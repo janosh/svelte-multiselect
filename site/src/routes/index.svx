@@ -1,0 +1,82 @@
+<script>
+  import Example from '../components/Example.svelte'
+  import ExampleMd from '../example.svx'
+</script>
+
+<main>
+
+# ![Logo](/favicon.svg) Svelte Multi-Select
+
+Sophisticated `MultiSelect` Svelte component. Code on [GitHub](https://github.com/janosh/svelte-multiselect).
+
+## Key Features
+
+- Single / multiple select
+- Dropdowns
+- Searchable
+- Tagging
+- Server-side rendering
+- Configurable
+- No dependencies
+- Keyboard friendly
+
+## Live Demo
+
+<Example />
+
+### Example Code
+
+<ExampleMd />
+
+Full list of props/bindable variables for this component:
+
+- `options` (required): Array of strings (or integers) that will be listed in the dropdown selection.
+- `selected = []`: Array of currently/pre-selected options when binding/passing as props respectively.
+- `readonly = false`: Disables the input. User won't be able to interact with it.
+- `placeholder = ''`: String shown when no option is selected.
+- `single = false`: Allows only a single option to be selected when true.
+- `required = false`: Prevents submission in an HTML form when true.
+- `input = undefined`: Handle to the DOM node storing the currently selected options in JSON format as its `value` attribute.
+- `name = ''`: Used as reference for associating HTML form labels with this component as well as for the `input` `id`. That is, the same DOM node `input` bindable through `<MultiSelect bind:input />` is also retrievable via `document.getElementByID(name)` e.g. for use in a JS file outside a Svelte component.
+
+## Want to contribute?
+
+Clone the repo and start the dev server to see the effect of your changes as you apply them.
+
+```sh
+git clone https://github.com/janosh/svelte-multiselect
+cd svelte-multiselect
+yarn
+yarn dev
+```
+
+</main>
+
+<style>
+  h1 {
+    font-size: calc(1em + 3vw);
+  }
+  .controls {
+    display: flex;
+    flex-wrap: wrap;
+    margin: 3em auto;
+    gap: 1em;
+    place-content: center;
+  }
+  span {
+    padding: 1pt 5pt;
+    border-radius: 4pt;
+    vertical-align: middle;
+    background: #0075ff;
+  }
+  ul {
+    columns: 2;
+  }
+  ul li {
+    padding: 5pt 1ex;
+  }
+  h1 img {
+    height: 1.2em;
+    vertical-align: -10pt;
+  }
+</style>

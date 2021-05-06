@@ -1,0 +1,37 @@
+:root {
+  --blue: #0461cc;
+}
+body {
+  background: #090019;
+  padding: 2em;
+  font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
+  margin: auto;
+  color: #eee;
+}
+main {
+  max-width: 45em;
+  margin: auto;
+  margin-bottom: 3em;
+}
+a {
+  color: var(--blue);
+  text-decoration: none;
+}
+a:hover {
+  color: orange;
+}
+code {
+  padding: 1pt 3pt;
+  border-radius: 3pt;
+  font-size: 1.2em;
+}
+pre code {
+  background-color: transparent;
+}
+pre {
+  border-radius: 1ex;
+  font-size: 0.75em;
+}
+a code {
+  color: white;
+}

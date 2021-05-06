@@ -1,0 +1,28 @@
+{
+  "name": "svelte-multiselect",
+  "description": "Svelte multi-select component",
+  "author": "Janosh Riebesell <janosh.riebesell@gmail.com>",
+  "homepage": "https://github.com/janosh/svelte-multiselect#readme",
+  "repository": "https://github.com/janosh/svelte-multiselect",
+  "bugs": {
+    "url": "https://github.com/janosh/svelte-multiselect/issues",
+    "email": "janosh.riebesell@gmail.com"
+  },
+  "license": "MIT",
+  "version": "1.0.0",
+  "type": "module",
+  "svelte": "MultiSelect.svelte",
+  "keywords": [
+    "svelte",
+    "multi-select",
+    "single-select",
+    "form",
+    "input"
+  ],
+  "devDependencies": {
+    "svelte": "^3.38.2"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
