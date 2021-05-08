@@ -8,14 +8,14 @@
 
 ## Key Features
 
-- Single / multiple select
-- Dropdowns
-- Searchable
-- Tagging
-- Server-side rendering
-- Configurable
-- No dependencies
-- Keyboard friendly
+- **Single / multiple select**: pass `single` prop to only allow one selection
+- **Dropdowns**: scrollable lists for large numbers of options
+- **Searchable**: start typing to filter options
+- **Tagging**: selected options are recorded as tags within the text input
+- **Server-side rendering**: no reliance on browser objects like `window` or `document`
+- **Configurable**
+- **No dependencies**, needs only Svelte as dev dependency
+- **Keyboard friendly** for mouse-less form completion
 
 ## Installation
 
@@ -54,13 +54,56 @@ Favorite Web Frameworks?
 <MultiSelect bind:input {name} {placeholder} options={webFrameworks} {required} />
 ```
 
+## Props
+
 Full list of props/bindable variables for this component:
 
-- `options` (required): Array of strings (or integers) that will be listed in the dropdown selection.
-- `selected = []`: Array of currently/pre-selected options when binding/passing as props respectively.
-- `readonly = false`: Disables the input. User won't be able to interact with it.
-- `placeholder = ''`: String shown when no option is selected.
-- `single = false`: Allows only a single option to be selected when true.
-- `required = false`: Prevents submission in an HTML form when true.
-- `input = undefined`: Handle to the DOM node storing the currently selected options in JSON format as its `value` attribute.
-- `name = ''`: Used as reference for associating HTML form labels with this component as well as for the `input` `id`. That is, the same DOM node `input` bindable through `<MultiSelect bind:input />` is also retrievable via `document.getElementByID(name)` e.g. for use in a JS file outside a Svelte component.
+| name          | default     | description                                                                                                                                                                                                                                                                                            |
+| :------------ | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`     | [required]  | Array of strings (or integers) that will be listed in the dropdown selection.                                                                                                                                                                                                                          |
+| `selected`    | `[]`        | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                                                                                                                                    |
+| `readonly`    | `false`     | Disables the input. User won't be able to interact with it.                                                                                                                                                                                                                                            |
+| `placeholder` | `''`        | String shown when no option is selected.                                                                                                                                                                                                                                                               |
+| `single`      | `false`     | Allows only a single option to be selected when true.                                                                                                                                                                                                                                                  |
+| `required`    | `false`     | Prevents submission in an HTML form when true.                                                                                                                                                                                                                                                         |
+| `input`       | `undefined` | Handle to the DOM node storing the currently selected options in JSON format as its `value` attribute.                                                                                                                                                                                                 |
+| `name`        | `''`        | Used as reference for associating HTML form labels with this component as well as for the `input` `id`. That is, the same DOM node `input` bindable through `<MultiSelect bind:input />` is also retrievable via `document.getElementByID(name)` e.g. for use in a JS file outside a Svelte component. |
+
+## Styling
+
+You can style every part of this component by using the following selectors. Overriding properties that the component already sets internally requires the `!important` keyword.
+
+```css
+:global(.multiselect) {
+  /* top-level wrapper div */
+}
+:global(.multiselect span.token) {
+  /* selected options */
+}
+:global(.multiselect span.token button),
+:global(.multiselect .remove-all) {
+  /* buttons to remove a single or all selected options at once */
+}
+:global(.multiselect ul) {
+  /* dropdown options */
+}
+:global(.multiselect ul li) {
+  /* dropdown options */
+}
+:global(li.selected) {
+  /* selected options in the dropdown list */
+}
+:global(li:not(.selected):hover) {
+  /* unselected but hovered options in the dropdown list */
+}
+:global(li.selected:hover) {
+  /* selected and hovered options in the dropdown list */
+  /* probably not necessary to style this state in most cases */
+}
+:global(li.active) {
+  /* active means element was navigated to with up/down arrow keys */
+  /* ready to be selected by pressing enter */
+}
+:global(li.selected.active) {
+}
+```

@@ -12,9 +12,6 @@
     "multiselect",
     "site"
   ],
-  "scripts": {
-    "publish": "yarn workspace multiselect publish"
-  },
   "devDependencies": {
     "eslint": "^7.25.0",
     "eslint-plugin-svelte3": "^3.2.0",

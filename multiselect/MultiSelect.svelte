@@ -16,7 +16,7 @@
   export let name = ``
 
   const dispatch = createEventDispatcher()
-  let activeOption, filterValue, filterInput
+  let activeOption, filterValue
   let showOptions = false
 
   $: filtered = options.filter((option) =>
@@ -35,10 +35,9 @@
     ) {
       filterValue = ``
       selected = single ? token : [token, ...selected]
-      input.value = JSON.stringify(selected)
       if (single) {
         setOptionsVisible(false)
-        filterInput.blur()
+        input.blur()
       }
     }
   }
@@ -46,13 +45,12 @@
   function remove(token) {
     if (readonly || single) return
     selected = selected.filter((str) => str !== token)
-    input.value = JSON.stringify(selected)
   }
 
   function setOptionsVisible(show) {
     if (readonly) return
     showOptions = show
-    if (show) filterInput.focus()
+    if (show) input.focus()
     else activeOption = undefined
   }
 
@@ -106,30 +104,28 @@
   {#if readonly}
     <ReadOnlyIcon height="18pt" />
   {:else}
-    <!-- for holding the component's value in a way accessible to the DOM -->
-    <input bind:this={input} {required} {name} id={name} readonly tabindex="-1" />
-    <!-- tabindex="-1" means skip element during tabbing, else we couldn't shift-tab out of filterInput as filterInput.focus() would jump right back -->
     <input
+      bind:this={input}
+      {required}
+      {name}
+      id={name}
       on:click|self={() => setOptionsVisible(true)}
       on:blur={() => dispatch(`blur`)}
       autocomplete="off"
       bind:value={filterValue}
-      bind:this={filterInput}
       on:keydown={handleKeydown}
       on:focus={() => setOptionsVisible(true)}
       on:blur={() => setOptionsVisible(false)}
       style="flex: 1;"
       placeholder={selected.length ? `` : placeholder} />
-    {#if !single}
-      <button
-        type="button"
-        class="remove-all"
-        title="Remove All"
-        on:click={removeAll}
-        style={selected.length === 0 && `display: none;`}>
-        <CrossIcon height="18pt" />
-      </button>
-    {/if}
+    <button
+      type="button"
+      class="remove-all"
+      title="Remove All"
+      on:click={removeAll}
+      style={selected.length === 0 && `display: none;`}>
+      <CrossIcon height="18pt" />
+    </button>
   {/if}
 
   {#if showOptions}

@@ -26,60 +26,54 @@
     `Theano`,
     `CNTK`,
   ]
-  const name = `webFrameworks`
   const placeholder = `Take your pick...`
-  const required = true
-
-  let input
+  let selectedWeb, selectedML
 </script>
 
-<h3>Multi Select</h3>
+<section>
+  <div>
+    <h3>Multi Select</h3>
 
-Favorite Web Frameworks?
+    <p>Favorite Web Frameworks?</p>
 
-<MultiSelect bind:input {name} {placeholder} options={webFrameworks} {required} />
+    {#if selectedWeb?.length > 0}
+      <pre><code>selected = {JSON.stringify(selectedWeb)}</code></pre>
+    {/if}
 
-<h3>Single Select</h3>
+    <MultiSelect {placeholder} options={webFrameworks} bind:selected={selectedWeb} />
+  </div>
+  <div>
+    <h3>Single Select</h3>
 
-Favorite Machine Learning Framework?
+    <p>Favorite Machine Learning Framework?</p>
 
-<MultiSelect single bind:input {placeholder} options={mlFrameworks} {required} />
+    {#if selectedML?.length > 0}
+      <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
+    {/if}
+
+    <MultiSelect single {placeholder} options={mlFrameworks} bind:selected={selectedML} />
+  </div>
+</section>
 
 <style>
-  :global(.multiselect) {
-    /* top-level wrapper div */
+  section {
+    display: flex;
+    gap: 1em;
   }
-  :global(.multiselect span.token) {
-    /* selected options */
+  section div {
+    flex: 1;
+    background-color: black;
+    border-radius: 1ex;
+    padding: 0 1em;
+    height: max-content;
   }
-  :global(.multiselect span.token button),
-  :global(.multiselect .remove-all) {
-    /* buttons to remove a single or all selected options at once */
-    font-size: 1em;
+  @media (max-width: 600px) {
+    section {
+      display: contents;
+    }
   }
   :global(.multiselect ul) {
     /* dropdown options */
     background: black !important;
-  }
-  :global(.multiselect ul li) {
-    /* dropdown options */
-  }
-  :global(li.selected) {
-    /* selected options in the dropdown list */
-  }
-  :global(li:not(.selected):hover) {
-    /* unselected but hovered options in the dropdown list */
-  }
-  :global(li.selected:hover) {
-    /* selected and hovered options in the dropdown list */
-    /* probably not necessary to style this state in most cases */
-  }
-  :global(li.active) {
-    /* active means element was navigated to with up/down arrow keys */
-    /* ready to be selected by pressing enter */
-    background: firebrick;
-  }
-  :global(li.selected.active) {
-    background: gray;
   }
 </style>

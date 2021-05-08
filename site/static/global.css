@@ -2,14 +2,14 @@
   --blue: #0461cc;
 }
 body {
-  background: #090019;
+  background: #10002c;
   padding: 2em;
   font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   margin: auto;
   color: #eee;
 }
 main {
-  max-width: 45em;
+  max-width: 50em;
   margin: auto;
   margin-bottom: 3em;
 }
@@ -24,6 +24,7 @@ code {
   padding: 1pt 3pt;
   border-radius: 3pt;
   font-size: 1.2em;
+  background-color: #006f6f; /* darkcyan */
 }
 pre code {
   background-color: transparent;
@@ -34,4 +35,15 @@ pre {
 }
 a code {
   color: white;
+}
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+table :is(td, th) {
+  border: 1px solid gray;
+  padding: 0.4em 0.8em;
+}
+tbody tr:nth-child(odd) {
+  background: black;
 }
