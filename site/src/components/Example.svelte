@@ -67,6 +67,9 @@
     padding: 0 1em;
     height: max-content;
   }
+  pre {
+    white-space: pre-wrap;
+  }
   @media (max-width: 600px) {
     section {
       display: contents;

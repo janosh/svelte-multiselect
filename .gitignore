@@ -7,6 +7,3 @@ build
 
 # deploy config
 .netlify
-
-# auto-generated
-site/src/example.svx

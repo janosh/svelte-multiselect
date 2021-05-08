@@ -8,8 +8,6 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "predev": "node src/exampleToSvx.js",
-    "prebuild": "node src/exampleToSvx.js",
     "dev": "svelte-kit dev",
     "build": "svelte-kit build",
     "preview": "svelte-kit preview",
