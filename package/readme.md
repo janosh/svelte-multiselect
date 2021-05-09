@@ -1,12 +1,16 @@
+<div class="maybe-hide">
+
 <p align="center">
   <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/site/static/favicon.svg" alt="Svelte MultiSelect" height=150>
 </p>
 
 # Svelte MultiSelect [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
 
-Keyboard-friendly, zero-dependency `MultiSelect` Svelte component.
-
 **[Live demo](https://svelte-multiselect.netlify.app)**.
+
+</div>
+
+Keyboard-friendly, zero-dependency `MultiSelect` Svelte component.
 
 ## Key Features
 

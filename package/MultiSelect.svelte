@@ -11,9 +11,7 @@
   export let placeholder = ``
   export let options
   export let single = false
-  export let required = false
   export let input = undefined
-  export let name = ``
 
   if (!options?.length > 0) console.error(`MultiSelect missing options`)
 
@@ -108,9 +106,6 @@
   {:else}
     <input
       bind:this={input}
-      {required}
-      {name}
-      id={name}
       on:click|self={() => setOptionsVisible(true)}
       on:blur={() => dispatch(`blur`)}
       autocomplete="off"

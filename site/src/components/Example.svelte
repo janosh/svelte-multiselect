@@ -1,31 +1,7 @@
 <script>
   import MultiSelect from '../../../package/MultiSelect.svelte'
+  import { webFrameworks, mlFrameworks } from './frameworks'
 
-  const webFrameworks = [
-    `Svelte`,
-    `React`,
-    `Vue`,
-    `Angular`,
-    `Polymer`,
-    `Ruby on Rails`,
-    `ASP.net`,
-    `Laravel`,
-    `Django`,
-    `Express`,
-    `Spring`,
-  ]
-  const mlFrameworks = [
-    `TensorFlow`,
-    `PyTorch`,
-    `scikit-learn`,
-    `Spark ML`,
-    `Torch`,
-    `Huggingface`,
-    `Keras`,
-    `Caffe`,
-    `Theano`,
-    `CNTK`,
-  ]
   const placeholder = `Take your pick...`
   let selectedWeb, selectedML
 </script>
