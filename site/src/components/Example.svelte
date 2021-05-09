@@ -1,5 +1,5 @@
 <script>
-  import MultiSelect from '../../../multiselect/MultiSelect.svelte'
+  import MultiSelect from '../../../package/MultiSelect.svelte'
 
   const webFrameworks = [
     `Svelte`,

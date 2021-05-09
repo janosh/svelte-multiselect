@@ -4,17 +4,19 @@
 
 # Svelte MultiSelect [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
 
+Keyboard-friendly, zero-dependency `MultiSelect` Svelte component.
+
 **[Live demo](https://svelte-multiselect.netlify.app)**.
 
 ## Key Features
 
-- **Single / multiple select**: pass `single` prop to only allow one selection
-- **Dropdowns**: scrollable lists for large numbers of options
-- **Searchable**: start typing to filter options
-- **Tagging**: selected options are recorded as tags within the text input
-- **Server-side rendering**: no reliance on browser objects like `window` or `document`
-- **Configurable**
-- **No dependencies**, needs only Svelte as dev dependency
+- **Single / multiple select:** pass `single` prop to only allow one selection
+- **Dropdowns:** scrollable lists for large numbers of options
+- **Searchable:** start typing to filter options
+- **Tagging:** selected options are recorded as tags within the text input
+- **Server-side rendering:** no reliance on browser objects like `window` or `document`
+- **Configurable:** see section [props](#props)
+- **No dependencies:** needs only Svelte as dev dependency
 - **Keyboard friendly** for mouse-less form completion
 
 ## Installation
@@ -29,29 +31,18 @@ yarn add -D svelte-multiselect
 <script>
   import MultiSelect from 'svelte-multiselect'
 
-  const webFrameworks = [
-    `Svelte`,
-    `React`,
-    `Vue`,
-    `Angular`,
-    `Polymer`,
-    `Ruby on Rails`,
-    `ASP.net`,
-    `Laravel`,
-    `Django`,
-    `Express`,
-    `Spring`,
-  ]
+  const webFrameworks = [`Svelte`, `React`, `Vue`, `Angular`, `Polymer`, `Ruby on Rails`, `ASP.net`, `Laravel`, `Django`, `Express`, `Spring`]
+
   const name = `webFrameworks`
   const placeholder = `Take your pick...`
   const required = true
 
-  let input
+  let selected
 </script>
 
 Favorite Web Frameworks?
 
-<MultiSelect bind:input {name} {placeholder} options={webFrameworks} {required} />
+<MultiSelect bind:selected {name} {placeholder} options={webFrameworks} {required} />
 ```
 
 ## Props
@@ -68,6 +59,17 @@ Full list of props/bindable variables for this component:
 | `required`    | `false`     | Prevents submission in an HTML form when true.                                                                                                                                                                                                                                                         |
 | `input`       | `undefined` | Handle to the DOM node storing the currently selected options in JSON format as its `value` attribute.                                                                                                                                                                                                 |
 | `name`        | `''`        | Used as reference for associating HTML form labels with this component as well as for the `input` `id`. That is, the same DOM node `input` bindable through `<MultiSelect bind:input />` is also retrievable via `document.getElementByID(name)` e.g. for use in a JS file outside a Svelte component. |
+
+## Want to contribute?
+
+Clone the repo, install dev dependencies and start the dev server to test your changes before submitting a PR.
+
+```sh
+git clone https://github.com/janosh/svelte-multiselect
+cd svelte-multiselect
+yarn
+yarn dev
+```
 
 ## Styling
 

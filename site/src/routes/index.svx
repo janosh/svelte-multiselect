@@ -10,13 +10,13 @@ Keyboard-friendly, zero-dependency `MultiSelect` Svelte component. Code on [GitH
 
 ## Key Features
 
-- **Single / multiple select**: pass `single` prop to only allow one selection
-- **Dropdowns**: scrollable lists for large numbers of options
-- **Searchable**: start typing to filter options
-- **Tagging**: selected options are recorded as tags within the text input
-- **Server-side rendering**: no reliance on browser objects like `window` or `document`
-- **Configurable**
-- **No dependencies**, needs only Svelte as dev dependency
+- **Single / multiple select:** pass `single` prop to only allow one selection
+- **Dropdowns:** scrollable lists for large numbers of options
+- **Searchable:** start typing to filter options
+- **Tagging:** selected options are recorded as tags within the text input
+- **Server-side rendering:** no reliance on browser objects like `window` or `document`
+- **Configurable:** see section [props](#props)
+- **No dependencies:** needs only Svelte as dev dependency
 - **Keyboard friendly** for mouse-less form completion
 
 ## Live Demo

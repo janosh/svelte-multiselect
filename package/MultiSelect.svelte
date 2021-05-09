@@ -15,6 +15,8 @@
   export let input = undefined
   export let name = ``
 
+  if (!options?.length > 0) console.error(`MultiSelect missing options`)
+
   const dispatch = createEventDispatcher()
   let activeOption, filterValue
   let showOptions = false

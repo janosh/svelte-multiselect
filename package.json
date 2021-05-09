@@ -9,7 +9,7 @@
   "type": "module",
   "private": true,
   "workspaces": [
-    "multiselect",
+    "package",
     "site"
   ],
   "devDependencies": {
