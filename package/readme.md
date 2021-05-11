@@ -10,6 +10,8 @@
 
 </div>
 
+<!-- remove above in docs -->
+
 Keyboard-friendly, zero-dependency `MultiSelect` Svelte component.
 
 ## Key Features

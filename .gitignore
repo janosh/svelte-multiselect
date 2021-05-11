@@ -7,3 +7,6 @@ build
 
 # deploy config
 .netlify
+
+# auto-generated
+site/src/docs.svx
