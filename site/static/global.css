@@ -24,7 +24,7 @@ code {
   padding: 1pt 3pt;
   border-radius: 3pt;
   font-size: 1.2em;
-  background-color: #006f6f; /* darkcyan */
+  background-color: rgba(255, 255, 255, 0.15);
 }
 pre code {
   background-color: transparent;

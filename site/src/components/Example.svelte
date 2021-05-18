@@ -38,7 +38,7 @@
   }
   section div {
     flex: 1;
-    background-color: black;
+    background-color: #211734;
     border-radius: 1ex;
     padding: 0 1em;
     height: max-content;

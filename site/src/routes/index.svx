@@ -7,6 +7,9 @@
 
 # ![Logo](/favicon.svg) Svelte Multi-Select
 
+[![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://www.npmjs.com/package/svelte-algolia)
+[![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
+
 ## Live Demo
 
 <Example />
