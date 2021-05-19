@@ -24,6 +24,7 @@
     "prettier": "^2.2.1",
     "prettier-plugin-svelte": "^2.2.0",
     "svelte": "^3.38.2",
+    "svelte-toc": "^0.1.0",
     "vite": "^2.2.4"
   }
 }

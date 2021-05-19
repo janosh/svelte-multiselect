@@ -68,13 +68,13 @@ Full list of props/bindable variables for this component:
 
 ## Want to contribute?
 
-Clone the repo, install dev dependencies and start the dev server to test your changes before submitting a PR.
+The repo is split into two workspaces, the `package` itself and the demo `site`. To submit a PR, best clone the repo, install dependencies and start the dev server to try out your changes first.
 
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
 yarn
-yarn dev
+yarn workspace site dev
 ```
 
 ## Styling
