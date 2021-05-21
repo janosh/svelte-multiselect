@@ -1,8 +1,8 @@
 :root {
-  --blue: #0461cc;
+  --night: #10002c;
 }
 body {
-  background: #10002c;
+  background: var(--night);
   padding: 2em;
   font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   margin: auto;
@@ -23,10 +23,10 @@ a:hover {
   color: orange;
 }
 code {
-  padding: 1pt 3pt;
-  border-radius: 3pt;
+  padding: 0 2pt;
+  border-radius: 2pt;
   font-size: 1.2em;
-  background-color: rgba(255, 255, 255, 0.15);
+  background-color: darkcyan;
 }
 pre code {
   background-color: transparent;
