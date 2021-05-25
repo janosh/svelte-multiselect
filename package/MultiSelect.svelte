@@ -6,11 +6,11 @@
   import ExpandIcon from './icons/ChevronExpand.svelte'
   import ReadOnlyIcon from './icons/ReadOnly.svelte'
 
-  export let selected = []
+  export let single = false
+  export let selected = single ? `` : []
   export let readonly = false
   export let placeholder = ``
   export let options
-  export let single = false
   export let input = undefined
 
   if (!options?.length > 0) console.error(`MultiSelect missing options`)
@@ -66,13 +66,16 @@
       else setOptionsVisible(true)
     } else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       const increment = event.key === `ArrowUp` ? -1 : 1
-      const calcIndex = filtered.indexOf(activeOption) + increment
-      if (calcIndex < 0) {
+      const newActiveIdx = filtered.indexOf(activeOption) + increment
+
+      if (newActiveIdx < 0) {
         activeOption = filtered[filtered.length - 1]
       } else {
-        if (calcIndex === filtered.length) activeOption = filtered[0]
-        else activeOption = filtered[calcIndex]
+        if (newActiveIdx === filtered.length) activeOption = filtered[0]
+        else activeOption = filtered[newActiveIdx]
       }
+    } else if (event.key === `Backspace`) {
+      if (selected.length > 0) selected = selected.slice(0, selected.length - 1)
     }
   }
 
@@ -83,7 +86,7 @@
 </script>
 
 <div class="multiselect" class:readonly on:click|self={() => setOptionsVisible(true)}>
-  <ExpandIcon height="18pt" style="padding-left: 4pt;" />
+  <ExpandIcon height="14pt" style="padding-left: 4pt;" />
   {#if single}
     {selected}
   {:else}
@@ -95,14 +98,14 @@
             on:click|stopPropagation={() => remove(itm)}
             type="button"
             title="Remove {itm}">
-            <CrossIcon height="18pt" />
+            <CrossIcon height="12pt" />
           </button>
         {/if}
       </span>
     {/each}
   {/if}
   {#if readonly}
-    <ReadOnlyIcon height="18pt" />
+    <ReadOnlyIcon height="14pt" />
   {:else}
     <input
       bind:this={input}
@@ -121,7 +124,7 @@
       title="Remove All"
       on:click={removeAll}
       style={selected.length === 0 && `display: none;`}>
-      <CrossIcon height="18pt" />
+      <CrossIcon height="14pt" />
     </button>
   {/if}
 
@@ -145,9 +148,9 @@
     position: relative;
     border-radius: 5pt;
     margin: 1em 0;
-    min-height: 2em;
     border: 1pt solid lightgray;
     align-items: center;
+    min-height: 18pt;
     display: flex;
     flex-wrap: wrap;
   }
@@ -161,9 +164,9 @@
   span.token {
     background-color: var(--blue);
     align-items: center;
-    border-radius: 1ex;
+    border-radius: 4pt;
     display: flex;
-    margin: 3pt;
+    margin: 2pt;
     padding: 0 0 0 1ex;
     transition: 0.3s;
     white-space: nowrap;

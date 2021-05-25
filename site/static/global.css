@@ -1,5 +1,6 @@
 :root {
   --night: #10002c;
+  --blue: #0461cc;
 }
 body {
   background: var(--night);

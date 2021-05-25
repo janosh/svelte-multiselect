@@ -12,9 +12,7 @@
 
     <p>Favorite Web Frameworks?</p>
 
-    {#if selectedWeb?.length > 0}
-      <pre><code>selected = {JSON.stringify(selectedWeb)}</code></pre>
-    {/if}
+    <pre><code>selected = {JSON.stringify(selectedWeb)}</code></pre>
 
     <MultiSelect {placeholder} options={webFrameworks} bind:selected={selectedWeb} />
   </div>
@@ -23,9 +21,7 @@
 
     <p>Favorite Machine Learning Framework?</p>
 
-    {#if selectedML?.length > 0}
-      <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
-    {/if}
+    <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
 
     <MultiSelect single {placeholder} options={mlFrameworks} bind:selected={selectedML} />
   </div>
