@@ -12,6 +12,7 @@
   export let placeholder = ``
   export let options
   export let input = undefined
+  export let noOptionsMsg = `No matching options`
 
   if (!options?.length > 0) console.error(`MultiSelect missing options`)
 
@@ -39,12 +40,14 @@
         setOptionsVisible(false)
         input.blur()
       }
+      dispatch(`add`, { token })
     }
   }
 
   function remove(token) {
     if (readonly || single) return
     selected = selected.filter((str) => str !== token)
+    dispatch(`remove`, { token })
   }
 
   function setOptionsVisible(show) {
@@ -86,50 +89,51 @@
 </script>
 
 <div class="multiselect" class:readonly on:click|self={() => setOptionsVisible(true)}>
-  <ExpandIcon height="14pt" style="padding-left: 4pt;" />
-  {#if single}
-    {selected}
-  {:else}
-    {#each selected as itm}
-      <span class="token">
-        {itm}
-        {#if !readonly}
-          <button
-            on:click|stopPropagation={() => remove(itm)}
-            type="button"
-            title="Remove {itm}">
-            <CrossIcon height="12pt" />
-          </button>
-        {/if}
-      </span>
-    {/each}
-  {/if}
+  <ExpandIcon height="14pt" style="padding-left: 1pt;" />
+  <ul class="tokens">
+    {#if single}
+      {selected}
+    {:else}
+      {#each selected as itm}
+        <li class="token">
+          {itm}
+          {#if !readonly}
+            <button
+              on:click|stopPropagation={() => remove(itm)}
+              type="button"
+              title="Remove {itm}">
+              <CrossIcon height="11pt" />
+            </button>
+          {/if}
+        </li>
+      {/each}
+    {/if}
+    <input
+      bind:this={input}
+      autocomplete="off"
+      bind:value={filterValue}
+      on:click|self={() => setOptionsVisible(true)}
+      on:keydown={handleKeydown}
+      on:focus={() => setOptionsVisible(true)}
+      on:blur={() => dispatch(`blur`)}
+      on:blur={() => setOptionsVisible(false)}
+      placeholder={selected.length ? `` : placeholder} />
+  </ul>
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else}
-    <input
-      bind:this={input}
-      on:click|self={() => setOptionsVisible(true)}
-      on:blur={() => dispatch(`blur`)}
-      autocomplete="off"
-      bind:value={filterValue}
-      on:keydown={handleKeydown}
-      on:focus={() => setOptionsVisible(true)}
-      on:blur={() => setOptionsVisible(false)}
-      style="flex: 1;"
-      placeholder={selected.length ? `` : placeholder} />
     <button
       type="button"
       class="remove-all"
       title="Remove All"
       on:click={removeAll}
-      style={selected.length === 0 && `display: none;`}>
+      style={selected.length === 0 ? `display: none;` : ``}>
       <CrossIcon height="14pt" />
     </button>
   {/if}
 
   {#if showOptions}
-    <ul transition:fly={{ duration: 200, y: 50 }}>
+    <ul class="options" transition:fly={{ duration: 200, y: 25 }}>
       {#each filtered as option}
         <li
           on:mousedown|preventDefault={() =>
@@ -138,6 +142,8 @@
           class:active={activeOption === option}>
           {option}
         </li>
+      {:else}
+        {noOptionsMsg}
       {/each}
     </ul>
   {/if}
@@ -146,23 +152,23 @@
 <style>
   .multiselect {
     position: relative;
-    border-radius: 5pt;
     margin: 1em 0;
-    border: 1pt solid lightgray;
+    border: var(--sms-border, 1pt solid lightgray);
+    border-radius: var(--sms-border-radius, 5pt);
     align-items: center;
     min-height: 18pt;
     display: flex;
-    flex-wrap: wrap;
+    cursor: text;
   }
   .multiselect:focus-within {
-    border: 1pt solid var(--blue);
+    border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
   .multiselect.readonly {
-    background: lightgray;
+    background: var(--sms-readonly-bg, lightgray);
   }
 
-  span.token {
-    background-color: var(--blue);
+  li.token {
+    background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue));
     align-items: center;
     border-radius: 4pt;
     display: flex;
@@ -171,17 +177,17 @@
     transition: 0.3s;
     white-space: nowrap;
   }
-  span.token button,
-  .remove-all {
+  li.token button,
+  button.remove-all {
     align-items: center;
     border-radius: 50%;
     display: flex;
     cursor: pointer;
     transition: 0.2s;
   }
-  span.token button:hover,
-  .remove-all:hover {
-    color: lightgray;
+  li.token button:hover,
+  button.remove-all:hover {
+    color: var(--sms-remove-x-hover-color, lightgray);
   }
   button {
     color: inherit;
@@ -189,22 +195,28 @@
     border: none;
     cursor: pointer;
     outline: none;
-    padding: 0 3pt;
+    padding: 0 2pt;
   }
 
   .multiselect input {
     border: none;
     outline: none;
     background: none;
-    padding: 0;
-    width: 1pt;
-    padding: 1pt;
     /* needed to hide red shadow around required inputs in some browsers */
     box-shadow: none;
-    color: inherit;
+    color: var(--sms-text-color, inherit);
+    flex: 1;
   }
 
-  ul {
+  ul.tokens {
+    display: flex;
+    padding: 0;
+    margin: 0;
+    flex-wrap: wrap;
+    flex: 1;
+  }
+
+  ul.options {
     list-style: none;
     max-height: 50vh;
     padding: 0;
@@ -215,18 +227,27 @@
     position: absolute;
     border-radius: 1ex;
     overflow: auto;
-    background: white;
+    background: var(--sms-options-bg, white);
   }
-  li {
+  ul.options li {
     padding: 3pt 2ex;
   }
-  li.selected {
-    border-left: 3pt solid green;
+  ul.options li.selected {
+    border-left: var(
+      --sms-li-selected-border-left,
+      3pt solid var(--sms-selected-color, green)
+    );
+    background: var(--sms-li-selected-bg, inherit);
+    color: var(--sms-li-selected-color, inherit);
   }
-  li:not(.selected):hover {
+  ul.options li:not(.selected):hover {
+    border-left: var(
+      --sms-li-not-selected-hover-border-left,
+      3pt solid var(--sms-active-color, cornflowerblue)
+    );
     border-left: 3pt solid var(--blue);
   }
-  li.active {
-    background: var(--blue);
+  ul.options li.active {
+    background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
   }
 </style>

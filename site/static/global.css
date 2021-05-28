@@ -4,7 +4,7 @@
 }
 body {
   background: var(--night);
-  padding: 2em;
+  padding: calc(1ex + 2vw);
   font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   margin: auto;
   color: #eee;
@@ -15,6 +15,7 @@ main {
   max-width: 50em;
   margin: auto;
   margin-bottom: 3em;
+  width: 100%;
 }
 a {
   color: var(--blue);
@@ -38,6 +39,10 @@ pre {
 }
 a code {
   color: white;
+}
+
+div.table {
+  overflow: scroll;
 }
 table {
   border-collapse: collapse;

@@ -4,7 +4,7 @@
   <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/site/static/favicon.svg" alt="Svelte MultiSelect" height=150>
 </p>
 
-# Svelte MultiSelect [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
+# Svelte MultiSelect [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys) [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)
 
 **[Live demo](https://svelte-multiselect.netlify.app)**.
 
@@ -55,6 +55,8 @@ Favorite Web Frameworks?
 
 Full list of props/bindable variables for this component:
 
+<div class="table">
+
 | name          | default     | description                                                                                                                                                                                                                                                                                            |
 | :------------ | :---------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `options`     | [required]  | Array of strings (or integers) that will be listed in the dropdown selection.                                                                                                                                                                                                                          |
@@ -65,6 +67,8 @@ Full list of props/bindable variables for this component:
 | `required`    | `false`     | Prevents submission in an HTML form when true.                                                                                                                                                                                                                                                         |
 | `input`       | `undefined` | Handle to the DOM node storing the currently selected options in JSON format as its `value` attribute.                                                                                                                                                                                                 |
 | `name`        | `''`        | Used as reference for associating HTML form labels with this component as well as for the `input` `id`. That is, the same DOM node `input` bindable through `<MultiSelect bind:input />` is also retrievable via `document.getElementByID(name)` e.g. for use in a JS file outside a Svelte component. |
+
+</div>
 
 ## Want to contribute?
 
@@ -79,39 +83,53 @@ yarn workspace site dev
 
 ## Styling
 
-You can style every part of this component by using the following selectors. Overriding properties that the component already sets internally requires the `!important` keyword.
+You can pass the following CSS variables directly to the component as props.
+
+- `border: var(--sms-border, 1pt solid lightgray)`: Border around top-level `div.multiselect`.
+- `border-radius: var(--sms-border-radius, 5pt)`: `div.multiselect` border radius.
+- `color: var(--sms-text-color, inherit)`: Input text color.
+- `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: `div.multiselect` border when focused.
+- `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
+- `background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue))`: Background of selected tokens.
+- `color: var(--sms-remove-x-hover-color, lightgray)`: Hover color of cross icon to remove selected tokens.
+- `background: var(--sms-options-bg, white)`: Background of options list.
+- `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
+- `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
+- `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
+
+You can alternatively style every part of this component with much more fine-grained control by using the following CSS selectors. Overriding properties that the component already sets internally requires the `!important` keyword.
 
 ```css
 :global(.multiselect) {
   /* top-level wrapper div */
 }
-:global(.multiselect span.token) {
+:global(.multiselect li.token) {
   /* selected options */
 }
-:global(.multiselect span.token button),
-:global(.multiselect .remove-all) {
+:global(.multiselect li.token button),
+:global(.multiselect button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }
-:global(.multiselect ul) {
+:global(.multiselect ul.options) {
   /* dropdown options */
 }
-:global(.multiselect ul li) {
+:global(.multiselect ul.options li) {
   /* dropdown options */
 }
-:global(li.selected) {
+:global(ul.options li.selected) {
   /* selected options in the dropdown list */
 }
-:global(li:not(.selected):hover) {
+:global(ul.options li:not(.selected):hover) {
   /* unselected but hovered options in the dropdown list */
 }
-:global(li.selected:hover) {
+:global(ul.options li.selected:hover) {
   /* selected and hovered options in the dropdown list */
   /* probably not necessary to style this state in most cases */
 }
-:global(li.active) {
+:global(ul.options li.active) {
   /* active means element was navigated to with up/down arrow keys */
   /* ready to be selected by pressing enter */
 }
-:global(li.selected.active) {
+:global(ul.options li.selected.active) {
 }
 ```
