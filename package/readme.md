@@ -12,7 +12,7 @@
 
 <!-- remove above in docs -->
 
-Keyboard-friendly, zero-dependency `MultiSelect` Svelte component.
+Keyboard-friendly, zero-dependency multi-select Svelte component.
 
 ## Key Features
 

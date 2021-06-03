@@ -20,11 +20,14 @@
     "@sveltejs/kit": "^1.0.0-next.109",
     "eslint": "^7.25.0",
     "eslint-plugin-svelte3": "^3.2.0",
+    "hastscript": "^7.0.1",
     "mdsvex": "^0.9.3",
     "prettier": "^2.2.1",
     "prettier-plugin-svelte": "^2.2.0",
+    "rehype-autolink-headings": "^5.1.0",
+    "rehype-slug": "^4.0.1",
     "svelte": "^3.38.2",
-    "svelte-toc": "^0.1.0",
+    "svelte-toc": "^0.1.1",
     "vite": "^2.2.4"
   }
 }
