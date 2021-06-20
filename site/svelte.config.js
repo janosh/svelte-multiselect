@@ -29,6 +29,7 @@ export default {
 
     // hydrate the <body> element in src/app.html
     target: `#svelte`,
+
     vite: {
       ssr: { noExternal: [`svelte-toc`] },
     },

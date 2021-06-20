@@ -6,13 +6,19 @@
   import ExpandIcon from './icons/ChevronExpand.svelte'
   import ReadOnlyIcon from './icons/ReadOnly.svelte'
 
-  export let single = false
-  export let selected = single ? `` : []
+  export let selected
+  export let maxSelect = null
   export let readonly = false
   export let placeholder = ``
   export let options
   export let input = undefined
   export let noOptionsMsg = `No matching options`
+
+  if (maxSelect !== null && maxSelect < 0) {
+    throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
+  }
+  $: single = maxSelect === 1
+  $: selected = single ? `` : []
 
   if (!options?.length > 0) console.error(`MultiSelect missing options`)
 
@@ -31,12 +37,13 @@
 
   function add(token) {
     if (
-      (!readonly && !selected.includes(token) && !single) ||
-      (single && selected.length !== 1)
+      !readonly &&
+      !selected.includes(token) &&
+      (maxSelect === null || selected.length < maxSelect)
     ) {
       filterValue = ``
       selected = single ? token : [token, ...selected]
-      if (single) {
+      if (selected.length === maxSelect) {
         setOptionsVisible(false)
         input.blur()
       }
@@ -46,7 +53,7 @@
 
   function remove(token) {
     if (readonly || single) return
-    selected = selected.filter((str) => str !== token)
+    selected = selected.filter((item) => item !== token)
     dispatch(`remove`, { token })
   }
 
@@ -83,12 +90,16 @@
   }
 
   const removeAll = () => {
-    selected = []
+    selected = single ? `` : []
     filterValue = ``
   }
 </script>
 
-<div class="multiselect" class:readonly on:click|self={() => setOptionsVisible(true)}>
+<div
+  class="multiselect"
+  class:readonly
+  class:single
+  on:click|self={() => setOptionsVisible(true)}>
   <ExpandIcon height="14pt" style="padding-left: 1pt;" />
   <ul class="tokens">
     {#if single}
@@ -176,6 +187,7 @@
     padding: 0 0 0 1ex;
     transition: 0.3s;
     white-space: nowrap;
+    line-height: 16pt;
   }
   li.token button,
   button.remove-all {
@@ -206,6 +218,7 @@
     box-shadow: none;
     color: var(--sms-text-color, inherit);
     flex: 1;
+    width: 1pt;
   }
 
   ul.tokens {

@@ -1,8 +1,10 @@
 <script>
-  import StyledSelect from './StyledSelect.svelte'
+  import MultiSelect from '../../../package/MultiSelect.svelte'
   import { webFrameworks, mlFrameworks } from './frameworks'
 
   let selectedWeb, selectedML
+
+  const placeholder = `Take your pick...`
 </script>
 
 <section>
@@ -13,7 +15,12 @@
 
     <pre><code>selected = {JSON.stringify(selectedWeb)}</code></pre>
 
-    <StyledSelect options={webFrameworks} bind:selected={selectedWeb} />
+    <MultiSelect
+      options={webFrameworks}
+      bind:selected={selectedWeb}
+      {placeholder}
+      --sms-active-color="var(--blue)"
+      --sms-options-bg="black" />
   </div>
   <div>
     <h3>Single Select</h3>
@@ -22,7 +29,13 @@
 
     <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
 
-    <StyledSelect single options={mlFrameworks} bind:selected={selectedML} />
+    <MultiSelect
+      maxSelect={1}
+      options={mlFrameworks}
+      bind:selected={selectedML}
+      {placeholder}
+      --sms-active-color="var(--blue)"
+      --sms-options-bg="black" />
   </div>
 </section>
 
