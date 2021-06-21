@@ -2,7 +2,8 @@
   import MultiSelect from '../../../package/MultiSelect.svelte'
   import { webFrameworks, mlFrameworks } from './frameworks'
 
-  let selectedWeb, selectedML
+  let selectedWeb
+  let selectedML = `PyTorch`
 
   const placeholder = `Take your pick...`
 </script>

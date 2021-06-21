@@ -18,7 +18,7 @@
     throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
   $: single = maxSelect === 1
-  $: selected = single ? `` : []
+  if (!selected) selected = single ? `` : []
 
   if (!options?.length > 0) console.error(`MultiSelect missing options`)
 
@@ -39,11 +39,15 @@
     if (
       !readonly &&
       !selected.includes(token) &&
-      (maxSelect === null || selected.length < maxSelect)
+      // (... || single) because in single mode, we always replace current token with new selection
+      (maxSelect === null || selected.length < maxSelect || single)
     ) {
       filterValue = ``
       selected = single ? token : [token, ...selected]
-      if (selected.length === maxSelect) {
+      if (
+        (Array.isArray(selected) && selected.length === maxSelect) ||
+        typeof selected === `string`
+      ) {
         setOptionsVisible(false)
         input.blur()
       }
@@ -149,7 +153,7 @@
         <li
           on:mousedown|preventDefault={() =>
             selected.includes(option) ? remove(option) : add(option)}
-          class:selected={selected.includes(option)}
+          class:selected={single ? selected === option : selected.includes(option)}
           class:active={activeOption === option}>
           {option}
         </li>
