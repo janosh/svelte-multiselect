@@ -31,20 +31,4 @@
   h1 > a {
     display: none;
   }
-  .controls {
-    display: flex;
-    flex-wrap: wrap;
-    margin: 3em auto;
-    gap: 1em;
-    place-content: center;
-  }
-  span {
-    padding: 1pt 5pt;
-    border-radius: 4pt;
-    vertical-align: middle;
-    background: #0075ff;
-  }
-  ul li {
-    padding: 5pt 1ex;
-  }
 </style>

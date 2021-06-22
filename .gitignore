@@ -4,9 +4,10 @@ node_modules
 # production build
 .svelte-kit
 build
+package/*
 
 # deploy config
 .netlify
 
 # auto-generated
-site/src/docs.svx
+src/docs.svx

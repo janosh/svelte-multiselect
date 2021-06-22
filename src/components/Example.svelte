@@ -1,5 +1,5 @@
 <script>
-  import MultiSelect from '../../../package/MultiSelect.svelte'
+  import MultiSelect from '../lib/MultiSelect.svelte'
   import { webFrameworks, mlFrameworks } from './frameworks'
 
   let selectedWeb
