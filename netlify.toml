@@ -3,6 +3,5 @@ command = "yarn build"
 publish = "build"
 
 [build.environment]
-NETLIFY_USE_YARN = "true"
 NODE_VERSION = "16.1.0"
 YARN_VERSION = "1.22.10"

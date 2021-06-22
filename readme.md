@@ -1,7 +1,7 @@
 <div class="maybe-hide">
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/static/favicon.svg" alt="Svelte MultiSelect" height=150>
+  <img src="static/favicon.svg" alt="Svelte MultiSelect" height=150>
 </p>
 
 # Svelte MultiSelect [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys) [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)

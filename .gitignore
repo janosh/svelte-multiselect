@@ -4,7 +4,7 @@ node_modules
 # production build
 .svelte-kit
 build
-package/*
+package
 
 # deploy config
 .netlify

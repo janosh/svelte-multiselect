@@ -14,8 +14,8 @@ const rehypePlugins = [
       content: s(
         `svg`,
         { width: 16, height: 16, viewBox: `0 0 16 16` },
-        // symbol #link-icon defined in app.html
-        s(`use`, { 'xlink:href': `#link-icon` })
+        // symbol #octicon-link defined in app.html
+        s(`use`, { 'xlink:href': `#octicon-link` })
       ),
     },
   ],

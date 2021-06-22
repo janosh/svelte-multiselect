@@ -18,7 +18,7 @@
     "serve": "yarn build && yarn preview",
     "prebuild": "cp readme.md src/docs.svx && sed -i.bak '1,/^<!-- remove above in docs -->$/d' src/docs.svx && rm src/docs.svx.bak",
     "predev": "yarn prebuild",
-    "release": "yarn version --patch && yarn package && yarn publish package"
+    "release": "yarn version && yarn package && yarn publish package"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^1.0.0-next.13",
@@ -32,7 +32,7 @@
     "rehype-autolink-headings": "^5.1.0",
     "rehype-slug": "^4.0.1",
     "svelte": "^3.38.2",
-    "svelte-toc": "^0.1.4",
+    "svelte-toc": "^0.1.5",
     "vite": "^2.3.8"
   },
   "keywords": [
