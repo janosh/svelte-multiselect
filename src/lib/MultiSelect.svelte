@@ -23,17 +23,17 @@
   if (!options?.length > 0) console.error(`MultiSelect missing options`)
 
   const dispatch = createEventDispatcher()
-  let activeOption, filterValue
+  let activeOption, searchText
   let showOptions = false
 
-  $: filtered = options.filter((option) =>
-    filterValue ? option.toLowerCase().includes(filterValue.toLowerCase()) : option
-  )
+  $: filteredOptions = searchText
+    ? options.filter((option) => option.toLowerCase().includes(searchText.toLowerCase()))
+    : options
   $: if (
-    (activeOption && !filtered.includes(activeOption)) ||
-    (!activeOption && filterValue)
+    (activeOption && !filteredOptions.includes(activeOption)) ||
+    (!activeOption && searchText)
   )
-    activeOption = filtered[0]
+    activeOption = filteredOptions[0]
 
   function add(token) {
     if (
@@ -42,7 +42,7 @@
       // (... || single) because in single mode, we always replace current token with new selection
       (maxSelect === null || selected.length < maxSelect || single)
     ) {
-      filterValue = ``
+      searchText = `` // reset search string on selection
       selected = single ? token : [token, ...selected]
       if (
         (Array.isArray(selected) && selected.length === maxSelect) ||
@@ -62,7 +62,8 @@
   }
 
   function setOptionsVisible(show) {
-    if (readonly) return
+    // nothing to do if visible is already as intended
+    if (readonly || show === showOptions) return
     showOptions = show
     if (show) input.focus()
     else activeOption = undefined
@@ -71,31 +72,39 @@
   function handleKeydown(event) {
     if (event.key === `Escape`) {
       setOptionsVisible(false)
-      filterValue = ``
+      searchText = ``
     } else if (event.key === `Enter`) {
       if (activeOption) {
         selected.includes(activeOption) ? remove(activeOption) : add(activeOption)
-        filterValue = ``
+        searchText = ``
       } // no active option means the options are closed in which case enter means open
       else setOptionsVisible(true)
     } else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       const increment = event.key === `ArrowUp` ? -1 : 1
-      const newActiveIdx = filtered.indexOf(activeOption) + increment
+      const newActiveIdx = filteredOptions.indexOf(activeOption) + increment
 
       if (newActiveIdx < 0) {
-        activeOption = filtered[filtered.length - 1]
+        activeOption = filteredOptions[filteredOptions.length - 1]
       } else {
-        if (newActiveIdx === filtered.length) activeOption = filtered[0]
-        else activeOption = filtered[newActiveIdx]
+        if (newActiveIdx === filteredOptions.length) activeOption = filteredOptions[0]
+        else activeOption = filteredOptions[newActiveIdx]
       }
     } else if (event.key === `Backspace`) {
-      if (selected.length > 0) selected = selected.slice(0, selected.length - 1)
+      // only remove selected tags on backspace if if there are any and no searchText characters remain
+      if (selected.length > 0 && searchText.length === 0) {
+        selected = selected.slice(0, selected.length - 1)
+      }
     }
   }
 
   const removeAll = () => {
     selected = single ? `` : []
-    filterValue = ``
+    searchText = ``
+  }
+
+  $: isSelected = (option) => {
+    if (single) return selected === option
+    else return selected.includes(option)
   }
 </script>
 
@@ -103,18 +112,20 @@
   class="multiselect"
   class:readonly
   class:single
-  on:click|self={() => setOptionsVisible(true)}>
+  on:mouseup|stopPropagation={() => setOptionsVisible(true)}>
   <ExpandIcon height="14pt" style="padding-left: 1pt;" />
   <ul class="tokens">
     {#if single}
-      {selected}
+      <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
+        {selected}
+      </span>
     {:else}
       {#each selected as itm}
-        <li class="token">
+        <li on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
           {itm}
           {#if !readonly}
             <button
-              on:click|stopPropagation={() => remove(itm)}
+              on:mouseup|stopPropagation={() => remove(itm)}
               type="button"
               title="Remove {itm}">
               <CrossIcon height="11pt" />
@@ -126,8 +137,8 @@
     <input
       bind:this={input}
       autocomplete="off"
-      bind:value={filterValue}
-      on:click|self={() => setOptionsVisible(true)}
+      bind:value={searchText}
+      on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
       on:keydown={handleKeydown}
       on:focus={() => setOptionsVisible(true)}
       on:blur={() => dispatch(`blur`)}
@@ -141,7 +152,7 @@
       type="button"
       class="remove-all"
       title="Remove All"
-      on:click={removeAll}
+      on:mouseup|stopPropagation={removeAll}
       style={selected.length === 0 ? `display: none;` : ``}>
       <CrossIcon height="14pt" />
     </button>
@@ -149,11 +160,12 @@
 
   {#if showOptions}
     <ul class="options" transition:fly={{ duration: 200, y: 25 }}>
-      {#each filtered as option}
+      {#each filteredOptions as option}
         <li
-          on:mousedown|preventDefault={() =>
-            selected.includes(option) ? remove(option) : add(option)}
-          class:selected={single ? selected === option : selected.includes(option)}
+          on:mouseup|preventDefault|stopPropagation
+          on:mousedown|preventDefault|stopPropagation={() =>
+            isSelected(option) ? remove(option) : add(option)}
+          class:selected={isSelected(option)}
           class:active={activeOption === option}>
           {option}
         </li>
@@ -182,7 +194,7 @@
     background: var(--sms-readonly-bg, lightgray);
   }
 
-  li.token {
+  ul.tokens > li {
     background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue));
     align-items: center;
     border-radius: 4pt;
@@ -193,7 +205,10 @@
     white-space: nowrap;
     line-height: 16pt;
   }
-  li.token button,
+  ul.tokens > span {
+    line-height: 14pt;
+  }
+  ul.tokens > li button,
   button.remove-all {
     align-items: center;
     border-radius: 50%;
@@ -201,7 +216,7 @@
     cursor: pointer;
     transition: 0.2s;
   }
-  li.token button:hover,
+  ul.tokens > li button:hover,
   button.remove-all:hover {
     color: var(--sms-remove-x-hover-color, lightgray);
   }

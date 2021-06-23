@@ -103,10 +103,10 @@ You can alternatively style every part of this component with much more fine-gra
 :global(.multiselect) {
   /* top-level wrapper div */
 }
-:global(.multiselect li.token) {
-  /* selected options */
+:global(.multiselect ul.token > li) {
+  /* selected options (tagging) */
 }
-:global(.multiselect li.token button),
+:global(.multiselect ul.token > li button),
 :global(.multiselect button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }
