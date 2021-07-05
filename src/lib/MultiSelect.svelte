@@ -14,6 +14,12 @@
   export let input = undefined
   export let noOptionsMsg = `No matching options`
 
+  export let outerDivClass = ``
+  export let ulTokensClass = ``
+  export let liTokenClass = ``
+  export let ulOptionsClass = ``
+  export let liOptionClass = ``
+
   if (maxSelect !== null && maxSelect < 0) {
     throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
@@ -109,19 +115,21 @@
 </script>
 
 <div
-  class="multiselect"
+  class="multiselect {outerDivClass}"
   class:readonly
   class:single
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}>
   <ExpandIcon height="14pt" style="padding-left: 1pt;" />
-  <ul class="tokens">
+  <ul class="tokens {ulTokensClass}">
     {#if single}
       <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
         {selected}
       </span>
     {:else}
       {#each selected as itm}
-        <li on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
+        <li
+          class={liTokenClass}
+          on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
           {itm}
           {#if !readonly}
             <button
@@ -159,14 +167,15 @@
   {/if}
 
   {#if showOptions}
-    <ul class="options" transition:fly={{ duration: 200, y: 25 }}>
+    <ul class="options {ulOptionsClass}" transition:fly={{ duration: 200, y: 25 }}>
       {#each filteredOptions as option}
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() =>
             isSelected(option) ? remove(option) : add(option)}
           class:selected={isSelected(option)}
-          class:active={activeOption === option}>
+          class:active={activeOption === option}
+          class={liOptionClass}>
           {option}
         </li>
       {:else}
@@ -203,10 +212,6 @@
     padding: 0 0 0 1ex;
     transition: 0.3s;
     white-space: nowrap;
-    line-height: 16pt;
-  }
-  ul.tokens > span {
-    line-height: 14pt;
   }
   ul.tokens > li button,
   button.remove-all {

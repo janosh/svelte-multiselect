@@ -72,20 +72,22 @@ Full list of props/bindable variables for this component:
 
 ## Want to contribute?
 
-The repo is split into two workspaces, the `package` itself and the demo `site`. To submit a PR, best clone the repo, install dependencies and start the dev server to try out your changes first.
+To submit a PR, clone the repo, install dependencies and start the dev server to try out your changes first.
 
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
 yarn
-yarn workspace site dev
+yarn dev
 ```
 
 ## Styling
 
-You can pass the following CSS variables directly to the component as props.
+### CSS variable props
 
-- `border: var(--sms-border, 1pt solid lightgray)`: Border around top-level `div.multiselect`.
+There are 3 ways to style this component. The first, if you only want to make small adjustments, allows you to pass the following CSS variables directly to the component as props.
+
+- `border: var(--sms-border, 1pt solid lightgray)`: Border around top-level `div.multiselect`. Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
 - `border-radius: var(--sms-border-radius, 5pt)`: `div.multiselect` border radius.
 - `color: var(--sms-text-color, inherit)`: Input text color.
 - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: `div.multiselect` border when focused.
@@ -97,16 +99,49 @@ You can pass the following CSS variables directly to the component as props.
 - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
 - `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
 
-You can alternatively style every part of this component with much more fine-grained control by using the following CSS selectors. Overriding properties that the component already sets internally requires the `!important` keyword.
+For example, to change the background color of the options dropdown:
+
+```svelte
+<MultiSelect --sms-options-bg="var(--my-css-var, white)" />
+```
+
+### CSS Frameworks
+
+The second method allows you to pass in custom class names to the important DOM elements of this component for use with CSS frameworks like [Tailwind CSS](https://tailwindcss.com).
+
+- `outerDivClass`
+- `ulTokensClass`
+- `liTokenClass`
+- `ulOptionsClass`
+- `liOptionClass`
+
+A simplified version of the DOM structure of this component showing where these classes are inserted is as follows:
+
+```html
+<div class="outerDivClass">
+  <ul class="ulTokensClass">
+    <li class="liTokenClass">First selected tag</li>
+    <li class="liTokenClass">Second selected tag</li>
+  </ul>
+  <ul class="ulOptionsClass">
+    <li class="liOptionClass">First available option</li>
+    <li class="liOptionClass">Second available option</li>
+  </ul>
+</div>
+```
+
+### Granular Control through global CSS
+
+You can alternatively style every part of this component with more fine-grained control by using the following `global` CSS selectors. Overriding properties that the component already sets internally requires the `!important` keyword.
 
 ```css
 :global(.multiselect) {
   /* top-level wrapper div */
 }
-:global(.multiselect ul.token > li) {
-  /* selected options (tagging) */
+:global(.multiselect ul.tokens > li) {
+  /* the blue tags representing selected options with remove buttons inside the input */
 }
-:global(.multiselect ul.token > li button),
+:global(.multiselect ul.tokens > li button),
 :global(.multiselect button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }

@@ -18,7 +18,7 @@
     "serve": "yarn build && yarn preview",
     "prebuild": "cp readme.md src/docs.svx && sed -i.bak '1,/^<!-- remove above in docs -->$/d' src/docs.svx && rm src/docs.svx.bak",
     "predev": "yarn prebuild",
-    "release": "yarn version && yarn package && yarn publish package"
+    "release": "yarn version && svelte-kit package && yarn publish package"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^1.0.0-next.13",
