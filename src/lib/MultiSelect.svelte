@@ -20,6 +20,9 @@
   export let ulOptionsClass = ``
   export let liOptionClass = ``
 
+  export let removeBtnTitle = `Remove`
+  export let removeAllTitle = `Remove all`
+
   if (maxSelect !== null && maxSelect < 0) {
     throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
@@ -126,17 +129,17 @@
         {selected}
       </span>
     {:else}
-      {#each selected as itm}
+      {#each selected as tag}
         <li
           class={liTokenClass}
           on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
-          {itm}
+          {tag}
           {#if !readonly}
             <button
-              on:mouseup|stopPropagation={() => remove(itm)}
+              on:mouseup|stopPropagation={() => remove(tag)}
               type="button"
-              title="Remove {itm}">
-              <CrossIcon height="11pt" />
+              title="{removeBtnTitle} {tag}">
+              <CrossIcon height="12pt" />
             </button>
           {/if}
         </li>
@@ -159,7 +162,7 @@
     <button
       type="button"
       class="remove-all"
-      title="Remove All"
+      title={removeAllTitle}
       on:mouseup|stopPropagation={removeAll}
       style={selected.length === 0 ? `display: none;` : ``}>
       <CrossIcon height="14pt" />

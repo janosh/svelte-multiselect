@@ -83,9 +83,11 @@ yarn dev
 
 ## Styling
 
-### CSS variable props
+There are 3 ways to style this component.
 
-There are 3 ways to style this component. The first, if you only want to make small adjustments, allows you to pass the following CSS variables directly to the component as props.
+### With CSS variables
+
+The first, if you only want to make small adjustments, allows you to pass the following CSS variables directly to the component as props.
 
 - `border: var(--sms-border, 1pt solid lightgray)`: Border around top-level `div.multiselect`. Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
 - `border-radius: var(--sms-border-radius, 5pt)`: `div.multiselect` border radius.
@@ -105,9 +107,9 @@ For example, to change the background color of the options dropdown:
 <MultiSelect --sms-options-bg="var(--my-css-var, white)" />
 ```
 
-### CSS Frameworks
+### With CSS frameworks
 
-The second method allows you to pass in custom class names to the important DOM elements of this component for use with CSS frameworks like [Tailwind CSS](https://tailwindcss.com).
+The second method allows you to pass in custom classes to the important DOM elements of this component to target them with frameworks like [Tailwind CSS](https://tailwindcss.com).
 
 - `outerDivClass`
 - `ulTokensClass`
@@ -115,24 +117,24 @@ The second method allows you to pass in custom class names to the important DOM 
 - `ulOptionsClass`
 - `liOptionClass`
 
-A simplified version of the DOM structure of this component showing where these classes are inserted is as follows:
+This simplified version of the DOM structure of this component shows where these classes are inserted:
 
-```html
-<div class="outerDivClass">
-  <ul class="ulTokensClass">
-    <li class="liTokenClass">First selected tag</li>
-    <li class="liTokenClass">Second selected tag</li>
+```svelte
+<div class={outerDivClass}>
+  <ul class={ulTokensClass}>
+    <li class={liTokenClass}>First selected tag</li>
+    <li class={liTokenClass}>Second selected tag</li>
   </ul>
-  <ul class="ulOptionsClass">
-    <li class="liOptionClass">First available option</li>
-    <li class="liOptionClass">Second available option</li>
+  <ul class={ulOptionsClass}>
+    <li class={liOptionClass}>First available option</li>
+    <li class={liOptionClass}>Second available option</li>
   </ul>
 </div>
 ```
 
-### Granular Control through global CSS
+### Granular control through global CSS
 
-You can alternatively style every part of this component with more fine-grained control by using the following `global` CSS selectors. Overriding properties that the component already sets internally requires the `!important` keyword.
+You can alternatively style every part of this component with more fine-grained control by using the following `:global()` CSS selectors. **Note**: Overriding properties that the component already sets internally requires the `!important` keyword.
 
 ```css
 :global(.multiselect) {

@@ -43,9 +43,6 @@ pre {
 a code {
   color: white;
 }
-ul li {
-  padding: 5pt 1ex;
-}
 
 div.table {
   overflow: scroll;
