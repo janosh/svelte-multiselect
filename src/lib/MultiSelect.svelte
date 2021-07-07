@@ -112,15 +112,18 @@
   }
 
   $: isSelected = (option) => {
+    if (!(selected?.length > 0)) return false // nothing is selected if `selected` is the empty array or string
     if (single) return selected === option
     else return selected.includes(option)
   }
 </script>
 
+<!-- z-index: 2 when showOptions is ture ensures the ul.tokens of one <MultiSelect /> display above those of another following shortly after it -->
 <div
   class="multiselect {outerDivClass}"
   class:readonly
   class:single
+  style={showOptions ? `z-index: 2;` : ``}
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}>
   <ExpandIcon height="14pt" style="padding-left: 1pt;" />
   <ul class="tokens {ulTokensClass}">
@@ -128,7 +131,7 @@
       <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
         {selected}
       </span>
-    {:else}
+    {:else if selected?.length > 0}
       {#each selected as tag}
         <li
           class={liTokenClass}
@@ -169,8 +172,11 @@
     </button>
   {/if}
 
-  {#if showOptions}
-    <ul class="options {ulOptionsClass}" transition:fly={{ duration: 200, y: 25 }}>
+  {#key showOptions}
+    <ul
+      class="options {ulOptionsClass}"
+      class:hidden={!showOptions}
+      transition:fly={{ duration: 300, y: 40 }}>
       {#each filteredOptions as option}
         <li
           on:mouseup|preventDefault|stopPropagation
@@ -185,7 +191,7 @@
         {noOptionsMsg}
       {/each}
     </ul>
-  {/if}
+  {/key}
 </div>
 
 <style>
@@ -215,6 +221,7 @@
     padding: 0 0 0 1ex;
     transition: 0.3s;
     white-space: nowrap;
+    height: 16pt;
   }
   ul.tokens > li button,
   button.remove-all {
@@ -262,12 +269,14 @@
     padding: 0;
     top: 100%;
     width: 100%;
-    z-index: 1;
     cursor: pointer;
     position: absolute;
     border-radius: 1ex;
     overflow: auto;
     background: var(--sms-options-bg, white);
+  }
+  ul.options.hidden {
+    visibility: hidden;
   }
   ul.options li {
     padding: 3pt 2ex;
