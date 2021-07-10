@@ -1,5 +1,6 @@
 import adapter from '@sveltejs/adapter-static'
 import { mdsvex } from 'mdsvex'
+import preprocess from "svelte-preprocess"
 
 import headingSlugs from 'rehype-slug'
 import linkHeadings from 'rehype-autolink-headings'
@@ -23,12 +24,15 @@ const rehypePlugins = [
 
 export default {
   extensions: [`.svelte`, `.svx`],
-  preprocess: mdsvex({ rehypePlugins }),
+  preprocess: [preprocess(), mdsvex({ rehypePlugins })],
   kit: {
     adapter: adapter(),
 
-    // hydrate the <body> element in src/app.html
+    // hydrate the <div/> with id 'svelte' in src/app.html
     target: `#svelte`,
+
+    // https://kit.svelte.dev/docs#configuration-trailingslash
+    trailingSlash: `ignore`, // GitHub issue discussing Netlify: https://git.io/JngRL
 
     vite: {
       ssr: { noExternal: [`svelte-toc`] },

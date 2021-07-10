@@ -1,13 +1,13 @@
 <script>
   import Example from '../components/Example.svelte'
-  import Toc from 'svelte-toc'
+  import Toc from 'svelte-toc/Toc.svelte'
   import Docs from '../docs.svx'
   import GitHubCorner from '../components/GitHubCorner.svelte'
 </script>
 
-<Toc headingSelector={[...Array(5).keys()].map(i => `main h${i + 2}`)} --toc-mobile-bg-color="black" --toc-mobile-btn-color="white" --toc-desktop-margin="11em 0 0 0" />
+<Toc headingSelector="main :where(h2, h3, h4)" />
 
-<GitHubCorner href="https://github.com/janosh/svelte-multiselect" --ghc-color="var(--night)" --ghc-bg="white" />
+<GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
 <main>
 
@@ -28,7 +28,15 @@
   h1 {
     font-size: calc(1em + 3vw);
   }
+  /* hide Octicon link icon (see svelte.config.js) */
   h1 > a {
     display: none;
+  }
+  :global(:root) {
+    --toc-mobile-bg-color: #484452;
+    --toc-mobile-btn-color: white;
+    --toc-desktop-margin: 12em 0 0 0;
+    --ghc-color: var(--night);
+    --ghc-bg: white;
   }
 </style>

@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { fly } from 'svelte/transition'
 
@@ -6,12 +6,12 @@
   import ExpandIcon from './icons/ChevronExpand.svelte'
   import ReadOnlyIcon from './icons/ReadOnly.svelte'
 
-  export let selected
-  export let maxSelect = null
+  export let selected: string[] | string
+  export let maxSelect: number | null = null // null means any number of options are selectable
   export let readonly = false
   export let placeholder = ``
-  export let options
-  export let input = undefined
+  export let options: string[]
+  export let input: HTMLInputElement | null = null
   export let noOptionsMsg = `No matching options`
 
   export let outerDivClass = ``
@@ -29,10 +29,10 @@
   $: single = maxSelect === 1
   if (!selected) selected = single ? `` : []
 
-  if (!options?.length > 0) console.error(`MultiSelect missing options`)
+  if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
 
   const dispatch = createEventDispatcher()
-  let activeOption, searchText
+  let activeOption: string, searchText: string
   let showOptions = false
 
   $: filteredOptions = searchText
@@ -44,7 +44,7 @@
   )
     activeOption = filteredOptions[0]
 
-  function add(token) {
+  function add(token: string) {
     if (
       !readonly &&
       !selected.includes(token) &&
@@ -58,27 +58,26 @@
         typeof selected === `string`
       ) {
         setOptionsVisible(false)
-        input.blur()
+        input?.blur()
       }
       dispatch(`add`, { token })
     }
   }
 
-  function remove(token) {
-    if (readonly || single) return
-    selected = selected.filter((item) => item !== token)
+  function remove(token: string) {
+    if (readonly || typeof selected === `string`) return
+    selected = selected.filter((item: string) => item !== token)
     dispatch(`remove`, { token })
   }
 
-  function setOptionsVisible(show) {
-    // nothing to do if visible is already as intended
+  function setOptionsVisible(show: boolean) {
+    // nothing to do if visibility is already as intended
     if (readonly || show === showOptions) return
     showOptions = show
-    if (show) input.focus()
-    else activeOption = undefined
+    if (show) input?.focus()
   }
 
-  function handleKeydown(event) {
+  function handleKeydown(event: KeyboardEvent) {
     if (event.key === `Escape`) {
       setOptionsVisible(false)
       searchText = ``
@@ -111,7 +110,7 @@
     searchText = ``
   }
 
-  $: isSelected = (option) => {
+  $: isSelected = (option: string) => {
     if (!(selected?.length > 0)) return false // nothing is selected if `selected` is the empty array or string
     if (single) return selected === option
     else return selected.includes(option)

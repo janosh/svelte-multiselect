@@ -18,11 +18,15 @@
     "serve": "yarn build && yarn preview",
     "prebuild": "cp readme.md src/docs.svx && sed -i.bak '1,/^<!-- remove above in docs -->$/d' src/docs.svx && rm src/docs.svx.bak",
     "predev": "yarn prebuild",
-    "release": "yarn version && svelte-kit package && yarn publish package"
+    "release": "yarn version && svelte-kit package && yarn publish package",
+    "check": "svelte-check --workspace src --tsconfig ./tsconfig.json"
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^1.0.0-next.13",
-    "@sveltejs/kit": "^1.0.0-next.115",
+    "@sveltejs/kit": "^1.0.0-next.123",
+    "@tsconfig/svelte": "^2.0.1",
+    "@typescript-eslint/eslint-plugin": "^4.28.2",
+    "@typescript-eslint/parser": "^4.28.2",
     "eslint": "^7.29.0",
     "eslint-plugin-svelte3": "^3.2.0",
     "hastscript": "^7.0.1",
@@ -32,7 +36,12 @@
     "rehype-autolink-headings": "^5.1.0",
     "rehype-slug": "^4.0.1",
     "svelte": "^3.38.2",
+    "svelte-check": "^2.2.2",
+    "svelte-preprocess": "^4.7.4",
     "svelte-toc": "^0.1.5",
+    "svelte2tsx": "^0.4.1",
+    "tslib": "^2.3.0",
+    "typescript": "^4.3.5",
     "vite": "^2.3.8"
   },
   "keywords": [
