@@ -1,6 +1,6 @@
 <script>
   import Example from '../components/Example.svelte'
-  import Toc from 'svelte-toc/Toc.svelte'
+  import Toc from 'svelte-toc'
   import Docs from '../docs.svx'
   import GitHubCorner from '../components/GitHubCorner.svelte'
 </script>
@@ -10,18 +10,26 @@
 <GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
 <main>
+  <h1>
+    <img src="/favicon.svg" alt="Logo" height="60" style="vertical-align: -5px" />
+    &nbsp;Svelte Multi-Select
+  </h1>
 
-# <img src="/favicon.svg" alt="Logo" height="60" style="vertical-align: -10px" /> &nbsp;Svelte Multi-Select
+  <a href="https://npmjs.com/package/svelte-multiselect">
+    <img
+      alt="NPM version"
+      src="https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM" />
+  </a>
 
-[![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
+  <a href="https://app.netlify.com/sites/svelte-multiselect/deploys">
+    <img
+      alt="Netlify Status"
+      src="https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status" />
+  </a>
 
-## Live Demo
+  <Example />
 
-<Example />
-
-<Docs />
-
+  <Docs />
 </main>
 
 <style>
@@ -29,7 +37,7 @@
     font-size: calc(1em + 3vw);
   }
   /* hide Octicon link icon (see svelte.config.js) */
-  h1 > a {
+  :global(h1 > a) {
     display: none;
   }
   :global(:root) {

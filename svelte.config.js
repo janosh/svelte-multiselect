@@ -33,9 +33,5 @@ export default {
 
     // https://kit.svelte.dev/docs#configuration-trailingslash
     trailingSlash: `ignore`, // GitHub issue discussing Netlify: https://git.io/JngRL
-
-    vite: {
-      ssr: { noExternal: [`svelte-toc`] },
-    },
   },
 }

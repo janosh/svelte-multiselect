@@ -7,6 +7,7 @@
   "license": "MIT",
   "version": "1.1.8",
   "type": "module",
+  "svelte": "MultiSelect.svelte",
   "bugs": {
     "url": "https://github.com/janosh/svelte-multiselect/issues"
   },
@@ -23,7 +24,7 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-static": "^1.0.0-next.13",
-    "@sveltejs/kit": "^1.0.0-next.123",
+    "@sveltejs/kit": "^1.0.0-next.125",
     "@tsconfig/svelte": "^2.0.1",
     "@typescript-eslint/eslint-plugin": "^4.28.2",
     "@typescript-eslint/parser": "^4.28.2",
@@ -38,7 +39,7 @@
     "svelte": "^3.38.2",
     "svelte-check": "^2.2.2",
     "svelte-preprocess": "^4.7.4",
-    "svelte-toc": "^0.1.5",
+    "svelte-toc": "^0.1.7",
     "svelte2tsx": "^0.4.1",
     "tslib": "^2.3.0",
     "typescript": "^4.3.5",
