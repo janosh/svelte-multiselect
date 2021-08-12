@@ -61,6 +61,7 @@
         input?.blur()
       }
       dispatch(`add`, { token })
+      dispatch(`change`, { token })
     }
   }
 
@@ -68,6 +69,7 @@
     if (readonly || typeof selected === `string`) return
     selected = selected.filter((item: string) => item !== token)
     dispatch(`remove`, { token })
+    dispatch(`change`, { token })
   }
 
   function setOptionsVisible(show: boolean) {

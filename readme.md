@@ -70,6 +70,23 @@ Full list of props/bindable variables for this component:
 
 </div>
 
+## Events
+
+`MultiSelect.svelte` dispatches the following types of events:
+
+- `on:add={(event) => console.log(event.detail.token)}`: Triggers when a new token is selected.
+- `on:remove={(event) => console.log(event.detail.token)}`: Triggers when a selected token is removed.
+- `on:change={(event) => console.log(event.detail.token)}`: Triggers when a new token is either added or removed.
+- `on:blur={yourFunctionHere}`: Triggers when the input field looses focus.
+
+Will add a section to the readme as well as a new event `on:change` that triggers for both `add` and `remove`.
+
+Example:
+
+```svelte
+<MultiSelect on:change={(event) => alert(`You selected '${event.detail.token}'`)} />
+```
+
 ## Want to contribute?
 
 To submit a PR, clone the repo, install dependencies and start the dev server to try out your changes first.
