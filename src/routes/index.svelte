@@ -36,10 +36,6 @@
   h1 {
     font-size: calc(1em + 3vw);
   }
-  /* hide Octicon link icon (see svelte.config.js) */
-  :global(h1 > a) {
-    display: none;
-  }
   :global(:root) {
     --toc-mobile-bg-color: #484452;
     --toc-mobile-btn-color: white;
