@@ -108,6 +108,8 @@
   }
 
   const removeAll = () => {
+    dispatch(`remove`, { token: selected })
+    dispatch(`change`, { token: selected, type: `remove` })
     selected = single ? `` : []
     searchText = ``
   }

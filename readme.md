@@ -72,17 +72,22 @@ Full list of props/bindable variables for this component:
 
 `MultiSelect.svelte` dispatches the following types of events:
 
-- `on:add={(event) => console.log(event.detail.token)}`: Triggers when a new token is selected.
-- `on:remove={(event) => console.log(event.detail.token)}`: Triggers when a selected token is removed.
-- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)}``: Triggers when a new token is either added or removed. `event.detail.type` will be either `'add'` or `'remove'`.
-- `on:blur={yourFunctionHere}`: Triggers when the input field looses focus.
+| name     | details                         | description                                                                                                                                    |
+| -------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add`    | `token: string`                 | Triggers when a new token is selected.                                                                                                         |
+| `remove` | `token: string`                 | Triggers when one or all selected tokens are removed. `event.detail.token` will be a single or multiple tokens, respectively.                  |
+| `change` | `token: string`, `type: string` | Triggers when a token is either added or removed, or all tokens are removed at once. `event.detail.type` will be either `'add'` or `'remove'`. |
+| `blur`   | none                            | Triggers when the input field looses focus.                                                                                                    |
 
-Will add a section to the readme as well as a new event `on:change` that triggers for both `add` and `remove`.
+### Examples
 
-Example:
+- `on:add={(event) => console.log(event.detail.token)}`
+- `on:remove={(event) => console.log(event.detail.token)}`.
+- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)}``
+- `on:blur={yourFunctionHere}`
 
 ```svelte
-<MultiSelect on:change={({ detail }) => alert(`You ${detail.type}ed '${detail.token}'`)} />
+<MultiSelect on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token}'`)} />
 ```
 
 ## Want to contribute?
