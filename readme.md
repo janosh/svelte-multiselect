@@ -1,10 +1,18 @@
 <div class="maybe-hide">
 
 <p align="center">
-  <img src="static/favicon.svg" alt="Svelte MultiSelect" height=150>
+  <img src="static/favicon.svg" alt="Svelte MultiSelect" height=80>
 </p>
 
-# Svelte MultiSelect [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys) [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)
+<h1 align="center">Svelte MultiSelect</h1>
+
+<h4 align="center">
+
+[![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
+[![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)
+[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/janosh/svelte-multiselect/main.svg)](https://results.pre-commit.ci/latest/github/janosh/svelte-multiselect/main)
+
+</h4>
 
 **[Live demo](https://svelte-multiselect.netlify.app)**.
 
@@ -37,7 +45,19 @@ yarn add -D svelte-multiselect
 <script>
   import MultiSelect from 'svelte-multiselect'
 
-  const webFrameworks = [`Svelte`, `React`, `Vue`, `Angular`, `Polymer`, `Ruby on Rails`, `ASP.net`, `Laravel`, `Django`, `Express`, `Spring`]
+  const webFrameworks = [
+    `Svelte`,
+    `React`,
+    `Vue`,
+    `Angular`,
+    `Polymer`,
+    `Ruby on Rails`,
+    `ASP.net`,
+    `Laravel`,
+    `Django`,
+    `Express`,
+    `Spring`,
+  ]
 
   let selected
 </script>
@@ -70,7 +90,7 @@ Full list of props/bindable variables for this component:
 
 ## Events
 
-`MultiSelect.svelte` dispatches the following types of events:
+`MultiSelect.svelte` dispatches the following events:
 
 | name     | details                         | description                                                                                                                                    |
 | -------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -83,11 +103,12 @@ Full list of props/bindable variables for this component:
 
 - `on:add={(event) => console.log(event.detail.token)}`
 - `on:remove={(event) => console.log(event.detail.token)}`.
-- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)}``
+- `` on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)} ``
 - `on:blur={yourFunctionHere}`
 
 ```svelte
-<MultiSelect on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token}'`)} />
+<MultiSelect
+  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token}'`)} />
 ```
 
 ## Want to contribute?

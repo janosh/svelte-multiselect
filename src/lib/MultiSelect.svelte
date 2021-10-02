@@ -255,7 +255,6 @@
     box-shadow: none;
     color: var(--sms-text-color, inherit);
     flex: 1;
-    width: 1pt;
   }
 
   ul.tokens {
