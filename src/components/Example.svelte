@@ -6,6 +6,7 @@
   let selectedML = `PyTorch`
 
   const placeholder = `Take your pick...`
+  const disabledOptions = [`Torch`, `CNTK`]
 </script>
 
 <section>
@@ -35,6 +36,7 @@
       options={mlFrameworks}
       bind:selected={selectedML}
       {placeholder}
+      {disabledOptions}
       --sms-active-color="var(--blue)"
       --sms-options-bg="black" />
   </div>

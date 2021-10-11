@@ -11,7 +11,7 @@
   export let readonly = false
   export let placeholder = ``
   export let options: string[]
-  export let disableOptions: string[] = []
+  export let disabledOptions: string[] = []
   export let input: HTMLInputElement | null = null
   export let noOptionsMsg = `No matching options`
 
@@ -31,6 +31,12 @@
   if (!selected) selected = single ? `` : []
 
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
+
+  $: invalidDisabledOptions = disabledOptions.filter((opt) => !options.includes(opt))
+
+  $: if (invalidDisabledOptions.length > 0) {
+    console.error(`Some disabledOptions do not appear in the options list!`)
+  }
 
   const dispatch = createEventDispatcher()
   let activeOption: string, searchText: string
@@ -117,7 +123,7 @@
     searchText = ``
   }
 
-  const isDisabled = (option: string) => disableOptions.includes(option)
+  const isDisabled = (option: string) => disabledOptions.includes(option)
 
   $: isSelected = (option: string) => {
     if (!(selected?.length > 0)) return false // nothing is selected if `selected` is the empty array or string
@@ -310,11 +316,10 @@
   ul.options li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
   }
-
   ul.options li.disabled {
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
-    cursor: default;
+    cursor: not-allowed;
   }
   ul.options li.disabled:hover {
     border-left: unset;
