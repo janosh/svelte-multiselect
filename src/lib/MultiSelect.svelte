@@ -11,6 +11,7 @@
   export let readonly = false
   export let placeholder = ``
   export let options: string[]
+  export let disableOptions: string[] = []
   export let input: HTMLInputElement | null = null
   export let noOptionsMsg = `No matching options`
 
@@ -22,6 +23,11 @@
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
+
+  $: disableOptionDict = disableOptions.reduce<{ [key:string]: boolean }>(
+    (acc, opt) => ({ ...acc, [opt]: true }),
+    {}
+  )
 
   if (maxSelect !== null && maxSelect < 0) {
     throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -85,6 +91,10 @@
       searchText = ``
     } else if (event.key === `Enter`) {
       if (activeOption) {
+        if (disableOptionDict[activeOption]) {
+          return
+        }
+
         selected.includes(activeOption) ? remove(activeOption) : add(activeOption)
         searchText = ``
       } // no active option means the options are closed in which case enter means open
@@ -183,10 +193,15 @@
       {#each filteredOptions as option}
         <li
           on:mouseup|preventDefault|stopPropagation
-          on:mousedown|preventDefault|stopPropagation={() =>
-            isSelected(option) ? remove(option) : add(option)}
+          on:mousedown|preventDefault|stopPropagation={() => {
+            if (disableOptionDict[option]) {
+              return
+            }
+            isSelected(option) ? remove(option) : add(option)
+          }}
           class:selected={isSelected(option)}
           class:active={activeOption === option}
+          class:disabled={disableOptionDict[option]}
           class={liOptionClass}>
           {option}
         </li>
@@ -271,7 +286,6 @@
     padding: 0;
     top: 100%;
     width: 100%;
-    cursor: pointer;
     position: absolute;
     border-radius: 1ex;
     overflow: auto;
@@ -282,6 +296,7 @@
   }
   ul.options li {
     padding: 3pt 2ex;
+    cursor: pointer;
   }
   ul.options li.selected {
     border-left: var(
@@ -300,5 +315,14 @@
   }
   ul.options li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
+  }
+
+  ul.options li.disabled {
+    background: var(--sms-li-disabled-bg, #f5f5f6);
+    color: #b8b8b8;
+    cursor: default;
+  }
+  ul.options li.disabled:hover {
+    border-left: unset;
   }
 </style>
