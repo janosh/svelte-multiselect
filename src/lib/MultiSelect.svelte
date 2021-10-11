@@ -24,7 +24,7 @@
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
 
-  $: disableOptionDict = disableOptions.reduce<{ [key:string]: boolean }>(
+  $: disableOptionDict = disableOptions.reduce<{ [key: string]: boolean }>(
     (acc, opt) => ({ ...acc, [opt]: true }),
     {}
   )
@@ -319,7 +319,7 @@
 
   ul.options li.disabled {
     background: var(--sms-li-disabled-bg, #f5f5f6);
-    color: #b8b8b8;
+    color: var(--sms-li-disabled-text, #b8b8b8);
     cursor: default;
   }
   ul.options li.disabled:hover {
