@@ -35,7 +35,9 @@
   $: invalidDisabledOptions = disabledOptions.filter((opt) => !options.includes(opt))
 
   $: if (invalidDisabledOptions.length > 0) {
-    console.error(`Some disabledOptions do not appear in the options list!`)
+    console.error(
+      `Some disabledOptions are invalid as they do not appear in the options list: ${invalidDisabledOptions}`
+    )
   }
 
   const dispatch = createEventDispatcher()
