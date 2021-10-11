@@ -10,7 +10,8 @@
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let readonly = false
   export let placeholder = ``
-  export let options: string[]
+  export let options: (string | number)[]
+  export let disabledOptions: (string | number)[] = []
   export let input: HTMLInputElement | null = null
   export let noOptionsMsg = `No matching options`
 
@@ -30,6 +31,12 @@
   if (!selected) selected = single ? `` : []
 
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
+
+  $: invalidDisabledOptions = disabledOptions.filter((opt) => !options.includes(opt))
+
+  $: if (invalidDisabledOptions.length > 0) {
+    console.error(`Some disabledOptions do not appear in the options list!`)
+  }
 
   const dispatch = createEventDispatcher()
   let activeOption: string, searchText: string
@@ -85,6 +92,8 @@
       searchText = ``
     } else if (event.key === `Enter`) {
       if (activeOption) {
+        if (isDisabled(activeOption)) return
+
         selected.includes(activeOption) ? remove(activeOption) : add(activeOption)
         searchText = ``
       } // no active option means the options are closed in which case enter means open
@@ -113,6 +122,8 @@
     selected = single ? `` : []
     searchText = ``
   }
+
+  const isDisabled = (option: string) => disabledOptions.includes(option)
 
   $: isSelected = (option: string) => {
     if (!(selected?.length > 0)) return false // nothing is selected if `selected` is the empty array or string
@@ -183,10 +194,14 @@
       {#each filteredOptions as option}
         <li
           on:mouseup|preventDefault|stopPropagation
-          on:mousedown|preventDefault|stopPropagation={() =>
-            isSelected(option) ? remove(option) : add(option)}
+          on:mousedown|preventDefault|stopPropagation={() => {
+            if (isDisabled(option)) return
+
+            isSelected(option) ? remove(option) : add(option)
+          }}
           class:selected={isSelected(option)}
           class:active={activeOption === option}
+          class:disabled={isDisabled(option)}
           class={liOptionClass}>
           {option}
         </li>
@@ -271,7 +286,6 @@
     padding: 0;
     top: 100%;
     width: 100%;
-    cursor: pointer;
     position: absolute;
     border-radius: 1ex;
     overflow: auto;
@@ -282,6 +296,7 @@
   }
   ul.options li {
     padding: 3pt 2ex;
+    cursor: pointer;
   }
   ul.options li.selected {
     border-left: var(
@@ -300,5 +315,13 @@
   }
   ul.options li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
+  }
+  ul.options li.disabled {
+    background: var(--sms-li-disabled-bg, #f5f5f6);
+    color: var(--sms-li-disabled-text, #b8b8b8);
+    cursor: not-allowed;
+  }
+  ul.options li.disabled:hover {
+    border-left: unset;
   }
 </style>
