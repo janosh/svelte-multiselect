@@ -10,8 +10,8 @@
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let readonly = false
   export let placeholder = ``
-  export let options: string[]
-  export let disabledOptions: string[] = []
+  export let options: (string | number)[]
+  export let disabledOptions: (string | number)[] = []
   export let input: HTMLInputElement | null = null
   export let noOptionsMsg = `No matching options`
 
