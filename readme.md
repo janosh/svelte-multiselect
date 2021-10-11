@@ -142,6 +142,8 @@ The first, if you only want to make small adjustments, allows you to pass the fo
 - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
 - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
 - `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
+- `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled option in the list;
+- `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the list;
 
 For example, to change the background color of the options dropdown:
 

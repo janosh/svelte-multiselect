@@ -24,11 +24,6 @@
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
 
-  $: disableOptionDict = disableOptions.reduce<{ [key: string]: boolean }>(
-    (acc, opt) => ({ ...acc, [opt]: true }),
-    {}
-  )
-
   if (maxSelect !== null && maxSelect < 0) {
     throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
@@ -91,9 +86,7 @@
       searchText = ``
     } else if (event.key === `Enter`) {
       if (activeOption) {
-        if (disableOptionDict[activeOption]) {
-          return
-        }
+        if (isDisabled(activeOption)) return
 
         selected.includes(activeOption) ? remove(activeOption) : add(activeOption)
         searchText = ``
@@ -123,6 +116,8 @@
     selected = single ? `` : []
     searchText = ``
   }
+
+  const isDisabled = (option: string) => disableOptions.includes(option)
 
   $: isSelected = (option: string) => {
     if (!(selected?.length > 0)) return false // nothing is selected if `selected` is the empty array or string
@@ -194,14 +189,13 @@
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() => {
-            if (disableOptionDict[option]) {
-              return
-            }
+            if (isDisabled(option)) return
+
             isSelected(option) ? remove(option) : add(option)
           }}
           class:selected={isSelected(option)}
           class:active={activeOption === option}
-          class:disabled={disableOptionDict[option]}
+          class:disabled={isDisabled(option)}
           class={liOptionClass}>
           {option}
         </li>
