@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MultiSelect from '../lib/MultiSelect.svelte'
+  import MultiSelect from '../lib'
   import { webFrameworks, mlFrameworks } from './frameworks'
 
   let selectedWeb: string[]
