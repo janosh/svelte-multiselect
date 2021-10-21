@@ -269,7 +269,7 @@
     /* needed to hide red shadow around required inputs in some browsers */
     box-shadow: none;
     color: var(--sms-text-color, inherit);
-    flex: 1;
+    width: 1pt; /* fixes issue #12  */
   }
 
   :where(ul.tokens) {

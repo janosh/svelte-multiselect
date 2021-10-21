@@ -64,7 +64,7 @@ yarn add -D svelte-multiselect
 
 Favorite Web Frameworks?
 
-{JSON.stringify(selected, null, 2)}
+<code>selected = {JSON.stringify(selected)}</code>
 
 <MultiSelect bind:selected options={webFrameworks} />
 ```
