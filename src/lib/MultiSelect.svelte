@@ -10,8 +10,8 @@
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let readonly = false
   export let placeholder = ``
-  export let options: (string | number)[]
-  export let disabledOptions: (string | number)[] = []
+  export let options: string[]
+  export let disabledOptions: string[] = []
   export let input: HTMLInputElement | null = null
   export let noOptionsMsg = `No matching options`
 
@@ -134,7 +134,7 @@
   }
 </script>
 
-<!-- z-index: 2 when showOptions is ture ensures the ul.tokens of one <MultiSelect /> display above those of another following shortly after it -->
+<!-- z-index: 2 when showOptions is true ensures the ul.tokens of one <MultiSelect /> display above those of another following shortly after it -->
 <div
   class="multiselect {outerDivClass}"
   class:readonly
@@ -215,7 +215,7 @@
 </div>
 
 <style>
-  .multiselect {
+  :where(.multiselect) {
     position: relative;
     margin: 1em 0;
     border: var(--sms-border, 1pt solid lightgray);
@@ -225,14 +225,14 @@
     display: flex;
     cursor: text;
   }
-  .multiselect:focus-within {
+  :where(.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
-  .multiselect.readonly {
+  :where(.multiselect.readonly) {
     background: var(--sms-readonly-bg, lightgray);
   }
 
-  ul.tokens > li {
+  :where(ul.tokens > li) {
     background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue));
     align-items: center;
     border-radius: 4pt;
@@ -243,19 +243,17 @@
     white-space: nowrap;
     height: 16pt;
   }
-  ul.tokens > li button,
-  button.remove-all {
+  :where(ul.tokens > li button, button.remove-all) {
     align-items: center;
     border-radius: 50%;
     display: flex;
     cursor: pointer;
     transition: 0.2s;
   }
-  ul.tokens > li button:hover,
-  button.remove-all:hover {
+  :where(ul.tokens > li button:hover, button.remove-all:hover) {
     color: var(--sms-remove-x-hover-color, lightgray);
   }
-  button {
+  :where(button) {
     color: inherit;
     background: transparent;
     border: none;
@@ -264,7 +262,7 @@
     padding: 0 2pt;
   }
 
-  .multiselect input {
+  :where(.multiselect input) {
     border: none;
     outline: none;
     background: none;
@@ -274,7 +272,7 @@
     flex: 1;
   }
 
-  ul.tokens {
+  :where(ul.tokens) {
     display: flex;
     padding: 0;
     margin: 0;
@@ -282,7 +280,7 @@
     flex: 1;
   }
 
-  ul.options {
+  :where(ul.options) {
     list-style: none;
     max-height: 50vh;
     padding: 0;
@@ -293,14 +291,14 @@
     overflow: auto;
     background: var(--sms-options-bg, white);
   }
-  ul.options.hidden {
+  :where(ul.options.hidden) {
     visibility: hidden;
   }
-  ul.options li {
+  :where(ul.options li) {
     padding: 3pt 2ex;
     cursor: pointer;
   }
-  ul.options li.selected {
+  :where(ul.options li.selected) {
     border-left: var(
       --sms-li-selected-border-left,
       3pt solid var(--sms-selected-color, green)
@@ -308,22 +306,22 @@
     background: var(--sms-li-selected-bg, inherit);
     color: var(--sms-li-selected-color, inherit);
   }
-  ul.options li:not(.selected):hover {
+  :where(ul.options li:not(.selected):hover) {
     border-left: var(
       --sms-li-not-selected-hover-border-left,
       3pt solid var(--sms-active-color, cornflowerblue)
     );
     border-left: 3pt solid var(--blue);
   }
-  ul.options li.active {
+  :where(ul.options li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
   }
-  ul.options li.disabled {
+  :where(ul.options li.disabled) {
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
     cursor: not-allowed;
   }
-  ul.options li.disabled:hover {
+  :where(ul.options li.disabled:hover) {
     border-left: unset;
   }
 </style>
