@@ -13,6 +13,7 @@
   export let options: string[]
   export let disabledOptions: string[] = []
   export let input: HTMLInputElement | null = null
+  export let name = ``
   export let noOptionsMsg = `No matching options`
 
   export let outerDivClass = ``
@@ -173,6 +174,7 @@
       on:focus={() => setOptionsVisible(true)}
       on:blur={() => dispatch(`blur`)}
       on:blur={() => setOptionsVisible(false)}
+      {name}
       placeholder={selected.length ? `` : placeholder} />
   </ul>
   {#if readonly}
@@ -266,8 +268,6 @@
     border: none;
     outline: none;
     background: none;
-    /* needed to hide red shadow around required inputs in some browsers */
-    box-shadow: none;
     color: var(--sms-text-color, inherit);
     width: 1pt; /* fixes issue #12  */
   }

@@ -75,17 +75,16 @@ Full list of props/bindable variables for this component:
 
 <div class="table">
 
-| name              | default                             | description                                                                                                                                                                                                                                                                                                   |
-| :---------------- | :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `options`         | [required]                          | Array of strings that will be listed in the dropdown selection.                                                                                                                                                                                                                                               |
-| `maxSelect`       | `null`                              | `null` or positive integer to allow users to select as many as they like or a maximum number of options, respectively.                                                                                                                                                                                        |
-| `selected`        | `[]` (or `''` if `maxSelect === 1`) | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                                                                                                                                           |
-| `readonly`        | `false`                             | Disables the input. User won't be able to interact with it.                                                                                                                                                                                                                                                   |
-| `placeholder`     | `''`                                | String shown when no option is selected.                                                                                                                                                                                                                                                                      |
-| `disabledOptions` | `[]`                                | Array of strings that will be disabled in the dropdown selection.                                                                                                                                                                                                                                             |
-| `required`        | `false`                             | Prevents submission in an HTML form when true.                                                                                                                                                                                                                                                                |
-| `input`           | `undefined`                         | Handle to the DOM node storing the currently selected options in JSON format as its `value` attribute.                                                                                                                                                                                                        |
-| `name`            | `''`                                | Used as `name` reference for associating HTML form `<label>`s with this component as well as for the `<input>`'s `id`. That is, the same DOM node bindable through `<MultiSelect bind:input />` is also retrievable via `document.getElementByID(name)` e.g. for use in a JS file outside a Svelte component. |
+| name              | default                             | description                                                                                                                                                                |
+| :---------------- | :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`         | N/A (required prop)                 | Array of strings that will be listed in the dropdown selection.                                                                                                            |
+| `maxSelect`       | `null`                              | `null` or positive integer to allow users to select as many as they like or a maximum number of options, respectively.                                                     |
+| `selected`        | `[]` (or `''` if `maxSelect === 1`) | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                        |
+| `readonly`        | `false`                             | Disables the component. It will still be rendered but users won't be able to interact with it.                                                                             |
+| `placeholder`     | `''`                                | String shown in the text input when no option is selected.                                                                                                                 |
+| `disabledOptions` | `[]`                                | Array of strings to be disabled in the dropdown selection. Corresponding `<li>` elements in the dropdown list can be styled through the `ul.options li.disabled` selector. |
+| `input`           | `undefined`                         | Handle to the `<input>` DOM node.                                                                                                                                          |
+| `name`            | `''`                                | Passed to the `<input>` for associating HTML form `<label>`s with this component. E.g. clicking a `<label>` with same name will focus this component.                      |
 
 </div>
 
@@ -102,9 +101,10 @@ Full list of props/bindable variables for this component:
 
 ### Examples
 
+<!-- prettier-ignore -->
 - `on:add={(event) => console.log(event.detail.token)}`
 - `on:remove={(event) => console.log(event.detail.token)}`.
-- `` on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)} ``
+- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)}``
 - `on:blur={yourFunctionHere}`
 
 ```svelte
@@ -197,20 +197,22 @@ You can alternatively style every part of this component with more fine-grained 
 :global(.multiselect ul.options li) {
   /* dropdown options */
 }
-:global(ul.options li.selected) {
+:global(.multiselect ul.options li.selected) {
   /* selected options in the dropdown list */
 }
-:global(ul.options li:not(.selected):hover) {
+:global(.multiselect ul.options li:not(.selected):hover) {
   /* unselected but hovered options in the dropdown list */
 }
-:global(ul.options li.selected:hover) {
+:global(.multiselect ul.options li.selected:hover) {
   /* selected and hovered options in the dropdown list */
   /* probably not necessary to style this state in most cases */
 }
-:global(ul.options li.active) {
+:global(.multiselect ul.options li.active) {
   /* active means element was navigated to with up/down arrow keys */
   /* ready to be selected by pressing enter */
 }
-:global(ul.options li.selected.active) {
+:global(.multiselect ul.options li.selected.active) {
+}
+:global(.multiselect ul.options li.disabled) {
 }
 ```
