@@ -134,10 +134,11 @@ The first, if you only want to make small adjustments, allows you to pass the fo
 - `border: var(--sms-border, 1pt solid lightgray)`: Border around top-level `div.multiselect`. Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
 - `border-radius: var(--sms-border-radius, 5pt)`: `div.multiselect` border radius.
 - `color: var(--sms-text-color, inherit)`: Input text color.
-- `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: `div.multiselect` border when focused.
+- `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: `div.multiselect` border when focused. Falls back to `--sms-active-color` if not set which in turn falls back on `cornflowerblue`.
 - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
 - `background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue))`: Background of selected tokens.
-- `color: var(--sms-remove-x-hover-color, lightgray)`: Hover color of cross icon to remove selected tokens.
+- `color: var(--sms-remove-x-hover+focus-color, lightgray)`: Hover color of cross icon to remove selected tokens.
+- `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `background: var(--sms-options-bg, white)`: Background of options list.
 - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
 - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
@@ -212,7 +213,9 @@ You can alternatively style every part of this component with more fine-grained 
   /* ready to be selected by pressing enter */
 }
 :global(.multiselect ul.options li.selected.active) {
+  /* both active and already selected, pressing enter now will deselect the element again */
 }
 :global(.multiselect ul.options li.disabled) {
+  /* this option is one included in disabledOptions (see props above) */
 }
 ```
