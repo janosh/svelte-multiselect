@@ -133,6 +133,13 @@
     if (single) return selected === option
     else return selected.includes(option)
   }
+
+  const handleEnterAndSpaceKeys = (handler: () => void) => (event: KeyboardEvent) => {
+    if ([`Enter`, `Space`].includes(event.code)) {
+      event.preventDefault()
+      handler()
+    }
+  }
 </script>
 
 <!-- z-index: 2 when showOptions is true ensures the ul.tokens of one <MultiSelect /> display above those of another following shortly after it -->
@@ -157,6 +164,7 @@
           {#if !readonly}
             <button
               on:mouseup|stopPropagation={() => remove(tag)}
+              on:keydown={handleEnterAndSpaceKeys(() => remove(tag))}
               type="button"
               title="{removeBtnTitle} {tag}">
               <CrossIcon height="12pt" />
@@ -185,6 +193,7 @@
       class="remove-all"
       title={removeAllTitle}
       on:mouseup|stopPropagation={removeAll}
+      on:keydown={handleEnterAndSpaceKeys(removeAll)}
       style={selected.length === 0 ? `display: none;` : ``}>
       <CrossIcon height="14pt" />
     </button>
@@ -252,9 +261,6 @@
     cursor: pointer;
     transition: 0.2s;
   }
-  :where(ul.tokens > li button:hover, button.remove-all:hover) {
-    color: var(--sms-remove-x-hover-color, lightgray);
-  }
   :where(button) {
     color: inherit;
     background: transparent;
@@ -263,13 +269,21 @@
     outline: none;
     padding: 0 2pt;
   }
+  :where(ul.tokens > li button:hover, button.remove-all:hover) {
+    color: var(--sms-remove-x-hover-focus-color, lightskyblue);
+  }
+  :where(button:focus) {
+    color: var(--sms-remove-x-hover-focus-color, lightskyblue);
+    transform: scale(1.04);
+  }
 
   :where(.multiselect input) {
     border: none;
     outline: none;
     background: none;
     color: var(--sms-text-color, inherit);
-    width: 1pt; /* fixes issue #12  */
+    flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
+    min-width: 2em;
   }
 
   :where(ul.tokens) {
