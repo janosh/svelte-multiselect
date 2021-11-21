@@ -109,7 +109,8 @@ Full list of props/bindable variables for this component:
 
 ```svelte
 <MultiSelect
-  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token}'`)} />
+  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token}'`)}
+/>
 ```
 
 ## Want to contribute?

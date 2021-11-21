@@ -22,7 +22,8 @@
       bind:selected={selectedWeb}
       {placeholder}
       --sms-active-color="var(--blue)"
-      --sms-options-bg="black" />
+      --sms-options-bg="black"
+    />
   </div>
   <div>
     <h3>Single Select</h3>
@@ -38,7 +39,8 @@
       {placeholder}
       {disabledOptions}
       --sms-active-color="var(--blue)"
-      --sms-options-bg="black" />
+      --sms-options-bg="black"
+    />
   </div>
 </section>
 
