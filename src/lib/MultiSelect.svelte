@@ -203,7 +203,7 @@
     <ul
       class="options {ulOptionsClass}"
       class:hidden={!showOptions}
-      transition:fly={{ duration: 300, y: 40 }}>
+      transition:fly|local={{ duration: 300, y: 40 }}>
       {#each filteredOptions as option}
         <li
           on:mouseup|preventDefault|stopPropagation
