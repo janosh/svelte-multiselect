@@ -18,19 +18,22 @@
   <a href="https://npmjs.com/package/svelte-multiselect">
     <img
       alt="NPM version"
-      src="https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM" />
+      src="https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM"
+    />
   </a>
 
   <a href="https://app.netlify.com/sites/svelte-multiselect/deploys">
     <img
       alt="Netlify Status"
-      src="https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status" />
+      src="https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status"
+    />
   </a>
 
   <a href="https://results.pre-commit.ci/latest/github/janosh/svelte-multiselect/main">
     <img
       alt="pre-commit.ci status"
-      src="https://results.pre-commit.ci/badge/github/janosh/svelte-multiselect/main.svg" />
+      src="https://results.pre-commit.ci/badge/github/janosh/svelte-multiselect/main.svg"
+    />
   </a>
 
   <Example />

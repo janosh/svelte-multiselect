@@ -148,7 +148,8 @@
   class:readonly
   class:single
   style={showOptions ? `z-index: 2;` : ``}
-  on:mouseup|stopPropagation={() => setOptionsVisible(true)}>
+  on:mouseup|stopPropagation={() => setOptionsVisible(true)}
+>
   <ExpandIcon height="14pt" style="padding-left: 1pt;" />
   <ul class="tokens {ulTokensClass}">
     {#if single}
@@ -159,14 +160,16 @@
       {#each selected as tag}
         <li
           class={liTokenClass}
-          on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
+          on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
+        >
           {tag}
           {#if !readonly}
             <button
               on:mouseup|stopPropagation={() => remove(tag)}
               on:keydown={handleEnterAndSpaceKeys(() => remove(tag))}
               type="button"
-              title="{removeBtnTitle} {tag}">
+              title="{removeBtnTitle} {tag}"
+            >
               <CrossIcon height="12pt" />
             </button>
           {/if}
@@ -183,7 +186,8 @@
       on:blur={() => dispatch(`blur`)}
       on:blur={() => setOptionsVisible(false)}
       {name}
-      placeholder={selected.length ? `` : placeholder} />
+      placeholder={selected.length ? `` : placeholder}
+    />
   </ul>
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
@@ -194,7 +198,8 @@
       title={removeAllTitle}
       on:mouseup|stopPropagation={removeAll}
       on:keydown={handleEnterAndSpaceKeys(removeAll)}
-      style={selected.length === 0 ? `display: none;` : ``}>
+      style={selected.length === 0 ? `display: none;` : ``}
+    >
       <CrossIcon height="14pt" />
     </button>
   {/if}
@@ -203,7 +208,8 @@
     <ul
       class="options {ulOptionsClass}"
       class:hidden={!showOptions}
-      transition:fly={{ duration: 300, y: 40 }}>
+      transition:fly|local={{ duration: 300, y: 40 }}
+    >
       {#each filteredOptions as option}
         <li
           on:mouseup|preventDefault|stopPropagation
@@ -215,7 +221,8 @@
           class:selected={isSelected(option)}
           class:active={activeOption === option}
           class:disabled={isDisabled(option)}
-          class={liOptionClass}>
+          class={liOptionClass}
+        >
           {option}
         </li>
       {:else}
