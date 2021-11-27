@@ -1,8 +1,8 @@
 <script>
-  import Example from '../components/Example.svelte'
   import Toc from 'svelte-toc'
-  import Docs from '../docs.svx'
+  import Example from '../components/Example.svelte'
   import GitHubCorner from '../components/GitHubCorner.svelte'
+  import Docs from '../docs.svx'
 </script>
 
 <Toc headingSelector="main :where(h2, h3, h4)" />

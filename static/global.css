@@ -2,6 +2,11 @@
   --night: #10002c;
   --blue: #0461cc;
 }
+html {
+  /* smoothly scroll heading links into view, unfortunately also applies to jumping
+  between matches when searching site https://stackoverflow.com/a/51588820 */
+  scroll-behavior: smooth;
+}
 body {
   background: var(--night);
   padding: calc(1ex + 2vw);
@@ -31,6 +36,7 @@ a:hover {
   color: orange;
 }
 code {
+  overflow-wrap: break-word;
   padding: 0 2pt;
   border-radius: 2pt;
   font-size: 1.2em;
@@ -62,12 +68,12 @@ tbody tr:nth-child(odd) {
   background: black;
 }
 
-/* style links added by rehype-autolink-headings, see svelte.config.js */
-:where(h2, h3, h4, h5, h6) a {
+/* style heading anchors added by rehype-autolink-headings, see svelte.config.js */
+:where(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
   transition: 0.3s;
   margin-left: 4pt;
   opacity: 0;
 }
-:where(h2, h3, h4, h5, h6):hover a {
+:where(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
   opacity: 1;
 }
