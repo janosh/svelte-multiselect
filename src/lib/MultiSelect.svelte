@@ -2,9 +2,7 @@
   import { createEventDispatcher } from 'svelte'
   import { fly } from 'svelte/transition'
 
-  import CrossIcon from './icons/Cross.svelte'
-  import ExpandIcon from './icons/ChevronExpand.svelte'
-  import ReadOnlyIcon from './icons/ReadOnly.svelte'
+  import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
 
   export let selected: string[] | string
   export let maxSelect: number | null = null // null means any number of options are selectable

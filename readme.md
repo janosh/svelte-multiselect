@@ -20,7 +20,7 @@
 
 <!-- remove above in docs -->
 
-Keyboard-friendly, zero-dependency multi-select Svelte component.
+**Keyboard-friendly, zero-dependency multi-select Svelte component.**
 
 ## Key Features
 
@@ -113,17 +113,6 @@ Full list of props/bindable variables for this component:
 />
 ```
 
-## Want to contribute?
-
-To submit a PR, clone the repo, install dependencies and start the dev server to try out your changes first.
-
-```sh
-git clone https://github.com/janosh/svelte-multiselect
-cd svelte-multiselect
-yarn
-yarn dev
-```
-
 ## Styling
 
 There are 3 ways to style this component.
@@ -180,14 +169,14 @@ This simplified version of the DOM structure of this component shows where these
 
 ### Granular control through global CSS
 
-You can alternatively style every part of this component with more fine-grained control by using the following `:global()` CSS selectors.
+You can alternatively style every part of this component with more fine-grained control by using the following `:global()` CSS selectors. `ul.tokens` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component has focus.
 
 ```css
 :global(.multiselect) {
   /* top-level wrapper div */
 }
 :global(.multiselect ul.tokens > li) {
-  /* the blue tags representing selected options with remove buttons inside the input */
+  /* selected options */
 }
 :global(.multiselect ul.tokens > li button),
 :global(.multiselect button.remove-all) {
@@ -197,7 +186,7 @@ You can alternatively style every part of this component with more fine-grained 
   /* dropdown options */
 }
 :global(.multiselect ul.options li) {
-  /* dropdown options */
+  /* dropdown list of available options */
 }
 :global(.multiselect ul.options li.selected) {
   /* selected options in the dropdown list */
@@ -210,13 +199,24 @@ You can alternatively style every part of this component with more fine-grained 
   /* probably not necessary to style this state in most cases */
 }
 :global(.multiselect ul.options li.active) {
-  /* active means element was navigated to with up/down arrow keys */
+  /* active means item was navigated to with up/down arrow keys */
   /* ready to be selected by pressing enter */
 }
 :global(.multiselect ul.options li.selected.active) {
-  /* both active and already selected, pressing enter now will deselect the element again */
+  /* both active and already selected, pressing enter now will deselect the item */
 }
 :global(.multiselect ul.options li.disabled) {
-  /* this option is one included in disabledOptions (see props above) */
+  /* options included in disabledOptions (see props above) */
 }
+```
+
+## Want to contribute?
+
+To submit a PR, clone the repo, install dependencies and start the dev server to try out your changes.
+
+```sh
+git clone https://github.com/janosh/svelte-multiselect
+cd svelte-multiselect
+yarn
+yarn dev
 ```
