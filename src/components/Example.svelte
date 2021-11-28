@@ -1,67 +1,64 @@
 <script lang="ts">
-  import MultiSelect from '../lib'
-  import { webFrameworks, mlFrameworks } from './frameworks'
+  import MultiSelect, { Option, _Option, Primitive } from '../lib'
+  import { mlFrameworks, webFrameworks } from './frameworks'
 
-  let selectedWeb: string[]
-  let selectedML = `PyTorch`
+  let selectedWeb: Primitive[]
+  let activeWeb: _Option
+  let selectedML: Option[] = [{ label: `PyTorch` }]
+
+  // used to show user hint to try arrow keys but only once
+  let neverActive = true
+  $: if (activeWeb) neverActive = false
 
   const placeholder = `Take your pick...`
   const disabledOptions = [`Torch`, `CNTK`]
 </script>
 
 <section>
-  <div>
-    <h3>Multi Select</h3>
+  <h3>Multi Select</h3>
 
-    <p>Favorite Web Frameworks?</p>
+  <p>Favorite Web Frameworks?</p>
 
-    <pre><code>selected = {JSON.stringify(selectedWeb)}</code></pre>
+  <pre><code>selected = {JSON.stringify((selectedWeb))}</code></pre>
+  <pre><code>activeOption = {JSON.stringify((activeWeb))} {#if neverActive}
+    // Use up/down arrow keys to make an option active
+  {/if}</code></pre>
 
-    <MultiSelect
-      options={webFrameworks}
-      bind:selected={selectedWeb}
-      {placeholder}
-      --sms-active-color="var(--blue)"
-      --sms-options-bg="black"
-    />
-  </div>
-  <div>
-    <h3>Single Select</h3>
+  <MultiSelect
+    options={webFrameworks}
+    bind:selectedLabels={selectedWeb}
+    bind:activeOption={activeWeb}
+    {placeholder}
+    --sms-active-color="var(--blue)"
+    --sms-options-bg="black"
+  />
+</section>
+<section>
+  <h3>Single Select</h3>
 
-    <p>Favorite Machine Learning Framework?</p>
+  <p>Favorite Machine Learning Framework?</p>
 
-    <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
+  <pre><code>selected = {JSON.stringify(selectedML[0]?.label)}</code></pre>
 
-    <MultiSelect
-      maxSelect={1}
-      options={mlFrameworks}
-      bind:selected={selectedML}
-      {placeholder}
-      {disabledOptions}
-      --sms-active-color="var(--blue)"
-      --sms-options-bg="black"
-    />
-  </div>
+  <MultiSelect
+    maxSelect={1}
+    options={mlFrameworks}
+    bind:selected={selectedML}
+    {placeholder}
+    {disabledOptions}
+    --sms-active-color="var(--blue)"
+    --sms-options-bg="black"
+  />
 </section>
 
 <style>
   section {
-    display: flex;
-    gap: 1em;
-  }
-  section div {
-    flex: 1;
-    background-color: #211734;
+    margin-top: 2em;
+    background-color: #28154b;
     border-radius: 1ex;
-    padding: 0 1.4ex;
-    flex-shrink: 1;
+    padding: 1pt 1.4ex;
   }
   pre {
     white-space: pre-wrap;
-  }
-  @media (max-width: 600px) {
-    section {
-      flex-direction: column;
-    }
   }
 </style>

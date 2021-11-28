@@ -1,18 +1,19 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
   import { fly } from 'svelte/transition'
-
+  import type { Option, _Option, Primitive } from './'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
-
-  export let selected: string[] | string
+  export let selected: Option[] = []
+  export let selectedLabels: Primitive[] = []
+  export let selectedValues: Primitive[] = []
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let readonly = false
   export let placeholder = ``
-  export let options: string[]
-  export let disabledOptions: string[] = []
+  export let options: Option[]
   export let input: HTMLInputElement | null = null
   export let name = ``
   export let noOptionsMsg = `No matching options`
+  export let activeOption: _Option | null = null
 
   export let outerDivClass = ``
   export let ulTokensClass = ``
@@ -22,60 +23,77 @@
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
+  export let defaultDisabledTitle = `This option is disabled`
 
   if (maxSelect !== null && maxSelect < 0) {
-    throw new TypeError(`maxSelect must be null or positive integer, got ${maxSelect}`)
+    console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  $: single = maxSelect === 1
-  if (!selected) selected = single ? `` : []
-
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
+  if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
-  $: invalidDisabledOptions = disabledOptions.filter((opt) => !options.includes(opt))
+  $: _options = options.map((option) => {
+    if (!option.id) option.id = option.label
+    if (!option.value) option.value = option.label
+    if (!option.disabledTitle) option.disabledTitle = defaultDisabledTitle
+    return option
+  }) as _Option[]
 
-  $: if (invalidDisabledOptions.length > 0) {
+  $: ids = _options.map((op) => op.id)
+
+  $: if (new Set(ids).size !== options.length) {
     console.error(
-      `Some disabledOptions are invalid as they do not appear in the options list: ${invalidDisabledOptions}`
+      `Option IDs must be unique. Duplicate IDs found: ${ids.filter(
+        (id, idx) => ids.indexOf(id) !== idx
+      )}. May be due to duplicate option values being used as IDs. In that case, specify IDs explicitly.`
     )
   }
 
+  $: selectedIds = selected.map((op) => op.id)
+  $: selectedLabels = selected.map((op) => op.label)
+  $: selectedValues = selected.map((op) => op.value)
+
   const dispatch = createEventDispatcher()
-  let activeOption: string, searchText: string
+  let searchText = ``
   let showOptions = false
 
-  $: filteredOptions = searchText
-    ? options.filter((option) => option.toLowerCase().includes(searchText.toLowerCase()))
-    : options
+  $: matchingOptions = _options.filter((op) => {
+    if (!searchText) return true
+    return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+  })
+
   $: if (
-    (activeOption && !filteredOptions.includes(activeOption)) ||
+    // if there was an active option but it's not in the filtered list of options
+    (activeOption && !matchingOptions.map((op) => op.id).includes(activeOption.id)) ||
+    // or there's no active option but the user entered search text
     (!activeOption && searchText)
   )
-    activeOption = filteredOptions[0]
+    // make the first filtered option active
+    activeOption = matchingOptions[0]
 
-  function add(token: string) {
+  function add(id: Primitive) {
     if (
       !readonly &&
-      !selected.includes(token) &&
-      // (... || single) because in single mode, we always replace current token with new selection
-      (maxSelect === null || selected.length < maxSelect || single)
+      !selectedIds.includes(id) &&
+      // for maxselect = 1 we always replace current token with new selection
+      (maxSelect == null || maxSelect == 1 || selected.length < maxSelect)
     ) {
       searchText = `` // reset search string on selection
-      selected = single ? token : [token, ...selected]
-      if (
-        (Array.isArray(selected) && selected.length === maxSelect) ||
-        typeof selected === `string`
-      ) {
-        setOptionsVisible(false)
-        input?.blur()
+      const token = options.find((op) => op.id === id)
+      if (!token) {
+        console.error(`MultiSelect: option with id ${id} not found`)
+        return
       }
+      selected = [token, ...selected]
+      if (selected.length === maxSelect) setOptionsVisible(false)
       dispatch(`add`, { token })
       dispatch(`change`, { token, type: `add` })
     }
   }
 
-  function remove(token: string) {
-    if (readonly || typeof selected === `string`) return
-    selected = selected.filter((item: string) => item !== token)
+  function remove(id: Primitive) {
+    if (selected.length === 0 || readonly) return
+    selected = selected.filter((token: Option) => id !== token.id)
+    const token = options.find((option) => option.id === id)
     dispatch(`remove`, { token })
     dispatch(`change`, { token, type: `remove` })
   }
@@ -85,52 +103,56 @@
     if (readonly || show === showOptions) return
     showOptions = show
     if (show) input?.focus()
+    else {
+      input?.blur()
+      activeOption = null
+    }
   }
 
+  // handle all keyboard events this component receives
   function handleKeydown(event: KeyboardEvent) {
+    // on escape: dismiss options dropdown and reset search text
     if (event.key === `Escape`) {
       setOptionsVisible(false)
       searchText = ``
-    } else if (event.key === `Enter`) {
+    }
+    // on enter key: toggle active option and reset search text
+    else if (event.key === `Enter`) {
       if (activeOption) {
-        if (isDisabled(activeOption)) return
-
-        selected.includes(activeOption) ? remove(activeOption) : add(activeOption)
+        const { id, disabled } = activeOption
+        if (disabled) return
+        selectedIds.includes(id) ? remove(id) : add(id)
         searchText = ``
-      } // no active option means the options are closed in which case enter means open
+      } // no active option means the options dropdown is closed in which case enter means open it
       else setOptionsVisible(true)
-    } else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
+    }
+    // on up/down arrow keys: update active option
+    else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       const increment = event.key === `ArrowUp` ? -1 : 1
-      const newActiveIdx = filteredOptions.indexOf(activeOption) + increment
+      const newActiveIdx = matchingOptions.indexOf(activeOption) + increment
 
       if (newActiveIdx < 0) {
-        activeOption = filteredOptions[filteredOptions.length - 1]
-      } else {
-        if (newActiveIdx === filteredOptions.length) activeOption = filteredOptions[0]
-        else activeOption = filteredOptions[newActiveIdx]
-      }
+        // wrap around top
+        activeOption = matchingOptions[matchingOptions.length - 1]
+        // wrap around bottom
+      } else if (newActiveIdx === matchingOptions.length) {
+        activeOption = matchingOptions[0]
+        // default case
+      } else activeOption = matchingOptions[newActiveIdx]
     } else if (event.key === `Backspace`) {
-      // only remove selected tags on backspace if if there are any and no searchText characters remain
-      if (selected.length > 0 && searchText.length === 0) {
-        selected = selected.slice(0, selected.length - 1)
-      }
+      const id = selectedIds.pop()
+      if (id && !searchText) remove(id)
     }
   }
 
   const removeAll = () => {
     dispatch(`remove`, { token: selected })
     dispatch(`change`, { token: selected, type: `remove` })
-    selected = single ? `` : []
+    selected = []
     searchText = ``
   }
 
-  const isDisabled = (option: string) => disabledOptions.includes(option)
-
-  $: isSelected = (option: string) => {
-    if (!(selected?.length > 0)) return false // nothing is selected if `selected` is the empty array or string
-    if (single) return selected === option
-    else return selected.includes(option)
-  }
+  $: isSelected = (id: Primitive) => selectedIds.includes(id)
 
   const handleEnterAndSpaceKeys = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
@@ -140,33 +162,34 @@
   }
 </script>
 
-<!-- z-index: 2 when showOptions is true ensures the ul.tokens of one <MultiSelect /> display above those of another following shortly after it -->
+<!-- z-index: 2 when showOptions is true ensures the ul.tokens of one <MultiSelect />
+display above those of another following shortly after it -->
 <div
   class="multiselect {outerDivClass}"
   class:readonly
-  class:single
+  class:single={maxSelect == 1}
   style={showOptions ? `z-index: 2;` : ``}
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
 >
   <ExpandIcon height="14pt" style="padding-left: 1pt;" />
   <ul class="tokens {ulTokensClass}">
-    {#if single}
+    {#if maxSelect == 1 && selected[0]?.label}
       <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
-        {selected}
+        {selected[0].label}
       </span>
-    {:else if selected?.length > 0}
-      {#each selected as tag}
+    {:else}
+      {#each selected as { label, id }}
         <li
           class={liTokenClass}
           on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
         >
-          {tag}
+          {label}
           {#if !readonly}
             <button
-              on:mouseup|stopPropagation={() => remove(tag)}
-              on:keydown={handleEnterAndSpaceKeys(() => remove(tag))}
+              on:mouseup|stopPropagation={() => remove(id)}
+              on:keydown={handleEnterAndSpaceKeys(() => remove(id))}
               type="button"
-              title="{removeBtnTitle} {tag}"
+              title="{removeBtnTitle} {id}"
             >
               <CrossIcon height="12pt" />
             </button>
@@ -184,19 +207,18 @@
       on:blur={() => dispatch(`blur`)}
       on:blur={() => setOptionsVisible(false)}
       {name}
-      placeholder={selected.length ? `` : placeholder}
+      placeholder={selectedIds.length ? `` : placeholder}
     />
   </ul>
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
-  {:else}
+  {:else if selected.length > 0}
     <button
       type="button"
       class="remove-all"
       title={removeAllTitle}
       on:mouseup|stopPropagation={removeAll}
       on:keydown={handleEnterAndSpaceKeys(removeAll)}
-      style={selected.length === 0 ? `display: none;` : ``}
     >
       <CrossIcon height="14pt" />
     </button>
@@ -208,20 +230,20 @@
       class:hidden={!showOptions}
       transition:fly|local={{ duration: 300, y: 40 }}
     >
-      {#each filteredOptions as option}
+      {#each matchingOptions as { label, id, disabled, title = '', selectedTitle, disabledTitle }}
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() => {
-            if (isDisabled(option)) return
-
-            isSelected(option) ? remove(option) : add(option)
+            if (disabled) return
+            isSelected(id) ? remove(id) : add(id)
           }}
-          class:selected={isSelected(option)}
-          class:active={activeOption === option}
-          class:disabled={isDisabled(option)}
+          class:selected={isSelected(id)}
+          class:active={activeOption?.id === id}
+          class:disabled
+          title={disabled ? disabledTitle : (isSelected(id) && selectedTitle) || title}
           class={liOptionClass}
         >
-          {option}
+          {label}
         </li>
       {:else}
         {noOptionsMsg}
