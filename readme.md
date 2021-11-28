@@ -29,7 +29,7 @@
 - **Searchable:** start typing to filter options
 - **Tagging:** selected options are recorded as tags within the text input
 - **Server-side rendering:** no reliance on browser objects like `window` or `document`
-- **Configurable:** see section [props](#props)
+- **Configurable:** see [props](#props)
 - **No dependencies:** needs only Svelte as dev dependency
 - **Keyboard friendly** for mouse-less form completion
 
@@ -75,16 +75,18 @@ Full list of props/bindable variables for this component:
 
 <div class="table">
 
-| name              | default                             | description                                                                                                                                                                |
-| :---------------- | :---------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `options`         | N/A (required prop)                 | Array of strings that will be listed in the dropdown selection.                                                                                                            |
-| `maxSelect`       | `null`                              | `null` or positive integer to allow users to select as many as they like or a maximum number of options, respectively.                                                     |
-| `selected`        | `[]` (or `''` if `maxSelect === 1`) | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                        |
-| `readonly`        | `false`                             | Disables the component. It will still be rendered but users won't be able to interact with it.                                                                             |
-| `placeholder`     | `''`                                | String shown in the text input when no option is selected.                                                                                                                 |
-| `disabledOptions` | `[]`                                | Array of strings to be disabled in the dropdown selection. Corresponding `<li>` elements in the dropdown list can be styled through the `ul.options li.disabled` selector. |
-| `input`           | `undefined`                         | Handle to the `<input>` DOM node.                                                                                                                                          |
-| `name`            | `''`                                | Passed to the `<input>` for associating HTML form `<label>`s with this component. E.g. clicking a `<label>` with same name will focus this component.                      |
+| name             | default       | description                                                                                                                                                                               |
+| :--------------- | :------------ | :---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`        | required prop | Array of `Option` objects that will be listed in the dropdown selection. See [`src/lib/index.ts#Options`](src/lib/index.ts) for admissible fields. The `label` is the only mandatory one. |
+| `activeOption`   | `null`        | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                          |
+| `maxSelect`      | `null`        | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                    |
+| `selected`       | `[]`          | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                       |
+| `selectedLabels` | `[]`          | Labels of currently selected options.                                                                                                                                                     |
+| `selectedValues` | `[]`          | Values of currently selected options.                                                                                                                                                     |
+| `readonly`       | `false`       | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                             |
+| `placeholder`    | `''`          | String shown in the text input when no option is selected.                                                                                                                                |
+| `input`          | `undefined`   | Handle to the `<input>` DOM node.                                                                                                                                                         |
+| `name`           | `''`          | Passed to the `<input>` for associating HTML form `<label>`s with this component. E.g. clicking a `<label>` with same name will focus this component.                                     |
 
 </div>
 
@@ -102,14 +104,14 @@ Full list of props/bindable variables for this component:
 ### Examples
 
 <!-- prettier-ignore -->
-- `on:add={(event) => console.log(event.detail.token)}`
-- `on:remove={(event) => console.log(event.detail.token)}`.
-- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token}'`)}``
+- `on:add={(event) => console.log(event.detail.token.label)}`
+- `on:remove={(event) => console.log(event.detail.token.label)}`.
+- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token.label}'`)}``
 - `on:blur={yourFunctionHere}`
 
 ```svelte
 <MultiSelect
-  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token}'`)}
+  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token.label}'`)}
 />
 ```
 
