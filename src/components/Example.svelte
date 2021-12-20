@@ -1,17 +1,16 @@
 <script lang="ts">
-  import MultiSelect, { Option, _Option, Primitive } from '../lib'
+  import MultiSelect, { Option, Primitive } from '../lib'
   import { mlFrameworks, webFrameworks } from './frameworks'
 
   let selectedWeb: Primitive[]
-  let activeWeb: _Option
-  let selectedML: Option[] = [{ label: `PyTorch` }]
+  let activeWeb: Option
+  let selectedML: Option[] = [{ label: `PyTorch`, value: `PyTorch` }]
 
   // used to show user hint to try arrow keys but only once
   let neverActive = true
   $: if (activeWeb) neverActive = false
 
   const placeholder = `Take your pick...`
-  const disabledOptions = [`Torch`, `CNTK`]
 </script>
 
 <section>
@@ -38,14 +37,13 @@
 
   <p>Favorite Machine Learning Framework?</p>
 
-  <pre><code>selected = {JSON.stringify(selectedML[0]?.label)}</code></pre>
+  <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
 
   <MultiSelect
     maxSelect={1}
     options={mlFrameworks}
     bind:selected={selectedML}
     {placeholder}
-    {disabledOptions}
     --sms-active-color="var(--blue)"
     --sms-options-bg="black"
   />

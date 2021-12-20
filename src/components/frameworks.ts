@@ -10,7 +10,7 @@ export const webFrameworks = [
   `Django`,
   `Express`,
   `Spring`,
-].map((label) => ({ label }))
+]
 
 export const mlFrameworks = [
   `TensorFlow`,
@@ -23,4 +23,4 @@ export const mlFrameworks = [
   `Caffe`,
   `Theano`,
   `CNTK`,
-].map((label) => ({ label }))
+].map((label) => ({ label, disabled: [`CNTK`, `Theano`].includes(label) }))
