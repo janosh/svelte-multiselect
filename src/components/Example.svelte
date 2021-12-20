@@ -18,10 +18,16 @@
 
   <p>Favorite Web Frameworks?</p>
 
-  <pre><code>selected = {JSON.stringify((selectedWeb))}</code></pre>
-  <pre><code>activeOption = {JSON.stringify((activeWeb))} {#if neverActive}
-    // Use up/down arrow keys to make an option active
-  {/if}</code></pre>
+  <pre>
+    <code>selected = {JSON.stringify(selectedWeb)}</code>
+  </pre>
+  <pre>
+    <code>
+      activeOption = {JSON.stringify(activeWeb)} {#if neverActive}
+        // Use up/down arrow keys to make an option active
+      {/if}
+    </code>
+  </pre>
 
   <MultiSelect
     options={webFrameworks}

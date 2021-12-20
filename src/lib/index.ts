@@ -9,7 +9,7 @@ export type Option = {
   disabled?: boolean // make this option unselectable
   disabledTitle?: string // override the default disabledTitle = 'This option is disabled'
   selectedTitle?: string // tooltip to display when this option is selected and hovered
-  [key: string]: unknown // allow any other key
+  [key: string]: unknown // allow any other keys users might want
 }
 
 // a proto option is more flexible than an option but can be auto-converted
