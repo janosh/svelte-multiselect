@@ -2,6 +2,7 @@
   import { createEventDispatcher, onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption } from './'
+  import { onClickOutside } from './actions'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
 
   export let selected: Option[] = []
@@ -205,6 +206,8 @@ display above those of another following shortly after it -->
   class:single={maxSelect == 1}
   style={showOptions ? `z-index: 2;` : undefined}
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
+  use:onClickOutside={() => setOptionsVisible(false)}
+  use:onClickOutside={() => dispatch(`blur`)}
 >
   <ExpandIcon height="14pt" style="padding: 0 3pt 0 1pt;" />
   <ul class="tokens {ulTokensClass}">
@@ -239,8 +242,6 @@ display above those of another following shortly after it -->
       on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
       on:keydown={handleKeydown}
       on:focus={() => setOptionsVisible(true)}
-      on:blur={() => dispatch(`blur`)}
-      on:blur={() => setOptionsVisible(false)}
       {name}
       placeholder={selectedLabels.length ? `` : placeholder}
     />
