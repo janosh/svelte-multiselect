@@ -1,3 +1,5 @@
+import { ProtoOption } from '../lib'
+
 export const webFrameworks = [
   `Svelte`,
   `React`,
@@ -23,4 +25,9 @@ export const mlFrameworks = [
   `Caffe`,
   `Theano`,
   `CNTK`,
-]
+].map((label) => {
+  const op: ProtoOption = { label }
+  if ([`CNTK`, `Theano`].includes(label)) op.disabled = true
+  if (label === `PyTorch`) op.preselected = true
+  return op
+})
