@@ -7,6 +7,7 @@ export type Option = {
   value: Primitive // falls back on label if not set
   title?: string // tooltip to display on hovering this option
   disabled?: boolean // make this option unselectable
+  preselected?: boolean // make this option selected on load (before any user interaction)
   disabledTitle?: string // override the default disabledTitle = 'This option is disabled'
   selectedTitle?: string // tooltip to display when this option is selected and hovered
   [key: string]: unknown // allow any other keys users might want

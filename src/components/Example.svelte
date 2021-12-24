@@ -4,7 +4,7 @@
 
   let selectedWeb: Primitive[]
   let activeWeb: Option
-  let selectedML: Option[] = [{ label: `PyTorch`, value: `PyTorch` }]
+  let selectedML: Option[]
 
   // used to show user hint to try arrow keys but only once
   let neverActive = true
@@ -33,6 +33,7 @@
     options={webFrameworks}
     bind:selectedLabels={selectedWeb}
     bind:activeOption={activeWeb}
+    maxSelect={4}
     {placeholder}
     --sms-active-color="var(--blue)"
     --sms-options-bg="black"

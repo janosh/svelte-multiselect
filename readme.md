@@ -75,18 +75,21 @@ Full list of props/bindable variables for this component:
 
 <div class="table">
 
-| name             | default       | description                                                                                                                                                                                    |
-| :--------------- | :------------ | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `options`        | required prop | Array of strings/numbers or `Option` objects that will be listed in the dropdown. See `src/lib/index.ts` for admissible fields. The `label` is the only mandatory one. It must also be unique. |
-| `activeOption`   | `null`        | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                               |
-| `maxSelect`      | `null`        | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                         |
-| `selected`       | `[]`          | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                            |
-| `selectedLabels` | `[]`          | Labels of currently selected options.                                                                                                                                                          |
-| `selectedValues` | `[]`          | Values of currently selected options.                                                                                                                                                          |
-| `readonly`       | `false`       | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                  |
-| `placeholder`    | `''`          | String shown in the text input when no option is selected.                                                                                                                                     |
-| `input`          | `undefined`   | Handle to the `<input>` DOM node.                                                                                                                                                              |
-| `name`           | `''`          | Passed to the `<input>` for associating HTML form `<label>`s with this component. E.g. clicking a `<label>` with same name will focus this component.                                          |
+<!-- prettier-ignore -->
+| name             | default                                                    | description                                                                                                                                                                                    |
+| :--------------- | :--------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`        | required prop                                              | Array of strings/numbers or `Option` objects that will be listed in the dropdown. See `src/lib/index.ts` for admissible fields. The `label` is the only mandatory one. It must also be unique. |
+| `activeOption`   | `null`                                                     | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                               |
+| `maxSelect`      | `null`                                                     | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                         |
+| `maxSelectMsg`   | ``(current: number, max: number) => `${current}/${max}` `` | Function that returns a string informing the user how many of the maximum allowed options they have currently selected. Return empty string to disable, i.e. `() => ''`.                       |
+| `selected`       | `[]`                                                       | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                            |
+| `selectedLabels` | `[]`                                                       | Labels of currently selected options.                                                                                                                                                          |
+| `selectedValues` | `[]`                                                       | Values of currently selected options.                                                                                                                                                          |
+| `readonly`       | `false`                                                    | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                  |
+| `placeholder`    | `undefined`                                                | String shown in the text input when no option is selected.                                                                                                                                     |
+| `input`          | `undefined`                                                | Handle to the `<input>` DOM node.                                                                                                                                                              |
+| `name`           | `undefined`                                                | Passed to the `<input>` for associating HTML form `<label>`s with this component. E.g. clicking a `<label>` with same name will focus this component.                                          |
+| `id`             | `undefined`                                                | Applied to the top-level `<div>` e.g. for `document.getElementById()`.                                                                                                                         |
 
 </div>
 

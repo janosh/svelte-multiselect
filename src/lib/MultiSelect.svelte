@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, onMount } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption } from './'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
@@ -8,11 +8,13 @@
   export let selectedLabels: Primitive[] = []
   export let selectedValues: Primitive[] = []
   export let maxSelect: number | null = null // null means any number of options are selectable
+  export let maxSelectMsg = (current: number, max: number) => `${current}/${max}`
   export let readonly = false
-  export let placeholder = ``
   export let options: ProtoOption[]
   export let input: HTMLInputElement | null = null
-  export let name = ``
+  export let placeholder: string | undefined = undefined
+  export let name: string | undefined = undefined
+  export let id: string | undefined = undefined
   export let noOptionsMsg = `No matching options`
   export let activeOption: Option | null = null
 
@@ -32,12 +34,30 @@
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
+  function isObject(item: unknown) {
+    return typeof item === `object` && !Array.isArray(item) && item !== null
+  }
+
+  onMount(() => {
+    selected = _options.filter((op) => op?.preselected)
+  })
+
   // process proto options to full ones with mandatory labels
-  $: _options = options.map((option) => {
+  $: _options = options.map((rawOp) => {
     // convert to objects internally if user passed list of strings or numbers as options
-    if (typeof option !== `object`) option = { label: option }
-    if (!option.value) option.value = option.label
-    return option
+    if (isObject(rawOp)) {
+      const op = { ...(rawOp as Option) }
+      if (!op.value) op.value = op.label
+      return op
+    } else {
+      if (![`string`, `number`].includes(typeof rawOp)) {
+        console.error(
+          `MultiSelect options must be objects, strings or numbers, got ${typeof rawOp}`
+        )
+      }
+      // even if we logged error above, try to proceed hoping user knows what they're doing
+      return { label: rawOp, value: rawOp }
+    }
   }) as Option[]
 
   $: labels = _options.map((op) => op.label)
@@ -87,7 +107,11 @@
         console.error(`MultiSelect: option with label ${label} not found`)
         return
       }
-      selected = [token, ...selected]
+      if (maxSelect === 1) {
+        selected = [token]
+      } else {
+        selected = [token, ...selected]
+      }
       if (selected.length === maxSelect) setOptionsVisible(false)
       dispatch(`add`, { token })
       dispatch(`change`, { token, type: `add` })
@@ -105,6 +129,7 @@
   function setOptionsVisible(show: boolean) {
     // nothing to do if visibility is already as intended
     if (readonly || show === showOptions) return
+
     showOptions = show
     if (show) input?.focus()
     else {
@@ -141,7 +166,7 @@
       const newActiveIdx = matchingEnabledOptions.indexOf(activeOption) + increment
 
       if (newActiveIdx < 0) {
-        // wrap around top\
+        // wrap around top
         activeOption = matchingEnabledOptions[matchingEnabledOptions.length - 1]
         // wrap around bottom
       } else if (newActiveIdx === matchingEnabledOptions.length) {
@@ -174,13 +199,14 @@
 <!-- z-index: 2 when showOptions is true ensures the ul.tokens of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
+  {id}
   class="multiselect {outerDivClass}"
   class:readonly
   class:single={maxSelect == 1}
-  style={showOptions ? `z-index: 2;` : ``}
+  style={showOptions ? `z-index: 2;` : undefined}
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
 >
-  <ExpandIcon height="14pt" style="padding-left: 1pt;" />
+  <ExpandIcon height="14pt" style="padding: 0 3pt 0 1pt;" />
   <ul class="tokens {ulTokensClass}">
     {#if maxSelect == 1 && selected[0]?.label}
       <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
@@ -222,6 +248,9 @@ display above those of another following shortly after it -->
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
+    {#if maxSelect !== null && maxSelect > 1}
+      <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
+    {/if}
     <button
       type="button"
       class="remove-all"
@@ -271,6 +300,7 @@ display above those of another following shortly after it -->
     min-height: 18pt;
     display: flex;
     cursor: text;
+    padding: 0 3pt;
   }
   :where(.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
