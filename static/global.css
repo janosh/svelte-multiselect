@@ -24,6 +24,7 @@ main {
   margin: auto;
   margin-bottom: 3em;
   width: 100%;
+  overflow: auto;
 }
 * {
   scroll-margin-top: 50px;

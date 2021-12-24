@@ -26,7 +26,7 @@
     position: fixed;
     top: 0;
     right: 0;
-    width: var(--ghc-size, calc(1em + 1vw));
+    width: var(--ghc-size, min(50pt, 15vw));
     fill: var(--ghc-bg, black);
     color: var(--ghc-color, white);
     z-index: 1;
