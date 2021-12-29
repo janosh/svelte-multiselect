@@ -12,6 +12,11 @@ export const webFrameworks = [
   `Django`,
   `Express`,
   `Spring`,
+  `jQuery`,
+  `Flask`,
+  `Flutter`,
+  `Bootstrap`,
+  `Sinatra`,
 ]
 
 export const mlFrameworks = [

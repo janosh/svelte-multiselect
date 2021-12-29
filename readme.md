@@ -33,6 +33,18 @@
 - **No dependencies:** needs only Svelte as dev dependency
 - **Keyboard friendly** for mouse-less form completion
 
+> ## Recent breaking changes
+>
+> - v2.0.0 added the ability to pass options as objects. As a result, `bind:selected` no longer returns simple strings but objects as well, even if you still pass in `options` as strings.
+> - v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
+>
+>   ```js
+>   on:add={(e) => console.log(e.detail.token.label)} // v2.0.0
+>   on:add={(e) => console.log(e.detail.option.label)} // v3.0.0
+>   ```
+>
+>   It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
+
 ## Installation
 
 ```sh
@@ -97,24 +109,25 @@ Full list of props/bindable variables for this component:
 
 `MultiSelect.svelte` dispatches the following events:
 
-| name     | details                         | description                                                                                                                                    |
-| -------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------- |
-| `add`    | `token: string`                 | Triggers when a new token is selected.                                                                                                         |
-| `remove` | `token: string`                 | Triggers when one or all selected tokens are removed. `event.detail.token` will be a single or multiple tokens, respectively.                  |
-| `change` | `token: string`, `type: string` | Triggers when a token is either added or removed, or all tokens are removed at once. `event.detail.type` will be either `'add'` or `'remove'`. |
-| `blur`   | none                            | Triggers when the input field looses focus.                                                                                                    |
+| name        | detail                                                                              | description                                                                                                                         |
+| ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `add`       | `{ option: Option }`                                                                | Triggers when a new option is selected.                                                                                             |
+| `remove`    | `{ option: Option }`                                                                | Triggers when one selected option provided as `event.detail.option` is removed.                                                     |
+| `removeAll` | `options: Option[]`                                                                 | Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected. |
+| `change`    | `{ option?: Option, options?: Option[] }`, `type: 'add' \| 'remove' \| 'removeAll'` | Triggers when a option is either added or removed, or all options are removed at once.                                              |
+| `blur`      | none                                                                                | Triggers when the input field looses focus.                                                                                         |
 
 ### Examples
 
 <!-- prettier-ignore -->
-- `on:add={(event) => console.log(event.detail.token.label)}`
-- `on:remove={(event) => console.log(event.detail.token.label)}`.
-- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.token.label}'`)}``
+- `on:add={(event) => console.log(event.detail.option.label)}`
+- `on:remove={(event) => console.log(event.detail.option.label)}`.
+- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.option.label}'`)}``
 - `on:blur={yourFunctionHere}`
 
 ```svelte
 <MultiSelect
-  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.token.label}'`)}
+  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.option.label}'`)}
 />
 ```
 
@@ -131,8 +144,8 @@ The first, if you only want to make small adjustments, allows you to pass the fo
 - `color: var(--sms-text-color, inherit)`: Input text color.
 - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: `div.multiselect` border when focused. Falls back to `--sms-active-color` if not set which in turn falls back on `cornflowerblue`.
 - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
-- `background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue))`: Background of selected tokens.
-- `color: var(--sms-remove-x-hover+focus-color, lightgray)`: Hover color of cross icon to remove selected tokens.
+- `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
+- `color: var(--sms-remove-x-hover+focus-color, lightgray)`: Hover color of cross icon to remove selected options.
 - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `background: var(--sms-options-bg, white)`: Background of options list.
 - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
@@ -152,8 +165,8 @@ For example, to change the background color of the options dropdown:
 The second method allows you to pass in custom classes to the important DOM elements of this component to target them with frameworks like [Tailwind CSS](https://tailwindcss.com).
 
 - `outerDivClass`
-- `ulTokensClass`
-- `liTokenClass`
+- `ulSelectedClass`
+- `liSelectedClass`
 - `ulOptionsClass`
 - `liOptionClass`
 
@@ -161,9 +174,9 @@ This simplified version of the DOM structure of this component shows where these
 
 ```svelte
 <div class={outerDivClass}>
-  <ul class={ulTokensClass}>
-    <li class={liTokenClass}>First selected tag</li>
-    <li class={liTokenClass}>Second selected tag</li>
+  <ul class={ulSelectedClass}>
+    <li class={liSelectedClass}>First selected tag</li>
+    <li class={liSelectedClass}>Second selected tag</li>
   </ul>
   <ul class={ulOptionsClass}>
     <li class={liOptionClass}>First available option</li>
@@ -174,16 +187,16 @@ This simplified version of the DOM structure of this component shows where these
 
 ### Granular control through global CSS
 
-You can alternatively style every part of this component with more fine-grained control by using the following `:global()` CSS selectors. `ul.tokens` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component has focus.
+You can alternatively style every part of this component with more fine-grained control by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component has focus.
 
 ```css
 :global(.multiselect) {
   /* top-level wrapper div */
 }
-:global(.multiselect ul.tokens > li) {
+:global(.multiselect ul.selected > li) {
   /* selected options */
 }
-:global(.multiselect ul.tokens > li button),
+:global(.multiselect ul.selected > li button),
 :global(.multiselect button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }
