@@ -20,13 +20,14 @@
   export let activeOption: Option | null = null
 
   export let outerDivClass = ``
-  export let ulTokensClass = ``
-  export let liTokenClass = ``
+  export let ulSelectedClass = ``
+  export let liSelectedClass = ``
   export let ulOptionsClass = ``
   export let liOptionClass = ``
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
+  // https://github.com/sveltejs/svelte/issues/6964
   export let defaultDisabledTitle = `This option is disabled`
 
   if (maxSelect !== null && maxSelect < 0) {
@@ -35,13 +36,13 @@
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
-  function isObject(item: unknown) {
-    return typeof item === `object` && !Array.isArray(item) && item !== null
-  }
-
   onMount(() => {
     selected = _options.filter((op) => op?.preselected)
   })
+
+  function isObject(item: unknown) {
+    return typeof item === `object` && !Array.isArray(item) && item !== null
+  }
 
   // process proto options to full ones with mandatory labels
   $: _options = options.map((rawOp) => {
@@ -99,32 +100,32 @@
     if (
       !readonly &&
       !selectedLabels.includes(label) &&
-      // for maxselect = 1 we always replace current token with new selection
+      // for maxselect = 1 we always replace current option with new selection
       (maxSelect == null || maxSelect == 1 || selected.length < maxSelect)
     ) {
       searchText = `` // reset search string on selection
-      const token = _options.find((op) => op.label === label)
-      if (!token) {
+      const option = _options.find((op) => op.label === label)
+      if (!option) {
         console.error(`MultiSelect: option with label ${label} not found`)
         return
       }
       if (maxSelect === 1) {
-        selected = [token]
+        selected = [option]
       } else {
-        selected = [token, ...selected]
+        selected = [option, ...selected]
       }
       if (selected.length === maxSelect) setOptionsVisible(false)
-      dispatch(`add`, { token })
-      dispatch(`change`, { token, type: `add` })
+      dispatch(`add`, { option })
+      dispatch(`change`, { option, type: `add` })
     }
   }
 
   function remove(label: Primitive) {
     if (selected.length === 0 || readonly) return
-    selected = selected.filter((token: Option) => label !== token.label)
-    const token = _options.find((option) => option.label === label)
-    dispatch(`remove`, { token })
-    dispatch(`change`, { token, type: `remove` })
+    selected = selected.filter((option) => label !== option.label)
+    const option = _options.find((option) => option.label === label)
+    dispatch(`remove`, { option })
+    dispatch(`change`, { option, type: `remove` })
   }
 
   function setOptionsVisible(show: boolean) {
@@ -149,8 +150,7 @@
     // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
       if (activeOption) {
-        const { label, disabled } = activeOption
-        if (disabled) return
+        const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
       } // no active option means the options dropdown is closed in which case enter means open it
@@ -166,14 +166,24 @@
       const increment = event.key === `ArrowUp` ? -1 : 1
       const newActiveIdx = matchingEnabledOptions.indexOf(activeOption) + increment
 
+      const ulOps = document.querySelector(`ul.options`)
       if (newActiveIdx < 0) {
         // wrap around top
         activeOption = matchingEnabledOptions[matchingEnabledOptions.length - 1]
-        // wrap around bottom
+        if (ulOps) ulOps.scrollTop = ulOps.scrollHeight
       } else if (newActiveIdx === matchingEnabledOptions.length) {
+        // wrap around bottom
         activeOption = matchingEnabledOptions[0]
+        if (ulOps) ulOps.scrollTop = 0
+      } else {
         // default case
-      } else activeOption = matchingEnabledOptions[newActiveIdx]
+        activeOption = matchingEnabledOptions[newActiveIdx]
+        const li = document.querySelector(`ul.options > li.active`)
+        // scrollIntoViewIfNeeded() scrolls top edge of element into view so when moving
+        // downwards, we scroll to next sibling to make element fully visible
+        if (increment === 1) li?.nextSibling?.scrollIntoViewIfNeeded()
+        else li?.scrollIntoViewIfNeeded()
+      }
     } else if (event.key === `Backspace`) {
       const label = selectedLabels.pop()
       if (label && !searchText) remove(label)
@@ -181,8 +191,8 @@
   }
 
   const removeAll = () => {
-    dispatch(`remove`, { token: selected })
-    dispatch(`change`, { token: selected, type: `remove` })
+    dispatch(`removeAll`, { options: selected })
+    dispatch(`change`, { options: selected, type: `removeAll` })
     selected = []
     searchText = ``
   }
@@ -197,7 +207,7 @@
   }
 </script>
 
-<!-- z-index: 2 when showOptions is true ensures the ul.tokens of one <MultiSelect />
+<!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
   {id}
@@ -210,7 +220,7 @@ display above those of another following shortly after it -->
   use:onClickOutside={() => dispatch(`blur`)}
 >
   <ExpandIcon height="14pt" style="padding: 0 3pt 0 1pt;" />
-  <ul class="tokens {ulTokensClass}">
+  <ul class="selected {ulSelectedClass}">
     {#if maxSelect == 1 && selected[0]?.label}
       <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
         {selected[0].label}
@@ -218,7 +228,7 @@ display above those of another following shortly after it -->
     {:else}
       {#each selected as { label }}
         <li
-          class={liTokenClass}
+          class={liSelectedClass}
           on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
         >
           {label}
@@ -269,7 +279,7 @@ display above those of another following shortly after it -->
       class:hidden={!showOptions}
       transition:fly|local={{ duration: 300, y: 40 }}
     >
-      {#each matchingOptions as { label, disabled, title = '', selectedTitle, disabledTitle = defaultDisabledTitle }}
+      {#each matchingOptions as { label, disabled, title = null, selectedTitle, disabledTitle = defaultDisabledTitle }}
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() => {
@@ -310,8 +320,8 @@ display above those of another following shortly after it -->
     background: var(--sms-readonly-bg, lightgray);
   }
 
-  :where(ul.tokens > li) {
-    background: var(--sms-token-bg, var(--sms-active-color, cornflowerblue));
+  :where(ul.selected > li) {
+    background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
     align-items: center;
     border-radius: 4pt;
     display: flex;
@@ -321,7 +331,7 @@ display above those of another following shortly after it -->
     white-space: nowrap;
     height: 16pt;
   }
-  :where(ul.tokens > li button, button.remove-all) {
+  :where(ul.selected > li button, button.remove-all) {
     align-items: center;
     border-radius: 50%;
     display: flex;
@@ -336,7 +346,7 @@ display above those of another following shortly after it -->
     outline: none;
     padding: 0 2pt;
   }
-  :where(ul.tokens > li button:hover, button.remove-all:hover) {
+  :where(ul.selected > li button:hover, button.remove-all:hover) {
     color: var(--sms-remove-x-hover-focus-color, lightskyblue);
   }
   :where(button:focus) {
@@ -353,12 +363,13 @@ display above those of another following shortly after it -->
     min-width: 2em;
   }
 
-  :where(ul.tokens) {
+  :where(ul.selected) {
     display: flex;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
     flex: 1;
+    overscroll-behavior: none;
   }
 
   :where(ul.options) {

@@ -23,7 +23,11 @@
   </pre>
   <pre>
     <code>
-      activeOption = {JSON.stringify(activeWeb)} {#if neverActive}
+      {#if activeWeb?.label}
+        activeOption.label = '{activeWeb.label}'
+      {:else}
+        activeOption = {activeWeb}
+      {/if} {#if neverActive}
         // Use up/down arrow keys to make an option active
       {/if}
     </code>
