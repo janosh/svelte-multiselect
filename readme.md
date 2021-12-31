@@ -33,17 +33,17 @@
 - **No dependencies:** needs only Svelte as dev dependency
 - **Keyboard friendly** for mouse-less form completion
 
-> ## Recent breaking changes
->
-> - v2.0.0 added the ability to pass options as objects. As a result, `bind:selected` no longer returns simple strings but objects as well, even if you still pass in `options` as strings.
-> - v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
->
->   ```js
->   on:add={(e) => console.log(e.detail.token.label)} // v2.0.0
->   on:add={(e) => console.log(e.detail.option.label)} // v3.0.0
->   ```
->
->   It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
+## Recent breaking changes
+
+- v2.0.0 added the ability to pass options as objects. As a result, `bind:selected` no longer returns simple strings but objects as well, even if you still pass in `options` as strings.
+- v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
+
+  ```js
+  on:add={(e) => console.log(e.detail.token.label)} // v2.0.0
+  on:add={(e) => console.log(e.detail.option.label)} // v3.0.0
+  ```
+
+  It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
 
 ## Installation
 

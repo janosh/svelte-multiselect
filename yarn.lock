@@ -1382,10 +1382,10 @@ svelte-preprocess@^4.0.0, svelte-preprocess@^4.10.1:
     sorcery "^0.10.0"
     strip-indent "^3.0.0"
 
-svelte-toc@^0.1.10:
-  version "0.1.10"
-  resolved "https://registry.yarnpkg.com/svelte-toc/-/svelte-toc-0.1.10.tgz#0cb92f2d733d9ce9329598c7858cec2cbf57ca64"
-  integrity sha512-fM4rOCov4SgXBSfScePPLE0QTCD5ztQJlqlyOrg6kjH/kQjauxUm5GSPaG51EZNBnGbixXvNh9NRHEj17aW2WA==
+svelte-toc@^0.2.0:
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/svelte-toc/-/svelte-toc-0.2.0.tgz#d61413e5019583e8d7a7398d26bce0c3f99bd626"
+  integrity sha512-cDFOvcJo+TftdvcpCLLCiKeiBrF9Jlk4YbudAWaqS5ByBl6ki0cWIV38vGD8ZUhtl51yrflO5G0DWvGIM0Plbw==
 
 svelte2tsx@^0.4.12:
   version "0.4.12"
