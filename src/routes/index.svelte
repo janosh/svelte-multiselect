@@ -5,7 +5,7 @@
   import Docs from '../docs.svx'
 </script>
 
-<Toc headingSelector="main :where(h2, h3, h4)" />
+<Toc headingSelector="main > :where(h2, h3, h4)" />
 
 <GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
