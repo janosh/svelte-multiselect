@@ -12,7 +12,7 @@
 <main>
   <h1>
     <img src="/favicon.svg" alt="Logo" height="60" style="vertical-align: -5px" />
-    &nbsp;Svelte Multi-Select
+    &nbsp;<span>Svelte Multi-Select</span>
   </h1>
 
   <a href="https://npmjs.com/package/svelte-multiselect">
@@ -43,7 +43,15 @@
 
 <style>
   h1 {
-    font-size: calc(1em + 3vw);
+    font-size: clamp(2rem, 2rem + 2vw, 3rem);
+    line-height: 3rem;
+    display: flex;
+    place-items: center;
+  }
+  @media (max-width: 600px) {
+    h1 {
+      flex-direction: column;
+    }
   }
   :global(:root) {
     --toc-mobile-bg-color: #484452;
