@@ -1,10 +1,9 @@
 import adapter from '@sveltejs/adapter-static'
-import { mdsvex } from 'mdsvex'
-import preprocess from 'svelte-preprocess'
-
-import headingSlugs from 'rehype-slug'
-import linkHeadings from 'rehype-autolink-headings'
 import { s } from 'hastscript'
+import { mdsvex } from 'mdsvex'
+import linkHeadings from 'rehype-autolink-headings'
+import headingSlugs from 'rehype-slug'
+import preprocess from 'svelte-preprocess'
 
 const rehypePlugins = [
   headingSlugs,
@@ -34,7 +33,8 @@ export default {
 
     package: {
       // exclude icon files from package.json "exports" field
-      exports: (filepath) => !filepath.startsWith(`icons/`),
+      exports: (filepath) =>
+        [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
     },
   },
 }
