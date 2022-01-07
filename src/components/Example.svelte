@@ -1,5 +1,6 @@
 <script lang="ts">
   import MultiSelect, { Option, Primitive } from '../lib'
+  import Confetti from './Confetti.svelte'
   import { mlFrameworks, webFrameworks } from './frameworks'
 
   let selectedWeb: Primitive[]
@@ -8,6 +9,7 @@
 
   // used to show user hint to try arrow keys but only once
   let neverActive = true
+  let showConfetti = false
   $: if (activeWeb) neverActive = false
 
   const placeholder = `Take your pick...`
@@ -39,10 +41,9 @@
     bind:activeOption={activeWeb}
     maxSelect={4}
     {placeholder}
-    --sms-active-color="var(--blue)"
-    --sms-options-bg="black"
   />
 </section>
+
 <section>
   <h3>Single Select</h3>
 
@@ -55,12 +56,35 @@
     options={mlFrameworks}
     bind:selected={selectedML}
     {placeholder}
-    --sms-active-color="var(--blue)"
-    --sms-options-bg="black"
   />
 </section>
 
+<section>
+  <h3>50/50 Chance of Confetti</h3>
+
+  <p>Favorite Web Frameworks?</p>
+
+  <MultiSelect
+    options={[`React`, `Svelte`]}
+    maxSelect={1}
+    {placeholder}
+    on:add={(e) => {
+      if (e.detail.option.label === `Svelte`) {
+        showConfetti = true
+        setTimeout(() => (showConfetti = false), 4000)
+      }
+    }}
+  />
+  {#if showConfetti}
+    <Confetti />
+  {/if}
+</section>
+
 <style>
+  :root {
+    --sms-active-color: var(--blue);
+    --sms-options-bg: black;
+  }
   section {
     margin-top: 2em;
     background-color: #28154b;
