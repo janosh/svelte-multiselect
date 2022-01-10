@@ -1,10 +1,7 @@
-<div class="maybe-hide">
-
-<p align="center">
-  <img src="static/favicon.svg" alt="Svelte MultiSelect" height=80>
-</p>
-
-<h1 align="center">Svelte MultiSelect</h1>
+<h1 align="center">
+  <img src="https://raw.githubusercontent.com/janosh/svelte-toc/main/static/favicon.svg" alt="Svelte MultiSelect" height=60>
+  <br>&ensp;Svelte MultiSelect
+</h1>
 
 <h4 align="center">
 
@@ -14,13 +11,15 @@
 
 </h4>
 
+<div class="hide-in-docs">
+
 **[Live demo](https://svelte-multiselect.netlify.app)**.
 
 </div>
 
-<!-- remove above in docs -->
-
 **Keyboard-friendly, zero-dependency multi-select Svelte component.**
+
+<slot />
 
 ## Key Features
 

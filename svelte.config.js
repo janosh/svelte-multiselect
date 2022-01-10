@@ -23,8 +23,11 @@ const rehypePlugins = [
 ]
 
 export default {
-  extensions: [`.svelte`, `.svx`],
-  preprocess: [preprocess(), mdsvex({ rehypePlugins })],
+  extensions: [`.svelte`, `.svx`, `.md`],
+  preprocess: [
+    preprocess(),
+    mdsvex({ rehypePlugins, extensions: [`.svx`, `.md`] }),
+  ],
   kit: {
     adapter: adapter(),
 
@@ -32,9 +35,15 @@ export default {
     target: `#svelte`,
 
     package: {
-      // exclude icon files from package.json "exports" field
+      // exclude auxiliary files from package.json "exports"
       exports: (filepath) =>
         [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
+    },
+
+    vite: {
+      server: {
+        fs: { allow: [`..`] }, // needed to import readme.md
+      },
     },
   },
 }

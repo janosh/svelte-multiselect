@@ -1,8 +1,8 @@
 <script>
+  import GitHubCorner from 'svelte-github-corner'
   import Toc from 'svelte-toc'
+  import Readme from '../../readme.md'
   import Example from '../components/Example.svelte'
-  import GitHubCorner from '../components/GitHubCorner.svelte'
-  import Docs from '../docs.svx'
 </script>
 
 <Toc headingSelector="main > :where(h2, h3, h4)" />
@@ -10,48 +10,30 @@
 <GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
 <main>
-  <h1>
-    <img src="/favicon.svg" alt="Logo" height="60" style="vertical-align: -5px" />
-    &nbsp;<span>Svelte Multi-Select</span>
-  </h1>
-
-  <a href="https://npmjs.com/package/svelte-multiselect">
-    <img
-      alt="NPM version"
-      src="https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM"
-    />
-  </a>
-
-  <a href="https://app.netlify.com/sites/svelte-multiselect/deploys">
-    <img
-      alt="Netlify Status"
-      src="https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status"
-    />
-  </a>
-
-  <a href="https://results.pre-commit.ci/latest/github/janosh/svelte-multiselect/main">
-    <img
-      alt="pre-commit.ci status"
-      src="https://results.pre-commit.ci/badge/github/janosh/svelte-multiselect/main.svg"
-    />
-  </a>
-
-  <Example />
-
-  <Docs />
+  <Readme>
+    <Example />
+  </Readme>
 </main>
 
 <style>
-  h1 {
-    font-size: clamp(2rem, 2rem + 2vw, 3rem);
-    line-height: 3rem;
+  :global(h1) {
     display: flex;
+    font-size: clamp(2rem, 2rem + 2vw, 3rem);
     place-items: center;
+    place-content: center;
+    margin: 1.2em 0;
+  }
+  :global(h1 br) {
+    display: none;
   }
   @media (max-width: 600px) {
-    h1 {
+    :global(h1) {
       flex-direction: column;
+      gap: 1ex;
     }
+  }
+  :global(.hide-in-docs) {
+    display: none;
   }
   :global(:root) {
     --toc-mobile-bg-color: #484452;
