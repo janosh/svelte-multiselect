@@ -17,8 +17,6 @@
     "preview": "svelte-kit preview",
     "package": "svelte-kit package",
     "serve": "yarn build && yarn preview",
-    "prebuild": "cp readme.md src/docs.svx && sed -i.bak '1,/^<!-- remove above in docs -->$/d' src/docs.svx && rm src/docs.svx.bak",
-    "predev": "yarn prebuild",
     "check": "svelte-check --ignore package"
   },
   "devDependencies": {
@@ -36,6 +34,7 @@
     "rehype-slug": "^5.0.1",
     "svelte": "^3.45.0",
     "svelte-check": "^2.2.11",
+    "svelte-github-corner": "^0.1.0",
     "svelte-preprocess": "^4.10.1",
     "svelte-toc": "^0.2.0",
     "svelte2tsx": "^0.4.12",
