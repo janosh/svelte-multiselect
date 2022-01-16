@@ -24,10 +24,12 @@ const rehypePlugins = [
 
 export default {
   extensions: [`.svelte`, `.svx`, `.md`],
+
   preprocess: [
     preprocess(),
     mdsvex({ rehypePlugins, extensions: [`.svx`, `.md`] }),
   ],
+
   kit: {
     adapter: adapter(),
 
