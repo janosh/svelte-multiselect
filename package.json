@@ -7,10 +7,8 @@
   "license": "MIT",
   "version": "3.0.1",
   "type": "module",
-  "svelte": "MultiSelect.svelte",
-  "bugs": {
-    "url": "https://github.com/janosh/svelte-multiselect/issues"
-  },
+  "svelte": "index.js",
+  "bugs": "https://github.com/janosh/svelte-multiselect/issues",
   "scripts": {
     "dev": "svelte-kit dev",
     "build": "svelte-kit build",

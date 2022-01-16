@@ -8,6 +8,3 @@ package
 
 # deploy config
 .netlify
-
-# auto-generated
-src/docs.svx

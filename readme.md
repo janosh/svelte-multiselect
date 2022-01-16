@@ -130,6 +130,25 @@ Full list of props/bindable variables for this component:
 />
 ```
 
+## TypeScript
+
+TypeScript users can import the types used for internal type safety for external use as well:
+
+```svelte
+<script lang="ts">
+  import MultiSelect, {
+    Option,
+    Primitive,
+    ProtoOption,
+  } from 'svelte-multiselect'
+
+  const myOptions: Option[] = [
+    { label: 'foo', value: 42 },
+    { label: 'bar', value: 69 },
+  ]
+</script>
+```
+
 ## Styling
 
 There are 3 ways to style this component.
