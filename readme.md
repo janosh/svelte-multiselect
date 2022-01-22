@@ -104,6 +104,26 @@ Full list of props/bindable variables for this component:
 
 </div>
 
+## Slots
+
+`MultiSelect.svelte` accepts two named slots
+
+- `slot="optionRenderer"`
+- `slot="selectedRenderer"`
+
+to customize rendering individual options in the dropdown and the list of selected tags, respectively. Each renderer receives the full `option` object along with the zero-indexed position (`idx`) in its list, both available via the `let:` directive:
+
+```svelte
+<MultiSelect options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}>
+  <span let:idx let:option slot="optionRenderer">
+    {idx + 1}. {option.label} {option.label === `Mango` ? `🎉` : ``}</span
+  >
+  <span let:idx let:option slot="selectedRenderer">
+    #️⃣ {idx + 1} {option.label}</span
+  >
+</MultiSelect>
+```
+
 ## Events
 
 `MultiSelect.svelte` dispatches the following events:
