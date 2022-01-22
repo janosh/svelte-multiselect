@@ -80,6 +80,25 @@
   {/if}
 </section>
 
+<section>
+  <h3>Renderer Components for Options and/or Selected</h3>
+
+  <p>Gotta love fruits</p>
+
+  <MultiSelect
+    options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
+    {placeholder}
+  >
+    <span let:idx let:option slot="optionRenderer">
+      {idx + 1}. {option.label} {option.label === `Mango` ? `🎉` : ``}</span
+    >
+    <span let:idx let:option slot="selectedRenderer">#️⃣ {idx + 1} {option.label}</span>
+  </MultiSelect>
+  {#if showConfetti}
+    <Confetti />
+  {/if}
+</section>
+
 <style>
   :root {
     --sms-active-color: var(--blue);

@@ -221,30 +221,23 @@ display above those of another following shortly after it -->
 >
   <ExpandIcon height="14pt" style="padding: 0 3pt 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
-    {#if maxSelect == 1 && selected[0]?.label}
-      <span on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}>
-        {selected[0].label}
-      </span>
-    {:else}
-      {#each selected as { label }}
-        <li
-          class={liSelectedClass}
-          on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
-        >
-          {label}
-          {#if !readonly}
-            <button
-              on:mouseup|stopPropagation={() => remove(label)}
-              on:keydown={handleEnterAndSpaceKeys(() => remove(label))}
-              type="button"
-              title="{removeBtnTitle} {label}"
-            >
-              <CrossIcon height="12pt" />
-            </button>
-          {/if}
-        </li>
-      {/each}
-    {/if}
+    {#each selected as option, idx}
+      <li class={liSelectedClass}>
+        <slot name="selectedRenderer" {option} {idx}>
+          {option.label}
+        </slot>
+        {#if !readonly}
+          <button
+            on:mouseup|stopPropagation={() => remove(option.label)}
+            on:keydown={handleEnterAndSpaceKeys(() => remove(option.label))}
+            type="button"
+            title="{removeBtnTitle} {option.label}"
+          >
+            <CrossIcon height="12pt" />
+          </button>
+        {/if}
+      </li>
+    {/each}
     <input
       bind:this={input}
       autocomplete="off"
@@ -279,7 +272,9 @@ display above those of another following shortly after it -->
       class:hidden={!showOptions}
       transition:fly|local={{ duration: 300, y: 40 }}
     >
-      {#each matchingOptions as { label, disabled, title = null, selectedTitle, disabledTitle = defaultDisabledTitle }}
+      {#each matchingOptions as option, idx}
+        {@const { label, disabled, title = null, selectedTitle } = option}
+        {@const { disabledTitle = defaultDisabledTitle } = option}
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() => {
@@ -292,7 +287,9 @@ display above those of another following shortly after it -->
           title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
           class={liOptionClass}
         >
-          {label}
+          <slot name="optionRenderer" {option} {idx}>
+            {option.label}
+          </slot>
         </li>
       {:else}
         {noOptionsMsg}
