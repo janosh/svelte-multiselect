@@ -4,6 +4,7 @@
   import type { Option, Primitive, ProtoOption } from './'
   import { onClickOutside } from './actions'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
+  import Wiggle from './Wiggle.svelte'
 
   export let selected: Option[] = []
   export let selectedLabels: Primitive[] = []
@@ -39,6 +40,8 @@
   onMount(() => {
     selected = _options.filter((op) => op?.preselected)
   })
+
+  let wiggle = false
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
@@ -97,6 +100,7 @@
     activeOption = matchingEnabledOptions[0]
 
   function add(label: Primitive) {
+    if (selected.length - (maxSelect ?? 0) < 1) wiggle = true
     if (
       !readonly &&
       !selectedLabels.includes(label) &&
@@ -253,7 +257,9 @@ display above those of another following shortly after it -->
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
     {#if maxSelect !== null && maxSelect > 1}
-      <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
+      <Wiggle bind:wiggle angle={20}>
+        <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
+      </Wiggle>
     {/if}
     <button
       type="button"
