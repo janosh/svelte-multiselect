@@ -81,18 +81,22 @@
 </section>
 
 <section>
-  <h3>Renderer Components for Options and/or Selected</h3>
+  <h3>Slot Components</h3>
 
-  <p>Gotta love fruits</p>
+  <p>as custom renderers for Options and/or Selected</p>
 
   <MultiSelect
     options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
     {placeholder}
   >
-    <span let:idx let:option slot="optionRenderer">
-      {idx + 1}. {option.label} {option.label === `Mango` ? `🎉` : ``}</span
-    >
-    <span let:idx let:option slot="selectedRenderer">#️⃣ {idx + 1} {option.label}</span>
+    <span let:idx let:option slot="renderOptions">
+      {idx + 1}. {option.label}
+      {option.label === `Mango` ? `🎉` : ``}
+    </span>
+    <span let:idx let:option slot="renderSelected">
+      #{idx + 1}
+      {option.label}
+    </span>
   </MultiSelect>
   {#if showConfetti}
     <Confetti />

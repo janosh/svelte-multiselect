@@ -227,7 +227,7 @@ display above those of another following shortly after it -->
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
       <li class={liSelectedClass}>
-        <slot name="selectedRenderer" {option} {idx}>
+        <slot name="renderSelected" {option} {idx}>
           {option.label}
         </slot>
         {#if !readonly}
@@ -293,7 +293,7 @@ display above those of another following shortly after it -->
           title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
           class={liOptionClass}
         >
-          <slot name="optionRenderer" {option} {idx}>
+          <slot name="renderOptions" {option} {idx}>
             {option.label}
           </slot>
         </li>
@@ -305,21 +305,23 @@ display above those of another following shortly after it -->
 </div>
 
 <style>
-  :where(.multiselect) {
+  :where(div.multiselect) {
     position: relative;
     margin: 1em 0;
     border: var(--sms-border, 1pt solid lightgray);
     border-radius: var(--sms-border-radius, 5pt);
+    background: var(--sms-input-bg);
+    height: var(--sms-input-height, 2em);
     align-items: center;
     min-height: 18pt;
     display: flex;
     cursor: text;
     padding: 0 3pt;
   }
-  :where(.multiselect:focus-within) {
+  :where(div.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
-  :where(.multiselect.readonly) {
+  :where(div.multiselect.readonly) {
     background: var(--sms-readonly-bg, lightgray);
   }
 
@@ -349,15 +351,14 @@ display above those of another following shortly after it -->
     outline: none;
     padding: 0 2pt;
   }
-  :where(ul.selected > li button:hover, button.remove-all:hover) {
+  :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-x-hover-focus-color, lightskyblue);
   }
   :where(button:focus) {
-    color: var(--sms-remove-x-hover-focus-color, lightskyblue);
     transform: scale(1.04);
   }
 
-  :where(.multiselect input) {
+  :where(div.multiselect input) {
     border: none;
     outline: none;
     background: none;
