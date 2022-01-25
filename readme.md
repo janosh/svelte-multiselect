@@ -26,7 +26,7 @@
 - **Single / multiple select:** pass `maxSelect={1}` prop to only allow one selection
 - **Dropdowns:** scrollable lists for large numbers of options
 - **Searchable:** start typing to filter options
-- **Tagging:** selected options are recorded as tags within the text input
+- **Tagging:** selected options are recorded as tags in the input
 - **Server-side rendering:** no reliance on browser objects like `window` or `document`
 - **Configurable:** see [props](#props)
 - **No dependencies:** needs only Svelte as dev dependency
@@ -34,7 +34,7 @@
 
 ## Recent breaking changes
 
-- v2.0.0 added the ability to pass options as objects. As a result, `bind:selected` no longer returns simple strings but objects as well, even if you still pass in `options` as strings.
+- v2.0.0 added the ability to pass options as objects. As a result, `bind:selected` no longer returns simple strings but objects, even if you still pass in `options` as strings. To get the same stuff you would have gotten from `bind:selected` before, there's now `bind:selectedLabels` (and `bind:selectedValues`).
 - v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
 
   ```js
@@ -108,19 +108,22 @@ Full list of props/bindable variables for this component:
 
 `MultiSelect.svelte` accepts two named slots
 
-- `slot="optionRenderer"`
-- `slot="selectedRenderer"`
+- `slot="renderOptions"`
+- `slot="renderSelected"`
 
 to customize rendering individual options in the dropdown and the list of selected tags, respectively. Each renderer receives the full `option` object along with the zero-indexed position (`idx`) in its list, both available via the `let:` directive:
 
 ```svelte
-<MultiSelect options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}>
-  <span let:idx let:option slot="optionRenderer">
-    {idx + 1}. {option.label} {option.label === `Mango` ? `🎉` : ``}</span
-  >
-  <span let:idx let:option slot="selectedRenderer">
-    #️⃣ {idx + 1} {option.label}</span
-  >
+<MultiSelect options={[`Banana`, `Apple`, `Mango`]}>
+  <span let:idx let:option slot="renderOptions">
+    {idx + 1}. {option.label}
+    {option.label === `Mango` ? `🎉` : ``}
+  </span>
+
+  <span let:idx let:option slot="renderSelected">
+    #{idx + 1}
+    {option.label}
+  </span>
 </MultiSelect>
 ```
 
@@ -152,7 +155,7 @@ to customize rendering individual options in the dropdown and the list of select
 
 ## TypeScript
 
-TypeScript users can import the types used for internal type safety for external use as well:
+TypeScript users can import the types used for internal type safety:
 
 ```svelte
 <script lang="ts">
@@ -171,26 +174,48 @@ TypeScript users can import the types used for internal type safety for external
 
 ## Styling
 
-There are 3 ways to style this component.
+There are 3 ways to style this component. To understand which options do what, it helps to keep in mind this simplified DOM structure of the component:
+
+```svelte
+<div class="multiselect">
+  <ul class="selected">
+    <li>Selected 1</li>
+    <li>Selected 2</li>
+  </ul>
+  <ul class="options">
+    <li>Option 1</li>
+    <li>Option 2</li>
+  </ul>
+</div>
+```
 
 ### With CSS variables
 
-The first, if you only want to make small adjustments, allows you to pass the following CSS variables directly to the component as props.
+If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context.
 
-- `border: var(--sms-border, 1pt solid lightgray)`: Border around top-level `div.multiselect`. Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
-- `border-radius: var(--sms-border-radius, 5pt)`: `div.multiselect` border radius.
-- `color: var(--sms-text-color, inherit)`: Input text color.
-- `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: `div.multiselect` border when focused. Falls back to `--sms-active-color` if not set which in turn falls back on `cornflowerblue`.
-- `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
-- `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
-- `color: var(--sms-remove-x-hover+focus-color, lightgray)`: Hover color of cross icon to remove selected options.
-- `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
-- `background: var(--sms-options-bg, white)`: Background of options list.
-- `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
-- `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
-- `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
-- `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
-- `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
+- `div.multiselect`:
+  - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
+  - `border-radius: var(--sms-border-radius, 5pt)`: Input border radius.
+  - `background: var(--sms-input-bg)`: Input background.
+  - `height: var(--sms-input-height, 2em)`: Input height.
+  - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when focused. Falls back to `--sms-active-color` if not set which in turn falls back on `cornflowerblue`.
+  - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
+- `div.multiselect input`
+  - `color: var(--sms-text-color, inherit)`: Input text color.
+- `ul.selected > li`:
+  - `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
+- `ul.selected > li button:hover, button.remove-all:hover`
+  - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+- `ul.options`
+  - `background: var(--sms-options-bg, white)`: Background of options list.
+- `ul.options > li.selected`
+  - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
+  - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
+- `ul.options > li.active`
+  - `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
+- `ul.options > li.disabled`
+  - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
+  - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
 
 For example, to change the background color of the options dropdown:
 
@@ -211,14 +236,14 @@ The second method allows you to pass in custom classes to the important DOM elem
 This simplified version of the DOM structure of this component shows where these classes are inserted:
 
 ```svelte
-<div class={outerDivClass}>
-  <ul class={ulSelectedClass}>
-    <li class={liSelectedClass}>First selected tag</li>
-    <li class={liSelectedClass}>Second selected tag</li>
+<div class="multiselect {outerDivClass}">
+  <ul class="selected {ulSelectedClass}">
+    <li class={liSelectedClass}>Selected 1</li>
+    <li class={liSelectedClass}>Selected 2</li>
   </ul>
-  <ul class={ulOptionsClass}>
-    <li class={liOptionClass}>First available option</li>
-    <li class={liOptionClass}>Second available option</li>
+  <ul class="options {ulOptionsClass}">
+    <li class={liOptionClass}>Option 1</li>
+    <li class={liOptionClass}>Option 2</li>
   </ul>
 </div>
 ```
