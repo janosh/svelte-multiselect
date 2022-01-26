@@ -3,7 +3,7 @@ command = "yarn build"
 publish = "build"
 
 [build.environment]
-NODE_VERSION = "17.0.1"
+NODE_VERSION = "17.4.0"
 YARN_VERSION = "1.22.11"
 
 # https://plausible.io/docs/proxy/guides/netlify
