@@ -10,22 +10,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repo
+      - name: Check out repo
         uses: actions/checkout@v2
 
-      - name: Setup node
-        uses: actions/setup-node@v2
-        with:
-          node-version: 17
-
-      - name: Install dependencies
-        run: yarn
-
-      - name: Build package
-        run: yarn package
-
-      - name: Publish package
+      - name: Build and publish package
         run: |
+          yarn
+          yarn package
           yarn publish package
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}

@@ -3,7 +3,7 @@
   import { fade } from 'svelte/transition'
 
   export let speed = 0.4
-  export let nItems = 100
+  export let nItems = 50
 
   const emojis = [`🥳`, `🎉`, `✨`]
 
