@@ -15,8 +15,8 @@
   export let options: ProtoOption[]
   export let input: HTMLInputElement | null = null
   export let placeholder: string | undefined = undefined
-  export let name: string | undefined = undefined
   export let id: string | undefined = undefined
+  export let name: string | undefined = id
   export let noOptionsMsg = `No matching options`
   export let activeOption: Option | null = null
 
@@ -214,11 +214,10 @@
 <!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
-  {id}
   class="multiselect {outerDivClass}"
   class:readonly
   class:single={maxSelect == 1}
-  style={showOptions ? `z-index: 2;` : undefined}
+  class:open={showOptions}
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
   use:onClickOutside={() => setOptionsVisible(false)}
   use:onClickOutside={() => dispatch(`blur`)}
@@ -249,6 +248,7 @@ display above those of another following shortly after it -->
       on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
       on:keydown={handleKeydown}
       on:focus={() => setOptionsVisible(true)}
+      {id}
       {name}
       placeholder={selectedLabels.length ? `` : placeholder}
     />
@@ -298,7 +298,7 @@ display above those of another following shortly after it -->
           </slot>
         </li>
       {:else}
-        {noOptionsMsg}
+        <span>{noOptionsMsg}</span>
       {/each}
     </ul>
   {/key}
@@ -317,6 +317,9 @@ display above those of another following shortly after it -->
     display: flex;
     cursor: text;
     padding: 0 3pt;
+  }
+  :where(div.multiselect.open) {
+    z-index: var(--sms-open-z-index, 4);
   }
   :where(div.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
@@ -396,6 +399,10 @@ display above those of another following shortly after it -->
   :where(ul.options li) {
     padding: 3pt 2ex;
     cursor: pointer;
+  }
+  /* for noOptionsMsg */
+  :where(ul.options span) {
+    padding: 3pt 2ex;
   }
   :where(ul.options li.selected) {
     border-left: var(
