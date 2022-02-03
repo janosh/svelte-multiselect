@@ -33,9 +33,6 @@ export default {
   kit: {
     adapter: adapter(),
 
-    // hydrate the <div/> with id 'svelte' in src/app.html
-    target: `#svelte`,
-
     package: {
       // exclude auxiliary files from package.json "exports"
       exports: (filepath) =>
