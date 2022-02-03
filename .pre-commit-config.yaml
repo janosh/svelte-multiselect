@@ -32,3 +32,18 @@ repos:
       - id: codespell
         stages: [commit, commit-msg]
         exclude: yarn.lock
+
+  - repo: https://github.com/pre-commit/mirrors-eslint
+    rev: v8.6.0
+    hooks:
+      - id: eslint
+        types: [file]
+        files: \.(svelte|js)$
+        args: [--plugin, eslint-plugin-svelte3]
+        additional_dependencies:
+          - eslint
+          - svelte
+          - typescript
+          - eslint-plugin-svelte3
+          - '@typescript-eslint/eslint-plugin'
+          - '@typescript-eslint/parser'
