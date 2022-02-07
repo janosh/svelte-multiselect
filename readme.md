@@ -203,7 +203,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
 - `div.multiselect.open`:
   - `z-index: var(--sms-open-z-index, 4)`: Useful to ensure the dropdown list of options is displayed on top of other page elements of increased `z-index`.
-- `div.multiselect input`
+- `div.multiselect > input`
   - `color: var(--sms-text-color, inherit)`: Input text color.
 - `ul.selected > li`:
   - `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
@@ -211,6 +211,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `ul.options`
   - `background: var(--sms-options-bg, white)`: Background of options list.
+  - `background: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
 - `ul.options > li.selected`
   - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
   - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.

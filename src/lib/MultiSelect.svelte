@@ -241,22 +241,22 @@ display above those of another following shortly after it -->
         {/if}
       </li>
     {/each}
-    <input
-      bind:this={input}
-      autocomplete="off"
-      bind:value={searchText}
-      on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
-      on:keydown={handleKeydown}
-      on:focus={() => setOptionsVisible(true)}
-      {id}
-      {name}
-      placeholder={selectedLabels.length ? `` : placeholder}
-    />
   </ul>
+  <input
+    bind:this={input}
+    autocomplete="off"
+    bind:value={searchText}
+    on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
+    on:keydown={handleKeydown}
+    on:focus={() => setOptionsVisible(true)}
+    {id}
+    {name}
+    placeholder={selectedLabels.length ? `` : placeholder}
+  />
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
-    {#if maxSelect !== null && maxSelect > 1}
+    {#if maxSelect !== null && maxSelectMsg !== null}
       <Wiggle bind:wiggle angle={20}>
         <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
       </Wiggle>
@@ -328,6 +328,12 @@ display above those of another following shortly after it -->
     background: var(--sms-readonly-bg, lightgray);
   }
 
+  :where(ul.selected) {
+    display: flex;
+    padding: 0;
+    margin: 0;
+    flex-wrap: wrap;
+  }
   :where(ul.selected > li) {
     background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
     align-items: center;
@@ -361,7 +367,7 @@ display above those of another following shortly after it -->
     transform: scale(1.04);
   }
 
-  :where(div.multiselect input) {
+  :where(div.multiselect > input) {
     border: none;
     outline: none;
     background: none;
@@ -371,15 +377,6 @@ display above those of another following shortly after it -->
     /* minimum font-size > 16px ensures iOS doesn't zoom in when focusing input */
     /* https://stackoverflow.com/a/6394497 */
     font-size: calc(16px + 0.1vw);
-  }
-
-  :where(ul.selected) {
-    display: flex;
-    padding: 0;
-    margin: 0;
-    flex-wrap: wrap;
-    flex: 1;
-    overscroll-behavior: none;
   }
 
   :where(ul.options) {
@@ -392,6 +389,7 @@ display above those of another following shortly after it -->
     border-radius: 1ex;
     overflow: auto;
     background: var(--sms-options-bg, white);
+    overscroll-behavior: var(--sms-options-overscroll, none);
   }
   :where(ul.options.hidden) {
     visibility: hidden;

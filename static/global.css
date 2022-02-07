@@ -14,7 +14,8 @@ body {
   color: #eee;
   line-height: 1.8em;
 }
-div#svelte {
+/* outer div = hydration target */
+body > div {
   display: flex;
   margin: auto;
   max-width: 1000px;
