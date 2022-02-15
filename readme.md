@@ -194,30 +194,36 @@ There are 3 ways to style this component. To understand which options do what, i
 
 If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context.
 
-- `div.multiselect`:
+- `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
-  - `border-radius: var(--sms-border-radius, 5pt)`: Input border radius.
-  - `background: var(--sms-input-bg)`: Input background.
-  - `height: var(--sms-input-height, 2em)`: Input height.
-  - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when focused. Falls back to `--sms-active-color` if not set which in turn falls back on `cornflowerblue`.
+  - `border-radius: var(--sms-border-radius, 5pt)`
+  - `background: var(--sms-input-bg)`
+  - `height: var(--sms-input-height, 2em)`
+- `div.multiselect.open`
+  - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
+- `div.multiselect:focus-within`
+  - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` if not set which defaults to `cornflowerblue`.
+- `div.multiselect.readonly`
   - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
-- `div.multiselect.open`:
-  - `z-index: var(--sms-open-z-index, 4)`: Useful to ensure the dropdown list of options is displayed on top of other page elements of increased `z-index`.
 - `div.multiselect > input`
   - `color: var(--sms-text-color, inherit)`: Input text color.
-- `ul.selected > li`:
+- `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
-- `ul.selected > li button:hover, button.remove-all:hover`
+  - `height: var(--sms-selected-li-height)`: Height of selected options.
+- `ul.selected > li button:hover, button.remove-all:hover, button:focus`
   - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
-- `ul.options`
-  - `background: var(--sms-options-bg, white)`: Background of options list.
-  - `background: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
-- `ul.options > li.selected`
+- `div.multiselect > ul.options`
+  - `background: var(--sms-options-bg, white)`: Background of dropdown list.
+  - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
+- `div.multiselect > ul.options > li.selected`
+  - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
   - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
   - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
-- `ul.options > li.active`
+- `div.multiselect > ul.options > li:not(.selected):hover`
+  - `border-left: var(--sms-li-not-selected-hover-border-left, 3pt solid var(--sms-active-color, cornflowerblue))`
+- `div.multiselect > ul.options > li.active`
   - `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
-- `ul.options > li.disabled`
+- `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
 
@@ -257,40 +263,47 @@ This simplified version of the DOM structure of this component shows where these
 You can alternatively style every part of this component with more fine-grained control by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component has focus.
 
 ```css
-:global(.multiselect) {
+:global(div.multiselect) {
   /* top-level wrapper div */
 }
-:global(.multiselect ul.selected > li) {
-  /* selected options */
+:global(div.multiselect.open) {
+  /* top-level wrapper div when dropdown open */
 }
-:global(.multiselect ul.selected > li button),
-:global(.multiselect button.remove-all) {
+:global(div.multiselect.readonly) {
+  /* top-level wrapper div when in readonly state */
+}
+:global(div.multiselect > ul.selected) {
+  /* selected list */
+}
+:global(div.multiselect > ul.selected > li) {
+  /* selected list items */
+}
+:global(div.multiselect button) {
+  /* target all buttons in this component */
+}
+:global(div.multiselect > ul.selected > li button, button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }
-:global(.multiselect ul.options) {
+:global(div.multiselect > input) {
+  /* input inside the top-level wrapper div */
+}
+:global(div.multiselect > ul.options) {
   /* dropdown options */
 }
-:global(.multiselect ul.options li) {
-  /* dropdown list of available options */
+:global(div.multiselect > ul.options > li) {
+  /* dropdown list items */
 }
-:global(.multiselect ul.options li.selected) {
+:global(div.multiselect > ul.options > li.selected) {
   /* selected options in the dropdown list */
 }
-:global(.multiselect ul.options li:not(.selected):hover) {
+:global(div.multiselect > ul.options > li:not(.selected):hover) {
   /* unselected but hovered options in the dropdown list */
 }
-:global(.multiselect ul.options li.selected:hover) {
-  /* selected and hovered options in the dropdown list */
-  /* probably not necessary to style this state in most cases */
-}
-:global(.multiselect ul.options li.active) {
+:global(div.multiselect > ul.options > li.active) {
   /* active means item was navigated to with up/down arrow keys */
   /* ready to be selected by pressing enter */
 }
-:global(.multiselect ul.options li.selected.active) {
-  /* both active and already selected, pressing enter now will deselect the item */
-}
-:global(.multiselect ul.options li.disabled) {
+:global(div.multiselect > ul.options > li.disabled) {
   /* options with disabled key set to true (see props above) */
 }
 ```
