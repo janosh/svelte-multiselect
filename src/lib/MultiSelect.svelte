@@ -308,15 +308,15 @@ display above those of another following shortly after it -->
   :where(div.multiselect) {
     position: relative;
     margin: 1em 0;
-    border: var(--sms-border, 1pt solid lightgray);
-    border-radius: var(--sms-border-radius, 5pt);
-    background: var(--sms-input-bg);
-    height: var(--sms-input-height, 2em);
     align-items: center;
     min-height: 18pt;
     display: flex;
     cursor: text;
     padding: 0 3pt;
+    border: var(--sms-border, 1pt solid lightgray);
+    border-radius: var(--sms-border-radius, 5pt);
+    background: var(--sms-input-bg);
+    height: var(--sms-input-height, 2em);
   }
   :where(div.multiselect.open) {
     z-index: var(--sms-open-z-index, 4);
@@ -328,31 +328,31 @@ display above those of another following shortly after it -->
     background: var(--sms-readonly-bg, lightgray);
   }
 
-  :where(ul.selected) {
+  :where(div.multiselect > ul.selected) {
     display: flex;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
   }
-  :where(ul.selected > li) {
-    background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
+  :where(div.multiselect > ul.selected > li) {
     align-items: center;
     border-radius: 4pt;
     display: flex;
     margin: 2pt;
-    padding: 0 0 0 1ex;
+    padding: 0 0 0 5pt;
     transition: 0.3s;
     white-space: nowrap;
-    height: 16pt;
+    background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
+    height: var(--sms-selected-li-height);
   }
-  :where(ul.selected > li button, button.remove-all) {
+  :where(div.multiselect > ul.selected > li button, button.remove-all) {
     align-items: center;
     border-radius: 50%;
     display: flex;
     cursor: pointer;
     transition: 0.2s;
   }
-  :where(button) {
+  :where(div.multiselect button) {
     color: inherit;
     background: transparent;
     border: none;
@@ -363,7 +363,7 @@ display above those of another following shortly after it -->
   :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-x-hover-focus-color, lightskyblue);
   }
-  :where(button:focus) {
+  :where(div.multiselect > button:focus) {
     transform: scale(1.04);
   }
 
@@ -371,15 +371,15 @@ display above those of another following shortly after it -->
     border: none;
     outline: none;
     background: none;
-    color: var(--sms-text-color, inherit);
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
     /* minimum font-size > 16px ensures iOS doesn't zoom in when focusing input */
     /* https://stackoverflow.com/a/6394497 */
     font-size: calc(16px + 0.1vw);
+    color: var(--sms-text-color, inherit);
   }
 
-  :where(ul.options) {
+  :where(div.multiselect > ul.options) {
     list-style: none;
     max-height: 50vh;
     padding: 0;
@@ -391,18 +391,18 @@ display above those of another following shortly after it -->
     background: var(--sms-options-bg, white);
     overscroll-behavior: var(--sms-options-overscroll, none);
   }
-  :where(ul.options.hidden) {
+  :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
   }
-  :where(ul.options li) {
+  :where(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;
     cursor: pointer;
   }
   /* for noOptionsMsg */
-  :where(ul.options span) {
+  :where(div.multiselect > ul.options span) {
     padding: 3pt 2ex;
   }
-  :where(ul.options li.selected) {
+  :where(div.multiselect > ul.options > li.selected) {
     border-left: var(
       --sms-li-selected-border-left,
       3pt solid var(--sms-selected-color, green)
@@ -410,22 +410,21 @@ display above those of another following shortly after it -->
     background: var(--sms-li-selected-bg, inherit);
     color: var(--sms-li-selected-color, inherit);
   }
-  :where(ul.options li:not(.selected):hover) {
+  :where(div.multiselect > ul.options > li:not(.selected):hover) {
     border-left: var(
       --sms-li-not-selected-hover-border-left,
       3pt solid var(--sms-active-color, cornflowerblue)
     );
-    border-left: 3pt solid var(--blue);
   }
-  :where(ul.options li.active) {
+  :where(div.multiselect > ul.options > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
   }
-  :where(ul.options li.disabled) {
+  :where(div.multiselect > ul.options > li.disabled) {
+    cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
-    cursor: not-allowed;
   }
-  :where(ul.options li.disabled:hover) {
+  :where(div.multiselect > ul.options > li.disabled:hover) {
     border-left: unset;
   }
 </style>
