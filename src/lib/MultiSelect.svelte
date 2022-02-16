@@ -19,6 +19,10 @@
   export let name: string | undefined = id
   export let noOptionsMsg = `No matching options`
   export let activeOption: Option | null = null
+  export let filterFunc = (op: Option, searchText: string) => {
+    if (!searchText) return true
+    return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+  }
 
   export let outerDivClass = ``
   export let ulSelectedClass = ``
@@ -83,10 +87,7 @@
   let showOptions = false
 
   // options matching the current search text
-  $: matchingOptions = _options.filter((op) => {
-    if (!searchText) return true
-    return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
-  })
+  $: matchingOptions = _options.filter((op) => filterFunc(op, searchText))
   $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
 
   $: if (
