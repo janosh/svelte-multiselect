@@ -17,7 +17,23 @@ export const webFrameworks = [
   `Flutter`,
   `Bootstrap`,
   `Sinatra`,
-]
+].map((label) => {
+  const op: ProtoOption = { label }
+  if (label === `Svelte`) op.something = `Kit`
+  if (
+    [
+      `Svelte`,
+      `React`,
+      `Vue`,
+      `Angular`,
+      `Express`,
+      `jQuery`,
+      `Polymer`,
+    ].includes(label)
+  )
+    op.something = `JavaScript`
+  return op
+})
 
 export const mlFrameworks = [
   `TensorFlow`,
