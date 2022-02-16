@@ -13,6 +13,13 @@
   $: if (activeWeb) neverActive = false
 
   const placeholder = `Take your pick...`
+  const filterFunc = (op: Option, searchText: string) => {
+    if (!searchText) return true
+    const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
+      `${s}`.toLowerCase()
+    )
+    return label.includes(searchStr) || lang.includes(searchStr)
+  }
 </script>
 
 <section>
@@ -28,6 +35,7 @@
     bind:activeOption={activeWeb}
     maxSelect={4}
     {placeholder}
+    {filterFunc}
   />
 </section>
 

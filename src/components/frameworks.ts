@@ -1,23 +1,23 @@
 import { ProtoOption } from '../lib'
 
 export const webFrameworks = [
-  `Svelte`,
-  `React`,
-  `Vue`,
-  `Angular`,
-  `Polymer`,
-  `Ruby on Rails`,
-  `ASP.net`,
-  `Laravel`,
-  `Django`,
-  `Express`,
-  `Spring`,
-  `jQuery`,
-  `Flask`,
-  `Flutter`,
-  `Bootstrap`,
-  `Sinatra`,
-]
+  [`Svelte`, `JavaScript`],
+  [`React`, `JavaScript`],
+  [`Vue`, `JavaScript`],
+  [`Angular`, `JavaScript`],
+  [`Polymer`, `JavaScript`],
+  [`Ruby on Rails`, `Ruby`],
+  [`ASP.net`, `C#`],
+  [`Laravel`, `PHP`],
+  [`Django`, `Python`],
+  [`Express`, `JavaScript`],
+  [`Spring`, `JavaScript`],
+  [`jQuery`, `JavaScript`],
+  [`Flask`, `Python`],
+  [`Flutter`, `Dart`],
+  [`Bootstrap`, `JavaScript`],
+  [`Sinatra`, `Ruby`],
+].map(([label, lang]) => ({ label, lang }))
 
 export const mlFrameworks = [
   `TensorFlow`,
