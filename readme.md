@@ -105,6 +105,15 @@ Full list of props/bindable variables for this component:
 
 </div>
 
+## Exposed methods
+
+```ts
+export let filterFunction = (op: Option, searchText: string) => {
+  if (!searchText) return true
+  return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+}
+```
+
 ## Slots
 
 `MultiSelect.svelte` accepts two named slots
