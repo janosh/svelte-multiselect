@@ -13,13 +13,10 @@
   $: if (activeWeb) neverActive = false
 
   const placeholder = `Take your pick...`
-  const newSearch = (op: Option, searchText: string) => {
+  const filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
-    if (op.something != null) {
-      return (
-        `${op.label}`.toLowerCase().includes(searchText.toLowerCase()) ||
-        `${op.something}`.toLowerCase().includes(searchText.toLowerCase())
-      )
+    if (op.stack && `${op.stack}`.toLowerCase().includes(searchText.toLowerCase())) {
+      return true
     }
     return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
   }
@@ -38,7 +35,7 @@
     bind:activeOption={activeWeb}
     maxSelect={4}
     {placeholder}
-    optionFilterFunction={newSearch}
+    {filterFunc}
   />
 </section>
 
