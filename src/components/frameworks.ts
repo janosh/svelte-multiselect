@@ -17,7 +17,7 @@ export const webFrameworks = [
   [`Flutter`, `Dart`],
   [`Bootstrap`, `JavaScript`],
   [`Sinatra`, `Ruby`],
-].map(([label, stack]) => ({ label, stack }))
+].map(([label, lang]) => ({ label, lang }))
 
 export const mlFrameworks = [
   `TensorFlow`,

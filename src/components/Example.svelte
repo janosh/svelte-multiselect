@@ -15,10 +15,10 @@
   const placeholder = `Take your pick...`
   const filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
-    if (op.stack && `${op.stack}`.toLowerCase().includes(searchText.toLowerCase())) {
-      return true
-    }
-    return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+    const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
+      `${s}`.toLowerCase()
+    )
+    return label.includes(searchStr) || lang.includes(searchStr)
   }
 </script>
 
