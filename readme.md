@@ -22,7 +22,7 @@
 
 <slot />
 
-## Key Features
+## Key features
 
 - **Single / multiple select:** pass `maxSelect={1}` prop to only allow one selection
 - **Dropdowns:** scrollable lists for large numbers of options
@@ -88,31 +88,38 @@ Full list of props/bindable variables for this component:
 <div class="table">
 
 <!-- prettier-ignore -->
-| name             | default                                                    | description                                                                                                                                                                                                                                |
-| :--------------- | :--------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `options`        | required prop                                              | Array of strings/numbers or `Option` objects that will be listed in the dropdown. See `src/lib/index.ts` for admissible fields. The `label` is the only mandatory one. It must also be unique.                                             |
-| `activeOption`   | `null`                                                     | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                                                                           |
-| `maxSelect`      | `null`                                                     | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                                                                     |
-| `maxSelectMsg`   | ``(current: number, max: number) => `${current}/${max}` `` | Function that returns a string informing the user how many of the maximum allowed options they have currently selected. Return empty string to disable, i.e. `() => ''`.                                                                   |
-| `selected`       | `[]`                                                       | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                                                                        |
-| `selectedLabels` | `[]`                                                       | Labels of currently selected options.                                                                                                                                                                                                      |
-| `selectedValues` | `[]`                                                       | Values of currently selected options.                                                                                                                                                                                                      |
-| `readonly`       | `false`                                                    | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                              |
-| `placeholder`    | `undefined`                                                | String shown in the text input when no option is selected.                                                                                                                                                                                 |
-| `input`          | `undefined`                                                | Handle to the `<input>` DOM node.                                                                                                                                                                                                          |
-| `id`             | `undefined`                                                | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                       |
-| `name`           | `id`                                                       | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`. |
+| name             | default       | description                                                                                                                                                                                                                                |
+| :--------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`        | required prop | Array of strings/numbers or `Option` objects that will be listed in the dropdown. See `src/lib/index.ts` for admissible fields. The `label` is the only mandatory one. It must also be unique.                                             |
+| `activeOption`   | `null`        | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                                                                           |
+| `maxSelect`      | `null`        | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                                                                     |
+| `selected`       | `[]`          | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                                                                        |
+| `selectedLabels` | `[]`          | Labels of currently selected options.                                                                                                                                                                                                      |
+| `selectedValues` | `[]`          | Values of currently selected options.                                                                                                                                                                                                      |
+| `readonly`       | `false`       | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                              |
+| `placeholder`    | `undefined`   | String shown in the text input when no option is selected.                                                                                                                                                                                 |
+| `input`          | `undefined`   | Handle to the `<input>` DOM node.                                                                                                                                                                                                          |
+| `id`             | `undefined`   | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                       |
+| `name`           | `id`          | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`. |
 
 </div>
 
 ## Exposed methods
 
-```ts
-export let filterFunction = (op: Option, searchText: string) => {
-  if (!searchText) return true
-  return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
-}
-```
+1. `filterFunc = (op: Option, searchText: string) => boolean`: Determine what options are shown when user enters search string to filter dropdown list. Defaults to:
+
+   ```ts
+   filterFunc = (op: Option, searchText: string) => {
+     if (!searchText) return true
+     return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+   }
+   ```
+
+2. `maxSelectMsg = (current: number, max: number) => string`: Inform the user how many of the maximum allowed options they have currently selected. Return empty string to disable, i.e. `() => ''`. Is automatically disabled when `maxSelect === null`. Defaults to:
+
+   ```ts
+   maxSelectMsg = (current: number, max: number) => `${current}/${max}`
+   ```
 
 ## Slots
 

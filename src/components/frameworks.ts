@@ -1,39 +1,23 @@
 import { ProtoOption } from '../lib'
 
 export const webFrameworks = [
-  `Svelte`,
-  `React`,
-  `Vue`,
-  `Angular`,
-  `Polymer`,
-  `Ruby on Rails`,
-  `ASP.net`,
-  `Laravel`,
-  `Django`,
-  `Express`,
-  `Spring`,
-  `jQuery`,
-  `Flask`,
-  `Flutter`,
-  `Bootstrap`,
-  `Sinatra`,
-].map((label) => {
-  const op: ProtoOption = { label }
-  if (label === `Svelte`) op.something = `Kit`
-  if (
-    [
-      `Svelte`,
-      `React`,
-      `Vue`,
-      `Angular`,
-      `Express`,
-      `jQuery`,
-      `Polymer`,
-    ].includes(label)
-  )
-    op.something = `JavaScript`
-  return op
-})
+  [`Svelte`, `JavaScript`],
+  [`React`, `JavaScript`],
+  [`Vue`, `JavaScript`],
+  [`Angular`, `JavaScript`],
+  [`Polymer`, `JavaScript`],
+  [`Ruby on Rails`, `Ruby`],
+  [`ASP.net`, `C#`],
+  [`Laravel`, `PHP`],
+  [`Django`, `Python`],
+  [`Express`, `JavaScript`],
+  [`Spring`, `JavaScript`],
+  [`jQuery`, `JavaScript`],
+  [`Flask`, `Python`],
+  [`Flutter`, `Dart`],
+  [`Bootstrap`, `JavaScript`],
+  [`Sinatra`, `Ruby`],
+].map(([label, stack]) => ({ label, stack }))
 
 export const mlFrameworks = [
   `TensorFlow`,
