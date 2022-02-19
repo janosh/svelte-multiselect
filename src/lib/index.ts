@@ -21,3 +21,11 @@ export type ProtoOption =
   | (Omit<Option, `value`> & {
       value?: Primitive
     })
+
+export interface OnChangeEventDetail {
+	detail: {
+		option?: Option;
+		options?: Option[];
+		type: "add" | "remove" | "removeAll";
+	};
+}
