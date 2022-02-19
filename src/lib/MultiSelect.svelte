@@ -239,18 +239,20 @@ display above those of another following shortly after it -->
         {/if}
       </li>
     {/each}
+    <li style="display: contents;">
+      <input
+        bind:this={input}
+        autocomplete="off"
+        bind:value={searchText}
+        on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
+        on:keydown={handleKeydown}
+        on:focus={() => setOptionsVisible(true)}
+        {id}
+        {name}
+        placeholder={selectedLabels.length ? `` : placeholder}
+      />
+    </li>
   </ul>
-  <input
-    bind:this={input}
-    autocomplete="off"
-    bind:value={searchText}
-    on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
-    on:keydown={handleKeydown}
-    on:focus={() => setOptionsVisible(true)}
-    {id}
-    {name}
-    placeholder={selectedLabels.length ? `` : placeholder}
-  />
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
@@ -328,6 +330,7 @@ display above those of another following shortly after it -->
 
   :where(div.multiselect > ul.selected) {
     display: flex;
+    flex: 1;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
@@ -365,7 +368,7 @@ display above those of another following shortly after it -->
     transform: scale(1.04);
   }
 
-  :where(div.multiselect > input) {
+  :where(div.multiselect > ul.selected > li > input) {
     border: none;
     outline: none;
     background: none;
