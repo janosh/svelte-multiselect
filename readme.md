@@ -261,6 +261,7 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `liSelectedClass`
 - `ulOptionsClass`
 - `liOptionClass`
+- `liActiveOptionClass`
 
 This simplified version of the DOM structure of this component shows where these classes are inserted:
 
@@ -272,7 +273,7 @@ This simplified version of the DOM structure of this component shows where these
   </ul>
   <ul class="options {ulOptionsClass}">
     <li class={liOptionClass}>Option 1</li>
-    <li class={liOptionClass}>Option 2</li>
+    <li class="{liOptionClass} {liActiveOptionClass}">Currently active option 2</li>
   </ul>
 </div>
 ```

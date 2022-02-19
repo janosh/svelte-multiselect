@@ -31,6 +31,7 @@
   export let liSelectedClass = ``
   export let ulOptionsClass = ``
   export let liOptionClass = ``
+  export let liActiveOptionClass = ``
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
@@ -280,17 +281,18 @@ display above those of another following shortly after it -->
       {#each matchingOptions as option, idx}
         {@const { label, disabled, title = null, selectedTitle } = option}
         {@const { disabledTitle = defaultDisabledTitle } = option}
+        {@const active = activeOption?.label === label}
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() => {
             if (disabled) return
             isSelected(label) ? remove(label) : add(label)
           }}
-          class:selected={isSelected(label)}
-          class:active={activeOption?.label === label}
-          class:disabled
           title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
-          class={liOptionClass}
+          class:selected={isSelected(label)}
+          class:active
+          class:disabled
+          class="{liOptionClass} {active ? liActiveOptionClass : ``}"
         >
           <slot name="renderOptions" {option} {idx}>
             {option.label}
