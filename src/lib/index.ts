@@ -23,9 +23,9 @@ export type ProtoOption =
     })
 
 export interface OnChangeEventDetail {
-	detail: {
-		option?: Option;
-		options?: Option[];
-		type: "add" | "remove" | "removeAll";
-	};
+  detail: {
+    option?: Option
+    options?: Option[]
+    type: 'add' | 'remove' | 'removeAll'
+  }
 }
