@@ -134,9 +134,6 @@
   }
 
   function setOptionsVisible(show: boolean) {
-    // nothing to do if visibility is already as intended
-    if (readonly || show === showOptions) return
-
     showOptions = show
     if (show) input?.focus()
     else {

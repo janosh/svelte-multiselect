@@ -27,13 +27,13 @@
 
   <p>Favorite Web Frameworks?</p>
 
-  <pre><code>selected = {JSON.stringify(selectedWeb)}</code></pre>
+  <pre><code>selectedLabels = {JSON.stringify(selectedWeb)}</code></pre>
 
   <MultiSelect
     options={webFrameworks}
     bind:selectedLabels={selectedWeb}
     bind:activeOption={activeWeb}
-    maxSelect={4}
+    maxSelect={6}
     {placeholder}
     {filterFunc}
   />
