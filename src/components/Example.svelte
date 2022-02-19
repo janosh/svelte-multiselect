@@ -25,11 +25,12 @@
 <section>
   <h3>Multi Select</h3>
 
-  <p>Favorite Web Frameworks?</p>
+  <label for="fav-web-tool">Favorite Web Frameworks?</label>
 
   <pre><code>selectedLabels = {JSON.stringify(selectedWeb)}</code></pre>
 
   <MultiSelect
+    id="fav-web-tool"
     options={webFrameworks}
     bind:selectedLabels={selectedWeb}
     bind:activeOption={activeWeb}
@@ -42,11 +43,12 @@
 <section>
   <h3>Single Select</h3>
 
-  <p>Favorite Machine Learning Framework?</p>
+  <label for="fav-ml-tool">Favorite Machine Learning Framework?</label>
 
   <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
 
   <MultiSelect
+    id="fav-ml-tool"
     maxSelect={1}
     options={mlFrameworks}
     bind:selected={selectedML}
@@ -57,9 +59,10 @@
 <section>
   <h3>50/50 Chance of Confetti</h3>
 
-  <p>Favorite Web Frameworks?</p>
+  <label for="confetti-select">Favorite Web Frameworks?</label>
 
   <MultiSelect
+    id="confetti-select"
     options={[`React`, `Svelte`]}
     maxSelect={1}
     {placeholder}
@@ -78,9 +81,10 @@
 <section>
   <h3>Slot Components</h3>
 
-  <p>as custom renderers for Options and/or Selected</p>
+  <label for="fruit-select">Custom renderers for options and/or selected items</label>
 
   <MultiSelect
+    id="fruit-select"
     options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
     {placeholder}
   >
@@ -93,9 +97,6 @@
       {option.label}
     </span>
   </MultiSelect>
-  {#if showConfetti}
-    <Confetti />
-  {/if}
 </section>
 
 <style>
