@@ -221,7 +221,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` if not set which defaults to `cornflowerblue`.
 - `div.multiselect.readonly`
   - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
-- `div.multiselect > input`
+- `div.multiselect > ul.selected > li > input`
   - `color: var(--sms-text-color, inherit)`: Input text color.
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
@@ -300,7 +300,7 @@ You can alternatively style every part of this component with more fine-grained 
 :global(div.multiselect > ul.selected > li button, button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }
-:global(div.multiselect > input) {
+:global(div.multiselect > ul.selected > li > input) {
   /* input inside the top-level wrapper div */
 }
 :global(div.multiselect > ul.options) {
