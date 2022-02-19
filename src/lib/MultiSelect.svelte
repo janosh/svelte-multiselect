@@ -212,10 +212,10 @@
 <!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
-  class="multiselect {outerDivClass}"
   class:readonly
   class:single={maxSelect == 1}
   class:open={showOptions}
+  class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
   use:onClickOutside={() => setOptionsVisible(false)}
   use:onClickOutside={() => dispatch(`blur`)}
@@ -274,8 +274,8 @@ display above those of another following shortly after it -->
 
   {#key showOptions}
     <ul
-      class="options {ulOptionsClass}"
       class:hidden={!showOptions}
+      class="options {ulOptionsClass}"
       transition:fly|local={{ duration: 300, y: 40 }}
     >
       {#each matchingOptions as option, idx}
