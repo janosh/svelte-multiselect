@@ -5,7 +5,7 @@
   import Example from '../components/Example.svelte'
 </script>
 
-<Toc headingSelector="main > :where(h2, h3, h4)" />
+<Toc headingSelector="main > :where(h2, h3)" />
 
 <GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
@@ -36,7 +36,7 @@
     display: none;
   }
   :global(:root) {
-    --toc-mobile-bg-color: #484452;
+    --toc-mobile-bg: #1c0e3e;
     --toc-mobile-btn-color: white;
     --toc-desktop-margin: 100px 0 0 0;
     --ghc-color: var(--night);
