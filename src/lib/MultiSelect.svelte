@@ -220,7 +220,7 @@ display above those of another following shortly after it -->
   use:onClickOutside={() => setOptionsVisible(false)}
   use:onClickOutside={() => dispatch(`blur`)}
 >
-  <ExpandIcon height="14pt" style="padding: 0 3pt 0 1pt;" />
+  <ExpandIcon style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
       <li class={liSelectedClass}>
@@ -309,14 +309,13 @@ display above those of another following shortly after it -->
     position: relative;
     margin: 1em 0;
     align-items: center;
-    min-height: 18pt;
     display: flex;
     cursor: text;
     padding: 0 3pt;
     border: var(--sms-border, 1pt solid lightgray);
     border-radius: var(--sms-border-radius, 5pt);
     background: var(--sms-input-bg);
-    height: var(--sms-input-height, 2em);
+    min-height: var(--sms-input-min-height, 22pt);
   }
   :where(div.multiselect.open) {
     z-index: var(--sms-open-z-index, 4);
@@ -340,7 +339,8 @@ display above those of another following shortly after it -->
     border-radius: 4pt;
     display: flex;
     margin: 2pt;
-    padding: 0 0 0 5pt;
+    line-height: normal;
+    padding: 1pt 2pt 1pt 5pt;
     transition: 0.3s;
     white-space: nowrap;
     background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
