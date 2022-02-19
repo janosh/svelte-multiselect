@@ -101,7 +101,7 @@
     activeOption = matchingEnabledOptions[0]
 
   function add(label: Primitive) {
-    if (selected.length - (maxSelect ?? 0) < 1) wiggle = true
+    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (
       !readonly &&
       !selectedLabels.includes(label) &&
@@ -134,9 +134,6 @@
   }
 
   function setOptionsVisible(show: boolean) {
-    // nothing to do if visibility is already as intended
-    if (readonly || show === showOptions) return
-
     showOptions = show
     if (show) input?.focus()
     else {
@@ -223,7 +220,7 @@ display above those of another following shortly after it -->
   use:onClickOutside={() => setOptionsVisible(false)}
   use:onClickOutside={() => dispatch(`blur`)}
 >
-  <ExpandIcon height="14pt" style="padding: 0 3pt 0 1pt;" />
+  <ExpandIcon style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
       <li class={liSelectedClass}>
@@ -242,18 +239,20 @@ display above those of another following shortly after it -->
         {/if}
       </li>
     {/each}
+    <li style="display: contents;">
+      <input
+        bind:this={input}
+        autocomplete="off"
+        bind:value={searchText}
+        on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
+        on:keydown={handleKeydown}
+        on:focus={() => setOptionsVisible(true)}
+        {id}
+        {name}
+        placeholder={selectedLabels.length ? `` : placeholder}
+      />
+    </li>
   </ul>
-  <input
-    bind:this={input}
-    autocomplete="off"
-    bind:value={searchText}
-    on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
-    on:keydown={handleKeydown}
-    on:focus={() => setOptionsVisible(true)}
-    {id}
-    {name}
-    placeholder={selectedLabels.length ? `` : placeholder}
-  />
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
@@ -310,14 +309,13 @@ display above those of another following shortly after it -->
     position: relative;
     margin: 1em 0;
     align-items: center;
-    min-height: 18pt;
     display: flex;
     cursor: text;
     padding: 0 3pt;
     border: var(--sms-border, 1pt solid lightgray);
     border-radius: var(--sms-border-radius, 5pt);
     background: var(--sms-input-bg);
-    height: var(--sms-input-height, 2em);
+    min-height: var(--sms-input-min-height, 22pt);
   }
   :where(div.multiselect.open) {
     z-index: var(--sms-open-z-index, 4);
@@ -331,6 +329,7 @@ display above those of another following shortly after it -->
 
   :where(div.multiselect > ul.selected) {
     display: flex;
+    flex: 1;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
@@ -340,7 +339,8 @@ display above those of another following shortly after it -->
     border-radius: 4pt;
     display: flex;
     margin: 2pt;
-    padding: 0 0 0 5pt;
+    line-height: normal;
+    padding: 1pt 2pt 1pt 5pt;
     transition: 0.3s;
     white-space: nowrap;
     background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
@@ -368,7 +368,7 @@ display above those of another following shortly after it -->
     transform: scale(1.04);
   }
 
-  :where(div.multiselect > input) {
+  :where(div.multiselect > ul.selected > li > input) {
     border: none;
     outline: none;
     background: none;
