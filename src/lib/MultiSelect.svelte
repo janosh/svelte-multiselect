@@ -101,7 +101,7 @@
     activeOption = matchingEnabledOptions[0]
 
   function add(label: Primitive) {
-    if (selected.length - (maxSelect ?? 0) < 1) wiggle = true
+    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (
       !readonly &&
       !selectedLabels.includes(label) &&
