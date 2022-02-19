@@ -9,6 +9,8 @@
   export let selected: Option[] = []
   export let selectedLabels: Primitive[] = []
   export let selectedValues: Primitive[] = []
+  export let searchText = ``
+  export let showOptions = false
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let maxSelectMsg = (current: number, max: number) => `${current}/${max}`
   export let readonly = false
@@ -46,6 +48,7 @@
   })
 
   let wiggle = false
+  const dispatch = createEventDispatcher()
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
@@ -81,10 +84,6 @@
 
   $: selectedLabels = selected.map((op) => op.label)
   $: selectedValues = selected.map((op) => op.value)
-
-  const dispatch = createEventDispatcher()
-  let searchText = ``
-  let showOptions = false
 
   // options matching the current search text
   $: matchingOptions = _options.filter((op) => filterFunc(op, searchText))
