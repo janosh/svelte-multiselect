@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption } from './'
   import { onClickOutside } from './actions'
@@ -37,6 +37,7 @@
   export let removeAllTitle = `Remove all`
   // https://github.com/sveltejs/svelte/issues/6964
   export let defaultDisabledTitle = `This option is disabled`
+  export let autoScroll = true
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -143,7 +144,7 @@
   }
 
   // handle all keyboard events this component receives
-  function handleKeydown(event: KeyboardEvent) {
+  async function handleKeydown(event: KeyboardEvent) {
     // on escape: dismiss options dropdown and reset search text
     if (event.key === `Escape`) {
       setOptionsVisible(false)
@@ -168,25 +169,24 @@
       const increment = event.key === `ArrowUp` ? -1 : 1
       const newActiveIdx = matchingEnabledOptions.indexOf(activeOption) + increment
 
-      const ulOps = document.querySelector(`ul.options`)
       if (newActiveIdx < 0) {
         // wrap around top
         activeOption = matchingEnabledOptions[matchingEnabledOptions.length - 1]
-        if (ulOps) ulOps.scrollTop = ulOps.scrollHeight
       } else if (newActiveIdx === matchingEnabledOptions.length) {
         // wrap around bottom
         activeOption = matchingEnabledOptions[0]
-        if (ulOps) ulOps.scrollTop = 0
       } else {
-        // default case
+        // default case: select next/previous in item list
         activeOption = matchingEnabledOptions[newActiveIdx]
-        const li = document.querySelector(`ul.options > li.active`)
-        // scrollIntoViewIfNeeded() scrolls top edge of element into view so when moving
-        // downwards, we scroll to next sibling to make element fully visible
-        if (increment === 1) li?.nextSibling?.scrollIntoViewIfNeeded()
-        else li?.scrollIntoViewIfNeeded()
       }
-    } else if (event.key === `Backspace`) {
+      if (autoScroll) {
+        await tick()
+        const li = document.querySelector(`ul.options > li.active`)
+        li?.scrollIntoViewIfNeeded()
+      }
+    }
+    // on backspace key: remove last selected option
+    else if (event.key === `Backspace`) {
       const label = selectedLabels.pop()
       if (label && !searchText) remove(label)
     }
@@ -388,7 +388,6 @@ display above those of another following shortly after it -->
 
   :where(div.multiselect > ul.options) {
     list-style: none;
-    max-height: 50vh;
     padding: 0;
     top: 100%;
     left: 0;
@@ -397,6 +396,7 @@ display above those of another following shortly after it -->
     border-radius: 1ex;
     overflow: auto;
     background: var(--sms-options-bg, white);
+    max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
   }
@@ -406,6 +406,7 @@ display above those of another following shortly after it -->
   :where(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;
     cursor: pointer;
+    scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
   /* for noOptionsMsg */
   :where(div.multiselect > ul.options span) {

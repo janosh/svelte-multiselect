@@ -104,6 +104,7 @@ Full list of props/bindable variables for this component:
 | `input`          | `undefined`             | Handle to the `<input>` DOM node.                                                                                                                                                                                                          |
 | `id`             | `undefined`             | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                       |
 | `name`           | `id`                    | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`. |
+| `autoScroll`     | `true`                  | `false` disables keeping the active dropdown items in view when going up/down the list of options with arrow keys.                                                                                                                         |
 
 </div>
 
@@ -233,8 +234,11 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
+  - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
   - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);`: Box shadow of dropdown list.
+- `div.multiselect > ul.options > li`
+  - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
   - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
   - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
