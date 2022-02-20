@@ -37,6 +37,7 @@
   export let removeAllTitle = `Remove all`
   // https://github.com/sveltejs/svelte/issues/6964
   export let defaultDisabledTitle = `This option is disabled`
+  export let allowUserOptions: boolean | 'append' = false
   export let autoScroll = true
 
   if (maxSelect !== null && maxSelect < 0) {
@@ -88,18 +89,10 @@
   $: selectedValues = selected.map((op) => op.value)
 
   // options matching the current search text
-  $: matchingOptions = _options.filter((op) => filterFunc(op, searchText))
-  $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
-
-  $: if (
-    // if there was an active option but it's not in the filtered list of options
-    (activeOption &&
-      !matchingEnabledOptions.map((op) => op.label).includes(activeOption.label)) ||
-    // or there's no active option but the user entered search text
-    (!activeOption && searchText)
+  $: matchingOptions = _options.filter(
+    (op) => filterFunc(op, searchText) && !selectedLabels.includes(op.label)
   )
-    // make the first filtered option active
-    activeOption = matchingEnabledOptions[0]
+  $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
 
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
@@ -156,7 +149,14 @@
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } // no active option means the options dropdown is closed in which case enter means open it
+      } else if ([true, `append`].includes(allowUserOptions)) {
+        selected = [...selected, { label: searchText, value: searchText }]
+        if (allowUserOptions === `append`)
+          options = [...options, { label: searchText, value: searchText }]
+        searchText = ``
+      }
+      // no active option and no search text means the options dropdown is closed
+      // in which case enter means open it
       else setOptionsVisible(true)
     }
     // on up/down arrow keys: update active option
