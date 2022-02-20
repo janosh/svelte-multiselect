@@ -234,6 +234,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
+  - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);`: Box shadow of dropdown list.
 - `div.multiselect > ul.options > li.selected`
   - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
   - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
@@ -273,7 +274,9 @@ This simplified version of the DOM structure of this component shows where these
   </ul>
   <ul class="options {ulOptionsClass}">
     <li class={liOptionClass}>Option 1</li>
-    <li class="{liOptionClass} {liActiveOptionClass}">Currently active option 2</li>
+    <li class="{liOptionClass} {liActiveOptionClass}">
+      Option 2 (currently active)
+    </li>
   </ul>
 </div>
 ```

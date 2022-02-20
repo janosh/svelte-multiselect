@@ -386,12 +386,14 @@ display above those of another following shortly after it -->
     max-height: 50vh;
     padding: 0;
     top: 100%;
+    left: 0;
     width: 100%;
     position: absolute;
     border-radius: 1ex;
     overflow: auto;
     background: var(--sms-options-bg, white);
     overscroll-behavior: var(--sms-options-overscroll, none);
+    box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
