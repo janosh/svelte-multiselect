@@ -12,7 +12,7 @@
   export let searchText = ``
   export let showOptions = false
   export let maxSelect: number | null = null // null means any number of options are selectable
-  export let maxSelectMsg = (current: number, max: number) => `${current}/${max}`
+  export let maxSelectMsg: ((current: number, max: number) => string) | null = null
   export let readonly = false
   export let options: ProtoOption[]
   export let input: HTMLInputElement | null = null
@@ -106,7 +106,7 @@
       !readonly &&
       !selectedLabels.includes(label) &&
       // for maxselect = 1 we always replace current option with new selection
-      (maxSelect == null || maxSelect == 1 || selected.length < maxSelect)
+      (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
     ) {
       searchText = `` // reset search string on selection
       const option = _options.find((op) => op.label === label)
@@ -213,7 +213,7 @@
 display above those of another following shortly after it -->
 <div
   class:readonly
-  class:single={maxSelect == 1}
+  class:single={maxSelect === 1}
   class:open={showOptions}
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
@@ -256,9 +256,12 @@ display above those of another following shortly after it -->
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
-    {#if maxSelect !== null && maxSelectMsg !== null}
+    {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
-        <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
+        <span style="padding: 0 3pt;">
+          {maxSelectMsg?.(selected.length, maxSelect) ??
+            (maxSelect > 1 ? `${selected.length}/${maxSelect}` : ``)}
+        </span>
       </Wiggle>
     {/if}
     {#if maxSelect !== 1}
