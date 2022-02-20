@@ -118,7 +118,7 @@ Full list of props/bindable variables for this component:
    }
    ```
 
-2. `maxSelectMsg = (current: number, max: number) => string`: Inform the user how many of the maximum allowed options they have currently selected. Return empty string to disable, i.e. `() => ''`. Is automatically disabled when `maxSelect === null`. Defaults to:
+2. `maxSelectMsg = (current: number, max: number) => string`: Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
 
    ```ts
    maxSelectMsg = (current: number, max: number) => `${current}/${max}`

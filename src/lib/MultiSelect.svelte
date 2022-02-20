@@ -261,15 +261,17 @@ display above those of another following shortly after it -->
         <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
       </Wiggle>
     {/if}
-    <button
-      type="button"
-      class="remove-all"
-      title={removeAllTitle}
-      on:mouseup|stopPropagation={removeAll}
-      on:keydown={handleEnterAndSpaceKeys(removeAll)}
-    >
-      <CrossIcon height="14pt" />
-    </button>
+    {#if maxSelect !== 1}
+      <button
+        type="button"
+        class="remove-all"
+        title={removeAllTitle}
+        on:mouseup|stopPropagation={removeAll}
+        on:keydown={handleEnterAndSpaceKeys(removeAll)}
+      >
+        <CrossIcon height="14pt" />
+      </button>
+    {/if}
   {/if}
 
   {#key showOptions}
