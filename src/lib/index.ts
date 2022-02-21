@@ -33,4 +33,3 @@ export type DispatchEvents = {
   }
   blur: undefined
 }
-    
