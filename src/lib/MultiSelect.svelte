@@ -1,7 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher, onMount } from 'svelte'
   import { fly } from 'svelte/transition'
-  import type { Option, Primitive, ProtoOption } from './'
+  import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
   import { onClickOutside } from './actions'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -49,7 +49,7 @@
   })
 
   let wiggle = false
-  const dispatch = createEventDispatcher()
+  const dispatch = createEventDispatcher<DispatchEvents>()
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
@@ -127,8 +127,11 @@
 
   function remove(label: Primitive) {
     if (selected.length === 0 || readonly) return
-    selected = selected.filter((option) => label !== option.label)
     const option = _options.find((option) => option.label === label)
+    if (!option) {
+      return console.error(`MultiSelect: option with label ${label} not found`)
+    }
+    selected = selected.filter((option) => label !== option.label)
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
   }

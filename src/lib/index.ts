@@ -21,3 +21,15 @@ export type ProtoOption =
   | (Omit<Option, `value`> & {
       value?: Primitive
     })
+
+export type DispatchEvents = {
+  add: { option: Option }
+  remove: { option: Option }
+  removeAll: { options: Option[] }
+  change: {
+    option?: Option
+    options?: Option[]
+    type: 'add' | 'remove' | 'removeAll'
+  }
+  blur: undefined
+}
