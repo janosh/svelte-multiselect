@@ -9,8 +9,10 @@
   export let selected: Option[] = []
   export let selectedLabels: Primitive[] = []
   export let selectedValues: Primitive[] = []
+  export let searchText = ``
+  export let showOptions = false
   export let maxSelect: number | null = null // null means any number of options are selectable
-  export let maxSelectMsg = (current: number, max: number) => `${current}/${max}`
+  export let maxSelectMsg: ((current: number, max: number) => string) | null = null
   export let readonly = false
   export let options: ProtoOption[]
   export let input: HTMLInputElement | null = null
@@ -29,6 +31,7 @@
   export let liSelectedClass = ``
   export let ulOptionsClass = ``
   export let liOptionClass = ``
+  export let liActiveOptionClass = ``
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
@@ -46,6 +49,7 @@
   })
 
   let wiggle = false
+  const dispatch = createEventDispatcher<DispatchEvents>()
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
@@ -82,10 +86,6 @@
   $: selectedLabels = selected.map((op) => op.label)
   $: selectedValues = selected.map((op) => op.value)
 
-  const dispatch = createEventDispatcher<DispatchEvents>()
-  let searchText = ``
-  let showOptions = false
-
   // options matching the current search text
   $: matchingOptions = _options.filter((op) => filterFunc(op, searchText))
   $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
@@ -106,7 +106,7 @@
       !readonly &&
       !selectedLabels.includes(label) &&
       // for maxselect = 1 we always replace current option with new selection
-      (maxSelect == null || maxSelect == 1 || selected.length < maxSelect)
+      (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
     ) {
       searchText = `` // reset search string on selection
       const option = _options.find((op) => op.label === label)
@@ -215,10 +215,10 @@
 <!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
-  class="multiselect {outerDivClass}"
   class:readonly
-  class:single={maxSelect == 1}
+  class:single={maxSelect === 1}
   class:open={showOptions}
+  class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
   use:onClickOutside={() => setOptionsVisible(false)}
   use:onClickOutside={() => dispatch(`blur`)}
@@ -259,42 +259,48 @@ display above those of another following shortly after it -->
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
-    {#if maxSelect !== null && maxSelectMsg !== null}
+    {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
-        <span style="padding: 0 3pt;">{maxSelectMsg(selected.length, maxSelect)}</span>
+        <span style="padding: 0 3pt;">
+          {maxSelectMsg?.(selected.length, maxSelect) ??
+            (maxSelect > 1 ? `${selected.length}/${maxSelect}` : ``)}
+        </span>
       </Wiggle>
     {/if}
-    <button
-      type="button"
-      class="remove-all"
-      title={removeAllTitle}
-      on:mouseup|stopPropagation={removeAll}
-      on:keydown={handleEnterAndSpaceKeys(removeAll)}
-    >
-      <CrossIcon height="14pt" />
-    </button>
+    {#if maxSelect !== 1}
+      <button
+        type="button"
+        class="remove-all"
+        title={removeAllTitle}
+        on:mouseup|stopPropagation={removeAll}
+        on:keydown={handleEnterAndSpaceKeys(removeAll)}
+      >
+        <CrossIcon height="14pt" />
+      </button>
+    {/if}
   {/if}
 
   {#key showOptions}
     <ul
-      class="options {ulOptionsClass}"
       class:hidden={!showOptions}
+      class="options {ulOptionsClass}"
       transition:fly|local={{ duration: 300, y: 40 }}
     >
       {#each matchingOptions as option, idx}
         {@const { label, disabled, title = null, selectedTitle } = option}
         {@const { disabledTitle = defaultDisabledTitle } = option}
+        {@const active = activeOption?.label === label}
         <li
           on:mouseup|preventDefault|stopPropagation
           on:mousedown|preventDefault|stopPropagation={() => {
             if (disabled) return
             isSelected(label) ? remove(label) : add(label)
           }}
-          class:selected={isSelected(label)}
-          class:active={activeOption?.label === label}
-          class:disabled
           title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
-          class={liOptionClass}
+          class:selected={isSelected(label)}
+          class:active
+          class:disabled
+          class="{liOptionClass} {active ? liActiveOptionClass : ``}"
         >
           <slot name="renderOptions" {option} {idx}>
             {option.label}
@@ -388,12 +394,14 @@ display above those of another following shortly after it -->
     max-height: 50vh;
     padding: 0;
     top: 100%;
+    left: 0;
     width: 100%;
     position: absolute;
     border-radius: 1ex;
     overflow: auto;
     background: var(--sms-options-bg, white);
     overscroll-behavior: var(--sms-options-overscroll, none);
+    box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;

@@ -88,19 +88,22 @@ Full list of props/bindable variables for this component:
 <div class="table">
 
 <!-- prettier-ignore -->
-| name             | default       | description                                                                                                                                                                                                                                |
-| :--------------- | :------------ | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `options`        | required prop | Array of strings/numbers or `Option` objects that will be listed in the dropdown. See `src/lib/index.ts` for admissible fields. The `label` is the only mandatory one. It must also be unique.                                             |
-| `activeOption`   | `null`        | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                                                                           |
-| `maxSelect`      | `null`        | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                                                                     |
-| `selected`       | `[]`          | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                                                                        |
-| `selectedLabels` | `[]`          | Labels of currently selected options.                                                                                                                                                                                                      |
-| `selectedValues` | `[]`          | Values of currently selected options.                                                                                                                                                                                                      |
-| `readonly`       | `false`       | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                              |
-| `placeholder`    | `undefined`   | String shown in the text input when no option is selected.                                                                                                                                                                                 |
-| `input`          | `undefined`   | Handle to the `<input>` DOM node.                                                                                                                                                                                                          |
-| `id`             | `undefined`   | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                       |
-| `name`           | `id`          | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`. |
+| name             | default                 | description                                                                                                                                                                                                                                |
+| :--------------- | :---------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `options`        | required prop           | Array of strings/numbers or `Option` objects that will be listed in the dropdown. See `src/lib/index.ts` for admissible fields. The `label` is the only mandatory one. It must also be unique.                                             |
+| `showOptions`    | `false`                 | Bindable boolean that controls whether the options dropdown is visible.                                                                                                                                                                    |
+| `searchText`     | ``                      | Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.                                                                                                                 |
+| `activeOption`   | `null`                  | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                                                                           |
+| `maxSelect`      | `null`                  | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                                                                     |
+| `selected`       | `[]`                    | Array of currently/pre-selected options when binding/passing as props respectively.                                                                                                                                                        |
+| `selectedLabels` | `[]`                    | Labels of currently selected options.                                                                                                                                                                                                      |
+| `selectedValues` | `[]`                    | Values of currently selected options.                                                                                                                                                                                                      |
+| `noOptionsMsg`   | `'No matching options'` | What message to show if no options match the user-entered search string.                                                                                                                                                                   |
+| `readonly`       | `false`                 | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                              |
+| `placeholder`    | `undefined`             | String shown in the text input when no option is selected.                                                                                                                                                                                 |
+| `input`          | `undefined`             | Handle to the `<input>` DOM node.                                                                                                                                                                                                          |
+| `id`             | `undefined`             | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                       |
+| `name`           | `id`                    | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`. |
 
 </div>
 
@@ -115,7 +118,7 @@ Full list of props/bindable variables for this component:
    }
    ```
 
-2. `maxSelectMsg = (current: number, max: number) => string`: Inform the user how many of the maximum allowed options they have currently selected. Return empty string to disable, i.e. `() => ''`. Is automatically disabled when `maxSelect === null`. Defaults to:
+2. `maxSelectMsg = (current: number, max: number) => string`: Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
 
    ```ts
    maxSelectMsg = (current: number, max: number) => `${current}/${max}`
@@ -231,6 +234,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
+  - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);`: Box shadow of dropdown list.
 - `div.multiselect > ul.options > li.selected`
   - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
   - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
@@ -258,6 +262,7 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `liSelectedClass`
 - `ulOptionsClass`
 - `liOptionClass`
+- `liActiveOptionClass`
 
 This simplified version of the DOM structure of this component shows where these classes are inserted:
 
@@ -269,7 +274,9 @@ This simplified version of the DOM structure of this component shows where these
   </ul>
   <ul class="options {ulOptionsClass}">
     <li class={liOptionClass}>Option 1</li>
-    <li class={liOptionClass}>Option 2</li>
+    <li class="{liOptionClass} {liActiveOptionClass}">
+      Option 2 (currently active)
+    </li>
   </ul>
 </div>
 ```

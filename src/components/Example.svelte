@@ -50,6 +50,7 @@
   <MultiSelect
     id="fav-ml-tool"
     maxSelect={1}
+    maxSelectMsg={(current, max) => `${current} of ${max} selected`}
     options={mlFrameworks}
     bind:selected={selectedML}
     {placeholder}
