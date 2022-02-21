@@ -3,6 +3,7 @@
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption } from './'
   import { onClickOutside } from './actions'
+  import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
@@ -39,6 +40,7 @@
   export let defaultDisabledTitle = `This option is disabled`
   export let allowUserOptions: boolean | 'append' = false
   export let autoScroll = true
+  export let loading = false
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -224,7 +226,7 @@ display above those of another following shortly after it -->
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
       <li class={liSelectedClass}>
-        <slot name="renderSelected" {option} {idx}>
+        <slot name="selected" {option} {idx}>
           {option.label}
         </slot>
         {#if !readonly}
@@ -253,6 +255,11 @@ display above those of another following shortly after it -->
       />
     </li>
   </ul>
+  {#if loading}
+    <slot name="spinner">
+      <CircleSpinner />
+    </slot>
+  {/if}
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
@@ -299,7 +306,7 @@ display above those of another following shortly after it -->
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
         >
-          <slot name="renderOptions" {option} {idx}>
+          <slot name="option" {option} {idx}>
             {option.label}
           </slot>
         </li>
