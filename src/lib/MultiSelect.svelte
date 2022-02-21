@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
   import { onClickOutside } from './actions'
+  import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
@@ -37,6 +38,9 @@
   export let removeAllTitle = `Remove all`
   // https://github.com/sveltejs/svelte/issues/6964
   export let defaultDisabledTitle = `This option is disabled`
+  export let allowUserOptions: boolean | 'append' = false
+  export let autoScroll = true
+  export let loading = false
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -87,18 +91,10 @@
   $: selectedValues = selected.map((op) => op.value)
 
   // options matching the current search text
-  $: matchingOptions = _options.filter((op) => filterFunc(op, searchText))
-  $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
-
-  $: if (
-    // if there was an active option but it's not in the filtered list of options
-    (activeOption &&
-      !matchingEnabledOptions.map((op) => op.label).includes(activeOption.label)) ||
-    // or there's no active option but the user entered search text
-    (!activeOption && searchText)
+  $: matchingOptions = _options.filter(
+    (op) => filterFunc(op, searchText) && !selectedLabels.includes(op.label)
   )
-    // make the first filtered option active
-    activeOption = matchingEnabledOptions[0]
+  $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
 
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
@@ -146,7 +142,7 @@
   }
 
   // handle all keyboard events this component receives
-  function handleKeydown(event: KeyboardEvent) {
+  async function handleKeydown(event: KeyboardEvent) {
     // on escape: dismiss options dropdown and reset search text
     if (event.key === `Escape`) {
       setOptionsVisible(false)
@@ -158,7 +154,14 @@
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } // no active option means the options dropdown is closed in which case enter means open it
+      } else if ([true, `append`].includes(allowUserOptions)) {
+        selected = [...selected, { label: searchText, value: searchText }]
+        if (allowUserOptions === `append`)
+          options = [...options, { label: searchText, value: searchText }]
+        searchText = ``
+      }
+      // no active option and no search text means the options dropdown is closed
+      // in which case enter means open it
       else setOptionsVisible(true)
     }
     // on up/down arrow keys: update active option
@@ -171,25 +174,24 @@
       const increment = event.key === `ArrowUp` ? -1 : 1
       const newActiveIdx = matchingEnabledOptions.indexOf(activeOption) + increment
 
-      const ulOps = document.querySelector(`ul.options`)
       if (newActiveIdx < 0) {
         // wrap around top
         activeOption = matchingEnabledOptions[matchingEnabledOptions.length - 1]
-        if (ulOps) ulOps.scrollTop = ulOps.scrollHeight
       } else if (newActiveIdx === matchingEnabledOptions.length) {
         // wrap around bottom
         activeOption = matchingEnabledOptions[0]
-        if (ulOps) ulOps.scrollTop = 0
       } else {
-        // default case
+        // default case: select next/previous in item list
         activeOption = matchingEnabledOptions[newActiveIdx]
-        const li = document.querySelector(`ul.options > li.active`)
-        // scrollIntoViewIfNeeded() scrolls top edge of element into view so when moving
-        // downwards, we scroll to next sibling to make element fully visible
-        if (increment === 1) li?.nextSibling?.scrollIntoViewIfNeeded()
-        else li?.scrollIntoViewIfNeeded()
       }
-    } else if (event.key === `Backspace`) {
+      if (autoScroll) {
+        await tick()
+        const li = document.querySelector(`ul.options > li.active`)
+        li?.scrollIntoViewIfNeeded()
+      }
+    }
+    // on backspace key: remove last selected option
+    else if (event.key === `Backspace`) {
       const label = selectedLabels.pop()
       if (label && !searchText) remove(label)
     }
@@ -227,7 +229,7 @@ display above those of another following shortly after it -->
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
       <li class={liSelectedClass}>
-        <slot name="renderSelected" {option} {idx}>
+        <slot name="selected" {option} {idx}>
           {option.label}
         </slot>
         {#if !readonly}
@@ -256,6 +258,11 @@ display above those of another following shortly after it -->
       />
     </li>
   </ul>
+  {#if loading}
+    <slot name="spinner">
+      <CircleSpinner />
+    </slot>
+  {/if}
   {#if readonly}
     <ReadOnlyIcon height="14pt" />
   {:else if selected.length > 0}
@@ -302,7 +309,7 @@ display above those of another following shortly after it -->
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
         >
-          <slot name="renderOptions" {option} {idx}>
+          <slot name="option" {option} {idx}>
             {option.label}
           </slot>
         </li>
@@ -391,7 +398,6 @@ display above those of another following shortly after it -->
 
   :where(div.multiselect > ul.options) {
     list-style: none;
-    max-height: 50vh;
     padding: 0;
     top: 100%;
     left: 0;
@@ -400,6 +406,7 @@ display above those of another following shortly after it -->
     border-radius: 1ex;
     overflow: auto;
     background: var(--sms-options-bg, white);
+    max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
   }
@@ -409,6 +416,7 @@ display above those of another following shortly after it -->
   :where(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;
     cursor: pointer;
+    scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
   /* for noOptionsMsg */
   :where(div.multiselect > ul.options span) {

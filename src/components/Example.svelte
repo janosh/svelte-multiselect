@@ -20,6 +20,13 @@
     )
     return label.includes(searchStr) || lang.includes(searchStr)
   }
+
+  let loading = false
+  let searchText = ``
+  $: if (searchText) {
+    loading = true
+    setTimeout(() => (loading = false), 1000)
+  }
 </script>
 
 <section>
@@ -53,7 +60,9 @@
     maxSelectMsg={(current, max) => `${current} of ${max} selected`}
     options={mlFrameworks}
     bind:selected={selectedML}
+    bind:searchText
     {placeholder}
+    {loading}
   />
 </section>
 
@@ -88,12 +97,13 @@
     id="fruit-select"
     options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
     {placeholder}
+    allowUserOptions="append"
   >
-    <span let:idx let:option slot="renderOptions">
+    <span let:idx let:option slot="option">
       {idx + 1}. {option.label}
       {option.label === `Mango` ? `🎉` : ``}
     </span>
-    <span let:idx let:option slot="renderSelected">
+    <span let:idx let:option slot="selected">
       #{idx + 1}
       {option.label}
     </span>
