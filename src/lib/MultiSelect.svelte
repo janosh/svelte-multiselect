@@ -41,6 +41,7 @@
   export let allowUserOptions: boolean | 'append' = false
   export let autoScroll = true
   export let loading = false
+  export let required = false
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -53,6 +54,10 @@
   })
 
   let wiggle = false
+  // formValue binds to input.form-control to prevent form submission if required
+  // prop is true and no options are selected
+  $: formValue = selectedValues.join(`,`)
+
   const dispatch = createEventDispatcher<DispatchEvents>()
 
   function isObject(item: unknown) {
@@ -225,6 +230,8 @@ display above those of another following shortly after it -->
   use:onClickOutside={() => setOptionsVisible(false)}
   use:onClickOutside={() => dispatch(`blur`)}
 >
+  <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
+  <input {required} bind:value={formValue} tabindex="-1" class="form-control" />
   <ExpandIcon style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
@@ -394,6 +401,15 @@ display above those of another following shortly after it -->
     /* https://stackoverflow.com/a/6394497 */
     font-size: calc(16px + 0.1vw);
     color: var(--sms-text-color, inherit);
+  }
+  :where(div.multiselect > input.form-control) {
+    width: 2em;
+    position: absolute;
+    background: transparent;
+    border: none;
+    outline: none;
+    z-index: -1;
+    opacity: 0;
   }
 
   :where(div.multiselect > ul.options) {

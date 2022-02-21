@@ -93,21 +93,27 @@
 
   <label for="fruit-select">Custom renderers for options and/or selected items</label>
 
-  <MultiSelect
-    id="fruit-select"
-    options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
-    {placeholder}
-    allowUserOptions="append"
-  >
-    <span let:idx let:option slot="option">
-      {idx + 1}. {option.label}
-      {option.label === `Mango` ? `🎉` : ``}
-    </span>
-    <span let:idx let:option slot="selected">
-      #{idx + 1}
-      {option.label}
-    </span>
-  </MultiSelect>
+  <form>
+    <MultiSelect
+      id="fruit-select"
+      options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
+      {placeholder}
+      allowUserOptions="append"
+      required
+    >
+      <span let:idx let:option slot="option">
+        {idx + 1}. {option.label}
+        {option.label === `Mango` ? `🎉` : ``}
+      </span>
+      <span let:idx let:option slot="selected">
+        #{idx + 1}
+        {option.label}
+      </span>
+    </MultiSelect>
+    <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;"
+      >submit</button
+    > (form submission will abort if Multiselect is empty)
+  </form>
 </section>
 
 <style>
