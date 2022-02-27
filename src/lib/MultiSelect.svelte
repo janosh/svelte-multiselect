@@ -335,7 +335,7 @@ display above those of another following shortly after it -->
     cursor: text;
     padding: 0 3pt;
     border: var(--sms-border, 1pt solid lightgray);
-    border-radius: var(--sms-border-radius, 5pt);
+    border-radius: var(--sms-border-radius, 3pt);
     background: var(--sms-input-bg);
     min-height: var(--sms-input-min-height, 22pt);
   }

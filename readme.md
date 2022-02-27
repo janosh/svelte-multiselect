@@ -229,7 +229,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
 
 - `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
-  - `border-radius: var(--sms-border-radius, 5pt)`
+  - `border-radius: var(--sms-border-radius, 3pt)`
   - `background: var(--sms-input-bg)`
   - `height: var(--sms-input-height, 2em)`
 - `div.multiselect.open`
