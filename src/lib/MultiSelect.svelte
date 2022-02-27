@@ -314,6 +314,16 @@ display above those of another following shortly after it -->
           class:active
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+          on:mouseover={() => {
+            if (disabled) return
+            activeOption = option
+          }}
+          on:focus={() => {
+            if (disabled) return
+            activeOption = option
+          }}
+          on:mouseout={() => (activeOption = null)}
+          on:blur={() => (activeOption = null)}
         >
           <slot name="option" {option} {idx}>
             {option.label}
@@ -448,14 +458,8 @@ display above those of another following shortly after it -->
     background: var(--sms-li-selected-bg, inherit);
     color: var(--sms-li-selected-color, inherit);
   }
-  :where(div.multiselect > ul.options > li:not(.selected):hover) {
-    border-left: var(
-      --sms-li-not-selected-hover-border-left,
-      3pt solid var(--sms-active-color, cornflowerblue)
-    );
-  }
   :where(div.multiselect > ul.options > li.active) {
-    background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
+    background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
   :where(div.multiselect > ul.options > li.disabled) {
     cursor: not-allowed;

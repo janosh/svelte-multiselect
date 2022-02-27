@@ -256,10 +256,8 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
   - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
   - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
-- `div.multiselect > ul.options > li:not(.selected):hover`
-  - `border-left: var(--sms-li-not-selected-hover-border-left, 3pt solid var(--sms-active-color, cornflowerblue))`
 - `div.multiselect > ul.options > li.active`
-  - `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
+  - `background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))`: Background of active dropdown item. Items become active either by mouseover or by navigating to them with arrow keys.
 - `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
