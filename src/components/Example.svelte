@@ -7,10 +7,7 @@
   let activeWeb: Option
   let selectedML: Option[]
 
-  // used to show user hint to try arrow keys but only once
-  let neverActive = true
   let showConfetti = false
-  $: if (activeWeb) neverActive = false
 
   const placeholder = `Take your pick...`
   const filterFunc = (op: Option, searchText: string) => {

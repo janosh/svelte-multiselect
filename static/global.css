@@ -18,10 +18,9 @@ body {
 body > div {
   display: flex;
   margin: auto;
-  max-width: 1000px;
+  max-width: 1100px;
 }
 main {
-  max-width: 50em;
   margin: auto;
   margin-bottom: 3em;
   width: 100%;
