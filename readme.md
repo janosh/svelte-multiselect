@@ -241,7 +241,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect > ul.selected > li > input`
   - `color: var(--sms-text-color, inherit)`: Input text color.
 - `div.multiselect > ul.selected > li`
-  - `background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue))`: Background of selected options.
+  - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
   - `height: var(--sms-selected-li-height)`: Height of selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
   - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.

@@ -36,7 +36,6 @@
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
-  // https://github.com/sveltejs/svelte/issues/6964
   export let defaultDisabledTitle = `This option is disabled`
   export let allowUserOptions: boolean | 'append' = false
   export let autoScroll = true
@@ -50,7 +49,7 @@
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   onMount(() => {
-    selected = _options.filter((op) => op?.preselected)
+    selected = _options.filter((op) => op?.preselected) ?? []
   })
 
   let wiggle = false
@@ -366,7 +365,7 @@ display above those of another following shortly after it -->
     padding: 1pt 2pt 1pt 5pt;
     transition: 0.3s;
     white-space: nowrap;
-    background: var(--sms-selected-bg, var(--sms-active-color, cornflowerblue));
+    background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
     height: var(--sms-selected-li-height);
   }
   :where(div.multiselect > ul.selected > li button, button.remove-all) {
@@ -383,6 +382,7 @@ display above those of another following shortly after it -->
     cursor: pointer;
     outline: none;
     padding: 0 2pt;
+    margin: 0; /* CSS reset */
   }
   :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-x-hover-focus-color, lightskyblue);
@@ -391,6 +391,10 @@ display above those of another following shortly after it -->
     transform: scale(1.04);
   }
 
+  :where(div.multiselect input) {
+    margin: auto 0; /* CSS reset */
+    padding: 0; /* CSS reset */
+  }
   :where(div.multiselect > ul.selected > li > input) {
     border: none;
     outline: none;
@@ -410,6 +414,7 @@ display above those of another following shortly after it -->
     outline: none;
     z-index: -1;
     opacity: 0;
+    pointer-events: none;
   }
 
   :where(div.multiselect > ul.options) {
