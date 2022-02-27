@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/svelte'
+import { readFileSync } from 'fs'
 import { expect, test } from 'vitest'
 import MultiSelect from '../src/lib'
 
@@ -32,6 +33,19 @@ test(`can focus input, enter text, toggle hidden options and select an option`, 
 
   const apple_sel = getByText(`Apple`, { selector: `ul.selected > li` })
   expect(apple_sel.textContent?.trim()).toBe(`Apple`)
+})
+
+test(`readme documents all props`, () => {
+  const readme = readFileSync(`readme.md`, `utf8`)
+
+  const instance = new MultiSelect({
+    target: document.body,
+    props: { options },
+  })
+
+  for (const prop of Object.keys(instance.$$.props)) {
+    expect(readme).to.contain(prop)
+  }
 })
 
 test(`default export from index.ts is same as component file`, async () => {
