@@ -401,9 +401,6 @@ display above those of another following shortly after it -->
     background: none;
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
-    /* minimum font-size > 16px ensures iOS doesn't zoom in when focusing input */
-    /* https://stackoverflow.com/a/6394497 */
-    font-size: calc(16px + 0.1vw);
     color: var(--sms-text-color, inherit);
   }
   :where(div.multiselect > input.form-control) {
