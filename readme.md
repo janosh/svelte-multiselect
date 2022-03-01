@@ -347,10 +347,13 @@ You can alternatively style every part of this component with more fine-grained 
   /* options with disabled key set to true (see props above) */
 }
 ```
+
 ## Unit Test
+
 To test your component which has svelte-multiselect in **Jest** or **Vitest**, you need to tweak your config to resolve [transpiling issue](https://github.com/EmilTholin/svelte-routing/issues/140#issuecomment-661682571).
 
 Add `transformIgnorePatterns` in `jest.config.json`:
+
 ```json
 {
   "testEnvironment": "jsdom",
@@ -361,7 +364,9 @@ Add `transformIgnorePatterns` in `jest.config.json`:
   }
 }
 ```
+
 Add `dep.inline` in your Vitest config: (Use `vitest` & [`vitest-svelte-kit`](https://github.com/nickbreaton/vitest-svelte-kit) here)
+
 ```js
 // svelte.config.js
 // ...
@@ -377,15 +382,15 @@ const config = {
         globals: true,
         environment: 'happy-dom',
         deps: {
-          inline: [/svelte-multiselect/]
-        }
-      }
-    }
-  }
-};
+          inline: [/svelte-multiselect/],
+        },
+      },
+    },
+  },
+}
 // ...
-
 ```
+
 Here is a basic example, try it [online](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__).
 
 ## Want to contribute?
