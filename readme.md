@@ -347,6 +347,46 @@ You can alternatively style every part of this component with more fine-grained 
   /* options with disabled key set to true (see props above) */
 }
 ```
+## Unit Test
+To test your component which has svelte-multiselect in **Jest** or **Vitest**, you need to tweak your config to resolve [transpiling issue](https://github.com/EmilTholin/svelte-routing/issues/140#issuecomment-661682571).
+
+Add `transformIgnorePatterns` in `jest.config.json`:
+```json
+{
+  "testEnvironment": "jsdom",
+  "transformIgnorePatterns": ["node_modules/?!(svelte-multiselect)"],
+  "transform": {
+    "^.+\\.[t|j]s?$": "esbuild-jest",
+    "^.+\\.svelte$": ["svelte-jester", { "preprocess": true }]
+  }
+}
+```
+Add `dep.inline` in your Vitest config: (Use `vitest` & [`vitest-svelte-kit`](https://github.com/nickbreaton/vitest-svelte-kit) here)
+```js
+// svelte.config.js
+// ...
+const config = {
+  // Consult https://github.com/sveltejs/svelte-preprocess
+  // for more information about preprocessors
+  preprocess: preprocess(),
+
+  kit: {
+    adapter: adapter(),
+    vite: {
+      test: {
+        globals: true,
+        environment: 'happy-dom',
+        deps: {
+          inline: [/svelte-multiselect/]
+        }
+      }
+    }
+  }
+};
+// ...
+
+```
+Here is a basic example, try it [online](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__).
 
 ## Want to contribute?
 
