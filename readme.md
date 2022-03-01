@@ -348,15 +348,14 @@ You can alternatively style every part of this component with more fine-grained 
 }
 ```
 
-## Unit Test
+## Downstream testing
 
-To test your component which has svelte-multiselect in **Jest** or **Vitest**, you need to tweak your config to resolve [transpiling issue](https://github.com/EmilTholin/svelte-routing/issues/140#issuecomment-661682571).
+To test a Svelte component which imports `svelte-multiselect`, you need to configure your test runner to avoid [transpiling issues](https://github.com/EmilTholin/svelte-routing/issues/140#issuecomment-661682571).
 
-Add `transformIgnorePatterns` in `jest.config.json`:
+For Jest, exclude `svelte-multiselect` from `transformIgnorePatterns` in your `jest.config.json`:
 
 ```json
 {
-  "testEnvironment": "jsdom",
   "transformIgnorePatterns": ["node_modules/?!(svelte-multiselect)"],
   "transform": {
     "^.+\\.[t|j]s?$": "esbuild-jest",
@@ -365,33 +364,23 @@ Add `transformIgnorePatterns` in `jest.config.json`:
 }
 ```
 
-Add `dep.inline` in your Vitest config: (Use `vitest` & [`vitest-svelte-kit`](https://github.com/nickbreaton/vitest-svelte-kit) here)
+For Vitest, include `svelte-multiselect` in `deps.inline`:
 
-```js
-// svelte.config.js
-// ...
-const config = {
-  // Consult https://github.com/sveltejs/svelte-preprocess
-  // for more information about preprocessors
-  preprocess: preprocess(),
+```ts
+// vite.config.ts
+import { svelte } from '@sveltejs/vite-plugin-svelte'
 
-  kit: {
-    adapter: adapter(),
-    vite: {
-      test: {
-        globals: true,
-        environment: 'happy-dom',
-        deps: {
-          inline: [/svelte-multiselect/],
-        },
-      },
+export default {
+  plugins: [svelte({ hot: !process.env.VITEST })],
+  test: {
+    deps: {
+      inline: [/svelte-multiselect/],
     },
   },
 }
-// ...
 ```
 
-Here is a basic example, try it [online](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__).
+Here's a [Stackblitz example](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__) that also uses [`'vitest-svelte-kit'`](https://github.com/nickbreaton/vitest-svelte-kit).
 
 ## Want to contribute?
 
