@@ -39,8 +39,8 @@
 - v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
 
   ```js
-  on:add={(e) => console.log(e.detail.token.label)} // v2.0.0
-  on:add={(e) => console.log(e.detail.option.label)} // v3.0.0
+  on:add={(e) => console.log(e.detail.token.label)} // v2
+  on:add={(e) => console.log(e.detail.option.label)} // v3
   ```
 
   It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
@@ -114,7 +114,8 @@ Full list of props/bindable variables for this component:
 | `loading`              | `false`                     | Whether the component should display a spinner to indicate it's in loading state. Use `<slot name='spinner'>` to specify a custom spinner.                                                                                                 |
 | `removeBtnTitle`       | `'Remove'`                  | Title text to display when user hovers over button (cross icon) to remove selected option.                                                                                                                                                 |
 | `removeAllTitle`       | `'Remove all'`              | Title text to display when user hovers over remove-all button.                                                                                                                                                                             |
-| `defaultDisabledTitle` | `'This option is disabled'` | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute. button.                                                                                                |
+| `defaultDisabledTitle` | `'This option is disabled'` | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.                                                                                                        |
+| `autocomplete`         | `'off'`                     | Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete) for other admissible values.                           |
 
 </div>
 

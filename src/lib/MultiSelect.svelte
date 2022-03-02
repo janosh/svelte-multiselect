@@ -41,6 +41,7 @@
   export let autoScroll = true
   export let loading = false
   export let required = false
+  export let autocomplete = `off`
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -253,7 +254,7 @@ display above those of another following shortly after it -->
     <li style="display: contents;">
       <input
         bind:this={input}
-        autocomplete="off"
+        {autocomplete}
         bind:value={searchText}
         on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
         on:keydown={handleKeydown}
