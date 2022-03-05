@@ -3,7 +3,7 @@
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
   import CircleSpinner from './CircleSpinner.svelte'
-  import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
+  import { CrossIcon, ExpandIcon, DisabledIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
   export let selected: Option[] = []
@@ -13,7 +13,8 @@
   export let showOptions = false
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let maxSelectMsg: ((current: number, max: number) => string) | null = null
-  export let readonly = false
+  export let disabled = false
+  export let disabledTitle = `This field is disabled`
   export let options: ProtoOption[]
   export let input: HTMLInputElement | null = null
   export let placeholder: string | undefined = undefined
@@ -103,7 +104,6 @@
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (
-      !readonly &&
       !selectedLabels.includes(label) &&
       // for maxselect = 1 we always replace current option with new selection
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
@@ -126,7 +126,7 @@
   }
 
   function remove(label: Primitive) {
-    if (selected.length === 0 || readonly) return
+    if (selected.length === 0) return
     const option = _options.find((option) => option.label === label)
     if (!option) {
       return console.error(`MultiSelect: option with label ${label} not found`)
@@ -137,6 +137,7 @@
   }
 
   function setOptionsVisible(show: boolean) {
+    if (disabled) return
     showOptions = show
     if (show) input?.focus()
     else {
@@ -221,7 +222,7 @@
 <!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
-  class:readonly
+  class:disabled
   class:single={maxSelect === 1}
   class:open={showOptions}
   class="multiselect {outerDivClass}"
@@ -230,6 +231,7 @@ display above those of another following shortly after it -->
     setOptionsVisible(false)
     dispatch(`blur`)
   }}
+  title={disabled ? disabledTitle : null}
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input {required} bind:value={formValue} tabindex="-1" class="form-control" />
@@ -240,7 +242,7 @@ display above those of another following shortly after it -->
         <slot name="selected" {option} {idx}>
           {option.label}
         </slot>
-        {#if !readonly}
+        {#if !disabled}
           <button
             on:mouseup|stopPropagation={() => remove(option.label)}
             on:keydown={handleEnterAndSpaceKeys(() => remove(option.label))}
@@ -263,6 +265,7 @@ display above those of another following shortly after it -->
         on:blur={() => setOptionsVisible(false)}
         {id}
         {name}
+        {disabled}
         placeholder={selectedLabels.length ? `` : placeholder}
       />
     </li>
@@ -272,8 +275,10 @@ display above those of another following shortly after it -->
       <CircleSpinner />
     </slot>
   {/if}
-  {#if readonly}
-    <ReadOnlyIcon height="14pt" />
+  {#if disabled}
+    <slot name="disabled-icon">
+      <DisabledIcon height="14pt" />
+    </slot>
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
@@ -360,8 +365,9 @@ display above those of another following shortly after it -->
   :where(div.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
-  :where(div.multiselect.readonly) {
-    background: var(--sms-readonly-bg, lightgray);
+  :where(div.multiselect.disabled) {
+    background: var(--sms-disabled-bg, lightgray);
+    cursor: not-allowed;
   }
 
   :where(div.multiselect > ul.selected) {
@@ -377,28 +383,24 @@ display above those of another following shortly after it -->
     display: flex;
     margin: 2pt;
     line-height: normal;
-    padding: 1pt 2pt 1pt 5pt;
+    padding: 1pt 5pt;
     transition: 0.3s;
     white-space: nowrap;
     background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
     height: var(--sms-selected-li-height);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
-  :where(div.multiselect > ul.selected > li button, button.remove-all) {
-    align-items: center;
+  :where(div.multiselect button) {
     border-radius: 50%;
     display: flex;
-    cursor: pointer;
     transition: 0.2s;
-  }
-  :where(div.multiselect button) {
     color: inherit;
     background: transparent;
     border: none;
     cursor: pointer;
     outline: none;
-    padding: 0 2pt;
-    margin: 0; /* CSS reset */
+    padding: 0;
+    margin: 0 0 0 4pt; /* CSS reset */
   }
   :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-x-hover-focus-color, lightskyblue);
@@ -419,6 +421,7 @@ display above those of another following shortly after it -->
     min-width: 2em;
     color: inherit;
     font-size: inherit;
+    cursor: inherit; /* needed for disabled state */
   }
   :where(div.multiselect > input.form-control) {
     width: 2em;
@@ -458,10 +461,6 @@ display above those of another following shortly after it -->
     padding: 3pt 2ex;
   }
   :where(div.multiselect > ul.options > li.selected) {
-    border-left: var(
-      --sms-li-selected-border-left,
-      3pt solid var(--sms-selected-color, green)
-    );
     background: var(--sms-li-selected-bg);
     color: var(--sms-li-selected-color);
   }
@@ -472,8 +471,5 @@ display above those of another following shortly after it -->
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
-  }
-  :where(div.multiselect > ul.options > li.disabled:hover) {
-    border-left: unset;
   }
 </style>
