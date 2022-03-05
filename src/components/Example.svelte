@@ -135,5 +135,6 @@
   }
   pre {
     white-space: pre-wrap;
+    background-color: transparent;
   }
 </style>
