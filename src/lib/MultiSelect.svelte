@@ -273,7 +273,9 @@ display above those of another following shortly after it -->
     </slot>
   {/if}
   {#if disabled}
-    <DisabledIcon height="14pt" />
+    <slot name="disabled-icon">
+      <DisabledIcon height="14pt" />
+    </slot>
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>

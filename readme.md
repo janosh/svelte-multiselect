@@ -146,6 +146,7 @@ Full list of props/bindable variables for this component:
 - `slot="option"`: Customize rendering of dropdown options. Receives as props the `option` object and the zero-indexed position (`idx`) it has in the dropdown.
 - `slot="selected"`: Customize rendering selected tags. Receives as props the `option` object and the zero-indexed position (`idx`) it has in the list of selected items.
 - `slot="spinner"`: Custom spinner component to display when in `loading` state. Receives no props.
+- `slot="disabled-icon"`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `<span slot="disabled-icon" />` or `div` to remove the default disabled icon.
 
 Example:
 
