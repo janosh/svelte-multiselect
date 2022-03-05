@@ -235,7 +235,7 @@ display above those of another following shortly after it -->
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input {required} bind:value={formValue} tabindex="-1" class="form-control" />
-  <ExpandIcon style="min-width: 1em; padding: 0 1pt;" />
+  <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
       <li class={liSelectedClass}>
@@ -249,7 +249,7 @@ display above those of another following shortly after it -->
             type="button"
             title="{removeBtnTitle} {option.label}"
           >
-            <CrossIcon height="12pt" />
+            <CrossIcon width="15px" />
           </button>
         {/if}
       </li>
@@ -277,7 +277,7 @@ display above those of another following shortly after it -->
   {/if}
   {#if disabled}
     <slot name="disabled-icon">
-      <DisabledIcon height="14pt" />
+      <DisabledIcon width="15px" />
     </slot>
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
@@ -296,7 +296,7 @@ display above those of another following shortly after it -->
         on:mouseup|stopPropagation={removeAll}
         on:keydown={handleEnterAndSpaceKeys(removeAll)}
       >
-        <CrossIcon height="14pt" />
+        <CrossIcon width="15px" />
       </button>
     {/if}
   {/if}
