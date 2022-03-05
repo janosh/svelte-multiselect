@@ -92,7 +92,7 @@
   <label for="fruit-select">Custom renderers for options and/or selected items</label>
 
   <form
-    on:submit={() => {
+    on:submit|preventDefault={() => {
       alert(`You selected '${selectedFruit.map((el) => el.label).join(`, `)}'`)
     }}
   >
