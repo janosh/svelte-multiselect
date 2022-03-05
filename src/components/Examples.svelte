@@ -67,7 +67,7 @@
 <section>
   <h3>50/50 Chance of Confetti</h3>
 
-  <label for="confetti-select">Favorite Web Frameworks?</label>
+  <label for="confetti-select">Favorite Web Framework?</label>
 
   <MultiSelect
     id="confetti-select"
@@ -77,13 +77,26 @@
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
         showConfetti = true
-        setTimeout(() => (showConfetti = false), 4000)
+        setTimeout(() => (showConfetti = false), 3000)
       }
     }}
   />
   {#if showConfetti}
     <Confetti />
   {/if}
+</section>
+
+<section>
+  <h3>Disabled</h3>
+
+  <label for="confetti-select">Favorite Web Framework?</label>
+
+  <MultiSelect
+    id="confetti-select"
+    options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
+    disabled
+    {placeholder}
+  />
 </section>
 
 <section>
@@ -125,6 +138,7 @@
     --sms-options-bg: var(--night);
     --sms-selected-bg: rgba(255, 255, 255, 0.2);
     --sms-text-color: white;
+    --sms-disabled-bg: rgba(7, 1, 34, 0.87);
     --sms-li-disabled-bg: black;
   }
   section {

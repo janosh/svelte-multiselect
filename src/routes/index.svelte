@@ -2,7 +2,7 @@
   import GitHubCorner from 'svelte-github-corner'
   import Toc from 'svelte-toc'
   import Readme from '../../readme.md'
-  import Example from '../components/Example.svelte'
+  import Examples from '../components/Examples.svelte'
 </script>
 
 <Toc headingSelector="main > :where(h2, h3)" />
@@ -11,7 +11,7 @@
 
 <main>
   <Readme>
-    <Example />
+    <Examples />
   </Readme>
 </main>
 
