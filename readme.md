@@ -46,8 +46,11 @@
   It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
 
 - v4.0.0 renamed the slots for customizing how selected options and dropdown list items are rendered:
+
   - old: `<slot name="renderOptions" />`, new: `<slot name="option" />`
   - old: `<slot name="renderSelected" />`, new: `<slot name="selected" />`
+
+- v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form or user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed to `div.multiselect.{readonly=>disabled}`.
 
 ## Installation
 
@@ -103,7 +106,7 @@ Full list of props/bindable variables for this component:
 | `selectedLabels`       | `[]`                        | Labels of currently selected options.                                                                                                                                                                                                      |
 | `selectedValues`       | `[]`                        | Values of currently selected options.                                                                                                                                                                                                      |
 | `noOptionsMsg`         | `'No matching options'`     | What message to show if no options match the user-entered search string.                                                                                                                                                                   |
-| `readonly`             | `false`                     | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                              |
+| `disabled`             | `false`                     | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                              |
 | `placeholder`          | `undefined`                 | String shown in the text input when no option is selected.                                                                                                                                                                                 |
 | `input`                | `undefined`                 | Handle to the `<input>` DOM node.                                                                                                                                                                                                          |
 | `id`                   | `undefined`                 | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                       |
@@ -238,8 +241,8 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
   - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` if not set which defaults to `cornflowerblue`.
-- `div.multiselect.readonly`
-  - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
+- `div.multiselect.disabled`
+  - `background: var(--sms-disabled-bg, lightgray)`: Background when in disabled state.
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
   - `height: var(--sms-selected-li-height)`: Height of selected options.
@@ -308,8 +311,8 @@ You can alternatively style every part of this component with more fine-grained 
 :global(div.multiselect.open) {
   /* top-level wrapper div when dropdown open */
 }
-:global(div.multiselect.readonly) {
-  /* top-level wrapper div when in readonly state */
+:global(div.multiselect.disabled) {
+  /* top-level wrapper div when in disabled state */
 }
 :global(div.multiselect > ul.selected) {
   /* selected list */
