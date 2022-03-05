@@ -260,6 +260,7 @@ display above those of another following shortly after it -->
         on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
         on:keydown={handleKeydown}
         on:focus={() => setOptionsVisible(true)}
+        on:blur={() => setOptionsVisible(false)}
         {id}
         {name}
         placeholder={selectedLabels.length ? `` : placeholder}
