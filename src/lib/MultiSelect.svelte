@@ -2,7 +2,6 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
-  import { onClickOutside } from './actions'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -227,8 +226,10 @@ display above those of another following shortly after it -->
   class:open={showOptions}
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
-  use:onClickOutside={() => setOptionsVisible(false)}
-  use:onClickOutside={() => dispatch(`blur`)}
+  on:focusout={() => {
+    setOptionsVisible(false)
+    dispatch(`blur`)
+  }}
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input {required} bind:value={formValue} tabindex="-1" class="form-control" />
