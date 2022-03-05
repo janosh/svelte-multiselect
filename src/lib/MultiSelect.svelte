@@ -2,7 +2,6 @@
   import { createEventDispatcher, onMount, tick } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
-  import { onClickOutside } from './actions'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, ReadOnlyIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -41,6 +40,7 @@
   export let autoScroll = true
   export let loading = false
   export let required = false
+  export let autocomplete = `off`
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -226,8 +226,10 @@ display above those of another following shortly after it -->
   class:open={showOptions}
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
-  use:onClickOutside={() => setOptionsVisible(false)}
-  use:onClickOutside={() => dispatch(`blur`)}
+  on:focusout={() => {
+    setOptionsVisible(false)
+    dispatch(`blur`)
+  }}
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input {required} bind:value={formValue} tabindex="-1" class="form-control" />
@@ -253,7 +255,7 @@ display above those of another following shortly after it -->
     <li style="display: contents;">
       <input
         bind:this={input}
-        autocomplete="off"
+        {autocomplete}
         bind:value={searchText}
         on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
         on:keydown={handleKeydown}
@@ -314,6 +316,16 @@ display above those of another following shortly after it -->
           class:active
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+          on:mouseover={() => {
+            if (disabled) return
+            activeOption = option
+          }}
+          on:focus={() => {
+            if (disabled) return
+            activeOption = option
+          }}
+          on:mouseout={() => (activeOption = null)}
+          on:blur={() => (activeOption = null)}
         >
           <slot name="option" {option} {idx}>
             {option.label}
@@ -335,9 +347,11 @@ display above those of another following shortly after it -->
     cursor: text;
     padding: 0 3pt;
     border: var(--sms-border, 1pt solid lightgray);
-    border-radius: var(--sms-border-radius, 5pt);
+    border-radius: var(--sms-border-radius, 3pt);
     background: var(--sms-input-bg);
     min-height: var(--sms-input-min-height, 22pt);
+    color: var(--sms-text-color);
+    font-size: var(--sms-font-size, inherit);
   }
   :where(div.multiselect.open) {
     z-index: var(--sms-open-z-index, 4);
@@ -367,6 +381,7 @@ display above those of another following shortly after it -->
     white-space: nowrap;
     background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
     height: var(--sms-selected-li-height);
+    color: var(--sms-selected-text-color, var(--sms-text-color));
   }
   :where(div.multiselect > ul.selected > li button, button.remove-all) {
     align-items: center;
@@ -401,10 +416,8 @@ display above those of another following shortly after it -->
     background: none;
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
-    /* minimum font-size > 16px ensures iOS doesn't zoom in when focusing input */
-    /* https://stackoverflow.com/a/6394497 */
-    font-size: calc(16px + 0.1vw);
-    color: var(--sms-text-color, inherit);
+    color: inherit;
+    font-size: inherit;
   }
   :where(div.multiselect > input.form-control) {
     width: 2em;
@@ -448,17 +461,11 @@ display above those of another following shortly after it -->
       --sms-li-selected-border-left,
       3pt solid var(--sms-selected-color, green)
     );
-    background: var(--sms-li-selected-bg, inherit);
-    color: var(--sms-li-selected-color, inherit);
-  }
-  :where(div.multiselect > ul.options > li:not(.selected):hover) {
-    border-left: var(
-      --sms-li-not-selected-hover-border-left,
-      3pt solid var(--sms-active-color, cornflowerblue)
-    );
+    background: var(--sms-li-selected-bg);
+    color: var(--sms-li-selected-color);
   }
   :where(div.multiselect > ul.options > li.active) {
-    background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue));
+    background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
   :where(div.multiselect > ul.options > li.disabled) {
     cursor: not-allowed;

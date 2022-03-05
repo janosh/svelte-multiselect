@@ -1,5 +1,4 @@
 import { cleanup, fireEvent, render } from '@testing-library/svelte'
-import { readFileSync } from 'fs'
 import { afterEach, expect, test } from 'vitest'
 import MultiSelect from '../src/lib'
 
@@ -37,19 +36,6 @@ test(`can focus input, enter text, toggle hidden options and select an option`, 
   expect(apple_sel.textContent?.trim()).toBe(`Apple`)
 })
 
-test(`readme documents all props`, () => {
-  const readme = readFileSync(`readme.md`, `utf8`)
-
-  const instance = new MultiSelect({
-    target: document.body,
-    props: { options },
-  })
-
-  for (const prop of Object.keys(instance.$$.props)) {
-    expect(readme).to.contain(prop)
-  }
-})
-
 test(`remove all button`, async () => {
   const { container, getByPlaceholderText } = render(MultiSelect, {
     options,
@@ -70,18 +56,13 @@ test(`remove all button`, async () => {
 
   const ul_sel = container.querySelector(`ul.selected`)
   // make sure all options are selected
-  expect(ul_sel?.textContent).toContain(`Mango Apple Banana`)
+  expect(ul_sel?.textContent).toContain(`Mango Dates Apple Watermelon Banana`)
 
   const rm_all_btn = container.querySelector(`button[title='Remove all']`)
   await fireEvent.mouseUp(rm_all_btn)
 
   const ul_sel_after = container.querySelector(`ul.selected`)
   expect(ul_sel_after?.textContent).toBe(` `) // only input left
-})
-
-test(`default export from index.ts is same as component file`, async () => {
-  const { default: comp } = await import(`../src/lib/MultiSelect.svelte`)
-  expect(comp).toBe(MultiSelect)
 })
 
 // TODO: requires component interaction before classes appear in DOM
