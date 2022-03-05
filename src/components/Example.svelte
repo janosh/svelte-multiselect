@@ -6,6 +6,7 @@
   let selectedWeb: Primitive[]
   let activeWeb: Option
   let selectedML: Option[]
+  let selectedFruit: Option[]
 
   let showConfetti = false
 
@@ -90,10 +91,15 @@
 
   <label for="fruit-select">Custom renderers for options and/or selected items</label>
 
-  <form>
+  <form
+    on:submit={() => {
+      alert(`You selected '${selectedFruit.map((el) => el.label).join(`, `)}'`)
+    }}
+  >
     <MultiSelect
       id="fruit-select"
       options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
+      bind:selected={selectedFruit}
       {placeholder}
       allowUserOptions="append"
       required
@@ -107,16 +113,19 @@
         {option.label}
       </span>
     </MultiSelect>
-    <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;"
-      >submit</button
-    > (form submission will abort if Multiselect is empty)
+    <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;">
+      submit
+    </button> (form submission will abort if Multiselect is empty)
   </form>
 </section>
 
 <style>
   :root {
     --sms-active-color: var(--blue);
-    --sms-options-bg: black;
+    --sms-options-bg: var(--night);
+    --sms-selected-bg: rgba(255, 255, 255, 0.2);
+    --sms-text-color: white;
+    --sms-li-disabled-bg: black;
   }
   section {
     margin-top: 2em;
