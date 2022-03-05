@@ -350,6 +350,8 @@ display above those of another following shortly after it -->
     border-radius: var(--sms-border-radius, 3pt);
     background: var(--sms-input-bg);
     min-height: var(--sms-input-min-height, 22pt);
+    color: var(--sms-text-color);
+    font-size: var(--sms-font-size, inherit);
   }
   :where(div.multiselect.open) {
     z-index: var(--sms-open-z-index, 4);
@@ -379,6 +381,7 @@ display above those of another following shortly after it -->
     white-space: nowrap;
     background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
     height: var(--sms-selected-li-height);
+    color: var(--sms-selected-text-color, var(--sms-text-color));
   }
   :where(div.multiselect > ul.selected > li button, button.remove-all) {
     align-items: center;
@@ -413,7 +416,8 @@ display above those of another following shortly after it -->
     background: none;
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
-    color: var(--sms-text-color, inherit);
+    color: inherit;
+    font-size: inherit;
   }
   :where(div.multiselect > input.form-control) {
     width: 2em;
@@ -457,8 +461,8 @@ display above those of another following shortly after it -->
       --sms-li-selected-border-left,
       3pt solid var(--sms-selected-color, green)
     );
-    background: var(--sms-li-selected-bg, inherit);
-    color: var(--sms-li-selected-color, inherit);
+    background: var(--sms-li-selected-bg);
+    color: var(--sms-li-selected-color);
   }
   :where(div.multiselect > ul.options > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
