@@ -460,10 +460,6 @@ display above those of another following shortly after it -->
     padding: 3pt 2ex;
   }
   :where(div.multiselect > ul.options > li.selected) {
-    border-left: var(
-      --sms-li-selected-border-left,
-      3pt solid var(--sms-selected-color, green)
-    );
     background: var(--sms-li-selected-bg);
     color: var(--sms-li-selected-color);
   }
@@ -474,8 +470,5 @@ display above those of another following shortly after it -->
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
-  }
-  :where(div.multiselect > ul.options > li.disabled:hover) {
-    border-left: unset;
   }
 </style>

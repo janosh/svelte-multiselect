@@ -258,7 +258,6 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
-  - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
   - `background: var(--sms-li-selected-bg)`: Background of selected list items in options pane.
   - `color: var(--sms-li-selected-color)`: Text color of selected list items in options pane.
 - `div.multiselect > ul.options > li.active`
