@@ -39,8 +39,8 @@
 - v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
 
   ```js
-  on:add={(e) => console.log(e.detail.token.label)} // v2.0.0
-  on:add={(e) => console.log(e.detail.option.label)} // v3.0.0
+  on:add={(e) => console.log(e.detail.token.label)} // v2
+  on:add={(e) => console.log(e.detail.option.label)} // v3
   ```
 
   It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
@@ -114,7 +114,8 @@ Full list of props/bindable variables for this component:
 | `loading`              | `false`                     | Whether the component should display a spinner to indicate it's in loading state. Use `<slot name='spinner'>` to specify a custom spinner.                                                                                                 |
 | `removeBtnTitle`       | `'Remove'`                  | Title text to display when user hovers over button (cross icon) to remove selected option.                                                                                                                                                 |
 | `removeAllTitle`       | `'Remove all'`              | Title text to display when user hovers over remove-all button.                                                                                                                                                                             |
-| `defaultDisabledTitle` | `'This option is disabled'` | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute. button.                                                                                                |
+| `defaultDisabledTitle` | `'This option is disabled'` | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.                                                                                                        |
+| `autocomplete`         | `'off'`                     | Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/autocomplete) for other admissible values.                           |
 
 </div>
 
@@ -229,20 +230,20 @@ If you only want to make small adjustments, you can pass the following CSS varia
 
 - `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
-  - `border-radius: var(--sms-border-radius, 5pt)`
+  - `border-radius: var(--sms-border-radius, 3pt)`
   - `background: var(--sms-input-bg)`
   - `height: var(--sms-input-height, 2em)`
+  - `color: var(--sms-text-color)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
   - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` if not set which defaults to `cornflowerblue`.
 - `div.multiselect.readonly`
   - `background: var(--sms-readonly-bg, lightgray)`: Background when in readonly state.
-- `div.multiselect > ul.selected > li > input`
-  - `color: var(--sms-text-color, inherit)`: Input text color.
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
   - `height: var(--sms-selected-li-height)`: Height of selected options.
+  - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
   - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `div.multiselect > ul.options`
@@ -254,12 +255,10 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
   - `border-left: var(--sms-li-selected-border-left, 3pt solid var(--sms-selected-color, green))`
-  - `background: var(--sms-li-selected-bg, inherit)`: Background of selected list items in options pane.
-  - `color: var(--sms-li-selected-color, inherit)`: Text color of selected list items in options pane.
-- `div.multiselect > ul.options > li:not(.selected):hover`
-  - `border-left: var(--sms-li-not-selected-hover-border-left, 3pt solid var(--sms-active-color, cornflowerblue))`
+  - `background: var(--sms-li-selected-bg)`: Background of selected list items in options pane.
+  - `color: var(--sms-li-selected-color)`: Text color of selected list items in options pane.
 - `div.multiselect > ul.options > li.active`
-  - `background: var(--sms-li-active-bg, var(--sms-active-color, cornflowerblue))`: Background of active (currently with arrow keys highlighted) list item.
+  - `background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))`: Background of active dropdown item. Items become active either by mouseover or by navigating to them with arrow keys.
 - `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.

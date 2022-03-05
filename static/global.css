@@ -1,6 +1,6 @@
 :root {
   --night: #10002c;
-  --blue: #0461cc;
+  --blue: cornflowerblue;
 }
 html {
   /* smoothly scroll heading links into view, unfortunately also applies to jumping
@@ -41,14 +41,15 @@ code {
   padding: 0 2pt;
   border-radius: 2pt;
   font-size: 1.2em;
-  background-color: #004040;
+  background-color: rgba(255, 255, 255, 0.15);
 }
 pre code {
   background-color: transparent;
 }
 pre {
-  border-radius: 1ex;
-  font-size: 0.75em;
+  border-radius: 4pt;
+  font-size: 10pt;
+  background-color: rgba(0, 0, 0, 0.6);
 }
 a code {
   color: white;
