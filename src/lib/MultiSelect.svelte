@@ -42,6 +42,7 @@
   export let loading = false
   export let required = false
   export let autocomplete = `off`
+  export let invalid = false
 
   if (maxSelect !== null && maxSelect < 0) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -52,11 +53,6 @@
   onMount(() => {
     selected = _options.filter((op) => op?.preselected) ?? []
   })
-
-  let wiggle = false
-  // formValue binds to input.form-control to prevent form submission if required
-  // prop is true and no options are selected
-  $: formValue = selectedValues.join(`,`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
 
@@ -92,8 +88,13 @@
     )
   }
 
+  let wiggle = false
   $: selectedLabels = selected.map((op) => op.label)
   $: selectedValues = selected.map((op) => op.value)
+  // formValue binds to input.form-control to prevent form submission if required
+  // prop is true and no options are selected
+  $: formValue = selectedValues.join(`,`)
+  $: if (formValue) invalid = false // reset error status whenever component state changes
 
   // options matching the current search text
   $: matchingOptions = _options.filter(
@@ -225,6 +226,7 @@ display above those of another following shortly after it -->
   class:disabled
   class:single={maxSelect === 1}
   class:open={showOptions}
+  class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
   on:focusout={() => {
@@ -234,7 +236,13 @@ display above those of another following shortly after it -->
   title={disabled ? disabledTitle : null}
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
-  <input {required} bind:value={formValue} tabindex="-1" class="form-control" />
+  <input
+    {required}
+    bind:value={formValue}
+    tabindex="-1"
+    class="form-control"
+    on:invalid={() => (invalid = true)}
+  />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
