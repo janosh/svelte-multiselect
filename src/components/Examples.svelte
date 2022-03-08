@@ -1,7 +1,7 @@
 <script lang="ts">
   import MultiSelect, { Option, Primitive } from '../lib'
   import Confetti from './Confetti.svelte'
-  import { mlFrameworks, webFrameworks } from './frameworks'
+  import { colors, ml_libs, web_ui_libs } from '../options'
 
   let selectedWeb: Primitive[]
   let activeWeb: Option
@@ -36,7 +36,7 @@
 
   <MultiSelect
     id="fav-web-tool"
-    options={webFrameworks}
+    options={web_ui_libs}
     bind:selectedLabels={selectedWeb}
     bind:activeOption={activeWeb}
     maxSelect={6}
@@ -56,7 +56,7 @@
     id="fav-ml-tool"
     maxSelect={1}
     maxSelectMsg={(current, max) => `${current} of ${max} selected`}
-    options={mlFrameworks}
+    options={ml_libs}
     bind:selected={selectedML}
     bind:searchText
     {placeholder}

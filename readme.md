@@ -64,28 +64,16 @@ yarn add -D svelte-multiselect
 <script>
   import MultiSelect from 'svelte-multiselect'
 
-  const webFrameworks = [
-    `Svelte`,
-    `React`,
-    `Vue`,
-    `Angular`,
-    `Polymer`,
-    `Ruby on Rails`,
-    `ASP.net`,
-    `Laravel`,
-    `Django`,
-    `Express`,
-    `Spring`,
-  ]
+  const ui_libs = [`Svelte`, `React`, `Vue`, `Angular`, `...`]
 
   let selected = []
 </script>
 
-Favorite Web Frameworks?
+Favorite Frontend Frameworks?
 
 <code>selected = {JSON.stringify(selected)}</code>
 
-<MultiSelect bind:selected options={webFrameworks} />
+<MultiSelect bind:selected options={ui_libs} />
 ```
 
 ## Props
