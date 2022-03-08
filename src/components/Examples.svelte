@@ -2,6 +2,7 @@
   import MultiSelect, { Option, Primitive } from '../lib'
   import Confetti from './Confetti.svelte'
   import { colors, ml_libs, web_ui_libs } from '../options'
+  import ColorSlot from './ColorSlot.svelte'
 
   let selectedWeb: Primitive[]
   let activeWeb: Option
@@ -110,21 +111,15 @@
     }}
   >
     <MultiSelect
-      id="fruit-select"
-      options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
+      id="color-select"
+      options={colors}
       bind:selected={selectedFruit}
-      {placeholder}
+      placeholder="Pick some colors..."
       allowUserOptions="append"
       required
     >
-      <span let:idx let:option slot="option">
-        {idx + 1}. {option.label}
-        {option.label === `Mango` ? `🎉` : ``}
-      </span>
-      <span let:idx let:option slot="selected">
-        #{idx + 1}
-        {option.label}
-      </span>
+      <ColorSlot let:idx {idx} let:option {option} slot="selected" />
+      <ColorSlot let:idx {idx} let:option {option} slot="option" />
     </MultiSelect>
     <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;">
       submit
