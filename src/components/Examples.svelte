@@ -88,19 +88,6 @@
 </section>
 
 <section>
-  <h3>Disabled</h3>
-
-  <label for="confetti-select">Favorite Web Framework?</label>
-
-  <MultiSelect
-    id="confetti-select"
-    options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
-    disabled
-    {placeholder}
-  />
-</section>
-
-<section>
   <h3>Slot Components</h3>
 
   <label for="fruit-select">Custom renderers for options and/or selected items</label>
