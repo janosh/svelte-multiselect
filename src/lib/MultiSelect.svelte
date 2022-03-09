@@ -227,6 +227,7 @@ display above those of another following shortly after it -->
   class:single={maxSelect === 1}
   class:open={showOptions}
   aria-expanded={showOptions}
+  aria-multiselectable={maxSelect === null || maxSelect > 1}
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
