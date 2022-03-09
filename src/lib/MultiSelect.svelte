@@ -296,7 +296,7 @@ display above those of another following shortly after it -->
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1}
+    {#if maxSelect !== 1 && selected.length > 1}
       <button
         type="button"
         class="remove-all"
