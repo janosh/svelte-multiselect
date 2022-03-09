@@ -431,6 +431,9 @@ display above those of another following shortly after it -->
     font-size: inherit;
     cursor: inherit; /* needed for disabled state */
   }
+  :where(div.multiselect > ul.selected > li > input)::placeholder {
+    color: var(--sms-placeholder-color);
+  }
   :where(div.multiselect > input.form-control) {
     width: 2em;
     position: absolute;

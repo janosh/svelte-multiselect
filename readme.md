@@ -228,6 +228,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-input-bg)`
   - `height: var(--sms-input-height, 2em)`
   - `color: var(--sms-text-color)`
+  - `color: var(--sms-placeholder-color)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
