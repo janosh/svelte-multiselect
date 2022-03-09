@@ -128,14 +128,6 @@
 </section>
 
 <style>
-  :root {
-    --sms-active-color: var(--blue);
-    --sms-options-bg: var(--night);
-    --sms-selected-bg: rgba(255, 255, 255, 0.2);
-    --sms-text-color: white;
-    --sms-disabled-bg: rgba(7, 1, 34, 0.87);
-    --sms-li-disabled-bg: black;
-  }
   section {
     margin-top: 2em;
     background-color: #28154b;
