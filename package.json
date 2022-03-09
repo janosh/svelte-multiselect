@@ -23,7 +23,6 @@
     "@sveltejs/adapter-static": "^1.0.0-next.28",
     "@sveltejs/kit": "^1.0.0-next.287",
     "@sveltejs/vite-plugin-svelte": "^1.0.0-next.38",
-    "@testing-library/svelte": "^3.0.3",
     "@typescript-eslint/eslint-plugin": "^5.12.1",
     "@typescript-eslint/parser": "^5.12.0",
     "@vitest/ui": "^0.5.7",
