@@ -97,3 +97,33 @@ describe(`external CSS classes`, async () => {
     })
   }
 })
+
+describe(`disabled multiselect`, async () => {
+  const page = await context.newPage()
+  await page.goto(`/disabled`)
+  const div = await page.$(`.multiselect.disabled`)
+
+  test(`has attribute aria-disabled`, async () => {
+    expect(await div?.getAttribute(`aria-disabled`)).to.equal(`true`)
+  })
+
+  test(`has disabled title`, async () => {
+    expect(await div?.getAttribute(`title`)).to.equal(
+      `Super special disabled message`
+    )
+  })
+
+  test(`has input attribute disabled`, async () => {
+    const input = await page.$(`.disabled > ul.selected > li > input`)
+    expect(await input?.isDisabled()).to.equal(true)
+  })
+
+  test(`renders no buttons`, async () => {
+    expect(await page.$$(`button`)).toHaveLength(0)
+  })
+
+  test(`renders disabled slot`, async () => {
+    const span = await page.textContent(`[slot='disabled-icon']`)
+    expect(await span).toBe(`This component is disabled. Get outta here!`)
+  })
+})
