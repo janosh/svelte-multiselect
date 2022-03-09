@@ -226,6 +226,7 @@ display above those of another following shortly after it -->
   class:disabled
   class:single={maxSelect === 1}
   class:open={showOptions}
+  aria-expanded={showOptions}
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
