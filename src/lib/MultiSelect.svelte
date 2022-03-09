@@ -408,7 +408,10 @@ display above those of another following shortly after it -->
     cursor: pointer;
     outline: none;
     padding: 0;
-    margin: 0 0 0 4pt; /* CSS reset */
+    margin: 0 0 0 3pt; /* CSS reset */
+  }
+  :where(div.multiselect button.remove-all) {
+    margin: 0 3pt;
   }
   :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-button-hover-color, lightskyblue);
