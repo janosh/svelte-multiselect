@@ -241,6 +241,7 @@ display above those of another following shortly after it -->
     {required}
     bind:value={formValue}
     tabindex="-1"
+    aria-hidden="true"
     class="form-control"
     on:invalid={() => (invalid = true)}
   />
