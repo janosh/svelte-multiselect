@@ -234,12 +234,14 @@ display above those of another following shortly after it -->
     dispatch(`blur`)
   }}
   title={disabled ? disabledTitle : null}
+  aria-disabled={disabled ? `true` : null}
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input
     {required}
     bind:value={formValue}
     tabindex="-1"
+    aria-hidden="true"
     class="form-control"
     on:invalid={() => (invalid = true)}
   />
@@ -296,7 +298,7 @@ display above those of another following shortly after it -->
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1}
+    {#if maxSelect !== 1 && selected.length > 1}
       <button
         type="button"
         class="remove-all"
@@ -408,13 +410,13 @@ display above those of another following shortly after it -->
     cursor: pointer;
     outline: none;
     padding: 0;
-    margin: 0 0 0 4pt; /* CSS reset */
+    margin: 0 0 0 3pt; /* CSS reset */
+  }
+  :where(div.multiselect button.remove-all) {
+    margin: 0 3pt;
   }
   :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
-    color: var(--sms-remove-x-hover-focus-color, lightskyblue);
-  }
-  :where(div.multiselect > button:focus) {
-    transform: scale(1.04);
+    color: var(--sms-button-hover-color, lightskyblue);
   }
 
   :where(div.multiselect input) {
@@ -430,6 +432,9 @@ display above those of another following shortly after it -->
     color: inherit;
     font-size: inherit;
     cursor: inherit; /* needed for disabled state */
+  }
+  :where(div.multiselect > ul.selected > li > input)::placeholder {
+    color: var(--sms-placeholder-color);
   }
   :where(div.multiselect > input.form-control) {
     width: 2em;

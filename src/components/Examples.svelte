@@ -1,7 +1,8 @@
 <script lang="ts">
   import MultiSelect, { Option, Primitive } from '../lib'
   import Confetti from './Confetti.svelte'
-  import { mlFrameworks, webFrameworks } from './frameworks'
+  import { colors, ml_libs, web_ui_libs } from '../options'
+  import ColorSlot from './ColorSlot.svelte'
 
   let selectedWeb: Primitive[]
   let activeWeb: Option
@@ -36,7 +37,7 @@
 
   <MultiSelect
     id="fav-web-tool"
-    options={webFrameworks}
+    options={web_ui_libs}
     bind:selectedLabels={selectedWeb}
     bind:activeOption={activeWeb}
     maxSelect={6}
@@ -56,7 +57,7 @@
     id="fav-ml-tool"
     maxSelect={1}
     maxSelectMsg={(current, max) => `${current} of ${max} selected`}
-    options={mlFrameworks}
+    options={ml_libs}
     bind:selected={selectedML}
     bind:searchText
     {placeholder}
@@ -87,19 +88,6 @@
 </section>
 
 <section>
-  <h3>Disabled</h3>
-
-  <label for="confetti-select">Favorite Web Framework?</label>
-
-  <MultiSelect
-    id="confetti-select"
-    options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
-    disabled
-    {placeholder}
-  />
-</section>
-
-<section>
   <h3>Slot Components</h3>
 
   <label for="fruit-select">Custom renderers for options and/or selected items</label>
@@ -110,21 +98,15 @@
     }}
   >
     <MultiSelect
-      id="fruit-select"
-      options={[`Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`]}
+      id="color-select"
+      options={colors}
       bind:selected={selectedFruit}
-      {placeholder}
+      placeholder="Pick some colors..."
       allowUserOptions="append"
       required
     >
-      <span let:idx let:option slot="option">
-        {idx + 1}. {option.label}
-        {option.label === `Mango` ? `🎉` : ``}
-      </span>
-      <span let:idx let:option slot="selected">
-        #{idx + 1}
-        {option.label}
-      </span>
+      <ColorSlot let:idx {idx} let:option {option} slot="selected" />
+      <ColorSlot let:idx {idx} let:option {option} slot="option" />
     </MultiSelect>
     <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;">
       submit
@@ -133,14 +115,6 @@
 </section>
 
 <style>
-  :root {
-    --sms-active-color: var(--blue);
-    --sms-options-bg: var(--night);
-    --sms-selected-bg: rgba(255, 255, 255, 0.2);
-    --sms-text-color: white;
-    --sms-disabled-bg: rgba(7, 1, 34, 0.87);
-    --sms-li-disabled-bg: black;
-  }
   section {
     margin-top: 2em;
     background-color: #28154b;

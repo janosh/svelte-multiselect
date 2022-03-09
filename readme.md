@@ -9,7 +9,7 @@
 [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)
 [![pre-commit.ci status](https://results.pre-commit.ci/badge/github/janosh/svelte-multiselect/main.svg)](https://results.pre-commit.ci/latest/github/janosh/svelte-multiselect/main)
-![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte)
+[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 
 </h4>
 
@@ -64,28 +64,16 @@ yarn add -D svelte-multiselect
 <script>
   import MultiSelect from 'svelte-multiselect'
 
-  const webFrameworks = [
-    `Svelte`,
-    `React`,
-    `Vue`,
-    `Angular`,
-    `Polymer`,
-    `Ruby on Rails`,
-    `ASP.net`,
-    `Laravel`,
-    `Django`,
-    `Express`,
-    `Spring`,
-  ]
+  const ui_libs = [`Svelte`, `React`, `Vue`, `Angular`, `...`]
 
   let selected = []
 </script>
 
-Favorite Web Frameworks?
+Favorite Frontend Frameworks?
 
 <code>selected = {JSON.stringify(selected)}</code>
 
-<MultiSelect bind:selected options={webFrameworks} />
+<MultiSelect bind:selected options={ui_libs} />
 ```
 
 ## Props
@@ -240,6 +228,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-input-bg)`
   - `height: var(--sms-input-height, 2em)`
   - `color: var(--sms-text-color)`
+  - `color: var(--sms-placeholder-color)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
@@ -251,7 +240,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `height: var(--sms-selected-li-height)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
-  - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
@@ -354,7 +343,7 @@ You can alternatively style every part of this component with more fine-grained 
 
 ## Downstream testing
 
-To test a Svelte component which imports `svelte-multiselect`, you need to configure your test runner to avoid [transpiling issues](https://github.com/EmilTholin/svelte-routing/issues/140#issuecomment-661682571).
+To test a Svelte component which imports `svelte-multiselect`, you need to configure your test runner to avoid [transpiling issues](https://github.com/janosh/svelte-multiselect/issues/48).
 
 For Jest, exclude `svelte-multiselect` from `transformIgnorePatterns` in your `jest.config.json`:
 
