@@ -234,6 +234,7 @@ display above those of another following shortly after it -->
     dispatch(`blur`)
   }}
   title={disabled ? disabledTitle : null}
+  aria-disabled={disabled ? `true` : null}
 >
   <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input
