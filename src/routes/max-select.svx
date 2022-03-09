@@ -1,0 +1,24 @@
+<script>
+  import MultiSelect from '../lib'
+  import { languages } from '../options'
+</script>
+
+<main>
+
+# Disabled
+
+```svelte
+<MultiSelect
+  options={languages}
+  maxSelect={10}
+>
+</MultiSelect>
+```
+
+<MultiSelect
+  options={languages}
+  maxSelect={10}
+>
+</MultiSelect>
+
+</main>

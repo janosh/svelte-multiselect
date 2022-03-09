@@ -1,0 +1,31 @@
+<script>
+  import MultiSelect from '../lib'
+  import { fruits } from '../options'
+</script>
+
+<main>
+
+# For testing user interactions
+
+- Remove all button
+  - removes all currently selected options from the input
+  - only appears if more than 1 element is selected
+  - has custom title (if specified)
+- Component can be focused
+  - which opens dropdown
+
+```svelte
+<MultiSelect
+  options={fruits}
+  placeholder="Pick your favorite fruits"
+  removeAllTitle="Delete all fruits"
+/>
+```
+
+<MultiSelect
+  options={fruits}
+  placeholder="Pick your favorite fruits"
+  removeAllTitle="Delete all fruits"
+/>
+
+</main>

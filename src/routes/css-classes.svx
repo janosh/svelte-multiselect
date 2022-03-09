@@ -1,0 +1,32 @@
+<script>
+  import MultiSelect from '../lib'
+  import { fruits } from '../options'
+</script>
+
+<main>
+
+# External CSS Classes
+
+```svelte
+<MultiSelect
+  options={fruits}
+  outerDivClass="test-outerDivClass"
+  ulSelectedClass="test-ulSelectedClass"
+  ulOptionsClass="test-ulOptionsClass"
+  liOptionClass="test-liOptionClass"
+  liSelectedClass="test-liSelectedClass"
+  liActiveOptionClass="test-liActiveOptionClass"
+/>
+```
+
+<MultiSelect
+  options={fruits}
+  outerDivClass="test-outerDivClass"
+  ulSelectedClass="test-ulSelectedClass"
+  ulOptionsClass="test-ulOptionsClass"
+  liOptionClass="test-liOptionClass"
+  liSelectedClass="test-liSelectedClass"
+  liActiveOptionClass="test-liActiveOptionClass"
+/>
+
+</main>
