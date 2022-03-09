@@ -411,10 +411,7 @@ display above those of another following shortly after it -->
     margin: 0 0 0 4pt; /* CSS reset */
   }
   :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
-    color: var(--sms-remove-x-hover-focus-color, lightskyblue);
-  }
-  :where(div.multiselect > button:focus) {
-    transform: scale(1.04);
+    color: var(--sms-button-hover-color, lightskyblue);
   }
 
   :where(div.multiselect input) {

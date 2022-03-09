@@ -240,7 +240,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `height: var(--sms-selected-li-height)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
-  - `color: var(--sms-remove-x-hover-focus-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
