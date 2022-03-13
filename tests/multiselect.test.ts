@@ -147,3 +147,24 @@ describe(`disabled multiselect`, async () => {
     expect(await span).toBe(`This component is disabled. Get outta here!`)
   })
 })
+
+describe(`accessibility`, async () => {
+  const page = await context.newPage()
+  await page.goto(`/ui`)
+
+  test(`has aria-expanded='true' after user interaction`, async () => {
+    const before = await page.getAttribute(`.multiselect`, `aria-expanded`, {
+      strict: true,
+    })
+    expect(before).toBe(`false`)
+  })
+
+  test(`has aria-expanded='true' after click`, async () => {
+    await page.click(`.multiselect`) // open the dropdown
+    await page.click(`.multiselect > ul.options > li`) // select 1st option
+    const after = await page.getAttribute(`.multiselect`, `aria-expanded`, {
+      strict: true,
+    })
+    expect(after).toBe(`true`)
+  })
+})
