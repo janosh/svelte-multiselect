@@ -7,26 +7,28 @@
 
 # External CSS Classes
 
+When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through the following classes:
+
 ```svelte
 <MultiSelect
   options={fruits}
-  outerDivClass="test-outerDivClass"
-  ulSelectedClass="test-ulSelectedClass"
-  ulOptionsClass="test-ulOptionsClass"
-  liOptionClass="test-liOptionClass"
-  liSelectedClass="test-liSelectedClass"
-  liActiveOptionClass="test-liActiveOptionClass"
+  outerDivClass="foo"
+  ulSelectedClass="bar"
+  ulOptionsClass="baz"
+  liOptionClass="bam"
+  liSelectedClass="hi"
+  liActiveOptionClass="mom"
 />
 ```
 
 <MultiSelect
   options={fruits}
-  outerDivClass="test-outerDivClass"
-  ulSelectedClass="test-ulSelectedClass"
-  ulOptionsClass="test-ulOptionsClass"
-  liOptionClass="test-liOptionClass"
-  liSelectedClass="test-liSelectedClass"
-  liActiveOptionClass="test-liActiveOptionClass"
+  outerDivClass="foo"
+  ulSelectedClass="bar"
+  ulOptionsClass="baz"
+  liOptionClass="bam"
+  liSelectedClass="hi"
+  liActiveOptionClass="mom"
 />
 
 </main>

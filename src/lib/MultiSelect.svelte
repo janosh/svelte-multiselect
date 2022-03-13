@@ -140,10 +140,13 @@
   function setOptionsVisible(show: boolean) {
     if (disabled) return
     showOptions = show
-    if (show) input?.focus()
-    else {
+    if (show) {
+      input?.focus()
+      dispatch(`focus`)
+    } else {
       input?.blur()
       activeOption = null
+      dispatch(`blur`)
     }
   }
 
@@ -226,13 +229,12 @@ display above those of another following shortly after it -->
   class:disabled
   class:single={maxSelect === 1}
   class:open={showOptions}
+  aria-expanded={showOptions}
+  aria-multiselectable={maxSelect === null || maxSelect > 1}
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
-  on:focusout={() => {
-    setOptionsVisible(false)
-    dispatch(`blur`)
-  }}
+  on:focusout={() => setOptionsVisible(false)}
   title={disabled ? disabledTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
@@ -248,7 +250,7 @@ display above those of another following shortly after it -->
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
-      <li class={liSelectedClass}>
+      <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
           {option.label}
         </slot>
@@ -277,6 +279,7 @@ display above those of another following shortly after it -->
         {name}
         {disabled}
         placeholder={selectedLabels.length ? `` : placeholder}
+        aria-invalid={invalid ? `true` : null}
       />
     </li>
   </ul>
@@ -342,6 +345,7 @@ display above those of another following shortly after it -->
           }}
           on:mouseout={() => (activeOption = null)}
           on:blur={() => (activeOption = null)}
+          aria-selected="false"
         >
           <slot name="option" {option} {idx}>
             {option.label}

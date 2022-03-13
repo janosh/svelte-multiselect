@@ -20,13 +20,13 @@
     "coverage": "vitest run --coverage"
   },
   "devDependencies": {
-    "@sveltejs/adapter-static": "^1.0.0-next.28",
-    "@sveltejs/kit": "^1.0.0-next.287",
-    "@sveltejs/vite-plugin-svelte": "^1.0.0-next.38",
-    "@typescript-eslint/eslint-plugin": "^5.12.1",
-    "@typescript-eslint/parser": "^5.12.0",
-    "@vitest/ui": "^0.5.7",
-    "eslint": "^8.9.0",
+    "@sveltejs/adapter-static": "^1.0.0-next.29",
+    "@sveltejs/kit": "^1.0.0-next.295",
+    "@sveltejs/vite-plugin-svelte": "^1.0.0-next.39",
+    "@typescript-eslint/eslint-plugin": "^5.14.0",
+    "@typescript-eslint/parser": "^5.14.0",
+    "@vitest/ui": "^0.6.0",
+    "eslint": "^8.11.0",
     "eslint-plugin-svelte3": "^3.4.1",
     "hastscript": "^7.0.2",
     "jsdom": "^19.0.0",
@@ -40,12 +40,12 @@
     "svelte-check": "^2.4.5",
     "svelte-github-corner": "^0.1.0",
     "svelte-preprocess": "^4.10.4",
-    "svelte-toc": "^0.2.6",
+    "svelte-toc": "^0.2.7",
     "svelte2tsx": "^0.5.5",
     "tslib": "^2.3.1",
-    "typescript": "^4.5.5",
-    "vite": "^2.8.4",
-    "vitest": "^0.5.7"
+    "typescript": "^4.6.2",
+    "vite": "^2.8.6",
+    "vitest": "^0.6.0"
   },
   "keywords": [
     "svelte",
