@@ -23,6 +23,7 @@
     </svelte:fragment>
   </Readme>
 </main>
+<Toc headingSelector="main > :where(h2, h3)" />
 
 <style>
   :global(h1) {
@@ -31,6 +32,12 @@
     place-items: center;
     place-content: center;
     margin: 1.2em 0;
+  }
+  /* outer div = hydration target */
+  :global(body > div) {
+    display: flex;
+    margin: auto;
+    max-width: 1100px;
   }
   :global(h1 br) {
     display: none;

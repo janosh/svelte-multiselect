@@ -29,13 +29,6 @@ body {
   padding: calc(1ex + 2vw);
   font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   color: #eee;
-  line-height: 1.8em;
-}
-/* outer div = hydration target */
-body > div {
-  display: flex;
-  margin: auto;
-  max-width: 1100px;
 }
 main {
   margin: auto;
