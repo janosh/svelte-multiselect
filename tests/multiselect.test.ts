@@ -167,4 +167,15 @@ describe(`accessibility`, async () => {
     })
     expect(after).toBe(`true`)
   })
+
+  test(`input.form-control is aria-hidden`, async () => {
+    // https://github.com/janosh/svelte-multiselect/issues/58
+
+    const hidden = await page.getAttribute(
+      `input.form-control`,
+      `aria-hidden`,
+      { strict: true }
+    )
+    expect(hidden).toBe(`true`)
+  })
 })
