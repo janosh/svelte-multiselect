@@ -152,6 +152,16 @@ describe(`accessibility`, async () => {
   const page = await context.newPage()
   await page.goto(`/ui`)
 
+  test(`input is aria-invalid when component has invalid=true`, async () => {
+    // don't interact with component before this test as it will set invalid=false
+    const invalid = await page.getAttribute(
+      `input[placeholder='Pick your favorite fruits']`,
+      `aria-invalid`,
+      { strict: true }
+    )
+    expect(invalid).toBe(`true`)
+  })
+
   test(`has aria-expanded='true' after user interaction`, async () => {
     const before = await page.getAttribute(`.multiselect`, `aria-expanded`, {
       strict: true,

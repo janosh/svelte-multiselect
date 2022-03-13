@@ -279,6 +279,7 @@ display above those of another following shortly after it -->
         {name}
         {disabled}
         placeholder={selectedLabels.length ? `` : placeholder}
+        aria-invalid={invalid ? `true` : null}
       />
     </li>
   </ul>

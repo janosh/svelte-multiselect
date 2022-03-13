@@ -23,6 +23,7 @@ This page is mostly used for testing. It checks that:
   options={fruits}
   placeholder="Pick your favorite fruits"
   removeAllTitle="Delete all fruits"
+  invalid
 />
 ```
 
@@ -30,6 +31,7 @@ This page is mostly used for testing. It checks that:
   options={fruits}
   placeholder="Pick your favorite fruits"
   removeAllTitle="Delete all fruits"
+  invalid
 />
 
 </main>
