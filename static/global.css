@@ -3,12 +3,21 @@
   --blue: cornflowerblue;
 
   --sms-active-color: var(--blue);
-  --sms-options-bg: rgba(0, 0, 0, 0.5);
+  --sms-options-bg: rgb(0, 0, 32);
   --sms-selected-bg: rgba(255, 255, 255, 0.2);
   --sms-text-color: white;
   --sms-disabled-bg: rgba(7, 1, 34, 0.87);
   --sms-li-disabled-bg: black;
   --sms-placeholder-color: lightgray;
+
+  --toc-mobile-bg: #1c0e3e;
+  --toc-mobile-btn-color: white;
+  --toc-desktop-nav-margin: 0 0 0 1em;
+  --toc-active-padding: 2pt 4pt;
+  --toc-active-margin: 0 0 0 -4pt;
+
+  --ghc-color: var(--night);
+  --ghc-bg: white;
 }
 html {
   /* smoothly scroll heading links into view, unfortunately also applies to jumping
@@ -32,10 +41,6 @@ main {
   margin: auto;
   margin-bottom: 3em;
   width: 100%;
-  overflow: auto;
-}
-* {
-  scroll-margin-top: 50px;
 }
 a {
   color: var(--blue);
@@ -62,6 +67,9 @@ pre {
 a code {
   color: white;
 }
+ul li {
+  margin: 10pt 0;
+}
 
 div.table {
   overflow: scroll;
@@ -78,14 +86,18 @@ tbody tr:nth-child(odd) {
   background: black;
 }
 
+:where(h2, h3, h4, h5, h6) {
+  scroll-margin-top: 50px;
+  transition: 0.3s;
+}
+:where(h2, h3, h4, h5, h6).toc-clicked {
+  color: orange;
+}
 /* style heading anchors added by rehype-autolink-headings, see svelte.config.js */
 :where(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
   transition: 0.3s;
   margin-left: 4pt;
   opacity: 0;
-}
-:where(h2, h3, h4, h5, h6).toc-clicked {
-  color: orange;
 }
 :where(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
   opacity: 1;
