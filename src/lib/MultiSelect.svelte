@@ -250,7 +250,7 @@ display above those of another following shortly after it -->
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx}
-      <li class={liSelectedClass}>
+      <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
           {option.label}
         </slot>
@@ -345,6 +345,7 @@ display above those of another following shortly after it -->
           }}
           on:mouseout={() => (activeOption = null)}
           on:blur={() => (activeOption = null)}
+          aria-selected="false"
         >
           <slot name="option" {option} {idx}>
             {option.label}

@@ -178,6 +178,21 @@ describe(`accessibility`, async () => {
     expect(after).toBe(`true`)
   })
 
+  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async () => {
+    await page.click(`.multiselect`) // open the dropdown
+    await page.click(`.multiselect > ul.options > li`) // select 1st option
+    const aria_option = await page.getAttribute(
+      `.multiselect > ul.options > li`,
+      `aria-selected`
+    )
+    expect(aria_option).toBe(`false`)
+    const aria_selected = await page.getAttribute(
+      `.multiselect > ul.selected > li`,
+      `aria-selected`
+    )
+    expect(aria_selected).toBe(`true`)
+  })
+
   test(`input.form-control is aria-hidden`, async () => {
     // https://github.com/janosh/svelte-multiselect/issues/58
 
