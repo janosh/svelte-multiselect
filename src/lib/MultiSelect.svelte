@@ -140,10 +140,13 @@
   function setOptionsVisible(show: boolean) {
     if (disabled) return
     showOptions = show
-    if (show) input?.focus()
-    else {
+    if (show) {
+      input?.focus()
+      dispatch(`focus`)
+    } else {
       input?.blur()
       activeOption = null
+      dispatch(`blur`)
     }
   }
 
@@ -231,10 +234,7 @@ display above those of another following shortly after it -->
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
-  on:focusout={() => {
-    setOptionsVisible(false)
-    dispatch(`blur`)
-  }}
+  on:focusout={() => setOptionsVisible(false)}
   title={disabled ? disabledTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
