@@ -33,6 +33,8 @@ export default {
   kit: {
     adapter: adapter(),
 
+    prerender: { default: true },
+
     package: {
       // exclude auxiliary files from package.json "exports"
       exports: (filepath) =>
