@@ -102,17 +102,17 @@ describe(`external CSS classes`, async () => {
   await page.click(`.multiselect > ul.options > li`) // select 1st option
   await page.keyboard.press(`ArrowDown`) // make next option active
 
-  for (const [className, selector] of [
-    [`outerDivClass`, `div.multiselect`],
-    [`ulSelectedClass`, `div.multiselect > ul.selected`],
-    [`ulOptionsClass`, `div.multiselect > ul.options`],
-    [`liOptionClass`, `div.multiselect > ul.options > li`],
+  for (const [prop, selector, cls] of [
+    [`outerDivClass`, `div.multiselect`, `foo`],
+    [`ulSelectedClass`, `div.multiselect > ul.selected`, `bar`],
+    [`ulOptionsClass`, `div.multiselect > ul.options`, `baz`],
+    [`liOptionClass`, `div.multiselect > ul.options > li`, `bam`],
     // below classes requires component interaction before appearing in DOM
-    [`liSelectedClass`, `div.multiselect > ul.selected > li`],
-    [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`],
+    [`liSelectedClass`, `div.multiselect > ul.selected > li`, `hi`],
+    [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`, `mom`],
   ]) {
-    test(`${className} attaches to correct DOM node`, async () => {
-      const node = await page.$(`${selector}.test-${className}`)
+    test(`${prop} attaches to correct DOM node`, async () => {
+      const node = await page.$(`${selector}.${cls}`)
       expect(node).toBeTruthy()
     })
   }

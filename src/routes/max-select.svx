@@ -5,20 +5,28 @@
 
 <main>
 
-# Disabled
+# Disabled MultiSelect
+
+Test that component in disabled state:
+
+- has attribute aria-disabled
+- has disabled title
+- has `<input disabled="true">`
+- renders no buttons
+- renders disabled slot
 
 ```svelte
 <MultiSelect
   options={languages}
   maxSelect={10}
->
-</MultiSelect>
+  placeholder="What languages do you know?"
+/>
 ```
 
 <MultiSelect
   options={languages}
   maxSelect={10}
->
-</MultiSelect>
+  placeholder="What languages do you know?"
+/>
 
 </main>
