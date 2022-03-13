@@ -162,16 +162,15 @@ describe(`accessibility`, async () => {
     expect(invalid).toBe(`true`)
   })
 
-  test(`has aria-expanded='true' after user interaction`, async () => {
+  test(`has aria-expanded='false' when closed`, async () => {
     const before = await page.getAttribute(`.multiselect`, `aria-expanded`, {
       strict: true,
     })
     expect(before).toBe(`false`)
   })
 
-  test(`has aria-expanded='true' after click`, async () => {
+  test(`has aria-expanded='true' when open`, async () => {
     await page.click(`.multiselect`) // open the dropdown
-    await page.click(`.multiselect > ul.options > li`) // select 1st option
     const after = await page.getAttribute(`.multiselect`, `aria-expanded`, {
       strict: true,
     })
@@ -193,7 +192,7 @@ describe(`accessibility`, async () => {
     expect(aria_selected).toBe(`true`)
   })
 
-  test(`input.form-control is aria-hidden`, async () => {
+  test(`invisible input.form-control is aria-hidden`, async () => {
     // https://github.com/janosh/svelte-multiselect/issues/58
 
     const hidden = await page.getAttribute(

@@ -17,6 +17,12 @@ This page is mostly used for testing. It checks that:
   - which opens dropdown
   - and closes dropdown when input looses focus
 - filters options to only list matches when entering text
+- accessibility
+  - input is `aria-invalid` when component has `invalid=true`
+  - has `aria-expanded='false'` when closed
+  - has `aria-expanded='true'` when open
+  - options have `aria-selected='false'` and selected items have `aria-selected='true`
+  - invisible `input.form-control` is `aria-hidden`
 
 ```svelte
 <MultiSelect
