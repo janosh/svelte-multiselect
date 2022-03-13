@@ -5,14 +5,18 @@
 
 <main>
 
-# For testing user interactions
+# User interface
 
-- Remove all button
+This page is mostly used for testing. It checks that:
+
+- the remove-all button
   - removes all currently selected options from the input
   - only appears if more than 1 element is selected
-  - has custom title (if specified)
-- Component can be focused
+  - has custom title (if supplied with `removeAllTitle`)
+- component can be focused
   - which opens dropdown
+  - and closes dropdown when input looses focus
+- filters options to only list matches when entering text
 
 ```svelte
 <MultiSelect

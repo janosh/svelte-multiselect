@@ -19,24 +19,44 @@ const context = await browser.newContext({
 
 describe(`input`, async () => {
   const page = await context.newPage()
-  await page.goto(`/ux`)
+  await page.goto(`/ui`)
 
-  test(`focus opens dropdown`, async () => {
+  test(`opens dropdown on focus`, async () => {
     expect(await page.$(`.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`.multiselect.open`)).toBeNull()
 
     await page.click(`input[placeholder='Pick your favorite fruits']`)
 
     expect(await page.$(`.multiselect.open`)).toBeTruthy()
+    await page.waitForTimeout(500) // give DOM time to update
+
+    const visibility = await page.$eval(
+      `.multiselect > ul.options`,
+      (el) => getComputedStyle(el).visibility
+    )
+    expect(visibility).toBe(`visible`)
   })
 
-  test(`filters to show only matching options when typing search text`, async () => {
+  test(`closes dropdown on blur`, async () => {
+    await page.$eval(`input[placeholder='Pick your favorite fruits']`, (el) =>
+      el.blur()
+    )
+    await page.waitForTimeout(500) // give DOM time to update
+
+    const visibility = await page.$eval(
+      `.multiselect > ul.options`,
+      (el) => getComputedStyle(el).visibility
+    )
+    expect(visibility).toBe(`hidden`)
+  })
+
+  test(`filters dropdown to show only matching options when entering text`, async () => {
     await page.fill(
       `input[placeholder='Pick your favorite fruits']`,
       `Pineapple`
     )
 
-    await page.waitForTimeout(300) // give DOM time to update
+    await page.waitForTimeout(500) // give DOM time to update
 
     expect(await page.$$(`.multiselect.open > ul.options > li`)).toHaveLength(1)
     const text = await page.textContent(`.multiselect.open > ul.options > li`)
@@ -46,7 +66,7 @@ describe(`input`, async () => {
 
 describe(`remove all button`, async () => {
   const page = await context.newPage()
-  await page.goto(`/ux`)
+  await page.goto(`/ui`)
 
   await page.click(`.multiselect`) // open the dropdown
   await page.click(`.multiselect > ul.options > li`) // select 1st option
