@@ -13,15 +13,9 @@
 
 </h4>
 
-<div class="hide-in-docs">
+**Keyboard-friendly, zero-dependency multi-select Svelte component.** <strong class="hide-in-docs"><a href="https://svelte-multiselect.netlify.app">Live demo</a></strong>
 
-**[Live demo](https://svelte-multiselect.netlify.app)**.
-
-</div>
-
-**Keyboard-friendly, zero-dependency multi-select Svelte component.**
-
-<slot />
+<slot name="examples" />
 
 ## Key features
 
@@ -33,6 +27,8 @@
 - **Configurable:** see [props](#props)
 - **No dependencies:** needs only Svelte as dev dependency
 - **Keyboard friendly** for mouse-less form completion
+
+<slot name="nav" />
 
 ## Recent breaking changes
 

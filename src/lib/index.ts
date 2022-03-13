@@ -31,5 +31,6 @@ export type DispatchEvents = {
     options?: Option[]
     type: 'add' | 'remove' | 'removeAll'
   }
+  focus: undefined
   blur: undefined
 }

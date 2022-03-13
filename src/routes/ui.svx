@@ -1,0 +1,43 @@
+<script>
+  import MultiSelect from '../lib'
+  import { fruits } from '../options'
+</script>
+
+<main>
+
+# User interface
+
+This page is mostly used for testing. It checks that:
+
+- the remove-all button
+  - removes all currently selected options from the input
+  - only appears if more than 1 element is selected
+  - has custom title (if supplied with `removeAllTitle`)
+- component can be focused
+  - which opens dropdown
+  - and closes dropdown when input looses focus
+- filters options to only list matches when entering text
+- accessibility
+  - input is `aria-invalid` when component has `invalid=true`
+  - has `aria-expanded='false'` when closed
+  - has `aria-expanded='true'` when open
+  - options have `aria-selected='false'` and selected items have `aria-selected='true`
+  - invisible `input.form-control` is `aria-hidden`
+
+```svelte
+<MultiSelect
+  options={fruits}
+  placeholder="Pick your favorite fruits"
+  removeAllTitle="Delete all fruits"
+  invalid
+/>
+```
+
+<MultiSelect
+  options={fruits}
+  placeholder="Pick your favorite fruits"
+  removeAllTitle="Delete all fruits"
+  invalid
+/>
+
+</main>

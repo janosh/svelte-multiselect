@@ -1,11 +1,13 @@
 name: Tests
 
 on:
-  workflow_dispatch:
-  push:
-    branches: [main]
   pull_request:
     branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+  release:
+    types: [published]
 
 jobs:
   tests:
@@ -25,6 +27,16 @@ jobs:
         run: yarn
 
       - name: Run tests
+        id: tests
         run: |
           yarn dev &
           yarn test
+
+      - name: Build package and publish to NPM
+        if: github.event_name == 'release' && steps.tests.outcome == 'success'
+        run: |
+          yarn
+          yarn package
+          yarn publish package
+        env:
+          NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
