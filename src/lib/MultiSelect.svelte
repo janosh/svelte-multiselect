@@ -17,6 +17,7 @@
   export let disabledTitle = `This field is disabled`
   export let options: ProtoOption[]
   export let input: HTMLInputElement | null = null
+  export let outerDiv: HTMLDivElement | null = null
   export let placeholder: string | undefined = undefined
   export let id: string | undefined = undefined
   export let name: string | undefined = id
@@ -152,8 +153,8 @@
 
   // handle all keyboard events this component receives
   async function handleKeydown(event: KeyboardEvent) {
-    // on escape: dismiss options dropdown and reset search text
-    if (event.key === `Escape`) {
+    // on escape or tab out of input: dismiss options dropdown and reset search text
+    if (event.key === `Escape` || event.key === `Tab`) {
       setOptionsVisible(false)
       searchText = ``
     }
@@ -223,9 +224,18 @@
   }
 </script>
 
+<svelte:window
+  on:click={(event) => {
+    if (outerDiv && !outerDiv.contains(event.target)) {
+      setOptionsVisible(false)
+    }
+  }}
+/>
+
 <!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
 display above those of another following shortly after it -->
 <div
+  bind:this={outerDiv}
   class:disabled
   class:single={maxSelect === 1}
   class:open={showOptions}
@@ -234,7 +244,6 @@ display above those of another following shortly after it -->
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={() => setOptionsVisible(true)}
-  on:focusout={() => setOptionsVisible(false)}
   title={disabled ? disabledTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
@@ -274,7 +283,6 @@ display above those of another following shortly after it -->
         on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
         on:keydown={handleKeydown}
         on:focus={() => setOptionsVisible(true)}
-        on:blur={() => setOptionsVisible(false)}
         {id}
         {name}
         {disabled}

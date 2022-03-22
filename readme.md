@@ -13,7 +13,13 @@
 
 </h4>
 
-**Keyboard-friendly, zero-dependency multi-select Svelte component.** <strong class="hide-in-docs"><a href="https://svelte-multiselect.netlify.app">Live demo</a></strong>
+**Keyboard-friendly, zero-dependency multi-select Svelte component.**
+<strong class="hide-in-docs">
+<a href="https://svelte-multiselect.netlify.app">Live demo</a> &bull;
+</strong>
+<strong>
+<a href="https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05">REPL</a>
+</strong>
 
 <slot name="examples" />
 
@@ -93,7 +99,8 @@ Full list of props/bindable variables for this component:
 | `disabled`             | `false`                     | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                                                                                                                                                                                                                     |
 | `disabledTitle`        | `This field is disabled`    | Tooltip text to display on hover when the component is in `disabled` state.                                                                                                                                                                                                                                                                                                                                                       |
 | `placeholder`          | `undefined`                 | String shown in the text input when no option is selected.                                                                                                                                                                                                                                                                                                                                                                        |
-| `input`                | `undefined`                 | Handle to the `<input>` DOM node.                                                                                                                                                                                                                                                                                                                                                                                                 |
+| `input`                | `null`                      | Handle to the `<input>` DOM node. Only available after component mounts (`null` before then).                                                                                                                                                                                                                                                                                                                                     |
+| `outerDiv`             | `null`                      | Handle to outer `<div class="multiselect">` that wraps the whole component. Only available after component mounts (`null` before then).                                                                                                                                                                                                                                                                                           |
 | `id`                   | `undefined`                 | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                                                                                                                                                                                                              |
 | `name`                 | `id`                        | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`.                                                                                                                                                                                        |
 | `required`             | `false`                     | Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.                                                                                                                                                                                                                      |

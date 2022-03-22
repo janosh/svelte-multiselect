@@ -1,8 +1,10 @@
 import * as playwright from 'playwright'
 import { describe, expect, test } from 'vitest'
 
-type browser_kind = 'chromium' | 'firefox' | 'webkit'
-const BROWSER = (process.env.BROWSER ?? `chromium`) as browser_kind
+const vendor = (process.env.BROWSER ?? `chromium`) as
+  | 'chromium'
+  | 'firefox'
+  | 'webkit'
 
 const port = process.env.PORT ?? 3000
 
@@ -12,7 +14,7 @@ const headful_config = {
   slowMo: 1000,
 }
 
-const browser = await playwright[BROWSER].launch(headful ? headful_config : {})
+const browser = await playwright[vendor].launch(headful ? headful_config : {})
 const context = await browser.newContext({
   baseURL: `http://localhost:${port}`,
 })
@@ -37,10 +39,13 @@ describe(`input`, async () => {
     expect(visibility).toBe(`visible`)
   })
 
-  test(`closes dropdown on blur`, async () => {
-    await page.$eval(`input[placeholder='Pick your favorite fruits']`, (el) =>
-      el.blur()
-    )
+  test(`closes dropdown on tab out`, async () => {
+    // note we only test for close on tab out, not on blur since blur should not close in case user
+    // clicked anywhere else inside component
+    await page.click(`input[placeholder='Pick your favorite fruits']`)
+
+    await page.focus(`input[placeholder='Pick your favorite fruits']`)
+    await page.keyboard.press(`Tab`)
     await page.waitForTimeout(500) // give DOM time to update
 
     const visibility = await page.$eval(
