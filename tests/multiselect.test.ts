@@ -209,3 +209,33 @@ describe(`accessibility`, async () => {
     expect(hidden).toBe(`true`)
   })
 })
+
+describe(`multiselect`, async () => {
+  test(`can select and remove many options`, async () => {
+    const page = await context.newPage()
+    await page.goto(`/ui`)
+
+    await page.locator(`[placeholder="Pick your favorite fruits"]`).click()
+
+    for (const option of [`Avocado`, `Cherries`, `Peach`, `Lychee`, `Kiwi`]) {
+      await page.locator(`text=${option} >> nth=0`).click()
+    }
+
+    await page.locator(`.remove-all`).click()
+
+    for (const option of [`Lime`, `Nectarine`, `Pineapple`]) {
+      await page.locator(`text=${option} >> nth=0`).click()
+    }
+    await page.locator(`text=Lime`).click()
+
+    await page.locator(`text=Nectarine`).click()
+
+    await page.locator(`text=Pineapple`).click()
+
+    await page.locator(`text=Pineapple >> button`).click()
+
+    expect(await page.textContent(`.multiselect > ul.selected`)).toContain(
+      `Nectarine Lime`
+    )
+  })
+})
