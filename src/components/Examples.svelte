@@ -1,8 +1,9 @@
 <script lang="ts">
   import MultiSelect, { Option, Primitive } from '../lib'
   import Confetti from './Confetti.svelte'
-  import { colors, ml_libs, web_ui_libs } from '../options'
+  import { colors, ml_libs, languages, web_ui_libs } from '../options'
   import ColorSlot from './ColorSlot.svelte'
+  import LanguageSlot from './LanguageSlot.svelte'
 
   let selectedWeb: Primitive[]
   let activeWeb: Option
@@ -44,6 +45,12 @@
     {placeholder}
     {filterFunc}
   />
+
+  <label for="languages">Favorite programming languages?</label>
+
+  <MultiSelect id="languages" options={languages} {placeholder}>
+    <LanguageSlot let:option {option} slot="selected" />
+  </MultiSelect>
 </section>
 
 <section>
