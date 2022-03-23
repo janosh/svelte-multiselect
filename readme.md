@@ -286,6 +286,7 @@ This simplified version of the DOM structure of this component shows where these
 
 ```svelte
 <div class="multiselect {outerDivClass}">
+  <input class={inputClass} />
   <ul class="selected {ulSelectedClass}">
     <li class={liSelectedClass}>Selected 1</li>
     <li class={liSelectedClass}>Selected 2</li>

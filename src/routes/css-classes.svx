@@ -16,6 +16,7 @@ When using CSS frameworks like Tailwind, you can customize the appearance of `<M
   ulSelectedClass="bar"
   ulOptionsClass="baz"
   liOptionClass="bam"
+  inputClass="slam"
   liSelectedClass="hi"
   liActiveOptionClass="mom"
 />
@@ -27,6 +28,7 @@ When using CSS frameworks like Tailwind, you can customize the appearance of `<M
   ulSelectedClass="bar"
   ulOptionsClass="baz"
   liOptionClass="bam"
+  inputClass="slam"
   liSelectedClass="hi"
   liActiveOptionClass="mom"
 />

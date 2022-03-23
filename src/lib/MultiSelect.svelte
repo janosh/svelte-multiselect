@@ -34,6 +34,7 @@
   export let ulOptionsClass = ``
   export let liOptionClass = ``
   export let liActiveOptionClass = ``
+  export let inputClass = ``
 
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
@@ -277,6 +278,7 @@ display above those of another following shortly after it -->
     {/each}
     <li style="display: contents;">
       <input
+        class={inputClass}
         bind:this={input}
         {autocomplete}
         bind:value={searchText}

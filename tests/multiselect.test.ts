@@ -112,6 +112,7 @@ describe(`external CSS classes`, async () => {
     [`ulSelectedClass`, `div.multiselect > ul.selected`, `bar`],
     [`ulOptionsClass`, `div.multiselect > ul.options`, `baz`],
     [`liOptionClass`, `div.multiselect > ul.options > li`, `bam`],
+    [`inputClass`, `div.multiselect > ul.selected > li > input`, `slam`],
     // below classes requires component interaction before appearing in DOM
     [`liSelectedClass`, `div.multiselect > ul.selected > li`, `hi`],
     [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`, `mom`],
