@@ -32,7 +32,7 @@ export const ml_libs = [
 // prettier-ignore
 export const languages = [
   `JavaScript`, `TypeScript`, `CoffeeScript`, `Python`, `Ruby`, `C`, `C#`, `C++`, `Go`, `Swift`, `Java`, `Rust`, `Kotlin`, `Haskell`, `Scala`, `Clojure`, `Erlang`, `Elixir`, `F#`, `Dart`, `Elm`, `Julia`, `Lua`, `R`, `OCaml`, `Pascal`, `Perl`, `PHP`
-]
+].map(lang => ({label: lang, value: lang, preselected: [`Python`, `TypeScript`, `C`].includes(lang) }))
 
 // prettier-ignore
 export const fruits = [
@@ -42,4 +42,4 @@ export const fruits = [
 // prettier-ignore
 export const colors = [
   `Red`, `Green`, `Blue`, `Yellow`, `Purple`, `Pink`, `Brown`, `Black`, `White`, `Gray`, `Orange`, `Cyan`, `Magenta`, `Silver`, `Gold`, `Turquoise`, `Violet`, `Lime`, `Indigo`, `Navy`,
-]
+].map(clr => ({label: clr, value: clr, preselected: [`Orange`, `Yellow`, `Green`].includes(clr)}))
