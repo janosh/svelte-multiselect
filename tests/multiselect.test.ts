@@ -112,6 +112,7 @@ describe(`external CSS classes`, async () => {
     [`ulSelectedClass`, `div.multiselect > ul.selected`, `bar`],
     [`ulOptionsClass`, `div.multiselect > ul.options`, `baz`],
     [`liOptionClass`, `div.multiselect > ul.options > li`, `bam`],
+    [`inputClass`, `div.multiselect > ul.selected > li > input`, `slam`],
     // below classes requires component interaction before appearing in DOM
     [`liSelectedClass`, `div.multiselect > ul.selected > li`, `hi`],
     [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`, `mom`],
@@ -206,5 +207,35 @@ describe(`accessibility`, async () => {
       { strict: true }
     )
     expect(hidden).toBe(`true`)
+  })
+})
+
+describe(`multiselect`, async () => {
+  test(`can select and remove many options`, async () => {
+    const page = await context.newPage()
+    await page.goto(`/ui`)
+
+    await page.locator(`[placeholder="Pick your favorite fruits"]`).click()
+
+    for (const option of [`Avocado`, `Cherries`, `Peach`, `Lychee`, `Kiwi`]) {
+      await page.locator(`text=${option} >> nth=0`).click()
+    }
+
+    await page.locator(`.remove-all`).click()
+
+    for (const option of [`Lime`, `Nectarine`, `Pineapple`]) {
+      await page.locator(`text=${option} >> nth=0`).click()
+    }
+    await page.locator(`text=Lime`).click()
+
+    await page.locator(`text=Nectarine`).click()
+
+    await page.locator(`text=Pineapple`).click()
+
+    await page.locator(`text=Pineapple >> button`).click()
+
+    expect(await page.textContent(`.multiselect > ul.selected`)).toContain(
+      `Nectarine Lime`
+    )
   })
 })
