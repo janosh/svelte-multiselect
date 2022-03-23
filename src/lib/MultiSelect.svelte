@@ -247,12 +247,12 @@ display above those of another following shortly after it -->
   title={disabled ? disabledTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
-  <!-- invisible input, used only to prevent form submission if required=true and no options selected -->
   <input
     {required}
     bind:value={formValue}
     tabindex="-1"
     aria-hidden="true"
+    aria-label="ignore this, used only to prevent form submission if select is required but empty"
     class="form-control"
     on:invalid={() => (invalid = true)}
   />
