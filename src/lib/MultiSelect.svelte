@@ -373,13 +373,14 @@ display above those of another following shortly after it -->
     align-items: center;
     display: flex;
     cursor: text;
-    padding: 0 3pt;
     border: var(--sms-border, 1pt solid lightgray);
     border-radius: var(--sms-border-radius, 3pt);
-    background: var(--sms-input-bg);
-    min-height: var(--sms-input-min-height, 22pt);
+    background: var(--sms-bg);
+    max-width: var(--sms-max-width);
+    padding: var(--sms-padding, 0 3pt);
     color: var(--sms-text-color);
     font-size: var(--sms-font-size, inherit);
+    min-height: var(--sms-min-height, 19pt);
   }
   :where(div.multiselect.open) {
     z-index: var(--sms-open-z-index, 4);
@@ -401,15 +402,14 @@ display above those of another following shortly after it -->
   }
   :where(div.multiselect > ul.selected > li) {
     align-items: center;
-    border-radius: 4pt;
+    border-radius: 3pt;
     display: flex;
     margin: 2pt;
     line-height: normal;
-    padding: 1pt 5pt;
     transition: 0.3s;
     white-space: nowrap;
     background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
-    height: var(--sms-selected-li-height);
+    padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
   :where(div.multiselect button) {

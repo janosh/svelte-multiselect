@@ -15,7 +15,7 @@
 
 **Keyboard-friendly, zero-dependency multi-select Svelte component.**
 <strong class="hide-in-docs">
-<a href="https://svelte-multiselect.netlify.app">Live demo</a> &bull;
+<a href="https://svelte-multiselect.netlify.app">Docs</a> &bull;
 </strong>
 <strong>
 <a href="https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05">REPL</a>
@@ -144,15 +144,17 @@ Full list of props/bindable variables for this component:
 Example:
 
 ```svelte
-<MultiSelect options={[`Banana`, `Apple`, `Mango`]}>
+<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]}>
   <span let:idx let:option slot="option">
-    {idx + 1}. {option.label}
-    {option.label === `Mango` ? `🎉` : ``}
+    {idx + 1}
+    {option.label}
+    <span style:background={option.label} style=" width: 1em; height: 1em;" />
   </span>
 
   <span let:idx let:option slot="selected">
-    #{idx + 1}
+    {idx + 1}
     {option.label}
+    <span style:background={option.label} style=" width: 1em; height: 1em;" />
   </span>
 
   <CustomSpinner slot="spinner">
@@ -163,13 +165,13 @@ Example:
 
 `MultiSelect.svelte` dispatches the following events:
 
-| name        | detail                                                                              | description                                                                                                                         |
-| ----------- | ----------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
-| `add`       | `{ option: Option }`                                                                | Triggers when a new option is selected.                                                                                             |
-| `remove`    | `{ option: Option }`                                                                | Triggers when one selected option provided as `event.detail.option` is removed.                                                     |
-| `removeAll` | `options: Option[]`                                                                 | Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected. |
-| `change`    | `{ option?: Option, options?: Option[] }`, `type: 'add' \| 'remove' \| 'removeAll'` | Triggers when a option is either added or removed, or all options are removed at once.                                              |
-| `blur`      | none                                                                                | Triggers when the input field looses focus.                                                                                         |
+| name        | detail                                   | description                                                                                                                                                     |
+| ----------- | ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `add`       | `{ option: Option }`                     | Triggers when a new option is selected.                                                                                                                         |
+| `remove`    | `{ option: Option }`                     | Triggers when one selected option provided as `event.detail.option` is removed.                                                                                 |
+| `removeAll` | `options: Option[]`                      | Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected.                             |
+| `change`    | `type: 'add' \| 'remove' \| 'removeAll'` | Triggers when a option is either added or removed, or all options are removed at once. Payload will be a single or an aarray of `Option` objects, respectively. |
+| `blur`      | none                                     | Triggers when the input field looses focus.                                                                                                                     |
 
 ### Examples
 
@@ -228,19 +230,22 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
   - `border-radius: var(--sms-border-radius, 3pt)`
-  - `background: var(--sms-input-bg)`
-  - `height: var(--sms-input-height, 2em)`
+  - `padding: var(--sms-padding, 0 3pt)`
+  - `background: var(--sms-bg)`
   - `color: var(--sms-text-color)`
-  - `color: var(--sms-placeholder-color)`
+  - `min-height: var(--sms-min-height)`
+  - `max-width: var(--sms-max-width)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
   - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` if not set which defaults to `cornflowerblue`.
 - `div.multiselect.disabled`
   - `background: var(--sms-disabled-bg, lightgray)`: Background when in disabled state.
+- `div.multiselect input::placeholder`
+  - `color: var(--sms-placeholder-color)`
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
-  - `height: var(--sms-selected-li-height)`: Height of selected options.
+  - `padding: var(--sms-selected-li-padding, 5pt 1pt)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
   - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
