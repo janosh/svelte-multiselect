@@ -54,6 +54,8 @@
 
 - v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form or user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed to `div.multiselect.{readonly=>disabled}`.
 
+- v4.0.3 CSS variables starting with `--sms-input-<attr>` were renamed to just `--sms-<attr>`. E.g. `--sms-input-min-height` is now `--sms-min-height`.
+
 ## Installation
 
 ```sh
