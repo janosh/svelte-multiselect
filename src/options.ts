@@ -36,7 +36,7 @@ export const languages = [
 
 // prettier-ignore
 export const fruits = [
-  `Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`, `Orange`, `Apricots`, `Avocado`, `Blackberries`, `Blackcurrant`, `Blueberries`, `Cherries`, `Coconut`, `Cranberries`, `Grapefruit`, `Grapes`, `Guava`, `Kiwifruit`, `Lemon`, `Lime`, `Lychee`, `Mandarin`, `Nectarine`, `Papaya`, `Passion fruit`, `Peach`, `Pear`, `Pineapple`, `Plum`, `Raspberry`, `Strawberry`, `Tangerine`
+  `Banana`, `Watermelon`, `Apple`, `Dates`, `Mango`, `Orange`, `Apricots`, `Avocado`, `Blackberries`, `Blackcurrant`, `Blueberries`, `Cherries`, `Coconut`, `Cranberries`, `Grapefruit`, `Grapes`, `Guava`, `Kiwi`, `Lemon`, `Lime`, `Lychee`, `Mandarin`, `Nectarine`, `Papaya`, `Passion fruit`, `Peach`, `Pear`, `Pineapple`, `Plum`, `Raspberry`, `Strawberry`, `Tangerine`
 ]
 
 // prettier-ignore
