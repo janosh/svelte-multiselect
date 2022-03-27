@@ -10,6 +10,10 @@
     // enable source maps by default.
     "sourceMap": true,
 
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+
+    "paths": {
+      "$src/*": ["./src/*"]
+    }
   }
 }
