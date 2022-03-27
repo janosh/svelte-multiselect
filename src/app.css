@@ -34,10 +34,12 @@ main {
   margin: auto;
   margin-bottom: 3em;
   width: 100%;
+  max-width: 50em;
 }
 a {
   color: var(--blue);
   text-decoration: none;
+  transition: 0.2s;
 }
 a:hover {
   color: orange;
@@ -60,6 +62,9 @@ pre {
 a code {
   color: white;
 }
+ul li {
+  margin: 1ex 0;
+}
 
 div.table {
   overflow: scroll;
@@ -74,6 +79,14 @@ table :is(td, th) {
 }
 tbody tr:nth-child(odd) {
   background: black;
+}
+
+h1 {
+  display: flex;
+  font-size: clamp(2rem, 2rem + 2vw, 3rem);
+  place-items: center;
+  place-content: center;
+  margin: 1.2em 0;
 }
 
 :where(h2, h3, h4, h5, h6) {

@@ -1,0 +1,35 @@
+<script>
+  import MultiSelect from '$lib'
+  import { languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
+</script>
+
+## Disabled MultiSelect
+
+```svelte
+<MultiSelect
+  options={languages}
+  maxSelect={10}
+  placeholder="What languages do you know?"
+/>
+```
+
+<br />
+
+<MultiSelect
+  options={languages}
+  maxSelect={10}
+  placeholder="What languages do you know?"
+>
+  <LanguageSlot let:option {option} slot="selected" />
+</MultiSelect>
+
+<br />
+
+Test that component in disabled state:
+
+- has attribute aria-disabled
+- has disabled title
+- has `<input disabled="true">`
+- renders no buttons
+- renders disabled slot

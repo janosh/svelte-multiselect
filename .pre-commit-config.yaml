@@ -38,8 +38,7 @@ repos:
     hooks:
       - id: eslint
         types: [file]
-        files: \.(svelte|js)$
-        args: [--plugin, eslint-plugin-svelte3]
+        files: \.(svelte|js|ts)$
         additional_dependencies:
           - eslint
           - svelte

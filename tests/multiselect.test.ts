@@ -21,13 +21,13 @@ const context = await browser.newContext({
 
 describe(`input`, async () => {
   const page = await context.newPage()
-  await page.goto(`/ui`)
+  await page.goto(`/demos/ui`)
 
   test(`opens dropdown on focus`, async () => {
     expect(await page.$(`.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`.multiselect.open`)).toBeNull()
 
-    await page.click(`input[placeholder='Pick your favorite fruits']`)
+    await page.click(`input[placeholder='Pick your favorite fruits!']`)
 
     expect(await page.$(`.multiselect.open`)).toBeTruthy()
     await page.waitForTimeout(500) // give DOM time to update
@@ -42,9 +42,9 @@ describe(`input`, async () => {
   test(`closes dropdown on tab out`, async () => {
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
-    await page.click(`input[placeholder='Pick your favorite fruits']`)
+    await page.click(`input[placeholder='Pick your favorite fruits!']`)
 
-    await page.focus(`input[placeholder='Pick your favorite fruits']`)
+    await page.focus(`input[placeholder='Pick your favorite fruits!']`)
     await page.keyboard.press(`Tab`)
     await page.waitForTimeout(500) // give DOM time to update
 
@@ -57,7 +57,7 @@ describe(`input`, async () => {
 
   test(`filters dropdown to show only matching options when entering text`, async () => {
     await page.fill(
-      `input[placeholder='Pick your favorite fruits']`,
+      `input[placeholder='Pick your favorite fruits!']`,
       `Pineapple`
     )
 
@@ -71,7 +71,7 @@ describe(`input`, async () => {
 
 describe(`remove all button`, async () => {
   const page = await context.newPage()
-  await page.goto(`/ui`)
+  await page.goto(`/demos/ui`)
 
   await page.click(`.multiselect`) // open the dropdown
   await page.click(`.multiselect > ul.options > li`) // select 1st option
@@ -101,7 +101,7 @@ describe(`remove all button`, async () => {
 
 describe(`external CSS classes`, async () => {
   const page = await context.newPage()
-  await page.goto(`/css-classes`)
+  await page.goto(`/demos/css-classes`)
 
   await page.click(`.multiselect`) // open the dropdown
   await page.click(`.multiselect > ul.options > li`) // select 1st option
@@ -126,7 +126,7 @@ describe(`external CSS classes`, async () => {
 
 describe(`disabled multiselect`, async () => {
   const page = await context.newPage()
-  await page.goto(`/disabled`)
+  await page.goto(`/demos/disabled`)
   const div = await page.$(`.multiselect.disabled`)
 
   test(`has attribute aria-disabled`, async () => {
@@ -156,12 +156,12 @@ describe(`disabled multiselect`, async () => {
 
 describe(`accessibility`, async () => {
   const page = await context.newPage()
-  await page.goto(`/ui`)
+  await page.goto(`/demos/ui`)
 
   test(`input is aria-invalid when component has invalid=true`, async () => {
     // don't interact with component before this test as it will set invalid=false
     const invalid = await page.getAttribute(
-      `input[placeholder='Pick your favorite fruits']`,
+      `input[placeholder='Pick your favorite fruits!']`,
       `aria-invalid`,
       { strict: true }
     )
@@ -213,9 +213,9 @@ describe(`accessibility`, async () => {
 describe(`multiselect`, async () => {
   test(`can select and remove many options`, async () => {
     const page = await context.newPage()
-    await page.goto(`/ui`)
+    await page.goto(`/demos/ui`)
 
-    await page.locator(`[placeholder="Pick your favorite fruits"]`).click()
+    await page.locator(`[placeholder="Pick your favorite fruits!"]`).click()
 
     for (const option of [`Avocado`, `Cherries`, `Peach`, `Lychee`, `Kiwi`]) {
       await page.locator(`text=${option} >> nth=0`).click()

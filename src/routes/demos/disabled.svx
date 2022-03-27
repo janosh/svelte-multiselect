@@ -1,10 +1,9 @@
 <script>
-  import MultiSelect from '../lib'
+  import MultiSelect from '$lib'
+  import { fruits } from '$src/options'
 </script>
 
-<main>
-
-# Disabled
+## Disabled
 
 ```svelte
 <MultiSelect
@@ -17,7 +16,11 @@
 </MultiSelect>
 ```
 
+<br />
+
+<label for="disabled"><strong>Disabled MultiSelect</strong></label>
 <MultiSelect
+  id="disabled"
   options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
   disabled
   disabledTitle="Super special disabled message"
@@ -25,5 +28,3 @@
 >
   <span slot="disabled-icon">This component is disabled. Get outta here!</span>
 </MultiSelect>
-
-</main>
