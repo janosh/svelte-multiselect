@@ -1,6 +1,6 @@
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/static/favicon.svg" alt="Svelte MultiSelect" height="60" width="60">
-  <br>&ensp;Svelte MultiSelect
+  <br class="hide-in-docs">&ensp;Svelte MultiSelect
 </h1>
 
 <h4 align="center">

@@ -1,5 +1,6 @@
 <script>
-  import MultiSelect from '../lib'
+  import MultiSelect from '$lib'
+  import { fruits } from '$src/options'
 </script>
 
 ## Disabled
@@ -15,7 +16,11 @@
 </MultiSelect>
 ```
 
+<br />
+
+<label for="disabled"><strong>Disabled MultiSelect</strong></label>
 <MultiSelect
+  id="disabled"
   options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
   disabled
   disabledTitle="Super special disabled message"
