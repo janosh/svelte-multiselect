@@ -3,9 +3,7 @@
   import { languages } from '../options'
 </script>
 
-<main>
-
-# Disabled MultiSelect
+## Disabled MultiSelect
 
 Test that component in disabled state:
 
@@ -28,5 +26,3 @@ Test that component in disabled state:
   maxSelect={10}
   placeholder="What languages do you know?"
 />
-
-</main>

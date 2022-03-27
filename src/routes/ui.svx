@@ -3,9 +3,7 @@
   import { fruits } from '../options'
 </script>
 
-<main>
-
-# User interface
+## User interface
 
 This page is mostly used for testing. It checks that:
 
@@ -39,5 +37,3 @@ This page is mostly used for testing. It checks that:
   removeAllTitle="Delete all fruits"
   invalid
 />
-
-</main>

@@ -1,13 +1,12 @@
 <script lang="ts">
-  import GitHubCorner from 'svelte-github-corner'
   import Toc from 'svelte-toc'
   import Readme from '../../readme.md'
   import Examples from '../components/Examples.svelte'
 
-  export let routes: string[]
+  const routes = Object.keys(import.meta.glob(`./*.svx`)).map(
+    (filename) => filename.split(`.`)[1]
+  )
 </script>
-
-<GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
 <main>
   <Readme>

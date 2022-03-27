@@ -2,9 +2,7 @@
   import MultiSelect from '../lib'
 </script>
 
-<main>
-
-# Disabled
+## Disabled
 
 ```svelte
 <MultiSelect
@@ -25,5 +23,3 @@
 >
   <span slot="disabled-icon">This component is disabled. Get outta here!</span>
 </MultiSelect>
-
-</main>

@@ -3,9 +3,7 @@
   import { fruits } from '../options'
 </script>
 
-<main>
-
-# External CSS Classes
+## External CSS Classes
 
 When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through the following classes:
 
@@ -32,5 +30,3 @@ When using CSS frameworks like Tailwind, you can customize the appearance of `<M
   liSelectedClass="hi"
   liActiveOptionClass="mom"
 />
-
-</main>
