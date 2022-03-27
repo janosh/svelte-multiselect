@@ -1,13 +1,9 @@
 <script>
-  import MultiSelect from '../lib'
-  import { fruits } from '../options'
+  import MultiSelect from '$lib'
+  import { fruits } from '$src/options'
 </script>
 
-<main>
-
-# External CSS Classes
-
-When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through the following classes:
+## External CSS Classes
 
 ```svelte
 <MultiSelect
@@ -22,7 +18,11 @@ When using CSS frameworks like Tailwind, you can customize the appearance of `<M
 />
 ```
 
+<br />
+
+<label for="fruits"><strong>Fruit Picker</strong></label>
 <MultiSelect
+  id="fruits"
   options={fruits}
   outerDivClass="foo"
   ulSelectedClass="bar"
@@ -33,4 +33,6 @@ When using CSS frameworks like Tailwind, you can customize the appearance of `<M
   liActiveOptionClass="mom"
 />
 
-</main>
+<br />
+
+When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through the following classes:
