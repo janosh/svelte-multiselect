@@ -48,14 +48,14 @@
     border-radius: 3pt;
     transition: 0.2s;
   }
+  a[href='/']:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
   nav > a {
     padding-bottom: 2pt;
   }
   nav > a[aria-current='page'] {
-    border-bottom: 1px solid lightgray;
-  }
-  a:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    font-weight: bold;
   }
   nav {
     display: flex;

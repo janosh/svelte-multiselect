@@ -13,7 +13,7 @@
 
 </h4>
 
-**Keyboard-friendly, zero-dependency multi-select Svelte component.**
+**Keyboard-friendly, accessible multi-select Svelte component.**
 <strong class="hide-in-docs">
 <a href="https://svelte-multiselect.netlify.app">Docs</a> &bull;
 </strong>

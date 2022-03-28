@@ -1,6 +1,6 @@
 import { ProtoOption } from './lib'
 
-export const web_ui_libs = [
+export const frontend_libs = [
   [`Svelte`, `JavaScript`],
   [`React`, `JavaScript`],
   [`Vue`, `JavaScript`],
@@ -31,7 +31,7 @@ export const ml_libs = [
 
 // prettier-ignore
 export const languages = [
-  `JavaScript`, `TypeScript`, `CoffeeScript`, `Python`, `Ruby`, `C`, `C#`, `C++`, `Go`, `Swift`, `Java`, `Rust`, `Kotlin`, `Haskell`, `Scala`, `Clojure`, `Erlang`, `Elixir`, `F#`, `Dart`, `Elm`, `Julia`, `Lua`, `R`, `OCaml`, `Pascal`, `Perl`, `PHP`
+  `JavaScript`, `TypeScript`, `CoffeeScript`, `Python`, `Ruby`, `C`, `C#`, `C++`, `Go`, `Swift`, `Java`, `Rust`, `Kotlin`, `Haskell`, `Scala`, `Clojure`, `Erlang`, `Elixir`, `F#`, `Dart`, `Elm`, `Julia`, `Lua`, `R`, `OCaml`, `Perl`, `PHP`
 ].map(lang => ({label: lang, value: lang, preselected: [`Python`, `TypeScript`, `C`].includes(lang) }))
 
 // prettier-ignore
