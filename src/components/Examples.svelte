@@ -1,12 +1,11 @@
 <script lang="ts">
   import MultiSelect, { Option, Primitive } from '../lib'
   import Confetti from './Confetti.svelte'
-  import { colors, ml_libs, languages, web_ui_libs } from '../options'
+  import { colors, ml_libs, languages, frontend_libs } from '../options'
   import ColorSlot from './ColorSlot.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
 
-  let selectedWeb: Primitive[]
-  let activeWeb: Option
+  let selectedLangs: Primitive[]
   let selectedML: Option[]
   let selectedFruit: Option[]
 
@@ -32,23 +31,16 @@
 <section>
   <h3>Multi Select</h3>
 
-  <label for="fav-web-tool">Favorite Web Frameworks?</label>
-
-  <pre><code>selectedLabels = {JSON.stringify(selectedWeb)}</code></pre>
-
-  <MultiSelect
-    id="fav-web-tool"
-    options={web_ui_libs}
-    bind:selectedLabels={selectedWeb}
-    bind:activeOption={activeWeb}
-    maxSelect={6}
-    {placeholder}
-    {filterFunc}
-  />
+  <pre>bind:selectedLabels = {JSON.stringify(selectedLangs)}</pre>
 
   <label for="languages">Favorite programming languages?</label>
 
-  <MultiSelect id="languages" options={languages} {placeholder}>
+  <MultiSelect
+    id="languages"
+    options={languages}
+    {placeholder}
+    bind:selectedLabels={selectedLangs}
+  >
     <LanguageSlot let:option {option} slot="selected" />
   </MultiSelect>
 </section>
@@ -58,7 +50,7 @@
 
   <label for="fav-ml-tool">Favorite Machine Learning Framework?</label>
 
-  <pre><code>selected = {JSON.stringify(selectedML)}</code></pre>
+  <pre>selected = {JSON.stringify(selectedML)}</pre>
 
   <MultiSelect
     id="fav-ml-tool"
@@ -73,22 +65,25 @@
 </section>
 
 <section>
-  <h3>50/50 Chance of Confetti</h3>
+  <h3>Chance of Confetti</h3>
 
   <label for="confetti-select">Favorite Web Framework?</label>
 
   <MultiSelect
     id="confetti-select"
-    options={[`React`, `Svelte`]}
+    options={frontend_libs}
     maxSelect={1}
     {placeholder}
+    {filterFunc}
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
         showConfetti = true
         setTimeout(() => (showConfetti = false), 3000)
       }
     }}
-  />
+  >
+    <LanguageSlot let:option {option} slot="selected" />
+  </MultiSelect>
   {#if showConfetti}
     <Confetti />
   {/if}
@@ -130,6 +125,8 @@
   }
   pre {
     white-space: pre-wrap;
-    background-color: transparent;
+    padding: 7pt 1em;
+    font-size: 1em;
+    word-break: break-word;
   }
 </style>
