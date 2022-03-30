@@ -64,14 +64,13 @@
 
   // process proto options to full ones with mandatory labels
   $: _options = options.map((rawOp) => {
-    // convert to objects internally if user passed list of strings or numbers as options
     if (isObject(rawOp)) {
       const option = { ...(rawOp as Option) }
       if (option.value === undefined) option.value = option.label
       return option
     } else {
       if (![`string`, `number`].includes(typeof rawOp)) {
-        console.error(
+        console.warn(
           `MultiSelect options must be objects, strings or numbers, got ${typeof rawOp}`
         )
       }
@@ -83,8 +82,8 @@
   $: labels = _options.map((op) => op.label)
 
   $: if (new Set(labels).size !== options.length) {
-    console.error(
-      `Option labels must be unique. Duplicates found: ${labels.filter(
+    console.warn(
+      `Option labels should be unique. Duplicates found: ${labels.filter(
         (label, idx) => labels.indexOf(label) !== idx
       )}`
     )

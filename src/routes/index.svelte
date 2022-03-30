@@ -23,7 +23,7 @@
   </Readme>
 </main>
 
-<Toc headingSelector="main > :where(h2, h3)" />
+<Toc headingSelector="main > :where(h2, h3)" breakpoint={1250} />
 
 <style>
   nav {
@@ -32,5 +32,11 @@
   }
   :global(.hide-in-docs) {
     display: none;
+  }
+  :global(aside.toc.desktop) {
+    position: fixed;
+    top: 3em;
+    left: calc(50vw + 50em / 2);
+    max-width: 16em;
   }
 </style>

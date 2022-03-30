@@ -5,20 +5,17 @@
 
 <h4 align="center">
 
+[![REPL](https://img.shields.io/badge/Svelte-REPL-blue)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
-[![NPM version](https://img.shields.io/npm/v/svelte-multiselect?color=blue&logo=NPM)](https://npmjs.com/package/svelte-multiselect)
-[![pre-commit.ci status](https://results.pre-commit.ci/badge/github/janosh/svelte-multiselect/main.svg)](https://results.pre-commit.ci/latest/github/janosh/svelte-multiselect/main)
-[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
+[![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
+[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 
 </h4>
 
 **Keyboard-friendly, accessible multi-select Svelte component.**
 <strong class="hide-in-docs">
-<a href="https://svelte-multiselect.netlify.app">Docs</a> &bull;
-</strong>
-<strong>
-<a href="https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05">REPL</a>
+<a href="https://svelte-multiselect.netlify.app">Docs</a>
 </strong>
 
 <slot name="examples" />
