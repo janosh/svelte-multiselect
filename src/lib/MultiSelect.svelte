@@ -66,9 +66,9 @@
   $: _options = options.map((rawOp) => {
     // convert to objects internally if user passed list of strings or numbers as options
     if (isObject(rawOp)) {
-      const op = { ...(rawOp as Option) }
-      if (!op.value) op.value = op.label
-      return op
+      const option = { ...(rawOp as Option) }
+      if (option.value === undefined) option.value = option.label
+      return option
     } else {
       if (![`string`, `number`].includes(typeof rawOp)) {
         console.error(
