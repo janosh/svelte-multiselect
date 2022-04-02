@@ -1,0 +1,38 @@
+<script>
+  import MultiSelect from '$lib'
+  import { languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
+  import { language_store } from '$src/stores'
+</script>
+
+## Page-Reload Persistent MultiSelect
+
+```svelte
+<script>
+  import { language_store } from '$src/stores'
+</script>
+
+<MultiSelect
+  id="languages"
+  options={languages}
+  placeholder="What languages do you know?"
+  bind:selected={$language_store}
+>
+  <LanguageSlot let:option {option} slot="selected" />
+</MultiSelect>
+```
+
+<br />
+
+<MultiSelect
+  id="languages"
+  options={languages}
+  placeholder="What languages do you know?"
+  bind:selected={$language_store}
+>
+  <LanguageSlot let:option {option} slot="selected" />
+</MultiSelect>
+
+<br />
+
+Test that component when bound to `localStorage` retains its `selected` state on page reload.

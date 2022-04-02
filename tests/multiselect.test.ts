@@ -238,4 +238,25 @@ describe(`multiselect`, async () => {
       `Nectarine Lime`
     )
   })
+
+  test.only(`retains its selected state on page reload when bound to localStorage`, async () => {
+    const page = await context.newPage()
+    await page.goto(`/demos/persistent`)
+
+    await page.locator(`input[name="languages"]`).click()
+
+    await page.locator(`text=Haskell >> nth=0`).click()
+
+    await page.locator(`input[name="languages"]`).fill(`java`)
+
+    await page.locator(`text=JavaScript`).click()
+
+    await page.reload()
+
+    await page.waitForTimeout(300)
+
+    const selected_text = await page.textContent(`.multiselect > ul.selected`)
+    expect(selected_text).toContain(`JavaScript`)
+    expect(selected_text).toContain(`Haskell`)
+  })
 })
