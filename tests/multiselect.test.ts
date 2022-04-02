@@ -239,7 +239,7 @@ describe(`multiselect`, async () => {
     )
   })
 
-  test.only(`retains its selected state on page reload when bound to localStorage`, async () => {
+  test(`retains its selected state on page reload when bound to localStorage`, async () => {
     const page = await context.newPage()
     await page.goto(`/demos/persistent`)
 
