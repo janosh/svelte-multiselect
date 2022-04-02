@@ -381,7 +381,7 @@ export default {
 }
 ```
 
-Here's a [Stackblitz example](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__) that also uses [`'vitest-svelte-kit'`](https://github.com/nickbreaton/vitest-svelte-kit).
+Here's a [Stackblitz example](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__) that also uses [`vitest-svelte-kit`](https://github.com/nickbreaton/vitest-svelte-kit).
 
 ## Want to contribute?
 

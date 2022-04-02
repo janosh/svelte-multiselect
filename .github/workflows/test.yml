@@ -17,10 +17,9 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v3
 
-      - name: Set up node v17
+      - name: Set up node
         uses: actions/setup-node@v3
         with:
-          node-version: 17
           cache: yarn
 
       - name: Install dependencies
