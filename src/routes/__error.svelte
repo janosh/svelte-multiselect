@@ -19,14 +19,16 @@
 <div>
   {#if status === 404}
     <h1>{error.name} {status}: Page not found 😅</h1>
-  {:else if status >= 500}
-    <h1>{error.name} {status}</h1>
-    <p>
-      This may be our fault. If page reloading doesn't help, please raise an issue on
-      <a href="https://github.com/janosh/svelte-multiselect/issues">GitHub</a>. Thanks! 🙏
-    </p>
   {:else}
     <h1>⚠️ {error.name} {status}</h1>
+    {#if status >= 500}
+      <p>
+        Oops, our bad. If page reloading doesn't help, please raise an issue on
+        <a href="https://github.com/janosh/svelte-multiselect/issues">GitHub</a>. Thanks!
+        🙏
+      </p>
+      <br />
+    {/if}
   {/if}
   <p>
     Return to <a sveltekit:prefetch href="/">index page</a>.

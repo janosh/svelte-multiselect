@@ -1,12 +1,11 @@
 <script lang="ts">
-  import { createEventDispatcher, onMount, tick } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, DisabledIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
-  export let selected: Option[] = []
   export let selectedLabels: Primitive[] = []
   export let selectedValues: Primitive[] = []
   export let searchText = ``
@@ -16,6 +15,8 @@
   export let disabled = false
   export let disabledTitle = `This field is disabled`
   export let options: ProtoOption[]
+  export let selected: Option[] =
+    (options as Option[]).filter((op) => op?.preselected) ?? []
   export let input: HTMLInputElement | null = null
   export let outerDiv: HTMLDivElement | null = null
   export let placeholder: string | undefined = undefined
@@ -51,10 +52,6 @@
   }
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
-
-  onMount(() => {
-    selected = _options.filter((op) => op?.preselected) ?? []
-  })
 
   const dispatch = createEventDispatcher<DispatchEvents>()
 

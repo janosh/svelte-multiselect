@@ -1947,10 +1947,10 @@ svelte-preprocess@^4.0.0, svelte-preprocess@^4.10.4:
     sorcery "^0.10.0"
     strip-indent "^3.0.0"
 
-svelte-toc@^0.2.8:
-  version "0.2.8"
-  resolved "https://registry.yarnpkg.com/svelte-toc/-/svelte-toc-0.2.8.tgz#8f4b9b6401154b4ff93bc27a8e68f1c69a3b46c7"
-  integrity sha512-69HbUosFZ3zJJfHQWSa6rEsLvLEZbotBVN7jOjhGvHUYhdulAvoZpZjY1v2206rVMHArWrXYwECDhSO+ThS9xw==
+svelte-toc@^0.2.9:
+  version "0.2.9"
+  resolved "https://registry.yarnpkg.com/svelte-toc/-/svelte-toc-0.2.9.tgz#7fc857a3cca8d1a31fd28a7636d03635cc1d8ae3"
+  integrity sha512-08aOB3skVxcw4y1A1vy5u7+/QZ8KfudMXjuxQp51gHh56gmWh+/eXGo8fNE/og/JQ2qqvRK7JMdCG8nF3hRxgQ==
 
 svelte2tsx@^0.5.6:
   version "0.5.6"

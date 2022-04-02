@@ -1,11 +1,11 @@
 <script lang="ts">
-  import MultiSelect, { Option, Primitive } from '../lib'
+  import MultiSelect, { Option } from '../lib'
   import Confetti from './Confetti.svelte'
   import { colors, ml_libs, languages, frontend_libs } from '../options'
   import ColorSlot from './ColorSlot.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
+  import { language_store } from '../stores'
 
-  let selectedLangs: Primitive[]
   let selectedML: Option[]
   let selectedFruit: Option[]
 
@@ -31,7 +31,7 @@
 <section>
   <h3>Multi Select</h3>
 
-  <pre>bind:selectedLabels = {JSON.stringify(selectedLangs)}</pre>
+  <pre>bind:selectedLabels = {JSON.stringify($language_store.map((t) => t.label))}</pre>
 
   <label for="languages">Favorite programming languages?</label>
 
@@ -39,7 +39,7 @@
     id="languages"
     options={languages}
     {placeholder}
-    bind:selectedLabels={selectedLangs}
+    bind:selected={$language_store}
   >
     <LanguageSlot let:option {option} slot="selected" />
   </MultiSelect>
