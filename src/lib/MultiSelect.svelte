@@ -138,7 +138,7 @@
   }
 
 
-  function addOption() {
+  function addOption(): void {
     _options.push({label: searchText, value: searchText});
     add(searchText);
     searchText = ``;
