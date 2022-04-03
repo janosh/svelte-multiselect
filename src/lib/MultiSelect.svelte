@@ -162,7 +162,7 @@
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } else if ([true, `append`].includes(allowUserOptions)) {
+      } else if ([true, `append`].includes(allowUserOptions) && searchText.length > 0) {
         selected = [...selected, { label: searchText, value: searchText }]
         if (allowUserOptions === `append`)
           options = [...options, { label: searchText, value: searchText }]
