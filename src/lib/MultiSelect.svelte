@@ -137,11 +137,10 @@
     dispatch(`change`, { option, type: `remove` })
   }
 
-
   function addOption(): void {
-    _options.push({label: searchText, value: searchText});
-    add(searchText);
-    searchText = ``;
+    _options.push({ label: searchText, value: searchText })
+    add(searchText)
+    searchText = ``
   }
 
   function setOptionsVisible(show: boolean) {
@@ -371,7 +370,7 @@ display above those of another following shortly after it -->
           {#if searchText}
             <li class="addOption" on:click={addOption}>{addOptionsMsg}</li>
           {/if}
-        {:else }
+        {:else}
           <span>{noOptionsMsg}</span>
         {/if}
       {/each}
