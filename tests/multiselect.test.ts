@@ -260,3 +260,53 @@ describe(`multiselect`, async () => {
     expect(selected_text).toContain(`Haskell`)
   })
 })
+
+describe(`allowUserOptions`, async () => {
+  test.only(`entering custom option adds it to selected but not to options`, async () => {
+    const page = await context.newPage()
+    const selector = `input[name="fruits"]`
+
+    await page.goto(`/demos/allow-user-options`)
+
+    await page.locator(selector).click()
+
+    await page.locator(selector).fill(`Durian`)
+
+    await page.locator(selector).press(`Enter`)
+
+    const selected_text = await page.textContent(
+      `label[for='fruits'] + .multiselect > ul.selected`
+    )
+    expect(selected_text).toContain(`Durian`)
+
+    const filtered_options = await page.textContent(
+      `label[for='fruits'] + .multiselect > ul.options`
+    )
+    expect(filtered_options).not.toContain(`Durian`)
+  })
+
+  test.only(`entering custom option in append mode adds it to selected and to options`, async () => {
+    // i.e. makes it selectable from the dropdown after removing
+    const page = await context.newPage()
+    const selector = `input[name="fruits-append"]`
+
+    await page.goto(`/demos/allow-user-options`)
+
+    await page.locator(selector).click()
+
+    await page.locator(selector).fill(`Miracle Berry`)
+
+    await page.locator(selector).press(`Enter`)
+
+    await page.locator(selector).fill(`Miracle Berry`)
+
+    await page.locator(selector).press(`ArrowDown`)
+
+    await page.locator(selector).press(`Enter`)
+
+    const selected_text = await page.textContent(
+      `label[for='fruits-append'] + .multiselect > ul.selected`
+    )
+    expect(selected_text).toContain(`Miracle Berry`)
+  })
+})
