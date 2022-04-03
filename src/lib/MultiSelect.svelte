@@ -23,8 +23,8 @@
   export let id: string | undefined = undefined
   export let name: string | undefined = id
   export let noOptionsMsg = `No matching options`
-  export let addOptionOption = false;
-  export let addOptionsMsg = `add this option`;
+  export let addOptionOption = false
+  export let addOptionsMsg = `add this option`
   export let activeOption: Option | null = null
   export let filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
