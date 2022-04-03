@@ -281,7 +281,7 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `liOptionClass`
 - `liActiveOptionClass`
 
-This simplified version of the DOM structure of this component shows where these classes are inserted:
+This simplified version of the DOM structure of the component shows where these classes are inserted:
 
 ```svelte
 <div class="multiselect {outerDivClass}">

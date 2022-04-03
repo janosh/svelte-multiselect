@@ -59,6 +59,9 @@ pre {
   font-size: 9pt;
   background-color: rgba(0, 0, 0, 0.6);
 }
+ul {
+  padding-left: 1em;
+}
 ul li {
   margin: 1ex 0;
 }

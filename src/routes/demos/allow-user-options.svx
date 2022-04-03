@@ -1,0 +1,36 @@
+<script>
+  import MultiSelect from '$lib'
+  import { fruits } from '$src/options'
+
+  let selected = [{ label: `Mango`, value: `Mango` }]
+  let selected_append = [...selected, { label: `Banana`, value: `Banana` }]
+</script>
+
+## Allow User Options
+
+```svelte
+<MultiSelect
+  options={fruits}
+  allowUserOptions={true}
+/>
+```
+
+<br />
+
+<label for="fruits"><strong>Fruit Picker with custom user input</strong></label>
+<MultiSelect id="fruits" options={fruits} allowUserOptions={true} bind:selected />
+
+<label for="fruits-append"><strong>Fruit Picker append user options</strong></label>
+<MultiSelect
+  id="fruits-append"
+  options={fruits}
+  allowUserOptions="append"
+  bind:selected={selected_append}
+/>
+
+<br />
+
+- `allowUserOptions={true}`: users can enter custom options
+- `allowUserOptions="append"`:
+users can enter custom options *and* they will be added to the list of available
+options
