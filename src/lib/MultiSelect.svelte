@@ -22,9 +22,9 @@
   export let placeholder: string | undefined = undefined
   export let id: string | undefined = undefined
   export let name: string | undefined = id
-  export let noOptionsMsg: string = `No matching options`
-  export let addOptionOption: boolean = true;
-  export let addOptionsMsg: string = `add this option`;
+  export let noOptionsMsg = `No matching options`
+  export let addOptionOption = true;
+  export let addOptionsMsg = `add this option`;
   export let activeOption: Option | null = null
   export let filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
