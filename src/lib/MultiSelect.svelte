@@ -126,11 +126,17 @@
 
   function remove(label: Primitive) {
     if (selected.length === 0) return
-    const option = _options.find((option) => option.label === label)
+    selected = selected.filter((option) => label !== option.label)
+    const option =
+      _options.find((option) => option.label === label) ??
+      // if option with label could not be found but allowUserOptions is truthy,
+      // assume it was created by user and create correspondidng option object
+      // on the fly for use as event payload
+      (allowUserOptions && { label, value: label })
+
     if (!option) {
       return console.error(`MultiSelect: option with label ${label} not found`)
     }
-    selected = selected.filter((option) => label !== option.label)
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
   }
@@ -199,9 +205,8 @@
       }
     }
     // on backspace key: remove last selected option
-    else if (event.key === `Backspace`) {
-      const label = selectedLabels.pop()
-      if (label && !searchText) remove(label)
+    else if (event.key === `Backspace` && selectedLabels.length > 0 && !searchText) {
+      remove(selectedLabels.at(-1) as Primitive)
     }
   }
 
