@@ -23,8 +23,8 @@
   export let id: string | undefined = undefined
   export let name: string | undefined = id
   export let noOptionsMsg = `No matching options`
-  export let addOptionOption = false;
-  export let addOptionsMsg = `add this option`;
+  export let addOptionOption = false
+  export let addOptionsMsg = `add this option`
   export let activeOption: Option | null = null
   export let filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
@@ -42,7 +42,6 @@
   export let removeBtnTitle = `Remove`
   export let removeAllTitle = `Remove all`
   export let defaultDisabledTitle = `This option is disabled`
-  export let allowUserOptions: boolean | 'append' = false
   export let autoScroll = true
   export let loading = false
   export let required = false
@@ -169,11 +168,8 @@
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } else if ([true, `append`].includes(allowUserOptions)) {
-        selected = [...selected, { label: searchText, value: searchText }]
-        if (allowUserOptions === `append`)
-          options = [...options, { label: searchText, value: searchText }]
-        searchText = ``
+      } else if (addOptionOption) {
+        addOption()
       }
       // no active option and no search text means the options dropdown is closed
       // in which case enter means open it
