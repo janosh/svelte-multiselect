@@ -157,6 +157,7 @@
     }
     // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
+      event.preventDefault() // prevent enter key from triggering form submission
       if (activeOption) {
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
