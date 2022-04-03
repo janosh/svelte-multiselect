@@ -48,3 +48,11 @@ repos:
           - eslint-plugin-svelte3
           - '@typescript-eslint/eslint-plugin'
           - '@typescript-eslint/parser'
+
+  - repo: local
+    hooks:
+      - id: no-test-only
+        name: Don't commit test selection modifiers
+        entry: 'test.only\('
+        language: pygrep
+        types: [ts]

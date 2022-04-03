@@ -262,7 +262,7 @@ describe(`multiselect`, async () => {
 })
 
 describe(`allowUserOptions`, async () => {
-  test.only(`entering custom option adds it to selected but not to options`, async () => {
+  test(`entering custom option adds it to selected but not to options`, async () => {
     const page = await context.newPage()
     const selector = `input[name="fruits"]`
 
@@ -285,7 +285,7 @@ describe(`allowUserOptions`, async () => {
     expect(filtered_options).not.toContain(`Durian`)
   })
 
-  test.only(`entering custom option in append mode adds it to selected and to options`, async () => {
+  test(`entering custom option in append mode adds it to selected and to options`, async () => {
     // i.e. makes it selectable from the dropdown after removing
     const page = await context.newPage()
     const selector = `input[name="fruits-append"]`
