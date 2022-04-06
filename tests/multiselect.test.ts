@@ -285,8 +285,9 @@ describe(`allowUserOptions`, async () => {
     expect(filtered_options).not.toContain(`Durian`)
   })
 
-  test(`entering custom option in append mode adds it to selected and to options`, async () => {
-    // i.e. makes it selectable from the dropdown after removing
+  test(`entering custom option in append mode adds it to selected
+      list and to options in dropdown menu`, async () => {
+    // i.e. it remains selectable from the dropdown after removing from selected
     const page = await context.newPage()
     const selector = `input[name="fruits-append"]`
 
@@ -308,5 +309,23 @@ describe(`allowUserOptions`, async () => {
       `label[for='fruits-append'] + .multiselect > ul.selected`
     )
     expect(selected_text).toContain(`Miracle Berry`)
+  })
+
+  test(`shows custom addOptionMsg if no options match`, async () => {
+    const page = await context.newPage()
+    const selector = `input[name="fruits-append"]`
+
+    await page.goto(`/demos/allow-user-options`)
+
+    await page.locator(selector).click()
+
+    await page.locator(selector).fill(`Foobar Berry`)
+
+    await page.waitForTimeout(300) // give DOM time to update
+
+    const selected_text = await page.textContent(
+      `label[for='fruits-append'] + .multiselect > ul.options`
+    )
+    expect(selected_text).toContain(`Add this custom fruit at your own risk!`)
   })
 })

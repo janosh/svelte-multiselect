@@ -2,6 +2,7 @@
   import MultiSelect from '$lib'
   import { fruits } from '$src/options'
 
+  // make some options pre-selected
   let selected = [{ label: `Mango`, value: `Mango` }]
   let selected_append = [...selected, { label: `Banana`, value: `Banana` }]
 </script>
@@ -12,6 +13,13 @@
 <MultiSelect
   options={fruits}
   allowUserOptions={true}
+/>
+
+<MultiSelect
+  id="fruits-append"
+  options={fruits}
+  allowUserOptions="append"
+  addOptionMsg="Add this custom fruit at your own risk!"
 />
 ```
 
@@ -25,6 +33,7 @@
   id="fruits-append"
   options={fruits}
   allowUserOptions="append"
+  addOptionMsg="Add this custom fruit at your own risk!"
   bind:selected={selected_append}
 />
 
