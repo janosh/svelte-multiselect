@@ -234,9 +234,10 @@ describe(`multiselect`, async () => {
 
     await page.locator(`text=Pineapple >> button`).click()
 
-    expect(await page.textContent(`.multiselect > ul.selected`)).toContain(
-      `Nectarine Lime`
-    )
+    const selected_text = await page.textContent(`.multiselect > ul.selected`)
+    for (const fruit of `Nectarine Lime`.split(` `)) {
+      expect(selected_text).toContain(fruit)
+    }
   })
 
   test(`retains its selected state on page reload when bound to localStorage`, async () => {

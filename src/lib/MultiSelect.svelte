@@ -55,7 +55,7 @@
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
-  let activeMsg = false
+  let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
