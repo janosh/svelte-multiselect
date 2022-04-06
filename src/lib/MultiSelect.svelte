@@ -41,6 +41,7 @@
   export let removeAllTitle = `Remove all`
   export let defaultDisabledTitle = `This option is disabled`
   export let allowUserOptions: boolean | 'append' = false
+  export let addOptionMsg = `Create this option...`
   export let autoScroll = true
   export let loading = false
   export let required = false
@@ -54,6 +55,7 @@
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
+  let activeMsg = false
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
@@ -100,23 +102,34 @@
   )
   $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
 
+  // add an option to selected list
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (
       !selectedLabels.includes(label) &&
-      // for maxselect = 1 we always replace current option with new selection
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
     ) {
+      // first check if we find option in the options list
+      let option = _options.find((op) => op.label === label)
+      if (
+        !option &&
+        [true, `append`].includes(allowUserOptions) &&
+        searchText.length > 0
+      ) {
+        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
+        option = { label: searchText, value: searchText }
+        if (allowUserOptions === `append`) options = [...options, option]
+      }
       searchText = `` // reset search string on selection
-      const option = _options.find((op) => op.label === label)
       if (!option) {
         console.error(`MultiSelect: option with label ${label} not found`)
         return
       }
       if (maxSelect === 1) {
+        // for maxselect = 1 we always replace current option with new one
         selected = [option]
       } else {
-        selected = [option, ...selected]
+        selected = [...selected, option]
       }
       if (selected.length === maxSelect) setOptionsVisible(false)
       dispatch(`add`, { option })
@@ -124,6 +137,7 @@
     }
   }
 
+  // remove an option from selected list
   function remove(label: Primitive) {
     if (selected.length === 0) return
     selected = selected.filter((option) => label !== option.label)
@@ -164,15 +178,14 @@
     // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
       event.preventDefault() // prevent enter key from triggering form submission
+
       if (activeOption) {
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
       } else if ([true, `append`].includes(allowUserOptions) && searchText.length > 0) {
-        selected = [...selected, { label: searchText, value: searchText }]
-        if (allowUserOptions === `append`)
-          options = [...options, { label: searchText, value: searchText }]
-        searchText = ``
+        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
+        add(searchText)
       }
       // no active option and no search text means the options dropdown is closed
       // in which case enter means open it
@@ -180,9 +193,14 @@
     }
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
-      if (activeOption === null) {
-        // if no option is active yet, make first one active
+      // if no option is active yet, but there are matching options, make first one active
+      if (activeOption === null && matchingEnabledOptions.length > 0) {
         activeOption = matchingEnabledOptions[0]
+        return
+      } else if (allowUserOptions && searchText.length > 0) {
+        // if allowUserOptions is truthy and user entered text but no options match, we make
+        // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
+        activeMsg = !activeMsg
         return
       }
       const increment = event.key === `ArrowUp` ? -1 : 1
@@ -337,10 +355,9 @@ display above those of another following shortly after it -->
         {@const { disabledTitle = defaultDisabledTitle } = option}
         {@const active = activeOption?.label === label}
         <li
-          on:mouseup|preventDefault|stopPropagation
-          on:mousedown|preventDefault|stopPropagation={() => {
-            if (disabled) return
-            isSelected(label) ? remove(label) : add(label)
+          on:mousedown|stopPropagation
+          on:mouseup|stopPropagation={() => {
+            if (!disabled) isSelected(label) ? remove(label) : add(label)
           }}
           title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
           class:selected={isSelected(label)}
@@ -348,12 +365,10 @@ display above those of another following shortly after it -->
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
           on:mouseover={() => {
-            if (disabled) return
-            activeOption = option
+            if (!disabled) activeOption = option
           }}
           on:focus={() => {
-            if (disabled) return
-            activeOption = option
+            if (!disabled) activeOption = option
           }}
           on:mouseout={() => (activeOption = null)}
           on:blur={() => (activeOption = null)}
@@ -364,7 +379,23 @@ display above those of another following shortly after it -->
           </slot>
         </li>
       {:else}
-        <span>{noOptionsMsg}</span>
+        {#if allowUserOptions && searchText}
+          <li
+            on:mousedown|stopPropagation
+            on:mouseup|stopPropagation={() => add(searchText)}
+            title={addOptionMsg}
+            class:active={activeMsg}
+            on:mouseover={() => (activeMsg = true)}
+            on:focus={() => (activeMsg = true)}
+            on:mouseout={() => (activeMsg = false)}
+            on:blur={() => (activeMsg = false)}
+            aria-selected="false"
+          >
+            {addOptionMsg}
+          </li>
+        {:else}
+          <span>{noOptionsMsg}</span>
+        {/if}
       {/each}
     </ul>
   {/key}
