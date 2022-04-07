@@ -53,6 +53,6 @@ repos:
     hooks:
       - id: no-test-only
         name: Don't commit test selection modifiers
-        entry: 'test.only\('
+        entry: '(test|describe).only\('
         language: pygrep
         types: [ts]
