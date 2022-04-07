@@ -3,7 +3,7 @@
   import Readme from '../../readme.md'
   import Examples from '../components/Examples.svelte'
 
-  const routes = Object.keys(import.meta.glob(`./demos/*.svx`)).map(
+  const routes = Object.keys(import.meta.glob(`./*.svx`)).map(
     (filename) => filename.split(`.`)[1]
   )
 </script>
@@ -16,7 +16,7 @@
       <nav>
         {#each routes as route, idx}
           {#if idx > 0}<strong>&bull;</strong>{/if}
-          <a href={route}>/{route.split(`/`).at(-1)}</a>
+          <a href={route}>{route}</a>
         {/each}
       </nav>
     </svelte:fragment>

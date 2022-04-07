@@ -1,0 +1,43 @@
+<script>
+  import MultiSelect from '$lib'
+  import { fruits } from '$src/options'
+
+  // make some options pre-selected
+  let selected = [{ label: `Mango`, value: `Mango` }]
+  let selected_append = [...selected, { label: `Banana`, value: `Banana` }]
+</script>
+
+## Allow User Options
+
+```svelte
+<MultiSelect
+  options={fruits}
+  allowUserOptions={true}
+/>
+
+<MultiSelect
+  id="fruits-append"
+  options={fruits}
+  allowUserOptions="append"
+  addOptionMsg="Add this custom fruit at your own risk!"
+/>
+```
+
+<br />
+
+<label for="fruits"><strong>Fruit Picker with custom user input</strong></label>
+<MultiSelect id="fruits" options={fruits} allowUserOptions={true} bind:selected />
+
+<label for="fruits-append"><strong>Fruit Picker append user options</strong></label>
+<MultiSelect
+  id="fruits-append"
+  options={fruits}
+  allowUserOptions="append"
+  addOptionMsg="Add this custom fruit at your own risk!"
+  bind:selected={selected_append}
+/>
+
+<br />
+
+- `allowUserOptions={true}`: users can enter custom options.
+- `allowUserOptions="append"`: same as `true` but also adds custom options to the dropdown list. They'll remain there for re-selection should user remove custom option from selected.

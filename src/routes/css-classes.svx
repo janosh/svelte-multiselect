@@ -1,0 +1,56 @@
+<script>
+  import MultiSelect from '$lib'
+  import { fruits } from '$src/options'
+</script>
+
+## External CSS Classes
+
+```svelte
+<MultiSelect
+  options={fruits}
+  outerDivClass="foo"
+  ulSelectedClass="bar"
+  ulOptionsClass="baz"
+  liOptionClass="bam"
+  inputClass="slam"
+  liSelectedClass="hi"
+  liActiveOptionClass="mom"
+/>
+```
+
+<br />
+
+<label for="fruits"><strong>Fruit Picker</strong></label>
+<MultiSelect
+  id="fruits"
+  options={fruits}
+  outerDivClass="foo"
+  ulSelectedClass="bar"
+  ulOptionsClass="baz"
+  liOptionClass="bam"
+  inputClass="slam"
+  liSelectedClass="hi"
+  liActiveOptionClass="mom"
+/>
+
+<br />
+
+When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through these classes.
+
+This simplified DOM structure of the component shows where these classes are inserted:
+
+```svelte
+<div class="multiselect {outerDivClass}">
+  <input class={inputClass} />
+  <ul class="selected {ulSelectedClass}">
+    <li class={liSelectedClass}>Selected 1</li>
+    <li class={liSelectedClass}>Selected 2</li>
+  </ul>
+  <ul class="options {ulOptionsClass}">
+    <li class={liOptionClass}>Option 1</li>
+    <li class="{liOptionClass} {liActiveOptionClass}">
+      Option 2 (currently active)
+    </li>
+  </ul>
+</div>
+```

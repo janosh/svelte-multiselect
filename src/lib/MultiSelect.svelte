@@ -1,6 +1,5 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, DisabledIcon } from './icons'
@@ -41,6 +40,7 @@
   export let removeAllTitle = `Remove all`
   export let defaultDisabledTitle = `This option is disabled`
   export let allowUserOptions: boolean | 'append' = false
+  export let addOptionMsg = `Create this option...`
   export let autoScroll = true
   export let loading = false
   export let required = false
@@ -54,6 +54,7 @@
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
+  let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
   function isObject(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
@@ -100,37 +101,56 @@
   )
   $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
 
+  // add an option to selected list
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (
       !selectedLabels.includes(label) &&
-      // for maxselect = 1 we always replace current option with new selection
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
     ) {
+      // first check if we find option in the options list
+      let option = _options.find((op) => op.label === label)
+      if (
+        !option &&
+        [true, `append`].includes(allowUserOptions) &&
+        searchText.length > 0
+      ) {
+        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
+        option = { label: searchText, value: searchText }
+        if (allowUserOptions === `append`) options = [...options, option]
+      }
       searchText = `` // reset search string on selection
-      const option = _options.find((op) => op.label === label)
       if (!option) {
         console.error(`MultiSelect: option with label ${label} not found`)
         return
       }
       if (maxSelect === 1) {
+        // for maxselect = 1 we always replace current option with new one
         selected = [option]
       } else {
-        selected = [option, ...selected]
+        selected = [...selected, option]
       }
       if (selected.length === maxSelect) setOptionsVisible(false)
+      else input?.focus()
       dispatch(`add`, { option })
       dispatch(`change`, { option, type: `add` })
     }
   }
 
+  // remove an option from selected list
   function remove(label: Primitive) {
     if (selected.length === 0) return
-    const option = _options.find((option) => option.label === label)
+    selected = selected.filter((option) => label !== option.label)
+    const option =
+      _options.find((option) => option.label === label) ??
+      // if option with label could not be found but allowUserOptions is truthy,
+      // assume it was created by user and create correspondidng option object
+      // on the fly for use as event payload
+      (allowUserOptions && { label, value: label })
+
     if (!option) {
       return console.error(`MultiSelect: option with label ${label} not found`)
     }
-    selected = selected.filter((option) => label !== option.label)
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
   }
@@ -157,15 +177,15 @@
     }
     // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
+      event.preventDefault() // prevent enter key from triggering form submission
+
       if (activeOption) {
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } else if ([true, `append`].includes(allowUserOptions)) {
-        selected = [...selected, { label: searchText, value: searchText }]
-        if (allowUserOptions === `append`)
-          options = [...options, { label: searchText, value: searchText }]
-        searchText = ``
+      } else if ([true, `append`].includes(allowUserOptions) && searchText.length > 0) {
+        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
+        add(searchText)
       }
       // no active option and no search text means the options dropdown is closed
       // in which case enter means open it
@@ -173,9 +193,14 @@
     }
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
-      if (activeOption === null) {
-        // if no option is active yet, make first one active
+      // if no option is active yet, but there are matching options, make first one active
+      if (activeOption === null && matchingEnabledOptions.length > 0) {
         activeOption = matchingEnabledOptions[0]
+        return
+      } else if (allowUserOptions && searchText.length > 0) {
+        // if allowUserOptions is truthy and user entered text but no options match, we make
+        // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
+        activeMsg = !activeMsg
         return
       }
       const increment = event.key === `ArrowUp` ? -1 : 1
@@ -198,9 +223,8 @@
       }
     }
     // on backspace key: remove last selected option
-    else if (event.key === `Backspace`) {
-      const label = selectedLabels.pop()
-      if (label && !searchText) remove(label)
+    else if (event.key === `Backspace` && selectedLabels.length > 0 && !searchText) {
+      remove(selectedLabels.at(-1) as Primitive)
     }
   }
 
@@ -320,48 +344,55 @@ display above those of another following shortly after it -->
     {/if}
   {/if}
 
-  {#key showOptions}
-    <ul
-      class:hidden={!showOptions}
-      class="options {ulOptionsClass}"
-      transition:fly|local={{ duration: 300, y: 40 }}
-    >
-      {#each matchingOptions as option, idx}
-        {@const { label, disabled, title = null, selectedTitle } = option}
-        {@const { disabledTitle = defaultDisabledTitle } = option}
-        {@const active = activeOption?.label === label}
+  <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
+    {#each matchingOptions as option, idx}
+      {@const { label, disabled, title = null, selectedTitle } = option}
+      {@const { disabledTitle = defaultDisabledTitle } = option}
+      {@const active = activeOption?.label === label}
+      <li
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation={() => {
+          if (!disabled) isSelected(label) ? remove(label) : add(label)
+        }}
+        title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
+        class:selected={isSelected(label)}
+        class:active
+        class:disabled
+        class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+        on:mouseover={() => {
+          if (!disabled) activeOption = option
+        }}
+        on:focus={() => {
+          if (!disabled) activeOption = option
+        }}
+        on:mouseout={() => (activeOption = null)}
+        on:blur={() => (activeOption = null)}
+        aria-selected="false"
+      >
+        <slot name="option" {option} {idx}>
+          {option.label}
+        </slot>
+      </li>
+    {:else}
+      {#if allowUserOptions && searchText}
         <li
-          on:mouseup|preventDefault|stopPropagation
-          on:mousedown|preventDefault|stopPropagation={() => {
-            if (disabled) return
-            isSelected(label) ? remove(label) : add(label)
-          }}
-          title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
-          class:selected={isSelected(label)}
-          class:active
-          class:disabled
-          class="{liOptionClass} {active ? liActiveOptionClass : ``}"
-          on:mouseover={() => {
-            if (disabled) return
-            activeOption = option
-          }}
-          on:focus={() => {
-            if (disabled) return
-            activeOption = option
-          }}
-          on:mouseout={() => (activeOption = null)}
-          on:blur={() => (activeOption = null)}
+          on:mousedown|stopPropagation
+          on:mouseup|stopPropagation={() => add(searchText)}
+          title={addOptionMsg}
+          class:active={activeMsg}
+          on:mouseover={() => (activeMsg = true)}
+          on:focus={() => (activeMsg = true)}
+          on:mouseout={() => (activeMsg = false)}
+          on:blur={() => (activeMsg = false)}
           aria-selected="false"
         >
-          <slot name="option" {option} {idx}>
-            {option.label}
-          </slot>
+          {addOptionMsg}
         </li>
       {:else}
         <span>{noOptionsMsg}</span>
-      {/each}
-    </ul>
-  {/key}
+      {/if}
+    {/each}
+  </ul>
 </div>
 
 <style>
@@ -470,9 +501,14 @@ display above those of another following shortly after it -->
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
+    transition: all 0.2s;
+    opacity: 1;
+    transform: translateY(0);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
+    opacity: 0;
+    transform: translateY(50px);
   }
   :where(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;

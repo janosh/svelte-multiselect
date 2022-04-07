@@ -11,7 +11,6 @@
 
   let showConfetti = false
 
-  const placeholder = `Take your pick...`
   const filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
     const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
@@ -38,7 +37,7 @@
   <MultiSelect
     id="languages"
     options={languages}
-    {placeholder}
+    placeholder="Take your pick..."
     bind:selected={$language_store}
   >
     <LanguageSlot let:option {option} slot="selected" />
@@ -48,7 +47,7 @@
 <section>
   <h3>Single Select</h3>
 
-  <label for="fav-ml-tool">Favorite Machine Learning Framework?</label>
+  <label for="fav-ml-tool">with loading indicator on text input</label>
 
   <pre>selected = {JSON.stringify(selectedML)}</pre>
 
@@ -59,7 +58,7 @@
     options={ml_libs}
     bind:selected={selectedML}
     bind:searchText
-    {placeholder}
+    placeholder="Favorite machine learning framework?"
     {loading}
   />
 </section>
@@ -67,13 +66,13 @@
 <section>
   <h3>Chance of Confetti</h3>
 
-  <label for="confetti-select">Favorite Web Framework?</label>
+  <label for="confetti-select">Callback on item selection</label>
 
   <MultiSelect
     id="confetti-select"
     options={frontend_libs}
-    maxSelect={1}
-    {placeholder}
+    maxSelect={4}
+    placeholder="Favorite web framework?"
     {filterFunc}
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
@@ -81,9 +80,7 @@
         setTimeout(() => (showConfetti = false), 3000)
       }
     }}
-  >
-    <LanguageSlot let:option {option} slot="selected" />
-  </MultiSelect>
+  />
   {#if showConfetti}
     <Confetti />
   {/if}
