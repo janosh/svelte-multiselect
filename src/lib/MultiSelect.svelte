@@ -1,6 +1,5 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import { fly } from 'svelte/transition'
   import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, DisabledIcon } from './icons'
@@ -344,61 +343,55 @@ display above those of another following shortly after it -->
     {/if}
   {/if}
 
-  {#key showOptions}
-    <ul
-      class:hidden={!showOptions}
-      class="options {ulOptionsClass}"
-      transition:fly|local={{ duration: 300, y: 40 }}
-    >
-      {#each matchingOptions as option, idx}
-        {@const { label, disabled, title = null, selectedTitle } = option}
-        {@const { disabledTitle = defaultDisabledTitle } = option}
-        {@const active = activeOption?.label === label}
+  <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
+    {#each matchingOptions as option, idx}
+      {@const { label, disabled, title = null, selectedTitle } = option}
+      {@const { disabledTitle = defaultDisabledTitle } = option}
+      {@const active = activeOption?.label === label}
+      <li
+        on:mousedown|stopPropagation
+        on:mouseup|stopPropagation={() => {
+          if (!disabled) isSelected(label) ? remove(label) : add(label)
+        }}
+        title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
+        class:selected={isSelected(label)}
+        class:active
+        class:disabled
+        class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+        on:mouseover={() => {
+          if (!disabled) activeOption = option
+        }}
+        on:focus={() => {
+          if (!disabled) activeOption = option
+        }}
+        on:mouseout={() => (activeOption = null)}
+        on:blur={() => (activeOption = null)}
+        aria-selected="false"
+      >
+        <slot name="option" {option} {idx}>
+          {option.label}
+        </slot>
+      </li>
+    {:else}
+      {#if allowUserOptions && searchText}
         <li
           on:mousedown|stopPropagation
-          on:mouseup|stopPropagation={() => {
-            if (!disabled) isSelected(label) ? remove(label) : add(label)
-          }}
-          title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
-          class:selected={isSelected(label)}
-          class:active
-          class:disabled
-          class="{liOptionClass} {active ? liActiveOptionClass : ``}"
-          on:mouseover={() => {
-            if (!disabled) activeOption = option
-          }}
-          on:focus={() => {
-            if (!disabled) activeOption = option
-          }}
-          on:mouseout={() => (activeOption = null)}
-          on:blur={() => (activeOption = null)}
+          on:mouseup|stopPropagation={() => add(searchText)}
+          title={addOptionMsg}
+          class:active={activeMsg}
+          on:mouseover={() => (activeMsg = true)}
+          on:focus={() => (activeMsg = true)}
+          on:mouseout={() => (activeMsg = false)}
+          on:blur={() => (activeMsg = false)}
           aria-selected="false"
         >
-          <slot name="option" {option} {idx}>
-            {option.label}
-          </slot>
+          {addOptionMsg}
         </li>
       {:else}
-        {#if allowUserOptions && searchText}
-          <li
-            on:mousedown|stopPropagation
-            on:mouseup|stopPropagation={() => add(searchText)}
-            title={addOptionMsg}
-            class:active={activeMsg}
-            on:mouseover={() => (activeMsg = true)}
-            on:focus={() => (activeMsg = true)}
-            on:mouseout={() => (activeMsg = false)}
-            on:blur={() => (activeMsg = false)}
-            aria-selected="false"
-          >
-            {addOptionMsg}
-          </li>
-        {:else}
-          <span>{noOptionsMsg}</span>
-        {/if}
-      {/each}
-    </ul>
-  {/key}
+        <span>{noOptionsMsg}</span>
+      {/if}
+    {/each}
+  </ul>
 </div>
 
 <style>
@@ -507,9 +500,14 @@ display above those of another following shortly after it -->
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
+    transition: all 0.2s;
+    opacity: 1;
+    transform: translateY(0);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
+    opacity: 0;
+    transform: translateY(50px);
   }
   :where(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;
