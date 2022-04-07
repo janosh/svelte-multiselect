@@ -56,36 +56,26 @@
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
-  function isObject(item: unknown) {
+  function is_object(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
   }
 
   // process proto options to full ones with mandatory labels
-  $: _options = options.map((rawOp) => {
-    if (isObject(rawOp)) {
-      const option = { ...(rawOp as Option) }
+  $: _options = options.map((raw_op) => {
+    if (is_object(raw_op)) {
+      const option = { ...(raw_op as Option) }
       if (option.value === undefined) option.value = option.label
       return option
     } else {
-      if (![`string`, `number`].includes(typeof rawOp)) {
+      if (![`string`, `number`].includes(typeof raw_op)) {
         console.warn(
-          `MultiSelect options must be objects, strings or numbers, got ${typeof rawOp}`
+          `MultiSelect options must be objects, strings or numbers, got ${typeof raw_op}`
         )
       }
       // even if we logged error above, try to proceed hoping user knows what they're doing
-      return { label: rawOp, value: rawOp }
+      return { label: raw_op, value: raw_op }
     }
   }) as Option[]
-
-  $: labels = _options.map((op) => op.label)
-
-  $: if (new Set(labels).size !== options.length) {
-    console.warn(
-      `Option labels should be unique. Duplicates found: ${labels.filter(
-        (label, idx) => labels.indexOf(label) !== idx
-      )}`
-    )
-  }
 
   let wiggle = false
   $: selectedLabels = selected.map((op) => op.label)
