@@ -39,7 +39,5 @@
 
 <br />
 
-- `allowUserOptions={true}`: users can enter custom options
-- `allowUserOptions="append"`:
-users can enter custom options *and* they will be added to the list of available
-options
+- `allowUserOptions={true}`: users can enter custom options.
+- `allowUserOptions="append"`: same as `true` but also adds custom options to the dropdown list. They'll remain there for re-selection should user remove custom option from selected.
