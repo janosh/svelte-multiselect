@@ -131,6 +131,7 @@
         selected = [...selected, option]
       }
       if (selected.length === maxSelect) setOptionsVisible(false)
+      else input?.focus()
       dispatch(`add`, { option })
       dispatch(`change`, { option, type: `add` })
     }

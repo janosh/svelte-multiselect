@@ -21,19 +21,19 @@ const context = await browser.newContext({
 
 describe(`input`, async () => {
   const page = await context.newPage()
-  await page.goto(`/demos/ui`)
+  await page.goto(`/ui`)
 
   test(`opens dropdown on focus`, async () => {
-    expect(await page.$(`.multiselect > ul.options.hidden`)).toBeTruthy()
-    expect(await page.$(`.multiselect.open`)).toBeNull()
+    expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
+    expect(await page.$(`div.multiselect.open`)).toBeNull()
 
     await page.click(`input[placeholder='Pick your favorite fruits!']`)
 
-    expect(await page.$(`.multiselect.open`)).toBeTruthy()
+    expect(await page.$(`div.multiselect.open`)).toBeTruthy()
     await page.waitForTimeout(500) // give DOM time to update
 
     const visibility = await page.$eval(
-      `.multiselect > ul.options`,
+      `div.multiselect > ul.options`,
       (el) => getComputedStyle(el).visibility
     )
     expect(visibility).toBe(`visible`)
@@ -42,14 +42,14 @@ describe(`input`, async () => {
   test(`closes dropdown on tab out`, async () => {
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
-    await page.click(`input[placeholder='Pick your favorite fruits!']`)
-
     await page.focus(`input[placeholder='Pick your favorite fruits!']`)
+
     await page.keyboard.press(`Tab`)
+
     await page.waitForTimeout(500) // give DOM time to update
 
     const visibility = await page.$eval(
-      `.multiselect > ul.options`,
+      `div.multiselect > ul.options.hidden`,
       (el) => getComputedStyle(el).visibility
     )
     expect(visibility).toBe(`hidden`)
@@ -63,22 +63,24 @@ describe(`input`, async () => {
 
     await page.waitForTimeout(500) // give DOM time to update
 
-    expect(await page.$$(`.multiselect.open > ul.options > li`)).toHaveLength(1)
-    const text = await page.textContent(`.multiselect.open > ul.options > li`)
+    expect(
+      await page.$$(`div.multiselect.open > ul.options > li`)
+    ).toHaveLength(1)
+    const text = await page.textContent(`div.multiselect.open > ul.options`)
     expect(text?.trim()).toBe(`Pineapple`)
   })
 })
 
 describe(`remove all button`, async () => {
   const page = await context.newPage()
-  await page.goto(`/demos/ui`)
+  await page.goto(`/ui`)
 
-  await page.click(`.multiselect`) // open the dropdown
-  await page.click(`.multiselect > ul.options > li`) // select 1st option
+  await page.click(`div.multiselect`) // open the dropdown
+  await page.click(`div.multiselect > ul.options > li`) // select 1st option
 
   test(`only appears if more than 1 option is selected`, async () => {
     expect(await page.$(`button.remove-all`)).toBeNull()
-    await page.click(`.multiselect > ul.options > li`) // select 2nd option
+    await page.click(`div.multiselect > ul.options > li`) // select 2nd option
     expect(await page.$(`button.remove-all`)).toBeTruthy()
   })
 
@@ -93,18 +95,20 @@ describe(`remove all button`, async () => {
   // })
 
   test(`should remove all selected options`, async () => {
-    await page.click(`.multiselect > button.remove-all`)
-    const selected = await page.$$(`.multiselect > ul.selected > li > button`)
+    await page.click(`div.multiselect > button.remove-all`)
+    const selected = await page.$$(
+      `div.multiselect > ul.selected > li > button`
+    )
     expect(selected.length).toBe(0)
   })
 })
 
 describe(`external CSS classes`, async () => {
   const page = await context.newPage()
-  await page.goto(`/demos/css-classes`)
+  await page.goto(`/css-classes`)
 
-  await page.click(`.multiselect`) // open the dropdown
-  await page.click(`.multiselect > ul.options > li`) // select 1st option
+  await page.click(`div.multiselect`) // open the dropdown
+  await page.click(`div.multiselect > ul.options > li`) // select 1st option
   await page.keyboard.press(`ArrowDown`) // make next option active
 
   for (const [prop, selector, cls] of [
@@ -126,8 +130,8 @@ describe(`external CSS classes`, async () => {
 
 describe(`disabled multiselect`, async () => {
   const page = await context.newPage()
-  await page.goto(`/demos/disabled`)
-  const div = await page.$(`.multiselect.disabled`)
+  await page.goto(`/disabled`)
+  const div = await page.$(`div.multiselect.disabled`)
 
   test(`has attribute aria-disabled`, async () => {
     expect(await div?.getAttribute(`aria-disabled`)).to.equal(`true`)
@@ -156,7 +160,7 @@ describe(`disabled multiselect`, async () => {
 
 describe(`accessibility`, async () => {
   const page = await context.newPage()
-  await page.goto(`/demos/ui`)
+  await page.goto(`/ui`)
 
   test(`input is aria-invalid when component has invalid=true`, async () => {
     // don't interact with component before this test as it will set invalid=false
@@ -169,30 +173,30 @@ describe(`accessibility`, async () => {
   })
 
   test(`has aria-expanded='false' when closed`, async () => {
-    const before = await page.getAttribute(`.multiselect`, `aria-expanded`, {
+    const before = await page.getAttribute(`div.multiselect`, `aria-expanded`, {
       strict: true,
     })
     expect(before).toBe(`false`)
   })
 
   test(`has aria-expanded='true' when open`, async () => {
-    await page.click(`.multiselect`) // open the dropdown
-    const after = await page.getAttribute(`.multiselect`, `aria-expanded`, {
+    await page.click(`div.multiselect`) // open the dropdown
+    const after = await page.getAttribute(`div.multiselect`, `aria-expanded`, {
       strict: true,
     })
     expect(after).toBe(`true`)
   })
 
   test(`options have aria-selected='false' and selected items have aria-selected='true'`, async () => {
-    await page.click(`.multiselect`) // open the dropdown
-    await page.click(`.multiselect > ul.options > li`) // select 1st option
+    await page.click(`div.multiselect`) // open the dropdown
+    await page.click(`div.multiselect > ul.options > li`) // select 1st option
     const aria_option = await page.getAttribute(
-      `.multiselect > ul.options > li`,
+      `div.multiselect > ul.options > li`,
       `aria-selected`
     )
     expect(aria_option).toBe(`false`)
     const aria_selected = await page.getAttribute(
-      `.multiselect > ul.selected > li`,
+      `div.multiselect > ul.selected > li`,
       `aria-selected`
     )
     expect(aria_selected).toBe(`true`)
@@ -213,7 +217,7 @@ describe(`accessibility`, async () => {
 describe(`multiselect`, async () => {
   test(`can select and remove many options`, async () => {
     const page = await context.newPage()
-    await page.goto(`/demos/ui`)
+    await page.goto(`/ui`)
 
     await page.locator(`[placeholder="Pick your favorite fruits!"]`).click()
 
@@ -234,7 +238,9 @@ describe(`multiselect`, async () => {
 
     await page.locator(`text=Pineapple >> button`).click()
 
-    const selected_text = await page.textContent(`.multiselect > ul.selected`)
+    const selected_text = await page.textContent(
+      `div.multiselect > ul.selected`
+    )
     for (const fruit of `Nectarine Lime`.split(` `)) {
       expect(selected_text).toContain(fruit)
     }
@@ -242,7 +248,7 @@ describe(`multiselect`, async () => {
 
   test(`retains its selected state on page reload when bound to localStorage`, async () => {
     const page = await context.newPage()
-    await page.goto(`/demos/persistent`)
+    await page.goto(`/persistent`)
 
     await page.locator(`input[name="languages"]`).click()
 
@@ -256,7 +262,9 @@ describe(`multiselect`, async () => {
 
     await page.waitForTimeout(300)
 
-    const selected_text = await page.textContent(`.multiselect > ul.selected`)
+    const selected_text = await page.textContent(
+      `div.multiselect > ul.selected`
+    )
     expect(selected_text).toContain(`JavaScript`)
     expect(selected_text).toContain(`Haskell`)
   })
@@ -267,7 +275,7 @@ describe(`allowUserOptions`, async () => {
     const page = await context.newPage()
     const selector = `input[name="fruits"]`
 
-    await page.goto(`/demos/allow-user-options`)
+    await page.goto(`/allow-user-options`)
 
     await page.locator(selector).click()
 
@@ -292,7 +300,7 @@ describe(`allowUserOptions`, async () => {
     const page = await context.newPage()
     const selector = `input[name="fruits-append"]`
 
-    await page.goto(`/demos/allow-user-options`)
+    await page.goto(`/allow-user-options`)
 
     await page.locator(selector).click()
 
@@ -316,13 +324,13 @@ describe(`allowUserOptions`, async () => {
     const page = await context.newPage()
     const selector = `input[name="fruits-append"]`
 
-    await page.goto(`/demos/allow-user-options`)
+    await page.goto(`/allow-user-options`)
 
     await page.locator(selector).click()
 
     await page.locator(selector).fill(`Foobar Berry`)
 
-    await page.waitForTimeout(300) // give DOM time to update
+    await page.waitForTimeout(500) // give DOM time to update
 
     const selected_text = await page.textContent(
       `label[for='fruits-append'] + .multiselect > ul.options`
