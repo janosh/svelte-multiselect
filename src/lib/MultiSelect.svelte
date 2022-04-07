@@ -130,7 +130,8 @@
   // remove an option from selected list
   function remove(label: Primitive) {
     if (selected.length === 0) return
-    selected = selected.filter((option) => label !== option.label)
+    selected.splice(selectedLabels.lastIndexOf(label), 1)
+    selected = selected // Svelte rerender after in-place splice
     const option =
       _options.find((option) => option.label === label) ??
       // if option with label could not be found but allowUserOptions is truthy,
