@@ -8,3 +8,6 @@ package
 
 # deploy config
 .netlify
+
+# test coverage reports
+coverage
