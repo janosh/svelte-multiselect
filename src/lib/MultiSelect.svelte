@@ -94,20 +94,20 @@
   // add an option to selected list
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
-    if (
-      !selectedLabels.includes(label) &&
-      (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
-    ) {
+    // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
+    if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
       // first check if we find option in the options list
+
       let option = _options.find((op) => op.label === label)
       if (
-        !option &&
+        !option && // this has the side-effect of not allowing to user to add the same
+        // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
         searchText.length > 0
       ) {
         // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
         option = { label: searchText, value: searchText }
-        if (allowUserOptions === `append`) options = [...options, option]
+        if (allowUserOptions === `append`) _options = [..._options, option]
       }
       searchText = `` // reset search string on selection
       if (!option) {
@@ -174,8 +174,8 @@
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } else if ([true, `append`].includes(allowUserOptions) && searchText.length > 0) {
-        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
+      } else if (allowUserOptions && searchText.length > 0) {
+        // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText)
       }
       // no active option and no search text means the options dropdown is closed
