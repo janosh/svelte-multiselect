@@ -56,36 +56,26 @@
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
-  function isObject(item: unknown) {
+  function is_object(item: unknown) {
     return typeof item === `object` && !Array.isArray(item) && item !== null
   }
 
   // process proto options to full ones with mandatory labels
-  $: _options = options.map((rawOp) => {
-    if (isObject(rawOp)) {
-      const option = { ...(rawOp as Option) }
+  $: _options = options.map((raw_op) => {
+    if (is_object(raw_op)) {
+      const option = { ...(raw_op as Option) }
       if (option.value === undefined) option.value = option.label
       return option
     } else {
-      if (![`string`, `number`].includes(typeof rawOp)) {
+      if (![`string`, `number`].includes(typeof raw_op)) {
         console.warn(
-          `MultiSelect options must be objects, strings or numbers, got ${typeof rawOp}`
+          `MultiSelect options must be objects, strings or numbers, got ${typeof raw_op}`
         )
       }
       // even if we logged error above, try to proceed hoping user knows what they're doing
-      return { label: rawOp, value: rawOp }
+      return { label: raw_op, value: raw_op }
     }
   }) as Option[]
-
-  $: labels = _options.map((op) => op.label)
-
-  $: if (new Set(labels).size !== options.length) {
-    console.warn(
-      `Option labels should be unique. Duplicates found: ${labels.filter(
-        (label, idx) => labels.indexOf(label) !== idx
-      )}`
-    )
-  }
 
   let wiggle = false
   $: selectedLabels = selected.map((op) => op.label)
@@ -104,20 +94,20 @@
   // add an option to selected list
   function add(label: Primitive) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
-    if (
-      !selectedLabels.includes(label) &&
-      (maxSelect === null || maxSelect === 1 || selected.length < maxSelect)
-    ) {
+    // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
+    if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
       // first check if we find option in the options list
+
       let option = _options.find((op) => op.label === label)
       if (
-        !option &&
+        !option && // this has the side-effect of not allowing to user to add the same
+        // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
         searchText.length > 0
       ) {
         // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
         option = { label: searchText, value: searchText }
-        if (allowUserOptions === `append`) options = [...options, option]
+        if (allowUserOptions === `append`) _options = [..._options, option]
       }
       searchText = `` // reset search string on selection
       if (!option) {
@@ -140,7 +130,8 @@
   // remove an option from selected list
   function remove(label: Primitive) {
     if (selected.length === 0) return
-    selected = selected.filter((option) => label !== option.label)
+    selected.splice(selectedLabels.lastIndexOf(label), 1)
+    selected = selected // Svelte rerender after in-place splice
     const option =
       _options.find((option) => option.label === label) ??
       // if option with label could not be found but allowUserOptions is truthy,
@@ -183,8 +174,8 @@
         const { label } = activeOption
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
-      } else if ([true, `append`].includes(allowUserOptions) && searchText.length > 0) {
-        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
+      } else if (allowUserOptions && searchText.length > 0) {
+        // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText)
       }
       // no active option and no search text means the options dropdown is closed

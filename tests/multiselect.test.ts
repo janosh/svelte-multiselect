@@ -71,6 +71,28 @@ describe(`input`, async () => {
   })
 })
 
+describe(`remove single button`, async () => {
+  const page = await context.newPage()
+  await page.goto(`/ui`)
+
+  await page.click(`div.multiselect`) // open the dropdown
+  await page.click(`div.multiselect > ul.options > li`) // select 1st option
+
+  await page.locator(`input#fruits`).click()
+
+  test(`should remove 1 option`, async () => {
+    await page.locator(`text=Banana`).click()
+
+    let selected = await page.$$(`div.multiselect > ul.selected > li > button`)
+    expect(selected.length).toBe(1)
+
+    await page.locator(`button[title='Remove Banana']`).click()
+
+    selected = await page.$$(`div.multiselect > ul.selected > li > button`)
+    expect(selected.length).toBe(0)
+  })
+})
+
 describe(`remove all button`, async () => {
   const page = await context.newPage()
   await page.goto(`/ui`)
