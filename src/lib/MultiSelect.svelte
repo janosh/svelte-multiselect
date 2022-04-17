@@ -18,15 +18,15 @@
   export let selectedOptions: Option[] = []
 
   export let sourceOfTruth: SourceOfTruth = `options`
-  switch (sourceOfTruth) {
-    case `options`:
-      selectedOptions = (options as Option[]).filter((op) => op?.preselected) ?? []
-      break
-    case `labels`:
-      break
-    case `values`:
-      // selectedOptions =
-      break
+
+  if (sourceOfTruth === `options`) {
+    selectedOptions = (options as Option[]).filter((op) => op?.preselected) ?? []
+  } else if (sourceOfTruth === `labels`) {
+    selectedLabels =
+      (options as Option[]).filter((op) => op?.preselected).map((op) => op.label) ?? []
+  } else if (sourceOfTruth === `values`) {
+    selectedValues =
+      (options as Option[]).filter((op) => op?.preselected).map((op) => op.value) ?? []
   }
 
   export let input: HTMLInputElement | null = null
@@ -95,38 +95,32 @@
   $: {
     selectedOptions, selectedLabels, selectedValues
 
-    switch (sourceOfTruth) {
-      case `options`:
-        selectedLabels = selectedOptions.map((op) => op.label)
-        selectedValues = selectedOptions.map((op) => op.value)
-        break
+    if (sourceOfTruth === `options`) {
+      selectedLabels = selectedOptions.map((op) => op.label)
+      selectedValues = selectedOptions.map((op) => op.value)
+    } else if (sourceOfTruth === `labels`) {
+      selectedOptions = selectedLabels.map((label) =>
+        _options.find((op) => {
+          return op.label === label
+        })
+      ) as Option[]
 
-      case `labels`:
-        selectedOptions = selectedLabels.map((label) =>
+      selectedValues = selectedLabels.map(
+        (label) =>
           _options.find((op) => {
             return op.label === label
-          })
-        ) as Option[]
+          })?.value
+      ) as Primitive[]
+    } else if (sourceOfTruth === `values`) {
+      selectedOptions = selectedValues.map((value) =>
+        _options.find((op) => {
+          return op.value === value
+        })
+      ) as Option[]
 
-        selectedValues = selectedLabels.map(
-          (label) =>
-            _options.find((op) => {
-              return op.label === label
-            })?.value
-        ) as Primitive[]
-        break
-
-      case `values`:
-        selectedOptions = selectedValues.map((value) =>
-          _options.find((op) => {
-            return op.value === value
-          })
-        ) as Option[]
-
-        selectedLabels = selectedValues.map(
-          (value) => _options.find((op) => op.value === value)?.label
-        ) as Primitive[]
-        break
+      selectedLabels = selectedValues.map(
+        (value) => _options.find((op) => op.value === value)?.label
+      ) as Primitive[]
     }
   }
 
@@ -167,28 +161,20 @@
       if (maxSelect === 1) {
         // for maxselect = 1 we always replace current option with new one
 
-        switch (sourceOfTruth) {
-          case `options`:
-            selectedOptions = [option]
-            break
-          case `labels`:
-            selectedLabels = [option.label]
-            break
-          case `values`:
-            selectedValues = [option.value]
-            break
+        if (sourceOfTruth === `options`) {
+          selectedOptions = [option]
+        } else if (sourceOfTruth === `labels`) {
+          selectedLabels = [option.label]
+        } else if (sourceOfTruth === `values`) {
+          selectedValues = [option.value]
         }
       } else {
-        switch (sourceOfTruth) {
-          case `options`:
-            selectedOptions = [...selectedOptions, option]
-            break
-          case `labels`:
-            selectedLabels = [...selectedLabels, option.label]
-            break
-          case `values`:
-            selectedValues = [...selectedValues, option.value]
-            break
+        if (sourceOfTruth === `options`) {
+          selectedOptions = [...selectedOptions, option]
+        } else if (sourceOfTruth === `labels`) {
+          selectedLabels = [...selectedLabels, option.label]
+        } else if (sourceOfTruth === `values`) {
+          selectedValues = [...selectedValues, option.value]
         }
       }
       if (selectedOptions.length === maxSelect) setOptionsVisible(false)
@@ -213,19 +199,15 @@
       return console.error(`MultiSelect: option with label ${label} not found`)
     }
 
-    switch (sourceOfTruth) {
-      case `options`:
-        selectedOptions.splice(selectedLabels.lastIndexOf(label), 1)
-        selectedOptions = selectedOptions
-        break
-      case `labels`:
-        selectedLabels.splice(selectedLabels.lastIndexOf(label), 1)
-        selectedLabels = selectedLabels
-        break
-      case `values`:
-        selectedValues.splice(selectedLabels.lastIndexOf(label), 1)
-        selectedValues = selectedValues
-        break
+    if (sourceOfTruth === `options`) {
+      selectedOptions.splice(selectedLabels.lastIndexOf(label), 1)
+      selectedOptions = selectedOptions
+    } else if (sourceOfTruth === `labels`) {
+      selectedLabels.splice(selectedLabels.lastIndexOf(label), 1)
+      selectedLabels = selectedLabels
+    } else if (sourceOfTruth === `values`) {
+      selectedValues.splice(selectedLabels.lastIndexOf(label), 1)
+      selectedValues = selectedValues
     }
 
     dispatch(`remove`, { option })
