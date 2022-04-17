@@ -26,7 +26,7 @@
     setTimeout(() => (loading = false), 1000)
   }
 
-  let vegetables = ['potatoe', 'leek', 'carrot', 'turnip', 'parsnip']
+  let vegetables = [`potatoe`, `leek`, `carrot`, `turnip`, `parsnip`]
 
   let selectedVegetableOptions: Option[]
   let selectedVegetableValues: Primitive[]
@@ -58,7 +58,7 @@
 
   <button
     on:click={() => {
-      selectedVegetableValues = ['turnip']
+      selectedVegetableValues = [`turnip`]
     }}
   >
     Select turnip by value
@@ -67,7 +67,7 @@
   <button
     on:click={() => {
       selectedVegetableValues = selectedVegetableValues.filter(
-        (value) => value !== 'turnip'
+        (value) => value !== `turnip`
       )
     }}
   >
