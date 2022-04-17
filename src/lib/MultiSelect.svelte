@@ -17,14 +17,14 @@
   export let selectedValues: Primitive[] = []
   export let selectedOptions: Option[] = []
 
-  export let sourceOfTruth: SourceOfTruth = SourceOfTruth.options
+  export let sourceOfTruth: SourceOfTruth = `options`
   switch (sourceOfTruth) {
-    case SourceOfTruth.options:
+    case `options`:
       selectedOptions = (options as Option[]).filter((op) => op?.preselected) ?? []
       break
-    case SourceOfTruth.labels:
+    case `labels`:
       break
-    case SourceOfTruth.values:
+    case `values`:
       // selectedOptions =
       break
   }
@@ -96,12 +96,12 @@
     selectedOptions, selectedLabels, selectedValues
 
     switch (sourceOfTruth) {
-      case SourceOfTruth.options:
+      case `options`:
         selectedLabels = selectedOptions.map((op) => op.label)
         selectedValues = selectedOptions.map((op) => op.value)
         break
 
-      case SourceOfTruth.labels:
+      case `labels`:
         selectedOptions = selectedLabels.map((label) =>
           _options.find((op) => {
             return op.label === label
@@ -116,7 +116,7 @@
         ) as Primitive[]
         break
 
-      case SourceOfTruth.values:
+      case `values`:
         selectedOptions = selectedValues.map((value) =>
           _options.find((op) => {
             return op.value === value
@@ -168,25 +168,25 @@
         // for maxselect = 1 we always replace current option with new one
 
         switch (sourceOfTruth) {
-          case SourceOfTruth.options:
+          case `options`:
             selectedOptions = [option]
             break
-          case SourceOfTruth.labels:
+          case `labels`:
             selectedLabels = [option.label]
             break
-          case SourceOfTruth.values:
+          case `values`:
             selectedValues = [option.value]
             break
         }
       } else {
         switch (sourceOfTruth) {
-          case SourceOfTruth.options:
+          case `options`:
             selectedOptions = [...selectedOptions, option]
             break
-          case SourceOfTruth.labels:
+          case `labels`:
             selectedLabels = [...selectedLabels, option.label]
             break
-          case SourceOfTruth.values:
+          case `values`:
             selectedValues = [...selectedValues, option.value]
             break
         }
@@ -214,15 +214,15 @@
     }
 
     switch (sourceOfTruth) {
-      case SourceOfTruth.options:
+      case `options`:
         selectedOptions.splice(selectedLabels.lastIndexOf(label), 1)
         selectedOptions = selectedOptions
         break
-      case SourceOfTruth.labels:
+      case `labels`:
         selectedLabels.splice(selectedLabels.lastIndexOf(label), 1)
         selectedLabels = selectedLabels
         break
-      case SourceOfTruth.values:
+      case `values`:
         selectedValues.splice(selectedLabels.lastIndexOf(label), 1)
         selectedValues = selectedValues
         break

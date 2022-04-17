@@ -80,7 +80,7 @@
     placeholder="I'd recommend turnips..."
     bind:selectedOptions={selectedVegetableOptions}
     bind:selectedValues={selectedVegetableValues}
-    sourceOfTruth={SourceOfTruth.values}
+    sourceOfTruth={`values`}
   >
     <LanguageSlot let:option {option} slot="selected" />
   </MultiSelect>
