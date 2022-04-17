@@ -92,9 +92,7 @@
 
   let wiggle = false
 
-  $: {
-    selectedOptions, selectedLabels, selectedValues
-
+  function updateSelected() {
     if (sourceOfTruth === `options`) {
       selectedLabels = selectedOptions.map((op) => op.label)
       selectedValues = selectedOptions.map((op) => op.value)
@@ -104,7 +102,6 @@
           return op.label === label
         })
       ) as Option[]
-
       selectedValues = selectedLabels.map(
         (label) =>
           _options.find((op) => {
@@ -121,6 +118,25 @@
       selectedLabels = selectedValues.map(
         (value) => _options.find((op) => op.value === value)?.label
       ) as Primitive[]
+    }
+  }
+
+  $: {
+    selectedOptions
+    if (sourceOfTruth === `options`) {
+      updateSelected()
+    }
+  }
+  $: {
+    selectedLabels
+    if (sourceOfTruth === `labels`) {
+      updateSelected()
+    }
+  }
+  $: {
+    selectedValues
+    if (sourceOfTruth === `values`) {
+      updateSelected()
     }
   }
 
