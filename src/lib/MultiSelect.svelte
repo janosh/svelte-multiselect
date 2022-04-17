@@ -19,12 +19,12 @@
 
   export let sourceOfTruth: SourceOfTruth = `options`
 
-  if (sourceOfTruth === `options`) {
+  if (sourceOfTruth === `options` && selectedOptions.length === 0) {
     selectedOptions = (options as Option[]).filter((op) => op?.preselected) ?? []
-  } else if (sourceOfTruth === `labels`) {
+  } else if (sourceOfTruth === `labels` && selectedLabels.length === 0) {
     selectedLabels =
       (options as Option[]).filter((op) => op?.preselected).map((op) => op.label) ?? []
-  } else if (sourceOfTruth === `values`) {
+  } else if (sourceOfTruth === `values` && selectedValues.length === 0) {
     selectedValues =
       (options as Option[]).filter((op) => op?.preselected).map((op) => op.value) ?? []
   }

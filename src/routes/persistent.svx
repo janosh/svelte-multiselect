@@ -3,6 +3,8 @@
   import { languages } from '$src/options'
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
   import { language_store } from '$src/stores'
+
+  console.log($language_store)
 </script>
 
 ## Page-Reload Persistent MultiSelect
@@ -16,7 +18,7 @@
   id="languages"
   options={languages}
   placeholder="What languages do you know?"
-  bind:selected={$language_store}
+  bind:selectedOptions={$language_store}
 >
   <LanguageSlot let:option {option} slot="selected" />
 </MultiSelect>
@@ -28,7 +30,7 @@
   id="languages"
   options={languages}
   placeholder="What languages do you know?"
-  bind:selected={$language_store}
+  bind:selectedOptions={$language_store}
 >
   <LanguageSlot let:option {option} slot="selected" />
 </MultiSelect>
