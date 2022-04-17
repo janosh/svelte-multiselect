@@ -13,6 +13,12 @@ export type Option = {
   [key: string]: unknown // allow any other keys users might want
 }
 
+export enum SourceOfTruth {
+  options = `options`,
+  labels = `labels`,
+  values = `values`,
+}
+
 // a proto option is more flexible than an option but can be auto-converted
 // allows users to pass in simple strings/numbers as options or objects with
 // only labels which are then also used as values

@@ -1,12 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
+  import { Option, Primitive, ProtoOption, DispatchEvents, SourceOfTruth } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, ExpandIcon, DisabledIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
-  export let selectedLabels: Primitive[] = []
-  export let selectedValues: Primitive[] = []
   export let searchText = ``
   export let showOptions = false
   export let maxSelect: number | null = null // null means any number of options are selectable
@@ -14,8 +12,23 @@
   export let disabled = false
   export let disabledTitle = `This field is disabled`
   export let options: ProtoOption[]
-  export let selected: Option[] =
-    (options as Option[]).filter((op) => op?.preselected) ?? []
+
+  export let selectedLabels: Primitive[] = []
+  export let selectedValues: Primitive[] = []
+  export let selectedOptions: Option[] = []
+
+  export let sourceOfTruth: SourceOfTruth = SourceOfTruth.options
+  switch (sourceOfTruth) {
+    case SourceOfTruth.options:
+      selectedOptions = (options as Option[]).filter((op) => op?.preselected) ?? []
+      break
+    case SourceOfTruth.labels:
+      break
+    case SourceOfTruth.values:
+      // selectedOptions =
+      break
+  }
+
   export let input: HTMLInputElement | null = null
   export let outerDiv: HTMLDivElement | null = null
   export let placeholder: string | undefined = undefined
@@ -51,7 +64,7 @@
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
   if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
-  if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
+  if (!Array.isArray(selectedOptions)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
@@ -78,8 +91,45 @@
   }) as Option[]
 
   let wiggle = false
-  $: selectedLabels = selected.map((op) => op.label)
-  $: selectedValues = selected.map((op) => op.value)
+
+  $: {
+    selectedOptions, selectedLabels, selectedValues
+
+    switch (sourceOfTruth) {
+      case SourceOfTruth.options:
+        selectedLabels = selectedOptions.map((op) => op.label)
+        selectedValues = selectedOptions.map((op) => op.value)
+        break
+
+      case SourceOfTruth.labels:
+        selectedOptions = selectedLabels.map((label) =>
+          _options.find((op) => {
+            return op.label === label
+          })
+        ) as Option[]
+
+        selectedValues = selectedLabels.map(
+          (label) =>
+            _options.find((op) => {
+              return op.label === label
+            })?.value
+        ) as Primitive[]
+        break
+
+      case SourceOfTruth.values:
+        selectedOptions = selectedValues.map((value) =>
+          _options.find((op) => {
+            return op.value === value
+          })
+        ) as Option[]
+
+        selectedLabels = selectedValues.map(
+          (value) => _options.find((op) => op.value === value)?.label
+        ) as Primitive[]
+        break
+    }
+  }
+
   // formValue binds to input.form-control to prevent form submission if required
   // prop is true and no options are selected
   $: formValue = selectedValues.join(`,`)
@@ -93,9 +143,9 @@
 
   // add an option to selected list
   function add(label: Primitive) {
-    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
+    if (maxSelect && maxSelect > 1 && selectedOptions.length >= maxSelect) wiggle = true
     // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
-    if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
+    if (maxSelect === null || maxSelect === 1 || selectedOptions.length < maxSelect) {
       // first check if we find option in the options list
 
       let option = _options.find((op) => op.label === label)
@@ -116,11 +166,32 @@
       }
       if (maxSelect === 1) {
         // for maxselect = 1 we always replace current option with new one
-        selected = [option]
+
+        switch (sourceOfTruth) {
+          case SourceOfTruth.options:
+            selectedOptions = [option]
+            break
+          case SourceOfTruth.labels:
+            selectedLabels = [option.label]
+            break
+          case SourceOfTruth.values:
+            selectedValues = [option.value]
+            break
+        }
       } else {
-        selected = [...selected, option]
+        switch (sourceOfTruth) {
+          case SourceOfTruth.options:
+            selectedOptions = [...selectedOptions, option]
+            break
+          case SourceOfTruth.labels:
+            selectedLabels = [...selectedLabels, option.label]
+            break
+          case SourceOfTruth.values:
+            selectedValues = [...selectedValues, option.value]
+            break
+        }
       }
-      if (selected.length === maxSelect) setOptionsVisible(false)
+      if (selectedOptions.length === maxSelect) setOptionsVisible(false)
       else input?.focus()
       dispatch(`add`, { option })
       dispatch(`change`, { option, type: `add` })
@@ -129,9 +200,8 @@
 
   // remove an option from selected list
   function remove(label: Primitive) {
-    if (selected.length === 0) return
-    selected.splice(selectedLabels.lastIndexOf(label), 1)
-    selected = selected // Svelte rerender after in-place splice
+    if (selectedOptions.length === 0) return
+
     const option =
       _options.find((option) => option.label === label) ??
       // if option with label could not be found but allowUserOptions is truthy,
@@ -142,6 +212,22 @@
     if (!option) {
       return console.error(`MultiSelect: option with label ${label} not found`)
     }
+
+    switch (sourceOfTruth) {
+      case SourceOfTruth.options:
+        selectedOptions.splice(selectedLabels.lastIndexOf(label), 1)
+        selectedOptions = selectedOptions
+        break
+      case SourceOfTruth.labels:
+        selectedLabels.splice(selectedLabels.lastIndexOf(label), 1)
+        selectedLabels = selectedLabels
+        break
+      case SourceOfTruth.values:
+        selectedValues.splice(selectedLabels.lastIndexOf(label), 1)
+        selectedValues = selectedValues
+        break
+    }
+
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
   }
@@ -220,9 +306,9 @@
   }
 
   const removeAll = () => {
-    dispatch(`removeAll`, { options: selected })
-    dispatch(`change`, { options: selected, type: `removeAll` })
-    selected = []
+    dispatch(`removeAll`, { options: selectedOptions })
+    dispatch(`change`, { options: selectedOptions, type: `removeAll` })
+    selectedOptions = []
     searchText = ``
   }
 
@@ -270,7 +356,7 @@ display above those of another following shortly after it -->
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
-    {#each selected as option, idx}
+    {#each selectedOptions as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
           {option.label}
@@ -313,16 +399,16 @@ display above those of another following shortly after it -->
     <slot name="disabled-icon">
       <DisabledIcon width="15px" />
     </slot>
-  {:else if selected.length > 0}
+  {:else if selectedOptions.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
         <span style="padding: 0 3pt;">
-          {maxSelectMsg?.(selected.length, maxSelect) ??
-            (maxSelect > 1 ? `${selected.length}/${maxSelect}` : ``)}
+          {maxSelectMsg?.(selectedOptions.length, maxSelect) ??
+            (maxSelect > 1 ? `${selectedOptions.length}/${maxSelect}` : ``)}
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1 && selected.length > 1}
+    {#if maxSelect !== 1 && selectedOptions.length > 1}
       <button
         type="button"
         class="remove-all"
