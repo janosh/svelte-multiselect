@@ -1,12 +1,10 @@
 <script lang="ts">
-  import { Option } from '../lib'
-
-  export let option: Option
+  export let option: string
   export let height = `20px`
 
   const repo = `https://raw.githubusercontent.com/vscode-icons/vscode-icons/master/icons`
 
-  $: lang = `${option.label}`
+  $: lang = option
     .toLowerCase()
     .replaceAll(`+`, `p`)
     .replace(`#`, `sharp`)
@@ -21,6 +19,6 @@
 </script>
 
 <span style="display: flex; gap: 3pt;">
-  {option.label}
+  {option}
   <img {src} {height} alt={lang} {hidden} />
 </span>
