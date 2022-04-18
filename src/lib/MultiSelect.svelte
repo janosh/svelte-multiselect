@@ -104,6 +104,9 @@
       }
       if (maxSelect === 1) {
         // for maxselect = 1 we always replace current option with new one
+        selected = [option]
+      } else {
+        selected = [...selected, option]
       }
       if (selected.length === maxSelect) setOptionsVisible(false)
       else input?.focus()

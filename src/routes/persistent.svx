@@ -3,8 +3,6 @@
   import { languages } from '$src/options'
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
   import { language_store } from '$src/stores'
-
-  console.log($language_store)
 </script>
 
 ## Page-Reload Persistent MultiSelect
