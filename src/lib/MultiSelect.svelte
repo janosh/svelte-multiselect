@@ -1,21 +1,22 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import type { Option, Primitive, ProtoOption, DispatchEvents } from './'
+  import { DispatchEvents, Option } from './'
   import CircleSpinner from './CircleSpinner.svelte'
-  import { CrossIcon, ExpandIcon, DisabledIcon } from './icons'
+  import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
-  export let selectedLabels: Primitive[] = []
-  export let selectedValues: Primitive[] = []
   export let searchText = ``
   export let showOptions = false
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let maxSelectMsg: ((current: number, max: number) => string) | null = null
   export let disabled = false
   export let disabledTitle = `This field is disabled`
-  export let options: ProtoOption[]
-  export let selected: Option[] =
-    (options as Option[]).filter((op) => op?.preselected) ?? []
+  export let options: Option[]
+
+  export let selected: Option[] = []
+  export let selectedLabels: (string | number)[] = []
+  export let selectedValues: (string | number)[] = []
+
   export let input: HTMLInputElement | null = null
   export let outerDiv: HTMLDivElement | null = null
   export let placeholder: string | undefined = undefined
@@ -25,7 +26,7 @@
   export let activeOption: Option | null = null
   export let filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
-    return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+    return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
 
   export let outerDivClass = ``
@@ -47,58 +48,45 @@
   export let autocomplete = `off`
   export let invalid = false
 
-  if (maxSelect !== null && maxSelect < 0) {
+  if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!(options?.length > 0)) console.error(`MultiSelect missing options`)
+  if (!(options?.length > 0)) console.error(`MultiSelect is missing options`)
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
-  function is_object(item: unknown) {
-    return typeof item === `object` && !Array.isArray(item) && item !== null
-  }
-
   // process proto options to full ones with mandatory labels
-  $: _options = options.map((raw_op) => {
-    if (is_object(raw_op)) {
-      const option = { ...(raw_op as Option) }
-      if (option.value === undefined) option.value = option.label
-      return option
-    } else {
-      if (![`string`, `number`].includes(typeof raw_op)) {
-        console.warn(
-          `MultiSelect options must be objects, strings or numbers, got ${typeof raw_op}`
-        )
-      }
-      // even if we logged error above, try to proceed hoping user knows what they're doing
-      return { label: raw_op, value: raw_op }
-    }
-  }) as Option[]
 
-  let wiggle = false
-  $: selectedLabels = selected.map((op) => op.label)
-  $: selectedValues = selected.map((op) => op.value)
+  const get_value = (option: Option) => (option instanceof Object ? option.value : option)
+  const get_label = (option: Option) => (option instanceof Object ? option.label : option)
+
+  let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
+  $: selectedLabels = selected.map(get_label)
+  $: selectedValues = selected.map(get_value)
+
   // formValue binds to input.form-control to prevent form submission if required
   // prop is true and no options are selected
   $: formValue = selectedValues.join(`,`)
   $: if (formValue) invalid = false // reset error status whenever component state changes
 
   // options matching the current search text
-  $: matchingOptions = _options.filter(
-    (op) => filterFunc(op, searchText) && !selectedLabels.includes(op.label)
+  $: matchingOptions = options.filter(
+    (op) =>
+      filterFunc(op, searchText) &&
+      !(op instanceof Object && op.disabled) &&
+      !selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
   )
-  $: matchingEnabledOptions = matchingOptions.filter((op) => !op.disabled)
 
   // add an option to selected list
-  function add(label: Primitive) {
+  function add(label: string | number) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
     if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
       // first check if we find option in the options list
 
-      let option = _options.find((op) => op.label === label)
+      let option = options.find((op) => get_value(op) === label)
       if (
         !option && // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
@@ -107,7 +95,7 @@
       ) {
         // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
         option = { label: searchText, value: searchText }
-        if (allowUserOptions === `append`) _options = [..._options, option]
+        if (allowUserOptions === `append`) options = [...options, option]
       }
       searchText = `` // reset search string on selection
       if (!option) {
@@ -128,12 +116,14 @@
   }
 
   // remove an option from selected list
-  function remove(label: Primitive) {
+  function remove(label: string | number) {
     if (selected.length === 0) return
+
     selected.splice(selectedLabels.lastIndexOf(label), 1)
     selected = selected // Svelte rerender after in-place splice
+
     const option =
-      _options.find((option) => option.label === label) ??
+      options.find((option) => get_label(option) === label) ??
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create correspondidng option object
       // on the fly for use as event payload
@@ -142,6 +132,7 @@
     if (!option) {
       return console.error(`MultiSelect: option with label ${label} not found`)
     }
+
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
   }
@@ -171,7 +162,7 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        const { label } = activeOption
+        const label = get_label(activeOption)
         selectedLabels.includes(label) ? remove(label) : add(label)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
@@ -185,27 +176,30 @@
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       // if no option is active yet, but there are matching options, make first one active
-      if (activeOption === null && matchingEnabledOptions.length > 0) {
-        activeOption = matchingEnabledOptions[0]
+      if (activeOption === null && matchingOptions.length > 0) {
+        activeOption = matchingOptions[0]
         return
       } else if (allowUserOptions && searchText.length > 0) {
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
         activeMsg = !activeMsg
         return
+      } else if (activeOption === null) {
+        // if no option is active and no options are matching, do nothing
+        return
       }
       const increment = event.key === `ArrowUp` ? -1 : 1
-      const newActiveIdx = matchingEnabledOptions.indexOf(activeOption) + increment
+      const newActiveIdx = matchingOptions.indexOf(activeOption) + increment
 
       if (newActiveIdx < 0) {
         // wrap around top
-        activeOption = matchingEnabledOptions[matchingEnabledOptions.length - 1]
-      } else if (newActiveIdx === matchingEnabledOptions.length) {
+        activeOption = matchingOptions[matchingOptions.length - 1]
+      } else if (newActiveIdx === matchingOptions.length) {
         // wrap around bottom
-        activeOption = matchingEnabledOptions[0]
+        activeOption = matchingOptions[0]
       } else {
         // default case: select next/previous in item list
-        activeOption = matchingEnabledOptions[newActiveIdx]
+        activeOption = matchingOptions[newActiveIdx]
       }
       if (autoScroll) {
         await tick()
@@ -215,7 +209,7 @@
     }
     // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selectedLabels.length > 0 && !searchText) {
-      remove(selectedLabels.at(-1) as Primitive)
+      remove(selectedLabels.at(-1) as string | number)
     }
   }
 
@@ -226,7 +220,7 @@
     searchText = ``
   }
 
-  $: isSelected = (label: Primitive) => selectedLabels.includes(label)
+  $: isSelected = (label: string | number) => selectedLabels.includes(label)
 
   const handleEnterAndSpaceKeys = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
@@ -273,14 +267,14 @@ display above those of another following shortly after it -->
     {#each selected as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
-          {option.label}
+          {get_label(option)}
         </slot>
         {#if !disabled}
           <button
-            on:mouseup|stopPropagation={() => remove(option.label)}
-            on:keydown={handleEnterAndSpaceKeys(() => remove(option.label))}
+            on:mouseup|stopPropagation={() => remove(get_label(option))}
+            on:keydown={handleEnterAndSpaceKeys(() => remove(get_label(option)))}
             type="button"
-            title="{removeBtnTitle} {option.label}"
+            title="{removeBtnTitle} {get_label(option)}"
           >
             <CrossIcon width="15px" />
           </button>
@@ -337,9 +331,14 @@ display above those of another following shortly after it -->
 
   <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
     {#each matchingOptions as option, idx}
-      {@const { label, disabled, title = null, selectedTitle } = option}
-      {@const { disabledTitle = defaultDisabledTitle } = option}
-      {@const active = activeOption?.label === label}
+      {@const {
+        label,
+        disabled = null,
+        title = null,
+        selectedTitle = null,
+        disabledTitle = defaultDisabledTitle,
+      } = option instanceof Object ? option : { label: option }}
+      {@const active = activeOption && get_label(activeOption) === label}
       <li
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation={() => {
@@ -361,7 +360,7 @@ display above those of another following shortly after it -->
         aria-selected="false"
       >
         <slot name="option" {option} {idx}>
-          {option.label}
+          {get_label(option)}
         </slot>
       </li>
     {:else}

@@ -28,5 +28,5 @@ function session_store<T>(name: string, initialValue: T) {
 
 export const language_store = session_store<Option[]>(
   `language-store`,
-  [`Python`, `TypeScript`, `C`].map((lang) => ({ label: lang, value: lang }))
+  `Python TypeScript C`.split(` `)
 )
