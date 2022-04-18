@@ -35,15 +35,6 @@
 
 ## Recent breaking changes
 
-- v3.0.0 changed the `event.detail` payload for `'add'`, `'remove'` and `'change'` events from `token` to `option`, e.g.
-
-  ```js
-  on:add={(e) => console.log(e.detail.token.label)} // v2
-  on:add={(e) => console.log(e.detail.option.label)} // v3
-  ```
-
-  It also added a separate event type `removeAll` for when the user removes all currently selected options at once which previously fired a normal `remove`. The props `ulTokensClass` and `liTokenClass` were renamed to `ulSelectedClass` and `liSelectedClass`. Similarly, the CSS variable `--sms-token-bg` changed to `--sms-selected-bg`.
-
 - v4.0.0 renamed the slots for customizing how selected options and dropdown list items are rendered:
 
   - old: `<slot name="renderOptions" />`, new: `<slot name="option" />`
@@ -52,6 +43,8 @@
 - v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form or user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed to `div.multiselect.{readonly=>disabled}`.
 
 - v4.0.3 CSS variables starting with `--sms-input-<attr>` were renamed to just `--sms-<attr>`. E.g. `--sms-input-min-height` is now `--sms-min-height`.
+
+- v5.0.0 Support both simple and object options.Previously string or number options were converted to objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's what you'll get from `bind:selected`.
 
 ## Installation
 
