@@ -1,14 +1,14 @@
 <script lang="ts">
-  import { Option } from '../lib'
+  import { ObjectOption } from '../lib'
 
-  export let option: Option
+  export let option: ObjectOption
   export let idx: number
 </script>
 
 <span>
   {idx + 1}
-  {option.label}
   <span style:background={option.label} />
+  {option.label}
 </span>
 
 <style>
@@ -21,7 +21,8 @@
     width: 1em;
     height: 1em;
     display: inline-block;
-    border-radius: 3pt;
+    border-radius: 2pt;
+    margin: 0 3pt;
     vertical-align: middle;
   }
 </style>

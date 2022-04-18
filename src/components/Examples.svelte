@@ -1,10 +1,10 @@
 <script lang="ts">
-  import MultiSelect, { Option, Primitive, SourceOfTruth } from '../lib'
-  import Confetti from './Confetti.svelte'
-  import { colors, ml_libs, languages, frontend_libs } from '../options'
-  import ColorSlot from './ColorSlot.svelte'
-  import LanguageSlot from './LanguageSlot.svelte'
+  import MultiSelect, { Option } from '../lib'
+  import { colors, frontend_libs, languages, ml_libs } from '../options'
   import { language_store } from '../stores'
+  import ColorSlot from './ColorSlot.svelte'
+  import Confetti from './Confetti.svelte'
+  import LanguageSlot from './LanguageSlot.svelte'
 
   let selectedML: Option[]
   let selectedFruit: Option[]
