@@ -25,11 +25,6 @@
     loading = true
     setTimeout(() => (loading = false), 1000)
   }
-
-  let vegetables = [`potatoe`, `leek`, `carrot`, `turnip`, `parsnip`]
-
-  let selectedVegetableOptions: Option[]
-  let selectedVegetableValues: Primitive[]
 </script>
 
 <section>
@@ -43,44 +38,7 @@
     id="languages"
     options={languages}
     placeholder="Take your pick..."
-    bind:selectedOptions={$language_store}
-  >
-    <LanguageSlot let:option {option} slot="selected" />
-  </MultiSelect>
-</section>
-
-<section>
-  <h3>Source of Truth</h3>
-
-  <pre>bind:selectedOptions = {JSON.stringify(selectedVegetableOptions)}</pre>
-
-  <label for="vegetables">Favorite vegetable?</label>
-
-  <button
-    on:click={() => {
-      selectedVegetableValues = [`turnip`]
-    }}
-  >
-    Select turnip by value
-  </button>
-
-  <button
-    on:click={() => {
-      selectedVegetableValues = selectedVegetableValues.filter(
-        (value) => value !== `turnip`
-      )
-    }}
-  >
-    Deselect turnip by value
-  </button>
-
-  <MultiSelect
-    id="vegetables"
-    options={vegetables}
-    placeholder="I'd recommend turnips..."
-    bind:selectedOptions={selectedVegetableOptions}
-    bind:selectedValues={selectedVegetableValues}
-    sourceOfTruth={`values`}
+    bind:selected={$language_store}
   >
     <LanguageSlot let:option {option} slot="selected" />
   </MultiSelect>
@@ -98,7 +56,7 @@
     maxSelect={1}
     maxSelectMsg={(current, max) => `${current} of ${max} selected`}
     options={ml_libs}
-    bind:selectedOptions={selectedML}
+    bind:selected={selectedML}
     bind:searchText
     placeholder="Favorite machine learning framework?"
     {loading}
@@ -141,7 +99,7 @@
     <MultiSelect
       id="color-select"
       options={colors}
-      bind:selectedOptions={selectedFruit}
+      bind:selected={selectedFruit}
       placeholder="Pick some colors..."
       allowUserOptions="append"
       required

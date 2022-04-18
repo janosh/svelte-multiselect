@@ -18,7 +18,7 @@
   id="languages"
   options={languages}
   placeholder="What languages do you know?"
-  bind:selectedOptions={$language_store}
+  bind:selected={$language_store}
 >
   <LanguageSlot let:option {option} slot="selected" />
 </MultiSelect>
@@ -30,7 +30,7 @@
   id="languages"
   options={languages}
   placeholder="What languages do you know?"
-  bind:selectedOptions={$language_store}
+  bind:selected={$language_store}
 >
   <LanguageSlot let:option {option} slot="selected" />
 </MultiSelect>

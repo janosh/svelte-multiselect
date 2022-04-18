@@ -83,7 +83,7 @@
   function add(label: string | number) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
-    if (maxSelect === null || maxSelect === 1 || selectedOptions.length < maxSelect) {
+    if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
       // first check if we find option in the options list
 
       let option = options.find((op) => get_value(op) === label)
@@ -104,24 +104,8 @@
       }
       if (maxSelect === 1) {
         // for maxselect = 1 we always replace current option with new one
-
-        if (sourceOfTruth === `options`) {
-          selectedOptions = [option]
-        } else if (sourceOfTruth === `labels`) {
-          selectedLabels = [option.label]
-        } else if (sourceOfTruth === `values`) {
-          selectedValues = [option.value]
-        }
-      } else {
-        if (sourceOfTruth === `options`) {
-          selectedOptions = [...selectedOptions, option]
-        } else if (sourceOfTruth === `labels`) {
-          selectedLabels = [...selectedLabels, option.label]
-        } else if (sourceOfTruth === `values`) {
-          selectedValues = [...selectedValues, option.value]
-        }
       }
-      if (selectedOptions.length === maxSelect) setOptionsVisible(false)
+      if (selected.length === maxSelect) setOptionsVisible(false)
       else input?.focus()
       dispatch(`add`, { option })
       dispatch(`change`, { option, type: `add` })
@@ -227,9 +211,9 @@
   }
 
   const removeAll = () => {
-    dispatch(`removeAll`, { options: selectedOptions })
-    dispatch(`change`, { options: selectedOptions, type: `removeAll` })
-    selectedOptions = []
+    dispatch(`removeAll`, { options: selected })
+    dispatch(`change`, { options: selected, type: `removeAll` })
+    selected = []
     searchText = ``
   }
 
@@ -277,7 +261,7 @@ display above those of another following shortly after it -->
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
-    {#each selectedOptions as option, idx}
+    {#each selected as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
           {get_label(option)}
@@ -320,16 +304,16 @@ display above those of another following shortly after it -->
     <slot name="disabled-icon">
       <DisabledIcon width="15px" />
     </slot>
-  {:else if selectedOptions.length > 0}
+  {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
         <span style="padding: 0 3pt;">
-          {maxSelectMsg?.(selectedOptions.length, maxSelect) ??
-            (maxSelect > 1 ? `${selectedOptions.length}/${maxSelect}` : ``)}
+          {maxSelectMsg?.(selected.length, maxSelect) ??
+            (maxSelect > 1 ? `${selected.length}/${maxSelect}` : ``)}
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1 && selectedOptions.length > 1}
+    {#if maxSelect !== 1 && selected.length > 1}
       <button
         type="button"
         class="remove-all"
