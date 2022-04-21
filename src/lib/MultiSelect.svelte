@@ -47,6 +47,7 @@
   export let required = false
   export let autocomplete = `off`
   export let invalid = false
+  export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
 
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
@@ -107,6 +108,15 @@
         selected = [option]
       } else {
         selected = [...selected, option]
+        if (sortSelected === true) {
+          selected = selected.sort((op1: Option, op2: Option) => {
+            const [label1, label2] = [get_label(op1), get_label(op2)]
+            // coerce to string if labels are numbers
+            return `${label1}`.localeCompare(`${label2}`)
+          })
+        } else if (typeof sortSelected === `function`) {
+          selected = selected.sort(sortSelected)
+        }
       }
       if (selected.length === maxSelect) setOptionsVisible(false)
       else input?.focus()
@@ -238,8 +248,6 @@
   }}
 />
 
-<!-- z-index: 2 when showOptions is true ensures the ul.selected of one <MultiSelect />
-display above those of another following shortly after it -->
 <div
   bind:this={outerDiv}
   class:disabled
@@ -402,6 +410,8 @@ display above those of another following shortly after it -->
     min-height: var(--sms-min-height, 19pt);
   }
   :where(div.multiselect.open) {
+    /* increase z-index when open to ensure the dropdown of one <MultiSelect />
+    displays above that of another slightly below it on the page */
     z-index: var(--sms-open-z-index, 4);
   }
   :where(div.multiselect:focus-within) {

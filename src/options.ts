@@ -32,8 +32,10 @@ export const languages =
     ` `
   )
 
-// prettier-ignore
-export const fruits = `Banana Watermelon Apple Dates Mango Orange Apricots Avocado Blackberries Blackcurrant Blueberries Cherries Coconut Cranberries Grapefruit Grapes Guava Kiwi Lemon Lime Lychee Mandarin Nectarine Papaya Passion-Fruit Peach Pear Pineapple Plum Raspberry Strawberry Tangerine`.split(` `)
+export const fruits =
+  `Banana Watermelon Apple Dates Mango Orange Apricots Avocado Blackberries Blackcurrant Blueberries Cherries Coconut Cranberries Grapefruit Grapes Guava Kiwi Lemon Lime Lychee Mandarin Nectarine Papaya Passion-Fruit Peach Pear Pineapple Plum Raspberry Strawberry Tangerine`.split(
+    ` `
+  )
 
 export const colors =
   `Red Green Blue Yellow Purple Pink Brown Black White Gray Orange Cyan Magenta Silver Gold Turquoise Violet Lime Indigo Navy`

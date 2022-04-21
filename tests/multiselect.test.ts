@@ -360,3 +360,45 @@ describe(`allowUserOptions`, async () => {
     expect(selected_text).toContain(`Add this custom fruit at your own risk!`)
   })
 })
+
+describe(`sortSelected`, async () => {
+  const labels = `Svelte Vue React Angular Polymer Laravel Django`.split(` `)
+
+  test(`default sorting is alphabetical by label`, async () => {
+    const page = await context.newPage()
+
+    await page.goto(`/sort-selected`)
+
+    await page.locator(`input[name="default-sort"]`).click() // open dropdown
+
+    for (const label of labels) {
+      await page.locator(`css=.multiselect.open >> text=${label}`).click()
+    }
+
+    const selected = await page.textContent(
+      `div.multiselect.open > ul.selected`
+    )
+    expect(selected?.trim()).toBe(
+      `Angular Django Laravel Polymer React Svelte Vue`
+    )
+  })
+
+  test(`custom sorting`, async () => {
+    const page = await context.newPage()
+
+    await page.goto(`/sort-selected`)
+
+    await page.locator(`input[name="custom-sort"]`).click() // open dropdown
+
+    for (const label of labels) {
+      await page.locator(`css=.multiselect.open >> text=${label}`).click()
+    }
+
+    const selected = await page.textContent(
+      `div.multiselect.open > ul.selected`
+    )
+    expect(selected?.trim()).toBe(
+      `Angular Polymer React Svelte Vue Laravel Django`
+    )
+  })
+})
