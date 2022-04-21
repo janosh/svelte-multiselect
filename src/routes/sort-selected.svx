@@ -1,0 +1,60 @@
+<script>
+  import MultiSelect from '$lib'
+  import { frontend_libs } from '$src/options'
+</script>
+
+## Sorting Selected Items
+
+```svelte
+<MultiSelect
+  options={frontend_libs}
+  placeholder="Pick your favorite frontend libs"
+  sortSelected
+/>
+```
+
+<br />
+
+<label for="default-sort"><strong>Frontend Lib Picker (default sorting)</strong></label>
+<MultiSelect
+  id="default-sort"
+  options={frontend_libs}
+  placeholder="Pick your favorite frontend libs"
+  sortSelected
+/>
+
+<br />
+
+```svelte
+<MultiSelect
+  options={frontend_libs}
+  placeholder="Pick your favorite frontend libs"
+  sortSelected={(op1: Option, op2: Option) => {
+    if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)
+    return op1.label.localeCompare(op2.label)
+  }}
+/>
+```
+
+<br />
+
+<label for="custom-sort"><strong>Frontend Lib Picker (custom sorting by programming language)</strong></label>
+<MultiSelect
+  id="custom-sort"
+  options={frontend_libs}
+  placeholder="Pick your favorite frontend libs"
+  sortSelected={(op1, op2) => {
+    if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)
+    return op1.label.localeCompare(op2.label)
+  }}
+/>
+
+<br />
+
+MultiSelect by default simply renders selected items in the order they were chosen. The prop
+
+```ts
+sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+```
+
+can be set to `true` to instead use default JS array sorting (uses option labels as sorting key if options are objects). Provide your own compare function to define custom sort order of selected options.
