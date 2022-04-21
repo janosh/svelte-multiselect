@@ -1,17 +1,17 @@
 <script lang="ts">
-  import MultiSelect, { Option } from '../lib'
+  import MultiSelect, { ObjectOption } from '../lib'
   import { colors, frontend_libs, languages, ml_libs } from '../options'
   import { language_store } from '../stores'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
 
-  let selectedML: Option[]
-  let selectedFruit: Option[]
+  let selected_ml: string[]
+  let selected_fruit: ObjectOption[]
 
   let showConfetti = false
 
-  const filterFunc = (op: Option, searchText: string) => {
+  const filterFunc = (op: ObjectOption, searchText: string) => {
     if (!searchText) return true
     const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
       `${s}`.toLowerCase()
@@ -30,7 +30,7 @@
 <section>
   <h3>Multi Select</h3>
 
-  <pre>bind:selectedLabels = {JSON.stringify($language_store.map((t) => t.label))}</pre>
+  <pre>bind:selectedLabels = {JSON.stringify($language_store)}</pre>
 
   <label for="languages">Favorite programming languages?</label>
 
@@ -49,14 +49,14 @@
 
   <label for="fav-ml-tool">with loading indicator on text input</label>
 
-  <pre>selected = {JSON.stringify(selectedML)}</pre>
+  <pre>selected = {JSON.stringify(selected_ml)}</pre>
 
   <MultiSelect
     id="fav-ml-tool"
     maxSelect={1}
     maxSelectMsg={(current, max) => `${current} of ${max} selected`}
     options={ml_libs}
-    bind:selected={selectedML}
+    bind:selectedLabels={selected_ml}
     bind:searchText
     placeholder="Favorite machine learning framework?"
     {loading}
@@ -93,13 +93,13 @@
 
   <form
     on:submit|preventDefault={() => {
-      alert(`You selected '${selectedFruit.map((el) => el.label).join(`, `)}'`)
+      alert(`You selected '${selected_fruit.map((el) => el.label).join(`, `)}'`)
     }}
   >
     <MultiSelect
       id="color-select"
       options={colors}
-      bind:selected={selectedFruit}
+      bind:selected={selected_fruit}
       placeholder="Pick some colors..."
       allowUserOptions="append"
       required
