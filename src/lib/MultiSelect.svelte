@@ -222,7 +222,7 @@
     }
   }
 
-  const removeAll = () => {
+  function remove_all() {
     dispatch(`removeAll`, { options: selected })
     dispatch(`change`, { options: selected, type: `removeAll` })
     selected = []
@@ -231,7 +231,7 @@
 
   $: isSelected = (label: string | number) => selectedLabels.includes(label)
 
-  const handleEnterAndSpaceKeys = (handler: () => void) => (event: KeyboardEvent) => {
+  const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
       event.preventDefault()
       handler()
@@ -279,7 +279,7 @@
         {#if !disabled}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
-            on:keydown={handleEnterAndSpaceKeys(() => remove(get_label(option)))}
+            on:keydown={if_enter_or_space(() => remove(get_label(option)))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
           >
@@ -328,8 +328,8 @@
         type="button"
         class="remove-all"
         title={removeAllTitle}
-        on:mouseup|stopPropagation={removeAll}
-        on:keydown={handleEnterAndSpaceKeys(removeAll)}
+        on:mouseup|stopPropagation={remove_all}
+        on:keydown={if_enter_or_space(remove_all)}
       >
         <CrossIcon width="15px" />
       </button>
