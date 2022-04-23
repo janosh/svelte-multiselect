@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import { DispatchEvents, Option } from './'
+  import { CustomEvents, DispatchEvents, Option } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -15,7 +15,7 @@
 
   export let selected: Option[] = []
   export let selectedLabels: (string | number)[] = []
-  export let selectedValues: (string | number)[] = []
+  export let selectedValues: unknown[] = []
 
   export let input: HTMLInputElement | null = null
   export let outerDiv: HTMLDivElement | null = null
@@ -49,6 +49,8 @@
   export let invalid = false
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
 
+  type $$Events = CustomEvents
+
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
@@ -58,10 +60,9 @@
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
-  // process proto options to full ones with mandatory labels
-
-  const get_value = (option: Option) => (option instanceof Object ? option.value : option)
-  const get_label = (option: Option) => (option instanceof Object ? option.label : option)
+  const get_label = (op: Option) => (op instanceof Object ? op.label : op)
+  // fallback on label if option is object and value is undefined
+  const get_value = (op: Option) => (op instanceof Object ? op.value ?? op.label : op)
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
   $: selectedLabels = selected.map(get_label)
@@ -87,7 +88,7 @@
     if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
       // first check if we find option in the options list
 
-      let option = options.find((op) => get_value(op) === label)
+      let option = options.find((op) => get_label(op) === label)
       if (
         !option && // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
@@ -223,7 +224,7 @@
     }
   }
 
-  const removeAll = () => {
+  function remove_all() {
     dispatch(`removeAll`, { options: selected })
     dispatch(`change`, { options: selected, type: `removeAll` })
     selected = []
@@ -232,7 +233,7 @@
 
   $: isSelected = (label: string | number) => selectedLabels.includes(label)
 
-  const handleEnterAndSpaceKeys = (handler: () => void) => (event: KeyboardEvent) => {
+  const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
       event.preventDefault()
       handler()
@@ -280,7 +281,7 @@
         {#if !disabled}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
-            on:keydown={handleEnterAndSpaceKeys(() => remove(get_label(option)))}
+            on:keydown={if_enter_or_space(() => remove(get_label(option)))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
           >
@@ -329,8 +330,8 @@
         type="button"
         class="remove-all"
         title={removeAllTitle}
-        on:mouseup|stopPropagation={removeAll}
-        on:keydown={handleEnterAndSpaceKeys(removeAll)}
+        on:mouseup|stopPropagation={remove_all}
+        on:keydown={if_enter_or_space(remove_all)}
       >
         <CrossIcon width="15px" />
       </button>
