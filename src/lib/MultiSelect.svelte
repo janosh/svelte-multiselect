@@ -15,7 +15,7 @@
 
   export let selected: Option[] = []
   export let selectedLabels: (string | number)[] = []
-  export let selectedValues: (string | number)[] = []
+  export let selectedValues: unknown[] = []
 
   export let input: HTMLInputElement | null = null
   export let outerDiv: HTMLDivElement | null = null
@@ -58,10 +58,9 @@
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
-  // process proto options to full ones with mandatory labels
-
-  const get_value = (option: Option) => (option instanceof Object ? option.value : option)
-  const get_label = (option: Option) => (option instanceof Object ? option.label : option)
+  const get_label = (op: Option) => (op instanceof Object ? op.label : op)
+  // fallback on label if option is object and value is undefined
+  const get_value = (op: Option) => (op instanceof Object ? op.value ?? op.label : op)
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
   $: selectedLabels = selected.map(get_label)
