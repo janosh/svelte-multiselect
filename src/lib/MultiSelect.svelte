@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
-  import { DispatchEvents, Option } from './'
+  import { CustomEvents, DispatchEvents, Option } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -48,6 +48,8 @@
   export let autocomplete = `off`
   export let invalid = false
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+
+  type $$Events = CustomEvents
 
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)

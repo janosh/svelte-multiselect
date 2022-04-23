@@ -25,3 +25,7 @@ export type DispatchEvents = {
   focus: undefined
   blur: undefined
 }
+
+export type CustomEvents = {
+  [key in keyof DispatchEvents]: CustomEvent<DispatchEvents[key]>
+}
