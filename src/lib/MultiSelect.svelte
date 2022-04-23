@@ -86,7 +86,7 @@
     if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
       // first check if we find option in the options list
 
-      let option = options.find((op) => get_value(op) === label)
+      let option = options.find((op) => get_label(op) === label)
       if (
         !option && // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
