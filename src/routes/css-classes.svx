@@ -1,13 +1,13 @@
 <script>
   import MultiSelect from '$lib'
-  import { fruits } from '$src/options'
+  import { foods } from '$src/options'
 </script>
 
 ## External CSS Classes
 
 ```svelte
 <MultiSelect
-  options={fruits}
+  options={foods}
   outerDivClass="foo"
   ulSelectedClass="bar"
   ulOptionsClass="baz"
@@ -20,10 +20,10 @@
 
 <br />
 
-<label for="fruits"><strong>Fruit Picker</strong></label>
+<label for="foods"><strong>Food Picker</strong></label>
 <MultiSelect
-  id="fruits"
-  options={fruits}
+  id="foods"
+  options={foods}
   outerDivClass="foo"
   ulSelectedClass="bar"
   ulOptionsClass="baz"

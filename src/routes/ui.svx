@@ -1,27 +1,27 @@
 <script>
   import MultiSelect from '$lib'
-  import { fruits } from '$src/options'
+  import { foods } from '$src/options'
 </script>
 
 ## User interface
 
 ```svelte
 <MultiSelect
-  options={fruits}
-  placeholder="Pick your favorite fruits"
-  removeAllTitle="Delete all fruits"
+  options={foods}
+  placeholder="Pick your favorite foods"
+  removeAllTitle="Delete all foods"
   invalid
 />
 ```
 
 <br />
 
-<label for="fruits"><strong>Fruit Picker</strong></label>
+<label for="foods"><strong>Food Picker</strong></label>
 <MultiSelect
-  id="fruits"
-  options={fruits}
-  placeholder="Pick your favorite fruits!"
-  removeAllTitle="Delete all fruits"
+  id="foods"
+  options={foods}
+  placeholder="Pick your favorite foods!"
+  removeAllTitle="Delete all foods"
   invalid
 />
 
