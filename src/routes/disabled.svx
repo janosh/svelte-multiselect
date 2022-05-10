@@ -1,6 +1,6 @@
 <script>
   import MultiSelect from '$lib'
-  import { fruits } from '$src/options'
+  import { foods } from '$src/options'
 </script>
 
 ## Disabled

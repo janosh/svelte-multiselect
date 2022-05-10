@@ -1,6 +1,6 @@
 <script>
   import MultiSelect from '$lib'
-  import { fruits } from '$src/options'
+  import { foods } from '$src/options'
 
   // make some options pre-selected
   let selected = [{ label: `Mango`, value: `Mango` }]
@@ -11,29 +11,29 @@
 
 ```svelte
 <MultiSelect
-  options={fruits}
+  options={foods}
   allowUserOptions={true}
 />
 
 <MultiSelect
-  id="fruits-append"
-  options={fruits}
+  id="foods-append"
+  options={foods}
   allowUserOptions="append"
-  addOptionMsg="Add this custom fruit at your own risk!"
+  addOptionMsg="Add this custom food at your own risk!"
 />
 ```
 
 <br />
 
-<label for="fruits"><strong>Fruit Picker with custom user input</strong></label>
-<MultiSelect id="fruits" options={fruits} allowUserOptions={true} bind:selected />
+<label for="foods"><strong>Food picker with custom user input</strong></label>
+<MultiSelect id="foods" options={foods} allowUserOptions={true} bind:selected />
 
-<label for="fruits-append"><strong>Fruit Picker append user options</strong></label>
+<label for="foods-append"><strong>Food picker append user options</strong></label>
 <MultiSelect
-  id="fruits-append"
-  options={fruits}
+  id="foods-append"
+  options={foods}
   allowUserOptions="append"
-  addOptionMsg="Add this custom fruit at your own risk!"
+  addOptionMsg="Add this custom food at your own risk!"
   bind:selected={selected_append}
 />
 

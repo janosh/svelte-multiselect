@@ -32,9 +32,10 @@ export const languages =
     ` `
   )
 
-export const fruits =
-  `Banana Watermelon Apple Dates Mango Orange Apricots Avocado Blackberries Blackcurrant Blueberries Cherries Coconut Cranberries Grapefruit Grapes Guava Kiwi Lemon Lime Lychee Mandarin Nectarine Papaya Passion-Fruit Peach Pear Pineapple Plum Raspberry Strawberry Tangerine`.split(
-    ` `
+// copied from https://emojipedia.org/food-drink
+export const foods =
+  `🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine, 🍋 Lemon, 🍌 Banana, 🍍 Pineapple, 🥭 Mango, 🍎 Red Apple, 🍏 Green Apple, 🍐 Pear, 🍑 Peach, 🍒 Cherries, 🍓 Strawberry, 🫐 Blueberries, 🥝 Kiwi, 🍅 Tomato, 🫒 Olive, 🥥 Coconut, 🥑 Avocado, 🍆 Eggplant, 🥔 Potato, 🥕 Carrot, 🌽 Ear of Corn, 🌶️ Hot Pepper, 🫑 Bell Pepper, 🥒 Cucumber, 🥬 Leafy Green, 🥦 Broccoli, 🧄 Garlic, 🧅 Onion, 🍄 Mushroom, 🥜 Peanuts`.split(
+    `, `
   )
 
 export const colors =
