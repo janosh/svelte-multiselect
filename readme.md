@@ -22,14 +22,14 @@
 
 ## Key features
 
-- **Single / multiple select:** pass `maxSelect={1}` prop to only allow one selection
+- **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
+- **Keyboard friendly** for mouse-less form completion
+- **No 3rd-party dependencies:** needs only Svelte as dev dependency
 - **Dropdowns:** scrollable lists for large numbers of options
 - **Searchable:** start typing to filter options
-- **Tagging:** selected options are recorded as tags in the input
-- **Server-side rendering:** no reliance on browser objects like `window` or `document`
+- **Tagging:** selected options are listed as tags within the input
+- **Single / multiple select:** pass `maxSelect={1, 2, 3, ...}` prop to restrict the number of selectable options
 - **Configurable:** see [props](#props)
-- **No dependencies:** needs only Svelte as dev dependency
-- **Keyboard friendly** for mouse-less form completion
 
 <slot name="nav" />
 
