@@ -48,13 +48,18 @@
   export let autocomplete = `off`
   export let invalid = false
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+  export let parseLabelsAsHtml = false
 
   type $$Events = CustomEvents
 
+  if (!(options?.length > 0)) console.error(`MultiSelect received no options`)
+  if (parseLabelsAsHtml && allowUserOptions)
+    console.warn(
+      `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+    )
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!(options?.length > 0)) console.error(`MultiSelect is missing options`)
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
@@ -276,7 +281,11 @@
     {#each selected as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
-          {get_label(option)}
+          {#if parseLabelsAsHtml}
+            {@html get_label(option)}
+          {:else}
+            {get_label(option)}
+          {/if}
         </slot>
         {#if !disabled}
           <button
@@ -369,7 +378,11 @@
         aria-selected="false"
       >
         <slot name="option" {option} {idx}>
-          {get_label(option)}
+          {#if parseLabelsAsHtml}
+            {@html get_label(option)}
+          {:else}
+            {get_label(option)}
+          {/if}
         </slot>
       </li>
     {:else}

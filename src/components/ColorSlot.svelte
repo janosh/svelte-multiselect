@@ -6,7 +6,7 @@
 </script>
 
 <span>
-  {idx + 1}
+  <small>{idx + 1}</small>
   <span style:background={option.label} />
   {option.label}
 </span>
@@ -17,12 +17,16 @@
     place-items: center;
     gap: 3pt;
   }
+  span small {
+    width: 10pt;
+    text-align: right;
+  }
   span > span {
     width: 1em;
     height: 1em;
     display: inline-block;
     border-radius: 2pt;
-    margin: 0 3pt;
+    margin: 0 5pt;
     vertical-align: middle;
   }
 </style>
