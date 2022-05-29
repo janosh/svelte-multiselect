@@ -41,6 +41,7 @@
   export let removeAllTitle = `Remove all`
   export let defaultDisabledTitle = `This option is disabled`
   export let allowUserOptions: boolean | 'append' = false
+  export let parseLabelsAsHtml = false // should not be combined with allowUserOptions!
   export let addOptionMsg = `Create this option...`
   export let autoScroll = true
   export let loading = false
@@ -48,7 +49,6 @@
   export let autocomplete = `off`
   export let invalid = false
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
-  export let parseLabelsAsHtml = false
 
   type $$Events = CustomEvents
 
