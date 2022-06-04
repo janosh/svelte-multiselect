@@ -392,3 +392,34 @@ describe(`sortSelected`, async () => {
     )
   })
 })
+
+describe(`parseLabelsAsHtml`, async () => {
+  test(`renders anchor tags as links`, async () => {
+    const page = await context.newPage()
+
+    await page.goto(`/parse-labels-as-html`)
+
+    const anchor = await page.$(
+      `a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`
+    )
+    expect(anchor).toBeTruthy()
+  })
+
+  // TODO: fix test, expected error msg not recorded by page.on(`console`) for unknown reason
+  // even though it's there when opening page in browser
+  test.skip(`to raise error if combined with allowUserOptions`, async () => {
+    const page = await context.newPage()
+    const logs: string[] = []
+    page.on(`console`, (msg) => logs.push(msg.text()))
+
+    await page.goto(`/parse-labels-as-html`)
+
+    const has_expected_error = logs.some((msg) =>
+      msg.includes(
+        `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+      )
+    )
+
+    expect(has_expected_error).toBe(true)
+  })
+})

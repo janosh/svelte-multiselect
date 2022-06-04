@@ -1,0 +1,30 @@
+<script>
+  import MultiSelect from '$lib'
+  import { pills } from '$src/options'
+</script>
+
+## User interface
+
+```svelte
+<MultiSelect
+  options={pills}
+  placeholder="Pick your favorite pills"
+  removeAllTitle="Delete all pills"
+  invalid
+/>
+```
+
+<br />
+
+<label for="pills"><strong>Pill Picker</strong></label>
+<MultiSelect
+  id="pills"
+  options={pills}
+  placeholder="Are you ready for the truth?"
+  parseLabelsAsHtml
+  allowUserOptions
+/>
+
+<br />
+
+This page is for testing the prop `parseLabelsAsHtml`.
