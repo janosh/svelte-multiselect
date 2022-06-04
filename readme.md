@@ -240,6 +240,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-disabled-bg, lightgray)`: Background when in disabled state.
 - `div.multiselect input::placeholder`
   - `color: var(--sms-placeholder-color)`
+  - `color: var(--sms-placeholder-opacity)`
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
   - `padding: var(--sms-selected-li-padding, 5pt 1pt)`: Height of selected options.

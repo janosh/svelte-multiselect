@@ -489,7 +489,9 @@
     cursor: inherit; /* needed for disabled state */
   }
   :where(div.multiselect > ul.selected > li > input)::placeholder {
+    padding-left: 5pt;
     color: var(--sms-placeholder-color);
+    opacity: var(--sms-placeholder-opacity);
   }
   :where(div.multiselect > input.form-control) {
     width: 2em;
