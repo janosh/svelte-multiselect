@@ -28,7 +28,6 @@ jobs:
       - name: Run tests
         id: tests
         run: |
-          yarn dev &
           yarn test
 
       - name: Build package and publish to NPM

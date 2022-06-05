@@ -7,7 +7,7 @@
   import LanguageSlot from './LanguageSlot.svelte'
 
   let selected_ml: string[]
-  let selected_foods: ObjectOption[]
+  let selected_colors: ObjectOption[]
 
   let showConfetti = false
 
@@ -93,13 +93,13 @@
 
   <form
     on:submit|preventDefault={() => {
-      alert(`You selected '${selected_foods.map((el) => el.label).join(`, `)}'`)
+      alert(`You selected '${selected_colors.map((el) => el.label).join(`, `)}'`)
     }}
   >
     <MultiSelect
       id="color-select"
       options={colors}
-      bind:selected={selected_foods}
+      bind:selected={selected_colors}
       placeholder="Pick some colors..."
       allowUserOptions="append"
       required

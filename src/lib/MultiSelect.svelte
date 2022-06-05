@@ -41,6 +41,7 @@
   export let removeAllTitle = `Remove all`
   export let defaultDisabledTitle = `This option is disabled`
   export let allowUserOptions: boolean | 'append' = false
+  export let parseLabelsAsHtml = false // should not be combined with allowUserOptions!
   export let addOptionMsg = `Create this option...`
   export let autoScroll = true
   export let loading = false
@@ -51,10 +52,14 @@
 
   type $$Events = CustomEvents
 
+  if (!(options?.length > 0)) console.error(`MultiSelect received no options`)
+  if (parseLabelsAsHtml && allowUserOptions)
+    console.warn(
+      `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+    )
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!(options?.length > 0)) console.error(`MultiSelect is missing options`)
   if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
 
   const dispatch = createEventDispatcher<DispatchEvents>()
@@ -276,7 +281,11 @@
     {#each selected as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
-          {get_label(option)}
+          {#if parseLabelsAsHtml}
+            {@html get_label(option)}
+          {:else}
+            {get_label(option)}
+          {/if}
         </slot>
         {#if !disabled}
           <button
@@ -369,7 +378,11 @@
         aria-selected="false"
       >
         <slot name="option" {option} {idx}>
-          {get_label(option)}
+          {#if parseLabelsAsHtml}
+            {@html get_label(option)}
+          {:else}
+            {get_label(option)}
+          {/if}
         </slot>
       </li>
     {:else}
@@ -476,7 +489,9 @@
     cursor: inherit; /* needed for disabled state */
   }
   :where(div.multiselect > ul.selected > li > input)::placeholder {
+    padding-left: 5pt;
     color: var(--sms-placeholder-color);
+    opacity: var(--sms-placeholder-opacity);
   }
   :where(div.multiselect > input.form-control) {
     width: 2em;
@@ -491,7 +506,7 @@
 
   :where(div.multiselect > ul.options) {
     list-style: none;
-    padding: 0;
+    padding: 4pt 0;
     top: 100%;
     left: 0;
     width: 100%;
@@ -503,8 +518,6 @@
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
     transition: all 0.2s;
-    opacity: 1;
-    transform: translateY(0);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
