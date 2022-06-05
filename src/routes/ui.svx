@@ -23,6 +23,7 @@
   placeholder="Pick your favorite foods!"
   removeAllTitle="Delete all foods"
   invalid
+  parseLabelsAsHtml
 />
 
 <br />

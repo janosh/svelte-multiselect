@@ -46,3 +46,17 @@ export const colors =
       value: clr,
       preselected: [`Orange`, `Yellow`, `Green`].includes(clr),
     }))
+
+const red_vs_blue_pill_link = (text: string) =>
+  `<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">${text}</a>`
+
+export const pills = [
+  {
+    label: `🔴  &ensp; Red Pill (${red_vs_blue_pill_link(`wait what?`)})`,
+    value: `red pill`,
+  },
+  {
+    label: `🔵  &ensp; Blue Pill (${red_vs_blue_pill_link(`more info!`)})`,
+    value: `blue pill`,
+  },
+]

@@ -27,41 +27,37 @@ describe(`input`, async () => {
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
 
-    await page.click(`input[placeholder='Pick your favorite foods!']`)
+    await page.click(`input[id='foods']`)
 
-    expect(await page.$(`div.multiselect.open`)).toBeTruthy()
-    await page.waitForTimeout(500) // give DOM time to update
+    expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
-    const visibility = await page.$eval(
-      `div.multiselect > ul.options`,
-      (el) => getComputedStyle(el).visibility
+    const visible_dropdown = await page.waitForSelector(
+      `div.multiselect.open > ul.options:visible`
     )
-    expect(visibility).toBe(`visible`)
+    expect(visible_dropdown).toBeTruthy()
   })
 
   test(`closes dropdown on tab out`, async () => {
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
-    await page.focus(`input[placeholder='Pick your favorite foods!']`)
+    await page.focus(`input[id='foods']`)
 
     await page.keyboard.press(`Tab`)
 
-    await page.waitForTimeout(500) // give DOM time to update
-
-    const visibility = await page.$eval(
-      `div.multiselect > ul.options.hidden`,
+    const dropdown = await page.locator(`div.multiselect > ul.options`)
+    await dropdown.waitFor({ state: `hidden` })
+    const visibility = await dropdown.evaluate(
       (el) => getComputedStyle(el).visibility
     )
+    const opacity = await dropdown.evaluate(
+      (el) => getComputedStyle(el).opacity
+    )
     expect(visibility).toBe(`hidden`)
+    expect(opacity).toBe(`0`)
   })
 
   test(`filters dropdown to show only matching options when entering text`, async () => {
-    await page.fill(
-      `input[placeholder='Pick your favorite foods!']`,
-      `Pineapple`
-    )
-
-    await page.waitForTimeout(500) // give DOM time to update
+    await page.fill(`input[id='foods']`, `Pineapple`)
 
     expect(
       await page.$$(`div.multiselect.open > ul.options > li`)
@@ -125,9 +121,12 @@ describe(`external CSS classes`, async () => {
   const page = await context.newPage()
   await page.goto(`/css-classes`)
 
-  await page.click(`div.multiselect`) // open the dropdown
-  await page.click(`div.multiselect > ul.options > li`) // select 1st option
-  await page.keyboard.press(`ArrowDown`) // make next option active
+  await page.click(`input[id='foods']`)
+  await page.waitForSelector(`div.multiselect > ul.options`, {
+    state: `visible`,
+  })
+
+  await page.hover(`text=🍌 Banana`) // hover any option to give it active state (can also use arrow keys)
 
   for (const [prop, selector, cls] of [
     [`outerDivClass`, `div.multiselect`, `foo`],
@@ -183,7 +182,7 @@ describe(`accessibility`, async () => {
   test(`input is aria-invalid when component has invalid=true`, async () => {
     // don't interact with component before this test as it will set invalid=false
     const invalid = await page.getAttribute(
-      `input[placeholder='Pick your favorite foods!']`,
+      `input[id='foods']`,
       `aria-invalid`,
       { strict: true }
     )
@@ -272,11 +271,7 @@ describe(`multiselect`, async () => {
 
     await page.reload()
 
-    await page.waitForTimeout(300)
-
-    const selected_text = await page.textContent(
-      `div.multiselect > ul.selected`
-    )
+    const selected_text = await page.textContent(`text=Haskell JavaScript`)
     expect(selected_text).toContain(`JavaScript`)
     expect(selected_text).toContain(`Haskell`)
   })
@@ -342,8 +337,6 @@ describe(`allowUserOptions`, async () => {
 
     await page.fill(selector, `Foobar Berry`)
 
-    await page.waitForTimeout(500) // give DOM time to update
-
     const selected_text = await page.textContent(
       `label[for='foods-append'] + .multiselect > ul.options`
     )
@@ -354,15 +347,14 @@ describe(`allowUserOptions`, async () => {
 describe(`sortSelected`, async () => {
   const labels = `Svelte Vue React Angular Polymer Laravel Django`.split(` `)
 
+  const page = await context.newPage()
+  await page.goto(`/sort-selected`)
+
   test(`default sorting is alphabetical by label`, async () => {
-    const page = await context.newPage()
-
-    await page.goto(`/sort-selected`)
-
     await page.click(`input[name="default-sort"]`) // open dropdown
 
     for (const label of labels) {
-      await page.click(`css=.multiselect.open >> text=${label}`)
+      await page.click(`ul.options >> text=${label}`)
     }
 
     const selected = await page.textContent(
@@ -374,14 +366,10 @@ describe(`sortSelected`, async () => {
   })
 
   test(`custom sorting`, async () => {
-    const page = await context.newPage()
-
-    await page.goto(`/sort-selected`)
-
     await page.click(`input[name="custom-sort"]`) // open dropdown
 
     for (const label of labels) {
-      await page.click(`css=.multiselect.open >> text=${label}`)
+      await page.click(`ul.options >> text=${label}`)
     }
 
     const selected = await page.textContent(
@@ -390,5 +378,36 @@ describe(`sortSelected`, async () => {
     expect(selected?.trim()).toBe(
       `Angular Polymer React Svelte Vue Laravel Django`
     )
+  })
+})
+
+describe(`parseLabelsAsHtml`, async () => {
+  test(`renders anchor tags as links`, async () => {
+    const page = await context.newPage()
+
+    await page.goto(`/parse-labels-as-html`)
+
+    const anchor = await page.$(
+      `a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`
+    )
+    expect(anchor).toBeTruthy()
+  })
+
+  // TODO: fix test, expected error msg not recorded by page.on(`console`) for unknown reason
+  // even though it's there when opening page in browser
+  test.skip(`to raise error if combined with allowUserOptions`, async () => {
+    const page = await context.newPage()
+    const logs: string[] = []
+    page.on(`console`, (msg) => logs.push(msg.text()))
+
+    await page.goto(`/parse-labels-as-html`)
+
+    const has_expected_error = logs.some((msg) =>
+      msg.includes(
+        `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+      )
+    )
+
+    expect(has_expected_error).toBe(true)
   })
 })
