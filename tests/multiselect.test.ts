@@ -29,14 +29,12 @@ describe(`input`, async () => {
 
     await page.click(`input[placeholder='Pick your favorite foods!']`)
 
-    expect(await page.$(`div.multiselect.open`)).toBeTruthy()
-    await page.waitForTimeout(500) // give DOM time to update
+    expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
-    const visibility = await page.$eval(
-      `div.multiselect > ul.options`,
-      (el) => getComputedStyle(el).visibility
+    const visible_dropdown = await page.waitForSelector(
+      `div.multiselect.open > ul.options:visible`
     )
-    expect(visibility).toBe(`visible`)
+    expect(visible_dropdown).toBeTruthy()
   })
 
   test(`closes dropdown on tab out`, async () => {
@@ -46,13 +44,16 @@ describe(`input`, async () => {
 
     await page.keyboard.press(`Tab`)
 
-    await page.waitForTimeout(500) // give DOM time to update
-
-    const visibility = await page.$eval(
-      `div.multiselect > ul.options.hidden`,
+    const dropdown = await page.locator(`div.multiselect > ul.options`)
+    await dropdown.waitFor({ state: `hidden` })
+    const visibility = await dropdown.evaluate(
       (el) => getComputedStyle(el).visibility
     )
+    const opacity = await dropdown.evaluate(
+      (el) => getComputedStyle(el).opacity
+    )
     expect(visibility).toBe(`hidden`)
+    expect(opacity).toBe(`0`)
   })
 
   test(`filters dropdown to show only matching options when entering text`, async () => {
@@ -60,8 +61,6 @@ describe(`input`, async () => {
       `input[placeholder='Pick your favorite foods!']`,
       `Pineapple`
     )
-
-    await page.waitForTimeout(500) // give DOM time to update
 
     expect(
       await page.$$(`div.multiselect.open > ul.options > li`)
@@ -272,11 +271,7 @@ describe(`multiselect`, async () => {
 
     await page.reload()
 
-    await page.waitForTimeout(300)
-
-    const selected_text = await page.textContent(
-      `div.multiselect > ul.selected`
-    )
+    const selected_text = await page.textContent(`text=Haskell JavaScript`)
     expect(selected_text).toContain(`JavaScript`)
     expect(selected_text).toContain(`Haskell`)
   })
@@ -341,8 +336,6 @@ describe(`allowUserOptions`, async () => {
     await page.click(selector)
 
     await page.fill(selector, `Foobar Berry`)
-
-    await page.waitForTimeout(500) // give DOM time to update
 
     const selected_text = await page.textContent(
       `label[for='foods-append'] + .multiselect > ul.options`

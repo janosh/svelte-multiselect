@@ -518,8 +518,6 @@
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
     transition: all 0.2s;
-    opacity: 1;
-    transform: translateY(0);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
