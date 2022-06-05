@@ -439,7 +439,7 @@
   :where(div.multiselect > ul.selected) {
     display: flex;
     flex: 1;
-    padding: 0;
+    padding: 1ex 0;
     margin: 0;
     flex-wrap: wrap;
   }
