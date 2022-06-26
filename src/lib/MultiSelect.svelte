@@ -218,9 +218,12 @@
         activeOption = matchingOptions[newActiveIdx]
       }
       if (autoScroll) {
-        await tick()
-        const li = document.querySelector(`ul.options > li.active`)
-        li?.scrollIntoViewIfNeeded()
+        // TODO This ugly timeout hack is needed to properly scroll element into view when wrapping
+        // around start/end of option list. Find a better solution than waiting 10 ms to.
+        setTimeout(() => {
+          const li = document.querySelector(`ul.options > li.active`)
+          li?.scrollIntoView()
+        }, 10)
       }
     }
     // on backspace key: remove last selected option
