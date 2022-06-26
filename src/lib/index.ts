@@ -29,3 +29,10 @@ export type DispatchEvents = {
 export type CustomEvents = {
   [key in keyof DispatchEvents]: CustomEvent<DispatchEvents[key]>
 }
+
+// get the label key from an option object or the option itself if it's a string or number
+export const get_label = (op: Option) => (op instanceof Object ? op.label : op)
+
+// fallback on label if option is object and value is undefined
+export const get_value = (op: Option) =>
+  op instanceof Object ? op.value ?? op.label : op
