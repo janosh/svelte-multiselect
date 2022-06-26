@@ -15,7 +15,7 @@
 
 <br />
 
-<label for="default-sort"><strong>Frontend Lib Picker (default sorting)</strong></label>
+<label for="default-sort">Frontend Lib Picker (default sorting)</label>
 <MultiSelect
   id="default-sort"
   options={frontend_libs}
@@ -38,7 +38,7 @@
 
 <br />
 
-<label for="custom-sort"><strong>Frontend Lib Picker (custom sorting by programming language)</strong></label>
+<label for="custom-sort">Frontend Lib Picker (custom sorting by programming language)</label>
 <MultiSelect
   id="custom-sort"
   options={frontend_libs}

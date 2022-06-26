@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { page } from '$app/stores'
   import GitHubCorner from 'svelte-github-corner'
   import '../app.css'
-  import { page } from '$app/stores'
 
   const demo_routes = Object.keys(import.meta.glob(`./*.svx`)).map(
     (filename) => filename.split(`.`)[1]
@@ -35,7 +35,7 @@
     <slot />
   </main>
 {:else}
-  <!-- handles non-svx routes index and __error -->
+  <!-- handles non-svx routes index.svelte and __error.svelte -->
   <slot />
 {/if}
 
@@ -60,16 +60,18 @@
   a[href='/']:hover {
     background-color: rgba(255, 255, 255, 0.2);
   }
+  nav {
+    display: flex;
+    gap: 1ex;
+    place-content: center;
+    margin: 1em auto 3em;
+    max-width: 45em;
+    flex-wrap: wrap;
+  }
   nav > a {
     padding-bottom: 2pt;
   }
   nav > a[aria-current='page'] {
     font-weight: bold;
-  }
-  nav {
-    display: flex;
-    gap: 1ex;
-    place-content: center;
-    margin: 1em 0 3em;
   }
 </style>

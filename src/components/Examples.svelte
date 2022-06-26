@@ -41,6 +41,7 @@
     bind:selected={$language_store}
   >
     <LanguageSlot let:option {option} slot="selected" />
+    <LanguageSlot let:option {option} slot="option" />
   </MultiSelect>
 </section>
 
