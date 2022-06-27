@@ -121,7 +121,7 @@ describe(`external CSS classes`, async () => {
   const page = await context.newPage()
   await page.goto(`/css-classes`)
 
-  await page.click(`input[id='foods']`)
+  await page.click(`input#foods`)
   await page.waitForSelector(`div.multiselect > ul.options`, {
     state: `visible`,
   })
@@ -261,11 +261,11 @@ describe(`multiselect`, async () => {
     const page = await context.newPage()
     await page.goto(`/persistent`)
 
-    await page.click(`input[name="languages"]`)
+    await page.click(`input#languages`)
 
     await page.click(`text=Haskell >> nth=0`)
 
-    await page.fill(`input[name="languages"]`, `java`)
+    await page.fill(`input#languages`, `java`)
 
     await page.click(`text=JavaScript`)
 
@@ -280,7 +280,7 @@ describe(`multiselect`, async () => {
 describe(`allowUserOptions`, async () => {
   test(`entering custom option adds it to selected but not to options`, async () => {
     const page = await context.newPage()
-    const selector = `input[name="foods"]`
+    const selector = `input#foods`
 
     await page.goto(`/allow-user-options`)
 
@@ -308,7 +308,7 @@ describe(`allowUserOptions`, async () => {
       list _and_ to options in dropdown menu`, async () => {
     // i.e. it remains selectable from the dropdown after removing from selected
     const page = await context.newPage()
-    const selector = `input[name="languages"]`
+    const selector = `input#languages`
 
     await page.goto(`/allow-user-options`)
 
@@ -329,7 +329,7 @@ describe(`allowUserOptions`, async () => {
 
   test(`shows custom addOptionMsg if no options match`, async () => {
     const page = await context.newPage()
-    const selector = `input[name="languages"]`
+    const selector = `input#languages`
 
     await page.goto(`/allow-user-options`)
 
@@ -351,7 +351,7 @@ describe(`sortSelected`, async () => {
   await page.goto(`/sort-selected`)
 
   test(`default sorting is alphabetical by label`, async () => {
-    await page.click(`input[name="default-sort"]`) // open dropdown
+    await page.click(`input#default-sort`) // open dropdown
 
     for (const label of labels) {
       await page.click(`ul.options >> text=${label}`)
@@ -366,7 +366,7 @@ describe(`sortSelected`, async () => {
   })
 
   test(`custom sorting`, async () => {
-    await page.click(`input[name="custom-sort"]`) // open dropdown
+    await page.click(`input#custom-sort`) // open dropdown
 
     for (const label of labels) {
       await page.click(`ul.options >> text=${label}`)
