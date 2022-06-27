@@ -123,8 +123,8 @@ describe(`external CSS classes`, async () => {
   const page = await context.newPage()
   await page.goto(`/css-classes`)
 
-  await page.click(`input#foods`)
   const ul_options = await page.$(`div.multiselect > ul.options`)
+  await page.click(`input#foods`)
   await ul_options?.waitForElementState(`visible`)
 
   await page.hover(`text=🍌 Banana`) // hover any option to give it active state (can also use arrow keys)
