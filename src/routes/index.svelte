@@ -29,6 +29,12 @@
   nav {
     display: flex;
     gap: 1ex;
+    flex-wrap: wrap;
+  }
+  nav a {
+    padding: 1pt 4pt;
+    background-color: rgba(255, 255, 255, 0.125);
+    border-radius: 3pt;
   }
   :global(.hide-in-docs) {
     display: none;

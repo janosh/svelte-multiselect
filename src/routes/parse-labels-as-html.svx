@@ -16,7 +16,7 @@
 
 <br />
 
-<label for="pills"><strong>Pill Picker</strong></label>
+<label for="pills">Pill Picker</label>
 <MultiSelect
   id="pills"
   options={pills}

@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
-  import { CustomEvents, DispatchEvents, Option } from './'
+  import { createEventDispatcher } from 'svelte'
+  import { CustomEvents, DispatchEvents, get_label, get_value, Option } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -65,10 +65,6 @@
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
 
-  const get_label = (op: Option) => (op instanceof Object ? op.label : op)
-  // fallback on label if option is object and value is undefined
-  const get_value = (op: Option) => (op instanceof Object ? op.value ?? op.label : op)
-
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
   $: selectedLabels = selected.map(get_label)
   $: selectedValues = selected.map(get_value)
@@ -100,8 +96,10 @@
         [true, `append`].includes(allowUserOptions) &&
         searchText.length > 0
       ) {
-        // user entered text but no options match, so if allowUserOptions=true | 'append', we create new option
-        option = { label: searchText, value: searchText }
+        // user entered text but no options match, so if allowUserOptions=true | 'append', we create
+        // a new option from the user-entered text
+        if (typeof options[0] === `string`) option = searchText
+        else option = { label: searchText, value: searchText }
         if (allowUserOptions === `append`) options = [...options, option]
       }
       searchText = `` // reset search string on selection
@@ -218,9 +216,12 @@
         activeOption = matchingOptions[newActiveIdx]
       }
       if (autoScroll) {
-        await tick()
-        const li = document.querySelector(`ul.options > li.active`)
-        li?.scrollIntoViewIfNeeded()
+        // TODO This ugly timeout hack is needed to properly scroll element into view when wrapping
+        // around start/end of option list. Find a better solution than waiting 10 ms to.
+        setTimeout(() => {
+          const li = document.querySelector(`ul.options > li.active`)
+          li?.scrollIntoView()
+        }, 10)
       }
     }
     // on backspace key: remove last selected option

@@ -18,7 +18,7 @@
 
 <br />
 
-<label for="disabled"><strong>Disabled MultiSelect</strong></label>
+<label for="disabled">Disabled MultiSelect</label>
 <MultiSelect
   id="disabled"
   options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}

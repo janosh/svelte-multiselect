@@ -22,7 +22,7 @@
 
 <br />
 
-<label for="foods"><strong>Food Picker</strong></label>
+<label for="foods">Food Picker</label>
 <MultiSelect
   id="foods"
   options={foods}

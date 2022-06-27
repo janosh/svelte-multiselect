@@ -1,43 +1,53 @@
 <script>
   import MultiSelect from '$lib'
-  import { foods } from '$src/options'
+  import { foods, languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
 
   // make some options pre-selected
-  let selected = [{ label: `Mango`, value: `Mango` }]
-  let selected_append = [...selected, { label: `Banana`, value: `Banana` }]
+  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(',')
+  let selected_append = ['Haskell', 'TypeScript']
 </script>
 
-## Allow User Options
+<label for="foods">Allow Custom User Input</label>
+
+`allowUserOptions={true}` means users can enter custom options by entering text and hitting enter.
+
+<MultiSelect id="foods" options={foods} allowUserOptions={true} bind:selected />
 
 ```svelte
 <MultiSelect
   options={foods}
   allowUserOptions={true}
 />
-
-<MultiSelect
-  id="foods-append"
-  options={foods}
-  allowUserOptions="append"
-  addOptionMsg="Add this custom food at your own risk!"
-/>
 ```
 
 <br />
-
-<label for="foods"><strong>Food picker with custom user input</strong></label>
-<MultiSelect id="foods" options={foods} allowUserOptions={true} bind:selected />
-
-<label for="foods-append"><strong>Food picker append user options</strong></label>
-<MultiSelect
-  id="foods-append"
-  options={foods}
-  allowUserOptions="append"
-  addOptionMsg="Add this custom food at your own risk!"
-  bind:selected={selected_append}
-/>
-
+<br />
 <br />
 
-- `allowUserOptions={true}`: users can enter custom options.
-- `allowUserOptions="append"`: same as `true` but also adds custom options to the dropdown list. They'll remain there for re-selection should user remove custom option from selected.
+<label for="languages">Append User Input</label>
+
+`allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection should the user remove their custom option from the list of selected items.
+
+<MultiSelect
+  id="languages"
+  options={languages}
+  allowUserOptions="append"
+  bind:selected={selected_append}
+  addOptionMsg="True polyglots can enter custom languages!"
+>
+  <LanguageSlot let:option {option} slot="selected" />
+  <LanguageSlot let:option {option} slot="option" />
+</MultiSelect>
+
+```svelte
+<MultiSelect
+  id="languages"
+  options={languages}
+  allowUserOptions="append"
+  addOptionMsg="True polyglots can enter custom languages!"
+>
+  <LanguageSlot let:option {option} slot="selected" />
+  <LanguageSlot let:option {option} slot="option" />
+</MultiSelect>
+```

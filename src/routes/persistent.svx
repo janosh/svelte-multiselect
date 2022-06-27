@@ -9,6 +9,19 @@
 
 `language_store` is bound to the browser's `sessionStorage`. This example tests that MultiSelect retains its `selected` state on page reload correctly.
 
+<br />
+
+<MultiSelect
+  id="languages"
+  options={languages}
+  placeholder="What languages do you know?"
+  bind:selected={$language_store}
+>
+  <LanguageSlot let:option {option} slot="selected" />
+</MultiSelect>
+
+<br />
+
 ```svelte
 <script>
   import { language_store } from '$src/stores'
@@ -23,16 +36,3 @@
   <LanguageSlot let:option {option} slot="selected" />
 </MultiSelect>
 ```
-
-<br />
-
-<MultiSelect
-  id="languages"
-  options={languages}
-  placeholder="What languages do you know?"
-  bind:selected={$language_store}
->
-  <LanguageSlot let:option {option} slot="selected" />
-</MultiSelect>
-
-<br />
