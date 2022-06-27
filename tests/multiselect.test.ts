@@ -292,7 +292,7 @@ describe(`allowUserOptions`, async () => {
     await page.press(selector, `Enter`)
 
     const li_selected_handle = await page.$(
-      `div.multiselect > ul.selected >> :scope:has-text("Durian")`
+      `div.multiselect > ul.selected >> :has-text("Durian")`
     )
 
     expect(li_selected_handle).toBeTruthy()
@@ -300,7 +300,7 @@ describe(`allowUserOptions`, async () => {
     await page.fill(selector, `Durian`)
 
     const li_option_handle = await page.$(
-      `div.multiselect > ul.option >> :scope:has-text("Durian")`
+      `div.multiselect > ul.option >> :has-text("Durian")`
     )
     expect(li_option_handle).toBeNull()
   })
