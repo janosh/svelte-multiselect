@@ -1,10 +1,12 @@
 <script lang="ts">
-  export let option: string
+  import { get_label, Option } from '../lib'
+  export let option: Option
   export let height = `20px`
+  export let gap = '5pt'
 
   const repo = `https://raw.githubusercontent.com/vscode-icons/vscode-icons/master/icons`
 
-  $: lang = option
+  $: lang = String(get_label(option))
     .toLowerCase()
     .replaceAll(`+`, `p`)
     .replace(`#`, `sharp`)
@@ -13,12 +15,17 @@
   $: src = `${repo}/file_type_${lang}.svg`
 
   let hidden = false
-  $: fetch(src).then((resp) => {
-    hidden = resp.status !== 200
-  })
+  // default back to visible every time src changes to see if the image loads successfully
+  $: src, (hidden = false)
 </script>
 
-<span style="display: flex; gap: 3pt;">
+<span style:gap>
+  <img {src} {height} alt={lang} {hidden} on:error={() => (hidden = true)} />
   {option}
-  <img {src} {height} alt={lang} {hidden} />
 </span>
+
+<style>
+  span {
+    display: flex;
+  }
+</style>

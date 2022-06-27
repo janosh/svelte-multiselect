@@ -4,25 +4,28 @@
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
 </script>
 
-## Disabled MultiSelect
+`maxSelect = 10` makes it impossible to select more than 10 options.
+
+<MultiSelect
+  id="languages"
+  options={languages}
+  maxSelect={10}
+  placeholder="What languages do you know?"
+>
+  <LanguageSlot let:option {option} slot="selected" />
+  <LanguageSlot let:option {option} slot="option" />
+</MultiSelect>
 
 ```svelte
 <MultiSelect
   options={languages}
   maxSelect={10}
   placeholder="What languages do you know?"
-/>
-```
-
-<br />
-
-<MultiSelect
-  options={languages}
-  maxSelect={10}
-  placeholder="What languages do you know?"
 >
   <LanguageSlot let:option {option} slot="selected" />
+  <LanguageSlot let:option {option} slot="option" />
 </MultiSelect>
+```
 
 <br />
 

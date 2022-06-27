@@ -65,6 +65,9 @@ ul {
 ul li {
   padding: 1ex 0;
 }
+label {
+  font-weight: bold;
+}
 
 div.table {
   overflow: scroll;
