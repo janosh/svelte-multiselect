@@ -90,6 +90,8 @@ describe(`remove all button`, async () => {
   await page.goto(`/ui`)
 
   await page.click(`div.multiselect`) // open the dropdown
+  const ul_options = await page.$(`div.multiselect > ul.options`)
+  await ul_options?.waitForElementState(`visible`)
   await page.click(`div.multiselect > ul.options > li`) // select 1st option
 
   test(`only appears if more than 1 option is selected`, async () => {
