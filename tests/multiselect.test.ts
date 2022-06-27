@@ -290,57 +290,57 @@ describe(`allowUserOptions`, async () => {
 
     await page.press(selector, `Enter`)
 
-    const selected_text = await page.textContent(
-      `label[for='foods'] + .multiselect > ul.selected`
+    const li_selected_handle = await page.$(
+      `div.multiselect > ul.selected >> :scope:has-text("Durian")`
     )
-    expect(selected_text).toContain(`Durian`)
 
-    const filtered_options = await page.textContent(
-      `label[for='foods'] + .multiselect > ul.options`
+    expect(li_selected_handle).toBeTruthy()
+
+    await page.fill(selector, `Durian`)
+
+    const li_option_handle = await page.$(
+      `div.multiselect > ul.option >> :scope:has-text("Durian")`
     )
-    expect(filtered_options).not.toContain(`Durian`)
+    expect(li_option_handle).toBeNull()
   })
 
   test(`entering custom option in append mode adds it to selected
-      list and to options in dropdown menu`, async () => {
+      list _and_ to options in dropdown menu`, async () => {
     // i.e. it remains selectable from the dropdown after removing from selected
     const page = await context.newPage()
-    const selector = `input[name="foods-append"]`
+    const selector = `input[name="languages"]`
 
     await page.goto(`/allow-user-options`)
 
     await page.click(selector)
 
-    await page.fill(selector, `Miracle Berry`)
+    await page.fill(selector, `foobar`)
 
-    await page.press(selector, `Enter`)
+    await page.press(selector, `Enter`) // create custom option
+    await page.press(selector, `Backspace`) // remove custom option from selected items
 
-    await page.fill(selector, `Miracle Berry`)
+    await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
 
-    await page.press(selector, `ArrowDown`)
+    await page.click(`ul.options > li:has-text('foobar')`)
 
-    await page.press(selector, `Enter`)
-
-    const selected_text = await page.textContent(
-      `label[for='foods-append'] + .multiselect > ul.selected`
-    )
-    expect(selected_text).toContain(`Miracle Berry`)
+    const ul_selected = await page.$(`ul.selected > li:has-text('foobar')`)
+    expect(ul_selected).toBeTruthy()
   })
 
   test(`shows custom addOptionMsg if no options match`, async () => {
     const page = await context.newPage()
-    const selector = `input[name="foods-append"]`
+    const selector = `input[name="languages"]`
 
     await page.goto(`/allow-user-options`)
 
     await page.click(selector)
 
-    await page.fill(selector, `Foobar Berry`)
+    await page.fill(selector, `foobar`)
 
-    const selected_text = await page.textContent(
-      `label[for='foods-append'] + .multiselect > ul.options`
+    const custom_msg_li = await page.$(
+      `text='True polyglots can enter custom languages!'`
     )
-    expect(selected_text).toContain(`Add this custom food at your own risk!`)
+    expect(custom_msg_li).toBeTruthy()
   })
 })
 
