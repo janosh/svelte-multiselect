@@ -5,6 +5,15 @@
 
 ## User interface
 
+<label for="foods">Food Picker</label>
+<MultiSelect
+  id="foods"
+  options={foods}
+  placeholder="Pick your favorite foods!"
+  removeAllTitle="Delete all foods"
+  invalid
+/>
+
 ```svelte
 <MultiSelect
   options={foods}
@@ -13,18 +22,6 @@
   invalid
 />
 ```
-
-<br />
-
-<label for="foods">Food Picker</label>
-<MultiSelect
-  id="foods"
-  options={foods}
-  placeholder="Pick your favorite foods!"
-  removeAllTitle="Delete all foods"
-  invalid
-  parseLabelsAsHtml
-/>
 
 <br />
 
