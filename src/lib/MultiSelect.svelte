@@ -12,6 +12,7 @@
   export let disabled = false
   export let disabledTitle = `This field is disabled`
   export let options: Option[]
+  export let matchingOptions: Option[] = []
 
   export let selected: Option[] = []
   export let selectedLabels: (string | number)[] = []
