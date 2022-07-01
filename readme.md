@@ -35,11 +35,6 @@
 
 ## Recent breaking changes
 
-- v4.0.0 renamed the slots for customizing how selected options and dropdown list items are rendered:
-
-  - old: `<slot name="renderOptions" />`, new: `<slot name="option" />`
-  - old: `<slot name="renderSelected" />`, new: `<slot name="selected" />`
-
 - v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form or user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed to `div.multiselect.{readonly=>disabled}`.
 
 - v4.0.3 CSS variables starting with `--sms-input-<attr>` were renamed to just `--sms-<attr>`. E.g. `--sms-input-min-height` is now `--sms-min-height`.
@@ -251,7 +246,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
-  - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/en-US/docs/Web/CSS/overscroll-behavior).
+  - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
   - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);`: Box shadow of dropdown list.
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
