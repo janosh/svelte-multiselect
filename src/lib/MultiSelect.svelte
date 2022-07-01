@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { CustomEvents, DispatchEvents, get_label, get_value, Option } from './'
+  import { DispatchEvents, get_label, get_value, MultiSelectEvents, Option } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -12,6 +12,7 @@
   export let disabled = false
   export let disabledTitle = `This field is disabled`
   export let options: Option[]
+  export let matchingOptions: Option[] = []
 
   export let selected: Option[] = []
   export let selectedLabels: (string | number)[] = []
@@ -50,7 +51,7 @@
   export let invalid = false
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
 
-  type $$Events = CustomEvents
+  type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
   if (!(options?.length > 0)) console.error(`MultiSelect received no options`)
   if (parseLabelsAsHtml && allowUserOptions)
@@ -81,6 +82,8 @@
       !(op instanceof Object && op.disabled) &&
       !selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
   )
+  // reset activeOption if it's no longer in the matchingOptions list
+  $: if (activeOption && !matchingOptions.includes(activeOption)) activeOption = null
 
   // add an option to selected list
   function add(label: string | number) {
@@ -237,7 +240,7 @@
     searchText = ``
   }
 
-  $: isSelected = (label: string | number) => selectedLabels.includes(label)
+  $: is_selected = (label: string | number) => selectedLabels.includes(label)
 
   const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
@@ -361,10 +364,10 @@
       <li
         on:mousedown|stopPropagation
         on:mouseup|stopPropagation={() => {
-          if (!disabled) isSelected(label) ? remove(label) : add(label)
+          if (!disabled) is_selected(label) ? remove(label) : add(label)
         }}
-        title={disabled ? disabledTitle : (isSelected(label) && selectedTitle) || title}
-        class:selected={isSelected(label)}
+        title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
+        class:selected={is_selected(label)}
         class:active
         class:disabled
         class="{liOptionClass} {active ? liActiveOptionClass : ``}"
