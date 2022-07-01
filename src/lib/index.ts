@@ -26,7 +26,7 @@ export type DispatchEvents = {
   blur: undefined
 }
 
-export type CustomEvents = {
+export type MultiSelectEvents = {
   [key in keyof DispatchEvents]: CustomEvent<DispatchEvents[key]>
 }
 

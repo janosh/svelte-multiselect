@@ -237,7 +237,7 @@ describe(`multiselect`, async () => {
     const page = await context.newPage()
     await page.goto(`/ui`)
 
-    await page.click(`[placeholder="Pick your favorite foods!"]`)
+    await page.click(`input#foods`)
 
     for (const idx of [2, 5, 8]) {
       await page.click(`ul.options >> li >> nth=${idx}`)
@@ -284,25 +284,24 @@ describe(`allowUserOptions`, async () => {
     const selector = `input#foods`
 
     await page.goto(`/allow-user-options`)
-
     await page.click(selector)
 
-    await page.fill(selector, `Durian`)
+    // ensure custom option initially not present
+    let li_handle = await page.$(`div.multiselect > ul.selected >> text=Durian`)
+    expect(li_handle).toBeNull()
 
+    // create custom option
+    await page.fill(selector, `Durian`)
     await page.press(selector, `Enter`)
 
-    const li_selected_handle = await page.$(
-      `div.multiselect > ul.selected >> :has-text("Durian")`
-    )
+    // ensure custom option now present
+    li_handle = await page.$(`div.multiselect > ul.selected >> text=Durian`)
+    expect(li_handle).toBeTruthy()
 
-    expect(li_selected_handle).toBeTruthy()
-
+    // ensure custom option was not added to options
     await page.fill(selector, `Durian`)
-
-    const li_option_handle = await page.$(
-      `div.multiselect > ul.option >> :has-text("Durian")`
-    )
-    expect(li_option_handle).toBeNull()
+    li_handle = await page.$(`div.multiselect > ul.option >> text=Durian`)
+    expect(li_handle).toBeNull()
   })
 
   test(`entering custom option in append mode adds it to selected
@@ -322,9 +321,9 @@ describe(`allowUserOptions`, async () => {
 
     await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
 
-    await page.click(`ul.options > li:has-text('foobar')`)
+    await page.click(`ul.options >> text=foobar`)
 
-    const ul_selected = await page.$(`ul.selected > li:has-text('foobar')`)
+    const ul_selected = await page.$(`ul.selected >> text=foobar`)
     expect(ul_selected).toBeTruthy()
   })
 
@@ -336,12 +335,34 @@ describe(`allowUserOptions`, async () => {
 
     await page.click(selector)
 
+    // enter some search text so no options match, should cause addOptionMsg to be shown
     await page.fill(selector, `foobar`)
 
     const custom_msg_li = await page.$(
-      `text='True polyglots can enter custom languages!'`
+      `text=True polyglots can enter custom languages!`
     )
     expect(custom_msg_li).toBeTruthy()
+  })
+
+  // https://github.com/janosh/svelte-multiselect/issues/89
+  // Prior to fixing GH-89, pressing Enter to create the custom option would clear the
+  // entered text 'foobar' (good so far) but instead of creating a custom option from it,
+  // delete the previously added option 'Python'. was due to Python still being the activeOption
+  // so Enter key would toggle it.
+  test(`creates custom option correctly after selecting a provided option`, async () => {
+    const page = await context.newPage()
+    const selector = `input#languages`
+
+    await page.goto(`/allow-user-options`)
+
+    await page.click(selector)
+    await page.click(`text=Python`)
+
+    await page.fill(selector, `foobar`)
+    await page.press(selector, `Enter`) // create custom option
+
+    const ul_selected = await page.$(`ul.selected >> text=foobar`)
+    expect(ul_selected).toBeTruthy()
   })
 })
 
