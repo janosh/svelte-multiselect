@@ -4,7 +4,7 @@
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
 
   // make some options pre-selected
-  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(',')
+  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
   let selected_append = ['Haskell', 'TypeScript']
 </script>
 
