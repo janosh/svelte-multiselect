@@ -433,3 +433,32 @@ describe(`parseLabelsAsHtml`, async () => {
     expect(has_expected_error).toBe(true)
   })
 })
+
+describe(`maxSelect`, async () => {
+  const page = await context.newPage()
+
+  await page.goto(`/max-select`)
+
+  test(`options dropdown disappears when reaching maxSelect items`, async () => {
+    await page.click(`input#languages`)
+
+    // select any 5 options
+    for (const idx of Array(5).fill(0)) {
+      await page.click(`ul.options > li >> nth=${idx}`)
+    }
+    const ul_options = await page.$(`ul.options`)
+    expect(ul_options?.isHidden()).toBeTruthy()
+  })
+
+  test(`no more options can be added after reaching maxSelect items`, async () => {
+    // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
+    expect(await page.$$(`ul.selected > li[aria-selected=true]`)).toHaveLength(
+      5
+    )
+    await page.click(`input#languages`) // re-open options dropdown
+    await page.click(`ul.options > li >> nth=0`)
+    expect(await page.$$(`ul.selected > li[aria-selected=true]`)).toHaveLength(
+      5
+    )
+  })
+})
