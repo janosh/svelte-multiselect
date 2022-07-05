@@ -128,9 +128,7 @@ describe(`external CSS classes`, async () => {
   await page.goto(`/css-classes`)
 
   await page.click(`input#foods`)
-  await page.waitForSelector(`div.multiselect > ul.options:visible`)
-
-  await page.hover(`text=🍌 Banana`) // hover any option to give it active state (can also use arrow keys)
+  await page.hover(`ul.options > li`) // hover any option to give it active state (can also use arrow keys)
 
   for (const [prop, selector, cls] of [
     [`outerDivClass`, `div.multiselect`, `foo`],
