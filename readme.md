@@ -98,7 +98,7 @@ Full list of props/bindable variables for this component:
 | `parseLabelsAsHtml`    | `false`                             | Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).                                                                                 |
 | `addOptionMsg`         | `'Create this option...'`           | Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.                                                                                                                                                                                                                                                                                                                    |
 | `loading`              | `false`                             | Whether the component should display a spinner to indicate it's in loading state. Use `<slot name='spinner'>` to specify a custom spinner.                                                                                                                                                                                                                                                                                        |
-| `removeBtnTitle`       | `'Remove'`                          | Title text to display when user hovers over button (cross icon) to remove selected option.                                                                                                                                                                                                                                                                                                                                        |
+| `removeBtnTitle`       | `'Remove'`                          | Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).                                                                                                                                                                                                                                                                                                                    |
 | `removeAllTitle`       | `'Remove all'`                      | Title text to display when user hovers over remove-all button.                                                                                                                                                                                                                                                                                                                                                                    |
 | `defaultDisabledTitle` | `'This option is disabled'`         | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.                                                                                                                                                                                                                                                                                               |
 | `autocomplete`         | `'off'`                             | Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.                                                                                                                                                                                                                        |
@@ -131,6 +131,7 @@ Full list of props/bindable variables for this component:
 - `slot="selected"`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
 - `slot="spinner"`: Custom spinner component to display when in `loading` state. Receives no props.
 - `slot="disabled-icon"`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `<span slot="disabled-icon" />` or `div` to remove the default disabled icon.
+- `slot="remove-icon"`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
 
 Example:
 
@@ -149,6 +150,7 @@ Example:
   </span>
 
   <CustomSpinner slot="spinner">
+  <strong slot="remove-icon">X</strong>
 </MultiSelect>
 ```
 
@@ -242,7 +244,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `padding: var(--sms-selected-li-padding, 5pt 1pt)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
-  - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the cross-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
