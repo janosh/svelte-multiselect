@@ -298,7 +298,7 @@
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
           >
-            <CrossIcon width="15px" />
+            <slot name="remove-icon"><CrossIcon width="15px" /></slot>
           </button>
         {/if}
       </li>
@@ -346,7 +346,7 @@
         on:mouseup|stopPropagation={remove_all}
         on:keydown={if_enter_or_space(remove_all)}
       >
-        <CrossIcon width="15px" />
+        <slot name="remove-icon"><CrossIcon width="15px" /></slot>
       </button>
     {/if}
   {/if}
