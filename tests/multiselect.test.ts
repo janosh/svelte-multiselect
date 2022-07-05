@@ -1,11 +1,15 @@
 import * as playwright from 'playwright'
 import { describe, expect, test } from 'vitest'
+// to run tests in this file, first start the dev server with `yarn dev` followed
+// by `yarn test`. Can be combined into `yarn dev &; yarn test`.
 
+// run tests in different browser with `BROWSER=webkit yarn test`
 const vendor = (process.env.BROWSER ?? `chromium`) as
   | 'chromium'
   | 'firefox'
   | 'webkit'
 
+// run tests on different port with `PORT=3001 yarn test`
 const port = process.env.PORT ?? 3000
 
 const headful = process.env.HEADFUL
@@ -112,10 +116,10 @@ describe(`remove all button`, async () => {
 
   test(`should remove all selected options`, async () => {
     await page.click(`div.multiselect > button.remove-all`)
-    const selected = await page.$$(
+    const selected_items = await page.$$(
       `div.multiselect > ul.selected > li > button`
     )
-    expect(selected.length).toBe(0)
+    expect(selected_items.length).toBe(0)
   })
 })
 
@@ -123,11 +127,8 @@ describe(`external CSS classes`, async () => {
   const page = await context.newPage()
   await page.goto(`/css-classes`)
 
-  const ul_options = await page.$(`div.multiselect > ul.options`)
   await page.click(`input#foods`)
-  await ul_options?.waitForElementState(`visible`)
-
-  await page.hover(`text=🍌 Banana`) // hover any option to give it active state (can also use arrow keys)
+  await page.hover(`ul.options > li`) // hover any option to give it active state (can also use arrow keys)
 
   for (const [prop, selector, cls] of [
     [`outerDivClass`, `div.multiselect`, `foo`],
@@ -238,16 +239,15 @@ describe(`multiselect`, async () => {
     await page.goto(`/ui`)
 
     await page.click(`input#foods`)
-
     for (const idx of [2, 5, 8]) {
-      await page.click(`ul.options >> li >> nth=${idx}`)
+      await page.click(`ul.options > li >> nth=${idx}`)
     }
 
     await page.click(`.remove-all`)
 
     // repeatedly select 1st option
     for (const idx of [0, 0, 0]) {
-      await page.click(`ul.options >> li >> nth=${idx}`)
+      await page.click(`ul.options > li >> nth=${idx}`)
     }
 
     const selected_text = await page.textContent(
@@ -431,5 +431,52 @@ describe(`parseLabelsAsHtml`, async () => {
     )
 
     expect(has_expected_error).toBe(true)
+  })
+})
+
+describe(`maxSelect`, async () => {
+  const page = await context.newPage()
+
+  await page.goto(`/max-select`)
+
+  test(`options dropdown disappears when reaching maxSelect items`, async () => {
+    await page.click(`input#languages`)
+
+    // select any 5 options
+    for (const idx of Array(5).fill(0)) {
+      await page.click(`ul.options > li >> nth=${idx}`)
+    }
+    const ul_options = await page.$(`ul.options`)
+    expect(ul_options?.isHidden()).toBeTruthy()
+  })
+
+  test(`no more options can be added after reaching maxSelect items`, async () => {
+    // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
+    expect(await page.$$(`ul.selected > li[aria-selected=true]`)).toHaveLength(
+      5
+    )
+    await page.click(`input#languages`) // re-open options dropdown
+    await page.click(`ul.options > li >> nth=0`)
+    expect(await page.$$(`ul.selected > li[aria-selected=true]`)).toHaveLength(
+      5
+    )
+  })
+})
+
+describe(`slots`, async () => {
+  const page = await context.newPage()
+
+  await page.goto(`/slots`)
+
+  test(`renders remove-icon slot for individual remove buttons and the remove-all button`, async () => {
+    await page.click(`input#svelte-svg-slot-remove-icon`) // open dropdown
+    await page.click(`ul.options > li`) // select any option
+    await page.click(`ul.options > li`) // select 2nd option
+
+    const svg_icons = await page.$$(`ul.selected > li > button > svg`)
+    expect(svg_icons).toHaveLength(2) // check that remove-icon slot is rendered
+
+    const remove_all_svg = await page.$$(`button.remove-all > svg`)
+    expect(remove_all_svg).toHaveLength(1) // check that remove-all slot is rendered
   })
 })
