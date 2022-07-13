@@ -53,7 +53,8 @@
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
-  if (!(options?.length > 0) && !allowUserOptions) console.error(`MultiSelect received no options`)
+  if (!(options?.length > 0) && !allowUserOptions)
+    console.error(`MultiSelect received no options`)
   if (parseLabelsAsHtml && allowUserOptions)
     console.warn(
       `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
