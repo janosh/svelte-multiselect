@@ -111,8 +111,18 @@
       ) {
         // user entered text but no options match, so if allowUserOptions=true | 'append', we create
         // a new option from the user-entered text
-        if (typeof options[0] === `string`) option = searchText
-        else option = { label: searchText, value: searchText }
+        if (typeof options[0] === `object`) {
+          // if 1st option is an object, we create new option as object to keep type homogeneity
+          option = { label: searchText, value: searchText }
+        } else {
+          if (
+            [`number`, `undefined`].includes(typeof options[0]) &&
+            !isNaN(Number(searchText))
+          ) {
+            // create new option as number if it parses to a number and 1st option is also number or missing
+            option = Number(searchText)
+          } else option = searchText // else create custom option as string
+        }
         if (allowUserOptions === `append`) options = [...options, option]
       }
       searchText = `` // reset search string on selection
