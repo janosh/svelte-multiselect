@@ -6,6 +6,7 @@
   // make some options pre-selected
   let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
   let selected_append = ['Haskell', 'TypeScript']
+  let selected_empty = []
 </script>
 
 <label for="foods">Allow Custom User Input</label>
@@ -50,4 +51,32 @@
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
 </MultiSelect>
+```
+
+<br />
+<br />
+<br />
+
+<label for="languages">Start empty</label>
+
+Starting with no options and letting the user populate their selection from scratch.
+
+{#if selected_empty?.length > 0}
+  <pre><code>selected = {JSON.stringify(selected_empty)}</code></pre>
+{/if}
+
+<MultiSelect
+  id="no-default-options"
+  allowUserOptions="append"
+  bind:selected={selected_empty}
+  noOptionsMsg=""
+/>
+
+```svelte
+<MultiSelect
+  id="no-default-options"
+  allowUserOptions="append"
+  bind:selected={selected_empty}
+  noOptionsMsg=""
+/>
 ```
