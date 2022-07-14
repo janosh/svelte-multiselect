@@ -371,64 +371,69 @@
     {/if}
   {/if}
 
-  <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
-    {#each matchingOptions as option, idx}
-      {@const {
-        label,
-        disabled = null,
-        title = null,
-        selectedTitle = null,
-        disabledTitle = defaultDisabledTitle,
-      } = option instanceof Object ? option : { label: option }}
-      {@const active = activeOption && get_label(activeOption) === label}
-      <li
-        on:mousedown|stopPropagation
-        on:mouseup|stopPropagation={() => {
-          if (!disabled) is_selected(label) ? remove(label) : add(label)
-        }}
-        title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
-        class:selected={is_selected(label)}
-        class:active
-        class:disabled
-        class="{liOptionClass} {active ? liActiveOptionClass : ``}"
-        on:mouseover={() => {
-          if (!disabled) activeOption = option
-        }}
-        on:focus={() => {
-          if (!disabled) activeOption = option
-        }}
-        on:mouseout={() => (activeOption = null)}
-        on:blur={() => (activeOption = null)}
-        aria-selected="false"
-      >
-        <slot name="option" {option} {idx}>
-          {#if parseLabelsAsHtml}
-            {@html get_label(option)}
-          {:else}
-            {get_label(option)}
-          {/if}
-        </slot>
-      </li>
-    {:else}
-      {#if allowUserOptions && searchText}
+  <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
+  {#if searchText || options?.length > 0}
+    <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
+      {#each matchingOptions as option, idx}
+        {@const {
+          label,
+          disabled = null,
+          title = null,
+          selectedTitle = null,
+          disabledTitle = defaultDisabledTitle,
+        } = option instanceof Object ? option : { label: option }}
+        {@const active = activeOption && get_label(activeOption) === label}
         <li
           on:mousedown|stopPropagation
-          on:mouseup|stopPropagation={() => add(searchText)}
-          title={addOptionMsg}
-          class:active={activeMsg}
-          on:mouseover={() => (activeMsg = true)}
-          on:focus={() => (activeMsg = true)}
-          on:mouseout={() => (activeMsg = false)}
-          on:blur={() => (activeMsg = false)}
+          on:mouseup|stopPropagation={() => {
+            if (!disabled) is_selected(label) ? remove(label) : add(label)
+          }}
+          title={disabled
+            ? disabledTitle
+            : (is_selected(label) && selectedTitle) || title}
+          class:selected={is_selected(label)}
+          class:active
+          class:disabled
+          class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+          on:mouseover={() => {
+            if (!disabled) activeOption = option
+          }}
+          on:focus={() => {
+            if (!disabled) activeOption = option
+          }}
+          on:mouseout={() => (activeOption = null)}
+          on:blur={() => (activeOption = null)}
           aria-selected="false"
         >
-          {addOptionMsg}
+          <slot name="option" {option} {idx}>
+            {#if parseLabelsAsHtml}
+              {@html get_label(option)}
+            {:else}
+              {get_label(option)}
+            {/if}
+          </slot>
         </li>
       {:else}
-        <span>{noOptionsMsg}</span>
-      {/if}
-    {/each}
-  </ul>
+        {#if allowUserOptions && searchText}
+          <li
+            on:mousedown|stopPropagation
+            on:mouseup|stopPropagation={() => add(searchText)}
+            title={addOptionMsg}
+            class:active={activeMsg}
+            on:mouseover={() => (activeMsg = true)}
+            on:focus={() => (activeMsg = true)}
+            on:mouseout={() => (activeMsg = false)}
+            on:blur={() => (activeMsg = false)}
+            aria-selected="false"
+          >
+            {addOptionMsg}
+          </li>
+        {:else}
+          <span>{noOptionsMsg}</span>
+        {/if}
+      {/each}
+    </ul>
+  {/if}
 </div>
 
 <style>
