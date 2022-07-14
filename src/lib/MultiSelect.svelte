@@ -53,16 +53,25 @@
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
-  if (!(options?.length > 0) && !allowUserOptions)
-    console.error(`MultiSelect received no options`)
-  if (parseLabelsAsHtml && allowUserOptions)
+  if (!(options?.length > 0)) {
+    if (allowUserOptions) {
+      options = [] // initializing as array avoids errors when component mounts
+    } else {
+      // only error for empty options if user is not allowed to create custom options
+      console.error(`MultiSelect received no options`)
+    }
+  }
+  if (parseLabelsAsHtml && allowUserOptions) {
     console.warn(
       `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
     )
+  }
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
+  if (!Array.isArray(selected)) {
+    console.error(`selected prop must be an array, got ${selected}`)
+  }
 
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
