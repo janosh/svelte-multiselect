@@ -364,6 +364,33 @@ describe(`allowUserOptions`, async () => {
     const ul_selected = await page.$(`ul.selected >> text=foobar`)
     expect(ul_selected).toBeTruthy()
   })
+
+  test(`can create custom option starting from empty options array`, async () => {
+    // and doesn't error about empty options when custom options allowed
+    const page = await context.newPage()
+    const logs: string[] = []
+    page.on(`console`, (msg) => {
+      if (msg.type() === `error`) logs.push(msg.text())
+    })
+    const selector = `input#no-default-options`
+
+    await page.goto(`/allow-user-options`)
+
+    await page.click(selector)
+
+    await page.fill(selector, `foo`)
+    await page.press(selector, `Enter`) // create custom option
+    await page.fill(selector, `42`)
+    await page.press(selector, `Enter`) // 2nd create custom option
+
+    const ul_selected = await page.$(`ul.selected >> text=42`)
+    expect(ul_selected).toBeTruthy()
+
+    const logged_err_msg = logs.some((msg) =>
+      msg.includes(`MultiSelect received no options`)
+    )
+    expect(logged_err_msg).toBe(false)
+  })
 })
 
 describe(`sortSelected`, async () => {

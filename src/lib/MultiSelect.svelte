@@ -53,15 +53,25 @@
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
-  if (!(options?.length > 0)) console.error(`MultiSelect received no options`)
-  if (parseLabelsAsHtml && allowUserOptions)
+  if (!(options?.length > 0)) {
+    if (allowUserOptions) {
+      options = [] // initializing as array avoids errors when component mounts
+    } else {
+      // only error for empty options if user is not allowed to create custom options
+      console.error(`MultiSelect received no options`)
+    }
+  }
+  if (parseLabelsAsHtml && allowUserOptions) {
     console.warn(
       `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
     )
+  }
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!Array.isArray(selected)) console.error(`selected prop must be an array`)
+  if (!Array.isArray(selected)) {
+    console.error(`selected prop must be an array, got ${selected}`)
+  }
 
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
@@ -101,8 +111,18 @@
       ) {
         // user entered text but no options match, so if allowUserOptions=true | 'append', we create
         // a new option from the user-entered text
-        if (typeof options[0] === `string`) option = searchText
-        else option = { label: searchText, value: searchText }
+        if (typeof options[0] === `object`) {
+          // if 1st option is an object, we create new option as object to keep type homogeneity
+          option = { label: searchText, value: searchText }
+        } else {
+          if (
+            [`number`, `undefined`].includes(typeof options[0]) &&
+            !isNaN(Number(searchText))
+          ) {
+            // create new option as number if it parses to a number and 1st option is also number or missing
+            option = Number(searchText)
+          } else option = searchText // else create custom option as string
+        }
         if (allowUserOptions === `append`) options = [...options, option]
       }
       searchText = `` // reset search string on selection
@@ -351,64 +371,69 @@
     {/if}
   {/if}
 
-  <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
-    {#each matchingOptions as option, idx}
-      {@const {
-        label,
-        disabled = null,
-        title = null,
-        selectedTitle = null,
-        disabledTitle = defaultDisabledTitle,
-      } = option instanceof Object ? option : { label: option }}
-      {@const active = activeOption && get_label(activeOption) === label}
-      <li
-        on:mousedown|stopPropagation
-        on:mouseup|stopPropagation={() => {
-          if (!disabled) is_selected(label) ? remove(label) : add(label)
-        }}
-        title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
-        class:selected={is_selected(label)}
-        class:active
-        class:disabled
-        class="{liOptionClass} {active ? liActiveOptionClass : ``}"
-        on:mouseover={() => {
-          if (!disabled) activeOption = option
-        }}
-        on:focus={() => {
-          if (!disabled) activeOption = option
-        }}
-        on:mouseout={() => (activeOption = null)}
-        on:blur={() => (activeOption = null)}
-        aria-selected="false"
-      >
-        <slot name="option" {option} {idx}>
-          {#if parseLabelsAsHtml}
-            {@html get_label(option)}
-          {:else}
-            {get_label(option)}
-          {/if}
-        </slot>
-      </li>
-    {:else}
-      {#if allowUserOptions && searchText}
+  <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
+  {#if searchText || options?.length > 0}
+    <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
+      {#each matchingOptions as option, idx}
+        {@const {
+          label,
+          disabled = null,
+          title = null,
+          selectedTitle = null,
+          disabledTitle = defaultDisabledTitle,
+        } = option instanceof Object ? option : { label: option }}
+        {@const active = activeOption && get_label(activeOption) === label}
         <li
           on:mousedown|stopPropagation
-          on:mouseup|stopPropagation={() => add(searchText)}
-          title={addOptionMsg}
-          class:active={activeMsg}
-          on:mouseover={() => (activeMsg = true)}
-          on:focus={() => (activeMsg = true)}
-          on:mouseout={() => (activeMsg = false)}
-          on:blur={() => (activeMsg = false)}
+          on:mouseup|stopPropagation={() => {
+            if (!disabled) is_selected(label) ? remove(label) : add(label)
+          }}
+          title={disabled
+            ? disabledTitle
+            : (is_selected(label) && selectedTitle) || title}
+          class:selected={is_selected(label)}
+          class:active
+          class:disabled
+          class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+          on:mouseover={() => {
+            if (!disabled) activeOption = option
+          }}
+          on:focus={() => {
+            if (!disabled) activeOption = option
+          }}
+          on:mouseout={() => (activeOption = null)}
+          on:blur={() => (activeOption = null)}
           aria-selected="false"
         >
-          {addOptionMsg}
+          <slot name="option" {option} {idx}>
+            {#if parseLabelsAsHtml}
+              {@html get_label(option)}
+            {:else}
+              {get_label(option)}
+            {/if}
+          </slot>
         </li>
       {:else}
-        <span>{noOptionsMsg}</span>
-      {/if}
-    {/each}
-  </ul>
+        {#if allowUserOptions && searchText}
+          <li
+            on:mousedown|stopPropagation
+            on:mouseup|stopPropagation={() => add(searchText)}
+            title={addOptionMsg}
+            class:active={activeMsg}
+            on:mouseover={() => (activeMsg = true)}
+            on:focus={() => (activeMsg = true)}
+            on:mouseout={() => (activeMsg = false)}
+            on:blur={() => (activeMsg = false)}
+            aria-selected="false"
+          >
+            {addOptionMsg}
+          </li>
+        {:else}
+          <span>{noOptionsMsg}</span>
+        {/if}
+      {/each}
+    </ul>
+  {/if}
 </div>
 
 <style>
