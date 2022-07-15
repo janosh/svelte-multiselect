@@ -1,6 +1,7 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import { DispatchEvents, get_label, get_value, MultiSelectEvents, Option } from './'
+  import type { DispatchEvents, MultiSelectEvents, Option } from './'
+  import { get_label, get_value } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -63,7 +64,7 @@
   }
   if (parseLabelsAsHtml && allowUserOptions) {
     console.warn(
-      `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+      `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
     )
   }
   if (maxSelect !== null && maxSelect < 1) {
