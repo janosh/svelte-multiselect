@@ -1,7 +1,6 @@
 import adapter from '@sveltejs/adapter-static'
 import { s } from 'hastscript'
 import { mdsvex } from 'mdsvex'
-import path from 'path'
 import linkHeadings from 'rehype-autolink-headings'
 import headingSlugs from 'rehype-slug'
 import preprocess from 'svelte-preprocess'
@@ -40,17 +39,6 @@ export default {
       // exclude auxiliary files from package.json "exports"
       exports: (filepath) =>
         [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
-    },
-
-    vite: {
-      resolve: {
-        alias: {
-          $src: path.resolve(`./src`),
-        },
-      },
-      server: {
-        fs: { allow: [`..`] }, // needed to import readme.md
-      },
     },
   },
 }

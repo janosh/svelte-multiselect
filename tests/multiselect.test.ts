@@ -1,33 +1,11 @@
-import * as playwright from 'playwright'
-import { describe, expect, test } from 'vitest'
-// to run tests in this file, first start the dev server with `yarn dev` followed
-// by `yarn test`. Can be combined into `yarn dev &; yarn test`.
+import type { Page } from '@playwright/test'
+import { expect, test } from '@playwright/test'
 
-// run tests in different browser with `BROWSER=webkit yarn test`
-const vendor = (process.env.BROWSER ?? `chromium`) as
-  | 'chromium'
-  | 'firefox'
-  | 'webkit'
+// to run tests in this file, use `npm/yarn run test`
 
-// run tests on different port with `PORT=3001 yarn test`
-const port = process.env.PORT ?? 3000
-
-const headful = process.env.HEADFUL
-const headful_config = {
-  headless: false,
-  slowMo: 1000,
-}
-
-const browser = await playwright[vendor].launch(headful ? headful_config : {})
-const context = await browser.newContext({
-  baseURL: `http://localhost:${port}`,
-})
-
-describe(`input`, async () => {
-  const page = await context.newPage()
-  await page.goto(`/ui`)
-
-  test(`opens dropdown on focus`, async () => {
+test.describe(`input`, async () => {
+  test(`opens dropdown on focus`, async ({ page }) => {
+    await page.goto(`/ui`)
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
 
@@ -41,7 +19,8 @@ describe(`input`, async () => {
     expect(visible_dropdown).toBeTruthy()
   })
 
-  test(`closes dropdown on tab out`, async () => {
+  test(`closes dropdown on tab out`, async ({ page }) => {
+    await page.goto(`/ui`)
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
     await page.focus(`input[id='foods']`)
@@ -60,7 +39,10 @@ describe(`input`, async () => {
     expect(opacity).toBe(`0`)
   })
 
-  test(`filters dropdown to show only matching options when entering text`, async () => {
+  test(`filters dropdown to show only matching options when entering text`, async ({
+    page,
+  }) => {
+    await page.goto(`/ui`)
     await page.fill(`input[id='foods']`, `Pineapple`)
 
     expect(
@@ -71,13 +53,11 @@ describe(`input`, async () => {
   })
 })
 
-describe(`remove single button`, async () => {
-  const page = await context.newPage()
-  await page.goto(`/ui`)
+test.describe(`remove single button`, async () => {
+  test(`should remove 1 option`, async ({ page }) => {
+    await page.goto(`/ui`)
 
-  await page.click(`input#foods`)
-
-  test(`should remove 1 option`, async () => {
+    await page.click(`input#foods`)
     await page.click(`text=🍌 Banana`)
 
     await page.click(`button[title='Remove 🍌 Banana']`)
@@ -89,47 +69,50 @@ describe(`remove single button`, async () => {
   })
 })
 
-describe(`remove all button`, async () => {
-  const page = await context.newPage()
-  await page.goto(`/ui`)
+test.describe(`remove all button`, async () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/ui`)
 
-  await page.click(`div.multiselect`) // open the dropdown
-  const ul_options = await page.$(`div.multiselect > ul.options`)
-  await ul_options?.waitForElementState(`visible`)
-  await page.click(`div.multiselect > ul.options > li`) // select 1st option
-
-  test(`only appears if more than 1 option is selected`, async () => {
-    expect(await page.$(`button.remove-all`)).toBeNull()
-    await page.click(`div.multiselect > ul.options > li`) // select next 1st option
-    expect(await page.$(`button.remove-all`)).toBeTruthy()
+    await page.click(`div.multiselect`) // open the dropdown
+    const ul_options = await page.$(`div.multiselect > ul.options`)
+    await ul_options?.waitForElementState(`visible`)
+    // select first 2 options since remove-all is only visible if more than 1 option is selected
+    await page.click(`div.multiselect > ul.options > li`)
+    await page.click(`div.multiselect > ul.options > li`)
   })
 
-  test(`has custom title`, async () => {
-    const btn = await page.$(`button.remove-all`)
-    expect(await btn?.getAttribute(`title`)).toBe(`Delete all foods`)
+  test(`only appears if more than 1 option is selected and removes all selected`, async ({
+    page,
+  }) => {
+    let selected_items = await page.$$(
+      `div.multiselect > ul.selected > li > button`
+    )
+    expect(selected_items).toHaveLength(2)
+
+    // await Promise.all([
+    //   await page.waitForEvent(`removeAll`),
+    // ])
+    await page.click(`button.remove-all`)
+    expect(await page.$(`button.remove-all`)).toBeNull() // remove-all button is hidden when nothing selected
+
+    selected_items = await page.$$(
+      `div.multiselect > ul.selected > li > button`
+    )
+    expect(selected_items).toHaveLength(0)
+  })
+
+  test(`has custom title`, async ({ page }) => {
+    const button_title = await page.getAttribute(`button.remove-all`, `title`)
+    expect(await button_title).toBe(`Delete all foods`)
   })
 
   // TODO: test button emits removeAll event
-  // test(`emits removeAll event`, async () => {
-  //   await page.waitForEvent(`removeAll`)
+  // test(`emits removeAll event`, async ({ page }) => {
+  //   await page.waitForEvent(`removeAll`),
   // })
-
-  test(`should remove all selected options`, async () => {
-    await page.click(`div.multiselect > button.remove-all`)
-    const selected_items = await page.$$(
-      `div.multiselect > ul.selected > li > button`
-    )
-    expect(selected_items.length).toBe(0)
-  })
 })
 
-describe(`external CSS classes`, async () => {
-  const page = await context.newPage()
-  await page.goto(`/css-classes`)
-
-  await page.click(`input#foods`)
-  await page.hover(`ul.options > li`) // hover any option to give it active state (can also use arrow keys)
-
+test.describe(`external CSS classes`, async () => {
   for (const [prop, selector, cls] of [
     [`outerDivClass`, `div.multiselect`, `foo`],
     [`ulSelectedClass`, `div.multiselect > ul.selected`, `bar`],
@@ -140,48 +123,58 @@ describe(`external CSS classes`, async () => {
     [`liSelectedClass`, `div.multiselect > ul.selected > li`, `hi`],
     [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`, `mom`],
   ]) {
-    test(`${prop} attaches to correct DOM node`, async () => {
+    test(`${prop} `, async ({ page }) => {
+      await page.goto(`/css-classes`)
+
+      await page.click(`input#foods`)
+      await page.hover(`ul.options > li`) // hover any option to give it active state (can also use arrow keys)
+
       const node = await page.$(`${selector}.${cls}`)
       expect(node).toBeTruthy()
     })
   }
 })
 
-describe(`disabled multiselect`, async () => {
-  const page = await context.newPage()
-  await page.goto(`/disabled`)
-  const div = await page.$(`div.multiselect.disabled`)
-
-  test(`has attribute aria-disabled`, async () => {
-    expect(await div?.getAttribute(`aria-disabled`)).to.equal(`true`)
+test.describe(`disabled multiselect`, async () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/disabled`)
   })
 
-  test(`has disabled title`, async () => {
-    expect(await div?.getAttribute(`title`)).to.equal(
+  test(`has attribute aria-disabled`, async ({ page }) => {
+    const div = await page.$(`div.multiselect.disabled`)
+    expect(await div?.getAttribute(`aria-disabled`)).toBe(`true`)
+  })
+
+  test(`has disabled title`, async ({ page }) => {
+    const div = await page.$(`div.multiselect.disabled`)
+    expect(await div?.getAttribute(`title`)).toBe(
       `Super special disabled message`
     )
   })
 
-  test(`has input attribute disabled`, async () => {
+  test(`has input attribute disabled`, async ({ page }) => {
     const input = await page.$(`.disabled > ul.selected > li > input`)
-    expect(await input?.isDisabled()).to.equal(true)
+    expect(await input?.isDisabled()).toBe(true)
   })
 
-  test(`renders no buttons`, async () => {
+  test(`renders no buttons`, async ({ page }) => {
     expect(await page.$$(`button`)).toHaveLength(0)
   })
 
-  test(`renders disabled slot`, async () => {
+  test(`renders disabled slot`, async ({ page }) => {
     const span = await page.textContent(`[slot='disabled-icon']`)
     expect(await span).toBe(`This component is disabled. Get outta here!`)
   })
 })
 
-describe(`accessibility`, async () => {
-  const page = await context.newPage()
-  await page.goto(`/ui`)
+test.describe(`accessibility`, async () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/ui`)
+  })
 
-  test(`input is aria-invalid when component has invalid=true`, async () => {
+  test(`input is aria-invalid when component has invalid=true`, async ({
+    page,
+  }) => {
     // don't interact with component before this test as it will set invalid=false
     const invalid = await page.getAttribute(
       `input[id='foods']`,
@@ -191,14 +184,14 @@ describe(`accessibility`, async () => {
     expect(invalid).toBe(`true`)
   })
 
-  test(`has aria-expanded='false' when closed`, async () => {
+  test(`has aria-expanded='false' when closed`, async ({ page }) => {
     const before = await page.getAttribute(`div.multiselect`, `aria-expanded`, {
       strict: true,
     })
     expect(before).toBe(`false`)
   })
 
-  test(`has aria-expanded='true' when open`, async () => {
+  test(`has aria-expanded='true' when open`, async ({ page }) => {
     await page.click(`div.multiselect`) // open the dropdown
     const after = await page.getAttribute(`div.multiselect`, `aria-expanded`, {
       strict: true,
@@ -206,7 +199,9 @@ describe(`accessibility`, async () => {
     expect(after).toBe(`true`)
   })
 
-  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async () => {
+  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({
+    page,
+  }) => {
     await page.click(`div.multiselect`) // open the dropdown
     await page.click(`div.multiselect > ul.options > li`) // select 1st option
     const aria_option = await page.getAttribute(
@@ -221,7 +216,7 @@ describe(`accessibility`, async () => {
     expect(aria_selected).toBe(`true`)
   })
 
-  test(`invisible input.form-control is aria-hidden`, async () => {
+  test(`invisible input.form-control is aria-hidden`, async ({ page }) => {
     // https://github.com/janosh/svelte-multiselect/issues/58
 
     const hidden = await page.getAttribute(
@@ -233,9 +228,8 @@ describe(`accessibility`, async () => {
   })
 })
 
-describe(`multiselect`, async () => {
-  test(`can select and remove many options`, async () => {
-    const page = await context.newPage()
+test.describe(`multiselect`, async () => {
+  test(`can select and remove many options`, async ({ page }) => {
     await page.goto(`/ui`)
 
     await page.click(`input#foods`)
@@ -258,8 +252,9 @@ describe(`multiselect`, async () => {
     }
   })
 
-  test(`retains its selected state on page reload when bound to localStorage`, async () => {
-    const page = await context.newPage()
+  test(`retains its selected state on page reload when bound to localStorage`, async ({
+    page,
+  }) => {
     await page.goto(`/persistent`)
 
     await page.click(`input#languages`)
@@ -278,9 +273,10 @@ describe(`multiselect`, async () => {
   })
 })
 
-describe(`allowUserOptions`, async () => {
-  test(`entering custom option adds it to selected but not to options`, async () => {
-    const page = await context.newPage()
+test.describe(`allowUserOptions`, async () => {
+  test(`entering custom option adds it to selected but not to options`, async ({
+    page,
+  }) => {
     const selector = `input#foods`
 
     await page.goto(`/allow-user-options`)
@@ -305,9 +301,8 @@ describe(`allowUserOptions`, async () => {
   })
 
   test(`entering custom option in append mode adds it to selected
-      list _and_ to options in dropdown menu`, async () => {
+      list _and_ to options in dropdown menu`, async ({ page }) => {
     // i.e. it remains selectable from the dropdown after removing from selected
-    const page = await context.newPage()
     const selector = `input#languages`
 
     await page.goto(`/allow-user-options`)
@@ -327,8 +322,7 @@ describe(`allowUserOptions`, async () => {
     expect(ul_selected).toBeTruthy()
   })
 
-  test(`shows custom addOptionMsg if no options match`, async () => {
-    const page = await context.newPage()
+  test(`shows custom addOptionMsg if no options match`, async ({ page }) => {
     const selector = `input#languages`
 
     await page.goto(`/allow-user-options`)
@@ -349,8 +343,9 @@ describe(`allowUserOptions`, async () => {
   // entered text 'foobar' (good so far) but instead of creating a custom option from it,
   // delete the previously added option 'Python'. was due to Python still being the activeOption
   // so Enter key would toggle it.
-  test(`creates custom option correctly after selecting a provided option`, async () => {
-    const page = await context.newPage()
+  test(`creates custom option correctly after selecting a provided option`, async ({
+    page,
+  }) => {
     const selector = `input#languages`
 
     await page.goto(`/allow-user-options`)
@@ -365,9 +360,10 @@ describe(`allowUserOptions`, async () => {
     expect(ul_selected).toBeTruthy()
   })
 
-  test(`can create custom option starting from empty options array`, async () => {
+  test(`can create custom option starting from empty options array`, async ({
+    page,
+  }) => {
     // and doesn't error about empty options when custom options allowed
-    const page = await context.newPage()
     const logs: string[] = []
     page.on(`console`, (msg) => {
       if (msg.type() === `error`) logs.push(msg.text())
@@ -393,13 +389,12 @@ describe(`allowUserOptions`, async () => {
   })
 })
 
-describe(`sortSelected`, async () => {
+test.describe(`sortSelected`, async () => {
   const labels = `Svelte Vue React Angular Polymer Laravel Django`.split(` `)
 
-  const page = await context.newPage()
-  await page.goto(`/sort-selected`)
+  test(`default sorting is alphabetical by label`, async ({ page }) => {
+    await page.goto(`/sort-selected`)
 
-  test(`default sorting is alphabetical by label`, async () => {
     await page.click(`input#default-sort`) // open dropdown
 
     for (const label of labels) {
@@ -414,11 +409,12 @@ describe(`sortSelected`, async () => {
     )
   })
 
-  test(`custom sorting`, async () => {
-    await page.click(`input#custom-sort`) // open dropdown
+  test(`custom sorting`, async ({ page }) => {
+    await page.goto(`/sort-selected`)
 
+    await page.click(`input#custom-sort`) // open dropdown
     for (const label of labels) {
-      await page.click(`ul.options >> text=${label}`)
+      await page.click(`ul.options:visible >> text=${label}`)
     }
 
     const selected = await page.textContent(
@@ -430,10 +426,8 @@ describe(`sortSelected`, async () => {
   })
 })
 
-describe(`parseLabelsAsHtml`, async () => {
-  test(`renders anchor tags as links`, async () => {
-    const page = await context.newPage()
-
+test.describe(`parseLabelsAsHtml`, async () => {
+  test(`renders anchor tags as links`, async ({ page }) => {
     await page.goto(`/parse-labels-as-html`)
 
     const anchor = await page.$(
@@ -444,8 +438,9 @@ describe(`parseLabelsAsHtml`, async () => {
 
   // TODO: fix test, expected error msg not recorded by page.on(`console`) for unknown reason
   // even though it's there when opening page in browser
-  test.skip(`to raise error if combined with allowUserOptions`, async () => {
-    const page = await context.newPage()
+  test.skip(`to raise error if combined with allowUserOptions`, async ({
+    page,
+  }) => {
     const logs: string[] = []
     page.on(`console`, (msg) => logs.push(msg.text()))
 
@@ -453,7 +448,7 @@ describe(`parseLabelsAsHtml`, async () => {
 
     const has_expected_error = logs.some((msg) =>
       msg.includes(
-        `You shouldn't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+        `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
       )
     )
 
@@ -461,41 +456,47 @@ describe(`parseLabelsAsHtml`, async () => {
   })
 })
 
-describe(`maxSelect`, async () => {
-  const page = await context.newPage()
+test.describe(`maxSelect`, async () => {
+  const max_select = 5
 
-  await page.goto(`/max-select`)
-
-  test(`options dropdown disappears when reaching maxSelect items`, async () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/max-select`)
     await page.click(`input#languages`)
 
-    // select any 5 options
-    for (const idx of Array(5).fill(0)) {
+    // select maxSelect options
+    for (const idx of Array(max_select).fill(0)) {
       await page.click(`ul.options > li >> nth=${idx}`)
     }
-    const ul_options = await page.$(`ul.options`)
-    expect(ul_options?.isHidden()).toBeTruthy()
   })
 
-  test(`no more options can be added after reaching maxSelect items`, async () => {
+  test(`options dropdown disappears when reaching maxSelect items`, async ({
+    page,
+  }) => {
+    await wait_for_animation_end(page, `ul.options`)
+
+    expect(await page.locator(`ul.options`)).toBeHidden()
+    expect(await page.getAttribute(`ul.options`, `class`)).toContain(`hidden`)
+  })
+
+  test(`no more options can be added after reaching maxSelect items`, async ({
+    page,
+  }) => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
-    expect(await page.$$(`ul.selected > li[aria-selected=true]`)).toHaveLength(
-      5
-    )
+    let selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
+    expect(selected_lis).toHaveLength(max_select)
     await page.click(`input#languages`) // re-open options dropdown
     await page.click(`ul.options > li >> nth=0`)
-    expect(await page.$$(`ul.selected > li[aria-selected=true]`)).toHaveLength(
-      5
-    )
+    selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
+    expect(selected_lis).toHaveLength(max_select)
   })
 })
 
-describe(`slots`, async () => {
-  const page = await context.newPage()
+test.describe(`slots`, async () => {
+  test(`renders remove-icon slot for individual remove buttons and the remove-all button`, async ({
+    page,
+  }) => {
+    await page.goto(`/slots`)
 
-  await page.goto(`/slots`)
-
-  test(`renders remove-icon slot for individual remove buttons and the remove-all button`, async () => {
     await page.click(`input#svelte-svg-slot-remove-icon`) // open dropdown
     await page.click(`ul.options > li`) // select any option
     await page.click(`ul.options > li`) // select 2nd option
@@ -507,3 +508,13 @@ describe(`slots`, async () => {
     expect(remove_all_svg).toHaveLength(1) // check that remove-all slot is rendered
   })
 })
+
+function wait_for_animation_end(page: Page, selector: string) {
+  return page
+    .locator(selector)
+    .evaluate((element) =>
+      Promise.all(
+        element.getAnimations().map((animation) => animation.finished)
+      )
+    )
+}
