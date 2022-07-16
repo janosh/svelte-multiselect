@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ObjectOption } from '../lib'
+  import type { ObjectOption } from '../lib'
 
   export let option: ObjectOption
   export let idx: number

@@ -1,5 +1,5 @@
 import { writable } from 'svelte/store'
-import { Option } from './lib'
+import type { Option } from './lib'
 
 function session_store<T>(name: string, initialValue: T) {
   if (typeof sessionStorage !== `undefined` && sessionStorage[name]) {

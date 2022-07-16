@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { get_label, Option } from '../lib'
+  import type { Option } from '../lib'
+  import { get_label } from '../lib'
   export let option: Option
   export let height = `20px`
   export let gap = '5pt'
