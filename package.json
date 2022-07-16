@@ -18,7 +18,7 @@
     "serve": "yarn build && yarn preview",
     "check": "svelte-check --ignore package",
     "test": "yarn vitest && playwright test tests/multiselect.test.ts",
-    "vitest": "vitest --run tests/{index,readme}.test.ts"
+    "vitest": "vitest --run tests/index.test.ts tests/readme.test.ts"
   },
   "devDependencies": {
     "@playwright/test": "^1.23.1",
