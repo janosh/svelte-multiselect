@@ -25,7 +25,7 @@ jobs:
       - name: Install dependencies
         run: |
           yarn
-          npx playwright install-deps chromium
+          npx playwright install
 
       - name: Run tests
         id: tests
