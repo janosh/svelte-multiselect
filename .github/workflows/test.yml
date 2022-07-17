@@ -34,7 +34,6 @@ jobs:
       - name: Build package and publish to NPM
         if: github.event_name == 'release' && steps.tests.outcome == 'success'
         run: |
-          yarn
           yarn package
           yarn publish package
         env:

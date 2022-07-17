@@ -13,7 +13,7 @@
 
 </h4>
 
-**Keyboard-friendly, accessible multi-select Svelte component.**
+**Keyboard-friendly, accessible and highly customizable multi-select component.**
 <strong class="hide-in-docs">
 <a href="https://svelte-multiselect.netlify.app">Docs</a>
 </strong>
@@ -24,7 +24,7 @@
 
 - **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
 - **Keyboard friendly** for mouse-less form completion
-- **No 3rd-party dependencies:** needs only Svelte as dev dependency
+- **No run-time deps:** needs only Svelte as dev dependency
 - **Dropdowns:** scrollable lists for large numbers of options
 - **Searchable:** start typing to filter options
 - **Tagging:** selected options are listed as tags within the input
