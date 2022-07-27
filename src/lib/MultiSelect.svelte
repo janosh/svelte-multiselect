@@ -515,9 +515,11 @@
     background: none;
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
-    color: inherit;
+    /* ensure input uses text color and not --sms-selected-text-color */
+    color: var(--sms-text-color);
     font-size: inherit;
     cursor: inherit; /* needed for disabled state */
+    border-radius: 0; /* reset ul.selected > li */
   }
   :where(div.multiselect > ul.selected > li > input)::placeholder {
     padding-left: 5pt;

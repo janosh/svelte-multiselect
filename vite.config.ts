@@ -1,5 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite'
-import path from 'path'
+import { resolve } from 'path'
 
 export default {
   plugins: [sveltekit()],
@@ -8,7 +8,7 @@ export default {
   },
   resolve: {
     alias: {
-      $src: path.resolve(`./src`),
+      $src: resolve(`./src`),
     },
   },
   server: {

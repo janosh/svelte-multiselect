@@ -7,7 +7,7 @@
 
   const emojis = [`🥳`, `🎉`, `✨`]
 
-  let confetti = [...new Array(nItems).keys()]
+  let confetti = [...Array(nItems).keys()]
     .map((idx) => ({
       emoji: emojis[idx % emojis.length],
       x: Math.random() * 100,
