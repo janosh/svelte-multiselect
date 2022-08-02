@@ -110,9 +110,11 @@ Full list of props/bindable variables for this component:
 
 ## Exposed methods
 
-1. `filterFunc = (op: Option, searchText: string) => boolean`: Determine what options are shown when user enters search string to filter dropdown list. Defaults to:
+1. `filterFunc = (op: Option, searchText: string) => boolean`: Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
 
    ```ts
+   import type { Option } from 'svelte-multiselect'
+
    filterFunc = (op: Option, searchText: string) => {
      if (!searchText) return true
      return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
