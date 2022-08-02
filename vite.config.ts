@@ -5,6 +5,9 @@ export default {
   plugins: [sveltekit()],
   test: {
     environment: `jsdom`,
+    deps: {
+      inline: [`compute-scroll-into-view`],
+    },
   },
   resolve: {
     alias: {
