@@ -6,6 +6,7 @@
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
+  import RepoSlot from './RepoSlot.svelte'
 
   let selected_ml: string[]
   let selected_colors: ObjectOption[]
@@ -82,7 +83,9 @@
         setTimeout(() => (showConfetti = false), 3000)
       }
     }}
-  />
+  >
+    <RepoSlot let:idx {idx} let:option {option} slot="option" />
+  </MultiSelect>
   {#if showConfetti}
     <Confetti />
   {/if}

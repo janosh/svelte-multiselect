@@ -1,4 +1,5 @@
 <script lang="ts">
+  import scrollIntoView from 'scroll-into-view-if-needed'
   import { createEventDispatcher } from 'svelte'
   import type { DispatchEvents, MultiSelectEvents, Option } from './'
   import { get_label, get_value } from './'
@@ -244,7 +245,7 @@
         // around start/end of option list. Find a better solution than waiting 10 ms to.
         setTimeout(() => {
           const li = document.querySelector(`ul.options > li.active`)
-          li?.scrollIntoView()
+          if (li) scrollIntoView(li, { scrollMode: `if-needed` })
         }, 10)
       }
     }
@@ -514,9 +515,11 @@
     background: none;
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
-    color: inherit;
+    /* ensure input uses text color and not --sms-selected-text-color */
+    color: var(--sms-text-color);
     font-size: inherit;
     cursor: inherit; /* needed for disabled state */
+    border-radius: 0; /* reset ul.selected > li */
   }
   :where(div.multiselect > ul.selected > li > input)::placeholder {
     padding-left: 5pt;

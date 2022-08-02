@@ -35,15 +35,17 @@
 
 ## Recent breaking changes
 
-- v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form or user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed to `div.multiselect.{readonly=>disabled}`.
+- v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form of user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed `div.multiselect.{readonly=>disabled}`.
 
 - v4.0.3 CSS variables starting with `--sms-input-<attr>` were renamed to just `--sms-<attr>`. E.g. `--sms-input-min-height` is now `--sms-min-height`.
 
-- v5.0.0 Support both simple and object options. Previously string or number options were converted to objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's what you'll get from `bind:selected`.
+- v5.0.0 Support both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`.
 
 ## Installation
 
 ```sh
+npm install -D svelte-multiselect
+pnpm install -D svelte-multiselect
 yarn add -D svelte-multiselect
 ```
 
@@ -108,9 +110,11 @@ Full list of props/bindable variables for this component:
 
 ## Exposed methods
 
-1. `filterFunc = (op: Option, searchText: string) => boolean`: Determine what options are shown when user enters search string to filter dropdown list. Defaults to:
+1. `filterFunc = (op: Option, searchText: string) => boolean`: Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
 
    ```ts
+   import type { Option } from 'svelte-multiselect'
+
    filterFunc = (op: Option, searchText: string) => {
      if (!searchText) return true
      return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
