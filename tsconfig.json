@@ -1,4 +1,3 @@
-// https://github.com/sveltejs/language-tools/blob/master/docs/preprocessors/typescript.md
 {
   "extends": "./.svelte-kit/tsconfig.json",
   "compilerOptions": {

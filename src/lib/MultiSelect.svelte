@@ -1,5 +1,4 @@
 <script lang="ts">
-  import scrollIntoView from 'scroll-into-view-if-needed'
   import { createEventDispatcher } from 'svelte'
   import type { DispatchEvents, MultiSelectEvents, Option } from './'
   import { get_label, get_value } from './'
@@ -245,7 +244,7 @@
         // around start/end of option list. Find a better solution than waiting 10 ms to.
         setTimeout(() => {
           const li = document.querySelector(`ul.options > li.active`)
-          if (li) scrollIntoView(li, { scrollMode: `if-needed` })
+          if (li) li.scrollIntoViewIfNeeded()
         }, 10)
       }
     }
