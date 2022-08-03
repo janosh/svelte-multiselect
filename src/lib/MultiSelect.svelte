@@ -244,7 +244,10 @@
         // around start/end of option list. Find a better solution than waiting 10 ms to.
         setTimeout(() => {
           const li = document.querySelector(`ul.options > li.active`)
-          if (li) li.scrollIntoViewIfNeeded()
+          if (li) {
+            li.parentNode?.scrollIntoView({ block: `center` })
+            li.scrollIntoViewIfNeeded()
+          }
         }, 10)
       }
     }
