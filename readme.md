@@ -36,7 +36,7 @@
 
 ## Recent breaking changes
 
-- v5.0.0 Support both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`.
+- v5.0.0 Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`.
 
 ## Installation
 
