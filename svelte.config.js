@@ -34,11 +34,11 @@ export default {
     adapter: adapter(),
 
     prerender: { default: true },
+  },
 
-    package: {
-      // exclude auxiliary files from package.json "exports"
-      exports: (filepath) =>
-        [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
-    },
+  package: {
+    // exclude icon and helper component files from package.json "exports"
+    exports: (filepath) =>
+      [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
   },
 }

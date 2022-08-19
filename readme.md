@@ -5,18 +5,19 @@
 
 <h4 align="center">
 
-[![REPL](https://img.shields.io/badge/Svelte-REPL-blue)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
 [![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
+[![REPL](https://img.shields.io/badge/Svelte-REPL-blue)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
+[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=pytorchlightning)](https://stackblitz.com/github/janosh/svelte-multiselect)
 
 </h4>
 
 **Keyboard-friendly, accessible and highly customizable multi-select component.**
-<strong class="hide-in-docs">
-<a href="https://svelte-multiselect.netlify.app">Docs</a>
-</strong>
+<span class="hide-in-docs">
+<a href="https://svelte-multiselect.netlify.app">View the docs</a>
+</span>
 
 <slot name="examples" />
 
@@ -35,11 +36,7 @@
 
 ## Recent breaking changes
 
-- v4.0.1 renamed the `readonly` prop to `disabled` which now prevents all form of user interaction with this component including opening the dropdown list which was still possible before. See [#45](https://github.com/janosh/svelte-multiselect/issues/45) for details. The associated CSS class applied to the outer `div` was likewise renamed `div.multiselect.{readonly=>disabled}`.
-
-- v4.0.3 CSS variables starting with `--sms-input-<attr>` were renamed to just `--sms-<attr>`. E.g. `--sms-input-min-height` is now `--sms-min-height`.
-
-- v5.0.0 Support both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`.
+- v5.0.0 Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`.
 
 ## Installation
 
