@@ -35,7 +35,7 @@
     <slot />
   </main>
 {:else}
-  <!-- handles non-svx routes index.svelte and __error.svelte -->
+  <!-- handles non-svx routes index.svelte and +error.svelte -->
   <slot />
 {/if}
 
