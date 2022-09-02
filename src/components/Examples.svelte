@@ -29,6 +29,8 @@
   }
 </script>
 
+<MultiSelect id="languages" options={[1, 2, 1, 1, 1]} placeholder="Take your pick..." />
+
 <section>
   <h3>Multi Select</h3>
 
@@ -94,8 +96,10 @@
 <section>
   <h3>Slot Components</h3>
 
-  <label for="food-select">Custom renderers for options and/or selected items</label>
-
+  <label for="food-select">
+    Color select using the <code>'selected'</code> and <code>'option'</code> slot components
+    to render colors.
+  </label>
   <form
     on:submit|preventDefault={() => {
       alert(`You selected '${selected_colors.map((el) => el.label).join(`, `)}'`)
@@ -114,7 +118,12 @@
     </MultiSelect>
     <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;">
       submit
-    </button> (form submission will abort if Multiselect is empty)
+    </button>
+    (form submission will abort if Multiselect is empty)
+    <p>
+      Also sets
+      <code>allowUserOptions="append"</code> to allow adding custom colors.
+    </p>
   </form>
 </section>
 
