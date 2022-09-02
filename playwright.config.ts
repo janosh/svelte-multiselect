@@ -2,7 +2,7 @@
 const config = {
   browser: `chromium`,
   webServer: {
-    command: `yarn serve --port 3000`,
+    command: `yarn dev --port 3000`,
     port: 3000,
   },
 }
