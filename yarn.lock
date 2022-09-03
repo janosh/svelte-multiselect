@@ -106,17 +106,17 @@
     estree-walker "^2.0.1"
     picomatch "^2.2.2"
 
-"@sveltejs/adapter-static@^1.0.0-next.39":
-  version "1.0.0-next.39"
-  resolved "https://registry.yarnpkg.com/@sveltejs/adapter-static/-/adapter-static-1.0.0-next.39.tgz#ae79b95accd3af6ecfa92e9596c4d41b49cf6fea"
-  integrity sha512-EeD39H6iEe0UEKnKxLFTZFZpi/FcX5xfbAvsMQ+B09aDZccpQmkJBSIo+4kq1JsQGSjwi/+J3aE9bR67R6CIyQ==
+"@sveltejs/adapter-static@^1.0.0-next.41":
+  version "1.0.0-next.41"
+  resolved "https://registry.yarnpkg.com/@sveltejs/adapter-static/-/adapter-static-1.0.0-next.41.tgz#b89ca319e10995c04fc0ac9a6fd4cd89b273d66b"
+  integrity sha512-Bw6MfEuzuqjKZuVCG7ZHXiOIy/LDoRVR278eeAf4kcwl1B8+YEvChqdCvG2N5Ur+rxUIHstPgeX39HezS8d+mw==
 
-"@sveltejs/kit@^1.0.0-next.454":
-  version "1.0.0-next.454"
-  resolved "https://registry.yarnpkg.com/@sveltejs/kit/-/kit-1.0.0-next.454.tgz#3e4a5a5f833ce27f91d0869922e543b0727c8a4c"
-  integrity sha512-Adbd837/E8B8TPVPlQZT4R0o3NekmtyUEYnI46M/YupMtg1NnaVdLF8Na6xoivtnIY7dP5H10zGJhGsTon3fPQ==
+"@sveltejs/kit@^1.0.0-next.464":
+  version "1.0.0-next.464"
+  resolved "https://registry.yarnpkg.com/@sveltejs/kit/-/kit-1.0.0-next.464.tgz#64aea6018192b7bff65e3f1b9b32a32f6705ec76"
+  integrity sha512-QV0IE8ShRC5ndP0fQN4/3bg8PMkjnhvLo0C4gULJ14LFPw5fgDbwuVM4uXmM+nfzT8hTkf9F27J3uZSoJmHaeg==
   dependencies:
-    "@sveltejs/vite-plugin-svelte" "^1.0.1"
+    "@sveltejs/vite-plugin-svelte" "^1.0.4"
     cookie "^0.5.0"
     devalue "^3.1.2"
     kleur "^4.1.4"
@@ -139,10 +139,10 @@
     sade "^1.8.1"
     svelte2tsx "~0.5.10"
 
-"@sveltejs/vite-plugin-svelte@^1.0.1", "@sveltejs/vite-plugin-svelte@^1.0.3":
-  version "1.0.3"
-  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.3.tgz#f760677e03074b9f42335dbde33ba988c95d1e67"
-  integrity sha512-0Qu51m2W9RBlxWPp8i31KJpnqmjWMOne8vAzgmOX6ZM9uX+/RAv6BNhEMcNoP5MsyLjyW1ZTCiJoaZZ5EeqpFg==
+"@sveltejs/vite-plugin-svelte@^1.0.4":
+  version "1.0.4"
+  resolved "https://registry.yarnpkg.com/@sveltejs/vite-plugin-svelte/-/vite-plugin-svelte-1.0.4.tgz#363a0adeb9221c35abb65197c6db0754b9994a08"
+  integrity sha512-UZco2fdj0OVuRWC0SUJjEOftITc2IeHLFJNp00ym9MuQ9dShnlO4P29G8KUxRlcS7kSpzHuko6eCR9MOALj7lQ==
   dependencies:
     "@rollup/pluginutils" "^4.2.1"
     debug "^4.3.4"
@@ -578,9 +578,9 @@ detect-indent@^6.0.0:
   integrity sha512-reYkTUJAZb9gUuZ2RvVCNhVHdg62RHnJ7WJl8ftMi4diZ6NWlciOzQN88pUhSELEwflJht4oQDv0F0BMlwaYtA==
 
 devalue@^3.1.2:
-  version "3.1.2"
-  resolved "https://registry.yarnpkg.com/devalue/-/devalue-3.1.2.tgz#412497b63d2dc0beba2179723475c2ef4c2b1b31"
-  integrity sha512-wUXbMGPAsBx79UF14nsWSsJlC7RcwPlf2w3bGheODWxKx57e9n68ceoijbqCJCEbjyo0S79nqfPwQgyijwLaqw==
+  version "3.1.3"
+  resolved "https://registry.yarnpkg.com/devalue/-/devalue-3.1.3.tgz#99f0073c109b78f92c82a704cc7da139ef1337f5"
+  integrity sha512-9KO89Cb+qjzf2CqdrH+NuLaqdk9GhDP5EhR4zlkR51dvuIaiqtlkDkGzLMShDemwUy21raSMdu+kpX8Enw3yGQ==
 
 dir-glob@^3.0.1:
   version "3.0.1"
@@ -603,10 +603,10 @@ domexception@^4.0.0:
   dependencies:
     webidl-conversions "^7.0.0"
 
-entities@^4.3.0:
-  version "4.3.1"
-  resolved "https://registry.yarnpkg.com/entities/-/entities-4.3.1.tgz#c34062a94c865c322f9d67b4384e4169bcede6a4"
-  integrity sha512-o4q/dYJlmyjP2zfnaWDUC6A3BQFmVTX+tZPezK7k0GLSU9QYCauscf5Y+qcEPzKL+EixVouYDgLQK5H9GrLpkg==
+entities@^4.4.0:
+  version "4.4.0"
+  resolved "https://registry.yarnpkg.com/entities/-/entities-4.4.0.tgz#97bdaba170339446495e653cfd2db78962900174"
+  integrity sha512-oYp7156SP8LkeGD0GF85ad1X9Ai79WtRsZ2gxJqtBuzH+98YUV6jkHEKlZkMbcrjJjIVJNIDP/3WL9wQkoPbWA==
 
 es6-promise@^3.1.2:
   version "3.3.1"
@@ -1490,9 +1490,9 @@ normalize-path@^3.0.0, normalize-path@~3.0.0:
   integrity sha512-6eZs5Ls3WtCisHWp9S2GUy8dqkpGi4BVSz3GaqiE6ezub0512ESztXUwUB6C6IKbQkY2Pnb/mD4WYojCRwcwLA==
 
 nwsapi@^2.2.0:
-  version "2.2.1"
-  resolved "https://registry.yarnpkg.com/nwsapi/-/nwsapi-2.2.1.tgz#10a9f268fbf4c461249ebcfe38e359aa36e2577c"
-  integrity sha512-JYOWTeFoS0Z93587vRJgASD5Ut11fYl5NyihP3KrYBvMe1FRRs6RN7m20SA/16GM4P6hTnZjT+UmDOt38UeXNg==
+  version "2.2.2"
+  resolved "https://registry.yarnpkg.com/nwsapi/-/nwsapi-2.2.2.tgz#e5418863e7905df67d51ec95938d67bf801f0bb0"
+  integrity sha512-90yv+6538zuvUMnN+zCr8LuV6bPFdq50304114vJYJ8RDyK8D5O9Phpbd6SZWgI7PwzmmfN1upeOJlvybDSgCw==
 
 once@^1.3.0:
   version "1.4.0"
@@ -1547,11 +1547,11 @@ parent-module@^1.0.0:
     callsites "^3.0.0"
 
 parse5@^7.0.0:
-  version "7.0.0"
-  resolved "https://registry.yarnpkg.com/parse5/-/parse5-7.0.0.tgz#51f74a5257f5fcc536389e8c2d0b3802e1bfa91a"
-  integrity sha512-y/t8IXSPWTuRZqXc0ajH/UwDj4mnqLEbSttNbThcFhGrZuOyoyvNBO85PBp2jQa55wY9d07PBNjsK8ZP3K5U6g==
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/parse5/-/parse5-7.1.1.tgz#4649f940ccfb95d8754f37f73078ea20afe0c746"
+  integrity sha512-kwpuwzB+px5WUg9pyK0IcK/shltJN5/OVhQagxhCQNtT9Y9QRZqNY2e1cmbu/paRh5LMnz/oVTVLBpjFmMZhSg==
   dependencies:
-    entities "^4.3.0"
+    entities "^4.4.0"
 
 pascal-case@^3.1.1:
   version "3.1.2"
@@ -1937,10 +1937,10 @@ svelte2tsx@^0.5.16, svelte2tsx@~0.5.10:
     dedent-js "^1.0.1"
     pascal-case "^3.1.1"
 
-svelte@^3.49.0:
-  version "3.49.0"
-  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.49.0.tgz#5baee3c672306de1070c3b7888fc2204e36a4029"
-  integrity sha512-+lmjic1pApJWDfPCpUUTc1m8azDqYCG1JN9YEngrx/hUyIcFJo6VZhj0A1Ai0wqoHcEIuQy+e9tk+4uDgdtsFA==
+svelte@^3.50.0:
+  version "3.50.0"
+  resolved "https://registry.yarnpkg.com/svelte/-/svelte-3.50.0.tgz#d11a7a6bd1e084ec051d55104a9af8bccf54461f"
+  integrity sha512-zXeOUDS7+85i+RxLN+0iB6PMbGH7OhEgjETcD1fD8ZrhuhNFxYxYEHU41xuhkHIulJavcu3PKbPyuCrBxdxskQ==
 
 symbol-tree@^3.2.4:
   version "3.2.4"

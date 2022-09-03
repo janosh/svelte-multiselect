@@ -3,6 +3,8 @@
   import GitHubCorner from 'svelte-github-corner'
   import '../app.css'
 
+  export const prerender = true
+
   const demo_routes = Object.keys(import.meta.glob(`./*.svx`)).map(
     (filename) => filename.split(`.`)[1]
   )
