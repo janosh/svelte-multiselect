@@ -33,7 +33,7 @@ This page is mostly used for testing. It checks that:
   - has custom title (if supplied with `removeAllTitle`)
 - component can be focused
   - which opens dropdown
-  - and closes dropdown when user tabs out of input or clicks outside component
+  - and closes dropdown when user tabs out of input or clicks/taps outside component
   - importantly, we don't close dropdown when input looses focus
 - filters options to only list matches when entering text
 - accessibility
