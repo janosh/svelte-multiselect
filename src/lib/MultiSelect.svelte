@@ -7,7 +7,7 @@
   import Wiggle from './Wiggle.svelte'
 
   export let searchText = ``
-  export let showOptions = false
+  export let open = false
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let maxSelectMsg: ((current: number, max: number) => string) | null = null
   export let disabled = false
@@ -26,10 +26,13 @@
   export let name: string | undefined = id
   export let noOptionsMsg = `No matching options`
   export let activeOption: Option | null = null
+  export let activeIndex: number | null = null
   export let filterFunc = (op: Option, searchText: string) => {
     if (!searchText) return true
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
+  export let focusInputOnSelect: boolean | 'desktop' = `desktop`
+  export let breakpoint = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
 
   export let outerDivClass = ``
   export let ulSelectedClass = ``
@@ -76,6 +79,7 @@
 
   const dispatch = createEventDispatcher<DispatchEvents>()
   let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
+  let window_width: number
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
   $: selectedLabels = selected.map(get_label)
@@ -93,8 +97,12 @@
       !(op instanceof Object && op.disabled) &&
       !selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
   )
-  // reset activeOption if it's no longer in the matchingOptions list
-  $: if (activeOption && !matchingOptions.includes(activeOption)) activeOption = null
+  // raise if matchingOptions[activeIndex] does not yield a value
+  if (activeIndex !== null && !matchingOptions[activeIndex]) {
+    throw `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`
+  }
+  // update activeOption when activeIndex changes
+  $: activeOption = activeIndex ? matchingOptions[activeIndex] : null
 
   // add an option to selected list
   function add(label: string | number) {
@@ -146,8 +154,13 @@
           selected = selected.sort(sortSelected)
         }
       }
-      if (selected.length === maxSelect) setOptionsVisible(false)
-      else input?.focus()
+      if (selected.length === maxSelect) close_dropdown()
+      else if (
+        focusInputOnSelect === true ||
+        (focusInputOnSelect === `desktop` && window_width > breakpoint)
+      ) {
+        input?.focus()
+      }
       dispatch(`add`, { option })
       dispatch(`change`, { option, type: `add` })
     }
@@ -175,24 +188,25 @@
     dispatch(`change`, { option, type: `remove` })
   }
 
-  function setOptionsVisible(show: boolean) {
+  function open_dropdown() {
     if (disabled) return
-    showOptions = show
-    if (show) {
-      input?.focus()
-      dispatch(`focus`)
-    } else {
-      input?.blur()
-      activeOption = null
-      dispatch(`blur`)
-    }
+    open = true
+    input?.focus()
+    dispatch(`focus`)
+  }
+
+  function close_dropdown() {
+    open = false
+    input?.blur()
+    activeOption = null
+    dispatch(`blur`)
   }
 
   // handle all keyboard events this component receives
-  async function handleKeydown(event: KeyboardEvent) {
+  async function handle_keydown(event: KeyboardEvent) {
     // on escape or tab out of input: dismiss options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
-      setOptionsVisible(false)
+      close_dropdown()
       searchText = ``
     }
     // on enter key: toggle active option and reset search text
@@ -209,7 +223,7 @@
       }
       // no active option and no search text means the options dropdown is closed
       // in which case enter means open it
-      else setOptionsVisible(true)
+      else open_dropdown()
     }
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
@@ -272,26 +286,30 @@
       handler()
     }
   }
+
+  function on_click_outside(event: MouseEvent | TouchEvent) {
+    if (outerDiv && !outerDiv.contains(event.target as Node)) {
+      close_dropdown()
+    }
+  }
 </script>
 
 <svelte:window
-  on:click={(event) => {
-    if (outerDiv && !outerDiv.contains(event.target)) {
-      setOptionsVisible(false)
-    }
-  }}
+  on:click={on_click_outside}
+  on:touchstart={on_click_outside}
+  bind:innerWidth={window_width}
 />
 
 <div
   bind:this={outerDiv}
   class:disabled
   class:single={maxSelect === 1}
-  class:open={showOptions}
-  aria-expanded={showOptions}
+  class:open
+  aria-expanded={open}
   aria-multiselectable={maxSelect === null || maxSelect > 1}
   class:invalid
   class="multiselect {outerDivClass}"
-  on:mouseup|stopPropagation={() => setOptionsVisible(true)}
+  on:mouseup|stopPropagation={open_dropdown}
   title={disabled ? disabledTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
@@ -333,9 +351,9 @@
         bind:this={input}
         {autocomplete}
         bind:value={searchText}
-        on:mouseup|self|stopPropagation={() => setOptionsVisible(true)}
-        on:keydown={handleKeydown}
-        on:focus={() => setOptionsVisible(true)}
+        on:mouseup|self|stopPropagation={open_dropdown}
+        on:keydown={handle_keydown}
+        on:focus={open_dropdown}
         {id}
         {name}
         {disabled}
@@ -377,7 +395,7 @@
 
   <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
   {#if searchText || options?.length > 0}
-    <ul class:hidden={!showOptions} class="options {ulOptionsClass}">
+    <ul class:hidden={!open} class="options {ulOptionsClass}">
       {#each matchingOptions as option, idx}
         {@const {
           label,
@@ -386,7 +404,7 @@
           selectedTitle = null,
           disabledTitle = defaultDisabledTitle,
         } = option instanceof Object ? option : { label: option }}
-        {@const active = activeOption && get_label(activeOption) === label}
+        {@const active = activeIndex === idx}
         <li
           on:mousedown|stopPropagation
           on:mouseup|stopPropagation={() => {
@@ -400,13 +418,13 @@
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
           on:mouseover={() => {
-            if (!disabled) activeOption = option
+            if (!disabled) activeIndex = idx
           }}
           on:focus={() => {
-            if (!disabled) activeOption = option
+            if (!disabled) activeIndex = idx
           }}
-          on:mouseout={() => (activeOption = null)}
-          on:blur={() => (activeOption = null)}
+          on:mouseout={() => (activeIndex = null)}
+          on:blur={() => (activeIndex = null)}
           aria-selected="false"
         >
           <slot name="option" {option} {idx}>

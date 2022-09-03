@@ -5,7 +5,7 @@ import { expect, test } from '@playwright/test'
 
 test.describe(`input`, async () => {
   test(`opens dropdown on focus`, async ({ page }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
 
@@ -42,7 +42,8 @@ test.describe(`input`, async () => {
   test(`filters dropdown to show only matching options when entering text`, async ({
     page,
   }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
     await page.fill(`input[id='foods']`, `Pineapple`)
 
     expect(

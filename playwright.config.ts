@@ -1,8 +1,8 @@
-/** @type {import('@playwright/test').PlaywrightTestConfig} */
-const config = {
-  browser: `chromium`,
+import type { PlaywrightTestConfig } from '@playwright/test'
+
+const config: PlaywrightTestConfig = {
   webServer: {
-    command: `yarn serve --port 3000`,
+    command: `yarn dev --port 3000`,
     port: 3000,
   },
 }

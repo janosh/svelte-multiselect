@@ -37,6 +37,7 @@
 ## Recent breaking changes
 
 - v5.0.0 Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`.
+- v6.0.0 The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to just `open`.
 
 ## Installation
 
@@ -77,6 +78,7 @@ Full list of props/bindable variables for this component:
 | `showOptions`          | `false`                             | Bindable boolean that controls whether the options dropdown is visible.                                                                                                                                                                                                                                                                                                                                                           |
 | `searchText`           | ``                                  | Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.                                                                                                                                                                                                                                                                                                        |
 | `activeOption`         | `null`                              | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                                                                                                                                                                                                                                                                  |
+| `activeIndex`          | `null`                              | Zero-based index of currently active option in the array of currently matching options, i.e. if the user typed a search string into the input and only a subset of options match, this index refers to the array position of the matching subset of options                                                                                                                                                                       |
 | `maxSelect`            | `null`                              | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                                                                                                                                                                                                                                                            |
 | `selected`             | `[]`                                | Array of currently selected options. Can be bound to `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.                                                                                                                                                                            |
 | `selectedLabels`       | `[]`                                | Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing      `bind:selectedLabels`.                                                                |
@@ -102,6 +104,8 @@ Full list of props/bindable variables for this component:
 | `defaultDisabledTitle` | `'This option is disabled'`         | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.                                                                                                                                                                                                                                                                                               |
 | `autocomplete`         | `'off'`                             | Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.                                                                                                                                                                                                                        |
 | `invalid`              | `false`                             | If `required=true` and user tries to submit but `selected = []` is empty, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed again as soon as the user selects an option. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation. |
+| `focusInputOnSelect`   | `'desktop'`                         | One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).                                                                                                                                                                                    |
+| `breakpoint`           | `800`                               | Screens wider than `breakpoint` in pixels will be considered `'desktop'`, everything narrower as `'mobile'`.                                                                                                                                                                                                                                                                                                                      |
 
 </div>
 
@@ -388,6 +392,6 @@ To submit a PR, clone the repo, install dependencies and start the dev server to
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
-yarn
-yarn dev
+npm install
+npm run dev
 ```
