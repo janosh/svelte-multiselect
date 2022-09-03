@@ -2,10 +2,7 @@
   import Toc from 'svelte-toc'
   import Readme from '../../readme.md'
   import Examples from '../components/Examples.svelte'
-
-  const demo_routes = Object.keys(import.meta.glob(`./**/*.svx`)).map((filename) =>
-    filename.split(`.`)[1].replace(`/+page`, ``)
-  )
+  import { demo_routes } from './demos'
 </script>
 
 <main>
@@ -35,6 +32,13 @@
     padding: 1pt 4pt;
     background-color: rgba(255, 255, 255, 0.125);
     border-radius: 3pt;
+  }
+  @media (max-width: 600px) {
+    :global(h1[align='center']) {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
   }
   :global(.hide-in-docs) {
     display: none;

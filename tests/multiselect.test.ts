@@ -20,7 +20,7 @@ test.describe(`input`, async () => {
   })
 
   test(`closes dropdown on tab out`, async ({ page }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
     await page.focus(`input[id='foods']`)
@@ -56,7 +56,7 @@ test.describe(`input`, async () => {
 
 test.describe(`remove single button`, async () => {
   test(`should remove 1 option`, async ({ page }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.click(`input#foods`)
     await page.click(`text=🍌 Banana`)
@@ -72,7 +72,7 @@ test.describe(`remove single button`, async () => {
 
 test.describe(`remove all button`, async () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.click(`div.multiselect`) // open the dropdown
     const ul_options = await page.$(`div.multiselect > ul.options`)
@@ -125,7 +125,7 @@ test.describe(`external CSS classes`, async () => {
     [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`, `mom`],
   ]) {
     test(`${prop} `, async ({ page }) => {
-      await page.goto(`/css-classes`)
+      await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
       await page.click(`input#foods`)
       await page.hover(`ul.options > li`) // hover any option to give it active state (can also use arrow keys)
@@ -138,7 +138,7 @@ test.describe(`external CSS classes`, async () => {
 
 test.describe(`disabled multiselect`, async () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/disabled`)
+    await page.goto(`/disabled`, { waitUntil: `networkidle` })
   })
 
   test(`has attribute aria-disabled`, async ({ page }) => {
@@ -170,7 +170,7 @@ test.describe(`disabled multiselect`, async () => {
 
 test.describe(`accessibility`, async () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
   })
 
   test(`input is aria-invalid when component has invalid=true`, async ({
@@ -231,7 +231,7 @@ test.describe(`accessibility`, async () => {
 
 test.describe(`multiselect`, async () => {
   test(`can select and remove many options`, async ({ page }) => {
-    await page.goto(`/ui`)
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.click(`input#foods`)
     for (const idx of [2, 5, 8]) {
@@ -256,7 +256,7 @@ test.describe(`multiselect`, async () => {
   test(`retains its selected state on page reload when bound to localStorage`, async ({
     page,
   }) => {
-    await page.goto(`/persistent`)
+    await page.goto(`/persistent`, { waitUntil: `networkidle` })
 
     await page.click(`input#languages`)
 
@@ -280,7 +280,7 @@ test.describe(`allowUserOptions`, async () => {
   }) => {
     const selector = `input#foods`
 
-    await page.goto(`/allow-user-options`)
+    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
     await page.click(selector)
 
     // ensure custom option initially not present
@@ -306,7 +306,7 @@ test.describe(`allowUserOptions`, async () => {
     // i.e. it remains selectable from the dropdown after removing from selected
     const selector = `input#languages`
 
-    await page.goto(`/allow-user-options`)
+    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
 
@@ -326,7 +326,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`shows custom addOptionMsg if no options match`, async ({ page }) => {
     const selector = `input#languages`
 
-    await page.goto(`/allow-user-options`)
+    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
 
@@ -349,7 +349,7 @@ test.describe(`allowUserOptions`, async () => {
   }) => {
     const selector = `input#languages`
 
-    await page.goto(`/allow-user-options`)
+    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
     await page.click(`text=Python`)
@@ -371,7 +371,7 @@ test.describe(`allowUserOptions`, async () => {
     })
     const selector = `input#no-default-options`
 
-    await page.goto(`/allow-user-options`)
+    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
 
@@ -394,7 +394,7 @@ test.describe(`sortSelected`, async () => {
   const labels = `Svelte Vue React Angular Polymer Laravel Django`.split(` `)
 
   test(`default sorting is alphabetical by label`, async ({ page }) => {
-    await page.goto(`/sort-selected`)
+    await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
     await page.click(`input#default-sort`) // open dropdown
 
@@ -411,7 +411,7 @@ test.describe(`sortSelected`, async () => {
   })
 
   test(`custom sorting`, async ({ page }) => {
-    await page.goto(`/sort-selected`)
+    await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
     await page.click(`input#custom-sort`) // open dropdown
     for (const label of labels) {
@@ -429,7 +429,7 @@ test.describe(`sortSelected`, async () => {
 
 test.describe(`parseLabelsAsHtml`, async () => {
   test(`renders anchor tags as links`, async ({ page }) => {
-    await page.goto(`/parse-labels-as-html`)
+    await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
 
     const anchor = await page.$(
       `a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`
@@ -445,7 +445,7 @@ test.describe(`parseLabelsAsHtml`, async () => {
     const logs: string[] = []
     page.on(`console`, (msg) => logs.push(msg.text()))
 
-    await page.goto(`/parse-labels-as-html`)
+    await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
 
     const has_expected_error = logs.some((msg) =>
       msg.includes(
@@ -461,7 +461,7 @@ test.describe(`maxSelect`, async () => {
   const max_select = 5
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/max-select`)
+    await page.goto(`/max-select`, { waitUntil: `networkidle` })
     await page.click(`input#languages`)
 
     // select maxSelect options
@@ -496,7 +496,7 @@ test.describe(`slots`, async () => {
   test(`renders remove-icon slot for individual remove buttons and the remove-all button`, async ({
     page,
   }) => {
-    await page.goto(`/slots`)
+    await page.goto(`/slots`, { waitUntil: `networkidle` })
 
     await page.click(`input#svelte-svg-slot-remove-icon`) // open dropdown
     await page.click(`ul.options > li`) // select any option
