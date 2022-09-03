@@ -5,8 +5,8 @@
 
   export const prerender = true
 
-  const demo_routes = Object.keys(import.meta.glob(`./*.svx`)).map(
-    (filename) => filename.split(`.`)[1]
+  const demo_routes = Object.keys(import.meta.glob(`./**/*.svx`)).map((filename) =>
+    filename.split(`.`)[1].replace(`/+page`, ``)
   )
 
   $: isCurrent = (path: string) => {

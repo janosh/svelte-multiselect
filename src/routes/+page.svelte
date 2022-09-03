@@ -3,8 +3,8 @@
   import Readme from '../../readme.md'
   import Examples from '../components/Examples.svelte'
 
-  const routes = Object.keys(import.meta.glob(`./*.svx`)).map(
-    (filename) => filename.split(`.`)[1]
+  const demo_routes = Object.keys(import.meta.glob(`./**/*.svx`)).map((filename) =>
+    filename.split(`.`)[1].replace(`/+page`, ``)
   )
 </script>
 
@@ -14,7 +14,7 @@
     <svelte:fragment slot="nav">
       <h2>More examples</h2>
       <nav>
-        {#each routes as route, idx}
+        {#each demo_routes as route, idx}
           {#if idx > 0}<strong>&bull;</strong>{/if}
           <a href={route}>{route}</a>
         {/each}
