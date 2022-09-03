@@ -2,12 +2,9 @@
   import { page } from '$app/stores'
   import GitHubCorner from 'svelte-github-corner'
   import '../app.css'
+  import { demo_routes } from './demos'
 
   export const prerender = true
-
-  const demo_routes = Object.keys(import.meta.glob(`./**/*.svx`)).map((filename) =>
-    filename.split(`.`)[1].replace(`/+page`, ``)
-  )
 
   $: isCurrent = (path: string) => {
     if (path === $page.url.pathname) return `page`
@@ -19,7 +16,7 @@
 <GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
 {#if demo_routes.includes($page.url.pathname)}
-  <a href="/" sveltekit:prefetch aria-label="Back to index page">&laquo; back</a>
+  <a href="/" data-sveltekit-prefetch aria-label="Back to index page">&laquo; back</a>
   <h1>
     <img src="/favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
     MultiSelect
@@ -29,7 +26,7 @@
   <nav>
     {#each demo_routes as route, idx}
       {#if idx > 0}<strong>&bull;</strong>{/if}
-      <a href={route} sveltekit:prefetch aria-current={isCurrent(route)}>{route}</a>
+      <a href={route} data-sveltekit-prefetch aria-current={isCurrent(route)}>{route}</a>
     {/each}
   </nav>
 
