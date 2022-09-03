@@ -29,8 +29,6 @@
   }
 </script>
 
-<MultiSelect id="languages" options={[1, 2, 1, 1, 1]} placeholder="Take your pick..." />
-
 <section>
   <h3>Multi Select</h3>
 
