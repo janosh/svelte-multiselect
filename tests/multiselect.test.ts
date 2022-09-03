@@ -511,11 +511,9 @@ test.describe(`slots`, async () => {
 })
 
 function wait_for_animation_end(page: Page, selector: string) {
-  return page
-    .locator(selector)
-    .evaluate((element) =>
-      Promise.all(
-        element.getAnimations().map((animation) => animation.finished)
-      )
-    )
+  // https://github.com/microsoft/playwright/issues/15660
+  const locator = page.locator(selector)
+  return locator.evaluate((element) =>
+    Promise.all(element.getAnimations().map((animation) => animation.finished))
+  )
 }

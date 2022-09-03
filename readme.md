@@ -163,6 +163,8 @@ Example:
 
 `MultiSelect.svelte` dispatches the following events:
 
+<div class="table">
+
 | name        | detail                                   | description                                                                                                                                             |
 | ----------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `add`       | `{ option: Option }`                     | Triggers when a new option is selected.                                                                                                                 |
@@ -170,6 +172,8 @@ Example:
 | `removeAll` | `options: Option[]`                      | Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected.                     |
 | `change`    | `type: 'add' \| 'remove' \| 'removeAll'` | Triggers when a option is either added or removed, or all options are removed at once. Payload will be a single or an array of `Option`s, respectively. |
 | `blur`      | none                                     | Triggers when the input field looses focus.                                                                                                             |
+
+</div>
 
 Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
 
