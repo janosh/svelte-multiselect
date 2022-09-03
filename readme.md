@@ -193,16 +193,14 @@ TypeScript users can import the types used for internal type safety:
 
 ```svelte
 <script lang="ts">
-  import MultiSelect, {
-    Option,
-    Primitive,
-    ProtoOption,
-  } from 'svelte-multiselect'
+  import MultiSelect, { Option, ObjectOption } from 'svelte-multiselect'
 
-  const myOptions: Option[] = [
+  const myOptions: ObjectOption[] = [
     { label: 'foo', value: 42 },
     { label: 'bar', value: 69 },
   ]
+  // an Option can be string | number | ObjectOption
+  const myNumbers: Option[] = [42, 69]
 </script>
 ```
 
