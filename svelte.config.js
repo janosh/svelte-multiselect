@@ -1,4 +1,4 @@
-import adapter from '@sveltejs/adapter-netlify'
+import adapter from '@sveltejs/adapter-static'
 import { s } from 'hastscript'
 import { mdsvex } from 'mdsvex'
 import linkHeadings from 'rehype-autolink-headings'
@@ -31,7 +31,7 @@ export default {
   ],
 
   kit: {
-    adapter: adapter({ edge: true }),
+    adapter: adapter(),
   },
 
   package: {

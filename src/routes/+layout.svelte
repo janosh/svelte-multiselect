@@ -4,8 +4,6 @@
   import '../app.css'
   import { demo_routes } from './demos'
 
-  export const prerender = true
-
   $: isCurrent = (path: string) => {
     if (path === $page.url.pathname) return `page`
     if (path !== `/` && $page.url.pathname.includes(path)) return `page`
