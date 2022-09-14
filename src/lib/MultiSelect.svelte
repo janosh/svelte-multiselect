@@ -6,54 +6,50 @@
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
-  export let searchText = ``
-  export let open = false
-  export let maxSelect: number | null = null // null means any number of options are selectable
-  export let maxSelectMsg: ((current: number, max: number) => string) | null = null
-  export let disabled = false
-  export let disabledTitle = `This field is disabled`
-  export let options: Option[]
-  export let matchingOptions: Option[] = []
-
-  export let selected: Option[] = []
-  export let selectedLabels: (string | number)[] = []
-  export let selectedValues: unknown[] = []
-
-  export let input: HTMLInputElement | null = null
-  export let outerDiv: HTMLDivElement | null = null
-  export let placeholder: string | undefined = undefined
-  export let id: string | undefined = undefined
-  export let name: string | undefined = id
-  export let noOptionsMsg = `No matching options`
-  export let activeOption: Option | null = null
   export let activeIndex: number | null = null
-  export let filterFunc = (op: Option, searchText: string) => {
+  export let activeOption: Option | null = null
+  export let addOptionMsg = `Create this option...`
+  export let allowUserOptions: boolean | 'append' = false
+  export let autocomplete = `off`
+  export let autoScroll = true
+  export let breakpoint = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
+  export let defaultDisabledTitle = `This option is disabled`
+  export let disabled = false
+  export let disabledInputTitle = `This input is disabled`
+  export let filterFunc = (op: Option, searchText: string): boolean => {
     if (!searchText) return true
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
-  export let breakpoint = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
-
-  export let outerDivClass = ``
-  export let ulSelectedClass = ``
-  export let liSelectedClass = ``
-  export let ulOptionsClass = ``
-  export let liOptionClass = ``
-  export let liActiveOptionClass = ``
+  export let id: string | null = null
+  export let input: HTMLInputElement | null = null
   export let inputClass = ``
-
-  export let removeBtnTitle = `Remove`
-  export let removeAllTitle = `Remove all`
-  export let defaultDisabledTitle = `This option is disabled`
-  export let allowUserOptions: boolean | 'append' = false
-  export let parseLabelsAsHtml = false // should not be combined with allowUserOptions!
-  export let addOptionMsg = `Create this option...`
-  export let autoScroll = true
-  export let loading = false
-  export let required = false
-  export let autocomplete = `off`
   export let invalid = false
+  export let liActiveOptionClass = ``
+  export let liOptionClass = ``
+  export let liSelectedClass = ``
+  export let loading = false
+  export let matchingOptions: Option[] = []
+  export let maxSelect: number | null = null // null means any number of options are selectable
+  export let maxSelectMsg: ((current: number, max: number) => string) | null = null
+  export let name: string | null = null
+  export let noOptionsMsg = `No matching options`
+  export let open = false
+  export let options: Option[]
+  export let outerDiv: HTMLDivElement | null = null
+  export let outerDivClass = ``
+  export let parseLabelsAsHtml = false // should not be combined with allowUserOptions!
+  export let placeholder: string | undefined = undefined
+  export let removeAllTitle = `Remove all`
+  export let removeBtnTitle = `Remove`
+  export let required = false
+  export let searchText = ``
+  export let selected: Option[] = []
+  export let selectedLabels: (string | number)[] = []
+  export let selectedValues: unknown[] = []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+  export let ulOptionsClass = ``
+  export let ulSelectedClass = ``
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
