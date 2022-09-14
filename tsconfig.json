@@ -4,18 +4,12 @@
     "strict": true,
     "module": "esnext",
     "target": "esnext",
-    "moduleResolution": "node", // needed for import { ... } from 'svelte' in TS files
+    "moduleResolution": "node",
 
     // To have warnings/errors of the Svelte compiler at the correct position,
     // enable source maps by default.
     "sourceMap": true,
 
-    "forceConsistentCasingInFileNames": true,
-
-    "paths": {
-      "$src/*": ["./src/*"],
-      "$lib": ["./src/lib"],
-      "$lib/*": ["./src/lib/*"]
-    }
+    "forceConsistentCasingInFileNames": true
   }
 }
