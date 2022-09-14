@@ -35,7 +35,7 @@ jobs:
         run: yarn test
 
       - name: Build package and publish to NPM
-        if: github.event_name == 'release' && steps.tests.outcome == 'success'
+        if: github.event_name == 'release' && steps.tests.outcome == 'success' && runner.os == 'Linux'
         run: |
           yarn package
           yarn publish package
