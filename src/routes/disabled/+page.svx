@@ -9,7 +9,7 @@
 <MultiSelect
   options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
   disabled
-  disabledTitle="Super special disabled message"
+  disabledInputTitle="Super special disabled message"
   --sms-disabled-bg="darkred"
 >
   <span slot="disabled-icon">This component is disabled. Get outta here!</span>
@@ -23,7 +23,7 @@
   id="disabled"
   options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
   disabled
-  disabledTitle="Super special disabled message"
+  disabledInputTitle="Super special disabled message"
   --sms-disabled-bg="darkred"
 >
   <span slot="disabled-icon">This component is disabled. Get outta here!</span>

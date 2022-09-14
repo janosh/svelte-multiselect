@@ -10,7 +10,7 @@
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
 [![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 [![REPL](https://img.shields.io/badge/Svelte-REPL-blue)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
-[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=pytorchlightning)](https://stackblitz.com/github/janosh/svelte-multiselect)
+[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
 
 </h4>
 
@@ -36,8 +36,10 @@
 
 ## Recent breaking changes
 
-- v5.0.0 Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`. See [PR 76](https://github.com/janosh/svelte-multiselect/pull/76).
-- v6.0.0 The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. See [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
+- **v5.0.0** Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`. See [PR 76](https://github.com/janosh/svelte-multiselect/pull/76).
+- **v6.0.0** The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. See [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
+- **v6.0.1** The prop `disabledTitle` which sets the title of the `<MultiSelect>` `<input>` node if in `disabled` mode was renamed to `disabledInputTitle`. See [PR 104](https://github.com/janosh/svelte-multiselect/pull/104).
+- **v6.0.1** The default margin of `1em 0` on the wrapper `div.multiselect` was removed. Instead, there is now a new CSS variable `--sms-margin`. Set it to `--sms-margin: 1em 0;` to restore the old appearance. See [PR 104](https://github.com/janosh/svelte-multiselect/pull/104).
 
 ## Installation
 
@@ -67,66 +69,222 @@ Favorite Frontend Frameworks?
 
 ## Props
 
-Full list of props/bindable variables for this component:
+Full list of props/bindable variables for this component. In the type hints below, `Option` is:
 
-<div class="table">
+```ts
+import type { Option } from 'svelte-multiselect'
+```
 
-<!-- prettier-ignore -->
-| name                   | default                             | description                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| :--------------------- | :---------------------------------- | :-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `options`              | required prop                       | Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. MultiSelect  A few keys like `preselected` and `title` have special meaning though. See `src/lib/index.ts` for all special keys and their purpose.        |
-| `showOptions`          | `false`                             | Bindable boolean that controls whether the options dropdown is visible.                                                                                                                                                                                                                                                                                                                                                           |
-| `searchText`           | ``                                  | Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.                                                                                                                                                                                                                                                                                                        |
-| `activeOption`         | `null`                              | Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.                                                                                                                                                                                                                                                                                                                                  |
-| `activeIndex`          | `null`                              | Zero-based index of currently active option in the array of currently matching options, i.e. if the user typed a search string into the input and only a subset of options match, this index refers to the array position of the matching subset of options                                                                                                                                                                       |
-| `maxSelect`            | `null`                              | Positive integer to limit the number of options users can pick. `null` means no limit.                                                                                                                                                                                                                                                                                                                                            |
-| `selected`             | `[]`                                | Array of currently selected options. Can be bound to `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.                                                                                                                                                                            |
-| `selectedLabels`       | `[]`                                | Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing      `bind:selectedLabels`.                                                                |
-| `selectedValues`       | `[]`                                | Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing      `bind:selectedValues`.                                                                |
-| `matchingOptions`      | `Option[]`                          | List of options currently displayed to the user. Same as `options` unless the user entered `searchText` in which case this array contains only those options for which `filterFunc = (op: Option, searchText: string) => boolean` returned `true` (see [exposed methods](#exposed-methods) below for details on `filterFunc`).                                                                                                    |
-| `sortSelected`         | `boolean \| ((op1, op2) => number)` | Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.                                                                                                                                  |
-| `noOptionsMsg`         | `'No matching options'`             | What message to show if no options match the user-entered search string.                                                                                                                                                                                                                                                                                                                                                          |
-| `disabled`             | `false`                             | Disable the component. It will still be rendered but users won't be able to interact with it.                                                                                                                                                                                                                                                                                                                                     |
-| `disabledTitle`        | `'This field is disabled'`          | Tooltip text to display on hover when the component is in `disabled` state.                                                                                                                                                                                                                                                                                                                                                       |
-| `placeholder`          | `undefined`                         | String shown in the text input when no option is selected.                                                                                                                                                                                                                                                                                                                                                                        |
-| `input`                | `null`                              | Handle to the `<input>` DOM node. Only available after component mounts (`null` before then).                                                                                                                                                                                                                                                                                                                                     |
-| `outerDiv`             | `null`                              | Handle to outer `<div class="multiselect">` that wraps the whole component. Only available after component mounts (`null` before then).                                                                                                                                                                                                                                                                                           |
-| `id`                   | `undefined`                         | Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.                                                                                                                                                                                                                              |
-| `name`                 | `id`                                | Applied to the `<input>` element. If not provided, will be set to the value of `id`. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>`.                                                                                                                                                                                        |
-| `required`             | `false`                             | Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.                                                                                                                                                                                                                      |
-| `autoScroll`           | `true`                              | `false` disables keeping the active dropdown items in view when going up/down the list of options with arrow keys.                                                                                                                                                                                                                                                                                                                |
-| `allowUserOptions`     | `false`                             | Whether users are allowed to enter values not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.                                                                                                                                                                                                                                           |
-| `parseLabelsAsHtml`    | `false`                             | Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).                                                                                 |
-| `addOptionMsg`         | `'Create this option...'`           | Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.                                                                                                                                                                                                                                                                                                                    |
-| `loading`              | `false`                             | Whether the component should display a spinner to indicate it's in loading state. Use `<slot name='spinner'>` to specify a custom spinner.                                                                                                                                                                                                                                                                                        |
-| `removeBtnTitle`       | `'Remove'`                          | Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).                                                                                                                                                                                                                                                                                                                    |
-| `removeAllTitle`       | `'Remove all'`                      | Title text to display when user hovers over remove-all button.                                                                                                                                                                                                                                                                                                                                                                    |
-| `defaultDisabledTitle` | `'This option is disabled'`         | Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.                                                                                                                                                                                                                                                                                               |
-| `autocomplete`         | `'off'`                             | Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.                                                                                                                                                                                                                        |
-| `invalid`              | `false`                             | If `required=true` and user tries to submit but `selected = []` is empty, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed again as soon as the user selects an option. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation. |
-| `focusInputOnSelect`   | `'desktop'`                         | One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).                                                                                                                                                                                    |
-| `breakpoint`           | `800`                               | Screens wider than `breakpoint` in pixels will be considered `'desktop'`, everything narrower as `'mobile'`.                                                                                                                                                                                                                                                                                                                      |
+1. ```ts
+   activeIndex: integer | null = null
+   ```
 
-</div>
+   Zero-based index of currently active option in the array of currently matching options, i.e. if the user typed a search string into the input and only a subset of options match, this index refers to the array position of the matching subset of options
 
-## Exposed methods
+1. ```ts
+   activeOption: Option | null = null
+   ```
 
-1. `filterFunc = (op: Option, searchText: string) => boolean`: Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
+   Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.
 
-   ```ts
-   import type { Option } from 'svelte-multiselect'
+1. ```ts
+   addOptionMsg: string = 'Create this option...'
+   ```
 
-   filterFunc = (op: Option, searchText: string) => {
+   Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.
+
+1. ```ts
+   allowUserOptions: boolean = false
+   ```
+
+   Whether users are allowed to enter values not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
+
+1. ```ts
+   autocomplete: string = 'off'
+   ```
+
+   Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.
+
+1. ```ts
+   autoScroll: boolean = true
+   ```
+
+   `false` disables keeping the active dropdown items in view when going up/down the list of options with arrow keys.
+
+1. ```ts
+   breakpoint: integer = 800
+   ```
+
+   Screens wider than `breakpoint` in pixels will be considered `'desktop'`, everything narrower as `'mobile'`.
+
+1. ```ts
+   defaultDisabledTitle: string = 'This option is disabled'
+   ```
+
+   Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.
+
+1. ```ts
+   disabled: boolean = false
+   ```
+
+   Disable the component. It will still be rendered but users won't be able to interact with it.
+
+1. ```ts
+   disabledInputTitle: string = 'This input is disabled'
+   ```
+
+   Tooltip text to display on hover when the component is in `disabled` state.
+
+1. ```ts
+   filterFunc: = (op: Option, searchText: string): boolean => {
      if (!searchText) return true
-     return `${op.label}`.toLowerCase().includes(searchText.toLowerCase())
+     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
    }
    ```
 
-2. `maxSelectMsg = (current: number, max: number) => string`: Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
+   Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
+
+1. ```ts
+   focusInputOnSelect: boolean | 'desktop' = `desktop`
+   ```
+
+   One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).
+
+1. ```ts
+   id: string | null = null
+   ```
+
+   Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.
+
+1. ```ts
+   input: HTMLInputElement | null = null
+   ```
+
+   Handle to the `<input>` DOM node. Only available after component mounts (`null` before then).
+
+1. ```ts
+   invalid: boolean = false
+   ```
+
+   If `required=true` and user tries to submit but `selected = []` is empty, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed again as soon as the user selects an option. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
+
+1. ```ts
+   loading: boolean = false
+   ```
+
+   Whether the component should display a spinner to indicate it's in loading state. Use `<slot name='spinner'>` to specify a custom spinner.
+
+1. ```ts
+   matchingOptions: Option[] = []
+   ```
+
+   List of options currently displayed to the user. Same as `options` unless the user entered `searchText` in which case this array contains only those options for which `filterFunc = (op: Option, searchText: string) => boolean` returned `true`.
+
+1. ```ts
+   maxSelect: number | null = null
+   ```
+
+   Positive integer to limit the number of options users can pick. `null` means no limit.
+
+1. ```ts
+   maxSelectMsg: (current: number, max: number): string = null
+   ```
+
+   Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
 
    ```ts
    maxSelectMsg = (current: number, max: number) => `${current}/${max}`
    ```
+
+1. ```ts
+   name: string | null = null
+   ```
+
+   Applied to the `<input>` element. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>` node.
+
+1. ```ts
+   noOptionsMsg: string = 'No matching options'
+   ```
+
+   What message to show if no options match the user-entered search string.
+
+1. ```ts
+   open: boolean = false
+   ```
+
+   Whether the dropdown list is currently visible. Is two-way bindable, i.e. can be used for external control of when the options are visible.
+
+1. ```ts
+   options: Option[]
+   ```
+
+   **The only required prop** (no default). Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. A few keys like `preselected` and `title` have special meaning though. See `src/lib/index.ts` for all special keys and their purpose.
+
+1. ```ts
+   outerDiv: HTMLDivElement | null = null
+   ```
+
+   Handle to outer `<div class="multiselect">` that wraps the whole component. Only available after component mounts (`null` before then).
+
+1. ```ts
+   parseLabelsAsHtml: boolean = false
+   ```
+
+   Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).
+
+1. ```ts
+   placeholder: string | null = null
+   ```
+
+   String shown in the text input when no option is selected.
+
+1. ```ts
+   removeAllTitle: string = 'Remove all'
+   ```
+
+   Title text to display when user hovers over remove-all button.
+
+1. ```ts
+   removeBtnTitle: string = 'Remove'
+   ```
+
+   Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
+
+1. ```ts
+   required: boolean = false
+   ```
+
+   Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.
+
+1. ```ts
+   searchText: string = ''
+   ```
+
+   Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
+
+1. ```ts
+   selected: Option[] = []
+   ```
+
+   Array of currently selected options. Can be bound to `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
+
+1. ```ts
+   selectedLabels: (string | number)[] = []
+   ```
+
+   Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedLabels`.
+
+1. ```ts
+   selectedValues: unknown[] = []
+   ```
+
+   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`.
+
+1. ```ts
+   sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+   ```
+
+   Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
 
 ## Slots
 
@@ -227,7 +385,7 @@ There are 3 ways to style this component. To understand which options do what, i
 
 ### With CSS variables
 
-If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context.
+If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context. See [`app.css`](https://github.com/janosh/svelte-multiselect/blob/main/src/app.css) for how these variables are set for the demo site of this component.
 
 - `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
@@ -237,6 +395,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `color: var(--sms-text-color)`
   - `min-height: var(--sms-min-height)`
   - `max-width: var(--sms-max-width)`
+  - `margin: var(--sms-margin)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
