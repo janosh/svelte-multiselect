@@ -9,12 +9,11 @@
   --sms-disabled-bg: rgba(7, 1, 34, 0.87);
   --sms-li-disabled-bg: black;
   --sms-placeholder-color: lightgray;
+  --sms-margin: 1em 0;
 
   --toc-mobile-bg: #1c0e3e;
   --toc-mobile-btn-color: white;
   --toc-desktop-nav-margin: 0 0 0 1em;
-  --toc-active-padding: 2pt 4pt;
-  --toc-active-margin: 0 0 0 -4pt;
 
   --ghc-color: var(--night);
   --ghc-bg: white;

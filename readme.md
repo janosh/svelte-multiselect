@@ -10,7 +10,7 @@
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
 [![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 [![REPL](https://img.shields.io/badge/Svelte-REPL-blue)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
-[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=pytorchlightning)](https://stackblitz.com/github/janosh/svelte-multiselect)
+[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
 
 </h4>
 
@@ -38,6 +38,8 @@
 
 - v5.0.0 Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`. See [PR 76](https://github.com/janosh/svelte-multiselect/pull/76).
 - v6.0.0 The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. See [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
+- v6.0.1 The prop `disabledTitle` which sets the title of the `<MultiSelect>` `<input>` node if in `disabled` mode was renamed to `disabledInputTitle`. See [PR 104](https://github.com/janosh/svelte-multiselect/pull/104).
+- v6.0.1 The default margin of `1em 0` on the wrapper `div.multiselect` was removed. Instead, there is now a new CSS variable `--sms-margin`. Set it to `--sms-margin: 1em 0;` to restore the old appearance. See [PR 104](https://github.com/janosh/svelte-multiselect/pull/104).
 
 ## Installation
 
@@ -237,6 +239,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `color: var(--sms-text-color)`
   - `min-height: var(--sms-min-height)`
   - `max-width: var(--sms-max-width)`
+  - `margin: var(--sms-margin)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`

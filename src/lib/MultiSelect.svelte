@@ -310,7 +310,7 @@
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={open_dropdown}
-  title={disabled ? disabledTitle : null}
+  title={disabled ? disabledInputTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
   <input
@@ -461,7 +461,6 @@
 <style>
   :where(div.multiselect) {
     position: relative;
-    margin: 1em 0;
     align-items: center;
     display: flex;
     cursor: text;
@@ -473,6 +472,7 @@
     color: var(--sms-text-color);
     font-size: var(--sms-font-size, inherit);
     min-height: var(--sms-min-height, 19pt);
+    margin: var(--sms-margin);
   }
   :where(div.multiselect.open) {
     /* increase z-index when open to ensure the dropdown of one <MultiSelect />
