@@ -12,6 +12,7 @@
   --sms-margin: 1em 0;
 
   --toc-mobile-bg: #1c0e3e;
+  --toc-li-padding: 4pt 1ex;
   --toc-mobile-btn-color: white;
   --toc-desktop-nav-margin: 0 0 0 1em;
 
@@ -106,4 +107,17 @@ h1 {
 }
 :where(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
   opacity: 1;
+}
+
+blockquote {
+  border-left: 3pt solid var(--blue);
+  padding: 4pt 2pt 4pt 9pt;
+  margin: 1em auto;
+  background-color: rgba(255, 255, 255, 0.1);
+}
+blockquote p:last-child {
+  margin-bottom: 0;
+}
+blockquote p:first-child {
+  margin-top: 0;
 }

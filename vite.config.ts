@@ -1,11 +1,15 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import { resolve } from 'path'
+import type { UserConfig } from 'vite'
+import type { UserConfig as VitestConfig } from 'vitest/config'
 
-export default {
+const vite_config: UserConfig & { test: VitestConfig } = {
   plugins: [sveltekit()],
+
   test: {
     environment: `jsdom`,
   },
+
   resolve: {
     alias: {
       $src: resolve(`./src`),
@@ -20,3 +24,5 @@ export default {
     port: 3000,
   },
 }
+
+export default vite_config

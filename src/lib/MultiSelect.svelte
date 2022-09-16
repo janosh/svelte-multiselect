@@ -1,6 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from 'svelte'
-  import type { DispatchEvents, MultiSelectEvents, Option } from './'
+  import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option } from './'
   import { get_label, get_value } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
@@ -44,7 +44,8 @@
   export let removeBtnTitle = `Remove`
   export let required = false
   export let searchText = ``
-  export let selected: Option[] = []
+  export let selected: Option[] =
+    options?.filter((op) => (op as ObjectOption)?.preselected) ?? []
   export let selectedLabels: (string | number)[] = []
   export let selectedValues: unknown[] = []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
@@ -88,10 +89,7 @@
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op) =>
-      filterFunc(op, searchText) &&
-      !(op instanceof Object && op.disabled) &&
-      !selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
+    (op) => filterFunc(op, searchText) && !selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
