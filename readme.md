@@ -263,7 +263,7 @@ import type { Option } from 'svelte-multiselect'
    Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
 
 1. ```ts
-   selected: Option[] = []
+   selected: Option[] = options?.filter((op) => op?.preselected) ?? []
    ```
 
    Array of currently selected options. Can be bound to `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
