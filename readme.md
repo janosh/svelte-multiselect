@@ -286,6 +286,13 @@ import type { Option } from 'svelte-multiselect'
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
 
+1. ```ts
+   userInputAs: 'string' | 'number' | 'object' =
+    options.length > 0 ? (typeof options[0] as 'object' | 'string' | 'number') : 'string'
+   ```
+
+   What type new options created from user text input should be. Only relevant if `allowUserOptions=true | 'append'`. If not explicitly set, we default `userInputAs` to the type of the 1st option (if available, else `string`) to keep type homogeneity. E.g. if MultiSelect already contains at least one option and it's an object, new options from user-entered text will take the shape `{label: userText, value: userText}`. Likewise if the 1st existing option is a number of string. If MultiSelect starts out empty but you still want user-created custom options to be objects, pass `userInputAs='object'`.
+
 ## Slots
 
 `MultiSelect.svelte` has 3 named slots:
@@ -321,33 +328,49 @@ Example:
 
 `MultiSelect.svelte` dispatches the following events:
 
-<div class="table">
+1. ```ts
+   on:add={(event) => console.log(event.detail.option)}
+   ```
 
-| name        | detail                                   | description                                                                                                                                             |
-| ----------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `add`       | `{ option: Option }`                     | Triggers when a new option is selected.                                                                                                                 |
-| `remove`    | `{ option: Option }`                     | Triggers when one selected option provided as `event.detail.option` is removed.                                                                         |
-| `removeAll` | `options: Option[]`                      | Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected.                     |
-| `change`    | `type: 'add' \| 'remove' \| 'removeAll'` | Triggers when a option is either added or removed, or all options are removed at once. Payload will be a single or an array of `Option`s, respectively. |
-| `blur`      | none                                     | Triggers when the input field looses focus.                                                                                                             |
+   Triggers when a new option is selected.
 
-</div>
+1. ```ts
+   on:remove={(event) => console.log(event.detail.option)}`
+   ```
 
-Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
+   Triggers when one selected option provided as `event.detail.option` is removed.
 
-### Examples
+1. ```ts
+   on:removeAll={(event) => console.log(event.detail.options)}`
+   ```
 
-<!-- prettier-ignore -->
-- `on:add={(event) => console.log(event.detail.option)}`
-- `on:remove={(event) => console.log(event.detail.option)}`.
-- ``on:change={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}``
-- `on:blur={myFunction}`
+   Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected.
+
+1. ```ts
+   on:change={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}
+   ```
+
+   Triggers when an option is either added or removed, or all options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
+
+1. ```ts
+   on:blur={() => console.log('Multiselect input lost focus')}
+   ```
+
+   Triggers when the input field looses focus.
+
+For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
 
 ```svelte
 <MultiSelect
-  on:change={(e) => alert(`You ${e.detail.type}ed '${e.detail.option}'`)}
+  on:change={(e) => {
+    if (e.detail.type === 'add') alert(`You added ${e.detail.option}`)
+    if (e.detail.type === 'remove') alert(`You removed ${e.detail.option}`)
+    if (e.detail.type === 'removeAll') alert(`You removed ${e.detail.options}`)
+  }}
 />
 ```
+
+> Note: Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
 
 ## TypeScript
 
@@ -385,7 +408,7 @@ There are 3 ways to style this component. To understand which options do what, i
 
 ### With CSS variables
 
-If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context. See [`app.css`](https://github.com/janosh/svelte-multiselect/blob/main/src/app.css) for how these variables are set for the demo site of this component.
+If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context. See [`app.css`](https://github.com/janosh/svelte-multiselect/blob/main/src/app.css) for how these variables are set on the demo site of this component.
 
 - `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
