@@ -1,5 +1,9 @@
 import MultiSelect from '$lib'
-import { describe, expect, test } from 'vitest'
+import { beforeEach, describe, expect, test } from 'vitest'
+
+beforeEach(() => {
+  document.body.innerHTML = ``
+})
 
 describe(`MultiSelect`, () => {
   test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
@@ -52,5 +56,63 @@ describe(`MultiSelect`, () => {
     expect([...remove_btns].map((btn) => btn.title)).toEqual(
       options.map((op) => `${removeBtnTitle} ${op.label}`)
     )
+  })
+
+  test(`applies id, value, autocomplete, name, placeholder to input`, () => {
+    const options = [1, 2, 3]
+    const searchText = `1`
+    const id = `fancy-id`
+    const autocomplete = `on`
+    const name = `fancy-name`
+    const placeholder = `fancy placeholder`
+
+    new MultiSelect({
+      target: document.body,
+      props: { options, searchText, id, autocomplete, placeholder, name },
+    })
+
+    const lis = document.querySelectorAll(`div.multiselect > ul.options > li`)
+    const input = document.querySelector(
+      `div.multiselect ul.selected input`
+    ) as HTMLInputElement
+
+    // make sure the search text filtered the dropdown options
+    expect(lis.length).toBe(1)
+
+    expect(input?.value).toBe(searchText)
+    expect(input?.id).toBe(id)
+    expect(input?.autocomplete).toBe(autocomplete)
+    expect(input?.placeholder).toBe(placeholder)
+    expect(input?.name).toBe(name)
+  })
+
+  test(`applies custom classes for styling through CSS frameworks`, () => {
+    const options = [1, 2, 3].map((itm, idx) => ({
+      label: itm,
+      value: itm,
+      preselected: Boolean(idx),
+    }))
+    const classes = Object.fromEntries(
+      `input liOption liSelected outerDiv ulOptions ulSelected`
+        .split(` `)
+        .map((cls) => [`${cls}Class`, cls])
+    )
+
+    new MultiSelect({
+      target: document.body,
+      props: { options, ...classes },
+    })
+
+    // TODO also test liActiveOptionClass once figured out how to make an option active
+    // this doesn't work for unknown reasons
+    // document
+    //   .querySelector(`div.multiselect > ul.options > li`)
+    //   ?.dispatchEvent(new Event(`mouseover`, { bubbles: true }))
+
+    for (const class_name of Object.values(classes)) {
+      const el = document.querySelector(`.${class_name}`)
+
+      expect(el, `did not find an element for ${class_name}Class`).toBeTruthy()
+    }
   })
 })
