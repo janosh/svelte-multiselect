@@ -416,9 +416,10 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `padding: var(--sms-padding, 0 3pt)`
   - `background: var(--sms-bg)`
   - `color: var(--sms-text-color)`
-  - `min-height: var(--sms-min-height)`
+  - `min-height: var(--sms-min-height, 19pt)`
   - `max-width: var(--sms-max-width)`
   - `margin: var(--sms-margin)`
+  - `font-size: var(--sms-font-size, inherit)`
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
@@ -427,10 +428,10 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-disabled-bg, lightgray)`: Background when in disabled state.
 - `div.multiselect input::placeholder`
   - `color: var(--sms-placeholder-color)`
-  - `color: var(--sms-placeholder-opacity)`
+  - `opacity: var(--sms-placeholder-opacity)`
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
-  - `padding: var(--sms-selected-li-padding, 5pt 1pt)`: Height of selected options.
+  - `padding: var(--sms-selected-li-padding, 1pt 5pt)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
   - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
@@ -438,7 +439,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
-  - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);`: Box shadow of dropdown list.
+  - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black)`: Box shadow of dropdown list.
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`

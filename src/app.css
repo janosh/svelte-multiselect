@@ -69,9 +69,6 @@ label {
   font-weight: bold;
 }
 
-div.table {
-  overflow: scroll;
-}
 table {
   border-collapse: collapse;
   width: 100%;
