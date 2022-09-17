@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ObjectOption } from '../lib'
-  import { Octocat } from '../lib/icons'
+  import type { ObjectOption } from '$lib'
+  import { Octocat } from '$lib/icons'
 
   export let option: ObjectOption
   export let idx: number

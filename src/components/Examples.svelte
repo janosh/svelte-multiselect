@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { ObjectOption } from '../lib'
-  import MultiSelect from '../lib'
+  import type { ObjectOption } from '$lib'
+  import MultiSelect from '$lib'
   import { colors, frontend_libs, languages, ml_libs } from '../options'
   import { language_store } from '../stores'
   import ColorSlot from './ColorSlot.svelte'
