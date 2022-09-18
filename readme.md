@@ -76,7 +76,7 @@ import type { Option } from 'svelte-multiselect'
 ```
 
 1. ```ts
-   activeIndex: integer | null = null
+   activeIndex: number | null = null
    ```
 
    Zero-based index of currently active option in the array of currently matching options, i.e. if the user typed a search string into the input and only a subset of options match, this index refers to the array position of the matching subset of options
@@ -88,22 +88,22 @@ import type { Option } from 'svelte-multiselect'
    Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.
 
 1. ```ts
-   addOptionMsg: string = 'Create this option...'
+   addOptionMsg: string = `Create this option...`
    ```
 
    Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.
 
 1. ```ts
-   allowUserOptions: boolean = false
+   allowUserOptions: boolean | 'append' = false
    ```
 
    Whether users are allowed to enter values not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
 
 1. ```ts
-   autocomplete: string = 'off'
+   autocomplete: string = `off`
    ```
 
-   Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. See [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.
+   Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. Should usually be one of `'on'` or `'off'` but see [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.
 
 1. ```ts
    autoScroll: boolean = true
@@ -112,13 +112,13 @@ import type { Option } from 'svelte-multiselect'
    `false` disables keeping the active dropdown items in view when going up/down the list of options with arrow keys.
 
 1. ```ts
-   breakpoint: integer = 800
+   breakpoint: number = 800
    ```
 
    Screens wider than `breakpoint` in pixels will be considered `'desktop'`, everything narrower as `'mobile'`.
 
 1. ```ts
-   defaultDisabledTitle: string = 'This option is disabled'
+   defaultDisabledTitle: string = `This option is disabled`
    ```
 
    Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.
@@ -130,13 +130,13 @@ import type { Option } from 'svelte-multiselect'
    Disable the component. It will still be rendered but users won't be able to interact with it.
 
 1. ```ts
-   disabledInputTitle: string = 'This input is disabled'
+   disabledInputTitle: string = `This input is disabled`
    ```
 
    Tooltip text to display on hover when the component is in `disabled` state.
 
 1. ```ts
-   filterFunc: = (op: Option, searchText: string): boolean => {
+   filterFunc = (op: Option, searchText: string): boolean => {
      if (!searchText) return true
      return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
    }
@@ -187,7 +187,7 @@ import type { Option } from 'svelte-multiselect'
    Positive integer to limit the number of options users can pick. `null` means no limit.
 
 1. ```ts
-   maxSelectMsg: (current: number, max: number): string = null
+   maxSelectMsg: ((current: number, max: number) => string) | null = null
    ```
 
    Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
@@ -203,7 +203,7 @@ import type { Option } from 'svelte-multiselect'
    Applied to the `<input>` element. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>` node.
 
 1. ```ts
-   noOptionsMsg: string = 'No matching options'
+   noOptionsMsg: string = `No matching options`
    ```
 
    What message to show if no options match the user-entered search string.
@@ -239,13 +239,13 @@ import type { Option } from 'svelte-multiselect'
    String shown in the text input when no option is selected.
 
 1. ```ts
-   removeAllTitle: string = 'Remove all'
+   removeAllTitle: string = `Remove all`
    ```
 
    Title text to display when user hovers over remove-all button.
 
 1. ```ts
-   removeBtnTitle: string = 'Remove'
+   removeBtnTitle: string = `Remove`
    ```
 
    Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
@@ -257,7 +257,7 @@ import type { Option } from 'svelte-multiselect'
    Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.
 
 1. ```ts
-   searchText: string = ''
+   searchText: string = ``
    ```
 
    Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
