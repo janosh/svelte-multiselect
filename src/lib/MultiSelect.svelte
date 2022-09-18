@@ -8,14 +8,14 @@
 
   export let activeIndex: number | null = null
   export let activeOption: Option | null = null
-  export let addOptionMsg = `Create this option...`
+  export let addOptionMsg: string = `Create this option...`
   export let allowUserOptions: boolean | 'append' = false
-  export let autocomplete = `off`
-  export let autoScroll = true
-  export let breakpoint = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
-  export let defaultDisabledTitle = `This option is disabled`
-  export let disabled = false
-  export let disabledInputTitle = `This input is disabled`
+  export let autocomplete: string = `off`
+  export let autoScroll: boolean = true
+  export let breakpoint: number = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
+  export let defaultDisabledTitle: string = `This option is disabled`
+  export let disabled: boolean = false
+  export let disabledInputTitle: string = `This input is disabled`
   export let filterFunc = (op: Option, searchText: string): boolean => {
     if (!searchText) return true
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
@@ -23,34 +23,34 @@
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
-  export let inputClass = ``
-  export let invalid = false
-  export let liActiveOptionClass = ``
-  export let liOptionClass = ``
-  export let liSelectedClass = ``
-  export let loading = false
+  export let inputClass: string = ``
+  export let invalid: boolean = false
+  export let liActiveOptionClass: string = ``
+  export let liOptionClass: string = ``
+  export let liSelectedClass: string = ``
+  export let loading: boolean = false
   export let matchingOptions: Option[] = []
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let maxSelectMsg: ((current: number, max: number) => string) | null = null
   export let name: string | null = null
-  export let noOptionsMsg = `No matching options`
-  export let open = false
+  export let noOptionsMsg: string = `No matching options`
+  export let open: boolean = false
   export let options: Option[]
   export let outerDiv: HTMLDivElement | null = null
-  export let outerDivClass = ``
-  export let parseLabelsAsHtml = false // should not be combined with allowUserOptions!
-  export let placeholder: string | undefined = undefined
-  export let removeAllTitle = `Remove all`
-  export let removeBtnTitle = `Remove`
-  export let required = false
-  export let searchText = ``
+  export let outerDivClass: string = ``
+  export let parseLabelsAsHtml: boolean = false // should not be combined with allowUserOptions!
+  export let placeholder: string | null = null
+  export let removeAllTitle: string = `Remove all`
+  export let removeBtnTitle: string = `Remove`
+  export let required: boolean = false
+  export let searchText: string = ``
   export let selected: Option[] =
     options?.filter((op) => (op as ObjectOption)?.preselected) ?? []
   export let selectedLabels: (string | number)[] = []
   export let selectedValues: unknown[] = []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
-  export let ulOptionsClass = ``
-  export let ulSelectedClass = ``
+  export let ulOptionsClass: string = ``
+  export let ulSelectedClass: string = ``
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
