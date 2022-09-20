@@ -2,11 +2,11 @@ import { readFileSync } from 'fs'
 import { describe, expect, test } from 'vitest'
 
 const readme = readFileSync(`readme.md`, `utf8`)
-const multiselect_src = readFileSync(`src/lib/MultiSelect.svelte`, `utf8`)
+const src = readFileSync(`src/lib/MultiSelect.svelte`, `utf8`)
 
 describe(`readme`, () => {
   test(`documents all props and their correct types and defaults`, () => {
-    for (let line of multiselect_src.split(`\n`)) {
+    for (let line of src.split(`\n`)) {
       if (line.trim().startsWith(`export let `)) {
         line = line.replace(`export let `, ``).split(` //`)[0].trim()
         if (line.includes(`Class: string = \``)) continue
@@ -18,7 +18,7 @@ describe(`readme`, () => {
   })
 
   test(`documents all CSS variables`, () => {
-    for (let line of multiselect_src.split(`\n`)) {
+    for (let line of src.split(`\n`)) {
       if (line.includes(`var(--`)) {
         line = line.trim().replace(`;`, ``)
         line = `- \`${line}\``
@@ -31,7 +31,7 @@ describe(`readme`, () => {
     for (let line of readme.split(`\n`)) {
       if (line.includes(`: var(--`)) {
         line = line.split(`:`)[0].split(`- \``)[1]
-        expect(multiselect_src, `${line} not in Toc.svelte`).to.contain(line)
+        expect(src, `${line} not in component`).to.contain(line)
       }
     }
   })
