@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
-
+import { foods } from '../src/options.ts'
 // to run tests in this file, use `npm/yarn run test`
 
 test.describe(`input`, async () => {
@@ -128,7 +128,7 @@ test.describe(`external CSS classes`, async () => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
       await page.click(`input#foods`)
-      await page.hover(`ul.options > li`) // hover any option to give it active state (can also use arrow keys)
+      await page.hover(`ul.options > li`) // hover any option to give it active state
 
       const node = await page.$(`${selector}.${cls}`)
       expect(node).toBeTruthy()
@@ -251,6 +251,30 @@ test.describe(`multiselect`, async () => {
     for (const food of `Grapes Melon Watermelon`.split(` `)) {
       expect(selected_text).toContain(food)
     }
+  })
+
+  test(`loops through dropdown list with arrow keys making each option active in turn`, async ({
+    page,
+  }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    await page.click(`input#foods`)
+
+    for (const expected_fruit of foods) {
+      await page.keyboard.press(`ArrowDown`)
+      const actual_food = await page.textContent(`ul.options > li.active`)
+      expect(actual_food?.trim()).toBe(expected_fruit)
+    }
+
+    // test loop back to first option
+    await page.keyboard.press(`ArrowDown`)
+    const first_food = await page.textContent(`ul.options > li.active`)
+    expect(first_food?.trim()).toBe(foods[0])
+
+    // test loop back to last option
+    await page.keyboard.press(`ArrowUp`)
+    const last_food = await page.textContent(`ul.options > li.active`)
+    expect(last_food?.trim()).toBe(foods.at(-1))
   })
 
   test(`retains its selected state on page reload when bound to localStorage`, async ({
