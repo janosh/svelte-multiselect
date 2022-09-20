@@ -75,7 +75,7 @@
   }
 
   const dispatch = createEventDispatcher<DispatchEvents>()
-  let activeMsg = false // controls active state of <li>{addOptionMsg}</li>
+  let add_option_msg_is_active: boolean = false // controls active state of <li>{addOptionMsg}</li>
   let window_width: number
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
@@ -222,31 +222,25 @@
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       // if no option is active yet, but there are matching options, make first one active
-      if (activeOption === null && matchingOptions.length > 0) {
-        activeOption = matchingOptions[0]
+      if (activeIndex === null && matchingOptions.length > 0) {
+        activeIndex = 0
         return
       } else if (allowUserOptions && searchText.length > 0) {
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
-        activeMsg = !activeMsg
+        add_option_msg_is_active = !add_option_msg_is_active
         return
-      } else if (activeOption === null) {
+      } else if (activeIndex === null) {
         // if no option is active and no options are matching, do nothing
         return
       }
       const increment = event.key === `ArrowUp` ? -1 : 1
-      const newActiveIdx = matchingOptions.indexOf(activeOption) + increment
 
-      if (newActiveIdx < 0) {
-        // wrap around top
-        activeOption = matchingOptions[matchingOptions.length - 1]
-      } else if (newActiveIdx === matchingOptions.length) {
-        // wrap around bottom
-        activeOption = matchingOptions[0]
-      } else {
-        // default case: select next/previous in item list
-        activeOption = matchingOptions[newActiveIdx]
-      }
+      activeIndex = (activeIndex + increment) % matchingOptions.length
+      // % in JS behaves like remainder operator, not real modulo, so negative numbers stay negative
+      // need to do manual wrap around at 0
+      if (activeIndex < 0) activeIndex = matchingOptions.length - 1
+
       if (autoScroll) {
         // TODO This ugly timeout hack is needed to properly scroll element into view when wrapping
         // around start/end of option list. Find a better solution than waiting 10 ms to.
@@ -435,11 +429,11 @@
             on:mousedown|stopPropagation
             on:mouseup|stopPropagation={() => add(searchText)}
             title={addOptionMsg}
-            class:active={activeMsg}
-            on:mouseover={() => (activeMsg = true)}
-            on:focus={() => (activeMsg = true)}
-            on:mouseout={() => (activeMsg = false)}
-            on:blur={() => (activeMsg = false)}
+            class:active={add_option_msg_is_active}
+            on:mouseover={() => (add_option_msg_is_active = true)}
+            on:focus={() => (add_option_msg_is_active = true)}
+            on:mouseout={() => (add_option_msg_is_active = false)}
+            on:blur={() => (add_option_msg_is_active = false)}
             aria-selected="false"
           >
             {addOptionMsg}
