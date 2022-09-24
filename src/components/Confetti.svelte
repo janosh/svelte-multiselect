@@ -43,6 +43,7 @@
 
 <style>
   span {
+    z-index: 10;
     position: fixed;
     font-size: 5vw;
     user-select: none;
