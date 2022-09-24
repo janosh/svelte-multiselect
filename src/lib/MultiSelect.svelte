@@ -96,7 +96,7 @@
     throw `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`
   }
   // update activeOption when activeIndex changes
-  $: activeOption = activeIndex ? matchingOptions[activeIndex] : null
+  $: activeOption = activeIndex !== null ? matchingOptions[activeIndex] : null
 
   // add an option to selected list
   function add(label: string | number) {
