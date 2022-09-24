@@ -123,14 +123,10 @@ describe(`MultiSelect`, () => {
   test(`arrow down makes first option active`, async () => {
     const options = [1, 2, 3]
 
-    new MultiSelect({
-      target: document.body,
-      props: { options, open: true },
-    })
+    new MultiSelect({ target: document.body, props: { options, open: true } })
 
-    const input = document.querySelector(
-      `div.multiselect ul.selected input`
-    ) as HTMLInputElement
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+    if (!input) throw new Error(`input not found`)
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
 
@@ -146,14 +142,11 @@ describe(`MultiSelect`, () => {
   test(`can select 1st and last option with arrow and enter key`, async () => {
     const options = [1, 2, 3]
 
-    new MultiSelect({
-      target: document.body,
-      props: { options },
-    })
+    new MultiSelect({ target: document.body, props: { options } })
 
-    const input = document.querySelector(
-      `div.multiselect ul.selected input`
-    ) as HTMLInputElement
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+
+    if (!input) throw new Error(`input not found`)
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
     await sleep()
