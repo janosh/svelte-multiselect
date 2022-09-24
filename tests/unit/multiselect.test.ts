@@ -5,6 +5,10 @@ beforeEach(() => {
   document.body.innerHTML = ``
 })
 
+async function sleep(ms: number = 1) {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
 describe(`MultiSelect`, () => {
   test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
     const defaultDisabledTitle = `Not selectable`
@@ -114,5 +118,49 @@ describe(`MultiSelect`, () => {
 
       expect(el, `did not find an element for ${class_name}Class`).toBeTruthy()
     }
+  })
+
+  test(`arrow down makes first option active`, async () => {
+    const options = [1, 2, 3]
+
+    new MultiSelect({ target: document.body, props: { options, open: true } })
+
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+    if (!input) throw new Error(`input not found`)
+
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+
+    await sleep()
+
+    const active_option = document.querySelector(
+      `div.multiselect > ul.options > li.active`
+    )
+
+    expect(active_option?.textContent?.trim()).toBe(`1`)
+  })
+
+  test(`can select 1st and last option with arrow and enter key`, async () => {
+    const options = [1, 2, 3]
+
+    new MultiSelect({ target: document.body, props: { options } })
+
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+
+    if (!input) throw new Error(`input not found`)
+
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    await sleep()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+    await sleep()
+    const selected = document.querySelector(`div.multiselect > ul.selected`)
+
+    expect(selected?.textContent?.trim()).toBe(`1`)
+
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp` }))
+    await sleep()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+    await sleep()
+
+    expect(selected?.textContent?.trim()).toBe(`1 3`)
   })
 })

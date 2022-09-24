@@ -25,12 +25,12 @@
 
 <br />
 
-This page is mostly used for testing. It checks that:
+This page demonstrates
 
 - the remove-all button
   - removes all currently selected options from the input
-  - only appears if more than 1 element is selected
-  - has custom title (if supplied with `removeAllTitle`)
+  - only appears if 2 or more elements are selected
+  - has custom title (if supplied via prop `removeAllTitle`)
 - component can be focused
   - which opens dropdown
   - and closes dropdown when user tabs out of input or clicks/taps outside component
