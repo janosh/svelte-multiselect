@@ -27,4 +27,4 @@
 
 <br />
 
-This page is for testing the prop `parseLabelsAsHtml`.
+This page shows how `parseLabelsAsHtml` affects rendering of dropdown and selected options.

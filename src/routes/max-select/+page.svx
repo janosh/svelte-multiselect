@@ -29,7 +29,7 @@
 
 <br />
 
-Test that component with integer value set for `maxSelect` behaves as follows:
+When setting an integer value for `maxSelect` Multiselect will
 
-- options dropdown disappears when reaching `maxSelect` items
-- no more options can be added after reaching `maxSelect` items
+- close options dropdown when reaching `maxSelect` items
+- prevent users from selecting more options after reaching `maxSelect` items

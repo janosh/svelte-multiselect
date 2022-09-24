@@ -29,6 +29,7 @@ body {
   padding: calc(1ex + 2vw);
   font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
   color: #eee;
+  line-height: 1.5;
 }
 main {
   margin: auto;
@@ -61,9 +62,6 @@ pre {
 }
 ul {
   padding-left: 1em;
-}
-ul li {
-  padding: 1ex 0;
 }
 label {
   font-weight: bold;

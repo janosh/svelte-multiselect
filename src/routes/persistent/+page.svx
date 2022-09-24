@@ -7,7 +7,7 @@
 
 ## Page-Reload Persistent MultiSelect
 
-`language_store` is bound to the browser's `sessionStorage`. This example tests that MultiSelect retains its `selected` state on page reload correctly.
+`language_store` is bound to the browser's `sessionStorage`. This example shows that MultiSelect retains its `selected` state on page reload correctly.
 
 <br />
 
