@@ -97,7 +97,8 @@ import type { Option } from 'svelte-multiselect'
    allowUserOptions: boolean | 'append' = false
    ```
 
-   Whether users are allowed to enter values not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
+   Whether users can enter values that are not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
+   If `allowUserOptions` is `true` or `'append'` then the type `object | number | string` of entered value is determined from the first option of the list to keep type homogeneity.
 
 1. ```ts
    autocomplete: string = `off`
@@ -285,13 +286,6 @@ import type { Option } from 'svelte-multiselect'
    ```
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
-
-1. ```ts
-   userInputAs: 'string' | 'number' | 'object' =
-    options.length > 0 ? (typeof options[0] as 'object' | 'string' | 'number') : 'string'
-   ```
-
-   What type new options created from user text input should be. Only relevant if `allowUserOptions=true | 'append'`. If not explicitly set, we default `userInputAs` to the type of the 1st option (if available, else `string`) to keep type homogeneity. E.g. if MultiSelect already contains at least one option and it's an object, new options from user-entered text will take the shape `{label: userText, value: userText}`. Likewise if the 1st existing option is a number of string. If MultiSelect starts out empty but you still want user-created custom options to be objects, pass `userInputAs='object'`.
 
 ## Slots
 
