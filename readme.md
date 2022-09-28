@@ -287,6 +287,19 @@ import type { Option } from 'svelte-multiselect'
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
 
+1. ```ts
+   inputmode: string = ``
+   ```
+
+   Allows manipulating [inputmode](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode) attribute.
+
+
+1. ```ts
+   pattern: string = ``
+   ```
+
+   Allows to use regular expression [pattern](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/pattern) attribute.
+  
 ## Slots
 
 `MultiSelect.svelte` has 3 named slots:
