@@ -293,13 +293,12 @@ import type { Option } from 'svelte-multiselect'
 
    Allows manipulating [inputmode](https://developer.mozilla.org/en-US/docs/Web/HTML/Global_attributes/inputmode) attribute.
 
-
 1. ```ts
    pattern: string = ``
    ```
 
    Allows to use regular expression [pattern](https://developer.mozilla.org/en-US/docs/Web/HTML/Attributes/pattern) attribute.
-  
+
 ## Slots
 
 `MultiSelect.svelte` has 3 named slots:
