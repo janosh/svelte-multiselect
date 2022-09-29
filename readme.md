@@ -8,7 +8,7 @@
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
-[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal&logo=v)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
+[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 [![REPL](https://img.shields.io/badge/Svelte-REPL-blue?logo=Svelte)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
 [![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
 
@@ -286,6 +286,18 @@ import type { Option } from 'svelte-multiselect'
    ```
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
+
+1. ```ts
+   inputmode: string = ``
+   ```
+
+   The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow browsers to display an appropriate virtual keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details.
+
+1. ```ts
+   pattern: string = ``
+   ```
+
+   The pattern attribute specifies a regular expression which the input's value must match. If a non-null value doesn't match the `pattern` regex, the read-only `patternMismatch` property will be `true`. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Attributes/pattern) for details.
 
 ## Slots
 
