@@ -253,6 +253,7 @@ test.describe(`multiselect`, async () => {
     }
   })
 
+  // https://github.com/janosh/svelte-multiselect/issues/111
   test(`loops through dropdown list with arrow keys making each option active in turn`, async ({
     page,
   }) => {

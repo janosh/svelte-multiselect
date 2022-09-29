@@ -62,17 +62,28 @@ describe(`MultiSelect`, () => {
     )
   })
 
-  test(`applies id, value, autocomplete, name, placeholder to input`, () => {
+  test(`applies DOM attributes to input node`, () => {
     const options = [1, 2, 3]
     const searchText = `1`
     const id = `fancy-id`
     const autocomplete = `on`
     const name = `fancy-name`
     const placeholder = `fancy placeholder`
+    const inputmode = `tel`
+    const pattern = `(reg)[ex]`
 
     new MultiSelect({
       target: document.body,
-      props: { options, searchText, id, autocomplete, placeholder, name },
+      props: {
+        options,
+        searchText,
+        id,
+        autocomplete,
+        placeholder,
+        name,
+        inputmode,
+        pattern,
+      },
     })
 
     const lis = document.querySelectorAll(`div.multiselect > ul.options > li`)
@@ -88,6 +99,8 @@ describe(`MultiSelect`, () => {
     expect(input?.autocomplete).toBe(autocomplete)
     expect(input?.placeholder).toBe(placeholder)
     expect(input?.name).toBe(name)
+    expect(input?.inputMode).toBe(inputmode)
+    expect(input?.pattern).toBe(pattern)
   })
 
   test(`applies custom classes for styling through CSS frameworks`, () => {
@@ -120,8 +133,9 @@ describe(`MultiSelect`, () => {
     }
   })
 
+  // https://github.com/janosh/svelte-multiselect/issues/111
   test(`arrow down makes first option active`, async () => {
-    const options = [1, 2, 3]
+    const options = [`1`, `2`, `3`]
 
     new MultiSelect({ target: document.body, props: { options, open: true } })
 
@@ -139,6 +153,7 @@ describe(`MultiSelect`, () => {
     expect(active_option?.textContent?.trim()).toBe(`1`)
   })
 
+  // https://github.com/janosh/svelte-multiselect/issues/112
   test(`can select 1st and last option with arrow and enter key`, async () => {
     const options = [1, 2, 3]
 
