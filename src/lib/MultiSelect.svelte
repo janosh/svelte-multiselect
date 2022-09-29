@@ -51,6 +51,8 @@
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
+  export let inputmode: string = ``
+  export let pattern: string = ``
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
@@ -345,6 +347,8 @@
         {id}
         {name}
         {disabled}
+        {inputmode}
+        {pattern}
         placeholder={selectedLabels.length ? `` : placeholder}
         aria-invalid={invalid ? `true` : null}
       />
