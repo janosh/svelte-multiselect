@@ -101,7 +101,7 @@
   $: activeOption = activeIndex !== null ? matchingOptions[activeIndex] : null
 
   // add an option to selected list
-  function add(label: string | number) {
+  function add(label: string | number, event: Event) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
     if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
@@ -150,7 +150,7 @@
           selected = selected.sort(sortSelected)
         }
       }
-      if (selected.length === maxSelect) close_dropdown()
+      if (selected.length === maxSelect) close_dropdown(event)
       else if (
         focusInputOnSelect === true ||
         (focusInputOnSelect === `desktop` && window_width > breakpoint)
@@ -184,25 +184,28 @@
     dispatch(`change`, { option, type: `remove` })
   }
 
-  function open_dropdown() {
+  function open_dropdown(event: Event) {
     if (disabled) return
     open = true
-    input?.focus()
-    dispatch(`focus`)
+    if (!(event instanceof FocusEvent)) {
+      // avoid double-focussing input when event that opened dropdown was already input FocusEvent
+      input?.focus()
+    }
+    dispatch(`open`, { event })
   }
 
-  function close_dropdown() {
+  function close_dropdown(event: Event) {
     open = false
     input?.blur()
     activeOption = null
-    dispatch(`blur`)
+    dispatch(`close`, { event })
   }
 
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
     // on escape or tab out of input: dismiss options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
-      close_dropdown()
+      close_dropdown(event)
       searchText = ``
     }
     // on enter key: toggle active option and reset search text
@@ -211,15 +214,15 @@
 
       if (activeOption) {
         const label = get_label(activeOption)
-        selectedLabels.includes(label) ? remove(label) : add(label)
+        selectedLabels.includes(label) ? remove(label) : add(label, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
-        add(searchText)
+        add(searchText, event)
       }
       // no active option and no search text means the options dropdown is closed
       // in which case enter means open it
-      else open_dropdown()
+      else open_dropdown(event)
     }
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
@@ -279,7 +282,7 @@
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
     if (outerDiv && !outerDiv.contains(event.target as Node)) {
-      close_dropdown()
+      close_dropdown(event)
     }
   }
 </script>
@@ -343,6 +346,7 @@
         bind:value={searchText}
         on:mouseup|self|stopPropagation={open_dropdown}
         on:keydown={handle_keydown}
+        on:focus
         on:focus={open_dropdown}
         {id}
         {name}
@@ -351,7 +355,20 @@
         {pattern}
         placeholder={selectedLabels.length ? `` : placeholder}
         aria-invalid={invalid ? `true` : null}
+        on:blur
+        on:change
+        on:click
+        on:keydown
+        on:keyup
+        on:mousedown
+        on:mouseenter
+        on:mouseleave
+        on:touchcancel
+        on:touchend
+        on:touchmove
+        on:touchstart
       />
+      <!-- the above on:* lines forward potentially useful DOM events -->
     </li>
   </ul>
   {#if loading}
@@ -399,8 +416,8 @@
         {@const active = activeIndex === idx}
         <li
           on:mousedown|stopPropagation
-          on:mouseup|stopPropagation={() => {
-            if (!disabled) is_selected(label) ? remove(label) : add(label)
+          on:mouseup|stopPropagation={(event) => {
+            if (!disabled) is_selected(label) ? remove(label) : add(label, event)
           }}
           title={disabled
             ? disabledTitle
@@ -431,7 +448,7 @@
         {#if allowUserOptions && searchText}
           <li
             on:mousedown|stopPropagation
-            on:mouseup|stopPropagation={() => add(searchText)}
+            on:mouseup|stopPropagation={(event) => add(searchText, event)}
             title={addOptionMsg}
             class:active={add_option_msg_is_active}
             on:mouseover={() => (add_option_msg_is_active = true)}

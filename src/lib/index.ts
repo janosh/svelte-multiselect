@@ -22,12 +22,24 @@ export type DispatchEvents = {
     options?: Option[]
     type: 'add' | 'remove' | 'removeAll'
   }
-  focus: undefined
-  blur: undefined
+  open: { event: Event }
+  close: { event: Event }
 }
 
 export type MultiSelectEvents = {
   [key in keyof DispatchEvents]: CustomEvent<DispatchEvents[key]>
+} & {
+  blur: FocusEvent
+  click: MouseEvent
+  focus: FocusEvent
+  keydown: KeyboardEvent
+  keyup: KeyboardEvent
+  mouseenter: MouseEvent
+  mouseleave: MouseEvent
+  touchcancel: TouchEvent
+  touchend: TouchEvent
+  touchmove: TouchEvent
+  touchstart: TouchEvent
 }
 
 // get the label key from an option object or the option itself if it's a string or number
