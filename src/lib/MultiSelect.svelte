@@ -345,7 +345,7 @@
         {autocomplete}
         bind:value={searchText}
         on:mouseup|self|stopPropagation={open_dropdown}
-        on:keydown={handle_keydown}
+        on:keydown|stopPropagation={handle_keydown}
         on:focus
         on:focus={open_dropdown}
         {id}
