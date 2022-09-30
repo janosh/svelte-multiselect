@@ -1,5 +1,5 @@
-import MultiSelect from '$lib'
-import { beforeEach, describe, expect, test } from 'vitest'
+import MultiSelect, { type MultiSelectEvents } from '$lib'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 beforeEach(() => {
   document.body.innerHTML = ``
@@ -177,5 +177,40 @@ describe(`MultiSelect`, () => {
     await sleep()
 
     expect(selected?.textContent?.trim()).toBe(`1 3`)
+  })
+
+  // https://github.com/janosh/svelte-multiselect/issues/119
+  test(`invokes callback function on keyup and keydown`, async () => {
+    const options = [1, 2, 3]
+
+    const events: [keyof MultiSelectEvents, Event][] = [
+      [`blur`, new FocusEvent(`blur`)],
+      [`click`, new MouseEvent(`click`)],
+      [`focus`, new FocusEvent(`focus`)],
+      [`keydown`, new KeyboardEvent(`keydown`, { key: `Enter` })],
+      [`keyup`, new KeyboardEvent(`keyup`, { key: `Enter` })],
+      [`mouseenter`, new MouseEvent(`mouseenter`)],
+      [`mouseleave`, new MouseEvent(`mouseleave`)],
+      [`touchend`, new TouchEvent(`touchend`)],
+      [`touchmove`, new TouchEvent(`touchmove`)],
+      [`touchstart`, new TouchEvent(`touchstart`)],
+    ]
+
+    const instance = new MultiSelect({
+      target: document.body,
+      props: { options },
+    })
+
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+    if (!input) throw new Error(`input not found`)
+
+    for (const [event_name, event] of events) {
+      const callback = vi.fn()
+      instance.$on(event_name, callback)
+
+      input.dispatchEvent(event)
+      expect(callback, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
+      expect(callback, `event type '${event_name}'`).toHaveBeenCalledWith(event)
+    }
   })
 })
