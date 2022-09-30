@@ -40,6 +40,7 @@
 - **v6.0.0** The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. See [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
 - **v6.0.1** The prop `disabledTitle` which sets the title of the `<MultiSelect>` `<input>` node if in `disabled` mode was renamed to `disabledInputTitle`. See [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
 - **v6.0.1** The default margin of `1em 0` on the wrapper `div.multiselect` was removed. Instead, there is now a new CSS variable `--sms-margin`. Set it to `--sms-margin: 1em 0;` to restore the old appearance. See [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
+- **6.1.0** The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. See [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
 
 ## Installation
 
@@ -359,10 +360,16 @@ Example:
    Triggers when an option is either added or removed, or all options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
 
 1. ```ts
-   on:blur={() => console.log('Multiselect input lost focus')}
+   on:open={(event) => console.log(`Multiselect dropdown was opened by ${event}`)}
    ```
 
-   Triggers when the input field looses focus.
+   Triggers when the dropdown list of options appears. Event is the DOM's `FocusEvent`,`KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
+
+1. ```ts
+   on:close={(event) => console.log(`Multiselect dropdown was closed by ${event}`)}
+   ```
+
+   Triggers when the dropdown list of options disappears. Event is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
 
 For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
 
@@ -377,6 +384,15 @@ For example, here's how you might annoy your users with an alert every time one 
 ```
 
 > Note: Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
+
+This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. You can register listeners for these just like for the above [Svelte `dispatch` events](https://svelte.dev/tutorial/component-events):
+
+```svelte
+<MultiSelect
+  options={[1, 2, 3]}
+  on:keyup={(event) => console.log('key', event.target.value)}
+/>
+```
 
 ## TypeScript
 
