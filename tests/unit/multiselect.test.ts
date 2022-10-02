@@ -180,7 +180,7 @@ describe(`MultiSelect`, () => {
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/119
-  test(`invokes callback function on keyup and keydown`, async () => {
+  test(`invokes callback functions on input node DOM events`, async () => {
     const options = [1, 2, 3]
 
     const events: [keyof MultiSelectEvents, Event][] = [

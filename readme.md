@@ -220,7 +220,7 @@ import type { Option } from 'svelte-multiselect'
    options: Option[]
    ```
 
-   **The only required prop** (no default). Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. A few keys like `preselected` and `title` have special meaning though. See `src/lib/index.ts` for all special keys and their purpose.
+   **The only required prop** (no default). Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. A few keys like `preselected` and `title` have special meaning though. See type `ObjectOption` in [`src/lib/index.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) for all special keys and their purpose.
 
 1. ```ts
    outerDiv: HTMLDivElement | null = null
@@ -483,12 +483,12 @@ For example, to change the background color of the options dropdown:
 
 The second method allows you to pass in custom classes to the important DOM elements of this component to target them with frameworks like [Tailwind CSS](https://tailwindcss.com).
 
-- `outerDivClass`
-- `ulSelectedClass`
-- `liSelectedClass`
-- `ulOptionsClass`
-- `liOptionClass`
-- `liActiveOptionClass`
+- `outerDivClass`: wrapper `div` enclosing the whole component
+- `ulSelectedClass`: list of selected options
+- `liSelectedClass`: selected list items
+- `ulOptionsClass`: available options listed in the dropdown when component is in `open` state
+- `liOptionClass`: list items selectable from dropdown list
+- `liActiveOptionClass`: the currently active dropdown list item (i.e. hovered or navigated to with arrow keys)
 
 This simplified version of the DOM structure of the component shows where these classes are inserted:
 
