@@ -81,8 +81,8 @@
   let window_width: number
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
-  $: selectedLabels = selected.map(get_label)
-  $: selectedValues = selected.map(get_value)
+  $: selectedLabels = selected?.map(get_label) ?? []
+  $: selectedValues = selected?.map(get_value) ?? []
 
   // formValue binds to input.form-control to prevent form submission if required
   // prop is true and no options are selected
