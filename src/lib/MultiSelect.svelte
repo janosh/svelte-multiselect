@@ -24,6 +24,7 @@
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
+  export let inputmode: string | null = null
   export let invalid: boolean = false
   export let liActiveOptionClass: string = ``
   export let liOptionClass: string = ``
@@ -39,23 +40,33 @@
   export let outerDiv: HTMLDivElement | null = null
   export let outerDivClass: string = ``
   export let parseLabelsAsHtml: boolean = false // should not be combined with allowUserOptions!
+  export let pattern: string | null = null
   export let placeholder: string | null = null
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
   export let required: boolean = false
   export let searchText: string = ``
   export let selected: Option[] | Option | null =
-    options?.filter((op) => (op as ObjectOption)?.preselected) ?? []
+    options
+      ?.filter((op) => (op as ObjectOption)?.preselected)
+      .slice(0, maxSelect ?? undefined) ?? []
   export let selectedLabels: (string | number)[] | string | number | null = []
   export let selectedValues: unknown[] | unknown | null = []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
-  export let inputmode: string = ``
-  export let pattern: string = ``
 
-  let _selected = selected as Option[]
+  // selected and _selected are identical except if maxSelect=1, selected will be the single item (or null)
+  // in _selected which will always be an array for easier component internals. selected then solves
+  // https://github.com/janosh/svelte-multiselect/issues/86
+  let _selected = (selected ?? []) as Option[]
   $: selected = maxSelect === 1 ? _selected[0] ?? null : _selected
+
+  let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
+  $: _selectedLabels = _selected?.map(get_label) ?? []
+  $: selectedLabels = maxSelect === 1 ? _selectedLabels[0] ?? null : _selectedLabels
+  $: _selectedValues = _selected?.map(get_value) ?? []
+  $: selectedValues = maxSelect === 1 ? _selectedValues[0] ?? null : _selectedValues
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
@@ -76,18 +87,14 @@
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
   if (!Array.isArray(_selected)) {
-    console.error(`selected prop must be an array, got ${_selected}`)
+    console.error(
+      `internal variable _selected prop should always be an array, got ${_selected}`
+    )
   }
 
   const dispatch = createEventDispatcher<DispatchEvents>()
   let add_option_msg_is_active: boolean = false // controls active state of <li>{addOptionMsg}</li>
   let window_width: number
-
-  let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
-  $: _selectedLabels = _selected?.map(get_label) ?? []
-  $: selectedLabels = maxSelect === 1 ? _selectedLabels[0] ?? null : _selectedLabels
-  $: _selectedValues = _selected?.map(get_value) ?? []
-  $: selectedValues = maxSelect === 1 ? _selectedValues[0] ?? null : _selectedValues
 
   // formValue binds to input.form-control to prevent form submission if required
   // prop is true and no options are selected
@@ -358,7 +365,7 @@
         {disabled}
         {inputmode}
         {pattern}
-        placeholder={selectedLabels.length ? `` : placeholder}
+        placeholder={_selected.length == 0 ? placeholder : null}
         aria-invalid={invalid ? `true` : null}
         on:blur
         on:change
