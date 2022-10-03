@@ -213,4 +213,50 @@ describe(`MultiSelect`, () => {
       expect(callback, `event type '${event_name}'`).toHaveBeenCalledWith(event)
     }
   })
+
+  test(`selected is a single option (not length-1 array) when maxSelect=1`, async () => {
+    const options = [1, 2, 3].map((itm) => ({
+      label: itm,
+      value: itm,
+      preselected: true,
+    }))
+
+    const instance = new MultiSelect({
+      target: document.body,
+      props: { options, maxSelect: 1 },
+    })
+
+    const selected = instance.$$.ctx[instance.$$.props.selected]
+
+    // this also tests that only 1st option is preselected although all options are marked such
+    expect(selected).toBe(options[0])
+  })
+
+  test(`selected is null when maxSelect=1 and no option is preselected`, async () => {
+    const instance = new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], maxSelect: 1 },
+    })
+
+    const selected = instance.$$.ctx[instance.$$.props.selected]
+
+    expect(selected).toBe(null)
+  })
+
+  test(`selected is array of options when maxSelect=2`, async () => {
+    const options = [1, 2, 3].map((itm) => ({
+      label: itm,
+      value: itm,
+      preselected: true,
+    }))
+
+    const instance = new MultiSelect({
+      target: document.body,
+      props: { options, maxSelect: 2 },
+    })
+
+    const selected = instance.$$.ctx[instance.$$.props.selected]
+
+    expect(selected).toEqual(options.slice(0, 2))
+  })
 })
