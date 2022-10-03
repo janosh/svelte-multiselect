@@ -265,22 +265,22 @@ import type { Option } from 'svelte-multiselect'
    Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
 
 1. ```ts
-   selected: Option[] = options?.filter((op) => op?.preselected) ?? []
+   selected: Option[] | Option | null = options?.filter((op) => op?.preselected) ?? []
    ```
 
-   Array of currently selected options. Can be bound to `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
+   Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction. If `maxSelect={1}`, selected will not be an array but a single `Option` or `null` if no options are selected.
 
 1. ```ts
    selectedLabels: (string | number)[] = []
    ```
 
-   Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedLabels`.
+   Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedLabels`. If `maxSelect={1}`, selectedLabels will not be an array but a single `string | number` or `null` if no options are selected.
 
 1. ```ts
    selectedValues: unknown[] = []
    ```
 
-   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`.
+   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`. If `maxSelect={1}`, selectedLabels will not be an array but a single value of `unknown` type or `null` if no options are selected.
 
 1. ```ts
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
