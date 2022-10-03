@@ -165,6 +165,12 @@ import type { Option } from 'svelte-multiselect'
    Handle to the `<input>` DOM node. Only available after component mounts (`null` before then).
 
 1. ```ts
+   inputmode: string | null = null
+   ```
+
+   The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow browsers to display an appropriate virtual keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details.
+
+1. ```ts
    invalid: boolean = false
    ```
 
@@ -235,6 +241,12 @@ import type { Option } from 'svelte-multiselect'
    Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).
 
 1. ```ts
+   pattern: string | null = null
+   ```
+
+   The pattern attribute specifies a regular expression which the input's value must match. If a non-null value doesn't match the `pattern` regex, the read-only `patternMismatch` property will be `true`. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Attributes/pattern) for details.
+
+1. ```ts
    placeholder: string | null = null
    ```
 
@@ -265,40 +277,31 @@ import type { Option } from 'svelte-multiselect'
    Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
 
 1. ```ts
-   selected: Option[] | Option | null = options?.filter((op) => op?.preselected) ?? []
+   selected: Option[] | Option | null =
+    options
+      ?.filter((op) => (op as ObjectOption)?.preselected)
+      .slice(0, maxSelect ?? undefined) ?? []
    ```
 
    Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction. If `maxSelect={1}`, selected will not be an array but a single `Option` or `null` if no options are selected.
 
 1. ```ts
-   selectedLabels: (string | number)[] = []
+   selectedLabels: (string | number)[] | string | number | null = []
    ```
 
    Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedLabels`. If `maxSelect={1}`, selectedLabels will not be an array but a single `string | number` or `null` if no options are selected.
 
 1. ```ts
-   selectedValues: unknown[] = []
+   selectedValues: unknown[] | unknown | null = []
    ```
 
-   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`. If `maxSelect={1}`, selectedLabels will not be an array but a single value of `unknown` type or `null` if no options are selected.
+   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`. If `maxSelect={1}`, selectedLabels will not be an array but a single value or `null` if no options are selected.
 
 1. ```ts
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
    ```
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
-
-1. ```ts
-   inputmode: string = ``
-   ```
-
-   The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow browsers to display an appropriate virtual keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details.
-
-1. ```ts
-   pattern: string = ``
-   ```
-
-   The pattern attribute specifies a regular expression which the input's value must match. If a non-null value doesn't match the `pattern` regex, the read-only `patternMismatch` property will be `true`. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Attributes/pattern) for details.
 
 ## Slots
 
