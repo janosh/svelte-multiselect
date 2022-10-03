@@ -44,15 +44,18 @@
   export let removeBtnTitle: string = `Remove`
   export let required: boolean = false
   export let searchText: string = ``
-  export let selected: Option[] =
+  export let selected: Option[] | Option | null =
     options?.filter((op) => (op as ObjectOption)?.preselected) ?? []
-  export let selectedLabels: (string | number)[] = []
-  export let selectedValues: unknown[] = []
+  export let selectedLabels: (string | number)[] | string | number | null = []
+  export let selectedValues: unknown[] | unknown | null = []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
   export let inputmode: string = ``
   export let pattern: string = ``
+
+  let _selected = selected as Option[]
+  $: selected = maxSelect === 1 ? _selected[0] ?? null : _selected
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
@@ -72,8 +75,8 @@
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!Array.isArray(selected)) {
-    console.error(`selected prop must be an array, got ${selected}`)
+  if (!Array.isArray(_selected)) {
+    console.error(`selected prop must be an array, got ${_selected}`)
   }
 
   const dispatch = createEventDispatcher<DispatchEvents>()
@@ -81,17 +84,19 @@
   let window_width: number
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
-  $: selectedLabels = selected?.map(get_label) ?? []
-  $: selectedValues = selected?.map(get_value) ?? []
+  $: _selectedLabels = _selected?.map(get_label) ?? []
+  $: selectedLabels = maxSelect === 1 ? _selectedLabels[0] ?? null : _selectedLabels
+  $: _selectedValues = _selected?.map(get_value) ?? []
+  $: selectedValues = maxSelect === 1 ? _selectedValues[0] ?? null : _selectedValues
 
   // formValue binds to input.form-control to prevent form submission if required
   // prop is true and no options are selected
-  $: formValue = selectedValues.join(`,`)
+  $: formValue = _selectedValues.join(`,`)
   $: if (formValue) invalid = false // reset error status whenever component state changes
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op) => filterFunc(op, searchText) && !selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
+    (op) => filterFunc(op, searchText) && !_selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
@@ -102,9 +107,9 @@
 
   // add an option to selected list
   function add(label: string | number, event: Event) {
-    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
+    if (maxSelect && maxSelect > 1 && _selected.length >= maxSelect) wiggle = true
     // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
-    if (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) {
+    if (maxSelect === null || maxSelect === 1 || _selected.length < maxSelect) {
       // first check if we find option in the options list
 
       let option = options.find((op) => get_label(op) === label)
@@ -137,20 +142,20 @@
       }
       if (maxSelect === 1) {
         // for maxselect = 1 we always replace current option with new one
-        selected = [option]
+        _selected = [option]
       } else {
-        selected = [...selected, option]
+        _selected = [..._selected, option]
         if (sortSelected === true) {
-          selected = selected.sort((op1: Option, op2: Option) => {
+          _selected = _selected.sort((op1: Option, op2: Option) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
             // coerce to string if labels are numbers
             return `${label1}`.localeCompare(`${label2}`)
           })
         } else if (typeof sortSelected === `function`) {
-          selected = selected.sort(sortSelected)
+          _selected = _selected.sort(sortSelected)
         }
       }
-      if (selected.length === maxSelect) close_dropdown(event)
+      if (_selected.length === maxSelect) close_dropdown(event)
       else if (
         focusInputOnSelect === true ||
         (focusInputOnSelect === `desktop` && window_width > breakpoint)
@@ -164,10 +169,10 @@
 
   // remove an option from selected list
   function remove(label: string | number) {
-    if (selected.length === 0) return
+    if (_selected.length === 0) return
 
-    selected.splice(selectedLabels.lastIndexOf(label), 1)
-    selected = selected // Svelte rerender after in-place splice
+    _selected.splice(_selectedLabels.lastIndexOf(label), 1)
+    _selected = _selected // Svelte rerender after in-place splice
 
     const option =
       options.find((option) => get_label(option) === label) ??
@@ -259,19 +264,19 @@
       }
     }
     // on backspace key: remove last selected option
-    else if (event.key === `Backspace` && selectedLabels.length > 0 && !searchText) {
-      remove(selectedLabels.at(-1) as string | number)
+    else if (event.key === `Backspace` && _selectedLabels.length > 0 && !searchText) {
+      remove(_selectedLabels.at(-1) as string | number)
     }
   }
 
   function remove_all() {
-    dispatch(`removeAll`, { options: selected })
-    dispatch(`change`, { options: selected, type: `removeAll` })
-    selected = []
+    dispatch(`removeAll`, { options: _selected })
+    dispatch(`change`, { options: _selected, type: `removeAll` })
+    _selected = []
     searchText = ``
   }
 
-  $: is_selected = (label: string | number) => selectedLabels.includes(label)
+  $: is_selected = (label: string | number) => _selectedLabels.includes(label)
 
   const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
@@ -317,7 +322,7 @@
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
-    {#each selected as option, idx}
+    {#each _selected as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
           {#if parseLabelsAsHtml}
@@ -380,16 +385,16 @@
     <slot name="disabled-icon">
       <DisabledIcon width="15px" />
     </slot>
-  {:else if selected.length > 0}
+  {:else if _selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
         <span style="padding: 0 3pt;">
-          {maxSelectMsg?.(selected.length, maxSelect) ??
-            (maxSelect > 1 ? `${selected.length}/${maxSelect}` : ``)}
+          {maxSelectMsg?.(_selected.length, maxSelect) ??
+            (maxSelect > 1 ? `${_selected.length}/${maxSelect}` : ``)}
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1 && selected.length > 1}
+    {#if maxSelect !== 1 && _selected.length > 1}
       <button
         type="button"
         class="remove-all"
