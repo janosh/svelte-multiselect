@@ -13,11 +13,11 @@ describe(`MultiSelect`, () => {
   test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
     const defaultDisabledTitle = `Not selectable`
     const special_disabled_title = `Special disabled title`
-    const options = [0, 1, 2].map((el) => ({
+    const options = [1, 2, 3].map((el) => ({
       label: el,
       value: el,
       disabled: true,
-      disabledTitle: el ? undefined : special_disabled_title,
+      disabledTitle: el > 1 ? undefined : special_disabled_title,
     }))
 
     new MultiSelect({
@@ -39,15 +39,11 @@ describe(`MultiSelect`, () => {
   test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
     const removeAllTitle = `Custom remove all title`
     const removeBtnTitle = `Custom remove button title`
-    const options = [1, 2, 3].map((itm) => ({
-      label: itm,
-      value: itm,
-      preselected: true,
-    }))
+    const options = [1, 2, 3]
 
     new MultiSelect({
       target: document.body,
-      props: { removeAllTitle, removeBtnTitle, options },
+      props: { removeAllTitle, removeBtnTitle, options, selected: options },
     })
     const remove_all_btn = document.querySelector(
       `div.multiselect button.remove-all`
@@ -58,12 +54,11 @@ describe(`MultiSelect`, () => {
 
     expect(remove_all_btn.title).toBe(removeAllTitle)
     expect([...remove_btns].map((btn) => btn.title)).toEqual(
-      options.map((op) => `${removeBtnTitle} ${op.label}`)
+      options.map((op) => `${removeBtnTitle} ${op}`)
     )
   })
 
   test(`applies DOM attributes to input node`, () => {
-    const options = [1, 2, 3]
     const searchText = `1`
     const id = `fancy-id`
     const autocomplete = `on`
@@ -75,7 +70,7 @@ describe(`MultiSelect`, () => {
     new MultiSelect({
       target: document.body,
       props: {
-        options,
+        options: [1, 2, 3],
         searchText,
         id,
         autocomplete,
@@ -104,11 +99,6 @@ describe(`MultiSelect`, () => {
   })
 
   test(`applies custom classes for styling through CSS frameworks`, () => {
-    const options = [1, 2, 3].map((itm, idx) => ({
-      label: itm,
-      value: itm,
-      preselected: Boolean(idx),
-    }))
     const classes = Object.fromEntries(
       `input liOption liSelected outerDiv ulOptions ulSelected`
         .split(` `)
@@ -117,7 +107,8 @@ describe(`MultiSelect`, () => {
 
     new MultiSelect({
       target: document.body,
-      props: { options, ...classes },
+      // select 1 to make sure the selected list is rendered
+      props: { options: [1, 2, 3], ...classes, selected: [1] },
     })
 
     // TODO also test liActiveOptionClass once figured out how to make an option active
@@ -135,9 +126,10 @@ describe(`MultiSelect`, () => {
 
   // https://github.com/janosh/svelte-multiselect/issues/111
   test(`arrow down makes first option active`, async () => {
-    const options = [`1`, `2`, `3`]
-
-    new MultiSelect({ target: document.body, props: { options, open: true } })
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], open: true },
+    })
 
     const input = document.querySelector(`div.multiselect ul.selected input`)
     if (!input) throw new Error(`input not found`)
@@ -155,9 +147,7 @@ describe(`MultiSelect`, () => {
 
   // https://github.com/janosh/svelte-multiselect/issues/112
   test(`can select 1st and last option with arrow and enter key`, async () => {
-    const options = [1, 2, 3]
-
-    new MultiSelect({ target: document.body, props: { options } })
+    new MultiSelect({ target: document.body, props: { options: [1, 2, 3] } })
 
     const input = document.querySelector(`div.multiselect ul.selected input`)
 
@@ -215,15 +205,11 @@ describe(`MultiSelect`, () => {
   })
 
   test(`selected is a single option (not length-1 array) when maxSelect=1`, async () => {
-    const options = [1, 2, 3].map((itm) => ({
-      label: itm,
-      value: itm,
-      preselected: true,
-    }))
+    const options = [1, 2, 3]
 
     const instance = new MultiSelect({
       target: document.body,
-      props: { options, maxSelect: 1 },
+      props: { options, maxSelect: 1, selected: options },
     })
 
     const selected = instance.$$.ctx[instance.$$.props.selected]
@@ -243,7 +229,8 @@ describe(`MultiSelect`, () => {
     expect(selected).toBe(null)
   })
 
-  test(`selected is array of options when maxSelect=2`, async () => {
+  test(`selected is array of first two options when maxSelect=2`, async () => {
+    // even though all options have preselected=true
     const options = [1, 2, 3].map((itm) => ({
       label: itm,
       value: itm,
@@ -258,5 +245,35 @@ describe(`MultiSelect`, () => {
     const selected = instance.$$.ctx[instance.$$.props.selected]
 
     expect(selected).toEqual(options.slice(0, 2))
+  })
+
+  test.each([null, [], undefined])(
+    `required but empty MultiSelect makes form not pass validity check`,
+    async (selected) => {
+      // not passing validity check means form won't submit (but dispatching
+      // submit and checking event.defaultPrevented is true seems harder to test)
+
+      const form = document.createElement(`form`)
+      document.body.appendChild(form)
+
+      new MultiSelect({
+        target: form,
+        props: { options: [1, 2, 3], required: true, selected },
+      })
+
+      expect(form.checkValidity()).toBe(false)
+    }
+  )
+
+  test(`required and non-empty MultiSelect makes form pass validity check`, async () => {
+    const form = document.createElement(`form`)
+    document.body.appendChild(form)
+
+    new MultiSelect({
+      target: form,
+      props: { options: [1, 2, 3], required: true, selected: [1] },
+    })
+
+    expect(form.checkValidity()).toBe(true)
   })
 })

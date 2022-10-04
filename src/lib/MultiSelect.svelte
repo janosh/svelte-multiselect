@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { createEventDispatcher } from 'svelte'
+  import { createEventDispatcher, tick } from 'svelte'
   import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option } from './'
   import { get_label, get_value } from './'
   import CircleSpinner from './CircleSpinner.svelte'
@@ -98,8 +98,8 @@
 
   // formValue binds to input.form-control to prevent form submission if required
   // prop is true and no options are selected
-  $: formValue = _selectedValues.join(`,`)
-  $: if (formValue) invalid = false // reset error status whenever component state changes
+  $: form_value = _selectedValues.join(`,`)
+  $: if (form_value) invalid = false // reset error status whenever component state changes
 
   // options matching the current search text
   $: matchingOptions = options.filter(
@@ -260,14 +260,13 @@
 
       if (autoScroll) {
         // TODO This ugly timeout hack is needed to properly scroll element into view when wrapping
-        // around start/end of option list. Find a better solution than waiting 10 ms to.
-        setTimeout(() => {
-          const li = document.querySelector(`ul.options > li.active`)
-          if (li) {
-            li.parentNode?.scrollIntoView({ block: `center` })
-            li.scrollIntoViewIfNeeded()
-          }
-        }, 10)
+        // around start/end of option list. Find a better solution than waiting 10 ms.
+        await tick()
+        const li = document.querySelector(`ul.options > li.active`)
+        if (li) {
+          li.parentNode?.scrollIntoView?.({ block: `center` })
+          li.scrollIntoViewIfNeeded?.()
+        }
       }
     }
     // on backspace key: remove last selected option
@@ -318,9 +317,10 @@
   title={disabled ? disabledInputTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
+  <!-- formValue binds to input.form-control to prevent form submission if required prop is true and no options are selected -->
   <input
     {required}
-    bind:value={formValue}
+    bind:value={form_value}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
