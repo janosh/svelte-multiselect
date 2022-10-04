@@ -114,10 +114,11 @@
       <ColorSlot let:idx {idx} let:option {option} slot="selected" />
       <ColorSlot let:idx {idx} let:option {option} slot="option" />
     </MultiSelect>
-    <button style="border: none; border-radius: 2pt; margin: 5pt 5pt 8pt 0;">
+    <button style="border: none; border-radius: 1pt; margin: 5pt 5pt 8pt 0;">
       submit
     </button>
-    (form submission will abort if Multiselect is empty)
+    (due to passing <code>required={true}</code> here, form submission will abort if
+    Multiselect is empty)
     <p>
       Also sets
       <code>allowUserOptions="append"</code> to allow adding custom colors.

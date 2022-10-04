@@ -55,7 +55,8 @@ export const get_value = (op: Option) =>
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
 if (
   typeof Element !== `undefined` &&
-  !Element.prototype?.scrollIntoViewIfNeeded
+  !Element.prototype?.scrollIntoViewIfNeeded &&
+  typeof IntersectionObserver !== `undefined`
 ) {
   Element.prototype.scrollIntoViewIfNeeded = function (centerIfNeeded = true) {
     const el = this as Element
