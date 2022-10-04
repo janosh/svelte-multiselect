@@ -99,16 +99,22 @@ describe(`MultiSelect`, () => {
   })
 
   test(`applies custom classes for styling through CSS frameworks`, () => {
-    const classes = Object.fromEntries(
-      `input liOption liSelected outerDiv ulOptions ulSelected`
-        .split(` `)
-        .map((cls) => [`${cls}Class`, cls])
+    const css_classes = {
+      input: HTMLInputElement,
+      liOption: HTMLLIElement,
+      liSelected: HTMLLIElement,
+      outerDiv: HTMLDivElement,
+      ulOptions: HTMLUListElement,
+      ulSelected: HTMLUListElement,
+    }
+    const prop_classes = Object.fromEntries(
+      Object.keys(css_classes).map((cls) => [`${cls}Class`, cls])
     )
 
     new MultiSelect({
       target: document.body,
       // select 1 to make sure the selected list is rendered
-      props: { options: [1, 2, 3], ...classes, selected: [1] },
+      props: { options: [1, 2, 3], ...prop_classes, selected: [1] },
     })
 
     // TODO also test liActiveOptionClass once figured out how to make an option active
@@ -117,10 +123,13 @@ describe(`MultiSelect`, () => {
     //   .querySelector(`div.multiselect > ul.options > li`)
     //   ?.dispatchEvent(new Event(`mouseover`, { bubbles: true }))
 
-    for (const class_name of Object.values(classes)) {
+    for (const [class_name, elem_type] of Object.entries(css_classes)) {
       const el = document.querySelector(`.${class_name}`)
 
-      expect(el, `did not find an element for ${class_name}Class`).toBeTruthy()
+      expect(
+        el,
+        `did not find an element for ${class_name}Class`
+      ).toBeInstanceOf(elem_type)
     }
   })
 
@@ -275,5 +284,49 @@ describe(`MultiSelect`, () => {
     })
 
     expect(form.checkValidity()).toBe(true)
+  })
+
+  test(`input is aria-invalid when component has invalid=true`, async () => {
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], invalid: true },
+    })
+
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+    if (!input) throw new Error(`input not found`)
+
+    expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
+  })
+
+  test(`parseLabelsAsHtml renders anchor tags as links`, async () => {
+    new MultiSelect({
+      target: document.body,
+      props: {
+        options: [`<a href="https://example.com">example.com</a>`],
+        parseLabelsAsHtml: true,
+      },
+    })
+
+    const anchor = document.querySelector(`a[href='https://example.com']`)
+    expect(anchor).toBeInstanceOf(HTMLAnchorElement)
+  })
+
+  test(`filters dropdown to show only matching options when entering text`, async () => {
+    const options = [`foo`, `bar`, `baz`]
+
+    new MultiSelect({
+      target: document.body,
+      props: { options },
+    })
+
+    const input = document.querySelector(`div.multiselect ul.selected input`)
+    if (!input) throw new Error(`input not found`)
+
+    input.value = `ba`
+    input.dispatchEvent(new InputEvent(`input`))
+    await sleep()
+
+    const dropdown = document.querySelector(`div.multiselect ul.options`)
+    expect(dropdown?.textContent?.trim()).toBe(`bar baz`)
   })
 })
