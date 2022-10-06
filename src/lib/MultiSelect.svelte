@@ -479,144 +479,159 @@
   {/if}
 </div>
 
-<style>
-  :where(div.multiselect) {
-    position: relative;
-    align-items: center;
-    display: flex;
-    cursor: text;
-    border: var(--sms-border, 1pt solid lightgray);
-    border-radius: var(--sms-border-radius, 3pt);
-    background: var(--sms-bg);
-    max-width: var(--sms-max-width);
-    padding: var(--sms-padding, 0 3pt);
-    color: var(--sms-text-color);
-    font-size: var(--sms-font-size, inherit);
-    min-height: var(--sms-min-height, 19pt);
-    margin: var(--sms-margin);
-  }
-  :where(div.multiselect.open) {
-    /* increase z-index when open to ensure the dropdown of one <MultiSelect />
+<style lang="scss">
+  @mixin default_styles() {
+    & {
+      position: relative;
+      align-items: center;
+      display: flex;
+      cursor: text;
+      border: var(--sms-border, 1pt solid lightgray);
+      border-radius: var(--sms-border-radius, 3pt);
+      background: var(--sms-bg);
+      max-width: var(--sms-max-width);
+      padding: var(--sms-padding, 0 3pt);
+      color: var(--sms-text-color);
+      font-size: var(--sms-font-size, inherit);
+      min-height: var(--sms-min-height, 19pt);
+      margin: var(--sms-margin);
+    }
+    &.open {
+      /* increase z-index when open to ensure the dropdown of one <MultiSelect />
     displays above that of another slightly below it on the page */
-    z-index: var(--sms-open-z-index, 4);
-  }
-  :where(div.multiselect:focus-within) {
-    border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
-  }
-  :where(div.multiselect.disabled) {
-    background: var(--sms-disabled-bg, lightgray);
-    cursor: not-allowed;
+      z-index: var(--sms-open-z-index, 4);
+    }
+    &:focus-within {
+      border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
+    }
+    &.disabled {
+      background: var(--sms-disabled-bg, lightgray);
+      cursor: not-allowed;
+    }
+
+    & > ul.selected {
+      display: flex;
+      flex: 1;
+      padding: 0;
+      margin: 0;
+      flex-wrap: wrap;
+    }
+    & > ul.selected > li {
+      align-items: center;
+      border-radius: 3pt;
+      display: flex;
+      margin: 2pt;
+      line-height: normal;
+      transition: 0.3s;
+      white-space: nowrap;
+      background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
+      padding: var(--sms-selected-li-padding, 1pt 5pt);
+      color: var(--sms-selected-text-color, var(--sms-text-color));
+    }
+    & button {
+      border-radius: 50%;
+      display: flex;
+      transition: 0.2s;
+      color: inherit;
+      background: transparent;
+      border: none;
+      cursor: pointer;
+      outline: none;
+      padding: 0;
+      margin: 0 0 0 3pt; /* CSS reset */
+    }
+    & button.remove-all {
+      margin: 0 3pt;
+    }
+    ul.selected > li button:hover,
+    button.remove-all:hover,
+    button:focus {
+      color: var(--sms-button-hover-color, lightskyblue);
+    }
+
+    & input {
+      margin: auto 0; /* CSS reset */
+      padding: 0; /* CSS reset */
+    }
+    & > ul.selected > li > input {
+      border: none;
+      outline: none;
+      background: none;
+      flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
+      min-width: 2em;
+      /* ensure input uses text color and not --sms-selected-text-color */
+      color: var(--sms-text-color);
+      font-size: inherit;
+      cursor: inherit; /* needed for disabled state */
+      border-radius: 0; /* reset ul.selected > li */
+    }
+    & > ul.selected > li > input::placeholder {
+      padding-left: 5pt;
+      color: var(--sms-placeholder-color);
+      opacity: var(--sms-placeholder-opacity);
+    }
+    & > input.form-control {
+      width: 2em;
+      position: absolute;
+      background: transparent;
+      border: none;
+      outline: none;
+      z-index: -1;
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    & > ul.options {
+      list-style: none;
+      padding: 4pt 0;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      position: absolute;
+      border-radius: 1ex;
+      overflow: auto;
+      background: var(--sms-options-bg, white);
+      max-height: var(--sms-options-max-height, 50vh);
+      overscroll-behavior: var(--sms-options-overscroll, none);
+      box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
+      transition: all 0.2s;
+    }
+    & > ul.options.hidden {
+      visibility: hidden;
+      opacity: 0;
+      transform: translateY(50px);
+    }
+    & > ul.options > li {
+      padding: 3pt 2ex;
+      cursor: pointer;
+      scroll-margin: var(--sms-options-scroll-margin, 100px);
+    }
+    & > ul.options span {
+      // for noOptionsMsg
+      padding: 3pt 2ex;
+    }
+    & > ul.options > li.selected {
+      background: var(--sms-li-selected-bg);
+      color: var(--sms-li-selected-color);
+    }
+    & > ul.options > li.active {
+      background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
+    }
+    & > ul.options > li.disabled {
+      cursor: not-allowed;
+      background: var(--sms-li-disabled-bg, #f5f5f6);
+      color: var(--sms-li-disabled-text, #b8b8b8);
+    }
   }
 
-  :where(div.multiselect > ul.selected) {
-    display: flex;
-    flex: 1;
-    padding: 0;
-    margin: 0;
-    flex-wrap: wrap;
-  }
-  :where(div.multiselect > ul.selected > li) {
-    align-items: center;
-    border-radius: 3pt;
-    display: flex;
-    margin: 2pt;
-    line-height: normal;
-    transition: 0.3s;
-    white-space: nowrap;
-    background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
-    padding: var(--sms-selected-li-padding, 1pt 5pt);
-    color: var(--sms-selected-text-color, var(--sms-text-color));
-  }
-  :where(div.multiselect button) {
-    border-radius: 50%;
-    display: flex;
-    transition: 0.2s;
-    color: inherit;
-    background: transparent;
-    border: none;
-    cursor: pointer;
-    outline: none;
-    padding: 0;
-    margin: 0 0 0 3pt; /* CSS reset */
-  }
-  :where(div.multiselect button.remove-all) {
-    margin: 0 3pt;
-  }
-  :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
-    color: var(--sms-button-hover-color, lightskyblue);
+  :where(div.multiselect) {
+    @include default_styles();
   }
 
-  :where(div.multiselect input) {
-    margin: auto 0; /* CSS reset */
-    padding: 0; /* CSS reset */
-  }
-  :where(div.multiselect > ul.selected > li > input) {
-    border: none;
-    outline: none;
-    background: none;
-    flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
-    min-width: 2em;
-    /* ensure input uses text color and not --sms-selected-text-color */
-    color: var(--sms-text-color);
-    font-size: inherit;
-    cursor: inherit; /* needed for disabled state */
-    border-radius: 0; /* reset ul.selected > li */
-  }
-  :where(div.multiselect > ul.selected > li > input)::placeholder {
-    padding-left: 5pt;
-    color: var(--sms-placeholder-color);
-    opacity: var(--sms-placeholder-opacity);
-  }
-  :where(div.multiselect > input.form-control) {
-    width: 2em;
-    position: absolute;
-    background: transparent;
-    border: none;
-    outline: none;
-    z-index: -1;
-    opacity: 0;
-    pointer-events: none;
-  }
-
-  :where(div.multiselect > ul.options) {
-    list-style: none;
-    padding: 4pt 0;
-    top: 100%;
-    left: 0;
-    width: 100%;
-    position: absolute;
-    border-radius: 1ex;
-    overflow: auto;
-    background: var(--sms-options-bg, white);
-    max-height: var(--sms-options-max-height, 50vh);
-    overscroll-behavior: var(--sms-options-overscroll, none);
-    box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
-    transition: all 0.2s;
-  }
-  :where(div.multiselect > ul.options.hidden) {
-    visibility: hidden;
-    opacity: 0;
-    transform: translateY(50px);
-  }
-  :where(div.multiselect > ul.options > li) {
-    padding: 3pt 2ex;
-    cursor: pointer;
-    scroll-margin: var(--sms-options-scroll-margin, 100px);
-  }
-  /* for noOptionsMsg */
-  :where(div.multiselect > ul.options span) {
-    padding: 3pt 2ex;
-  }
-  :where(div.multiselect > ul.options > li.selected) {
-    background: var(--sms-li-selected-bg);
-    color: var(--sms-li-selected-color);
-  }
-  :where(div.multiselect > ul.options > li.active) {
-    background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
-  }
-  :where(div.multiselect > ul.options > li.disabled) {
-    cursor: not-allowed;
-    background: var(--sms-li-disabled-bg, #f5f5f6);
-    color: var(--sms-li-disabled-text, #b8b8b8);
+  // https://github.com/janosh/svelte-multiselect/issues/117
+  @supports not selector(:where(div.multiselect)) {
+    div.multiselect {
+      @include default_styles();
+    }
   }
 </style>

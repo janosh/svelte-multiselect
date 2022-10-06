@@ -2,7 +2,7 @@
   import { page } from '$app/stores'
   import GitHubCorner from 'svelte-github-corner'
   import '../app.css'
-  import { demo_routes } from './demos'
+  import { demo_routes } from './+layout'
 
   $: isCurrent = (path: string) => {
     if (path === $page.url.pathname) return `page`

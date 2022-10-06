@@ -26,7 +26,7 @@ export default {
   extensions: [`.svelte`, `.svx`, `.md`],
 
   preprocess: [
-    preprocess(),
+    preprocess({ sass: false, scss: true }),
     mdsvex({ rehypePlugins, extensions: [`.svx`, `.md`] }),
   ],
 
