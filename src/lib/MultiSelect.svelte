@@ -226,7 +226,7 @@
 
       if (activeOption) {
         const label = get_label(activeOption)
-        selectedLabels.includes(label) ? remove(label) : add(label, event)
+        selectedLabels?.includes(label) ? remove(label) : add(label, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
