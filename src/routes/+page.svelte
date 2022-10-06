@@ -2,7 +2,7 @@
   import Toc from 'svelte-toc'
   import Readme from '../../readme.md'
   import Examples from '../components/Examples.svelte'
-  import { demo_routes } from './demos'
+  import { demo_routes } from './+layout'
 </script>
 
 <main>
