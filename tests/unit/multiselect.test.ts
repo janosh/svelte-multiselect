@@ -361,4 +361,43 @@ describe(`MultiSelect`, () => {
 
     expect(selected?.textContent?.trim()).toEqual(``)
   })
+
+  test(`cant select disabled options`, async () => {
+    const options = [1, 2, 3].map((el) => ({
+      label: el,
+      value: el,
+      disabled: el === 1,
+    }))
+    new MultiSelect({ target: document.body, props: { options } })
+
+    document
+      .querySelectorAll(`div.multiselect > ul.options > li`)
+      ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
+
+    const selected = document.querySelector(`div.multiselect ul.selected`)
+    await sleep()
+
+    expect(selected?.textContent?.trim()).toEqual(`2 3`)
+  })
+
+  test.each([2, 5, 10])(
+    `cant select more than maxSelect options`,
+    async (maxSelect: number) => {
+      new MultiSelect({
+        target: document.body,
+        props: { options: [...Array(10).keys()], maxSelect },
+      })
+
+      document
+        .querySelectorAll(`div.multiselect > ul.options > li`)
+        ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
+
+      const selected = document.querySelector(`div.multiselect ul.selected`)
+      await sleep()
+
+      expect(selected?.textContent?.trim()).toEqual(
+        [...Array(maxSelect).keys()].join(` `)
+      )
+    }
+  )
 })
