@@ -178,23 +178,6 @@ describe(`MultiSelect`, () => {
     expect(selected?.textContent?.trim()).toBe(`1 3`)
   })
 
-  // https://github.com/janosh/svelte-multiselect/issues/127
-  test(`can select an option with arrow and enter keys in single-select mode`, async () => {
-    new MultiSelect({
-      target: document.body,
-      props: { options: [1, 2, 3], maxSelect: 1 },
-    })
-
-    const input = document.querySelector(`div.multiselect ul.selected input`)
-    if (!input) throw new Error(`input not found`)
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
-    await sleep()
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
-    await sleep()
-    const selected = document.querySelector(`div.multiselect > ul.selected`)
-    expect(selected?.textContent?.trim()).toBe(`1`)
-  })
-
   // https://github.com/janosh/svelte-multiselect/issues/119
   test(`invokes callback functions on input node DOM events`, async () => {
     const options = [1, 2, 3]
@@ -346,4 +329,75 @@ describe(`MultiSelect`, () => {
     const dropdown = document.querySelector(`div.multiselect ul.options`)
     expect(dropdown?.textContent?.trim()).toBe(`bar baz`)
   })
+
+  test(`single remove button removes 1 selected option`, async () => {
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], selected: [1, 2, 3] },
+    })
+
+    document
+      .querySelector(`div.multiselect ul.selected button[title='Remove 1']`)
+      ?.dispatchEvent(new Event(`mouseup`))
+
+    const selected = document.querySelector(`div.multiselect ul.selected`)
+    await sleep()
+
+    expect(selected?.textContent?.trim()).toEqual(`2 3`)
+  })
+
+  test(`remove all button removes all selected options`, async () => {
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], selected: [1, 2, 3] },
+    })
+
+    document
+      .querySelector(`div.multiselect button[title='Remove all']`)
+      ?.dispatchEvent(new Event(`mouseup`))
+    const selected = document.querySelector(`div.multiselect ul.selected`)
+
+    await sleep()
+
+    expect(selected?.textContent?.trim()).toEqual(``)
+  })
+
+  test(`cant select disabled options`, async () => {
+    const options = [1, 2, 3].map((el) => ({
+      label: el,
+      value: el,
+      disabled: el === 1,
+    }))
+    new MultiSelect({ target: document.body, props: { options } })
+
+    document
+      .querySelectorAll(`div.multiselect > ul.options > li`)
+      ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
+
+    const selected = document.querySelector(`div.multiselect ul.selected`)
+    await sleep()
+
+    expect(selected?.textContent?.trim()).toEqual(`2 3`)
+  })
+
+  test.each([2, 5, 10])(
+    `cant select more than maxSelect options`,
+    async (maxSelect: number) => {
+      new MultiSelect({
+        target: document.body,
+        props: { options: [...Array(10).keys()], maxSelect },
+      })
+
+      document
+        .querySelectorAll(`div.multiselect > ul.options > li`)
+        ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
+
+      const selected = document.querySelector(`div.multiselect ul.selected`)
+      await sleep()
+
+      expect(selected?.textContent?.trim()).toEqual(
+        [...Array(maxSelect).keys()].join(` `)
+      )
+    }
+  )
 })

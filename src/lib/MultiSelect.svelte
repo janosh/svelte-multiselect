@@ -143,8 +143,10 @@
         if (allowUserOptions === `append`) options = [...options, option]
       }
       searchText = `` // reset search string on selection
-      if (!option) {
-        console.error(`MultiSelect: option with label ${label} not found`)
+      if ([``, undefined, null].includes(option)) {
+        console.error(
+          `MultiSelect: encountered missing option with label ${label} (or option is poorly labeled)`
+        )
         return
       }
       if (maxSelect === 1) {
