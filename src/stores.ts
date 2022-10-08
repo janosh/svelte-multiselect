@@ -1,5 +1,4 @@
 import { writable } from 'svelte/store'
-import type { Option } from './lib'
 
 function session_store<T>(name: string, initialValue: T) {
   if (typeof sessionStorage !== `undefined` && sessionStorage[name]) {
@@ -26,7 +25,7 @@ function session_store<T>(name: string, initialValue: T) {
   }
 }
 
-export const language_store = session_store<Option[]>(
+export const language_store = session_store<string[]>(
   `language-store`,
   `Python TypeScript C`.split(` `)
 )
