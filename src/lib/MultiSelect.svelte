@@ -1,7 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option } from './'
-  import { get_label, get_value } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
@@ -55,6 +54,12 @@
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
+
+  // get the label key from an option object or the option itself if it's a string or number
+  const get_label = (op: Option) => (op instanceof Object ? op.label : op)
+
+  // fallback on label if option is object and value is undefined
+  const get_value = (op: Option) => (op instanceof Object ? op.value ?? op.label : op)
 
   // selected and _selected are identical except if maxSelect=1, selected will be the single item (or null)
   // in _selected which will always be an array for easier component internals. selected then solves

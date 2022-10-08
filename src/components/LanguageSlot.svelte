@@ -1,13 +1,11 @@
 <script lang="ts">
-  import type { Option } from '$lib'
-  import { get_label } from '$lib'
-  export let option: Option
+  export let option: string
   export let height = `20px`
   export let gap = '5pt'
 
   const repo = `https://raw.githubusercontent.com/vscode-icons/vscode-icons/master/icons`
 
-  $: lang = String(get_label(option))
+  $: lang = String(option)
     .toLowerCase()
     .replaceAll(`+`, `p`)
     .replace(`#`, `sharp`)
