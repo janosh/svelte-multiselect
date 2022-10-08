@@ -15,7 +15,6 @@ describe(`MultiSelect`, () => {
     const special_disabled_title = `Special disabled title`
     const options = [1, 2, 3].map((el) => ({
       label: el,
-      value: el,
       disabled: true,
       disabledTitle: el > 1 ? undefined : special_disabled_title,
     }))
@@ -34,28 +33,6 @@ describe(`MultiSelect`, () => {
       defaultDisabledTitle,
       defaultDisabledTitle,
     ])
-  })
-
-  test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
-    const removeAllTitle = `Custom remove all title`
-    const removeBtnTitle = `Custom remove button title`
-    const options = [1, 2, 3]
-
-    new MultiSelect({
-      target: document.body,
-      props: { removeAllTitle, removeBtnTitle, options, selected: options },
-    })
-    const remove_all_btn = document.querySelector(
-      `div.multiselect button.remove-all`
-    ) as HTMLButtonElement
-    const remove_btns = document.querySelectorAll(
-      `div.multiselect > ul.selected > li > button`
-    )
-
-    expect(remove_all_btn.title).toBe(removeAllTitle)
-    expect([...remove_btns].map((btn) => btn.title)).toEqual(
-      options.map((op) => `${removeBtnTitle} ${op}`)
-    )
   })
 
   test(`applies DOM attributes to input node`, () => {
@@ -242,7 +219,6 @@ describe(`MultiSelect`, () => {
     // even though all options have preselected=true
     const options = [1, 2, 3].map((itm) => ({
       label: itm,
-      value: itm,
       preselected: true,
     }))
 
@@ -346,26 +322,64 @@ describe(`MultiSelect`, () => {
     expect(selected?.textContent?.trim()).toEqual(`2 3`)
   })
 
-  test(`remove all button removes all selected options`, async () => {
+  test(`remove all button removes all selected options and is visible only if more than 1 option is selected`, async () => {
     new MultiSelect({
       target: document.body,
       props: { options: [1, 2, 3], selected: [1, 2, 3] },
     })
+    let selected = document.querySelector(`div.multiselect ul.selected`)
+    expect(selected?.textContent?.trim()).toEqual(`1 2 3`)
 
     document
       .querySelector(`div.multiselect button[title='Remove all']`)
       ?.dispatchEvent(new Event(`mouseup`))
-    const selected = document.querySelector(`div.multiselect ul.selected`)
-
     await sleep()
 
+    selected = document.querySelector(`div.multiselect ul.selected`)
     expect(selected?.textContent?.trim()).toEqual(``)
+
+    // select 2 options
+    for (const _ of [1, 2]) {
+      expect(
+        document.querySelector(`div.multiselect button[title='Remove all']`),
+        `remove all button should only appear if more than 1 option is selected`
+      ).toBeNull()
+      document
+        .querySelector(`div.multiselect ul.options li`)
+        ?.dispatchEvent(new Event(`mouseup`))
+      await sleep()
+    }
+
+    expect(
+      document.querySelector(`div.multiselect button[title='Remove all']`)
+    ).toBeInstanceOf(HTMLButtonElement)
+  })
+
+  test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
+    const removeAllTitle = `Custom remove all title`
+    const removeBtnTitle = `Custom remove button title`
+    const options = [1, 2, 3]
+
+    new MultiSelect({
+      target: document.body,
+      props: { removeAllTitle, removeBtnTitle, options, selected: options },
+    })
+    const remove_all_btn = document.querySelector(
+      `div.multiselect button.remove-all`
+    ) as HTMLButtonElement
+    const remove_btns = document.querySelectorAll(
+      `div.multiselect > ul.selected > li > button`
+    )
+
+    expect(remove_all_btn.title).toBe(removeAllTitle)
+    expect([...remove_btns].map((btn) => btn.title)).toEqual(
+      options.map((op) => `${removeBtnTitle} ${op}`)
+    )
   })
 
   test(`cant select disabled options`, async () => {
     const options = [1, 2, 3].map((el) => ({
       label: el,
-      value: el,
       disabled: el === 1,
     }))
     new MultiSelect({ target: document.body, props: { options } })
@@ -400,4 +414,31 @@ describe(`MultiSelect`, () => {
       )
     }
   )
+
+  test(`closes dropdown on tab out`, async () => {
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3] },
+    })
+    // starts with closed dropdown
+    expect(
+      document.querySelector(`div.multiselect ul.options.hidden`)
+    ).toBeInstanceOf(HTMLUListElement)
+
+    // opens dropdown on focus
+    document.querySelector(`div.multiselect ul.selected input`)?.focus()
+    await sleep()
+    expect(
+      document.querySelector(`div.multiselect ul.options.hidden`)
+    ).toBeNull()
+
+    // closes dropdown again on tab out
+    document
+      .querySelector(`div.multiselect ul.selected input`)
+      ?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Tab` }))
+    await sleep()
+    expect(
+      document.querySelector(`div.multiselect ul.options.hidden`)
+    ).toBeInstanceOf(HTMLUListElement)
+  })
 })
