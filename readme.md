@@ -138,6 +138,26 @@ import type { Option } from 'svelte-multiselect'
 
    Tooltip text to display on hover when the component is in `disabled` state.
 
+<!-- prettier-ignore -->
+1. ```ts
+   duplicateFunc: (op1: Option, op2: Option) => boolean = (op1, op2) =>
+    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
+   ```
+
+   This option determines when two options are considered duplicates. Defaults to case-insensitive equality comparison after string coercion (looking only at the `label` key of object options). I.e. the default `duplicateFunc` considers `'Foo' == 'foo'`, `'42' == 42` and ``{ label: `Foo`, value: 0 } == { label: `foo`, value: 42 }``.
+
+1. ```ts
+   duplicates: boolean = false
+   ```
+
+   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is ` true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `duplicateFunc` to customize when a pair of options is considered a duplicate.
+
+1. ```ts
+   duplicateOptionMsg: string = `This option is already selected`
+   ```
+
+   Text to display to users when `allowUserOptions` is truthy and they try to create a new option that's already selected.
+
 1. ```ts
    filterFunc = (op: Option, searchText: string): boolean => {
      if (!searchText) return true
@@ -290,13 +310,13 @@ import type { Option } from 'svelte-multiselect'
    selectedLabels: (string | number)[] | string | number | null = []
    ```
 
-   Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings, `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedLabels`. If `maxSelect={1}`, selectedLabels will not be an array but a single `string | number` or `null` if no options are selected.
+   Labels of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.label)` when options are objects. If options are simple strings (or numbers), `selected === selectedLabels`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedLabels`. If `maxSelect={1}`, selectedLabels will not be an array but a single `string | number` or `null` if no options are selected.
 
 1. ```ts
    selectedValues: unknown[] | unknown | null = []
    ```
 
-   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings, `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`. If `maxSelect={1}`, selectedLabels will not be an array but a single value or `null` if no options are selected.
+   Values of currently selected options. Exposed just for convenience, equivalent to `selected.map(op => op.value)` when options are objects. If options are simple strings (or numbers), `selected === selectedValues`. Supports binding but is read-only, i.e. since this value is reactive to `selected`, you cannot control `selected` by changing `bind:selectedValues`. If `maxSelect={1}`, selectedLabels will not be an array but a single value or `null` if no options are selected.
 
 1. ```ts
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
@@ -460,7 +480,8 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `padding: var(--sms-selected-li-padding, 1pt 5pt)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
-  - `color: var(--sms-button-hover-color, lightskyblue)`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `color: var(--sms-remove-btn-hover-color, lightskyblue)`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2))`: Background for hovered remove buttons.
 - `div.multiselect > ul.options`
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
