@@ -94,7 +94,7 @@
 <section>
   <h3>Slot Components</h3>
 
-  <label for="food-select">
+  <label for="color-select">
     Color select using the <code>'selected'</code> and <code>'option'</code> slot components
     to render colors.
   </label>

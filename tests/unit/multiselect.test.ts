@@ -441,4 +441,47 @@ describe(`MultiSelect`, () => {
       document.querySelector(`div.multiselect ul.options.hidden`)
     ).toBeInstanceOf(HTMLUListElement)
   })
+
+  describe.each([
+    [[`1`, `2`, `3`], [`1`]], // test string options
+    [[1, 2, 3], [1]], // test number options
+  ])(
+    `shows duplicateOptionMsg when searchText is already selected for options=%j`,
+    (options, selected) => {
+      test.each([
+        [true, `Create this option...`],
+        [false, `Custom duplicate option message`],
+      ])(
+        `allowUserOptions=true, duplicates=%j`,
+        async (duplicates, duplicateOptionMsg) => {
+          new MultiSelect({
+            target: document.body,
+            props: {
+              options,
+              allowUserOptions: true,
+              duplicates,
+              duplicateOptionMsg,
+              selected,
+            },
+          })
+
+          const input = document.querySelector(
+            `div.multiselect ul.selected input`
+          )
+          if (!input) throw new Error(`input not found`)
+
+          input.value = selected[0]
+          input.dispatchEvent(new InputEvent(`input`))
+          await sleep()
+
+          const dropdown = document.querySelector(`div.multiselect ul.options`)
+
+          const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
+          expect(dropdown?.textContent?.trim(), fail_msg).toBe(
+            duplicateOptionMsg
+          )
+        }
+      )
+    }
+  )
 })
