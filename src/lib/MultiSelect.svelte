@@ -15,6 +15,11 @@
   export let defaultDisabledTitle: string = `This option is disabled`
   export let disabled: boolean = false
   export let disabledInputTitle: string = `This input is disabled`
+  // case-insensitive equality comparison after string coercion (looking only at the `label` key of object options)
+  export let duplicateFunc: (op1: Option, op2: Option) => boolean = (op1, op2) =>
+    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
+  export let duplicateOptionMsg: string = `This option is already selected`
+  export let duplicates: boolean = false // whether to allow duplicate options
   export let filterFunc = (op: Option, searchText: string): boolean => {
     if (!searchText) return true
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
@@ -120,8 +125,14 @@
   // add an option to selected list
   function add(label: string | number, event: Event) {
     if (maxSelect && maxSelect > 1 && _selected.length >= maxSelect) wiggle = true
-    // to prevent duplicate selection, we could add `&& !selectedLabels.includes(label)`
-    if (maxSelect === null || maxSelect === 1 || _selected.length < maxSelect) {
+    if (!isNaN(Number(label)) && typeof _selectedLabels[0] === `number`)
+      label = Number(label) // convert to number if possible
+
+    const is_duplicate = _selected.some((option) => duplicateFunc(option, label))
+    if (
+      (maxSelect === null || maxSelect === 1 || _selected.length < maxSelect) &&
+      (duplicates || !is_duplicate)
+    ) {
       // first check if we find option in the options list
 
       let option = options.find((op) => get_label(op) === label)
@@ -146,6 +157,9 @@
           } else option = searchText // else create custom option as string
         }
         if (allowUserOptions === `append`) options = [...options, option]
+      }
+      if (option === undefined) {
+        throw `Run time error, option with label ${label} not found in options list`
       }
       searchText = `` // reset search string on selection
       if ([``, undefined, null].includes(option)) {
@@ -352,7 +366,9 @@
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
           >
-            <slot name="remove-icon"><CrossIcon width="15px" /></slot>
+            <slot name="remove-icon">
+              <CrossIcon width="15px" />
+            </slot>
           </button>
         {/if}
       </li>
@@ -416,7 +432,9 @@
         on:mouseup|stopPropagation={remove_all}
         on:keydown={if_enter_or_space(remove_all)}
       >
-        <slot name="remove-icon"><CrossIcon width="15px" /></slot>
+        <slot name="remove-icon">
+          <CrossIcon width="15px" />
+        </slot>
       </button>
     {/if}
   {/if}
@@ -476,7 +494,9 @@
             on:blur={() => (add_option_msg_is_active = false)}
             aria-selected="false"
           >
-            {addOptionMsg}
+            {!duplicates && _selected.some((option) => duplicateFunc(option, searchText))
+              ? duplicateOptionMsg
+              : addOptionMsg}
           </li>
         {:else}
           <span>{noOptionsMsg}</span>
@@ -553,7 +573,8 @@
     ul.selected > li button:hover,
     button.remove-all:hover,
     button:focus {
-      color: var(--sms-button-hover-color, lightskyblue);
+      color: var(--sms-remove-btn-hover-color, lightskyblue);
+      background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2));
     }
 
     & input {
