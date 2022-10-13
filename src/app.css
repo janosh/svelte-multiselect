@@ -65,6 +65,7 @@ ul {
 }
 label {
   font-weight: bold;
+  cursor: pointer;
 }
 
 table {
