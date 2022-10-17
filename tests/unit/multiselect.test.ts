@@ -9,6 +9,12 @@ async function sleep(ms: number = 1) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function doc_query(selector: string) {
+  const res = document.querySelector(selector)
+  if (!res) throw new Error(`No element found for selector: ${selector}`)
+  return res
+}
+
 describe(`MultiSelect`, () => {
   test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
     const defaultDisabledTitle = `Not selectable`
@@ -24,7 +30,7 @@ describe(`MultiSelect`, () => {
       props: { options, defaultDisabledTitle },
     })
 
-    const lis = document.querySelectorAll(`div.multiselect > ul.options > li`)
+    const lis = document.querySelectorAll(`ul.options > li`)
 
     expect(lis.length).toBe(3)
 
@@ -58,10 +64,8 @@ describe(`MultiSelect`, () => {
       },
     })
 
-    const lis = document.querySelectorAll(`div.multiselect > ul.options > li`)
-    const input = document.querySelector(
-      `div.multiselect ul.selected input`
-    ) as HTMLInputElement
+    const lis = document.querySelectorAll(`ul.options > li`)
+    const input = doc_query(`ul.selected input`) as HTMLInputElement
 
     // make sure the search text filtered the dropdown options
     expect(lis.length).toBe(1)
@@ -97,16 +101,13 @@ describe(`MultiSelect`, () => {
     // TODO also test liActiveOptionClass once figured out how to make an option active
     // this doesn't work for unknown reasons
     // document
-    //   .querySelector(`div.multiselect > ul.options > li`)
+    //   .querySelector(`ul.options > li`)
     //   ?.dispatchEvent(new Event(`mouseover`, { bubbles: true }))
 
     for (const [class_name, elem_type] of Object.entries(css_classes)) {
-      const el = document.querySelector(`.${class_name}`)
+      const el = doc_query(`.${class_name}`)
 
-      expect(
-        el,
-        `did not find an element for ${class_name}Class`
-      ).toBeInstanceOf(elem_type)
+      expect(el).toBeInstanceOf(elem_type)
     }
   })
 
@@ -117,42 +118,37 @@ describe(`MultiSelect`, () => {
       props: { options: [1, 2, 3], open: true },
     })
 
-    const input = document.querySelector(`div.multiselect ul.selected input`)
-    if (!input) throw new Error(`input not found`)
+    const input = doc_query(`ul.selected input`)
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
 
     await sleep()
 
-    const active_option = document.querySelector(
-      `div.multiselect > ul.options > li.active`
-    )
+    const active_option = doc_query(`ul.options > li.active`)
 
-    expect(active_option?.textContent?.trim()).toBe(`1`)
+    expect(active_option.textContent?.trim()).toBe(`1`)
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/112
   test(`can select 1st and last option with arrow and enter key`, async () => {
     new MultiSelect({ target: document.body, props: { options: [1, 2, 3] } })
 
-    const input = document.querySelector(`div.multiselect ul.selected input`)
-
-    if (!input) throw new Error(`input not found`)
+    const input = doc_query(`ul.selected input`)
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
     await sleep()
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
     await sleep()
-    const selected = document.querySelector(`div.multiselect > ul.selected`)
+    const selected = doc_query(`div.multiselect > ul.selected`)
 
-    expect(selected?.textContent?.trim()).toBe(`1`)
+    expect(selected.textContent?.trim()).toBe(`1`)
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp` }))
     await sleep()
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
     await sleep()
 
-    expect(selected?.textContent?.trim()).toBe(`1 3`)
+    expect(selected.textContent?.trim()).toBe(`1 3`)
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/119
@@ -177,8 +173,7 @@ describe(`MultiSelect`, () => {
       props: { options },
     })
 
-    const input = document.querySelector(`div.multiselect ul.selected input`)
-    if (!input) throw new Error(`input not found`)
+    const input = doc_query(`ul.selected input`)
 
     for (const [event_name, event] of events) {
       const callback = vi.fn()
@@ -268,8 +263,7 @@ describe(`MultiSelect`, () => {
       props: { options: [1, 2, 3], invalid: true },
     })
 
-    const input = document.querySelector(`div.multiselect ul.selected input`)
-    if (!input) throw new Error(`input not found`)
+    const input = doc_query(`ul.selected input`)
 
     expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
   })
@@ -283,7 +277,7 @@ describe(`MultiSelect`, () => {
       },
     })
 
-    const anchor = document.querySelector(`a[href='https://example.com']`)
+    const anchor = doc_query(`a[href='https://example.com']`)
     expect(anchor).toBeInstanceOf(HTMLAnchorElement)
   })
 
@@ -295,16 +289,41 @@ describe(`MultiSelect`, () => {
       props: { options },
     })
 
-    const input = document.querySelector(`div.multiselect ul.selected input`)
-    if (!input) throw new Error(`input not found`)
+    const input = doc_query(`ul.selected input`)
 
     input.value = `ba`
     input.dispatchEvent(new InputEvent(`input`))
     await sleep()
 
-    const dropdown = document.querySelector(`div.multiselect ul.options`)
-    expect(dropdown?.textContent?.trim()).toBe(`bar baz`)
+    const dropdown = doc_query(`div.multiselect ul.options`)
+    expect(dropdown.textContent?.trim()).toBe(`bar baz`)
   })
+
+  // test default case and custom message
+  test.each([undefined, `Custom no options message`])(
+    `shows noMatchingOptionsMsg when no options match searchText`,
+    async (noMatchingOptionsMsg) => {
+      const select = new MultiSelect({
+        target: document.body,
+        props: { options: [1, 2, 3], noMatchingOptionsMsg },
+      })
+
+      const input = doc_query(`ul.selected input`)
+
+      input.value = `4`
+      input.dispatchEvent(new InputEvent(`input`))
+      await sleep()
+
+      if (noMatchingOptionsMsg === undefined) {
+        // get default value for noMatchingOptionsMsg
+        noMatchingOptionsMsg =
+          select.$$.ctx[select.$$.props.noMatchingOptionsMsg]
+      }
+
+      const dropdown = doc_query(`div.multiselect ul.options`)
+      expect(dropdown.textContent?.trim()).toBe(noMatchingOptionsMsg)
+    }
+  )
 
   test(`single remove button removes 1 selected option`, async () => {
     new MultiSelect({
@@ -316,10 +335,10 @@ describe(`MultiSelect`, () => {
       .querySelector(`div.multiselect ul.selected button[title='Remove 1']`)
       ?.dispatchEvent(new Event(`mouseup`))
 
-    const selected = document.querySelector(`div.multiselect ul.selected`)
+    const selected = doc_query(`div.multiselect ul.selected`)
     await sleep()
 
-    expect(selected?.textContent?.trim()).toEqual(`2 3`)
+    expect(selected.textContent?.trim()).toEqual(`2 3`)
   })
 
   test(`remove all button removes all selected options and is visible only if more than 1 option is selected`, async () => {
@@ -327,32 +346,32 @@ describe(`MultiSelect`, () => {
       target: document.body,
       props: { options: [1, 2, 3], selected: [1, 2, 3] },
     })
-    let selected = document.querySelector(`div.multiselect ul.selected`)
-    expect(selected?.textContent?.trim()).toEqual(`1 2 3`)
+    let selected = doc_query(`div.multiselect ul.selected`)
+    expect(selected.textContent?.trim()).toEqual(`1 2 3`)
 
     document
-      .querySelector(`div.multiselect button[title='Remove all']`)
+      .querySelector(`button[title='Remove all']`)
       ?.dispatchEvent(new Event(`mouseup`))
     await sleep()
 
-    selected = document.querySelector(`div.multiselect ul.selected`)
-    expect(selected?.textContent?.trim()).toEqual(``)
+    selected = doc_query(`div.multiselect ul.selected`)
+    expect(selected.textContent?.trim()).toEqual(``)
 
     // select 2 options
     for (const _ of [1, 2]) {
       expect(
-        document.querySelector(`div.multiselect button[title='Remove all']`),
+        document.querySelector(`button[title='Remove all']`),
         `remove all button should only appear if more than 1 option is selected`
       ).toBeNull()
-      document
-        .querySelector(`div.multiselect ul.options li`)
-        ?.dispatchEvent(new Event(`mouseup`))
+      doc_query(`div.multiselect ul.options li`).dispatchEvent(
+        new Event(`mouseup`)
+      )
       await sleep()
     }
 
-    expect(
-      document.querySelector(`div.multiselect button[title='Remove all']`)
-    ).toBeInstanceOf(HTMLButtonElement)
+    expect(doc_query(`button[title='Remove all']`)).toBeInstanceOf(
+      HTMLButtonElement
+    )
   })
 
   test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
@@ -364,9 +383,7 @@ describe(`MultiSelect`, () => {
       target: document.body,
       props: { removeAllTitle, removeBtnTitle, options, selected: options },
     })
-    const remove_all_btn = document.querySelector(
-      `div.multiselect button.remove-all`
-    ) as HTMLButtonElement
+    const remove_all_btn = doc_query(`button.remove-all`) as HTMLButtonElement
     const remove_btns = document.querySelectorAll(
       `div.multiselect > ul.selected > li > button`
     )
@@ -384,14 +401,14 @@ describe(`MultiSelect`, () => {
     }))
     new MultiSelect({ target: document.body, props: { options } })
 
-    document
-      .querySelectorAll(`div.multiselect > ul.options > li`)
-      ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
+    for (const li of document.querySelectorAll(`ul.options > li`)) {
+      li.dispatchEvent(new MouseEvent(`mouseup`))
+    }
 
-    const selected = document.querySelector(`div.multiselect ul.selected`)
+    const selected = doc_query(`div.multiselect ul.selected`)
     await sleep()
 
-    expect(selected?.textContent?.trim()).toEqual(`2 3`)
+    expect(selected.textContent?.trim()).toEqual(`2 3`)
   })
 
   test.each([2, 5, 10])(
@@ -403,13 +420,13 @@ describe(`MultiSelect`, () => {
       })
 
       document
-        .querySelectorAll(`div.multiselect > ul.options > li`)
+        .querySelectorAll(`ul.options > li`)
         ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
 
-      const selected = document.querySelector(`div.multiselect ul.selected`)
+      const selected = doc_query(`div.multiselect ul.selected`)
       await sleep()
 
-      expect(selected?.textContent?.trim()).toEqual(
+      expect(selected.textContent?.trim()).toEqual(
         [...Array(maxSelect).keys()].join(` `)
       )
     }
@@ -421,25 +438,19 @@ describe(`MultiSelect`, () => {
       props: { options: [1, 2, 3] },
     })
     // starts with closed dropdown
-    expect(
-      document.querySelector(`div.multiselect ul.options.hidden`)
-    ).toBeInstanceOf(HTMLUListElement)
+    expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 
     // opens dropdown on focus
-    document.querySelector(`div.multiselect ul.selected input`)?.focus()
+    doc_query(`ul.selected input`).focus()
     await sleep()
-    expect(
-      document.querySelector(`div.multiselect ul.options.hidden`)
-    ).toBeNull()
+    expect(document.querySelector(`ul.options.hidden`)).toBeNull()
 
     // closes dropdown again on tab out
-    document
-      .querySelector(`div.multiselect ul.selected input`)
-      ?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Tab` }))
+    doc_query(`ul.selected input`).dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `Tab` })
+    )
     await sleep()
-    expect(
-      document.querySelector(`div.multiselect ul.options.hidden`)
-    ).toBeInstanceOf(HTMLUListElement)
+    expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
   })
 
   describe.each([
@@ -465,19 +476,16 @@ describe(`MultiSelect`, () => {
             },
           })
 
-          const input = document.querySelector(
-            `div.multiselect ul.selected input`
-          )
-          if (!input) throw new Error(`input not found`)
+          const input = doc_query(`ul.selected input`)
 
           input.value = selected[0]
           input.dispatchEvent(new InputEvent(`input`))
           await sleep()
 
-          const dropdown = document.querySelector(`div.multiselect ul.options`)
+          const dropdown = doc_query(`div.multiselect ul.options`)
 
           const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
-          expect(dropdown?.textContent?.trim(), fail_msg).toBe(
+          expect(dropdown.textContent?.trim(), fail_msg).toBe(
             duplicateOptionMsg
           )
         }

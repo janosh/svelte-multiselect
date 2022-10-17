@@ -69,7 +69,7 @@ Starting with no options and letting the user populate their selection from scra
   id="no-default-options"
   allowUserOptions="append"
   bind:selected={selected_empty}
-  noOptionsMsg=""
+  noMatchingOptionsMsg=""
 />
 
 ```svelte
@@ -77,6 +77,6 @@ Starting with no options and letting the user populate their selection from scra
   id="no-default-options"
   allowUserOptions="append"
   bind:selected={selected_empty}
-  noOptionsMsg=""
+  noMatchingOptionsMsg=""
 />
 ```

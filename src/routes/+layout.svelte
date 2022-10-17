@@ -14,7 +14,7 @@
 <GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
 
 {#if demo_routes.includes($page.url.pathname)}
-  <a href="/" data-sveltekit-prefetch aria-label="Back to index page">&laquo; back</a>
+  <a href="/" aria-label="Back to index page">&laquo; back</a>
   <h1>
     <img src="/favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
     MultiSelect
@@ -24,7 +24,7 @@
   <nav>
     {#each demo_routes as route, idx}
       {#if idx > 0}<strong>&bull;</strong>{/if}
-      <a href={route} data-sveltekit-prefetch aria-current={isCurrent(route)}>{route}</a>
+      <a href={route} aria-current={isCurrent(route)}>{route}</a>
     {/each}
   </nav>
 
