@@ -15,7 +15,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "package": "svelte-package",
-    "serve": "yarn build && yarn preview",
+    "serve": "pnpm build && pnpm preview",
     "check": "svelte-check --ignore package",
     "test": "vitest --run tests/unit/*.ts && playwright test tests/*.test.ts"
   },

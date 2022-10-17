@@ -17,24 +17,29 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v3
 
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v2
+        with:
+          version: latest
+
       - name: Set up node
         uses: actions/setup-node@v3
         with:
-          cache: yarn
+          cache: pnpm
 
       - name: Install dependencies
         run: |
-          yarn
+          pnpm install
           npx playwright install
 
       - name: Run tests
         id: tests
-        run: yarn test
+        run: pnpm test
 
       - name: Build package and publish to NPM
         if: github.event_name == 'release' && steps.tests.outcome == 'success' && runner.os == 'Linux'
         run: |
-          yarn package
-          yarn publish package
+          pnpm package
+          pnpm publish package
         env:
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
