@@ -30,7 +30,7 @@ jobs:
       - name: Install dependencies
         run: |
           pnpm install
-          npx playwright install
+          npx playwright install chromium
 
       - name: Run tests
         id: tests
