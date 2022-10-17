@@ -9,8 +9,13 @@
 <span>
   <small>{idx + 1}</small>
   <strong>{option.label}</strong>
-  <small on:click|stopPropagation>
-    <a href="https://github.com/{option.repo_handle}" target="_blank">
+  <small>
+    <a
+      href="https://github.com/{option.repo_handle}"
+      target="_blank"
+      rel="noreferrer"
+      on:click|stopPropagation
+    >
       <Octocat width="14pt" />{option.repo_handle}
     </a>
   </small>

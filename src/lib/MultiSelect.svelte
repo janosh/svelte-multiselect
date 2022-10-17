@@ -38,7 +38,7 @@
   export let maxSelect: number | null = null // null means any number of options are selectable
   export let maxSelectMsg: ((current: number, max: number) => string) | null = null
   export let name: string | null = null
-  export let noOptionsMsg: string = `No matching options`
+  export let noMatchingOptionsMsg: string = `No matching options`
   export let open: boolean = false
   export let options: Option[]
   export let outerDiv: HTMLDivElement | null = null
@@ -499,7 +499,7 @@
               : addOptionMsg}
           </li>
         {:else}
-          <span>{noOptionsMsg}</span>
+          <span>{noMatchingOptionsMsg}</span>
         {/if}
       {/each}
     </ul>
@@ -635,7 +635,7 @@
       scroll-margin: var(--sms-options-scroll-margin, 100px);
     }
     & > ul.options span {
-      // for noOptionsMsg
+      // for noMatchingOptionsMsg
       padding: 3pt 2ex;
     }
     & > ul.options > li.selected {
