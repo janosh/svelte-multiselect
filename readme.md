@@ -232,7 +232,7 @@ import type { Option } from 'svelte-multiselect'
    Applied to the `<input>` element. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>` node.
 
 1. ```ts
-   noOptionsMsg: string = `No matching options`
+   noMatchingOptionsMsg: string = `No matching options`
    ```
 
    What message to show if no options match the user-entered search string.
