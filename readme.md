@@ -8,8 +8,8 @@
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
 [![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
-[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
-[![REPL](https://img.shields.io/badge/Svelte-REPL-blue?logo=Svelte)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
+[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
+[![REPL](https://img.shields.io/badge/Svelte-REPL-blue?label=Try%20it!)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
 [![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
 
 </h4>
