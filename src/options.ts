@@ -21,17 +21,16 @@ export const frontend_libs = [
   [`Preact`, `JavaScript`, `preactjs/preact`],
 ].map(([label, lang, repo_handle]) => ({
   label,
-  value: label,
   lang,
   repo_handle,
 }))
 
 export const ml_libs =
-  `TensorFlow PyTorch scikit-learn Spark ML Torch Huggingface Keras Caffe Theano CNTK`
+  `TensorFlow PyTorch scikit-learn Spark Torch Huggingface Keras Caffe Theano CNTK JAX fast.ai Lightning XGBoost MXNet`
     .split(` `)
     .map((label) => {
-      const op = { label, value: label, disabled: false, preselected: false }
-      if ([`CNTK`, `Theano`].includes(label)) op.disabled = true
+      const op = { label, disabled: false, preselected: false }
+      if ([`CNTK`, `Theano`, `MXNet`].includes(label)) op.disabled = true
       if (label === `PyTorch`) op.preselected = true
       return op
     })
@@ -48,13 +47,9 @@ export const foods =
   )
 
 export const colors =
-  `Red Green Blue Yellow Purple Pink Brown Black White Gray Orange Cyan Magenta Silver Gold Turquoise Violet Lime Indigo Navy`
-    .split(` `)
-    .map((clr) => ({
-      label: clr,
-      value: clr,
-      preselected: [`Orange`, `Yellow`, `Green`].includes(clr),
-    }))
+  `Red Green Blue Yellow Purple Pink Brown Black White Gray Orange Cyan Magenta Silver Gold Turquoise Violet Lime Indigo Navy`.split(
+    ` `
+  )
 
 const red_vs_blue_pill_link = (text: string) =>
   `<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">${text}</a>`

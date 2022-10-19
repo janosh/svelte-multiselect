@@ -9,11 +9,11 @@
   import RepoSlot from './RepoSlot.svelte'
 
   let selected_ml: string[]
-  let selected_colors: ObjectOption[]
+  let selected_colors = [`red`, `orange`, `yellow`]
 
   let showConfetti = false
 
-  const filterFunc = (op: ObjectOption, searchText: string) => {
+  const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {
     if (!searchText) return true
     const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
       `${s}`.toLowerCase()
@@ -50,9 +50,11 @@
 <section>
   <h3>Single Select</h3>
 
-  <label for="fav-ml-tool">with loading indicator on text input</label>
+  <p>with loading indicator on text input</p>
 
   <pre>selected = {JSON.stringify(selected_ml)}</pre>
+
+  <label for="fav-ml-tool">Favorite machine learning framework?</label>
 
   <MultiSelect
     id="fav-ml-tool"
@@ -76,7 +78,7 @@
     options={frontend_libs}
     maxSelect={4}
     placeholder="Favorite web framework?"
-    {filterFunc}
+    filterFunc={frontend_libs_filter_func}
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
         showConfetti = true
@@ -100,7 +102,7 @@
   </label>
   <form
     on:submit|preventDefault={() => {
-      alert(`You selected '${selected_colors.map((el) => el.label).join(`, `)}'`)
+      alert(`You selected '${selected_colors.join(`, `)}'`)
     }}
   >
     <MultiSelect
