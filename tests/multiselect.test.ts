@@ -4,6 +4,8 @@ import { foods } from '../src/options.ts'
 
 // to run tests in this file, use `npm run test`
 
+test.describe.configure({ mode: `parallel` })
+
 test.describe(`input`, async () => {
   test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
