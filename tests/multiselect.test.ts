@@ -463,11 +463,7 @@ test.describe(`parseLabelsAsHtml`, async () => {
     expect(anchor).toBeTruthy()
   })
 
-  // TODO: fix test, expected error msg not recorded by page.on(`console`) for unknown reason
-  // even though it's there when opening page in browser
-  test.skip(`to raise error if combined with allowUserOptions`, async ({
-    page,
-  }) => {
+  test(`to raise error if combined with allowUserOptions`, async ({ page }) => {
     const logs: string[] = []
     page.on(`console`, (msg) => logs.push(msg.text()))
 
