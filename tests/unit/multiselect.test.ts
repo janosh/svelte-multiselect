@@ -1,5 +1,6 @@
-import MultiSelect, { type MultiSelectEvents } from '$lib'
+import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import Test2WayBind from './Test2WayBind.svelte'
 
 beforeEach(() => {
   document.body.innerHTML = ``
@@ -534,6 +535,58 @@ describe(`MultiSelect`, () => {
       await sleep()
 
       expect(input.value).toBe(expected)
+    }
+  )
+
+  test(`2-way bind selected`, async () => {
+    let selected: Option[]
+    const binder = new Test2WayBind({
+      target: document.body,
+    })
+    binder.$on(`selected-changed`, (e: CustomEvent) => {
+      selected = e.detail
+    })
+
+    // test internal changes bind outwards
+    for (const _ of [1, 2]) {
+      const li = doc_query(`ul.options li`)
+      li.dispatchEvent(new MouseEvent(`mouseup`))
+      await sleep()
+    }
+
+    expect(selected).toEqual([1, 2])
+
+    // test external changes bind inwards
+    selected = [3]
+    binder.$set({ selected })
+    await sleep()
+    expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`3`)
+  })
+
+  test.each([
+    [null, [1, 2]],
+    [1, 2],
+    [2, [1, 2]],
+  ])(
+    `1-way bind value when maxSelect=%s, expected value=%s`,
+    async (maxSelect, expected) => {
+      const binder = new Test2WayBind({
+        target: document.body,
+        props: { maxSelect },
+      })
+      let value: Option[]
+      binder.$on(`value-changed`, (e: CustomEvent) => {
+        value = e.detail
+      })
+
+      // test internal changes bind outwards
+      for (const _ of [1, 2]) {
+        const li = doc_query(`ul.options li`)
+        li.dispatchEvent(new MouseEvent(`mouseup`))
+        await sleep()
+      }
+
+      expect(value).toEqual(expected)
     }
   )
 })
