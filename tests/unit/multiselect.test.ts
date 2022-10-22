@@ -227,23 +227,31 @@ describe(`MultiSelect`, () => {
     expect(selected).toEqual(options.slice(0, 2))
   })
 
-  test.each([null, [], undefined])(
-    `required but empty MultiSelect makes form not pass validity check`,
-    async (selected) => {
-      // not passing validity check means form won't submit (but dispatching
-      // submit and checking event.defaultPrevented is true seems harder to test)
+  describe.each([
+    [[], false], // empty selected = invalid form
+    [[1], true], // at least 1 selected = valid form
+  ])(`required MultiSelect`, (selected, form_valid) => {
+    test.each([1, 2, null])(
+      `${
+        form_valid ? `does` : `doesn't`
+      } pass validity check if selected=${selected} and maxSelect=%s`,
+      (maxSelect) => {
+        // i think, not passing validity check means form won't submit
+        // maybe TODO: simulating form submission event and checking
+        // event.defaultPrevented == true seems closer to ground truth but harder to test
 
-      const form = document.createElement(`form`)
-      document.body.appendChild(form)
+        const form = document.createElement(`form`)
+        document.body.appendChild(form)
 
-      new MultiSelect({
-        target: form,
-        props: { options: [1, 2, 3], required: true, selected },
-      })
+        new MultiSelect({
+          target: form,
+          props: { options: [1, 2, 3], required: true, selected, maxSelect },
+        })
 
-      expect(form.checkValidity()).toBe(false)
-    }
-  )
+        expect(form.checkValidity()).toBe(form_valid)
+      }
+    )
+  })
 
   test(`required and non-empty MultiSelect makes form pass validity check`, async () => {
     const form = document.createElement(`form`)
