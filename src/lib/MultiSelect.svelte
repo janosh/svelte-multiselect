@@ -54,22 +54,22 @@
   export let required: boolean = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
-  export let selected: Option[] | Option | null =
+  export let selected: Option[] =
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
+  export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
   const get_label = (op: Option) => (op instanceof Object ? op.label : op)
 
-  // selected and _selected are identical except if maxSelect=1, selected will be the single item (or null)
-  // in _selected which will always be an array for easier component internals. selected then solves
-  // https://github.com/janosh/svelte-multiselect/issues/86
-  let _selected = (selected ?? []) as Option[]
-  $: selected = maxSelect === 1 ? _selected[0] ?? null : _selected
+  // if maxSelect=1, value is the single item in selected (or null if selected is empty)
+  // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
+  // https://github.com/janosh/svelte-multiselect/issues/136
+  $: value = maxSelect === 1 ? selected[0] ?? null : selected
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
 
@@ -91,9 +91,9 @@
   if (maxSelect !== null && maxSelect < 1) {
     console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
   }
-  if (!Array.isArray(_selected)) {
+  if (!Array.isArray(selected)) {
     console.error(
-      `internal variable _selected prop should always be an array, got ${_selected}`
+      `internal variable selected prop should always be an array, got ${selected}`
     )
   }
 
@@ -103,8 +103,7 @@
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op) =>
-      filterFunc(op, searchText) && !_selected.map(get_label).includes(get_label(op)) // remove already selected options from dropdown list
+    (op) => filterFunc(op, searchText) && !selected.map(get_label).includes(get_label(op)) // remove already selected options from dropdown list
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
@@ -115,13 +114,13 @@
 
   // add an option to selected list
   function add(label: string | number, event: Event) {
-    if (maxSelect && maxSelect > 1 && _selected.length >= maxSelect) wiggle = true
-    if (!isNaN(Number(label)) && typeof _selected.map(get_label)[0] === `number`)
+    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
+    if (!isNaN(Number(label)) && typeof selected.map(get_label)[0] === `number`)
       label = Number(label) // convert to number if possible
 
-    const is_duplicate = _selected.some((option) => duplicateFunc(option, label))
+    const is_duplicate = selected.some((option) => duplicateFunc(option, label))
     if (
-      (maxSelect === null || maxSelect === 1 || _selected.length < maxSelect) &&
+      (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
     ) {
       // first check if we find option in the options list
@@ -161,20 +160,20 @@
       }
       if (maxSelect === 1) {
         // for maxselect = 1 we always replace current option with new one
-        _selected = [option]
+        selected = [option]
       } else {
-        _selected = [..._selected, option]
+        selected = [...selected, option]
         if (sortSelected === true) {
-          _selected = _selected.sort((op1: Option, op2: Option) => {
+          selected = selected.sort((op1: Option, op2: Option) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
             // coerce to string if labels are numbers
             return `${label1}`.localeCompare(`${label2}`)
           })
         } else if (typeof sortSelected === `function`) {
-          _selected = _selected.sort(sortSelected)
+          selected = selected.sort(sortSelected)
         }
       }
-      if (_selected.length === maxSelect) close_dropdown(event)
+      if (selected.length === maxSelect) close_dropdown(event)
       else if (
         focusInputOnSelect === true ||
         (focusInputOnSelect === `desktop` && window_width > breakpoint)
@@ -190,10 +189,10 @@
 
   // remove an option from selected list
   function remove(label: string | number) {
-    if (_selected.length === 0) return
+    if (selected.length === 0) return
 
-    _selected.splice(_selected.map(get_label).lastIndexOf(label), 1)
-    _selected = _selected // Svelte rerender after in-place splice
+    selected.splice(selected.map(get_label).lastIndexOf(label), 1)
+    selected = selected // Svelte rerender after in-place splice
 
     const option =
       options.find((option) => get_label(option) === label) ??
@@ -241,7 +240,7 @@
 
       if (activeOption) {
         const label = get_label(activeOption)
-        _selected.map(get_label).includes(label) ? remove(label) : add(label, event)
+        selected.map(get_label).includes(label) ? remove(label) : add(label, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -285,19 +284,19 @@
       }
     }
     // on backspace key: remove last selected option
-    else if (event.key === `Backspace` && _selected.length > 0 && !searchText) {
-      remove(_selected.map(get_label).at(-1) as string | number)
+    else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
+      remove(selected.map(get_label).at(-1) as string | number)
     }
   }
 
   function remove_all() {
-    dispatch(`removeAll`, { options: _selected })
-    dispatch(`change`, { options: _selected, type: `removeAll` })
-    _selected = []
+    dispatch(`removeAll`, { options: selected })
+    dispatch(`change`, { options: selected, type: `removeAll` })
+    selected = []
     searchText = ``
   }
 
-  $: is_selected = (label: string | number) => _selected.map(get_label).includes(label)
+  $: is_selected = (label: string | number) => selected.map(get_label).includes(label)
 
   const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
@@ -332,10 +331,10 @@
   title={disabled ? disabledInputTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
-  <!-- bind:value={_selected} prevents form submission if required prop is true and no options are selected -->
+  <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
     {required}
-    bind:value={_selected}
+    bind:value={selected}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
@@ -344,7 +343,7 @@
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
-    {#each _selected as option, idx}
+    {#each selected as option, idx}
       <li class={liSelectedClass} aria-selected="true">
         <slot name="selected" {option} {idx}>
           {#if parseLabelsAsHtml}
@@ -382,7 +381,7 @@
         {disabled}
         {inputmode}
         {pattern}
-        placeholder={_selected.length == 0 ? placeholder : null}
+        placeholder={selected.length == 0 ? placeholder : null}
         aria-invalid={invalid ? `true` : null}
         on:blur
         on:change
@@ -409,15 +408,15 @@
     <slot name="disabled-icon">
       <DisabledIcon width="15px" />
     </slot>
-  {:else if _selected.length > 0}
+  {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
         <span style="padding: 0 3pt;">
-          {maxSelectMsg?.(_selected.length, maxSelect)}
+          {maxSelectMsg?.(selected.length, maxSelect)}
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1 && _selected.length > 1}
+    {#if maxSelect !== 1 && selected.length > 1}
       <button
         type="button"
         class="remove-all"
@@ -487,7 +486,7 @@
             on:blur={() => (add_option_msg_is_active = false)}
             aria-selected="false"
           >
-            {!duplicates && _selected.some((option) => duplicateFunc(option, searchText))
+            {!duplicates && selected.some((option) => duplicateFunc(option, searchText))
               ? duplicateOptionMsg
               : addOptionMsg}
           </li>

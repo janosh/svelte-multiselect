@@ -309,19 +309,25 @@ import type { Option } from 'svelte-multiselect'
    Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
 
 1. ```ts
-   selected: Option[] | Option | null =
+   selected: Option[] =
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
    ```
 
-   Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally or passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction. If `maxSelect={1}`, selected will not be an array but a single `Option` or `null` if no options are selected.
+   Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally. Can be passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
 
 1. ```ts
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
    ```
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
+
+1. ```ts
+   value: Option | Option[] | null = null
+   ```
+
+   If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: `value` supports 1-way binding only, meaning `bind:value` will update `value` when internal component state changes but changing `value` externally will not update internal component state. This is because `value` is already reactive to `selected` and making `selected` reactive to `value` would be cyclic. Suggestions for better solutions that solve both [#86](https://github.com/janosh/svelte-multiselect/issues/86) and [#136](https://github.com/janosh/svelte-multiselect/issues/136) welcome!
 
 ## Slots
 
