@@ -52,6 +52,7 @@
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
   export let required: boolean = false
+  export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
   export let selected: Option[] | Option | null =
     options
@@ -159,7 +160,7 @@
       if (option === undefined) {
         throw `Run time error, option with label ${label} not found in options list`
       }
-      searchText = `` // reset search string on selection
+      if (resetFilterOnAdd) searchText = `` // reset search string on selection
       if ([``, undefined, null].includes(option)) {
         console.error(
           `MultiSelect: encountered missing option with label ${label} (or option is poorly labeled)`

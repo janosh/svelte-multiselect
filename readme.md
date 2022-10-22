@@ -296,6 +296,12 @@ import type { Option } from 'svelte-multiselect'
    Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.
 
 1. ```ts
+   resetFilterOnAdd: boolean = true
+   ```
+
+   Whether text entered into the input to filter options in the dropdown list is reset to empty string when user selects an option.
+
+1. ```ts
    searchText: string = ``
    ```
 
