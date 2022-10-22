@@ -36,14 +36,14 @@
 
 ## Recent breaking changes
 
-- **v5.0.0**&nbsp; Supports both simple and object options. Previously strings and numbers were converted to `{ value, label }` objects internally and returned by `bind:selected`. Now, if you pass in `string[]`, that's exactly what you'll get from `bind:selected`. See [PR 76](https://github.com/janosh/svelte-multiselect/pull/76).
 - **v6.0.0**&nbsp; The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. See [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
 - **v6.0.1**&nbsp; The prop `disabledTitle` which sets the title of the `<MultiSelect>` `<input>` node if in `disabled` mode was renamed to `disabledInputTitle`. See [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
 - **v6.0.1**&nbsp; The default margin of `1em 0` on the wrapper `div.multiselect` was removed. Instead, there is now a new CSS variable `--sms-margin`. Set it to `--sms-margin: 1em 0;` to restore the old appearance. See [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
 - **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. See [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
 - **v7.0.0**&nbsp; `selected` (as well `selectedLabels` and `selectedValues`) used to be arrays always. Now, if `maxSelect=1`, they will no longer be a length-1 array but simply a single a option (label/value respectively) or `null` if no option is selected. See [PR 123](https://github.com/janosh/svelte-multiselect/pull/123).
-- **v7.1.1**&nbsp; Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. See [PR 133](https://github.com/janosh/svelte-multiselect/pull/123).
-- **To be released**&nbsp; Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)`.
+- **8.0.0**&nbsp;
+  - Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)` if your options were objects with `label` and `value` keys. If they were simple strings/numbers, there was no point in using `selected{Labels,Values}` anyway. See [PR 138](https://github.com/janosh/svelte-multiselect/pull/138)
+  - Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. See [PR 133](https://github.com/janosh/svelte-multiselect/pull/133).
 
 ## Installation
 
