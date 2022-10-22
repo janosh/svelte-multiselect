@@ -4,6 +4,8 @@ import { foods } from '../src/options.ts'
 
 // to run tests in this file, use `npm run test`
 
+test.describe.configure({ mode: `parallel` })
+
 test.describe(`input`, async () => {
   test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
@@ -463,11 +465,7 @@ test.describe(`parseLabelsAsHtml`, async () => {
     expect(anchor).toBeTruthy()
   })
 
-  // TODO: fix test, expected error msg not recorded by page.on(`console`) for unknown reason
-  // even though it's there when opening page in browser
-  test.skip(`to raise error if combined with allowUserOptions`, async ({
-    page,
-  }) => {
+  test(`to raise error if combined with allowUserOptions`, async ({ page }) => {
     const logs: string[] = []
     page.on(`console`, (msg) => logs.push(msg.text()))
 
