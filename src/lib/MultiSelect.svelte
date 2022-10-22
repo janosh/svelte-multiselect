@@ -36,7 +36,10 @@
   export let loading: boolean = false
   export let matchingOptions: Option[] = []
   export let maxSelect: number | null = null // null means any number of options are selectable
-  export let maxSelectMsg: ((current: number, max: number) => string) | null = null
+  export let maxSelectMsg: ((current: number, max: number) => string) | null = (
+    current: number,
+    max: number
+  ) => (max > 1 ? `${current}/${max}` : ``)
   export let name: string | null = null
   export let noMatchingOptionsMsg: string = `No matching options`
   export let open: boolean = false
@@ -105,11 +108,6 @@
   const dispatch = createEventDispatcher<DispatchEvents>()
   let add_option_msg_is_active: boolean = false // controls active state of <li>{addOptionMsg}</li>
   let window_width: number
-
-  // formValue binds to input.form-control to prevent form submission if required
-  // prop is true and no options are selected
-  $: form_value = _selectedValues.join(`,`)
-  $: if (form_value) invalid = false // reset error status whenever component state changes
 
   // options matching the current search text
   $: matchingOptions = options.filter(
@@ -192,6 +190,8 @@
       }
       dispatch(`add`, { option })
       dispatch(`change`, { option, type: `add` })
+
+      invalid = false // reset error status whenever new items are selected
     }
   }
 
@@ -215,6 +215,7 @@
 
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
+    invalid = false // reset error status whenever items are removed
   }
 
   function open_dropdown(event: Event) {
@@ -338,10 +339,10 @@
   title={disabled ? disabledInputTitle : null}
   aria-disabled={disabled ? `true` : null}
 >
-  <!-- formValue binds to input.form-control to prevent form submission if required prop is true and no options are selected -->
+  <!-- bind:value={_selected} prevents form submission if required prop is true and no options are selected -->
   <input
     {required}
-    bind:value={form_value}
+    bind:value={_selected}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
@@ -419,8 +420,7 @@
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
         <span style="padding: 0 3pt;">
-          {maxSelectMsg?.(_selected.length, maxSelect) ??
-            (maxSelect > 1 ? `${_selected.length}/${maxSelect}` : ``)}
+          {maxSelectMsg?.(_selected.length, maxSelect)}
         </span>
       </Wiggle>
     {/if}
@@ -454,7 +454,7 @@
         <li
           on:mousedown|stopPropagation
           on:mouseup|stopPropagation={(event) => {
-            if (!disabled) is_selected(label) ? remove(label) : add(label, event)
+            if (!disabled) add(label, event)
           }}
           title={disabled
             ? disabledTitle

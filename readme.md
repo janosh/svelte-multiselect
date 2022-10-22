@@ -217,7 +217,10 @@ import type { Option } from 'svelte-multiselect'
    Positive integer to limit the number of options users can pick. `null` means no limit. `maxSelect={1}` will change the type of `selected` to be a single `Option` (or `null`) (not a length-1 array). Likewise, the type of `selectedLabels` changes from `(string | number)[]` to `string | number | null` and `selectedValues` from `unknown[]` to `unknown | null`. `maxSelect={1}` will also give `div.multiselect` a class of `single`. I.e. you can target the selector `div.multiselect.single` to give single selects a different appearance from multi selects.
 
 1. ```ts
-   maxSelectMsg: ((current: number, max: number) => string) | null = null
+   maxSelectMsg: ((current: number, max: number) => string) | null = (
+    current: number,
+    max: number
+  ) => (max > 1 ? `${current}/${max}` : ``)
    ```
 
    Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
