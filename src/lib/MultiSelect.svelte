@@ -58,17 +58,12 @@
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
-  export let selectedLabels: (string | number)[] | string | number | null = []
-  export let selectedValues: unknown[] | unknown | null = []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
 
   // get the label key from an option object or the option itself if it's a string or number
   const get_label = (op: Option) => (op instanceof Object ? op.label : op)
-
-  // fallback on label if option is object and value is undefined
-  const get_value = (op: Option) => (op instanceof Object ? op.value ?? op.label : op)
 
   // selected and _selected are identical except if maxSelect=1, selected will be the single item (or null)
   // in _selected which will always be an array for easier component internals. selected then solves
@@ -77,10 +72,6 @@
   $: selected = maxSelect === 1 ? _selected[0] ?? null : _selected
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
-  $: _selectedLabels = _selected?.map(get_label) ?? []
-  $: selectedLabels = maxSelect === 1 ? _selectedLabels[0] ?? null : _selectedLabels
-  $: _selectedValues = _selected?.map(get_value) ?? []
-  $: selectedValues = maxSelect === 1 ? _selectedValues[0] ?? null : _selectedValues
 
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
@@ -112,7 +103,8 @@
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op) => filterFunc(op, searchText) && !_selectedLabels.includes(get_label(op)) // remove already selected options from dropdown list
+    (op) =>
+      filterFunc(op, searchText) && !_selected.map(get_label).includes(get_label(op)) // remove already selected options from dropdown list
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
@@ -124,7 +116,7 @@
   // add an option to selected list
   function add(label: string | number, event: Event) {
     if (maxSelect && maxSelect > 1 && _selected.length >= maxSelect) wiggle = true
-    if (!isNaN(Number(label)) && typeof _selectedLabels[0] === `number`)
+    if (!isNaN(Number(label)) && typeof _selected.map(get_label)[0] === `number`)
       label = Number(label) // convert to number if possible
 
     const is_duplicate = _selected.some((option) => duplicateFunc(option, label))
@@ -200,7 +192,7 @@
   function remove(label: string | number) {
     if (_selected.length === 0) return
 
-    _selected.splice(_selectedLabels.lastIndexOf(label), 1)
+    _selected.splice(_selected.map(get_label).lastIndexOf(label), 1)
     _selected = _selected // Svelte rerender after in-place splice
 
     const option =
@@ -249,7 +241,7 @@
 
       if (activeOption) {
         const label = get_label(activeOption)
-        selectedLabels?.includes(label) ? remove(label) : add(label, event)
+        _selected.map(get_label).includes(label) ? remove(label) : add(label, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -293,8 +285,8 @@
       }
     }
     // on backspace key: remove last selected option
-    else if (event.key === `Backspace` && _selectedLabels.length > 0 && !searchText) {
-      remove(_selectedLabels.at(-1) as string | number)
+    else if (event.key === `Backspace` && _selected.length > 0 && !searchText) {
+      remove(_selected.map(get_label).at(-1) as string | number)
     }
   }
 
@@ -305,7 +297,7 @@
     searchText = ``
   }
 
-  $: is_selected = (label: string | number) => _selectedLabels.includes(label)
+  $: is_selected = (label: string | number) => _selected.map(get_label).includes(label)
 
   const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
     if ([`Enter`, `Space`].includes(event.code)) {
