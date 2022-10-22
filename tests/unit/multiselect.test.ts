@@ -103,7 +103,7 @@ describe(`MultiSelect`, () => {
     // this doesn't work for unknown reasons
     // document
     //   .querySelector(`ul.options > li`)
-    //   ?.dispatchEvent(new Event(`mouseover`, { bubbles: true }))
+    //   ?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
 
     for (const [class_name, elem_type] of Object.entries(css_classes)) {
       const el = doc_query(`.${class_name}`)
@@ -140,7 +140,7 @@ describe(`MultiSelect`, () => {
     await sleep()
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
     await sleep()
-    const selected = doc_query(`div.multiselect > ul.selected`)
+    const selected = doc_query(`ul.selected`)
 
     expect(selected.textContent?.trim()).toBe(`1`)
 
@@ -186,7 +186,7 @@ describe(`MultiSelect`, () => {
     }
   })
 
-  test(`selected is a single option (not length-1 array) when maxSelect=1`, async () => {
+  test(`value is a single option (i.e. selected[0]) when maxSelect=1`, async () => {
     const options = [1, 2, 3]
 
     const instance = new MultiSelect({
@@ -194,21 +194,21 @@ describe(`MultiSelect`, () => {
       props: { options, maxSelect: 1, selected: options },
     })
 
-    const selected = instance.$$.ctx[instance.$$.props.selected]
+    const value = instance.$$.ctx[instance.$$.props.value]
 
-    // this also tests that only 1st option is preselected although all options are marked such
-    expect(selected).toBe(options[0])
+    // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
+    expect(value).toBe(options[0])
   })
 
-  test(`selected is null when maxSelect=1 and no option is preselected`, async () => {
+  test(`selected is null when maxSelect=1 and no option is pre-selected`, async () => {
     const instance = new MultiSelect({
       target: document.body,
       props: { options: [1, 2, 3], maxSelect: 1 },
     })
 
-    const selected = instance.$$.ctx[instance.$$.props.selected]
+    const value = instance.$$.ctx[instance.$$.props.value]
 
-    expect(selected).toBe(null)
+    expect(value).toBe(null)
   })
 
   test(`selected is array of first two options when maxSelect=2`, async () => {
@@ -280,7 +280,7 @@ describe(`MultiSelect`, () => {
 
     // assert aria-invalid attribute is removed on selecting a new option
     const option = doc_query(`ul.options > li`)
-    option.dispatchEvent(new Event(`mouseup`))
+    option.dispatchEvent(new MouseEvent(`mouseup`))
     await sleep()
 
     expect(input.getAttribute(`aria-invalid`)).toBe(null)
@@ -316,7 +316,7 @@ describe(`MultiSelect`, () => {
     input.dispatchEvent(new InputEvent(`input`))
     await sleep()
 
-    const dropdown = doc_query(`div.multiselect ul.options`)
+    const dropdown = doc_query(`ul.options`)
     expect(dropdown.textContent?.trim()).toBe(`bar baz`)
   })
 
@@ -341,7 +341,7 @@ describe(`MultiSelect`, () => {
           select.$$.ctx[select.$$.props.noMatchingOptionsMsg]
       }
 
-      const dropdown = doc_query(`div.multiselect ul.options`)
+      const dropdown = doc_query(`ul.options`)
       expect(dropdown.textContent?.trim()).toBe(noMatchingOptionsMsg)
     }
   )
@@ -353,10 +353,10 @@ describe(`MultiSelect`, () => {
     })
 
     document
-      .querySelector(`div.multiselect ul.selected button[title='Remove 1']`)
-      ?.dispatchEvent(new Event(`mouseup`))
+      .querySelector(`ul.selected button[title='Remove 1']`)
+      ?.dispatchEvent(new MouseEvent(`mouseup`))
 
-    const selected = doc_query(`div.multiselect ul.selected`)
+    const selected = doc_query(`ul.selected`)
     await sleep()
 
     expect(selected.textContent?.trim()).toEqual(`2 3`)
@@ -367,15 +367,15 @@ describe(`MultiSelect`, () => {
       target: document.body,
       props: { options: [1, 2, 3], selected: [1, 2, 3] },
     })
-    let selected = doc_query(`div.multiselect ul.selected`)
+    let selected = doc_query(`ul.selected`)
     expect(selected.textContent?.trim()).toEqual(`1 2 3`)
 
     document
       .querySelector(`button[title='Remove all']`)
-      ?.dispatchEvent(new Event(`mouseup`))
+      ?.dispatchEvent(new MouseEvent(`mouseup`))
     await sleep()
 
-    selected = doc_query(`div.multiselect ul.selected`)
+    selected = doc_query(`ul.selected`)
     expect(selected.textContent?.trim()).toEqual(``)
 
     // select 2 options
@@ -385,8 +385,8 @@ describe(`MultiSelect`, () => {
         `remove all button should only appear if more than 1 option is selected`
       ).toBeNull()
 
-      const li = doc_query(`div.multiselect ul.options li`)
-      li.dispatchEvent(new Event(`mouseup`))
+      const li = doc_query(`ul.options li`)
+      li.dispatchEvent(new MouseEvent(`mouseup`))
       await sleep()
     }
 
@@ -405,9 +405,7 @@ describe(`MultiSelect`, () => {
       props: { removeAllTitle, removeBtnTitle, options, selected: options },
     })
     const remove_all_btn = doc_query(`button.remove-all`) as HTMLButtonElement
-    const remove_btns = document.querySelectorAll(
-      `div.multiselect > ul.selected > li > button`
-    )
+    const remove_btns = document.querySelectorAll(`ul.selected > li > button`)
 
     expect(remove_all_btn.title).toBe(removeAllTitle)
     expect([...remove_btns].map((btn) => btn.title)).toEqual(
@@ -426,7 +424,7 @@ describe(`MultiSelect`, () => {
       li.dispatchEvent(new MouseEvent(`mouseup`))
     }
 
-    const selected = doc_query(`div.multiselect ul.selected`)
+    const selected = doc_query(`ul.selected`)
     await sleep()
 
     expect(selected.textContent?.trim()).toEqual(`2 3`)
@@ -444,7 +442,7 @@ describe(`MultiSelect`, () => {
         .querySelectorAll(`ul.options > li`)
         ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
 
-      const selected = doc_query(`div.multiselect ul.selected`)
+      const selected = doc_query(`ul.selected`)
       await sleep()
 
       expect(selected.textContent?.trim()).toEqual(
@@ -503,7 +501,7 @@ describe(`MultiSelect`, () => {
           input.dispatchEvent(new InputEvent(`input`))
           await sleep()
 
-          const dropdown = doc_query(`div.multiselect ul.options`)
+          const dropdown = doc_query(`ul.options`)
 
           const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
           expect(dropdown.textContent?.trim(), fail_msg).toBe(
@@ -530,8 +528,8 @@ describe(`MultiSelect`, () => {
       input.dispatchEvent(new InputEvent(`input`))
       await sleep()
 
-      const li = doc_query(`div.multiselect ul.options li`)
-      li.dispatchEvent(new Event(`mouseup`))
+      const li = doc_query(`ul.options li`)
+      li.dispatchEvent(new MouseEvent(`mouseup`))
       await sleep()
 
       expect(input.value).toBe(expected)
