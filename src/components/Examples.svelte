@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
   import MultiSelect from '$lib'
-  import { colors, frontend_libs, languages, ml_libs } from '../options'
+  import { colors, frontend_libs, languages, ml_libs, octicons } from '../options'
   import { language_store } from '../stores'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
+  import IconifySlotSlot from './IconifySlot.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
   import RepoSlot from './RepoSlot.svelte'
 
@@ -128,12 +129,36 @@
   </form>
 </section>
 
+<section>
+  <h3>Very long Multi Select</h3>
+
+  <label for="octicons">List of GitHub's Octicons</label>
+
+  <MultiSelect
+    id="octicons"
+    options={octicons}
+    placeholder="Take your pick..."
+    maxSelect={20}
+    maxSelectMsg={(current, max) =>
+      current == max ? `Hold your horses!` : `${current} of ${max}`}
+  >
+    <IconifySlotSlot let:option {option} slot="selected" />
+    <IconifySlotSlot let:option {option} slot="option" />
+  </MultiSelect>
+</section>
+
 <style>
   section {
     margin-top: 2em;
     background-color: #28154b;
-    border-radius: 1ex;
-    padding: 1pt 1.4ex;
+    border-radius: 4pt;
+    padding: 1pt 10pt;
+  }
+  section h3 {
+    margin: 5pt 0 10pt;
+  }
+  section p {
+    margin: 5pt 0;
   }
   pre {
     white-space: pre-wrap;

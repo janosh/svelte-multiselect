@@ -11,10 +11,10 @@
   <strong>{option.label}</strong>
   <small>
     <a
+      on:click|stopPropagation
       href="https://github.com/{option.repo_handle}"
       target="_blank"
       rel="noreferrer"
-      on:click|stopPropagation
     >
       <Octocat width="14pt" />{option.repo_handle}
     </a>
