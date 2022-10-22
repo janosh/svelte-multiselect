@@ -504,4 +504,28 @@ describe(`MultiSelect`, () => {
       )
     }
   )
+
+  test.each([
+    [true, ``],
+    [false, `1`],
+  ])(
+    `resetFilterOnAdd=%j handles input value correctly after adding an option`,
+    async (resetFilterOnAdd, expected) => {
+      new MultiSelect({
+        target: document.body,
+        props: { options: [1, 2, 3], resetFilterOnAdd },
+      })
+
+      const input = doc_query(`ul.selected input`)
+      input.value = `1`
+      input.dispatchEvent(new InputEvent(`input`))
+      await sleep()
+
+      const li = doc_query(`div.multiselect ul.options li`)
+      li.dispatchEvent(new Event(`mouseup`))
+      await sleep()
+
+      expect(input.value).toBe(expected)
+    }
+  )
 })
