@@ -7,14 +7,14 @@
 </script>
 
 <span>
-  <small>{idx + 1}</small>
+  {idx + 1}
   <strong>{option.label}</strong>
   <small>
     <a
+      on:click|stopPropagation
       href="https://github.com/{option.repo_handle}"
       target="_blank"
       rel="noreferrer"
-      on:click|stopPropagation
     >
       <Octocat width="14pt" />{option.repo_handle}
     </a>
@@ -27,15 +27,9 @@
     place-items: center;
     gap: 10pt;
   }
-  span small:first-child {
-    width: 6pt;
-    text-align: right;
-  }
   a {
     display: flex;
     gap: 3pt;
-    font-style: normal;
     font-weight: lighter;
-    place-items: center;
   }
 </style>

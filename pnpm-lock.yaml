@@ -1,6 +1,7 @@
 lockfileVersion: 5.4
 
 specifiers:
+  '@iconify/svelte': ^3.0.0
   '@playwright/test': ^1.27.1
   '@sveltejs/adapter-static': ^1.0.0-next.44
   '@sveltejs/kit': ^1.0.0-next.516
@@ -30,6 +31,7 @@ specifiers:
   vitest: ^0.24.3
 
 devDependencies:
+  '@iconify/svelte': 3.0.0_svelte@3.52.0
   '@playwright/test': 1.27.1
   '@sveltejs/adapter-static': 1.0.0-next.44
   '@sveltejs/kit': 1.0.0-next.516_svelte@3.52.0+vite@3.1.8
@@ -113,6 +115,19 @@ packages:
 
   /@humanwhocodes/object-schema/1.2.1:
     resolution: {integrity: sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==}
+    dev: true
+
+  /@iconify/svelte/3.0.0_svelte@3.52.0:
+    resolution: {integrity: sha512-kmpIDyEqGBqV3uLTxEXVOPcsUg06GpwlLTTK1a8omaiBOBZCKnj+m4EETFjoy5cKsdCd5bWBYysna/uUuSTfoQ==}
+    peerDependencies:
+      svelte: '>=3'
+    dependencies:
+      '@iconify/types': 2.0.0
+      svelte: 3.52.0
+    dev: true
+
+  /@iconify/types/2.0.0:
+    resolution: {integrity: sha512-+wluvCrRhXrhyOmRDJ3q8mux9JkKy5SJ/v8ol2tu4FVjyYvtEzkc/3pK15ET6RKg4b4w4BmTk1+gsCUhf21Ykg==}
     dev: true
 
   /@jridgewell/resolve-uri/3.1.0:

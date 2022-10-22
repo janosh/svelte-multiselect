@@ -1,19 +1,20 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
   import MultiSelect from '$lib'
-  import { colors, frontend_libs, languages, ml_libs } from '../options'
+  import { colors, frontend_libs, languages, ml_libs, octicons } from '../options'
   import { language_store } from '../stores'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
+  import IconifySlotSlot from './IconifySlot.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
   import RepoSlot from './RepoSlot.svelte'
 
   let selected_ml: string[]
-  let selected_colors: ObjectOption[]
+  let selected_colors = [`red`, `orange`, `yellow`]
 
   let showConfetti = false
 
-  const filterFunc = (op: ObjectOption, searchText: string) => {
+  const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {
     if (!searchText) return true
     const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
       `${s}`.toLowerCase()
@@ -50,9 +51,11 @@
 <section>
   <h3>Single Select</h3>
 
-  <label for="fav-ml-tool">with loading indicator on text input</label>
+  <p>with loading indicator on text input</p>
 
   <pre>selected = {JSON.stringify(selected_ml)}</pre>
+
+  <label for="fav-ml-tool">Favorite machine learning framework?</label>
 
   <MultiSelect
     id="fav-ml-tool"
@@ -76,7 +79,7 @@
     options={frontend_libs}
     maxSelect={4}
     placeholder="Favorite web framework?"
-    {filterFunc}
+    filterFunc={frontend_libs_filter_func}
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
         showConfetti = true
@@ -100,7 +103,7 @@
   </label>
   <form
     on:submit|preventDefault={() => {
-      alert(`You selected '${selected_colors.map((el) => el.label).join(`, `)}'`)
+      alert(`You selected '${selected_colors.join(`, `)}'`)
     }}
   >
     <MultiSelect
@@ -126,12 +129,36 @@
   </form>
 </section>
 
+<section>
+  <h3>Very long Multi Select</h3>
+
+  <label for="octicons">List of GitHub's Octicons</label>
+
+  <MultiSelect
+    id="octicons"
+    options={octicons}
+    placeholder="Take your pick..."
+    maxSelect={20}
+    maxSelectMsg={(current, max) =>
+      current == max ? `Hold your horses!` : `${current} of ${max}`}
+  >
+    <IconifySlotSlot let:option {option} slot="selected" />
+    <IconifySlotSlot let:option {option} slot="option" />
+  </MultiSelect>
+</section>
+
 <style>
   section {
     margin-top: 2em;
     background-color: #28154b;
-    border-radius: 1ex;
-    padding: 1pt 1.4ex;
+    border-radius: 4pt;
+    padding: 1pt 10pt;
+  }
+  section h3 {
+    margin: 5pt 0 10pt;
+  }
+  section p {
+    margin: 5pt 0;
   }
   pre {
     white-space: pre-wrap;

@@ -117,3 +117,6 @@ blockquote p:last-child {
 blockquote p:first-child {
   margin-top: 0;
 }
+div.multiselect.invalid {
+  border: 1px solid red !important;
+}

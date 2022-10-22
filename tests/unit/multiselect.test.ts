@@ -257,7 +257,7 @@ describe(`MultiSelect`, () => {
     expect(form.checkValidity()).toBe(true)
   })
 
-  test(`input is aria-invalid when component has invalid=true`, async () => {
+  test(`div has 'invalid' class and input is aria-invalid when invalid=true`, async () => {
     new MultiSelect({
       target: document.body,
       props: { options: [1, 2, 3], invalid: true },
@@ -266,6 +266,18 @@ describe(`MultiSelect`, () => {
     const input = doc_query(`ul.selected input`)
 
     expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
+    const multiselect = doc_query(`div.multiselect`)
+    expect(multiselect.classList.contains(`invalid`)).toBe(true)
+
+    // assert aria-invalid attribute is removed on selecting a new option
+    const option = doc_query(`ul.options > li`)
+    option.dispatchEvent(new Event(`mouseup`))
+    await sleep()
+
+    expect(input.getAttribute(`aria-invalid`)).toBe(null)
+
+    // assert div.multiselect no longer has invalid class
+    expect(multiselect.classList.contains(`invalid`)).toBe(false)
   })
 
   test(`parseLabelsAsHtml renders anchor tags as links`, async () => {
@@ -363,9 +375,9 @@ describe(`MultiSelect`, () => {
         document.querySelector(`button[title='Remove all']`),
         `remove all button should only appear if more than 1 option is selected`
       ).toBeNull()
-      doc_query(`div.multiselect ul.options li`).dispatchEvent(
-        new Event(`mouseup`)
-      )
+
+      const li = doc_query(`div.multiselect ul.options li`)
+      li.dispatchEvent(new Event(`mouseup`))
       await sleep()
     }
 
@@ -394,7 +406,7 @@ describe(`MultiSelect`, () => {
     )
   })
 
-  test(`cant select disabled options`, async () => {
+  test(`can't select disabled options`, async () => {
     const options = [1, 2, 3].map((el) => ({
       label: el,
       disabled: el === 1,
@@ -490,6 +502,30 @@ describe(`MultiSelect`, () => {
           )
         }
       )
+    }
+  )
+
+  test.each([
+    [true, ``],
+    [false, `1`],
+  ])(
+    `resetFilterOnAdd=%j handles input value correctly after adding an option`,
+    async (resetFilterOnAdd, expected) => {
+      new MultiSelect({
+        target: document.body,
+        props: { options: [1, 2, 3], resetFilterOnAdd },
+      })
+
+      const input = doc_query(`ul.selected input`)
+      input.value = `1`
+      input.dispatchEvent(new InputEvent(`input`))
+      await sleep()
+
+      const li = doc_query(`div.multiselect ul.options li`)
+      li.dispatchEvent(new Event(`mouseup`))
+      await sleep()
+
+      expect(input.value).toBe(expected)
     }
   )
 })
