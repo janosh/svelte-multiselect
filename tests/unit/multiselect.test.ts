@@ -16,6 +16,28 @@ function doc_query(selector: string) {
   return res
 }
 
+test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
+  const binder = new Test2WayBind({
+    target: document.body,
+    props: { options: [1, 2, 3] },
+  })
+
+  // test internal change to activeOption binds outwards
+  let activeOption: Option
+  binder.$on(`activeOption-changed`, (e: CustomEvent) => {
+    activeOption = e.detail
+  })
+  const cb = vi.fn()
+  binder.$on(`activeOption-changed`, cb)
+
+  const first_option = doc_query(`ul.options > li`)
+  first_option.dispatchEvent(new MouseEvent(`mouseover`))
+
+  await sleep()
+  expect(activeOption).toBe(1)
+  expect(cb).toBeCalledTimes(1)
+})
+
 test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
   const defaultDisabledTitle = `Not selectable`
   const special_disabled_title = `Special disabled title`
@@ -543,7 +565,7 @@ test(`2-way bind selected`, async () => {
     selected = e.detail
   })
 
-  // test internal changes bind outwards
+  // test internal changes to selected bind outwards
   for (const _ of [1, 2]) {
     const li = doc_query(`ul.options li`)
     li.dispatchEvent(new MouseEvent(`mouseup`))
@@ -552,7 +574,7 @@ test(`2-way bind selected`, async () => {
 
   expect(selected).toEqual([1, 2])
 
-  // test external changes bind inwards
+  // test external changes to selected bind inwards
   selected = [3]
   binder.$set({ selected })
   await sleep()
