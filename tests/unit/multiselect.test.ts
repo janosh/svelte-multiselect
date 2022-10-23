@@ -16,6 +16,53 @@ function doc_query(selector: string) {
   return res
 }
 
+test(`2-way binding of activeIndex`, async () => {
+  let activeIndex: number
+  const binder = new Test2WayBind({
+    target: document.body,
+    props: { options: [1, 2, 3] },
+  })
+  binder.$on(`activeIndex-changed`, (e: CustomEvent) => {
+    activeIndex = e.detail
+  })
+
+  // test internal changes to activeIndex bind outwards
+  for (const idx of [1, 2]) {
+    const li = doc_query(`ul.options li:nth-child(${idx})`)
+    li.dispatchEvent(new MouseEvent(`mouseover`))
+    await sleep()
+    expect(activeIndex).toEqual(idx - 1)
+  }
+
+  // test external changes to activeIndex bind inwards
+  activeIndex = 2
+  binder.$set({ activeIndex })
+  await sleep()
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`3`)
+})
+
+test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
+  const binder = new Test2WayBind({
+    target: document.body,
+    props: { options: [1, 2, 3] },
+  })
+
+  // test internal change to activeOption binds outwards
+  let activeOption: Option
+  binder.$on(`activeOption-changed`, (e: CustomEvent) => {
+    activeOption = e.detail
+  })
+  const cb = vi.fn()
+  binder.$on(`activeOption-changed`, cb)
+
+  const first_option = doc_query(`ul.options > li`)
+  first_option.dispatchEvent(new MouseEvent(`mouseover`))
+
+  await sleep()
+  expect(activeOption).toBe(1)
+  expect(cb).toBeCalledTimes(1)
+})
+
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
   const binder = new Test2WayBind({
     target: document.body,
@@ -555,7 +602,7 @@ test.each([
   }
 )
 
-test(`2-way bind selected`, async () => {
+test(`2-way binding of selected`, async () => {
   let selected: Option[]
   const binder = new Test2WayBind({
     target: document.body,
