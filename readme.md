@@ -49,7 +49,7 @@
 
 ```sh
 npm install -D svelte-multiselect
-pnpm install -D svelte-multiselect
+pnpm add -D svelte-multiselect
 yarn add -D svelte-multiselect
 ```
 
@@ -73,11 +73,7 @@ Favorite Frontend Frameworks?
 
 ## Props
 
-Full list of props/bindable variables for this component. In the type hints below, `Option` is:
-
-```ts
-import type { Option } from 'svelte-multiselect'
-```
+Full list of props/bindable variables for this component. The `Option` type you see below is defined in [`src/lib/index.ts`](src/lib/index.ts) and can be imported as `import { type Option } from 'svelte-multiselect'`.
 
 1. ```ts
    activeIndex: number | null = null
