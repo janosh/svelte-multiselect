@@ -25,6 +25,7 @@ jobs:
       - name: Set up node
         uses: actions/setup-node@v3
         with:
+          node-version: 18
           cache: pnpm
 
       - name: Install dependencies
@@ -40,6 +41,5 @@ jobs:
         if: github.event_name == 'release' && steps.tests.outcome == 'success' && runner.os == 'Linux'
         run: |
           pnpm package
-          pnpm publish package
-        env:
+          npm publish ./package
           NPM_AUTH_TOKEN: ${{ secrets.NPM_AUTH_TOKEN }}
