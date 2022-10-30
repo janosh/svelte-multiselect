@@ -504,9 +504,11 @@
     align-items: center;
     display: flex;
     cursor: text;
+    box-sizing: border-box;
     border: var(--sms-border, 1pt solid lightgray);
     border-radius: var(--sms-border-radius, 3pt);
     background: var(--sms-bg);
+    width: var(--sms-width);
     max-width: var(--sms-max-width);
     padding: var(--sms-padding, 0 3pt);
     color: var(--sms-text-color);
