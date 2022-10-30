@@ -8,6 +8,7 @@ const vite_config: UserConfig & { test: VitestConfig } = {
 
   test: {
     environment: `jsdom`,
+    css: true,
   },
 
   resolve: {
@@ -15,6 +16,7 @@ const vite_config: UserConfig & { test: VitestConfig } = {
       $src: resolve(`./src`),
     },
   },
+
   server: {
     fs: { allow: [`..`] }, // needed to import readme.md
     port: 3000,
