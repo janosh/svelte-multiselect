@@ -37,7 +37,6 @@
     "prettier-plugin-svelte": "^2.8.0",
     "rehype-autolink-headings": "^6.1.1",
     "rehype-slug": "^5.0.1",
-    "sass": "^1.55.0",
     "svelte": "^3.52.0",
     "svelte-check": "^2.9.2",
     "svelte-github-corner": "^0.1.0",
