@@ -57,8 +57,10 @@ pre code {
 }
 pre {
   border-radius: 4pt;
-  font-size: 9pt;
+  font-size: 9.5pt;
   background-color: rgba(0, 0, 0, 0.4);
+  padding: 1em;
+  overflow-x: auto;
 }
 ul {
   padding-left: 1em;
