@@ -129,7 +129,7 @@
 
   <CollapsibleCode
     code={`
-    <label for="confetti-select">Callback on item selection</label>
+<label for="confetti-select">Callback on item selection</label>
 
 <MultiSelect
   id="confetti-select"
@@ -191,8 +191,10 @@
 <label for="color-select">
   Color select using the \`selected\` and \`option\` slot components to render colors.
 </label>
+
 <form on:submit|preventDefault={() => {alert('You selected "\${selected_colors.join(', ')}"')}}>
-<MultiSelect
+
+  <MultiSelect
   id="color-select"
   options={colors}
   bind:selected={selected_colors}
@@ -203,6 +205,7 @@
   <ColorSlot let:idx {idx} let:option {option} slot="selected" />
   <ColorSlot let:idx {idx} let:option {option} slot="option" />
 </MultiSelect>
+
 <button style="border: none; border-radius: 1pt; margin: 5pt 5pt 8pt 0;">
   submit
 </button>

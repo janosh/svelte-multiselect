@@ -1,6 +1,7 @@
 :root {
   --night: #10002c;
   --blue: cornflowerblue;
+  --text-color: #eee;
 
   --sms-active-color: var(--blue);
   --sms-options-bg: rgb(0, 0, 32);
@@ -28,7 +29,7 @@ body {
   background: var(--night);
   padding: calc(1ex + 2vw);
   font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  color: #eee;
+  color: var(--text-color);
   line-height: 1.5;
 }
 main {
@@ -36,6 +37,11 @@ main {
   margin-bottom: 3em;
   width: 100%;
   max-width: 50em;
+}
+button {
+  color: var(--text-color);
+  cursor: pointer;
+  border: none;
 }
 a {
   color: var(--blue);

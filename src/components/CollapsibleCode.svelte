@@ -6,6 +6,9 @@
   export let code: string
 </script>
 
-<Collapsible title="View code">
+<Collapsible
+  title={[`View code`, `Close`]}
+  btn_style="position: absolute; top: 8pt; right: 1em;"
+>
   <pre><code>{@html hljs.highlight(code.trim(), { language: `html` }).value}</code></pre>
 </Collapsible>
