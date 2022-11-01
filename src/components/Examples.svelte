@@ -1,11 +1,11 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
   import MultiSelect from '$lib'
-  import { colors, frontend_libs, languages, ml_libs, octicons } from '../options'
+  import { colors, frontend_libs, languages, ml_libs } from '../options'
   import { language_store } from '../stores'
+  import CollapsibleCode from './CollapsibleCode.svelte'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
-  import IconifySlotSlot from './IconifySlot.svelte'
   import LanguageSlot from './LanguageSlot.svelte'
   import RepoSlot from './RepoSlot.svelte'
 
@@ -33,7 +33,7 @@
 <section>
   <h3>Multi Select</h3>
 
-  <pre>bind:selectedLabels = {JSON.stringify($language_store)}</pre>
+  <pre>bind:selected = {JSON.stringify($language_store)}</pre>
 
   <label for="languages">Favorite programming languages?</label>
 
@@ -46,6 +46,22 @@
     <LanguageSlot let:option {option} slot="selected" />
     <LanguageSlot let:option {option} slot="option" />
   </MultiSelect>
+  <CollapsibleCode
+    code={`
+<pre>bind:selected = {JSON.stringify($language_store)}</pre>
+
+<label for="languages">Favorite programming languages?</label>
+
+<MultiSelect
+  id="languages"
+  options={languages}
+  placeholder="Take your pick..."
+  bind:selected={$language_store}
+>
+  <LanguageSlot let:option {option} slot="selected" />
+  <LanguageSlot let:option {option} slot="option" />
+</MultiSelect>`}
+  />
 </section>
 
 <section>
@@ -62,10 +78,28 @@
     maxSelect={1}
     maxSelectMsg={(current, max) => `${current} of ${max} selected`}
     options={ml_libs}
-    bind:selectedLabels={selected_ml}
+    bind:selected={selected_ml}
     bind:searchText
     placeholder="Favorite machine learning framework?"
     {loading}
+  />
+  <CollapsibleCode
+    code={`
+<pre>selected = {JSON.stringify(selected_ml)}</pre>
+
+<label for="fav-ml-tool">Favorite machine learning framework?</label>
+
+<MultiSelect
+  id="fav-ml-tool"
+  maxSelect={1}
+  maxSelectMsg={(current, max) => '\${current} of \${max} selected'}
+  options={ml_libs}
+  bind:selected={selected_ml}
+  bind:searchText
+  placeholder="Favorite machine learning framework?"
+  {loading}
+/>
+`}
   />
 </section>
 
@@ -92,6 +126,31 @@
   {#if showConfetti}
     <Confetti />
   {/if}
+
+  <CollapsibleCode
+    code={`
+<label for="confetti-select">Callback on item selection</label>
+
+<MultiSelect
+  id="confetti-select"
+  options={frontend_libs}
+  maxSelect={4}
+  placeholder="Favorite web framework?"
+  filterFunc={frontend_libs_filter_func}
+  on:add={(e) => {
+    if (e.detail.option.label === 'Svelte') {
+      showConfetti = true
+      setTimeout(() => (showConfetti = false), 3000)
+    }
+  }}
+>
+  <RepoSlot let:idx {idx} let:option {option} slot="option" />
+</MultiSelect>
+{#if showConfetti}
+  <Confetti />
+{/if}
+`}
+  />
 </section>
 
 <section>
@@ -127,9 +186,34 @@
       <code>allowUserOptions="append"</code> to allow adding custom colors.
     </p>
   </form>
+  <CollapsibleCode
+    code={`
+<label for="color-select">
+  Color select using the \`selected\` and \`option\` slot components to render colors.
+</label>
+
+<form on:submit|preventDefault={() => {alert('You selected "\${selected_colors.join(', ')}"')}}>
+
+  <MultiSelect
+  id="color-select"
+  options={colors}
+  bind:selected={selected_colors}
+  placeholder="Pick some colors..."
+  allowUserOptions="append"
+  required
+>
+  <ColorSlot let:idx {idx} let:option {option} slot="selected" />
+  <ColorSlot let:idx {idx} let:option {option} slot="option" />
+</MultiSelect>
+
+<button style="border: none; border-radius: 1pt; margin: 5pt 5pt 8pt 0;">
+  submit
+</button>
+`}
+  />
 </section>
 
-<section>
+<!-- <section>
   <h3>Very long Multi Select</h3>
 
   <label for="octicons">List of GitHub's Octicons</label>
@@ -145,14 +229,14 @@
     <IconifySlotSlot let:option {option} slot="selected" />
     <IconifySlotSlot let:option {option} slot="option" />
   </MultiSelect>
-</section>
-
+</section> -->
 <style>
   section {
     margin-top: 2em;
     background-color: #28154b;
     border-radius: 4pt;
     padding: 1pt 10pt;
+    position: relative;
   }
   section h3 {
     margin: 5pt 0 10pt;
