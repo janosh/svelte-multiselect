@@ -1,7 +1,7 @@
 :root {
   --night: #10002c;
   --blue: cornflowerblue;
-  --text-color: #eee;
+  --text-color: #ddd;
 
   --sms-active-color: var(--blue);
   --sms-options-bg: rgb(0, 0, 32);
@@ -42,6 +42,7 @@ button {
   color: var(--text-color);
   cursor: pointer;
   border: none;
+  border-radius: 3pt;
 }
 a {
   color: var(--blue);

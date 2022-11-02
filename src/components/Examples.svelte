@@ -12,7 +12,7 @@
   let selected_ml: string[]
   let selected_colors = [`red`, `orange`, `yellow`]
 
-  let showConfetti = false
+  let show_confetti = false
 
   const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {
     if (!searchText) return true
@@ -29,6 +29,8 @@
     setTimeout(() => (loading = false), 1000)
   }
 </script>
+
+<h2>Examples</h2>
 
 <section>
   <h3>Multi Select</h3>
@@ -47,6 +49,7 @@
     <LanguageSlot let:option {option} slot="option" />
   </MultiSelect>
   <CollapsibleCode
+    repl_url="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7"
     code={`
 <pre>bind:selected = {JSON.stringify($language_store)}</pre>
 
@@ -84,6 +87,7 @@
     {loading}
   />
   <CollapsibleCode
+    repl_url="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759"
     code={`
 <pre>selected = {JSON.stringify(selected_ml)}</pre>
 
@@ -92,7 +96,7 @@
 <MultiSelect
   id="fav-ml-tool"
   maxSelect={1}
-  maxSelectMsg={(current, max) => '\${current} of \${max} selected'}
+  maxSelectMsg={(current, max) => \`\${current} of \${max} selected\`}
   options={ml_libs}
   bind:selected={selected_ml}
   bind:searchText
@@ -116,18 +120,19 @@
     filterFunc={frontend_libs_filter_func}
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
-        showConfetti = true
-        setTimeout(() => (showConfetti = false), 3000)
+        show_confetti = true
+        setTimeout(() => (show_confetti = false), 3000)
       }
     }}
   >
     <RepoSlot let:idx {idx} let:option {option} slot="option" />
   </MultiSelect>
-  {#if showConfetti}
+  {#if show_confetti}
     <Confetti />
   {/if}
 
   <CollapsibleCode
+    repl_url="https://svelte.dev/repl/516279bd62ec424986115263c2cdc169"
     code={`
 <label for="confetti-select">Callback on item selection</label>
 
@@ -139,14 +144,14 @@
   filterFunc={frontend_libs_filter_func}
   on:add={(e) => {
     if (e.detail.option.label === 'Svelte') {
-      showConfetti = true
-      setTimeout(() => (showConfetti = false), 3000)
+      show_confetti = true
+      setTimeout(() => (show_confetti = false), 3000)
     }
   }}
 >
   <RepoSlot let:idx {idx} let:option {option} slot="option" />
 </MultiSelect>
-{#if showConfetti}
+{#if show_confetti}
   <Confetti />
 {/if}
 `}
@@ -176,9 +181,7 @@
       <ColorSlot let:idx {idx} let:option {option} slot="selected" />
       <ColorSlot let:idx {idx} let:option {option} slot="option" />
     </MultiSelect>
-    <button style="border: none; border-radius: 1pt; margin: 5pt 5pt 8pt 0;">
-      submit
-    </button>
+    <button>submit</button>
     (due to passing <code>required={true}</code> here, form submission will abort if
     Multiselect is empty)
     <p>
@@ -187,6 +190,7 @@
     </p>
   </form>
   <CollapsibleCode
+    repl_url="https://svelte.dev/repl/3a217c39932047a09f61d6425b04a7c3"
     code={`
 <label for="color-select">
   Color select using the \`selected\` and \`option\` slot components to render colors.
@@ -232,7 +236,7 @@
 </section> -->
 <style>
   section {
-    margin-top: 2em;
+    margin-bottom: 2em;
     background-color: #28154b;
     border-radius: 4pt;
     padding: 1pt 10pt;
@@ -249,5 +253,10 @@
     padding: 7pt 1em;
     font-size: 1em;
     word-break: break-word;
+  }
+  button {
+    margin: 5pt 5pt 8pt 0;
+    background: darkcyan;
+    padding: 2pt 4pt;
   }
 </style>
