@@ -4,6 +4,7 @@
   import 'highlight.js/styles/vs2015.css'
   import { tweened } from 'svelte/motion'
   import { slide } from 'svelte/transition'
+  import CopyButton from './CopyButton.svelte'
 
   export let duration: number = 200
   export let open: boolean = false
@@ -34,6 +35,9 @@
 
 {#if open}
   <div transition:slide={{ duration }}>
+    <aside>
+      <CopyButton content={code} />
+    </aside>
     <pre><code>{@html hljs.highlight(code.trim(), { language: `html` }).value}</code
       ></pre>
   </div>
@@ -58,5 +62,15 @@
   }
   :is(a, button):hover {
     background: rgba(255, 255, 255, 0.4);
+  }
+  div {
+    position: relative;
+  }
+  aside {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    display: flex;
+    gap: 1em;
   }
 </style>

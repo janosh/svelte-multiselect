@@ -14,10 +14,10 @@
 
 </h4>
 
-<p align="center">
-  <strong>Keyboard-friendly, accessible and highly customizable multi-select component.</strong>
+<p align="center"><strong>
+  Keyboard-friendly, accessible and highly customizable multi-select component.
   <a class="hide-in-docs" href="https://svelte-multiselect.netlify.app">View the docs</a>
-</p>
+</strong></p>
 
 <slot name="examples" />
 

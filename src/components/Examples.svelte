@@ -96,7 +96,7 @@
 <MultiSelect
   id="fav-ml-tool"
   maxSelect={1}
-  maxSelectMsg={(current, max) => '\${current} of \${max} selected'}
+  maxSelectMsg={(current, max) => \`\${current} of \${max} selected\`}
   options={ml_libs}
   bind:selected={selected_ml}
   bind:searchText
