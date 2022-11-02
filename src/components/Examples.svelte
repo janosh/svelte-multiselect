@@ -12,7 +12,7 @@
   let selected_ml: string[]
   let selected_colors = [`red`, `orange`, `yellow`]
 
-  let showConfetti = false
+  let show_confetti = false
 
   const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {
     if (!searchText) return true
@@ -29,6 +29,8 @@
     setTimeout(() => (loading = false), 1000)
   }
 </script>
+
+<h2>Examples</h2>
 
 <section>
   <h3>Multi Select</h3>
@@ -118,14 +120,14 @@
     filterFunc={frontend_libs_filter_func}
     on:add={(e) => {
       if (e.detail.option.label === `Svelte`) {
-        showConfetti = true
-        setTimeout(() => (showConfetti = false), 3000)
+        show_confetti = true
+        setTimeout(() => (show_confetti = false), 3000)
       }
     }}
   >
     <RepoSlot let:idx {idx} let:option {option} slot="option" />
   </MultiSelect>
-  {#if showConfetti}
+  {#if show_confetti}
     <Confetti />
   {/if}
 
@@ -142,14 +144,14 @@
   filterFunc={frontend_libs_filter_func}
   on:add={(e) => {
     if (e.detail.option.label === 'Svelte') {
-      showConfetti = true
-      setTimeout(() => (showConfetti = false), 3000)
+      show_confetti = true
+      setTimeout(() => (show_confetti = false), 3000)
     }
   }}
 >
   <RepoSlot let:idx {idx} let:option {option} slot="option" />
 </MultiSelect>
-{#if showConfetti}
+{#if show_confetti}
   <Confetti />
 {/if}
 `}
