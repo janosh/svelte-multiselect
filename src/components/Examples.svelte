@@ -176,9 +176,7 @@
       <ColorSlot let:idx {idx} let:option {option} slot="selected" />
       <ColorSlot let:idx {idx} let:option {option} slot="option" />
     </MultiSelect>
-    <button style="border: none; border-radius: 1pt; margin: 5pt 5pt 8pt 0;">
-      submit
-    </button>
+    <button>submit</button>
     (due to passing <code>required={true}</code> here, form submission will abort if
     Multiselect is empty)
     <p>
@@ -249,5 +247,10 @@
     padding: 7pt 1em;
     font-size: 1em;
     word-break: break-word;
+  }
+  button {
+    margin: 5pt 5pt 8pt 0;
+    background: darkcyan;
+    padding: 2pt 4pt;
   }
 </style>
