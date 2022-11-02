@@ -14,10 +14,10 @@
 
 </h4>
 
-**Keyboard-friendly, accessible and highly customizable multi-select component.**
-<span class="hide-in-docs">
-<a href="https://svelte-multiselect.netlify.app">View the docs</a>
-</span>
+<p align="center"><strong>
+  Keyboard-friendly, accessible and highly customizable multi-select component.
+  <a class="hide-in-docs" href="https://svelte-multiselect.netlify.app">View the docs</a>
+</strong></p>
 
 <slot name="examples" />
 
@@ -148,7 +148,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    duplicates: boolean = false
    ```
 
-   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is ` true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `duplicateFunc` to customize when a pair of options is considered a duplicate.
+   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `duplicateFunc` to customize when a pair of options is considered a duplicate.
 
 1. ```ts
    duplicateOptionMsg: string = `This option is already selected`
@@ -425,7 +425,8 @@ TypeScript users can import the types used for internal type safety:
 
 ```svelte
 <script lang="ts">
-  import MultiSelect, { Option, ObjectOption } from 'svelte-multiselect'
+  import MultiSelect from 'svelte-multiselect'
+  import type { Option, ObjectOption } from 'svelte-multiselect'
 
   const myOptions: ObjectOption[] = [
     { label: 'foo', value: 42 },
