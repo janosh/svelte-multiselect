@@ -593,6 +593,6 @@ To submit a PR, clone the repo, install dependencies and start the dev server to
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
