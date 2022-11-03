@@ -13,10 +13,10 @@
   export let stiffness = 0.05
   export let damping = 0.1
 
-  let restState = { angle: 0, scale: 1, dx: 0, dy: 0 }
-  let store = spring(restState, { stiffness, damping })
+  let rest_state = { angle: 0, scale: 1, dx: 0, dy: 0 }
+  let store = spring(rest_state, { stiffness, damping })
 
-  $: store.set(wiggle ? { scale, angle, dx, dy } : restState)
+  $: store.set(wiggle ? { scale, angle, dx, dy } : rest_state)
   $: if (wiggle) setTimeout(() => (wiggle = false), duration)
 </script>
 

@@ -215,9 +215,9 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
 1. ```ts
    maxSelectMsg: ((current: number, max: number) => string) | null = (
-    current: number,
-    max: number
-  ) => (max > 1 ? `${current}/${max}` : ``)
+     current: number,
+     max: number
+   ) => (max > 1 ? `${current}/${max}` : ``)
    ```
 
    Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
@@ -586,40 +586,6 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 }
 ```
 
-## Downstream testing
-
-To test a Svelte component which imports `svelte-multiselect`, you need to configure your test runner to avoid [transpiling issues](https://github.com/janosh/svelte-multiselect/issues/48).
-
-For Jest, exclude `svelte-multiselect` from `transformIgnorePatterns` in your `jest.config.json`:
-
-```json
-{
-  "transformIgnorePatterns": ["node_modules/?!(svelte-multiselect)"],
-  "transform": {
-    "^.+\\.[t|j]s?$": "esbuild-jest",
-    "^.+\\.svelte$": ["svelte-jester", { "preprocess": true }]
-  }
-}
-```
-
-For Vitest, include `svelte-multiselect` in `deps.inline`:
-
-```ts
-// vite.config.ts
-import { svelte } from '@sveltejs/vite-plugin-svelte'
-
-export default {
-  plugins: [svelte({ hot: !process.env.VITEST })],
-  test: {
-    deps: {
-      inline: [/svelte-multiselect/],
-    },
-  },
-}
-```
-
-Here's a [Stackblitz example](https://stackblitz.com/fork/github/davipon/test-svelte-multiselect?initialPath=__vitest__) that also uses [`vitest-svelte-kit`](https://github.com/nickbreaton/vitest-svelte-kit).
-
 ## Want to contribute?
 
 To submit a PR, clone the repo, install dependencies and start the dev server to try out your changes.
@@ -627,6 +593,6 @@ To submit a PR, clone the repo, install dependencies and start the dev server to
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
