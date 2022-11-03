@@ -1,20 +1,7 @@
 import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vitest'
+import { doc_query, sleep } from '.'
 import Test2WayBind from './Test2WayBind.svelte'
-
-beforeEach(() => {
-  document.body.innerHTML = ``
-})
-
-async function sleep(ms: number = 1) {
-  return new Promise((resolve) => setTimeout(resolve, ms))
-}
-
-function doc_query(selector: string) {
-  const res = document.querySelector(selector)
-  if (!res) throw new Error(`No element found for selector: ${selector}`)
-  return res
-}
 
 test(`2-way binding of activeIndex`, async () => {
   let activeIndex: number
