@@ -215,9 +215,9 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
 1. ```ts
    maxSelectMsg: ((current: number, max: number) => string) | null = (
-    current: number,
-    max: number
-  ) => (max > 1 ? `${current}/${max}` : ``)
+     current: number,
+     max: number
+   ) => (max > 1 ? `${current}/${max}` : ``)
    ```
 
    Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
