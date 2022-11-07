@@ -254,9 +254,4 @@
     font-size: 1em;
     word-break: break-word;
   }
-  button {
-    margin: 5pt 5pt 8pt 0;
-    background: darkcyan;
-    padding: 2pt 4pt;
-  }
 </style>
