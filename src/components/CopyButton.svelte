@@ -27,10 +27,3 @@
   <Icon icon={labels[state][1]} inline />
   <span>{labels[state][0]}</span>
 </button>
-
-<style>
-  button {
-    background: darkcyan;
-    padding: 2pt 4pt;
-  }
-</style>
