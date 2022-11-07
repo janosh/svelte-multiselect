@@ -334,7 +334,8 @@
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
     {required}
-    bind:value={selected}
+    {name}
+    value={selected.length > 0 ? JSON.stringify(selected) : null}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
@@ -377,7 +378,6 @@
         on:focus
         on:focus={open_dropdown}
         {id}
-        {name}
         {disabled}
         {inputmode}
         {pattern}

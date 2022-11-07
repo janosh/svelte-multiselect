@@ -230,7 +230,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    name: string | null = null
    ```
 
-   Applied to the `<input>` element. Sets the key of this field in a submitted form data object. Not useful at the moment since the value is stored in Svelte state, not on the `<input>` node.
+   Applied to the `<input>` element. Sets the key of this field in a submitted form data object. See [form example](https://svelte-multiselect.netlify.app/form).
 
 1. ```ts
    noMatchingOptionsMsg: string = `No matching options`

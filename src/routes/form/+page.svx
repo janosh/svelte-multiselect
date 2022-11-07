@@ -1,0 +1,52 @@
+<script>
+  import MultiSelect from '$lib'
+  import ColorSlot from '../../components/ColorSlot.svelte'
+  import { colors } from '../../options'
+
+  async function handle_submit(event) {
+    // use bind:this={form} or event.target as arg to new FormData()
+    form_data = new FormData(event.target)
+  }
+  let form_data
+  let form
+  const name="martian-flag"
+</script>
+
+<h2 align="center">Svelte MultiSelect</h2>
+
+<form on:submit|preventDefault={handle_submit}>
+  <label for="colors">
+    <strong>Which colors would you pick for the Martian flag?</strong>
+  </label>
+  <MultiSelect
+    id="colors"
+    options={colors}
+    placeholder="Pick some colors..."
+    {name}
+    required
+  >
+    <ColorSlot let:idx {idx} let:option {option} slot="selected" />
+    <ColorSlot let:idx {idx} let:option {option} slot="option" />
+  </MultiSelect>
+  <button>Submit</button>
+  <small>select some options, then click submit to see what data MultiSelect sends to a form submit handler</small>
+</form>
+
+<blockquote>
+  Hint: Use <code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
+</blockquote>
+
+{#if form_data}
+  Received form data:
+  <pre><code>{JSON.stringify(...form_data)}</code></pre>
+  After JSON parsing:
+  <pre><code>{form_data.get(name)}</code></pre>
+{/if}
+
+<style>
+  form {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 1ex 1em;
+    border-radius: 3pt;
+  }
+</style>

@@ -43,6 +43,8 @@ button {
   cursor: pointer;
   border: none;
   border-radius: 3pt;
+  background: darkcyan;
+  padding: 2pt 4pt;
 }
 a {
   color: var(--blue);
@@ -61,6 +63,7 @@ code {
 }
 pre code {
   background-color: transparent;
+  display: inline-block;
 }
 pre {
   border-radius: 4pt;
