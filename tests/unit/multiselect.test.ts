@@ -122,6 +122,7 @@ test(`applies DOM attributes to input node`, () => {
 
   const lis = document.querySelectorAll(`ul.options > li`)
   const input = doc_query(`ul.selected input`) as HTMLInputElement
+  const form_input = doc_query(`input.form-control`) as HTMLInputElement
 
   // make sure the search text filtered the dropdown options
   expect(lis.length).toBe(1)
@@ -130,7 +131,7 @@ test(`applies DOM attributes to input node`, () => {
   expect(input?.id).toBe(id)
   expect(input?.autocomplete).toBe(autocomplete)
   expect(input?.placeholder).toBe(placeholder)
-  expect(input?.name).toBe(name)
+  expect(form_input?.name).toBe(name)
   expect(input?.inputMode).toBe(inputmode)
   expect(input?.pattern).toBe(pattern)
 })
@@ -322,6 +323,40 @@ test(`required and non-empty MultiSelect makes form pass validity check`, async 
   expect(form.checkValidity()).toBe(true)
 })
 
+// skip until https://github.com/vitest-dev/vitest/issues/2289 is resolved
+test.skip(`passes selected options to form submission handlers`, async () => {
+  const form = document.createElement(`form`)
+  document.body.appendChild(form)
+  let form_data: FormData | null = null
+
+  // attach event listener to form
+  form.onsubmit = (event) => {
+    event.preventDefault()
+    form_data = new FormData(form)
+  }
+
+  const field_name = `test form submission`
+  // add multiselect and submit button to form
+  new MultiSelect({
+    target: form,
+    props: { options: [1, 2, 3], name: field_name },
+  })
+  const btn = document.createElement(`button`)
+  // btn.type = `submit`
+  form.appendChild(btn)
+
+  // select all options and submit form
+  for (const _ of Array(3)) {
+    const li = doc_query(`ul.options li`)
+    li.dispatchEvent(new MouseEvent(`mouseup`))
+    await sleep()
+  }
+  btn.dispatchEvent(new MouseEvent(`click`))
+  await sleep()
+
+  expect(form_data?.get(field_name)).toEqual(`[1,2,3]`)
+})
+
 test(`div has 'invalid' class and input is aria-invalid when invalid=true`, async () => {
   new MultiSelect({
     target: document.body,
@@ -434,7 +469,7 @@ test(`remove all button removes all selected options and is visible only if more
   expect(selected.textContent?.trim()).toEqual(``)
 
   // select 2 options
-  for (const _ of [1, 2]) {
+  for (const _ of Array(2)) {
     expect(
       document.querySelector(`button[title='Remove all']`),
       `remove all button should only appear if more than 1 option is selected`
@@ -600,7 +635,7 @@ test(`2-way binding of selected`, async () => {
   })
 
   // test internal changes to selected bind outwards
-  for (const _ of [1, 2]) {
+  for (const _ of Array(2)) {
     const li = doc_query(`ul.options li`)
     li.dispatchEvent(new MouseEvent(`mouseup`))
     await sleep()
