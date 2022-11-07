@@ -17,7 +17,7 @@
     "package": "svelte-package",
     "serve": "pnpm build && pnpm preview",
     "check": "svelte-check --ignore package",
-    "test": "vitest --coverage --run tests/unit/*.ts && playwright test tests/*.test.ts"
+    "test": "vitest --run tests/unit/*.ts && playwright test tests/*.test.ts"
   },
   "devDependencies": {
     "@iconify/svelte": "^3.0.0",
