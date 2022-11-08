@@ -17,7 +17,8 @@
     "package": "svelte-package",
     "serve": "pnpm build && pnpm preview",
     "check": "svelte-check --ignore package",
-    "test": "vitest --run tests/unit/*.ts && playwright test tests/*.test.ts"
+    "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
+    "vitest": "vitest tests/unit/*.ts"
   },
   "devDependencies": {
     "@iconify/svelte": "^3.0.0",
@@ -28,6 +29,7 @@
     "@sveltejs/vite-plugin-svelte": "^1.1.0",
     "@typescript-eslint/eslint-plugin": "^5.42.1",
     "@typescript-eslint/parser": "^5.42.1",
+    "@vitest/coverage-c8": "^0.25.1",
     "eslint": "^8.27.0",
     "eslint-plugin-svelte3": "^4.0.0",
     "hastscript": "^7.1.0",
