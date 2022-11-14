@@ -410,7 +410,7 @@ For example, here's how you might annoy your users with an alert every time one 
 
 > Note: Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
 
-This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. You can register listeners for these just like for the above [Svelte `dispatch` events](https://svelte.dev/tutorial/component-events):
+The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutorial/component-events). This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
 
 ```svelte
 <MultiSelect

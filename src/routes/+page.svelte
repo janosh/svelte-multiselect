@@ -10,6 +10,11 @@
     <Examples slot="examples" />
     <svelte:fragment slot="nav">
       <h2>More examples</h2>
+      <p>
+        Some more in-depth examples for specific features of <code>
+          svelte-multiselect
+        </code>:
+      </p>
       <nav>
         {#each demo_routes as route, idx}
           {#if idx > 0}<strong>&bull;</strong>{/if}
