@@ -76,10 +76,11 @@
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
   if (!(options?.length > 0)) {
-    if (allowUserOptions) {
+    if (allowUserOptions || loading) {
       options = [] // initializing as array avoids errors when component mounts
     } else {
-      // only error for empty options if user is not allowed to create custom options
+      // only error for empty options if user is not allowed to create custom
+      // options and loading is false
       console.error(`MultiSelect received no options`)
     }
   }
