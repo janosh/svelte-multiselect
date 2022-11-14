@@ -42,3 +42,11 @@ This page demonstrates
   - has `aria-expanded='true'` when open
   - options have `aria-selected='false'` and selected items have `aria-selected='true`
   - invisible `input.form-control` is `aria-hidden`
+
+<!-- TODO figure out why the Playwright test 'loops through dropdown list with arrow keys making...'
+depends on `html { scroll-behavior: smooth; }` -->
+<style>
+  :global(html) {
+    scroll-behavior: smooth;
+  }
+</style>

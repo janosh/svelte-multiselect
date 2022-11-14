@@ -323,39 +323,46 @@ test(`required and non-empty MultiSelect makes form pass validity check`, async 
   expect(form.checkValidity()).toBe(true)
 })
 
-// skip until https://github.com/vitest-dev/vitest/issues/2289 is resolved
-test.skip(`passes selected options to form submission handlers`, async () => {
-  const form = document.createElement(`form`)
-  document.body.appendChild(form)
-  let form_data: FormData | null = null
+test.each([
+  [
+    [1, 2, 3],
+    [`a`, `b`, `c`],
+    [{ label: `a` }, { label: `b` }, { label: `c` }],
+  ],
+])(
+  `passes selected options=%s to form submission handlers`,
+  async (options) => {
+    const form = document.createElement(`form`)
+    // actual form submission not supported in nodejs, would throw without preventing default behavior
+    form.onsubmit = (e) => e.preventDefault()
+    document.body.appendChild(form)
 
-  // attach event listener to form
-  form.onsubmit = (event) => {
-    event.preventDefault()
-    form_data = new FormData(form)
-  }
+    const field_name = `test form submission`
+    // add multiselect to form
+    new MultiSelect({
+      target: form,
+      props: { options, name: field_name, required: true },
+    })
+    expect(form.checkValidity()).toBe(false)
 
-  const field_name = `test form submission`
-  // add multiselect and submit button to form
-  new MultiSelect({
-    target: form,
-    props: { options: [1, 2, 3], name: field_name },
-  })
-  const btn = document.createElement(`button`)
-  // btn.type = `submit`
-  form.appendChild(btn)
+    // add submit button to form
+    const btn = document.createElement(`button`)
+    form.appendChild(btn)
 
-  // select all options and submit form
-  for (const _ of Array(3)) {
-    const li = doc_query(`ul.options li`)
-    li.dispatchEvent(new MouseEvent(`mouseup`))
+    // select 3 options
+    for (const _ of Array(3)) {
+      const li = doc_query(`ul.options li`)
+      li.dispatchEvent(new MouseEvent(`mouseup`))
+      await sleep()
+    }
+    expect(form.checkValidity()).toBe(true)
+
+    btn.dispatchEvent(new MouseEvent(`click`)) // submit form
     await sleep()
+    const form_data = new FormData(form)
+    expect(form_data.get(field_name)).toEqual(JSON.stringify(options))
   }
-  btn.dispatchEvent(new MouseEvent(`click`))
-  await sleep()
-
-  expect(form_data?.get(field_name)).toEqual(`[1,2,3]`)
-})
+)
 
 test(`div has 'invalid' class and input is aria-invalid when invalid=true`, async () => {
   new MultiSelect({

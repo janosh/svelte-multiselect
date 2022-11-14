@@ -167,7 +167,7 @@ test.describe(`disabled multiselect`, async () => {
 
   test(`renders disabled slot`, async ({ page }) => {
     const span = await page.textContent(`[slot='disabled-icon']`)
-    expect(await span).toBe(`This component is disabled. Get outta here!`)
+    expect(await span).toBe(`This component is disabled. It won't even open.`)
   })
 })
 

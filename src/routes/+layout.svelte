@@ -20,7 +20,7 @@
     MultiSelect
   </h1>
 
-  <p>Other examples</p>
+  <h2>Other examples</h2>
   <nav>
     {#each demo_routes as route, idx}
       {#if idx > 0}<strong>&bull;</strong>{/if}
@@ -37,8 +37,7 @@
 {/if}
 
 <style>
-  h1,
-  p {
+  :is(h1, h2) {
     text-align: center;
     display: flex;
     place-content: center;
