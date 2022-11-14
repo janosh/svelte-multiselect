@@ -20,11 +20,6 @@
   --ghc-color: var(--night);
   --ghc-bg: white;
 }
-html {
-  /* smoothly scroll heading links into view, unfortunately also applies to jumping
-  between matches when searching site https://stackoverflow.com/a/51588820 */
-  scroll-behavior: smooth;
-}
 body {
   background: var(--night);
   padding: calc(1ex + 2vw);

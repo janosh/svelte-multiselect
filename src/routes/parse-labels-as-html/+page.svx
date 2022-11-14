@@ -1,30 +1,50 @@
 <script>
   import MultiSelect from '$lib'
-  import { pills } from '$src/options'
+
+  const pills = [
+    {
+      label: `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`,
+      value: `red pill`,
+    },
+    {
+      label: `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none">show me</a>)`,
+      value: `blue pill`,
+    },
+  ]
 </script>
 
-## User interface
-
-```svelte
-<MultiSelect
-  options={pills}
-  placeholder="Pick your favorite pills"
-  removeAllTitle="Delete all pills"
-  invalid
-/>
-```
-
-<br />
+## `parseLabelsAsHtml`
 
 <label for="pills">Pill Picker</label>
 <MultiSelect
   id="pills"
   options={pills}
-  placeholder="Are you ready for the truth?"
+  maxSelect={1}
+  placeholder="Are you ready for the truth? Pick a pill!"
   parseLabelsAsHtml
   allowUserOptions
 />
 
 <br />
 
-This page shows how `parseLabelsAsHtml` affects rendering of dropdown and selected options.
+When `parseLabelsAsHtml={true}`, MultiSelect renders HTML in option labels.
+
+```svelte
+export const pills = [
+  {
+    label: `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`,
+    value: `red pill`,
+  },
+  {
+    label: `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none" target="_blank">show me</a>)`,
+    value: `blue pill`,
+  },
+]
+
+<MultiSelect
+  options={pills}
+  maxSelect={1}
+  placeholder="Are you ready for the truth? Pick a pill!"
+  parseLabelsAsHtml
+/>
+```
