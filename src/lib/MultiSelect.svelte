@@ -265,22 +265,19 @@
         // if no option is active and no options are matching, do nothing
         return
       }
+      // if none of the abvove special cases apply, we make next/prev option
+      // active with wrap around at both ends
       const increment = event.key === `ArrowUp` ? -1 : 1
 
       activeIndex = (activeIndex + increment) % matchingOptions.length
-      // % in JS behaves like remainder operator, not real modulo, so negative numbers stay negative
+      // in JS % behaves like remainder operator, not real modulo, so negative numbers stay negative
       // need to do manual wrap around at 0
       if (activeIndex < 0) activeIndex = matchingOptions.length - 1
 
       if (autoScroll) {
-        // TODO This ugly timeout hack is needed to properly scroll element into view when wrapping
-        // around start/end of option list. Find a better solution than waiting 10 ms.
         await tick()
         const li = document.querySelector(`ul.options > li.active`)
-        if (li) {
-          li.parentNode?.scrollIntoView?.({ block: `center` })
-          li.scrollIntoViewIfNeeded?.()
-        }
+        if (li) li.scrollIntoViewIfNeeded?.()
       }
     }
     // on backspace key: remove last selected option
