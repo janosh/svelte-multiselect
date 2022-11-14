@@ -464,7 +464,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `padding: var(--sms-padding, 0 3pt)`
   - `background: var(--sms-bg)`
   - `color: var(--sms-text-color)`
-  - `min-height: var(--sms-min-height, 19pt)`
+  - `min-height: var(--sms-min-height, 22pt)`
   - `width: var(--sms-width)`
   - `max-width: var(--sms-max-width)`
   - `margin: var(--sms-margin)`

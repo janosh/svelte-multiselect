@@ -4,7 +4,7 @@
   import '../app.css'
   import { demo_routes } from './+layout'
 
-  $: isCurrent = (path: string) => {
+  $: is_current = (path: string) => {
     if (path === $page.url.pathname) return `page`
     if (path !== `/` && $page.url.pathname.includes(path)) return `page`
     return undefined
@@ -24,7 +24,7 @@
   <nav>
     {#each demo_routes as route, idx}
       {#if idx > 0}<strong>&bull;</strong>{/if}
-      <a href={route} aria-current={isCurrent(route)}>{route}</a>
+      <a href={route} aria-current={is_current(route)}>{route}</a>
     {/each}
   </nav>
 

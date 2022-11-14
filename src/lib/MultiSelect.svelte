@@ -511,7 +511,7 @@
     padding: var(--sms-padding, 0 3pt);
     color: var(--sms-text-color);
     font-size: var(--sms-font-size, inherit);
-    min-height: var(--sms-min-height, 19pt);
+    min-height: var(--sms-min-height, 22pt);
     margin: var(--sms-margin);
   }
   :where(div.multiselect.open) {
