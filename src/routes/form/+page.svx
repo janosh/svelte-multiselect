@@ -1,7 +1,7 @@
 <script>
   import MultiSelect from '$lib'
-  import ColorSlot from '../../components/ColorSlot.svelte'
-  import { colors } from '../../options'
+  import ColorSlot from '$src/components/ColorSlot.svelte'
+  import { colors } from '$src/options'
 
   async function handle_submit(event) {
     // use bind:this={form} or event.target as arg to new FormData()
@@ -11,8 +11,6 @@
   let form
   const name="martian-flag"
 </script>
-
-<h2 align="center">Svelte MultiSelect</h2>
 
 <form on:submit|preventDefault={handle_submit}>
   <label for="colors">
@@ -32,9 +30,7 @@
   <small>select some options, then click submit to see what data MultiSelect sends to a form submit handler</small>
 </form>
 
-<blockquote>
-  Hint: Use <code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
-</blockquote>
+> Hint: Use <code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
 
 {#if form_data}
   Received form data:
