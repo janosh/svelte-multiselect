@@ -683,3 +683,29 @@ test.each([
     expect(value).toEqual(expected)
   }
 )
+
+test(`console error if no options are provided`, () => {
+  console.error = vi.fn()
+  new MultiSelect({
+    target: document.body,
+    props: { options: [] },
+  })
+
+  expect(console.error).toHaveBeenCalledOnce()
+
+  // check error message is as expected
+  expect(console.error.mock.calls[0][0]).toContain(
+    `MultiSelect received no options`
+  )
+})
+
+test(`no console error about missing options if loading=true`, () => {
+  console.error = vi.fn()
+
+  new MultiSelect({
+    target: document.body,
+    props: { options: [], loading: true },
+  })
+
+  expect(console.error).not.toHaveBeenCalled()
+})
