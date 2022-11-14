@@ -21,8 +21,8 @@
 
 <nav>
   <button on:click={toggle}>
-    {open ? `Close` : `View code`}
     <span style="display: inline-block; transform: rotate({$angle}deg);">👆</span>
+    {open ? `Close` : `View code`}
   </button>
 
   {#if repl_url}
@@ -33,15 +33,12 @@
   {/if}
 </nav>
 
-{#if open}
-  <div transition:slide={{ duration }}>
-    <aside>
-      <CopyButton content={code} />
-    </aside>
-    <pre><code>{@html hljs.highlight(code.trim(), { language: `html` }).value}</code
-      ></pre>
-  </div>
-{/if}
+<div class:open>
+  <aside>
+    <CopyButton content={code} />
+  </aside>
+  <pre><code>{@html hljs.highlight(code.trim(), { language: `html` }).value}</code></pre>
+</div>
 
 <style>
   nav {
@@ -65,6 +62,15 @@
   }
   div {
     position: relative;
+    visibility: hidden;
+    opacity: 0;
+    max-height: 0;
+    transition: max-height 0.3s, opacity 0.3s, visibility 0.3s;
+  }
+  div.open {
+    visibility: visible;
+    opacity: 1;
+    max-height: 100vh;
   }
   aside {
     position: absolute;

@@ -5,7 +5,9 @@
 
 <div>
   {idx + 1}
-  <span style:background={option} />
+  {#if typeof CSS !== `undefined` && CSS.supports(`color`, option)}
+    <span style:background={option} />
+  {/if}
   {option}
 </div>
 

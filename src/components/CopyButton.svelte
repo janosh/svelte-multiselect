@@ -2,6 +2,7 @@
   import Icon from '@iconify/svelte'
 
   export let content: string
+  export let style: string | null = null
 
   let state: 'default' | 'success' | 'error' = `default`
 
@@ -23,7 +24,7 @@
   }
 </script>
 
-<button on:click={copy}>
+<button on:click={copy} {style}>
   <Icon icon={labels[state][1]} inline />
   <span>{labels[state][0]}</span>
 </button>
