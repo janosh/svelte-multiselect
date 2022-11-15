@@ -709,3 +709,32 @@ test(`no console error about missing options if loading=true`, () => {
 
   expect(console.error).not.toHaveBeenCalled()
 })
+
+test.each([[null], [`custom add option message`]])(
+  `arrow keys on empty multiselect toggle addOptionMsg as active`,
+  async (addOptionMsg) => {
+    let props = { options: [], allowUserOptions: true, searchText: `foo` }
+    if (addOptionMsg) props = { ...props, addOptionMsg }
+    new MultiSelect({ target: document.body, props })
+
+    const input = doc_query(`ul.selected input`)
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    await sleep()
+
+    const li_active = doc_query(`ul.options li.active`)
+    expect(li_active.textContent?.trim()).toBe(
+      addOptionMsg ?? `Create this option...`
+    )
+  }
+)
+
+test(`disabled multiselect has disabled icon`, () => {
+  new MultiSelect({
+    target: document.body,
+    props: { options: [1, 2, 3], disabled: true },
+  })
+
+  expect(
+    doc_query(`ul.selected + svg[data-name='disabled-icon']`)
+  ).toBeInstanceOf(SVGSVGElement)
+})
