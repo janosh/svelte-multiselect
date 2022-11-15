@@ -5,7 +5,7 @@
   "homepage": "https://svelte-multiselect.netlify.app",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
-  "version": "8.0.2",
+  "version": "8.0.3",
   "type": "module",
   "svelte": "index.js",
   "main": "index.js",
