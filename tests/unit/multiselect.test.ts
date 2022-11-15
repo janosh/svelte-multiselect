@@ -684,31 +684,29 @@ test.each([
   }
 )
 
-test(`console error if no options are provided`, () => {
-  console.error = vi.fn()
-  new MultiSelect({
-    target: document.body,
-    props: { options: [] },
-  })
+test.each([
+  [true, false, 0],
+  [false, true, 0],
+  [true, true, 0],
+  [false, false, 1],
+])(
+  `no console error about missing options if loading or disabled=true`,
+  (loading, disabled, expected) => {
+    console.error = vi.fn()
 
-  expect(console.error).toHaveBeenCalledOnce()
+    new MultiSelect({
+      target: document.body,
+      props: { options: [], loading, disabled },
+    })
 
-  // check error message is as expected
-  expect(console.error.mock.calls[0][0]).toContain(
-    `MultiSelect received no options`
-  )
-})
-
-test(`no console error about missing options if loading=true`, () => {
-  console.error = vi.fn()
-
-  new MultiSelect({
-    target: document.body,
-    props: { options: [], loading: true },
-  })
-
-  expect(console.error).not.toHaveBeenCalled()
-})
+    expect(console.error).toHaveBeenCalledTimes(expected)
+    if (expected > 0) {
+      expect(console.error.mock.calls[0][0]).toContain(
+        `MultiSelect received no options`
+      )
+    }
+  }
+)
 
 test.each([[null], [`custom add option message`]])(
   `arrow keys on empty multiselect toggle addOptionMsg as active`,
