@@ -404,7 +404,7 @@
   {/if}
   {#if disabled}
     <slot name="disabled-icon">
-      <DisabledIcon width="15px" />
+      <DisabledIcon width="14pt" style="margin: 0 2pt;" data-name="disabled-icon" />
     </slot>
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}

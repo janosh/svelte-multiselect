@@ -98,7 +98,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    ```
 
    Whether users can enter values that are not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
-   If `allowUserOptions` is `true` or `'append'` then the type `object | number | string` of entered value is determined from the first option of the list to keep type homogeneity.
+   If `allowUserOptions` is `true` or `'append'` then the type `object | number | string` of entered value is determined by `typeof options[0]` (i.e. the first option in the dropdown list) to keep type homogeneity.
 
 1. ```ts
    autocomplete: string = `off`
