@@ -3,12 +3,11 @@
   import ColorSlot from '$src/components/ColorSlot.svelte'
   import { colors } from '$src/options'
   import CollapsibleCode from '$src/components/CollapsibleCode.svelte'
-  import type { ActionData, PageData } from './$types'
+  import type { ActionData, PageServerData } from './$types'
   import { repository } from '../../../package.json'
-  import { page } from '$app/stores'
 
   export let form: ActionData
-  export let data: PageData
+  export let data: PageServerData
 
   $: err_msg = {
     json: `The email field is required`,
@@ -27,6 +26,12 @@
   <a href="/form">JS form example</a>
   instead.
 </p>
+
+<blockquote>
+  Note that this example will only work when running the dev server locally since it needs
+  a server to respond to the form's POST request and this documentation site only serves
+  static HTML.
+</blockquote>
 
 <form method="POST" action="?/validate-form">
   <label for="colors">

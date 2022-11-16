@@ -2,7 +2,9 @@ import { invalid } from '@sveltejs/kit'
 import { readFileSync } from 'fs'
 import type { Actions, PageServerLoad } from './$types'
 
-export const actions: Actions = {
+// remove leading underscore to activate this example
+// needs to be disabled for building static site
+export const _actions: Actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
     let colors = data.get(`colors`)
@@ -24,15 +26,16 @@ export const actions: Actions = {
   },
 }
 
-export const prerender = false
-
 export const load: PageServerLoad = () => {
   return {
     codes: [`.svelte`, `.server.ts`].map((ext) => {
       const filepath = new URL(`./+page${ext}`, import.meta.url)
-      const code = readFileSync(filepath, `utf8`)
-
-      return [`+page${ext}`, code]
+      try {
+        const code = readFileSync(filepath, `utf8`)
+        return [`+page${ext}`, code]
+      } catch (error) {
+        return [`+page${ext}`, `code`]
+      }
     }),
   }
 }
