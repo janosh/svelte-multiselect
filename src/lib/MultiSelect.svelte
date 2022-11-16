@@ -25,6 +25,7 @@
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
+  export let form_input: HTMLInputElement
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
@@ -51,7 +52,7 @@
   export let placeholder: string | null = null
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
-  export let required: boolean = false
+  export let required: boolean | number = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
   export let selected: Option[] =
@@ -90,11 +91,18 @@
     )
   }
   if (maxSelect !== null && maxSelect < 1) {
-    console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
+    console.error(
+      `MultiSelect's maxSelect must be null or positive integer, got ${maxSelect}`
+    )
   }
   if (!Array.isArray(selected)) {
     console.error(
-      `internal variable selected prop should always be an array, got ${selected}`
+      `MultiSelect's selected prop should always be an array, got ${selected}`
+    )
+  }
+  if (maxSelect && typeof required === `number` && required > maxSelect) {
+    console.error(
+      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
     )
   }
 
@@ -185,6 +193,7 @@
       dispatch(`change`, { option, type: `add` })
 
       invalid = false // reset error status whenever new items are selected
+      form_input?.setCustomValidity(``)
     }
   }
 
@@ -209,6 +218,7 @@
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
     invalid = false // reset error status whenever items are removed
+    form_input?.setCustomValidity(``)
   }
 
   function open_dropdown(event: Event) {
@@ -331,14 +341,26 @@
 >
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
-    {required}
     {name}
-    value={selected.length > 0 ? JSON.stringify(selected) : null}
+    required={Boolean(required)}
+    value={selected.length >= required ? JSON.stringify(selected) : null}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
     class="form-control"
-    on:invalid={() => (invalid = true)}
+    bind:this={form_input}
+    on:invalid={() => {
+      invalid = true
+      let msg
+      if (maxSelect && maxSelect > 1 && required > 1) {
+        msg = `Please select between ${required} and ${maxSelect} options`
+      } else if (required > 1) {
+        msg = `Please select at least ${required} options`
+      } else {
+        msg = `Please select an option`
+      }
+      form_input.setCustomValidity(msg)
+    }}
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">

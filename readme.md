@@ -21,7 +21,7 @@
 
 <slot name="examples" />
 
-## Key features
+## Features
 
 - **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
 - **Keyboard friendly** for mouse-less form completion
@@ -36,9 +36,6 @@
 
 ## Recent breaking changes
 
-- **v6.0.0**&nbsp; The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
-- **v6.0.1**&nbsp; The prop `disabledTitle` which sets the title of the `<MultiSelect>` `<input>` node if in `disabled` mode was renamed to `disabledInputTitle`. [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
-- **v6.0.1**&nbsp; The default margin of `1em 0` on the wrapper `div.multiselect` was removed. Instead, there is now a new CSS variable `--sms-margin`. Set it to `--sms-margin: 1em 0;` to restore the old appearance. [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
 - **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
 - **v7.0.0**&nbsp; `selected` (as well `selectedLabels` and `selectedValues`) used to be arrays always. Now, if `maxSelect=1`, they will no longer be a length-1 array but simply a single a option (label/value respectively) or `null` if no option is selected. [PR 123](https://github.com/janosh/svelte-multiselect/pull/123).
 - **8.0.0**&nbsp;
@@ -172,6 +169,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).
 
 1. ```ts
+   form_input: HTMLInputElement
+   ```
+
+   Handle to the `<input>` DOM node that's responsible for form validity checks and passing selected options to form submission handlers. Only available after component mounts (`null` before then).
+
+1. ```ts
    id: string | null = null
    ```
 
@@ -193,7 +196,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    invalid: boolean = false
    ```
 
-   If `required=true` and user tries to submit but `selected = []` is empty, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed again as soon as the user selects an option. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
+   If `required = true, 1, 2, ...` and user tries to submit form but `selected = []` is empty/`selected.length < required`, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed as soon as any change to `selected` is registered. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
 
 1. ```ts
    loading: boolean = false
@@ -287,10 +290,10 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
 
 1. ```ts
-   required: boolean = false
+   required: boolean | number = false
    ```
 
-   Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.
+   If `required = true, 1, 2, ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least `required` options".
 
 1. ```ts
    resetFilterOnAdd: boolean = true
