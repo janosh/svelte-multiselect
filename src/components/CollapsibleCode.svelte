@@ -3,13 +3,15 @@
   import hljs from 'highlight.js/lib/common'
   import 'highlight.js/styles/vs2015.css'
   import { tweened } from 'svelte/motion'
-  import { slide } from 'svelte/transition'
   import CopyButton from './CopyButton.svelte'
 
   export let duration: number = 200
   export let open: boolean = false
   export let code: string
   export let repl_url: string = ``
+  export let github_url: string = ``
+  export let style: string | null = null
+  export let language = `html`
 
   const angle = tweened(180, { duration })
 
@@ -19,7 +21,8 @@
   }
 </script>
 
-<nav>
+<nav {style}>
+  <slot name="title" />
   <button on:click={toggle}>
     <span style="display: inline-block; transform: rotate({$angle}deg);">👆</span>
     {open ? `Close` : `View code`}
@@ -31,21 +34,27 @@
       REPL
     </a>
   {/if}
+
+  {#if github_url}
+    <a href={github_url} target="_blank" rel="noreferrer">
+      <Icon icon="octicon:mark-github-16" inline />
+      GitHub
+    </a>
+  {/if}
 </nav>
 
 <div class:open>
   <aside>
     <CopyButton content={code} />
   </aside>
-  <pre><code>{@html hljs.highlight(code.trim(), { language: `html` }).value}</code></pre>
+  <pre><code>{@html hljs.highlight(code.trim(), { language }).value}</code></pre>
 </div>
 
 <style>
   nav {
-    position: absolute;
     top: 8pt;
     right: 1em;
-    display: flex;
+    display: inline-flex;
     gap: 1ex;
     line-height: 1;
   }
@@ -70,7 +79,7 @@
   div.open {
     visibility: visible;
     opacity: 1;
-    max-height: 100vh;
+    max-height: 9999vh;
   }
   aside {
     position: absolute;
