@@ -315,6 +315,13 @@
       close_dropdown(event)
     }
   }
+
+  $: custom_validity_msg =
+    maxSelect && maxSelect > 1 && required > 1
+      ? `Please select between ${required} and ${maxSelect} options`
+      : required > 1
+      ? `Please select at least ${required} options`
+      : `Please select an option`
 </script>
 
 <svelte:window
@@ -346,6 +353,7 @@
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
     class="form-control"
     on:invalid={() => (invalid = true)}
+    oninvalid="this.setCustomValidity('{custom_validity_msg}')"
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
