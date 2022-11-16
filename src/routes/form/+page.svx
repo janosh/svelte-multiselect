@@ -22,7 +22,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     options={colors}
     placeholder="Pick some colors..."
     {name}
-    required
+    required={2}
   >
     <ColorSlot let:idx {idx} let:option {option} slot="selected" />
     <ColorSlot let:idx {idx} let:option {option} slot="option" />
