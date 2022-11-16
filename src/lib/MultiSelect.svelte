@@ -90,11 +90,18 @@
     )
   }
   if (maxSelect !== null && maxSelect < 1) {
-    console.error(`maxSelect must be null or positive integer, got ${maxSelect}`)
+    console.error(
+      `MultiSelect's maxSelect must be null or positive integer, got ${maxSelect}`
+    )
   }
   if (!Array.isArray(selected)) {
     console.error(
-      `internal variable selected prop should always be an array, got ${selected}`
+      `MultiSelect's selected prop should always be an array, got ${selected}`
+    )
+  }
+  if (maxSelect && typeof required === `number` && required > maxSelect) {
+    console.error(
+      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
     )
   }
 
