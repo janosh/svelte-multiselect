@@ -1,16 +1,17 @@
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import ColorSlot from '$src/components/ColorSlot.svelte'
   import { colors } from '$src/options'
 
-  async function handle_submit(event) {
+  async function handle_submit(event: SubmitEvent) {
     // use bind:this={form} or event.target as arg to new FormData()
-    form_data = new FormData(event.target)
+    form_data = new FormData(event.target as HTMLFormElement)
   }
-  let form_data
-  let form
-  const name="martian-flag"
+  let form_data: FormData
+  const name = `martian-flag`
 </script>
+
+This example shows the JavaScript way of handling MultiSelect fields in form submission events. If you're using SvelteKit, you may want to look at check out [this example](/kit-form-actions) on to use [form actions](https://kit.svelte.dev/docs/form-actions) instead which work even with JS disabled.
 
 <form on:submit|preventDefault={handle_submit}>
   <label for="colors">
@@ -27,10 +28,14 @@
     <ColorSlot let:idx {idx} let:option {option} slot="option" />
   </MultiSelect>
   <button>Submit</button>
-  <small>select some options, then click submit to see what data MultiSelect sends to a form submit handler</small>
+  <small
+    >select some options, then click submit to see what data MultiSelect sends to a form
+    submit handler</small
+  >
 </form>
 
-> Hint: Use <code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
+> Hint: Use<code>JSON.parse()</code> to convert the string value passed to form submit
+handler back to array.
 
 {#if form_data}
   Received form data:

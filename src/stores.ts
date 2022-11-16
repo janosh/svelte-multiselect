@@ -27,5 +27,5 @@ function session_store<T>(name: string, initialValue: T) {
 
 export const language_store = session_store<string[]>(
   `language-store`,
-  `Python TypeScript C`.split(` `)
+  `Python TypeScript C Rust`.split(` `)
 )
