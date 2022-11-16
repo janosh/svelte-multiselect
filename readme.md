@@ -21,7 +21,7 @@
 
 <slot name="examples" />
 
-## Key features
+## Features
 
 - **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
 - **Keyboard friendly** for mouse-less form completion
@@ -36,9 +36,6 @@
 
 ## Recent breaking changes
 
-- **v6.0.0**&nbsp; The prop `showOptions` which controls whether the list of dropdown options is currently open or closed was renamed to `open`. [PR 103](https://github.com/janosh/svelte-multiselect/pull/103).
-- **v6.0.1**&nbsp; The prop `disabledTitle` which sets the title of the `<MultiSelect>` `<input>` node if in `disabled` mode was renamed to `disabledInputTitle`. [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
-- **v6.0.1**&nbsp; The default margin of `1em 0` on the wrapper `div.multiselect` was removed. Instead, there is now a new CSS variable `--sms-margin`. Set it to `--sms-margin: 1em 0;` to restore the old appearance. [PR 105](https://github.com/janosh/svelte-multiselect/pull/105).
 - **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
 - **v7.0.0**&nbsp; `selected` (as well `selectedLabels` and `selectedValues`) used to be arrays always. Now, if `maxSelect=1`, they will no longer be a length-1 array but simply a single a option (label/value respectively) or `null` if no option is selected. [PR 123](https://github.com/janosh/svelte-multiselect/pull/123).
 - **8.0.0**&nbsp;
