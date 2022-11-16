@@ -29,7 +29,7 @@
 
 <blockquote>
   Note that this example will only work when running the dev server locally since it needs
-  a server to respond to the form's POST request and this documentation site only serves
+  a server to respond to the form's POST request and this documentation site is only
   static HTML.
 </blockquote>
 

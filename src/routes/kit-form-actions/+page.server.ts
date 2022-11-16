@@ -4,6 +4,7 @@ import type { Actions, PageServerLoad } from './$types'
 
 // remove leading underscore to activate this example
 // needs to be disabled for building static site
+// TODO find a way to make this work on static docs site
 export const _actions: Actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
@@ -34,6 +35,7 @@ export const load: PageServerLoad = () => {
         const code = readFileSync(filepath, `utf8`)
         return [`+page${ext}`, code]
       } catch (error) {
+        // catch file not found error which occur during site build
         return [`+page${ext}`, `code`]
       }
     }),
