@@ -286,29 +286,56 @@ test(`selected is array of first two options when maxSelect=2`, async () => {
 })
 
 describe.each([
-  [[], false], // empty selected = invalid form
-  [[1], true], // at least 1 selected = valid form
-])(`required MultiSelect`, (selected, form_valid) => {
-  test.each([1, 2, null])(
-    `${
-      form_valid ? `does` : `doesn't`
-    } pass validity check if selected=${selected} and maxSelect=%s`,
-    (maxSelect) => {
-      // i think, not passing validity check means form won't submit
-      // maybe TODO: simulating form submission event and checking
-      // event.defaultPrevented == true seems closer to ground truth but harder to test
+  [false, [], true], // unrequired + empty selected = valid form
+  [true, [], false], // required + empty selected = invalid form
+  [1, [1], true], // required=1 + 1 selected = valid form
+  [2, [1], false], // required=2 + 1 selected = invalid form
+  [2, [1, 2], true], // required=2 + 2 selected = valid form
+])(
+  `MultiSelect with required=%s, selected=%s`,
+  (required, selected, form_valid) => {
+    test.each([1, 2, null])(
+      `${
+        form_valid ? `passes` : `doesn't pass`
+      } form validity check and maxSelect=%s`,
+      (maxSelect) => {
+        // i think, not passing validity check means form won't submit
+        // maybe TODO: simulating form submission event and checking
+        // event.defaultPrevented == true seems closer to ground truth but harder to test
 
-      const form = document.createElement(`form`)
-      document.body.appendChild(form)
+        const form = document.createElement(`form`)
+        document.body.appendChild(form)
 
-      new MultiSelect({
-        target: form,
-        props: { options: [1, 2, 3], required: true, selected, maxSelect },
-      })
+        new MultiSelect({
+          target: form,
+          props: { options: [1, 2, 3], required, selected, maxSelect },
+        })
 
-      expect(form.checkValidity()).toBe(form_valid)
-    }
-  )
+        expect(form.checkValidity()).toBe(form_valid)
+      }
+    )
+  }
+)
+
+test.each([
+  [0, 1, 0],
+  [1, 1, 0],
+  [2, 1, 1],
+  [1, 2, 0],
+])(`console error if required > maxSelect`, (required, maxSelect, expected) => {
+  console.error = vi.fn()
+
+  new MultiSelect({
+    target: document.body,
+    props: { options: [1, 2, 3], required, maxSelect },
+  })
+
+  expect(console.error).toHaveBeenCalledTimes(expected)
+  if (expected > 0) {
+    expect(console.error.mock.calls[0][0]).toContain(
+      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
+    )
+  }
 })
 
 test(`required and non-empty MultiSelect makes form pass validity check`, async () => {
