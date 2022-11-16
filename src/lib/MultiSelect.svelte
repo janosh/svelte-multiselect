@@ -51,7 +51,7 @@
   export let placeholder: string | null = null
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
-  export let required: boolean = false
+  export let required: boolean | number = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
   export let selected: Option[] =
@@ -331,9 +331,9 @@
 >
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
-    {required}
     {name}
-    value={selected.length > 0 ? JSON.stringify(selected) : null}
+    required={Boolean(required)}
+    value={selected.length >= required ? JSON.stringify(selected) : null}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
