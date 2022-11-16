@@ -293,7 +293,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    required: boolean | number = false
    ```
 
-   If `required = true, 1, 2, ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least {required} options".
+   If `required = true, 1, 2, ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least `required` options".
 
 1. ```ts
    resetFilterOnAdd: boolean = true
