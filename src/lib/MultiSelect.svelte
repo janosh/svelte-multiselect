@@ -25,6 +25,7 @@
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
+  export let form_input: HTMLInputElement
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
@@ -192,6 +193,7 @@
       dispatch(`change`, { option, type: `add` })
 
       invalid = false // reset error status whenever new items are selected
+      form_input?.setCustomValidity(``)
     }
   }
 
@@ -216,6 +218,7 @@
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
     invalid = false // reset error status whenever items are removed
+    form_input?.setCustomValidity(``)
   }
 
   function open_dropdown(event: Event) {
@@ -315,13 +318,6 @@
       close_dropdown(event)
     }
   }
-
-  $: custom_validity_msg =
-    maxSelect && maxSelect > 1 && required > 1
-      ? `Please select between ${required} and ${maxSelect} options`
-      : required > 1
-      ? `Please select at least ${required} options`
-      : `Please select an option`
 </script>
 
 <svelte:window
@@ -352,8 +348,19 @@
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
     class="form-control"
-    on:invalid={() => (invalid = true)}
-    oninvalid="this.setCustomValidity('{custom_validity_msg}')"
+    bind:this={form_input}
+    on:invalid={() => {
+      invalid = true
+      let msg
+      if (maxSelect && maxSelect > 1 && required > 1) {
+        msg = `Please select between ${required} and ${maxSelect} options`
+      } else if (required > 1) {
+        msg = `Please select at least ${required} options`
+      } else {
+        msg = `Please select an option`
+      }
+      form_input.setCustomValidity(msg)
+    }}
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">

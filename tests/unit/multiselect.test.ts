@@ -391,7 +391,7 @@ test.each([
   }
 )
 
-test(`div has 'invalid' class and input is aria-invalid when invalid=true`, async () => {
+test(`invalid=true gives top-level div class 'invalid' and input attribute of 'aria-invalid'`, async () => {
   new MultiSelect({
     target: document.body,
     props: { options: [1, 2, 3], invalid: true },

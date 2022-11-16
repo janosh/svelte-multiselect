@@ -169,6 +169,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).
 
 1. ```ts
+   form_input: HTMLInputElement
+   ```
+
+   Handle to the `<input>` DOM node that's responsible for form validity checks and passing selected options to form submission handlers. Only available after component mounts (`null` before then).
+
+1. ```ts
    id: string | null = null
    ```
 
@@ -190,7 +196,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    invalid: boolean = false
    ```
 
-   If `required=true | 1 | 2 | ...` and user tries to submit form but `selected = []` is empty/`selected.length < required`, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed as soon as any change to `selected` is registered. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
+   If `required = true, 1, 2, ...` and user tries to submit form but `selected = []` is empty/`selected.length < required`, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed as soon as any change to `selected` is registered. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
 
 1. ```ts
    loading: boolean = false
@@ -287,7 +293,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    required: boolean | number = false
    ```
 
-   If `required = true | 1 | 2 | ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least {required} options".
+   If `required = true, 1, 2, ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least {required} options".
 
 1. ```ts
    resetFilterOnAdd: boolean = true

@@ -40,7 +40,7 @@ handler back to array.
 {#if form_data}
   Received form data:
   <pre><code>{JSON.stringify(...form_data)}</code></pre>
-  After JSON parsing:
+  After JSON parsing <code>form_data.get(field_name)</code>:
   <pre><code>{form_data.get(name)}</code></pre>
 {/if}
 
