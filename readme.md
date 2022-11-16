@@ -193,7 +193,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    invalid: boolean = false
    ```
 
-   If `required=true` and user tries to submit but `selected = []` is empty, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed again as soon as the user selects an option. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
+   If `required=true | 1 | 2 | ...` and user tries to submit form but `selected = []` is empty/`selected.length < required`, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed as soon as any change to `selected` is registered. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
 
 1. ```ts
    loading: boolean = false
@@ -287,10 +287,10 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
 
 1. ```ts
-   required: boolean = false
+   required: boolean | number = false
    ```
 
-   Whether forms can be submitted without selecting any options. Aborts submission, is scrolled into view and shows help "Please fill out" message when true and user tries to submit with no options selected.
+   If `required = true | 1 | 2 | ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least {required} options".
 
 1. ```ts
    resetFilterOnAdd: boolean = true
