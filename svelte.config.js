@@ -22,6 +22,7 @@ const rehypePlugins = [
   ],
 ]
 
+/** @type {import('@sveltejs/kit').Config} */
 export default {
   extensions: [`.svelte`, `.svx`, `.md`],
 

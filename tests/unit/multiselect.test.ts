@@ -736,3 +736,30 @@ test(`disabled multiselect has disabled icon`, () => {
     doc_query(`ul.selected + svg[data-name='disabled-icon']`)
   ).toBeInstanceOf(SVGSVGElement)
 })
+
+test(`can remove user-created selected option which is not in dropdown list`, async () => {
+  // i.e. allowUserOptions=true, not 'append', meaning user options are only selected but
+  // aren't added to dropdown list yet remove() should still be able to delete them
+  new MultiSelect({
+    target: document.body,
+    props: { options: [`1`, `2`, `3`], allowUserOptions: true },
+  })
+
+  // add a new option created from user text input
+  const input = doc_query(`ul.selected input`)
+  input.value = `foo`
+  input.dispatchEvent(new InputEvent(`input`))
+  await sleep()
+
+  const li = doc_query(`ul.options li[title='Create this option...']`)
+  li.dispatchEvent(new MouseEvent(`mouseup`))
+  await sleep()
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`foo`)
+
+  // remove the new option
+  const li_selected = doc_query(`ul.selected li button[title*='Remove']`)
+  li_selected.dispatchEvent(new MouseEvent(`mouseup`))
+  await sleep()
+
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
+})
