@@ -432,7 +432,7 @@
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
-        <span style="padding: 0 3pt;">
+        <span class="max-select-msg-label">
           {maxSelectMsg?.(selected.length, maxSelect)}
         </span>
       </Wiggle>
@@ -661,5 +661,9 @@
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
+  }
+  
+  .max-select-msg-label {
+    padding: 0 3pt;
   }
 </style>
