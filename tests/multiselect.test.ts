@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
-import { foods } from '../src/options'
+import { foods } from '../src/options.ts'
 
 // to run tests in this file, use `pnpm test`
 

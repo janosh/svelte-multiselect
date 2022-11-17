@@ -248,7 +248,7 @@
       placeholder="Take your pick..."
       maxSelect={1}
       required={1}
-      disableRemoveBtn = {true}
+      disableRemoveBtn={true}
       bind:selected={$country_store}
     />`}
   />
