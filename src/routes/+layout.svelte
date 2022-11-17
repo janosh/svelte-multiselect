@@ -17,10 +17,9 @@
   <a href="/" aria-label="Back to index page">&laquo; back</a>
   <h1>
     <img src="/favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
-    MultiSelect
+    MultiSelect Examples
   </h1>
 
-  <h2>Other examples</h2>
   <nav>
     {#each demo_routes as route, idx}
       {#if idx > 0}<strong>&bull;</strong>{/if}
@@ -37,7 +36,7 @@
 {/if}
 
 <style>
-  :is(h1, h2) {
+  h1 {
     text-align: center;
     display: flex;
     place-content: center;
@@ -58,16 +57,19 @@
   }
   nav {
     display: flex;
-    gap: 1ex;
+    gap: 1em 1ex;
     place-content: center;
     margin: 1em auto 3em;
     max-width: 45em;
     flex-wrap: wrap;
   }
   nav > a {
-    padding-bottom: 2pt;
+    padding: 0 4pt;
+    background-color: rgba(255, 255, 255, 0.1);
+    border-radius: 3pt;
+    transition: 0.2s;
   }
   nav > a[aria-current='page'] {
-    font-weight: bold;
+    color: mediumseagreen;
   }
 </style>

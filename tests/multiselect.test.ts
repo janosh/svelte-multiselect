@@ -485,7 +485,7 @@ test.describe(`maxSelect`, async () => {
   const max_select = 5
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/max-select`, { waitUntil: `networkidle` })
+    await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
     await page.click(`input#languages`)
 
     // select maxSelect options
@@ -497,10 +497,11 @@ test.describe(`maxSelect`, async () => {
   test(`options dropdown disappears when reaching maxSelect items`, async ({
     page,
   }) => {
-    await wait_for_animation_end(page, `ul.options`)
+    const ul_selector = `[data-id='languages'] ul.options`
+    await wait_for_animation_end(page, ul_selector)
 
-    expect(await page.locator(`ul.options`)).toBeHidden()
-    expect(await page.getAttribute(`ul.options`, `class`)).toContain(`hidden`)
+    expect(await page.locator(ul_selector)).toBeHidden()
+    expect(await page.getAttribute(ul_selector, `class`)).toContain(`hidden`)
   })
 
   test(`no more options can be added after reaching maxSelect items`, async ({

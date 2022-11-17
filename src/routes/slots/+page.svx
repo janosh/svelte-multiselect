@@ -5,6 +5,8 @@
   import MinusIcon from '$src/components/MinusIcon.svelte'
 </script>
 
+## Slot Components
+
 ### Svelte SVG component as `slot="remove-icon"`
 
 <MultiSelect
