@@ -41,6 +41,7 @@
     current: number,
     max: number
   ) => (max > 1 ? `${current}/${max}` : ``)
+  export let maxSelectMsgClass: string = ``
   export let name: string | null = null
   export let noMatchingOptionsMsg: string = `No matching options`
   export let open: boolean = false
@@ -432,7 +433,7 @@
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
-        <span style="padding: 0 3pt;">
+        <span class="max-select-msg {maxSelectMsgClass}">
           {maxSelectMsg?.(selected.length, maxSelect)}
         </span>
       </Wiggle>
@@ -661,5 +662,9 @@
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
+  }
+
+  :where(span.max-select-msg) {
+    padding: 0 3pt;
   }
 </style>
