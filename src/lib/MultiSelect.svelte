@@ -375,7 +375,7 @@
             {get_label(option)}
           {/if}
         </slot>
-        {#if !disabled  && !disableRemoveBtn}
+        {#if !disabled && !disableRemoveBtn}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
             on:keydown={if_enter_or_space(() => remove(get_label(option)))}

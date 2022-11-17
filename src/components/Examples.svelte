@@ -232,16 +232,16 @@
     placeholder="Take your pick..."
     maxSelect={1}
     required={1}
-    disableRemoveBtn = {true}
+    disableRemoveBtn={true}
     bind:selected={$country_store}
   />
   <CollapsibleCode
     repl_url="https://svelte.dev/repl/55257560b40346f3bc127d7adb944372"
     code={`
     <pre>bind:selected = {JSON.stringify($country_store)}</pre>
-  
+
     <label for="countries">What country are you from?</label>
-  
+
     <MultiSelect
       id="countries"
       options={countries}
