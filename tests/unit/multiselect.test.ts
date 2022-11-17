@@ -145,6 +145,7 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
     outerDiv: HTMLDivElement,
     ulOptions: HTMLUListElement,
     ulSelected: HTMLUListElement,
+    maxSelectMsg: HTMLSpanElement,
   }
   const css_classes = Object.fromEntries(
     Object.keys(prop_elem_map).map((cls) => [`${cls}Class`, cls])
@@ -152,8 +153,9 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
 
   new MultiSelect({
     target: document.body,
-    // select 1 to make sure the selected list is rendered
-    props: { options: [1, 2, 3], ...css_classes, selected: [1] },
+    // select=[1] needed for selected list to show up
+    // maxSelect={2} needed for maxSelectMsg to show up
+    props: { options: [1, 2, 3], ...css_classes, selected: [1], maxSelect: 2 },
   })
 
   // make an option active hovering it so it gets the active class

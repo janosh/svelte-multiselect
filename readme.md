@@ -229,6 +229,8 @@ Full list of props/bindable variables for this component. The `Option` type you 
    maxSelectMsg = (current: number, max: number) => `${current}/${max}`
    ```
 
+   Use CSS selector `span.max-select-msg` (or prop `maxSelectMsgClass` if you're using a CSS framework like Tailwind) to customize appearance of the message container.
+
 1. ```ts
    name: string | null = null
    ```
@@ -520,6 +522,7 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `ulOptionsClass`: available options listed in the dropdown when component is in `open` state
 - `liOptionClass`: list items selectable from dropdown list
 - `liActiveOptionClass`: the currently active dropdown list item (i.e. hovered or navigated to with arrow keys)
+- `maxSelectMsgClass`: small span towards the right end of the input field displaying to the user how many of the allowed number of options they've already selected
 
 This simplified version of the DOM structure of the component shows where these classes are inserted:
 
@@ -530,6 +533,7 @@ This simplified version of the DOM structure of the component shows where these 
     <li class={liSelectedClass}>Selected 1</li>
     <li class={liSelectedClass}>Selected 2</li>
   </ul>
+  <span class="maxSelectMsgClass">2/5 selected</span>
   <ul class="options {ulOptionsClass}">
     <li class={liOptionClass}>Option 1</li>
     <li class="{liOptionClass} {liActiveOptionClass}">

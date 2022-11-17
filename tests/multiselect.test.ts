@@ -118,16 +118,17 @@ test.describe(`remove all button`, async () => {
 
 test.describe(`external CSS classes`, async () => {
   for (const [prop, selector, cls] of [
-    [`outerDivClass`, `div.multiselect`, `foo`],
-    [`ulSelectedClass`, `div.multiselect > ul.selected`, `bar`],
-    [`ulOptionsClass`, `div.multiselect > ul.options`, `baz`],
-    [`liOptionClass`, `div.multiselect > ul.options > li`, `bam`],
-    [`inputClass`, `div.multiselect > ul.selected > li > input`, `slam`],
+    [`outerDiv`, `div.multiselect`, `foo`],
+    [`ulSelected`, `div.multiselect > ul.selected`, `bar`],
+    [`ulOptions`, `div.multiselect > ul.options`, `baz`],
+    [`liOption`, `div.multiselect > ul.options > li`, `bam`],
+    [`input`, `div.multiselect > ul.selected > li > input`, `slam`],
     // below classes requires component interaction before appearing in DOM
-    [`liSelectedClass`, `div.multiselect > ul.selected > li`, `hi`],
-    [`liActiveOptionClass`, `div.multiselect > ul.options > li.active`, `mom`],
+    [`liSelected`, `div.multiselect > ul.selected > li`, `hi`],
+    [`liActiveOption`, `div.multiselect > ul.options > li.active`, `mom`],
+    [`maxSelectMsg`, `div.multiselect > span > span.max-select-msg`, `bla`],
   ]) {
-    test(`${prop} `, async ({ page }) => {
+    test(`${prop}Class`, async ({ page }) => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
       await page.click(`input#foods`)
