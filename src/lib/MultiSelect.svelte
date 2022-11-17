@@ -52,6 +52,7 @@
   export let placeholder: string | null = null
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
+  export let disableRemoveBtn: boolean = false
   export let required: boolean | number = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
@@ -374,7 +375,7 @@
             {get_label(option)}
           {/if}
         </slot>
-        {#if !disabled}
+        {#if !disabled  && !disableRemoveBtn}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
             on:keydown={if_enter_or_space(() => remove(get_label(option)))}
