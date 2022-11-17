@@ -295,7 +295,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    Conditionally renders the button which removes a selected option. If `true`, the button is not rendered
 
-2. ```ts
+1. ```ts
    required: boolean | number = false
    ```
 
