@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
   import MultiSelect from '$lib'
-  import { colors, frontend_libs, languages, ml_libs } from '../options'
-  import { language_store } from '../stores'
+  import { colors, countries, frontend_libs, languages, ml_libs } from '../options'
+  import { language_store, country_store } from '../stores'
   import CollapsibleCode from './CollapsibleCode.svelte'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
@@ -214,6 +214,43 @@
   submit
 </button>
 `}
+  />
+</section>
+
+<section>
+  <h3>Strict Single Select</h3>
+
+  <p>Impossible to remove selected item</p>
+
+  <pre> maxSelect={1} required={1} disableRemoveBtn = {true}</pre>
+
+  <label for="countries">What country are you from?</label>
+
+  <MultiSelect
+    id="countries"
+    options={countries}
+    placeholder="Take your pick..."
+    maxSelect={1}
+    required={1}
+    disableRemoveBtn = {true}
+    bind:selected={$country_store}
+  />
+  <CollapsibleCode
+    repl_url="https://svelte.dev/repl/55257560b40346f3bc127d7adb944372"
+    code={`
+    <pre>bind:selected = {JSON.stringify($country_store)}</pre>
+  
+    <label for="countries">What country are you from?</label>
+  
+    <MultiSelect
+      id="countries"
+      options={countries}
+      placeholder="Take your pick..."
+      maxSelect={1}
+      required={1}
+      disableRemoveBtn = {true}
+      bind:selected={$country_store}
+    />`}
   />
 </section>
 
