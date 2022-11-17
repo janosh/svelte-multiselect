@@ -15,8 +15,10 @@
   inputClass="slam"
   liSelectedClass="hi"
   liActiveOptionClass="mom"
+  maxSelectMsgClass="bla"
   placeholder="Which foods do you like?"
   selected={["🍇 Grapes"]}
+  maxSelect={2}
 />
 ```
 
@@ -33,9 +35,12 @@
   inputClass="slam"
   liSelectedClass="hi"
   liActiveOptionClass="mom"
+  maxSelectMsgClass="bla"
   placeholder="Which foods do you like?"
   selected={["🍇 Grapes"]}
+  maxSelect={2}
 />
+<!-- maxSelect={2} needed for maxSelectMsg to show up -->
 
 <br />
 
