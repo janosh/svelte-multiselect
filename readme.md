@@ -591,7 +591,7 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 
 ## Want to contribute?
 
-To submit a PR, clone the repo, install dependencies and start the dev server to try out your changes.
+To submit a PR, clone the repo, install dependencies and start the dev server to see changes as you make them.
 
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
@@ -600,7 +600,7 @@ pnpm install
 pnpm dev
 ```
 
-To test if your feature works, run our tests:
+To make sure your changes didn't break anything, you can run the full test suite (which also runs in CI) using:
 
 ```sh
 pnpm test
