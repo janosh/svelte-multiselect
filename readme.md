@@ -599,3 +599,8 @@ cd svelte-multiselect
 pnpm install
 pnpm dev
 ```
+
+To test if your feature works, run our tests:
+```sh
+pnpm test
+```
