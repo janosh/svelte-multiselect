@@ -338,6 +338,7 @@
   on:mouseup|stopPropagation={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   aria-disabled={disabled ? `true` : null}
+  data-id={id}
 >
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input

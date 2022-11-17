@@ -13,7 +13,7 @@
   ]
 </script>
 
-## `parseLabelsAsHtml`
+## Parse labels as HTML
 
 <label for="pills">Pill Picker</label>
 <MultiSelect

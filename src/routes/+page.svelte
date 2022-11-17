@@ -30,12 +30,12 @@
 <style>
   nav {
     display: flex;
-    gap: 1ex;
+    gap: 2ex 1ex;
     flex-wrap: wrap;
   }
   nav a {
     padding: 1pt 4pt;
-    background-color: rgba(255, 255, 255, 0.125);
+    background-color: rgba(255, 255, 255, 0.1);
     border-radius: 3pt;
   }
   @media (max-width: 600px) {
