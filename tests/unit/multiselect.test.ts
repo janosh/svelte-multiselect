@@ -792,3 +792,18 @@ test(`can remove user-created selected option which is not in dropdown list`, as
 
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
 })
+
+test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
+  `does not render remove buttons if selected.length <= minSelect`,
+  async (selected) => {
+    const minSelect = 2
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3, 4], minSelect, selected },
+    })
+
+    expect(
+      document.querySelectorAll(`ul.selected button[title*='Remove']`)
+    ).toHaveLength(selected.length > minSelect ? selected.length : 0)
+  }
+)
