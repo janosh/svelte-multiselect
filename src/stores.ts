@@ -29,3 +29,5 @@ export const language_store = session_store<string[]>(
   `language-store`,
   `Python TypeScript C Rust`.split(` `)
 )
+
+export const country_store = writable<string[]>([`United States`])

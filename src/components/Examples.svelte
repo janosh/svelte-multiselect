@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
   import MultiSelect from '$lib'
-  import { colors, frontend_libs, languages, ml_libs } from '../options'
-  import { language_store } from '../stores'
+  import { colors, countries, frontend_libs, languages, ml_libs } from '../options'
+  import { language_store, country_store } from '../stores'
   import CollapsibleCode from './CollapsibleCode.svelte'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
@@ -214,6 +214,40 @@
   submit
 </button>
 `}
+  />
+</section>
+
+<section>
+  <h3><code>minSelect</code></h3>
+
+  <p>
+    Note the missing remove <code>x</code> button behind the selected option due to
+    <code>minSelect=1</code>
+  </p>
+
+  <label for="countries">What country are you from?</label>
+
+  <MultiSelect
+    id="countries"
+    options={countries}
+    required={1}
+    minSelect={1}
+    maxSelect={1}
+    bind:selected={$country_store}
+  />
+  <CollapsibleCode
+    repl_url="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1"
+    code={`
+<label for="countries">What country are you from?</label>
+
+<MultiSelect
+  id="countries"
+  options={countries}
+  required={1}
+  minSelect={1}
+  maxSelect={1}
+  bind:selected={$country_store}
+/>`}
   />
 </section>
 

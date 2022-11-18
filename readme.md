@@ -232,6 +232,14 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Use CSS selector `span.max-select-msg` (or prop `maxSelectMsgClass` if you're using a CSS framework like Tailwind) to customize appearance of the message container.
 
 1. ```ts
+   minSelect: number | null = null
+   ```
+
+   Conditionally render the `x` button which removes a selected option depending on the number of selected options. Meaning all remove buttons disappear if `selected.length <= minSelect`. E.g. if 2 options are selected and `minSelect={3}`, users will not be able to remove any selections until they selected more than 3 options.
+
+   Note: Prop `required={3}` should be used instead if you only care about the component state at form submission time. `minSelect={3}` should be used if you want to place constraints on component state at all times.
+
+1. ```ts
    name: string | null = null
    ```
 
