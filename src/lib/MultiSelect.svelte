@@ -25,7 +25,7 @@
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
-  export let form_input: HTMLInputElement
+  export let form_input: HTMLInputElement | null = null
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
