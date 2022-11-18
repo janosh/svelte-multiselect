@@ -169,7 +169,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).
 
 1. ```ts
-   form_input: HTMLInputElement
+   form_input: HTMLInputElement | null = null
    ```
 
    Handle to the `<input>` DOM node that's responsible for form validity checks and passing selected options to form submission handlers. Only available after component mounts (`null` before then).

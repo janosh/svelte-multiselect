@@ -2,7 +2,7 @@
   import type { ObjectOption } from '$lib'
   import MultiSelect from '$lib'
   import { colors, countries, frontend_libs, languages, ml_libs } from '../options'
-  import { language_store, country_store } from '../stores'
+  import { language_store } from '../stores'
   import CollapsibleCode from './CollapsibleCode.svelte'
   import ColorSlot from './ColorSlot.svelte'
   import Confetti from './Confetti.svelte'
@@ -233,7 +233,7 @@
     required={1}
     minSelect={1}
     maxSelect={1}
-    bind:selected={$country_store}
+    selected={[`Canada`]}
   />
   <CollapsibleCode
     repl_url="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1"
@@ -246,7 +246,7 @@
   required={1}
   minSelect={1}
   maxSelect={1}
-  bind:selected={$country_store}
+  selected={['Canada']}
 />`}
   />
 </section>
