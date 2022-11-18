@@ -290,10 +290,10 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
 
 1. ```ts
-   disableRemoveBtn: boolean = false
+   minSelect: number | null = null
    ```
 
-   Conditionally renders the button which removes a selected option. If `true`, the button is not rendered
+   Conditionally renders the `x` button which removes a selected option depending on the number of selected options. Meaning all remove buttons should disappear if `selected.length <= minSelect`.
 
 1. ```ts
    required: boolean | number = false

@@ -36,7 +36,7 @@
   export let liSelectedClass: string = ``
   export let loading: boolean = false
   export let matchingOptions: Option[] = []
-  export let maxSelect: number | null = null // null means any number of options are selectable
+  export let maxSelect: number | null = null // null means there is no upper limit for selected.length
   export let maxSelectMsg: ((current: number, max: number) => string) | null = (
     current: number,
     max: number
@@ -52,7 +52,7 @@
   export let placeholder: string | null = null
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
-  export let disableRemoveBtn: boolean = false
+  export let minSelect: number | null = null  // null means there is no lower limit for selected.length
   export let required: boolean | number = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
@@ -375,7 +375,7 @@
             {get_label(option)}
           {/if}
         </slot>
-        {#if !disabled && !disableRemoveBtn}
+        {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
             on:keydown={if_enter_or_space(() => remove(get_label(option)))}
