@@ -218,35 +218,34 @@
 </section>
 
 <section>
-  <h3>Strict Select</h3>
+  <h3><code>minSelect</code></h3>
 
-  <p>Impossible to remove selected item if selected.length {'<'}= 1</p>
-
-  <pre> required={1} minSelect={1}</pre>
+  <p>
+    Note the missing remove <code>x</code> button behind the selected option due to
+    <code>minSelect=1</code>
+  </p>
 
   <label for="countries">What country are you from?</label>
 
   <MultiSelect
     id="countries"
     options={countries}
-    placeholder="Take your pick..."
     required={1}
     minSelect={1}
+    maxSelect={1}
     bind:selected={$country_store}
   />
   <CollapsibleCode
     repl_url="https://svelte.dev/repl/55257560b40346f3bc127d7adb944372"
     code={`
-<pre> required={1} minSelect={1}</pre>
-
 <label for="countries">What country are you from?</label>
 
 <MultiSelect
   id="countries"
   options={countries}
-  placeholder="Take your pick..."
   required={1}
   minSelect={1}
+  maxSelect={1}
   bind:selected={$country_store}
 />`}
   />
