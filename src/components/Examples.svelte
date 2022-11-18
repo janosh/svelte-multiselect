@@ -220,7 +220,7 @@
 <section>
   <h3>Strict Select</h3>
 
-  <p>Impossible to remove selected item if selected.length {"<"}= 1</p>
+  <p>Impossible to remove selected item if selected.length {'<'}= 1</p>
 
   <pre> required={1} minSelect={1}</pre>
 

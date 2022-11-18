@@ -52,7 +52,7 @@
   export let placeholder: string | null = null
   export let removeAllTitle: string = `Remove all`
   export let removeBtnTitle: string = `Remove`
-  export let minSelect: number | null = null  // null means there is no lower limit for selected.length
+  export let minSelect: number | null = null // null means there is no lower limit for selected.length
   export let required: boolean | number = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
