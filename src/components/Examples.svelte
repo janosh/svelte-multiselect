@@ -236,7 +236,7 @@
     bind:selected={$country_store}
   />
   <CollapsibleCode
-    repl_url="https://svelte.dev/repl/55257560b40346f3bc127d7adb944372"
+    repl_url="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1"
     code={`
 <label for="countries">What country are you from?</label>
 
