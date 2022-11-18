@@ -230,6 +230,14 @@ Full list of props/bindable variables for this component. The `Option` type you 
    ```
 
 1. ```ts
+   minSelect: number | null = null
+   ```
+
+   Conditionally render the `x` button which removes a selected option depending on the number of selected options. Meaning all remove buttons disappear if `selected.length <= minSelect`. E.g. if 2 options are selected and `minSelect={3}`, users will not be able to remove any selections until they selected more than 3 options.
+
+   Note: Prop `required={3}` should be used instead if you only care about the component state at form submission time. `minSelect={3}` should be used if you want to place constraints on component state at all times.
+
+1. ```ts
    name: string | null = null
    ```
 
@@ -288,12 +296,6 @@ Full list of props/bindable variables for this component. The `Option` type you 
    ```
 
    Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
-
-1. ```ts
-   minSelect: number | null = null
-   ```
-
-   Conditionally renders the `x` button which removes a selected option depending on the number of selected options. Meaning all remove buttons should disappear if `selected.length <= minSelect`.
 
 1. ```ts
    required: boolean | number = false
