@@ -36,9 +36,9 @@ export const ml_libs =
     })
 
 export const languages =
-  `JavaScript TypeScript CoffeeScript Python Ruby C C# C++ Go Swift Java Rust Kotlin Haskell Scala Clojure Erlang Elixir F# Dart Elm Julia Lua R OCaml Perl PHP`.split(
-    ` `
-  )
+  `JavaScript TypeScript CoffeeScript Python Ruby C C# C++ Go Swift Java Rust Kotlin Haskell Scala Clojure Erlang Elixir F# Dart Elm Julia Lua R OCaml Perl PHP`
+    .split(` `)
+    .sort()
 
 // copied from https://emojipedia.org/food-drink
 export const foods =
