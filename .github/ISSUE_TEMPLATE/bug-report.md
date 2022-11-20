@@ -1,5 +1,6 @@
 ---
 name: Bug report
+about: Help improve this project by pointing out bugs
 ---
 
 A concise description of what's going wrong.
