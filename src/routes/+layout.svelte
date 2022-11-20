@@ -18,7 +18,7 @@
 
 <GitHubCorner href={repository} />
 
-{#if demo_routes.includes($page.url.pathname)}
+{#if demo_routes.some((route) => $page.url.pathname.endsWith(route))}
   <a href="/" aria-label="Back to index page">&laquo; back</a>
   <h1>
     <img src="/favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
