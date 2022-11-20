@@ -6,7 +6,7 @@
 <h4 align="center">
 
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
-[![Netlify Status](https://api.netlify.com/api/v1/badges/a45b62c3-ea45-4cfd-9912-77ec4fc8d7e8/deploy-status)](https://app.netlify.com/sites/svelte-multiselect/deploys)
+[![Docs](https://github.com/janosh/svelte-multiselect/actions/workflows/docs.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/docs.yml)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
 [![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 [![REPL](https://img.shields.io/badge/Svelte-REPL-blue?label=Try%20it!)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
@@ -16,7 +16,7 @@
 
 <p align="center"><strong>
   Keyboard-friendly, accessible and highly customizable multi-select component.
-  <a class="hide-in-docs" href="https://svelte-multiselect.netlify.app">View the docs</a>
+  <a class="hide-in-docs" href="https://janosh.github.io/svelte-multiselect">View the docs</a>
 </strong></p>
 
 <slot name="examples" />
@@ -243,7 +243,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    name: string | null = null
    ```
 
-   Applied to the `<input>` element. Sets the key of this field in a submitted form data object. See [form example](https://svelte-multiselect.netlify.app/form).
+   Applied to the `<input>` element. Sets the key of this field in a submitted form data object. See [form example](https://janosh.github.io/svelte-multiselect/form).
 
 1. ```ts
    noMatchingOptionsMsg: string = `No matching options`
@@ -330,7 +330,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
    ```
 
-   Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://svelte-multiselect.netlify.app/sort-selected) example.
+   Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://janosh.github.io/svelte-multiselect/sort-selected) example.
 
 1. ```ts
    value: Option | Option[] | null = null
