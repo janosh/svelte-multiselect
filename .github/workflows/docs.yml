@@ -13,13 +13,8 @@ permissions:
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true # allow one concurrent deployment
-
 jobs:
   build:
-    name: Build
     runs-on: ubuntu-latest
     steps:
       - name: Check out repo
@@ -37,16 +32,17 @@ jobs:
           cache: pnpm
 
       - name: Install dependencies
-        run: |
-          pnpm install
-          pnpm build
+        run: pnpm install
 
-      - uses: actions/upload-pages-artifact@v1
+      - name: Build site
+        run: pnpm build
+
+      - name: Upload build artifact
+        uses: actions/upload-pages-artifact@v1
         with:
           path: build
 
   deploy:
-    name: Deploy
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}

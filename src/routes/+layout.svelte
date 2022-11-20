@@ -3,6 +3,8 @@
   import GitHubCorner from 'svelte-github-corner'
   import '../app.css'
   import { demo_routes } from './+layout'
+  import { name, repository } from '../../package.json'
+  import { dev, browser } from '$app/environment'
 
   $: is_current = (path: string) => {
     if (path === $page.url.pathname) return `page`
@@ -11,7 +13,11 @@
   }
 </script>
 
-<GitHubCorner href="https://github.com/janosh/svelte-multiselect" />
+<svelte:head>
+  <base href="/{browser && !dev ? name : ''}" />
+</svelte:head>
+
+<GitHubCorner href={repository} />
 
 {#if demo_routes.includes($page.url.pathname)}
   <a href="/" aria-label="Back to index page">&laquo; back</a>
