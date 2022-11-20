@@ -2,7 +2,7 @@
   "name": "svelte-multiselect",
   "description": "Svelte multi-select component",
   "author": "Janosh Riebesell <janosh.riebesell@gmail.com>",
-  "homepage": "https://svelte-multiselect.netlify.app",
+  "homepage": "https://janosh.github.io/svelte-multiselect",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
   "version": "8.1.0",

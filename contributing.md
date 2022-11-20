@@ -35,4 +35,4 @@ This repo has 3 required CI checks that have to pass for every PR before merging
 
 - tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](.github/workflows/test.yml))
 - linting: handled by [pre-commit.ci](https://results.pre-commit.ci/repo/github/365228700)
-- netlify: [continuous deployment](https://app.netlify.com/sites/svelte-multiselect/deploys) for docs
+- docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/deployments) through GitHub pages
