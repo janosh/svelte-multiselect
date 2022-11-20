@@ -6,8 +6,5 @@ node_modules
 build
 package
 
-# deploy config
-.netlify
-
 # test coverage reports
 coverage
