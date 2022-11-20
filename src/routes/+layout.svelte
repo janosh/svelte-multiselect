@@ -4,7 +4,6 @@
   import '../app.css'
   import { demo_routes } from './+layout'
   import { name, repository } from '../../package.json'
-  import { dev, browser } from '$app/environment'
 
   $: is_current = (path: string) => {
     if (path === $page.url.pathname) return `page`
@@ -14,7 +13,7 @@
 </script>
 
 <svelte:head>
-  <base href="/{browser && !dev ? name : ''}" />
+  <base href={import.meta.env.CI ? `/${name}/` : ``} />
 </svelte:head>
 
 <GitHubCorner href={repository} />
