@@ -1,10 +1,10 @@
 name: Docs
 
 on:
-  pull_request:
-    branches: [main]
   push:
     branches: [main]
+  # GH pages doesn't support PR previews yet but plans to add
+  # https://github.com/community/community/discussions/7730#discussioncomment-1885967
   workflow_dispatch:
 
 # set permissions of GITHUB_TOKEN to allow deployment to GitHub Pages
