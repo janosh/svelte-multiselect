@@ -22,7 +22,7 @@
     {/if}
   {/if}
   <p>
-    Return to <a href="/">index page</a>.
+    Return to <a href=".">index page</a>.
   </p>
 
   {#if dev && $page.error?.stack}
