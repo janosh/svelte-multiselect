@@ -23,7 +23,7 @@
     progressively enhanced forms
   </a>
   (i.e. supporting no-JS browsers) take a look at the
-  <a href="/form">JS form example</a>
+  <a href="form">JS form example</a>
   instead.
 </p>
 
