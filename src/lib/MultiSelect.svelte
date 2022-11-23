@@ -390,7 +390,8 @@
         {/if}
       </li>
     {/each}
-    {#if !(selected.length === 1  && maxSelect && (maxSelect === 1))} <!--No input needed when maxSelect is 1 and a selection has been made-->
+    {#if !(selected.length === 1 && maxSelect && maxSelect === 1)}
+      <!--No input needed when maxSelect is 1 and a selection has been made-->
       <li style="display: contents;">
         <input
           class={inputClass}
