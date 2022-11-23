@@ -390,37 +390,39 @@
         {/if}
       </li>
     {/each}
-    <li style="display: contents;">
-      <input
-        class={inputClass}
-        bind:this={input}
-        {autocomplete}
-        bind:value={searchText}
-        on:mouseup|self|stopPropagation={open_dropdown}
-        on:keydown|stopPropagation={handle_keydown}
-        on:focus
-        on:focus={open_dropdown}
-        {id}
-        {disabled}
-        {inputmode}
-        {pattern}
-        placeholder={selected.length == 0 ? placeholder : null}
-        aria-invalid={invalid ? `true` : null}
-        on:blur
-        on:change
-        on:click
-        on:keydown
-        on:keyup
-        on:mousedown
-        on:mouseenter
-        on:mouseleave
-        on:touchcancel
-        on:touchend
-        on:touchmove
-        on:touchstart
-      />
-      <!-- the above on:* lines forward potentially useful DOM events -->
-    </li>
+    {#if !(selected.length === 1  && maxSelect && (maxSelect === 1))} <!--No input needed when maxSelect is 1 and a selection has been made-->
+      <li style="display: contents;">
+        <input
+          class={inputClass}
+          bind:this={input}
+          {autocomplete}
+          bind:value={searchText}
+          on:mouseup|self|stopPropagation={open_dropdown}
+          on:keydown|stopPropagation={handle_keydown}
+          on:focus
+          on:focus={open_dropdown}
+          {id}
+          {disabled}
+          {inputmode}
+          {pattern}
+          placeholder={selected.length == 0 ? placeholder : null}
+          aria-invalid={invalid ? `true` : null}
+          on:blur
+          on:change
+          on:click
+          on:keydown
+          on:keyup
+          on:mousedown
+          on:mouseenter
+          on:mouseleave
+          on:touchcancel
+          on:touchend
+          on:touchmove
+          on:touchstart
+        />
+        <!-- the above on:* lines forward potentially useful DOM events -->
+      </li>
+    {/if}
   </ul>
   {#if loading}
     <slot name="spinner">
