@@ -610,6 +610,12 @@
     padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
+  :where(div.multiselect > ul.selected > li[draggable]) {
+    cursor: grab;
+  }
+  :where(div.multiselect > ul.selected > li.active) {
+    background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
+  }
   :where(div.multiselect button) {
     border-radius: 50%;
     display: flex;
