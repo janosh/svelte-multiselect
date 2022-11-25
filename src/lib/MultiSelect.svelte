@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
+  import { flip } from 'svelte/animate'
   import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
@@ -61,6 +62,7 @@
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
+  export let selectedOptionsDraggable: boolean = true
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
@@ -320,6 +322,33 @@
       close_dropdown(event)
     }
   }
+
+  let drag_idx: number | null = null
+  // event handlers enable dragging to reorder selected options
+  const drop = (target_idx: number) => (event: DragEvent) => {
+    if (!event.dataTransfer) return
+    event.dataTransfer.dropEffect = `move`
+    const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
+    const new_selected = selected
+
+    if (start_idx < target_idx) {
+      new_selected.splice(target_idx + 1, 0, new_selected[start_idx])
+      new_selected.splice(start_idx, 1)
+    } else {
+      new_selected.splice(target_idx, 0, new_selected[start_idx])
+      new_selected.splice(start_idx + 1, 1)
+    }
+    selected = new_selected
+    drag_idx = null
+  }
+
+  const dragstart = (idx: number) => (event: DragEvent) => {
+    if (!event.dataTransfer) return
+    // only allow moving, not copying (also affects the cursor during drag)
+    event.dataTransfer.effectAllowed = `move`
+    event.dataTransfer.dropEffect = `move`
+    event.dataTransfer.setData(`text/plain`, `${idx}`)
+  }
 </script>
 
 <svelte:window
@@ -362,13 +391,23 @@
       } else {
         msg = `Please select an option`
       }
-      form_input.setCustomValidity(msg)
+      form_input?.setCustomValidity(msg)
     }}
   />
   <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
   <ul class="selected {ulSelectedClass}">
-    {#each selected as option, idx}
-      <li class={liSelectedClass} aria-selected="true">
+    {#each selected as option, idx (get_label(option))}
+      <li
+        class={liSelectedClass}
+        aria-selected="true"
+        animate:flip={{ duration: 100 }}
+        draggable={selectedOptionsDraggable}
+        on:dragstart={dragstart(idx)}
+        on:drop|preventDefault={drop(idx)}
+        on:dragenter={() => (drag_idx = idx)}
+        class:active={drag_idx === idx}
+        ondragover="return false"
+      >
         <slot name="selected" {option} {idx}>
           {#if parseLabelsAsHtml}
             {@html get_label(option)}
