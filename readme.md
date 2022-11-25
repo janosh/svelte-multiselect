@@ -327,6 +327,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally. Can be passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
 
 1. ```ts
+   selectedOptionsDraggable: boolean = true
+   ```
+
+   Whether selected options are draggable so users can change their order.
+
+1. ```ts
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
    ```
 
@@ -509,7 +515,7 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `background: var(--sms-li-selected-bg)`: Background of selected list items in options pane.
   - `color: var(--sms-li-selected-color)`: Text color of selected list items in options pane.
 - `div.multiselect > ul.options > li.active`
-  - `background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))`: Background of active dropdown item. Items become active either by mouseover or by navigating to them with arrow keys.
+  - `background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))`: Background of active options. Options in the dropdown list become active either by mouseover or by navigating to them with arrow keys. Selected options become active when `selectedOptionsDraggable=true` and an option is being dragged to a new position. Note the active option in that case is not the dragged option but the option under it whose place it will take on drag end.
 - `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.

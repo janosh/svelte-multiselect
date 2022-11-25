@@ -807,3 +807,48 @@ test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
     ).toHaveLength(selected.length > minSelect ? selected.length : 0)
   }
 )
+
+class DataTransfer {
+  data: Record<string, string> = {}
+  setData(type: string, val: string) {
+    this.data[type] = val
+  }
+  getData(type: string) {
+    return this.data[type]
+  }
+}
+
+class DragEvent extends MouseEvent {
+  constructor(type: string, props: Record<string, unknown>) {
+    super(type, props)
+    Object.assign(this, props)
+  }
+}
+
+test(`test drag selected option to change order`, async () => {
+  // https://github.com/janosh/svelte-multiselect/issues/176
+  const options = [1, 2, 3]
+  new MultiSelect({
+    target: document.body,
+    props: { options, selected: options },
+  })
+
+  // test swapping selected options 1 and 2
+  const li = doc_query(`ul.selected li`)
+
+  const dataTransfer = new DataTransfer()
+  dataTransfer.setData(`text/plain`, `1`)
+
+  li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
+  await sleep()
+
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`2 1 3`)
+
+  // test swapping them back
+  const li2 = doc_query(`ul.selected li:nth-child(2)`)
+  dataTransfer.setData(`text/plain`, `0`)
+
+  li2.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
+  await sleep()
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
+})
