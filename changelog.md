@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v8.2.0](https://github.com/janosh/svelte-multiselect/compare/v8.1.0...v8.2.0)
+
+- Draggable selected options [`#178`](https://github.com/janosh/svelte-multiselect/pull/178)
+- Fix page navigation in GH pages, broken because served from non-apex domain [`#172`](https://github.com/janosh/svelte-multiselect/pull/172)
+- Publish docs to GitHub pages [`#170`](https://github.com/janosh/svelte-multiselect/pull/170)
+- Contributing docs plus issue and PR templates with StackBlitz repro starter [`#169`](https://github.com/janosh/svelte-multiselect/pull/169)
+- add missing about field to bug-report issue template (closes #171) [`#171`](https://github.com/janosh/svelte-multiselect/issues/171)
+- add changelog.md [`236d238`](https://github.com/janosh/svelte-multiselect/commit/236d238c5fa1ce5f07cf08c09861da4d8446acb2)
+- fix prop form_input: set default value null to make it optional [`b150fe0`](https://github.com/janosh/svelte-multiselect/commit/b150fe0032ebde82a319b23bd5e6b573e0c31721)
+- set aliveStatusCodes: [200, 429] in .github/workflows/link-check-config.json [`b34c7bf`](https://github.com/janosh/svelte-multiselect/commit/b34c7bf99d4afa96dcd3c9c322ab4e94b1ef3a39)
+- add changelog script to `package.json` [`c943617`](https://github.com/janosh/svelte-multiselect/commit/c9436171033e06e8098f4443ed40d48ddee35167)
+
 <!-- auto-changelog-above -->
 
 #### [v8.1.0](https://github.com/janosh/svelte-multiselect/compare/v8.0.4...v8.1.0)
@@ -373,14 +385,14 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 12 August 2021
 
-- add on:change event and document events in readme (closes #5) [`#5`](https://github.com/janosh/svelte-multiselect/issues/5)
+- add `on:change` event and document events in readme (closes #5) [`#5`](https://github.com/janosh/svelte-multiselect/issues/5)
 
 #### [v1.1.9](https://github.com/janosh/svelte-multiselect/compare/v1.1.8...v1.1.9)
 
 > 12 July 2021
 
 - convert to typescript [`bd391c5`](https://github.com/janosh/svelte-multiselect/commit/bd391c5aba615ab41e2f561f81e057928a7064a8)
-- update to @sveltejs/kit@1.0.0-next.124+ to use svelte field in package.json [`2367e38`](https://github.com/janosh/svelte-multiselect/commit/2367e38d699e503e6dc98808904278f96eb54ee7)
+- update to @sveltejs/kit@1.0.0-next.124+ to use svelte field in `package.json` [`2367e38`](https://github.com/janosh/svelte-multiselect/commit/2367e38d699e503e6dc98808904278f96eb54ee7)
 
 #### [v1.1.8](https://github.com/janosh/svelte-multiselect/compare/v1.1.7...v1.1.8)
 
@@ -406,13 +418,13 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 22 June 2021
 
-- convert to svelte-kit package [`9db3cfb`](https://github.com/janosh/svelte-multiselect/commit/9db3cfb5b6e2db844961be5bc59fc12e5d5b6b76)
+- convert to `svelte-kit package` [`9db3cfb`](https://github.com/janosh/svelte-multiselect/commit/9db3cfb5b6e2db844961be5bc59fc12e5d5b6b76)
 
 #### [v1.1.4](https://github.com/janosh/svelte-multiselect/compare/v1.1.3...v1.1.4)
 
 > 21 June 2021
 
-- fix setting initial value for selected, fix setting class 'selected' in single mode [`16d11de`](https://github.com/janosh/svelte-multiselect/commit/16d11de77567f9d30e37e815dfcb9a7d580d6500)
+- fix setting initial value for selected, fix setting class `'selected'` in single mode [`16d11de`](https://github.com/janosh/svelte-multiselect/commit/16d11de77567f9d30e37e815dfcb9a7d580d6500)
 
 #### [v1.1.3](https://github.com/janosh/svelte-multiselect/compare/v1.1.2...v1.1.3)
 
@@ -435,21 +447,21 @@ All notable changes to this project will be documented in this file. Dates are d
 - remove selected tokens with backspace [`c5d7495`](https://github.com/janosh/svelte-multiselect/commit/c5d7495a43b945dd56ad06fbe639de0db542d5f4)
 - add readme badges [`992eaa4`](https://github.com/janosh/svelte-multiselect/commit/992eaa43ec19841b3035a5dcf9996eaf58316fa8)
 - demo site fix stripping start of readme for docs [`107273d`](https://github.com/janosh/svelte-multiselect/commit/107273de356f176cb0fc94f28ae4f2e773b62d42)
-- add svelte-toc table of contents to demo site [`36aa1c5`](https://github.com/janosh/svelte-multiselect/commit/36aa1c523c5bc3acb14e9613b61c04ffd54c6100)
+- add `svelte-toc` table of contents to demo site [`36aa1c5`](https://github.com/janosh/svelte-multiselect/commit/36aa1c523c5bc3acb14e9613b61c04ffd54c6100)
 
 #### [v1.1.0](https://github.com/janosh/svelte-multiselect/compare/v1.0.1...v1.1.0)
 
 > 9 May 2021
 
-- import readme on demo site instead of duplication [`c0e4924`](https://github.com/janosh/svelte-multiselect/commit/c0e49246e76a81600bb35931fd7d30f6f6aeb550)
-- remove unused example.svx [`2138caa`](https://github.com/janosh/svelte-multiselect/commit/2138caa171f20a2f80c2e75d0dffd066caf17a83)
+- import readme on demo site (more DRY) [`c0e4924`](https://github.com/janosh/svelte-multiselect/commit/c0e49246e76a81600bb35931fd7d30f6f6aeb550)
+- remove unused `example.svx` [`2138caa`](https://github.com/janosh/svelte-multiselect/commit/2138caa171f20a2f80c2e75d0dffd066caf17a83)
 - rename package dir, improve readme [`0150378`](https://github.com/janosh/svelte-multiselect/commit/015037848f666a76b24b93603764084b41611740)
 
 #### [v1.0.1](https://github.com/janosh/svelte-multiselect/compare/v1.0.0...v1.0.1)
 
 > 8 May 2021
 
-- remove hidden input for storing currently selected as JSON [`802a219`](https://github.com/janosh/svelte-multiselect/commit/802a2195a28986c219298d7d9e7ca47f2aaf7db6)
+- remove hidden input for storing currently selected options as JSON [`802a219`](https://github.com/janosh/svelte-multiselect/commit/802a2195a28986c219298d7d9e7ca47f2aaf7db6)
 
 #### v1.0.0
 
