@@ -18,7 +18,8 @@
     "serve": "pnpm build && pnpm preview",
     "check": "svelte-check --ignore package",
     "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
-    "vitest": "vitest tests/unit/*.ts"
+    "vitest": "vitest tests/unit/*.ts",
+    "changelog": "npx auto-changelog -p --output changelog.md --unreleased-only --hide-credit --commit-limit false"
   },
   "devDependencies": {
     "@iconify/svelte": "^3.0.0",
