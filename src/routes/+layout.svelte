@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from '$app/stores'
   import GitHubCorner from 'svelte-github-corner'
+  import { repository } from '../../package.json'
   import '../app.css'
   import { demo_routes } from './+layout'
-  import { name, repository } from '../../package.json'
 
   $: is_current = (path: string) => {
     if (path === $page.url.pathname) return `page`
@@ -11,10 +11,6 @@
     return undefined
   }
 </script>
-
-<svelte:head>
-  <base href={import.meta.env.CI ? `/${name}/` : ``} />
-</svelte:head>
 
 <GitHubCorner href={repository} />
 
