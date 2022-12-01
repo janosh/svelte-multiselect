@@ -43,19 +43,6 @@
     place-content: center;
     place-items: center;
   }
-  a[href='.'] {
-    font-size: 16pt;
-    position: absolute;
-    top: 2em;
-    left: 2em;
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 1pt 5pt;
-    border-radius: 3pt;
-    transition: 0.2s;
-  }
-  a[href='.']:hover {
-    background-color: rgba(255, 255, 255, 0.2);
-  }
   nav {
     display: flex;
     gap: 1em 1ex;

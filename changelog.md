@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file. Dates are d
 
 #### [v8.2.0](https://github.com/janosh/svelte-multiselect/compare/v8.1.0...v8.2.0)
 
+> 30 November 2022
+
 - Draggable selected options [`#178`](https://github.com/janosh/svelte-multiselect/pull/178)
 - Fix page navigation in GH pages, broken because served from non-apex domain [`#172`](https://github.com/janosh/svelte-multiselect/pull/172)
 - Publish docs to GitHub pages [`#170`](https://github.com/janosh/svelte-multiselect/pull/170)
@@ -11,7 +13,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - add missing about field to bug-report issue template (closes #171) [`#171`](https://github.com/janosh/svelte-multiselect/issues/171)
 - add changelog.md [`236d238`](https://github.com/janosh/svelte-multiselect/commit/236d238c5fa1ce5f07cf08c09861da4d8446acb2)
 - fix prop form_input: set default value null to make it optional [`b150fe0`](https://github.com/janosh/svelte-multiselect/commit/b150fe0032ebde82a319b23bd5e6b573e0c31721)
-- set aliveStatusCodes: [200, 429] in .github/workflows/link-check-config.json [`b34c7bf`](https://github.com/janosh/svelte-multiselect/commit/b34c7bf99d4afa96dcd3c9c322ab4e94b1ef3a39)
+- set `aliveStatusCodes: [200, 429]` in `.github/workflows/link-check-config.json` [`b34c7bf`](https://github.com/janosh/svelte-multiselect/commit/b34c7bf99d4afa96dcd3c9c322ab4e94b1ef3a39)
 - add changelog script to `package.json` [`c943617`](https://github.com/janosh/svelte-multiselect/commit/c9436171033e06e8098f4443ed40d48ddee35167)
 
 <!-- auto-changelog-above -->
@@ -41,7 +43,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Test uncovered lines [`#157`](https://github.com/janosh/svelte-multiselect/pull/157)
 - Don't `console.error` about missing `options` if `loading=true` [`#156`](https://github.com/janosh/svelte-multiselect/pull/156)
 - Measure `vitest` coverage with `c8` [`#155`](https://github.com/janosh/svelte-multiselect/pull/155)
-- increase --sms-min-height 19-&gt;22pt [`5d0e081`](https://github.com/janosh/svelte-multiselect/commit/5d0e0815d0b488ae23b439a3f085dd083138c326)
+- increase --sms-min-height 19->`22pt [`5d0e081`](<https://github.com/janosh/svelte-multiselect/commit/5d0e0815d0b488ae23b439a3f085dd083138c326>)
 
 #### [v8.0.2](https://github.com/janosh/svelte-multiselect/compare/v8.0.1...v8.0.2)
 
@@ -67,7 +69,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Add new prop `value` [`#138`](https://github.com/janosh/svelte-multiselect/pull/138)
 - New prop resetFilterOnAdd [`#137`](https://github.com/janosh/svelte-multiselect/pull/137)
 - `yarn` to `pnpm` [`#134`](https://github.com/janosh/svelte-multiselect/pull/134)
-- Rename prop `noOptionsMsg`-&gt;`noMatchingOptionsMsg` [`#133`](https://github.com/janosh/svelte-multiselect/pull/133)
+- Rename prop `noOptionsMsg -> noMatchingOptionsMsg` [`#133`](https://github.com/janosh/svelte-multiselect/pull/133)
 - remove props selectedLabels and selectedValues [`ef6598e`](https://github.com/janosh/svelte-multiselect/commit/ef6598e8b0dc1f2f8cb687074463cb73b2f9ebff)
 
 #### [v7.1.0](https://github.com/janosh/svelte-multiselect/compare/v7.0.2...v7.1.0)
@@ -173,7 +175,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Replace `li.scrollIntoViewIfNeeded()` with `li.scrollIntoView()` [`#88`](https://github.com/janosh/svelte-multiselect/pull/88)
 - Add new prop `parseLabelsAsHtml` [`#84`](https://github.com/janosh/svelte-multiselect/pull/84)
-- try fix flaky test 'multiselect &gt; can select and remove many options' [`2b0c453`](https://github.com/janosh/svelte-multiselect/commit/2b0c453c794c0b3b82e81c5b994c10bc305a98d6)
+- try fix flaky test 'multiselect >`can select and remove many options' [`2b0c453`](<https://github.com/janosh/svelte-multiselect/commit/2b0c453c794c0b3b82e81c5b994c10bc305a98d6>)
 - bump netlify node to v18, update readme + deps [`586c724`](https://github.com/janosh/svelte-multiselect/commit/586c724d471aece2b5a3726bb5eb145e36073fe3)
 - remove plausible.js analytics [`cd4c9f6`](https://github.com/janosh/svelte-multiselect/commit/cd4c9f6e18e13959dfb4fcebe9acba7a875b83a2)
 
@@ -222,7 +224,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Add `aria-label` to hidden `.form-control` input [`#62`](https://github.com/janosh/svelte-multiselect/pull/62)
 - Add `aria-label` to hidden `.form-control` input (#62) [`#58`](https://github.com/janosh/svelte-multiselect/issues/58) [`#35`](https://github.com/janosh/svelte-multiselect/issues/35)
 - fix dropdown closing when clicking between list items (closes #61) [`#61`](https://github.com/janosh/svelte-multiselect/issues/61)
-- svelte.config.js add kit.prerender.default: true, mv src/{global,app}.d.ts [`4a84913`](https://github.com/janosh/svelte-multiselect/commit/4a8491380e08bad137ca7bdda9ee4ddd38abe3d6)
+- `svelte.config.js` add `kit.prerender.default: true`, `mv src/{global,app}.d.ts` [`4a84913`](https://github.com/janosh/svelte-multiselect/commit/4a8491380e08bad137ca7bdda9ee4ddd38abe3d6)
 
 #### [v4.0.2](https://github.com/janosh/svelte-multiselect/compare/v4.0.1...v4.0.2)
 
@@ -261,7 +263,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 20 February 2022
 
-- by default, only show maxSelectMsg if maxSelect != null and &gt; 1 (closes #37) [`#37`](https://github.com/janosh/svelte-multiselect/issues/37)
+- by default, only show maxSelectMsg if maxSelect != null and >`1 (closes #37) [`#37`](<https://github.com/janosh/svelte-multiselect/issues/37>)
 - add CSS var --sms-options-shadow defaults to subtle black shadow around dropdown list (0 0 14pt -8pt black) (closes #36) [`#36`](https://github.com/janosh/svelte-multiselect/issues/36)
 - add prop liActiveOptionClass = '' (closes #35) [`#35`](https://github.com/janosh/svelte-multiselect/issues/35)
 - turn searchText = and showOptions = false into bindable props (closes #33) [`#33`](https://github.com/janosh/svelte-multiselect/issues/33)
@@ -293,7 +295,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 3 February 2022
 
-- apply id prop to &lt;input&gt; instead of outer div (closes #25) [`#25`](https://github.com/janosh/svelte-multiselect/issues/25)
+- apply id prop to `<input>` instead of outer div (closes #25) [`#25`](https://github.com/janosh/svelte-multiselect/issues/25)
 - add eslint commit hook + update deps [`6ad44b8`](https://github.com/janosh/svelte-multiselect/commit/6ad44b85057aef71eae19293de80f9d42f91f87b)
 - v.3.2.0 [`71ff2d1`](https://github.com/janosh/svelte-multiselect/commit/71ff2d192caccacbe41f83949c14d7d4ca87d590)
 - add readme badge to document minimum svelte version (for #24) [`7d9fe5a`](https://github.com/janosh/svelte-multiselect/commit/7d9fe5a977b56dab95069b64321f0718e0d61f08)
@@ -303,7 +305,7 @@ All notable changes to this project will be documented in this file. Dates are d
 > 25 January 2022
 
 - wiggle the maxSelect msg on hitting selection limit (closes #19) [`#19`](https://github.com/janosh/svelte-multiselect/issues/19)
-- readme better docs for CSS variables, rename slots {options,selected}Renderer -&gt; render{options,selected} [`c8ab724`](https://github.com/janosh/svelte-multiselect/commit/c8ab7241506cfe6b5930d098150a251e85c52afd)
+- readme better docs for CSS variables, rename slots `{options,selected}Renderer -> render{options,selected}` [`c8ab724`](https://github.com/janosh/svelte-multiselect/commit/c8ab7241506cfe6b5930d098150a251e85c52afd)
 
 #### [v3.1.0](https://github.com/janosh/svelte-multiselect/compare/v3.0.1...v3.1.0)
 
@@ -344,7 +346,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 27 October 2021
 
-- set &lt;input&gt; width back to 1pt as it's only needed to tab into, focus and blur &lt;MultiSelect&gt; (closes #12) [`#12`](https://github.com/janosh/svelte-multiselect/issues/12)
+- set `<input>` width back to 1pt as it's only needed to tab into, focus and blur `<MultiSelect>` (closes #12) [`#12`](https://github.com/janosh/svelte-multiselect/issues/12)
 - update readme [`45c7993`](https://github.com/janosh/svelte-multiselect/commit/45c7993398c986499d4c0729177620cbec719cb7)
 
 #### [v1.2.1](https://github.com/janosh/svelte-multiselect/compare/v1.2.0...v1.2.1)
