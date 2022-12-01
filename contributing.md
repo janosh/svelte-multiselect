@@ -33,7 +33,7 @@ PRs don't always have to add functionality. If you have ideas for new examples o
 
 This repo has 3 required CI checks that have to pass for every PR before merging:
 
-- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](.github/workflows/test.yml))
+- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/changelog-page/.github/workflows/test.yml))
 - linting: handled by [pre-commit.ci](https://results.pre-commit.ci/repo/github/365228700)
 - docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/deployments) through GitHub pages
 

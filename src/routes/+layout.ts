@@ -4,7 +4,7 @@ export const demo_routes = Object.keys(
   import.meta.glob(`./*/+page.{svx,svelte}`)
 )
   .map((filename) => filename.split(`/`)[1])
-  .filter((name) => ![`changelog.md`].includes(name))
+  .filter((name) => !name.endsWith(`.md`))
 
 if (demo_routes.length < 5) {
   throw new Error(`Too few demo routes found: ${demo_routes.length}`)
