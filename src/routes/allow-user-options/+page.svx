@@ -10,7 +10,7 @@
 
 `allowUserOptions={true}` means users can enter custom options by entering text and hitting enter.
 
-```svelte example
+```svelte example id="foods"
 <script>
   import MultiSelect from '$lib'
   import { foods } from '$src/options'
@@ -31,7 +31,7 @@
 
 `allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection should the user remove their custom option from the list of selected items.
 
-```svelte example
+```svelte example id="languages"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
@@ -57,7 +57,7 @@
 
 Starting with no options and letting the user populate their selection from scratch.
 
-```svelte example
+```svelte example id="no-default-options"
 <script>
   import MultiSelect from '$lib'
 
@@ -69,7 +69,6 @@ Starting with no options and letting the user populate their selection from scra
 {/if}
 
 <MultiSelect
-  id="no-default-options"
   allowUserOptions="append"
   bind:selected
   noMatchingOptionsMsg=""

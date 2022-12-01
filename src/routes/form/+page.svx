@@ -24,7 +24,6 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     <strong>Which colors would you pick for the Martian flag?</strong>
   </label>
   <MultiSelect
-    id="colors"
     options={colors}
     placeholder="Pick some colors..."
     {name}

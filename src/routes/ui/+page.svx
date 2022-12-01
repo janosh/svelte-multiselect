@@ -3,7 +3,7 @@
 
 ### Food Picker (initially invalid)
 
-```svelte example
+```svelte example id="foods"
 <script>
   import MultiSelect from '$lib'
   import { foods } from '$src/options'

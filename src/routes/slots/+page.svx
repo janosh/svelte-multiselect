@@ -14,6 +14,7 @@
   options={languages}
   maxSelect={5}
   placeholder="What languages do you know?"
+  selected={['Python', 'TypeScript', 'Julia']}
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
@@ -34,9 +35,10 @@
   options={languages}
   maxSelect={5}
   placeholder="What languages do you know?"
+  selected={['Python', 'TypeScript', 'Julia']}
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
-  <em slot="remove-icon">del</em>
+  <span slot="remove-icon">x</span>
 </MultiSelect>
 ```

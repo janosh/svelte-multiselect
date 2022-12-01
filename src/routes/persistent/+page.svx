@@ -12,7 +12,7 @@
 
 <br />
 
-```svelte example
+```svelte example id="languages"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
@@ -21,7 +21,6 @@
 </script>
 
 <MultiSelect
-  id="languages"
   options={languages}
   placeholder="What languages do you know?"
   bind:selected={$language_store}

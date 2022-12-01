@@ -15,5 +15,6 @@ When `parseLabelsAsHtml={true}`, MultiSelect renders HTML in option labels.
   maxSelect={1}
   placeholder="Are you ready for the truth? Pick a pill!"
   parseLabelsAsHtml
+  allowUserOptions
 />
 ```

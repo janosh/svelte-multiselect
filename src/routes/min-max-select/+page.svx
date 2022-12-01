@@ -1,19 +1,8 @@
-<script lang="ts">
-  import MultiSelect from '$lib'
-  import { languages } from '$src/options'
-  import LanguageSlot from '$src/components/LanguageSlot.svelte'
-
-  function handle_submit(event: SubmitEvent) {
-    const form_data = new FormData(event.target)
-    alert(`form data received by submit handler:\n${JSON.stringify(...form_data)}`)
-  }
-</script>
-
 ## Min/max number of selected options
 
 `maxSelect={5}` prevents users from selecting more than 5 options.
 
-```svelte example
+```svelte example id="languages"
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
