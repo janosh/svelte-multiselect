@@ -1,10 +1,11 @@
 import { sveltekit } from '@sveltejs/kit/vite'
+import examples from 'mdsvexamples/vite'
 import { resolve } from 'path'
 import type { UserConfig } from 'vite'
 import type { UserConfig as VitestConfig } from 'vitest/config'
 
 const vite_config: UserConfig & { test: VitestConfig } = {
-  plugins: [sveltekit()],
+  plugins: [sveltekit(), examples],
 
   test: {
     environment: `jsdom`,

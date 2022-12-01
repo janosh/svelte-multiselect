@@ -1,13 +1,17 @@
 <script>
-  import MultiSelect from '$lib'
-  import { foods } from '$src/options'
 </script>
 
 ## External CSS Classes
 
-```svelte
+```svelte example id="foods"
+<script>
+  import MultiSelect from '$lib'
+
+  const options = [...Array(4).keys()].map(idx => `Option ${idx + 1}`)
+</script>
+
 <MultiSelect
-  options={foods}
+  {options}
   outerDivClass="foo"
   ulSelectedClass="bar"
   ulOptionsClass="baz"
@@ -17,30 +21,11 @@
   liActiveOptionClass="mom"
   maxSelectMsgClass="bla"
   placeholder="Which foods do you like?"
-  selected={["🍇 Grapes"]}
-  maxSelect={2}
-/>
-```
-
-<br />
-
-<label for="foods">Food Picker</label>
-<MultiSelect
-  id="foods"
-  options={foods}
-  outerDivClass="foo"
-  ulSelectedClass="bar"
-  ulOptionsClass="baz"
-  liOptionClass="bam"
-  inputClass="slam"
-  liSelectedClass="hi"
-  liActiveOptionClass="mom"
-  maxSelectMsgClass="bla"
-  placeholder="Which foods do you like?"
-  selected={["🍇 Grapes"]}
+  selected={options.slice(0, 2)}
   maxSelect={2}
 />
 <!-- maxSelect={2} needed for maxSelectMsg to show up -->
+```
 
 <br />
 
@@ -50,16 +35,22 @@ This simplified DOM structure of the component shows where these classes are ins
 
 ```svelte
 <div class="multiselect {outerDivClass}">
-  <input class={inputClass} />
+
   <ul class="selected {ulSelectedClass}">
     <li class={liSelectedClass}>Selected 1</li>
     <li class={liSelectedClass}>Selected 2</li>
   </ul>
+
+  <input class={inputClass} />
+
+  <span class="max-select-msg {maxSelectMsgClass}" />
+
   <ul class="options {ulOptionsClass}">
     <li class={liOptionClass}>Option 1</li>
     <li class="{liOptionClass} {liActiveOptionClass}">
       Option 2 (currently active)
     </li>
   </ul>
+
 </div>
 ```

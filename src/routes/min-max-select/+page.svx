@@ -1,29 +1,14 @@
-<script lang="ts">
-  import MultiSelect from '$lib'
-  import { languages } from '$src/options'
-  import LanguageSlot from '$src/components/LanguageSlot.svelte'
-
-  function handle_submit(event: SubmitEvent) {
-    const form_data = new FormData(event.target)
-    alert(`form data received by submit handler:\n${JSON.stringify(...form_data)}`)
-  }
-</script>
-
 ## Min/max number of selected options
 
 `maxSelect={5}` prevents users from selecting more than 5 options.
 
-<MultiSelect
-  id="languages"
-  options={languages}
-  maxSelect={5}
-  placeholder="What languages do you know?"
->
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
-</MultiSelect>
+```svelte example id="languages"
+<script lang="ts">
+  import MultiSelect from '$lib'
+  import { languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
+</script>
 
-```svelte
 <MultiSelect
   options={languages}
   maxSelect={5}
@@ -43,13 +28,16 @@ When setting an integer value for `maxSelect` Multiselect will
 
 `required={3}` means users have to pick at least 3 options before they can submit a form.
 
-<form on:submit={handle_submit}>
-  <MultiSelect options={[1, 2, 3, 4, 5, 6]} required={3} name="numbers" sortSelected />
-  <button>submit</button>
-  <p></p>
-</form>
+```svelte example
+<script lang="ts">
+  import MultiSelect from '$lib'
 
-```svelte
+  function handle_submit(event: SubmitEvent) {
+    const form_data = new FormData(event.target)
+    alert('form data received by submit handler:\n' + JSON.stringify(...form_data))
+  }
+</script>
+
 <form on:submit={handle_submit}>
   <MultiSelect options={[1, 2, 3, 4, 5, 6]} required={3} name="numbers" sortSelected />
   <button>submit</button>
@@ -60,19 +48,16 @@ When setting an integer value for `maxSelect` Multiselect will
 
 Of course you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
-<form on:submit={handle_submit}>
-  <MultiSelect
-    options={[1, 2, 3, 4, 5, 6]}
-    required={2}
-    maxSelect={3}
-    name="numbers"
-    sortSelected
-  />
-  <button>submit</button>
-  <p></p>
-</form>
+```svelte example
+<script lang="ts">
+  import MultiSelect from '$lib'
 
-```svelte
+  function handle_submit(event: SubmitEvent) {
+    const form_data = new FormData(event.target)
+    alert('form data received by submit handler:\n' + JSON.stringify(...form_data))
+  }
+</script>
+
 <form on:submit={handle_submit}>
   <MultiSelect
     options={[1, 2, 3, 4, 5, 6]}

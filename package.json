@@ -37,6 +37,7 @@
     "highlight.js": "^11.6.0",
     "jsdom": "^20.0.2",
     "mdsvex": "^0.10.6",
+    "mdsvexamples": "^0.3.2",
     "prettier": "^2.7.1",
     "prettier-plugin-svelte": "^2.8.1",
     "rehype-autolink-headings": "^6.1.1",

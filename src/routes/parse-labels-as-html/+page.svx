@@ -1,50 +1,20 @@
+## Parse labels as HTML
+
+When `parseLabelsAsHtml={true}`, MultiSelect renders HTML in option labels.
+
+```svelte example
 <script>
   import MultiSelect from '$lib'
 
-  const pills = [
-    {
-      label: `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`,
-      value: `red pill`,
-    },
-    {
-      label: `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none">show me</a>)`,
-      value: `blue pill`,
-    },
-  ]
+  const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`
+  const blue_pill = `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none" target="_blank">show me</a>)`
 </script>
 
-## Parse labels as HTML
-
-<label for="pills">Pill Picker</label>
 <MultiSelect
-  id="pills"
-  options={pills}
+  options={[ { label: red_pill, value: `red pill` }, { label: blue_pill, value: `blue pill` }]}
   maxSelect={1}
   placeholder="Are you ready for the truth? Pick a pill!"
   parseLabelsAsHtml
   allowUserOptions
-/>
-
-<br />
-
-When `parseLabelsAsHtml={true}`, MultiSelect renders HTML in option labels.
-
-```svelte
-export const pills = [
-  {
-    label: `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`,
-    value: `red pill`,
-  },
-  {
-    label: `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none" target="_blank">show me</a>)`,
-    value: `blue pill`,
-  },
-]
-
-<MultiSelect
-  options={pills}
-  maxSelect={1}
-  placeholder="Are you ready for the truth? Pick a pill!"
-  parseLabelsAsHtml
 />
 ```

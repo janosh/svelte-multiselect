@@ -6,7 +6,7 @@
 <h4 align="center">
 
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
-[![Docs](https://github.com/janosh/svelte-multiselect/actions/workflows/docs.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/docs.yml)
+[![GitHub Pages](https://github.com/janosh/svelte-multiselect/actions/workflows/gh-patges.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/gh-patges.yml)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
 [![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/dev/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
 [![REPL](https://img.shields.io/badge/Svelte-REPL-blue?label=Try%20it!)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)

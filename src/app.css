@@ -1,7 +1,7 @@
 :root {
-  --night: #10002c;
+  --night: #0b0b1b;
   --blue: cornflowerblue;
-  --text-color: #ddd;
+  --text-color: #ccc;
 
   --sms-active-color: var(--blue);
   --sms-options-bg: rgb(0, 0, 32);
@@ -64,7 +64,7 @@ pre code {
 pre {
   border-radius: 4pt;
   font-size: 9.5pt;
-  background-color: rgba(0, 0, 0, 0.4);
+  background-color: rgba(255, 255, 255, 0.05);
   padding: 1em;
   overflow-x: auto;
 }
