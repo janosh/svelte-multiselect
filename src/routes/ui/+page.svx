@@ -1,20 +1,14 @@
+
+## User interface
+
+### Food Picker (initially invalid)
+
+```svelte example
 <script>
   import MultiSelect from '$lib'
   import { foods } from '$src/options'
 </script>
 
-## User interface
-
-<label for="foods">Food Picker</label>
-<MultiSelect
-  id="foods"
-  options={foods}
-  placeholder="Pick your favorite foods!"
-  removeAllTitle="Delete all foods"
-  invalid
-/>
-
-```svelte
 <MultiSelect
   options={foods}
   placeholder="Pick your favorite foods"
@@ -25,7 +19,7 @@
 
 <br />
 
-This page demonstrates
+This page is used for Playwright testing to ensure
 
 - the remove-all button
   - removes all currently selected options from the input

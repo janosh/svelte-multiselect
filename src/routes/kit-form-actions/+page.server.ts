@@ -1,10 +1,9 @@
 import { invalid } from '@sveltejs/kit'
-import { readFileSync } from 'fs'
-import type { Actions, PageServerLoad } from './$types'
+import type { Actions } from './$types'
 
 // remove leading underscore to activate this example
 // needs to be disabled for building static site
-// TODO find a way to make this work on static docs site
+// TODO is there a way to make this work on static site?
 export const _actions: Actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
@@ -25,19 +24,4 @@ export const _actions: Actions = {
 
     return { colors, success: true }
   },
-}
-
-export const load: PageServerLoad = () => {
-  return {
-    codes: [`.svelte`, `.server.ts`].map((ext) => {
-      const filepath = new URL(`./+page${ext}`, import.meta.url)
-      try {
-        const code = readFileSync(filepath, `utf8`)
-        return [`+page${ext}`, code]
-      } catch (error) {
-        // catch file not found error which occur during site build
-        return [`+page${ext}`, `code`]
-      }
-    }),
-  }
 }

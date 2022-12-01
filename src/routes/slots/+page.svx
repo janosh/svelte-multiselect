@@ -1,3 +1,8 @@
+## Slot Components
+
+### Svelte SVG component as `slot="remove-icon"`
+
+```svelte example
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
@@ -5,22 +10,6 @@
   import MinusIcon from '$src/components/MinusIcon.svelte'
 </script>
 
-## Slot Components
-
-### Svelte SVG component as `slot="remove-icon"`
-
-<MultiSelect
-  id="svelte-svg-slot-remove-icon"
-  options={languages}
-  maxSelect={5}
-  placeholder="What languages do you know?"
->
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
-  <MinusIcon slot="remove-icon" width="1em" />
-</MultiSelect>
-
-```svelte
 <MultiSelect
   options={languages}
   maxSelect={5}
@@ -34,18 +23,13 @@
 
 ### Simple HTML tag as `slot="remove-icon"`
 
-<MultiSelect
-  id="html-slot-remove-icon"
-  options={languages}
-  maxSelect={5}
-  placeholder="What languages do you know?"
->
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
-  <em slot="remove-icon">del</em>
-</MultiSelect>
+```svelte example
+<script>
+  import MultiSelect from '$lib'
+  import { languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
+</script>
 
-```svelte
 <MultiSelect
   options={languages}
   maxSelect={5}

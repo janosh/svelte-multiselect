@@ -1,3 +1,10 @@
+## How to acquire form data in submission handler
+
+This example shows the JavaScript way of handling MultiSelect fields in form submission events. If you're using SvelteKit, you may want check out [this example](kit-form-actions) on to use [form actions](https://kit.svelte.dev/docs/form-actions) instead (which works even in browsers with JS disabled).
+
+> Hint: Use<code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
+
+```svelte example
 <script lang="ts">
   import MultiSelect from '$lib'
   import ColorSlot from '$src/components/ColorSlot.svelte'
@@ -8,10 +15,9 @@
     form_data = new FormData(event.target as HTMLFormElement)
   }
   let form_data: FormData
-  const name = `martian-flag`
+  // the key under which selected options are stored in FormData
+  const name = 'martian-flag'
 </script>
-
-This example shows the JavaScript way of handling MultiSelect fields in form submission events. If you're using SvelteKit, you may want to look at check out [this example](/kit-form-actions) on to use [form actions](https://kit.svelte.dev/docs/form-actions) instead which work even with JS disabled.
 
 <form on:submit|preventDefault={handle_submit}>
   <label for="colors">
@@ -34,9 +40,6 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   >
 </form>
 
-> Hint: Use<code>JSON.parse()</code> to convert the string value passed to form submit
-handler back to array.
-
 {#if form_data}
   Received form data:
   <pre><code>{JSON.stringify(...form_data)}</code></pre>
@@ -48,6 +51,8 @@ handler back to array.
   form {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 1ex 1em;
+    margin: 2em auto;
     border-radius: 3pt;
   }
 </style>
+```
