@@ -1,11 +1,13 @@
+## Sorting Selected Items
+
+### Frontend Lib Picker (default sorting)
+
+```svelte example id="default-sort"
 <script>
   import MultiSelect from '$lib'
   import { frontend_libs } from '$src/options'
 </script>
 
-## Sorting Selected Items
-
-```svelte
 <MultiSelect
   options={frontend_libs}
   placeholder="Pick your favorite frontend libs"
@@ -15,43 +17,29 @@
 
 <br />
 
-<label for="default-sort">Frontend Lib Picker (default sorting)</label>
-<MultiSelect
-  id="default-sort"
-  options={frontend_libs}
-  placeholder="Pick your favorite frontend libs"
-  sortSelected
-/>
+### Frontend Lib Picker (custom sorting by programming language)
 
-<br />
+```svelte example id="custom-sort"
+<script lang="ts">
+  import MultiSelect, { type Option } from '$lib'
+  import { frontend_libs } from '$src/options'
 
-```svelte
-<MultiSelect
-  options={frontend_libs}
-  placeholder="Pick your favorite frontend libs"
-  sortSelected={(op1: Option, op2: Option) => {
+  const sortSelected = (op1: Option, op2: Option) => {
     if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)
     return op1.label.localeCompare(op2.label)
-  }}
+  }
+</script>
+
+<MultiSelect
+  options={frontend_libs}
+  placeholder="Pick your favorite frontend libs"
+  {sortSelected}
 />
 ```
 
 <br />
 
-<label for="custom-sort">Frontend Lib Picker (custom sorting by programming language)</label>
-<MultiSelect
-  id="custom-sort"
-  options={frontend_libs}
-  placeholder="Pick your favorite frontend libs"
-  sortSelected={(op1, op2) => {
-    if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)
-    return op1.label.localeCompare(op2.label)
-  }}
-/>
-
-<br />
-
-MultiSelect by default simply renders selected items in the order they were chosen. The prop
+MultiSelect by default simply renders selected items in the order they were chosen. Unless `draggable=false`, users can drag and drop to reorder selected options. The prop
 
 ```ts
 sortSelected: boolean | ((op1: Option, op2: Option) => number) = false

@@ -12,7 +12,7 @@ test.describe(`input`, async () => {
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
 
-    await page.click(`input[id='foods']`)
+    await page.click(`#foods ul input`)
 
     expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
@@ -26,7 +26,7 @@ test.describe(`input`, async () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
-    await page.focus(`input[id='foods']`)
+    await page.focus(`#foods ul input`)
 
     await page.keyboard.press(`Tab`)
 
@@ -47,7 +47,7 @@ test.describe(`input`, async () => {
   }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.fill(`input[id='foods']`, `Pineapple`)
+    await page.fill(`#foods ul input`, `Pineapple`)
 
     expect(
       await page.$$(`div.multiselect.open > ul.options > li`)
@@ -61,7 +61,7 @@ test.describe(`remove single button`, async () => {
   test(`should remove 1 option`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.click(`input#foods`)
+    await page.click(`#foods ul input`)
     await page.click(`text=🍌 Banana`)
 
     await page.click(`button[title='Remove 🍌 Banana']`)
@@ -131,7 +131,7 @@ test.describe(`external CSS classes`, async () => {
     test(`${prop}Class`, async ({ page }) => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
-      await page.click(`input#foods`)
+      await page.click(`#foods ul input`)
       await page.hover(`ul.options > li`) // hover any option to give it active state
 
       const node = await page.$(`${selector}.${cls}`)
@@ -163,7 +163,7 @@ test.describe(`disabled multiselect`, async () => {
   })
 
   test(`renders no buttons`, async ({ page }) => {
-    expect(await page.$$(`button`)).toHaveLength(0)
+    expect(await page.$$(`#disabled-input-title button`)).toHaveLength(0)
   })
 
   test(`renders disabled slot`, async ({ page }) => {
@@ -181,11 +181,9 @@ test.describe(`accessibility`, async () => {
     page,
   }) => {
     // don't interact with component before this test as it will set invalid=false
-    const invalid = await page.getAttribute(
-      `input[id='foods']`,
-      `aria-invalid`,
-      { strict: true }
-    )
+    const invalid = await page.getAttribute(`#foods ul input`, `aria-invalid`, {
+      strict: true,
+    })
     expect(invalid).toBe(`true`)
   })
 
@@ -237,7 +235,7 @@ test.describe(`multiselect`, async () => {
   test(`can select and remove many options`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.click(`input#foods`)
+    await page.click(`#foods ul input`)
     for (const idx of [2, 5, 8]) {
       await page.click(`ul.options > li >> nth=${idx}`)
     }
@@ -263,7 +261,7 @@ test.describe(`multiselect`, async () => {
   }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.click(`input#foods`)
+    await page.click(`#foods ul input`)
 
     for (const expected_fruit of foods) {
       await page.keyboard.press(`ArrowDown`)
@@ -287,11 +285,11 @@ test.describe(`multiselect`, async () => {
   }) => {
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
 
-    await page.click(`input#languages`)
+    await page.click(`#languages ul input`)
 
     await page.click(`text=Haskell >> nth=0`)
 
-    await page.fill(`input#languages`, `java`)
+    await page.fill(`#languages ul input`, `java`)
 
     await page.click(`text=JavaScript`)
 
@@ -307,7 +305,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`entering custom option adds it to selected but not to options`, async ({
     page,
   }) => {
-    const selector = `input#foods`
+    const selector = `#foods ul input`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
     await page.click(selector)
@@ -333,7 +331,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`entering custom option in append mode adds it to selected
       list _and_ to options in dropdown menu`, async ({ page }) => {
     // i.e. it remains selectable from the dropdown after removing from selected
-    const selector = `input#languages`
+    const selector = `#languages ul input`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -353,7 +351,7 @@ test.describe(`allowUserOptions`, async () => {
   })
 
   test(`shows custom addOptionMsg if no options match`, async ({ page }) => {
-    const selector = `input#languages`
+    const selector = `#languages ul input`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -376,7 +374,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`creates custom option correctly after selecting a provided option`, async ({
     page,
   }) => {
-    const selector = `input#languages`
+    const selector = `#languages ul input`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -398,7 +396,7 @@ test.describe(`allowUserOptions`, async () => {
     page.on(`console`, (msg) => {
       if (msg.type() === `error`) logs.push(msg.text())
     })
-    const selector = `input#no-default-options`
+    const selector = `#no-default-options ul input`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -425,7 +423,7 @@ test.describe(`sortSelected`, async () => {
   test(`default sorting is alphabetical by label`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`input#default-sort`) // open dropdown
+    await page.click(`#default-sort ul input`) // open dropdown
 
     for (const label of labels) {
       await page.click(`ul.options >> text=${label}`)
@@ -442,7 +440,7 @@ test.describe(`sortSelected`, async () => {
   test(`custom sorting`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`input#custom-sort`) // open dropdown
+    await page.click(`#custom-sort ul input`) // open dropdown
     for (const label of labels) {
       await page.click(`ul.options:visible >> text=${label}`)
     }
@@ -487,7 +485,7 @@ test.describe(`maxSelect`, async () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
-    await page.click(`input#languages`)
+    await page.click(`#languages ul input`)
 
     // select maxSelect options
     for (const idx of Array(max_select).fill(0)) {
@@ -498,7 +496,7 @@ test.describe(`maxSelect`, async () => {
   test(`options dropdown disappears when reaching maxSelect items`, async ({
     page,
   }) => {
-    const ul_selector = `[data-id='languages'] ul.options`
+    const ul_selector = `#languages ul.options`
     await wait_for_animation_end(page, ul_selector)
 
     expect(await page.locator(ul_selector)).toBeHidden()
@@ -511,7 +509,7 @@ test.describe(`maxSelect`, async () => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
     let selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
     expect(selected_lis).toHaveLength(max_select)
-    await page.click(`input#languages`) // re-open options dropdown
+    await page.click(`#languages ul input`) // re-open options dropdown
     await page.click(`ul.options > li >> nth=0`)
     selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
     expect(selected_lis).toHaveLength(max_select)
@@ -524,12 +522,8 @@ test.describe(`slots`, async () => {
   }) => {
     await page.goto(`/slots`, { waitUntil: `networkidle` })
 
-    await page.click(`input#svelte-svg-slot-remove-icon`) // open dropdown
-    await page.click(`ul.options > li`) // select any option
-    await page.click(`ul.options > li`) // select 2nd option
-
     const svg_icons = await page.$$(`ul.selected > li > button > svg`)
-    expect(svg_icons).toHaveLength(2) // check that remove-icon slot is rendered
+    expect(svg_icons).toHaveLength(3) // check that remove-icon slot is rendered
 
     const remove_all_svg = await page.$$(`button.remove-all > svg`)
     expect(remove_all_svg).toHaveLength(1) // check that remove-all slot is rendered

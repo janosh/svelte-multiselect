@@ -1,8 +1,9 @@
 <script>
-  import MultiSelect from '$lib'
-  import { languages } from '$src/options'
-  import LanguageSlot from '$src/components/LanguageSlot.svelte'
-  import { language_store } from '$src/stores'
+  import hljs from 'highlight.js/lib/common'
+  import 'highlight.js/styles/vs2015.css'
+
+  const glob = import.meta.glob('/src/stores.ts', { eager: true, as: 'raw' })
+  const store_code = glob['/src/stores.ts']
 </script>
 
 ## Page-Reload Persistent MultiSelect
@@ -11,24 +12,15 @@
 
 <br />
 
-<MultiSelect
-  id="languages"
-  options={languages}
-  placeholder="What languages do you know?"
-  bind:selected={$language_store}
->
-  <LanguageSlot let:option {option} slot="selected" />
-</MultiSelect>
-
-<br />
-
-```svelte
+```svelte example id="languages"
 <script>
+  import MultiSelect from '$lib'
+  import { languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
   import { language_store } from '$src/stores'
 </script>
 
 <MultiSelect
-  id="languages"
   options={languages}
   placeholder="What languages do you know?"
   bind:selected={$language_store}
@@ -36,3 +28,7 @@
   <LanguageSlot let:option {option} slot="selected" />
 </MultiSelect>
 ```
+
+where `language_store` is a Svelte `writable` with custom initialization logic and a wrapper around `set` method to update `sessionStorage`:
+
+<pre><code>{@html hljs.highlight(store_code, { language: 'typescript' }).value}</code></pre>

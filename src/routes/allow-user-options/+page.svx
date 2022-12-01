@@ -3,35 +3,44 @@
   import { foods, languages } from '$src/options'
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
 
-  // make some options pre-selected
-  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
-  let selected_append = ['Haskell', 'TypeScript']
   let selected_empty = []
 </script>
 
-<label for="foods">Allow Custom User Input</label>
+## Allow Custom User Input
 
 `allowUserOptions={true}` means users can enter custom options by entering text and hitting enter.
 
-<MultiSelect id="foods" options={foods} allowUserOptions={true} bind:selected />
+```svelte example id="foods"
+<script>
+  import MultiSelect from '$lib'
+  import { foods } from '$src/options'
 
-```svelte
+  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
+</script>
+
 <MultiSelect
   options={foods}
   allowUserOptions={true}
+  bind:selected
 />
 ```
 
 <br />
-<br />
-<br />
 
-<label for="languages">Append User Input</label>
+## Append User Input
 
 `allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection should the user remove their custom option from the list of selected items.
 
+```svelte example id="languages"
+<script>
+  import MultiSelect from '$lib'
+  import { languages } from '$src/options'
+  import LanguageSlot from '$src/components/LanguageSlot.svelte'
+
+  let selected_append = ['Haskell', 'TypeScript']
+</script>
+
 <MultiSelect
-  id="languages"
   options={languages}
   allowUserOptions="append"
   bind:selected={selected_append}
@@ -40,43 +49,28 @@
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
 </MultiSelect>
-
-```svelte
-<MultiSelect
-  id="languages"
-  options={languages}
-  allowUserOptions="append"
-  addOptionMsg="True polyglots can enter custom languages!"
->
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
-</MultiSelect>
 ```
 
 <br />
-<br />
-<br />
 
-<label for="languages">Start empty</label>
+## Start empty
 
 Starting with no options and letting the user populate their selection from scratch.
 
-{#if selected_empty?.length > 0}
-  <pre><code>selected = {JSON.stringify(selected_empty)}</code></pre>
+```svelte example id="no-default-options"
+<script>
+  import MultiSelect from '$lib'
+
+  let selected = []
+</script>
+
+{#if selected?.length > 0}
+  <pre><code>selected = {JSON.stringify(selected)}</code></pre>
 {/if}
 
 <MultiSelect
-  id="no-default-options"
   allowUserOptions="append"
-  bind:selected={selected_empty}
-  noMatchingOptionsMsg=""
-/>
-
-```svelte
-<MultiSelect
-  id="no-default-options"
-  allowUserOptions="append"
-  bind:selected={selected_empty}
+  bind:selected
   noMatchingOptionsMsg=""
 />
 ```

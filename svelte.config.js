@@ -1,6 +1,7 @@
 import adapter from '@sveltejs/adapter-static'
 import { s } from 'hastscript'
 import { mdsvex } from 'mdsvex'
+import examples from 'mdsvexamples'
 import linkHeadings from 'rehype-autolink-headings'
 import headingSlugs from 'rehype-slug'
 import preprocess from 'svelte-preprocess'
@@ -21,6 +22,9 @@ const rehypePlugins = [
     },
   ],
 ]
+const remarkPlugins = [
+  [examples, { defaults: { Wrapper: `/src/components/ExampleCode.svelte` } }],
+]
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {
@@ -28,7 +32,7 @@ export default {
 
   preprocess: [
     preprocess(),
-    mdsvex({ rehypePlugins, extensions: [`.svx`, `.md`] }),
+    mdsvex({ rehypePlugins, remarkPlugins, extensions: [`.svx`, `.md`] }),
   ],
 
   kit: {
