@@ -607,6 +607,10 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 }
 ```
 
+## 🆕 &nbsp; Changelog
+
+[View the changelog](/changelog.md).
+
 ## 🙏 &nbsp; Contributing
 
 Here are some steps to [get you started](https://github.com/janosh/svelte-multiselect/blob/main/contributing.md) if you'd like to contribute to this project!
