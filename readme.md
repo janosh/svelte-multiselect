@@ -21,7 +21,7 @@
 
 <slot name="examples" />
 
-## Features
+## 💡 &nbsp; Features
 
 - **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
 - **Keyboard friendly** for mouse-less form completion
@@ -30,11 +30,11 @@
 - **Searchable:** start typing to filter options
 - **Tagging:** selected options are listed as tags within the input
 - **Single / multiple select:** pass `maxSelect={1, 2, 3, ...}` prop to restrict the number of selectable options
-- **Configurable:** see [props](#props)
+- **Configurable:** see props
 
 <slot name="nav" />
 
-## Recent breaking changes
+## 📜 &nbsp; Breaking changes
 
 - **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
 - **v7.0.0**&nbsp; `selected` (as well `selectedLabels` and `selectedValues`) used to be arrays always. Now, if `maxSelect=1`, they will no longer be a length-1 array but simply a single a option (label/value respectively) or `null` if no option is selected. [PR 123](https://github.com/janosh/svelte-multiselect/pull/123).
@@ -42,7 +42,7 @@
   - Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)` if your options were objects with `label` and `value` keys. If they were simple strings/numbers, there was no point in using `selected{Labels,Values}` anyway. [PR 138](https://github.com/janosh/svelte-multiselect/pull/138)
   - Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. [PR 133](https://github.com/janosh/svelte-multiselect/pull/133).
 
-## Installation
+## 🔨 &nbsp; Installation
 
 ```sh
 npm install -D svelte-multiselect
@@ -50,7 +50,7 @@ pnpm add -D svelte-multiselect
 yarn add -D svelte-multiselect
 ```
 
-## Usage
+## 📙 &nbsp; Usage
 
 ```svelte
 <script>
@@ -61,14 +61,14 @@ yarn add -D svelte-multiselect
   let selected = []
 </script>
 
-Favorite Frontend Frameworks?
+Favorite Frontend Tools?
 
 <code>selected = {JSON.stringify(selected)}</code>
 
 <MultiSelect bind:selected options={ui_libs} />
 ```
 
-## Props
+## 🔣 &nbsp; Props
 
 Full list of props/bindable variables for this component. The `Option` type you see below is defined in [`src/lib/index.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) and can be imported as `import { type Option } from 'svelte-multiselect'`.
 
@@ -344,7 +344,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: `value` supports 1-way binding only, meaning `bind:value` will update `value` when internal component state changes but changing `value` externally will not update internal component state. This is because `value` is already reactive to `selected` and making `selected` reactive to `value` would be cyclic. Suggestions for better solutions that solve both [#86](https://github.com/janosh/svelte-multiselect/issues/86) and [#136](https://github.com/janosh/svelte-multiselect/issues/136) welcome!
 
-## Slots
+## 🎰 &nbsp; Slots
 
 `MultiSelect.svelte` has 3 named slots:
 
@@ -375,7 +375,7 @@ Example:
 </MultiSelect>
 ```
 
-## Events
+## 🎬 &nbsp; Events
 
 `MultiSelect.svelte` dispatches the following events:
 
@@ -438,7 +438,7 @@ The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutor
 />
 ```
 
-## TypeScript
+## 🦺 &nbsp; TypeScript
 
 TypeScript users can import the types used for internal type safety:
 
@@ -456,7 +456,7 @@ TypeScript users can import the types used for internal type safety:
 </script>
 ```
 
-## Styling
+## ✨ &nbsp; Styling
 
 There are 3 ways to style this component. To understand which options do what, it helps to keep in mind this simplified DOM structure of the component:
 
@@ -559,7 +559,7 @@ This simplified version of the DOM structure of the component shows where these 
 
 ### With global CSS
 
-Odd as it may seem, you get the most fine-grained control over the styling of every part of this component by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component is in its `open` state. See also [simplified DOM structure](#styling).
+Odd as it may seem, you get the most fine-grained control over the styling of every part of this component by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component is in its `open` state. See also [simplified DOM structure](#--styling).
 
 ```css
 :global(div.multiselect) {
@@ -607,6 +607,10 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 }
 ```
 
-## Want to contribute to this project?
+## 🆕 &nbsp; Changelog
 
-[Here are some steps](https://github.com/janosh/svelte-multiselect/blob/main/contributing.md) to get you started!
+[View the changelog](changelog.md).
+
+## 🙏 &nbsp; Contributing
+
+Here are some steps to [get you started](contributing.md) if you'd like to contribute to this project!

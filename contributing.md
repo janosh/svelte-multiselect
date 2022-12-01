@@ -33,6 +33,31 @@ PRs don't always have to add functionality. If you have ideas for new examples o
 
 This repo has 3 required CI checks that have to pass for every PR before merging:
 
-- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](.github/workflows/test.yml))
+- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/changelog-page/.github/workflows/test.yml))
 - linting: handled by [pre-commit.ci](https://results.pre-commit.ci/repo/github/365228700)
 - docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/deployments) through GitHub pages
+
+## New release
+
+To make a release, increase the `"version"` field in `package.json`. This package (mostly) follows semantic versioning, meaning
+
+- `x.y.z -> x+1.y.z`: major release with breaking changes
+- `x.y.z -> x.y+1.z`: minor release with new features
+- `x.y.z -> x.y.z+1`: patch release with bug fixes
+
+Now run the `changelog` script from `package.json` to update `changelog.md`, then commit both files using the new version number prefixed by `'v'` as commit message and tag:
+
+```sh
+pnpm changelog  # or npm run changelog
+git add package.json changelog.md
+git commit -m vx.y.z
+git tag $(git log -1 --pretty=%B)
+```
+
+Push the release commit and tag:
+
+```sh
+git push && git push --tags
+```
+
+Finally [publish a new release on GitHub](https://github.com/janosh/svelte-multiselect/releases/new).

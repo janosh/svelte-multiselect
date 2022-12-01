@@ -27,7 +27,6 @@ jobs:
         with:
           node-version: 18
           cache: pnpm
-          registry-url: https://registry.npmjs.org
 
       - name: Install dependencies
         run: |
@@ -42,5 +41,6 @@ jobs:
         if: github.event_name == 'release' && steps.tests.outcome == 'success' && runner.os == 'Linux'
         run: |
           npm run package
+          npm login
           npm publish ./package
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
