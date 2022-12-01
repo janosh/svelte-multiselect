@@ -74,7 +74,7 @@
 
   <pre>selected = {JSON.stringify(selected_ml)}</pre>
 
-  <label for="fav-ml-tool">Favorite machine learning framework?</label>
+  <label for="fav-ml-tool">Favorite machine learning tool?</label>
 
   <MultiSelect
     id="fav-ml-tool"
@@ -83,7 +83,7 @@
     options={ml_libs}
     bind:selected={selected_ml}
     bind:searchText
-    placeholder="Favorite machine learning framework?"
+    placeholder="Favorite machine learning tool?"
     {loading}
   />
   <CollapsibleCode
@@ -91,7 +91,7 @@
     code={`
 <pre>selected = {JSON.stringify(selected_ml)}</pre>
 
-<label for="fav-ml-tool">Favorite machine learning framework?</label>
+<label for="fav-ml-tool">Favorite machine learning tool?</label>
 
 <MultiSelect
   id="fav-ml-tool"
@@ -100,7 +100,7 @@
   options={ml_libs}
   bind:selected={selected_ml}
   bind:searchText
-  placeholder="Favorite machine learning framework?"
+  placeholder="Favorite machine learning tool?"
   {loading}
 />
 `}
