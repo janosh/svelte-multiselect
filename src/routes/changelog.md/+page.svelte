@@ -3,8 +3,6 @@
   import Changelog from '../../../changelog.md'
 </script>
 
-<a href="." aria-label="Back to index page">&laquo; back</a>
-
 <main>
   <Changelog />
 </main>
