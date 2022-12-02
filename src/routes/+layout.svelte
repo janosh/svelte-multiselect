@@ -14,8 +14,10 @@
 
 <GitHubCorner href={repository} />
 
-{#if demo_routes.some((route) => $page.url.pathname.endsWith(route))}
+{#if !$page.error && $page.url.pathname !== `/`}
   <a href="." aria-label="Back to index page">&laquo; back</a>
+{/if}
+{#if demo_routes.some((route) => $page.url.pathname.endsWith(route))}
   <h1>
     <img src="favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
     MultiSelect Examples
@@ -59,5 +61,18 @@
   }
   nav > a[aria-current='page'] {
     color: mediumseagreen;
+  }
+  a[href='.'] {
+    font-size: 15pt;
+    position: absolute;
+    top: 2em;
+    left: 2em;
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 1pt 5pt;
+    border-radius: 3pt;
+    transition: 0.2s;
+  }
+  a[href='.']:hover {
+    background-color: rgba(255, 255, 255, 0.2);
   }
 </style>

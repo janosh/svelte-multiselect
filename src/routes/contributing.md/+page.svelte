@@ -3,8 +3,6 @@
   import Contributing from '../../../contributing.md'
 </script>
 
-<a href="." aria-label="Back to index page">&laquo; back</a>
-
 <main>
   <Contributing />
 </main>
