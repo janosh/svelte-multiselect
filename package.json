@@ -15,10 +15,11 @@
     "build": "vite build",
     "preview": "vite preview",
     "package": "svelte-package",
-    "serve": "pnpm build && pnpm preview",
+    "serve": "vite build && vite preview",
     "check": "svelte-check --ignore package",
     "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
-    "vitest": "vitest tests/unit/*.ts",
+    "test:unit": "vitest tests/unit/*.ts",
+    "test:e2e": "playwright test tests/*.test.ts",
     "changelog": "npx auto-changelog -p --output changelog.md --unreleased-only --hide-credit --commit-limit false"
   },
   "devDependencies": {
