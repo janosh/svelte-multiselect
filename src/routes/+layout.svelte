@@ -15,7 +15,7 @@
 <GitHubCorner href={repository} />
 
 {#if !$page.error && $page.url.pathname !== `/`}
-  <a href="." aria-label="Back to index page">&laquo; back</a>
+  <a href="." aria-label="Back to index page">&laquo; home</a>
 {/if}
 {#if demo_routes.some((route) => $page.url.pathname.endsWith(route))}
   <h1>

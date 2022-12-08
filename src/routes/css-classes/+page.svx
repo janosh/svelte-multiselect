@@ -7,24 +7,33 @@
 <script>
   import MultiSelect from '$lib'
 
-  const options = [...Array(4).keys()].map(idx => `Option ${idx + 1}`)
+  const options = [...Array(7).keys()].map(idx => `Option ${idx + 1}`)
 </script>
 
 <MultiSelect
   {options}
-  outerDivClass="foo"
-  ulSelectedClass="bar"
-  ulOptionsClass="baz"
-  liOptionClass="bam"
-  inputClass="slam"
-  liSelectedClass="hi"
-  liActiveOptionClass="mom"
-  maxSelectMsgClass="bla"
+  outerDivClass="wrapper"
+  ulSelectedClass="user-choices"
+  ulOptionsClass="dropdown"
+  liOptionClass="selectable-li"
+  inputClass="search-text-input"
+  liSelectedClass="selected-li"
+  liActiveOptionClass="hovered-or-arrow-keyed-li"
+  maxSelectMsgClass="user-hint-max-selected-reached"
   placeholder="Which foods do you like?"
   selected={options.slice(0, 2)}
   maxSelect={2}
 />
 <!-- maxSelect={2} needed for maxSelectMsg to show up -->
+
+<style>
+  :global(.wrapper) {
+    background: black;
+  }
+  :global(.dropdown) {
+    background: darkgreen;
+  }
+</style>
 ```
 
 <br />

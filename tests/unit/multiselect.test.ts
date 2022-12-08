@@ -730,7 +730,7 @@ test.each([
 
     expect(console.error).toHaveBeenCalledTimes(expected)
     if (expected > 0) {
-      expect(console.error.mock.calls[0][0]).toContain(
+      expect(console.error).toHaveBeenCalledWith(
         `MultiSelect received no options`
       )
     }
