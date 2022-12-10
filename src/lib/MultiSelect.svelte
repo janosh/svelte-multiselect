@@ -271,7 +271,7 @@
       if (activeIndex === null && matchingOptions.length > 0) {
         activeIndex = 0
         return
-      } else if (allowUserOptions && searchText.length > 0) {
+      } else if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
         add_option_msg_is_active = !add_option_msg_is_active
