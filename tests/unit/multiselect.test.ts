@@ -472,6 +472,32 @@ test.each([undefined, `Custom no options message`])(
   }
 )
 
+// https://github.com/janosh/svelte-multiselect/issues/183
+test(`up/down arrow keys can traverse dropdown list even when user entered searchText into input`, async () => {
+  const options = [`foo`, `bar`, `baz`]
+  new MultiSelect({
+    target: document.body,
+    props: { options, allowUserOptions: true },
+  })
+
+  const input = doc_query(`ul.selected input`)
+  input.value = `ba`
+  input.dispatchEvent(new InputEvent(`input`))
+  await sleep()
+
+  const dropdown = doc_query(`ul.options`)
+  expect(dropdown.textContent?.trim()).toBe(`bar baz`)
+
+  // loop through the dropdown list twice
+  for (const text of [`bar`, `baz`, `bar`, `baz`]) {
+    // down arrow key
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    await sleep()
+    const li_active = doc_query(`ul.options li.active`)
+    expect(li_active.textContent?.trim()).toBe(text)
+  }
+})
+
 test(`single remove button removes 1 selected option`, async () => {
   new MultiSelect({
     target: document.body,
