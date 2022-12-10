@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v8.2.1](https://github.com/janosh/svelte-multiselect/compare/v8.2.0...v8.2.1)
+
+- Fix `allowUserOptions` preventing dropdown list navigation with up/down arrow keys [`#184`](https://github.com/janosh/svelte-multiselect/pull/184)
+- Mdsvexamples [`#182`](https://github.com/janosh/svelte-multiselect/pull/182)
+- Add changelog & contributing pages to site [`#181`](https://github.com/janosh/svelte-multiselect/pull/181)
+- tweak contributing.md and css-classes example [`6f78033`](https://github.com/janosh/svelte-multiselect/commit/6f78033826beb34cd00bf3282c93ac5328905735)
+- fix build error [`b896d36`](https://github.com/janosh/svelte-multiselect/commit/b896d3643a0988b0d0bed832ba46bcad0e2c4494)
+- fix readme badge for gh-pages.yml status [`906b560`](https://github.com/janosh/svelte-multiselect/commit/906b56024a826ed45263197b1267015d88f0a660)
+
+<!-- auto-changelog-above -->
+
 #### [v8.2.0](https://github.com/janosh/svelte-multiselect/compare/v8.1.0...v8.2.0)
 
 > 30 November 2022
@@ -15,8 +26,6 @@ All notable changes to this project will be documented in this file. Dates are d
 - fix prop form_input: set default value null to make it optional [`b150fe0`](https://github.com/janosh/svelte-multiselect/commit/b150fe0032ebde82a319b23bd5e6b573e0c31721)
 - set `aliveStatusCodes: [200, 429]` in `.github/workflows/link-check-config.json` [`b34c7bf`](https://github.com/janosh/svelte-multiselect/commit/b34c7bf99d4afa96dcd3c9c322ab4e94b1ef3a39)
 - add changelog script to `package.json` [`c943617`](https://github.com/janosh/svelte-multiselect/commit/c9436171033e06e8098f4443ed40d48ddee35167)
-
-<!-- auto-changelog-above -->
 
 #### [v8.1.0](https://github.com/janosh/svelte-multiselect/compare/v8.0.4...v8.1.0)
 
