@@ -280,7 +280,8 @@
         // if no option is active and no options are matching, do nothing
         return
       }
-      // if none of the abvove special cases apply, we make next/prev option
+      event.preventDefault()
+      // if none of the above special cases apply, we make next/prev option
       // active with wrap around at both ends
       const increment = event.key === `ArrowUp` ? -1 : 1
 
