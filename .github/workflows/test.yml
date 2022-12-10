@@ -37,10 +37,15 @@ jobs:
         id: tests
         run: pnpm test
 
+  release:
+    runs-on: ubuntu-latest
+    needs: tests
+    if: github.event_name == 'release' && needs.tests.result == 'success'
+    steps:
       - name: Build package and publish to NPM
-        if: github.event_name == 'release' && steps.tests.outcome == 'success' && runner.os == 'Linux'
         run: |
           npm run package
           npm login
           npm publish ./package
+        env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
