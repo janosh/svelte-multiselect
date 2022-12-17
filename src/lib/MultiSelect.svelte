@@ -396,7 +396,7 @@
     }}
   />
   <slot name="expand-icon" {open}>
-    <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt;" />
+    <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
   <ul class="selected {ulSelectedClass}">
     {#each selected as option, idx (get_label(option))}
