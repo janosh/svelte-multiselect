@@ -346,13 +346,14 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
 ## 🎰 &nbsp; Slots
 
-`MultiSelect.svelte` has 3 named slots:
+`MultiSelect.svelte` accepts the following named slots:
 
-- `slot="option"`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
-- `slot="selected"`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
-- `slot="spinner"`: Custom spinner component to display when in `loading` state. Receives no props.
-- `slot="disabled-icon"`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `<span slot="disabled-icon" />` or `div` to remove the default disabled icon.
-- `slot="remove-icon"`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
+1. `slot="option"`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
+1. `slot="selected"`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
+1. `slot="spinner"`: Custom spinner component to display when in `loading` state. Receives no props.
+1. `slot="disabled-icon"`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `<span slot="disabled-icon" />` or `div` to remove the default disabled icon.
+1. `slot="expand-icon"`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. Receives prop `open: boolean` which is true if the Multiselect dropdown is visible and false if it's hidden.
+1. `slot="remove-icon"`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
 
 Example:
 
