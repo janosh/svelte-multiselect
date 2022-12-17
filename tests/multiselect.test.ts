@@ -522,11 +522,22 @@ test.describe(`slots`, async () => {
   }) => {
     await page.goto(`/slots`, { waitUntil: `networkidle` })
 
-    const svg_icons = await page.$$(`ul.selected > li > button > svg`)
-    expect(svg_icons).toHaveLength(3) // check that remove-icon slot is rendered
+    const expand_icon = await page.$$(`#languages-1 input + svg`)
+    expect(expand_icon, `custom expand icon slot is not rendered`).toHaveLength(
+      1
+    )
+
+    const remove_icons = await page.$$(`ul.selected > li > button > svg`)
+    expect(
+      remove_icons,
+      `custom remove icon slot is not rendered`
+    ).toHaveLength(3)
 
     const remove_all_svg = await page.$$(`button.remove-all > svg`)
-    expect(remove_all_svg).toHaveLength(1) // check that remove-all slot is rendered
+    expect(
+      remove_all_svg,
+      `custom remove-all icon slot is not rendered`
+    ).toHaveLength(1)
   })
 })
 
