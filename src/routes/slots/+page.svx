@@ -2,12 +2,14 @@
 
 ### Svelte SVG component as `slot="remove-icon"`
 
-```svelte example
+```svelte example id="languages-1"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
   import MinusIcon from '$src/components/MinusIcon.svelte'
+  import ExpandIcon from '$src/components/ExpandIcon.svelte'
+  import CollapseIcon from '$src/components/CollapseIcon.svelte'
 </script>
 
 <MultiSelect
@@ -18,13 +20,20 @@
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
+  <svelte:fragment slot="expand-icon" let:open>
+    {#if open}
+      <CollapseIcon width="1em" />
+    {:else}
+      <ExpandIcon width="1em" />
+    {/if}
+  </svelte:fragment>
   <MinusIcon slot="remove-icon" width="1em" />
 </MultiSelect>
 ```
 
 ### Simple HTML tag as `slot="remove-icon"`
 
-```svelte example
+```svelte example id="languages-2"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
