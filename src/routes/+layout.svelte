@@ -3,7 +3,7 @@
   import GitHubCorner from 'svelte-github-corner'
   import { repository } from '../../package.json'
   import '../app.css'
-  import { demo_routes } from './+layout'
+  import { _demo_routes } from './+layout'
 
   $: is_current = (path: string) => {
     if (path === $page.url.pathname) return `page`
@@ -17,14 +17,14 @@
 {#if !$page.error && $page.url.pathname !== `/`}
   <a href="." aria-label="Back to index page">&laquo; home</a>
 {/if}
-{#if demo_routes.some((route) => $page.url.pathname.endsWith(route))}
+{#if _demo_routes.some((route) => $page.url.pathname.endsWith(route))}
   <h1>
     <img src="favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
     MultiSelect Examples
   </h1>
 
   <nav>
-    {#each demo_routes as route, idx}
+    {#each _demo_routes as route, idx}
       {#if idx > 0}<strong>&bull;</strong>{/if}
       <a href={route} aria-current={is_current(route)}>{route}</a>
     {/each}
