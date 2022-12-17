@@ -523,21 +523,35 @@ test.describe(`slots`, async () => {
     await page.goto(`/slots`, { waitUntil: `networkidle` })
 
     const expand_icon = await page.$$(`#languages-1 input + svg`)
-    expect(expand_icon, `custom expand icon slot is not rendered`).toHaveLength(
-      1
+    let msg = `custom expand icon slot is not rendered`
+    expect(expand_icon, msg).toHaveLength(1)
+
+    // make sure, rendering different expand-icon slot depending on open=true/false works
+    // for that, first get d attribute of path inside svg
+    const expand_icon_path = await page.$eval(
+      `#languages-1 input + svg path`,
+      (el) => el.getAttribute(`d`)
     )
 
+    // then click on the expand icon to open the dropdown and change open to true
+    await page.click(`#languages-1 input + svg`)
+    await wait_for_animation_end(page, `#languages-1 ul.options`)
+
+    // assert that the collapse icon path differs from expand icon path
+    const collapse_icon_path = await page.$eval(
+      `#languages-1 input + svg path`,
+      (el) => el.getAttribute(`d`)
+    )
+    expect(expand_icon_path).not.toBe(collapse_icon_path)
+    // ^^^ expand-icon test done
+
     const remove_icons = await page.$$(`ul.selected > li > button > svg`)
-    expect(
-      remove_icons,
-      `custom remove icon slot is not rendered`
-    ).toHaveLength(3)
+    msg = `custom remove icon slot is not rendered`
+    expect(remove_icons, msg).toHaveLength(3)
 
     const remove_all_svg = await page.$$(`button.remove-all > svg`)
-    expect(
-      remove_all_svg,
-      `custom remove-all icon slot is not rendered`
-    ).toHaveLength(1)
+    msg = `custom remove-all icon slot is not rendered`
+    expect(remove_all_svg, msg).toHaveLength(1)
   })
 })
 
