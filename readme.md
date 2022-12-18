@@ -327,16 +327,16 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally. Can be passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
 
 1. ```ts
-   selectedOptionsDraggable: boolean = true
-   ```
-
-   Whether selected options are draggable so users can change their order.
-
-1. ```ts
    sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
    ```
 
    Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://janosh.github.io/svelte-multiselect/sort-selected) example.
+
+1. ```ts
+   selectedOptionsDraggable: boolean = !sortSelected
+   ```
+
+   Whether selected options are draggable so users can change their order.
 
 1. ```ts
    value: Option | Option[] | null = null
