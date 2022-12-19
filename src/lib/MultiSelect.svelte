@@ -62,8 +62,8 @@
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
-  export let selectedOptionsDraggable: boolean = true
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+  export let selectedOptionsDraggable: boolean = !sortSelected
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
   export let value: Option | Option[] | null = null
@@ -107,6 +107,11 @@
   if (maxSelect && typeof required === `number` && required > maxSelect) {
     console.error(
       `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
+    )
+  }
+  if (sortSelected && selectedOptionsDraggable) {
+    console.warn(
+      `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user re-orderings of selected options will be undone by sortSelected on component re-renders.`
     )
   }
 

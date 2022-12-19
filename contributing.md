@@ -35,9 +35,9 @@ Any new features should come with corresponding tests. If you fix a bug, please 
 
 This repo has 3 required CI checks that have to pass for every PR before merging:
 
-- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/changelog-page/.github/workflows/test.yml))
+- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/test.yml))
 - linting: handled by [pre-commit.ci](https://results.pre-commit.ci/repo/github/365228700)
-- docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/deployments) through GitHub pages
+- docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/gh-pages.yml) through GitHub Pages
 
 ## 🆕 New release
 

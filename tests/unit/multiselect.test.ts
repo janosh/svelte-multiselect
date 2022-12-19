@@ -878,3 +878,28 @@ test(`test drag selected option to change order`, async () => {
   await sleep()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
+
+test.each([[true], [false]])(
+  `console warning when combining sortSelected=%s and selectedOptionsDraggable`,
+  async (sortSelected) => {
+    console.warn = vi.fn()
+
+    new MultiSelect({
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        sortSelected,
+        selectedOptionsDraggable: true,
+      },
+    })
+
+    if (sortSelected) {
+      expect(console.warn).toHaveBeenCalledTimes(1)
+      expect(console.warn).toHaveBeenCalledWith(
+        `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user re-orderings of selected options will be undone by sortSelected on component re-renders.`
+      )
+    } else {
+      expect(console.warn).toHaveBeenCalledTimes(0)
+    }
+  }
+)
