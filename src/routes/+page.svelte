@@ -2,7 +2,7 @@
   import Toc from 'svelte-toc'
   import Readme from '../../readme.md'
   import Examples from '../components/Examples.svelte'
-  import { demo_routes } from './+layout'
+  import { _demo_routes } from './+layout'
 </script>
 
 <main>
@@ -16,7 +16,7 @@
         </code>:
       </p>
       <nav>
-        {#each demo_routes as route, idx}
+        {#each _demo_routes as route, idx}
           {#if idx > 0}<strong>&bull;</strong>{/if}
           <a href={route}>{route}</a>
         {/each}

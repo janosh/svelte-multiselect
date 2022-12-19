@@ -24,7 +24,7 @@ HTML.
   import type { ActionData, PageServerData } from './$types'
 
   export let form: ActionData
-  export let data: PageServerData
+  // export let data: PageServerData
 
   $: err_msg = {
     json: 'The email field is required',
