@@ -2,7 +2,18 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+<!-- auto-changelog-above -->
+
+#### [v8.2.2](https://github.com/janosh/svelte-multiselect/compare/v8.2.1...v8.2.2)
+
+> 18 December 2022
+
+- Issue console warning if `sortSelected && selectedOptionsDraggable` [`#187`](https://github.com/janosh/svelte-multiselect/pull/187)
+- Add new slot named 'expand-icon' [`#186`](https://github.com/janosh/svelte-multiselect/pull/186)
+
 #### [v8.2.1](https://github.com/janosh/svelte-multiselect/compare/v8.2.0...v8.2.1)
+
+> 10 December 2022
 
 - Fix `allowUserOptions` preventing dropdown list navigation with up/down arrow keys [`#184`](https://github.com/janosh/svelte-multiselect/pull/184)
 - Mdsvexamples [`#182`](https://github.com/janosh/svelte-multiselect/pull/182)
@@ -10,8 +21,6 @@ All notable changes to this project will be documented in this file. Dates are d
 - tweak contributing.md and css-classes example [`6f78033`](https://github.com/janosh/svelte-multiselect/commit/6f78033826beb34cd00bf3282c93ac5328905735)
 - fix build error [`b896d36`](https://github.com/janosh/svelte-multiselect/commit/b896d3643a0988b0d0bed832ba46bcad0e2c4494)
 - fix readme badge for gh-pages.yml status [`906b560`](https://github.com/janosh/svelte-multiselect/commit/906b56024a826ed45263197b1267015d88f0a660)
-
-<!-- auto-changelog-above -->
 
 #### [v8.2.0](https://github.com/janosh/svelte-multiselect/compare/v8.1.0...v8.2.0)
 
