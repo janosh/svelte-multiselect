@@ -7,9 +7,9 @@
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
-  import MinusIcon from '$src/components/MinusIcon.svelte'
-  import ExpandIcon from '$src/components/ExpandIcon.svelte'
   import CollapseIcon from '$src/components/CollapseIcon.svelte'
+  import ExpandIcon from '$src/components/ExpandIcon.svelte'
+  import MinusIcon from '$src/components/MinusIcon.svelte'
 </script>
 
 <MultiSelect
@@ -38,6 +38,11 @@
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
   import LanguageSlot from '$src/components/LanguageSlot.svelte'
+  import CollapseIcon from '$src/components/CollapseIcon.svelte'
+  import ExpandIcon from '$src/components/ExpandIcon.svelte'
+
+  // local variable used in CollapseIcon on:click callback to close dropdown
+  let open
 </script>
 
 <MultiSelect
@@ -45,9 +50,17 @@
   maxSelect={5}
   placeholder="What languages do you know?"
   selected={['Python', 'TypeScript', 'Julia']}
+  bind:open
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
+  <svelte:fragment slot="expand-icon">
+    {#if open}
+      <CollapseIcon width="1em" on:click={() => (open = false)} />
+    {:else}
+      <ExpandIcon width="1em" />
+    {/if}
+  </svelte:fragment>
   <span slot="remove-icon">x</span>
 </MultiSelect>
 ```
