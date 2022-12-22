@@ -163,7 +163,9 @@ test.describe(`disabled multiselect`, async () => {
   })
 
   test(`renders no buttons`, async ({ page }) => {
-    expect(await page.$$(`#disabled-input-title button`)).toHaveLength(0)
+    expect(
+      await page.$$(`#disabled-input-title div.multiselect button`)
+    ).toHaveLength(0)
   })
 
   test(`renders disabled slot`, async ({ page }) => {

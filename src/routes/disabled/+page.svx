@@ -9,7 +9,7 @@
 </script>
 
 <MultiSelect
-  options={[{ label: `Svelte`, value: `Svelte`, preselected: true }]}
+  options={[{ label: `Svelte`, preselected: true }]}
   disabled
   disabledInputTitle="Super special disabled message"
   --sms-disabled-bg="darkred"

@@ -20,7 +20,7 @@
     "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
     "test:unit": "vitest tests/unit/*.ts",
     "test:e2e": "playwright test tests/*.test.ts",
-    "changelog": "npx auto-changelog -p --output changelog.md --unreleased-only --hide-credit --commit-limit false"
+    "changelog": "npx auto-changelog --package --output changelog.md --unreleased-only --hide-credit --commit-limit false"
   },
   "devDependencies": {
     "@iconify/svelte": "^3.0.1",

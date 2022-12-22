@@ -33,14 +33,21 @@ main {
   width: 100%;
   max-width: 50em;
 }
-button {
-  color: var(--text-color);
+button,
+a.btn {
+  color: white;
   cursor: pointer;
   border: none;
   border-radius: 3pt;
-  background: darkcyan;
+  background-color: darkcyan;
   padding: 2pt 4pt;
   font-size: 12pt;
+  line-height: initial;
+  transition: background-color 0.2s;
+}
+:is(button, a.btn):hover {
+  background-color: teal;
+  color: white;
 }
 a {
   color: var(--blue);
