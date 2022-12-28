@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file. Dates are d
 
 <!-- auto-changelog-above -->
 
+#### [v8.2.3](https://github.com/janosh/svelte-multiselect/compare/v8.2.2...v8.2.3)
+
+> 28 December 2022
+
+- add 'Open in StackBlitz' links to example code fences [`ac07557`](https://github.com/janosh/svelte-multiselect/commit/ac075576c261892807faa0071b5f3e0b5b4fcd2c)
+- v8.2.2 contains unintended breaking changes and was deprecated on NPM (see [#188](https://github.com/janosh/svelte-multiselect/issues/188)). Use this fixed release instead.
+
 #### [v8.2.2](https://github.com/janosh/svelte-multiselect/compare/v8.2.1...v8.2.2)
 
 > 18 December 2022
