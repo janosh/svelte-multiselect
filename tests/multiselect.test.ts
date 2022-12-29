@@ -557,6 +557,22 @@ test.describe(`slots`, async () => {
   })
 })
 
+test(`dragging selected options across each other changes their order`, async ({
+  page,
+}) => {
+  // https://github.com/janosh/svelte-multiselect/issues/176
+  await page.goto(`/persistent`, { waitUntil: `networkidle` })
+  let selected = await page.textContent(`ul.selected`)
+  expect(selected?.trim()).toBe(`Python  TypeScript  C  Haskell`)
+
+  // swap selected options 1 and 2
+  const li1 = await page.locator(`ul.selected li:nth-child(1)`)
+  const li2 = await page.locator(`ul.selected li:nth-child(2)`)
+  await li1?.dragTo(li2)
+  selected = await page.textContent(`ul.selected`)
+  expect(selected?.trim()).toBe(`TypeScript  Python  C  Haskell`)
+})
+
 function wait_for_animation_end(page: Page, selector: string) {
   // https://github.com/microsoft/playwright/issues/15660
   const locator = page.locator(selector)

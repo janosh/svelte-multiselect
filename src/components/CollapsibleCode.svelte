@@ -38,7 +38,7 @@
   {#if github_url}
     <a href={github_url} target="_blank" rel="noreferrer">
       <Icon icon="octicon:mark-github" inline />
-      &nbsp;GitHub
+      &thinsp;GitHub
     </a>
   {/if}
 </nav>

@@ -21,7 +21,7 @@
 
 <slot name="examples" />
 
-## 💡 &nbsp; Features
+## 💡 &thinsp; Features
 
 - **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
 - **Keyboard friendly** for mouse-less form completion
@@ -34,7 +34,7 @@
 
 <slot name="nav" />
 
-## 📜 &nbsp; Breaking changes
+## 📜 &thinsp; Breaking changes
 
 - **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
 - **v7.0.0**&nbsp; `selected` (as well `selectedLabels` and `selectedValues`) used to be arrays always. Now, if `maxSelect=1`, they will no longer be a length-1 array but simply a single a option (label/value respectively) or `null` if no option is selected. [PR 123](https://github.com/janosh/svelte-multiselect/pull/123).
@@ -42,7 +42,7 @@
   - Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)` if your options were objects with `label` and `value` keys. If they were simple strings/numbers, there was no point in using `selected{Labels,Values}` anyway. [PR 138](https://github.com/janosh/svelte-multiselect/pull/138)
   - Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. [PR 133](https://github.com/janosh/svelte-multiselect/pull/133).
 
-## 🔨 &nbsp; Installation
+## 🔨 &thinsp; Installation
 
 ```sh
 npm install -D svelte-multiselect
@@ -50,7 +50,7 @@ pnpm add -D svelte-multiselect
 yarn add -D svelte-multiselect
 ```
 
-## 📙 &nbsp; Usage
+## 📙 &thinsp; Usage
 
 ```svelte
 <script>
@@ -68,7 +68,7 @@ Favorite Frontend Tools?
 <MultiSelect bind:selected options={ui_libs} />
 ```
 
-## 🔣 &nbsp; Props
+## 🔣 &thinsp; Props
 
 Full list of props/bindable variables for this component. The `Option` type you see below is defined in [`src/lib/index.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) and can be imported as `import { type Option } from 'svelte-multiselect'`.
 
@@ -344,7 +344,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: `value` supports 1-way binding only, meaning `bind:value` will update `value` when internal component state changes but changing `value` externally will not update internal component state. This is because `value` is already reactive to `selected` and making `selected` reactive to `value` would be cyclic. Suggestions for better solutions that solve both [#86](https://github.com/janosh/svelte-multiselect/issues/86) and [#136](https://github.com/janosh/svelte-multiselect/issues/136) welcome!
 
-## 🎰 &nbsp; Slots
+## 🎰 &thinsp; Slots
 
 `MultiSelect.svelte` accepts the following named slots:
 
@@ -376,7 +376,7 @@ Example:
 </MultiSelect>
 ```
 
-## 🎬 &nbsp; Events
+## 🎬 &thinsp; Events
 
 `MultiSelect.svelte` dispatches the following events:
 
@@ -439,7 +439,7 @@ The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutor
 />
 ```
 
-## 🦺 &nbsp; TypeScript
+## 🦺 &thinsp; TypeScript
 
 The type of `options` is inferred automatically from the data you pass. E.g.
 
@@ -468,7 +468,7 @@ import {
 } from 'svelte-multiselect'
 ```
 
-## ✨ &nbsp; Styling
+## ✨ &thinsp; Styling
 
 There are 3 ways to style this component. To understand which options do what, it helps to keep in mind this simplified DOM structure of the component:
 
@@ -619,10 +619,10 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 }
 ```
 
-## 🆕 &nbsp; Changelog
+## 🆕 &thinsp; Changelog
 
 [View the changelog](changelog.md).
 
-## 🙏 &nbsp; Contributing
+## 🙏 &thinsp; Contributing
 
 Here are some steps to [get you started](contributing.md) if you'd like to contribute to this project!

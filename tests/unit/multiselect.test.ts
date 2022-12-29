@@ -851,13 +851,14 @@ class DragEvent extends MouseEvent {
   }
 }
 
-test(`test drag selected option to change order`, async () => {
+test(`dragging selected options across each other changes their order`, async () => {
   // https://github.com/janosh/svelte-multiselect/issues/176
   const options = [1, 2, 3]
   new MultiSelect({
     target: document.body,
     props: { options, selected: options },
   })
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 
   // test swapping selected options 1 and 2
   const li = doc_query(`ul.selected li`)
