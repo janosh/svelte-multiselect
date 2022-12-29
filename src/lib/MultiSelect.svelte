@@ -1,7 +1,12 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
-  import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option as GenericOption } from './'
+  import type {
+    DispatchEvents,
+    MultiSelectEvents,
+    ObjectOption,
+    Option as GenericOption,
+  } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
