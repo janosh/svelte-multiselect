@@ -6,7 +6,7 @@
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
-  type InferredOption = $$Generic<Option>;
+  type InferredOption = $$Generic<Option>
 
   export let activeIndex: number | null = null
   export let activeOption: InferredOption | null = null
@@ -19,8 +19,10 @@
   export let disabled: boolean = false
   export let disabledInputTitle: string = `This input is disabled`
   // case-insensitive equality comparison after string coercion (looking only at the `label` key of object options)
-  export let duplicateFunc: (op1: InferredOption, op2: InferredOption) => boolean = (op1, op2) =>
-    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
+  export let duplicateFunc: (op1: InferredOption, op2: InferredOption) => boolean = (
+    op1,
+    op2
+  ) => `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
   export let duplicateOptionMsg: string = `This option is already selected`
   export let duplicates: boolean = false // whether to allow duplicate options
   export let filterFunc = (op: InferredOption, searchText: string): boolean => {
@@ -64,7 +66,9 @@
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
-  export let sortSelected: boolean | ((op1: InferredOption, op2: InferredOption) => number) = false
+  export let sortSelected:
+    | boolean
+    | ((op1: InferredOption, op2: InferredOption) => number) = false
   export let selectedOptionsDraggable: boolean = !sortSelected
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
