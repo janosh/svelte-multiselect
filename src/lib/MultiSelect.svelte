@@ -1,15 +1,15 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
-  import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option } from './'
+  import type { DispatchEvents, MultiSelectEvents, ObjectOption, Option as GenericOption } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
 
-  type InferredOption = $$Generic<Option>
+  type Option = $$Generic<GenericOption>
 
   export let activeIndex: number | null = null
-  export let activeOption: InferredOption | null = null
+  export let activeOption: Option | null = null
   export let addOptionMsg: string = `Create this option...`
   export let allowUserOptions: boolean | 'append' = false
   export let autocomplete: string = `off`
@@ -19,13 +19,11 @@
   export let disabled: boolean = false
   export let disabledInputTitle: string = `This input is disabled`
   // case-insensitive equality comparison after string coercion (looking only at the `label` key of object options)
-  export let duplicateFunc: (op1: InferredOption, op2: InferredOption) => boolean = (
-    op1,
-    op2
-  ) => `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
+  export let duplicateFunc: (op1: Option, op2: Option) => boolean = (op1, op2) =>
+    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
   export let duplicateOptionMsg: string = `This option is already selected`
   export let duplicates: boolean = false // whether to allow duplicate options
-  export let filterFunc = (op: InferredOption, searchText: string): boolean => {
+  export let filterFunc = (op: Option, searchText: string): boolean => {
     if (!searchText) return true
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
   }
@@ -40,7 +38,7 @@
   export let liOptionClass: string = ``
   export let liSelectedClass: string = ``
   export let loading: boolean = false
-  export let matchingOptions: InferredOption[] = []
+  export let matchingOptions: Option[] = []
   export let maxSelect: number | null = null // null means there is no upper limit for selected.length
   export let maxSelectMsg: ((current: number, max: number) => string) | null = (
     current: number,
@@ -50,7 +48,7 @@
   export let name: string | null = null
   export let noMatchingOptionsMsg: string = `No matching options`
   export let open: boolean = false
-  export let options: InferredOption[]
+  export let options: Option[]
   export let outerDiv: HTMLDivElement | null = null
   export let outerDivClass: string = ``
   export let parseLabelsAsHtml: boolean = false // should not be combined with allowUserOptions!
@@ -62,20 +60,18 @@
   export let required: boolean | number = false
   export let resetFilterOnAdd: boolean = true
   export let searchText: string = ``
-  export let selected: InferredOption[] =
+  export let selected: Option[] =
     options
       ?.filter((op) => (op as ObjectOption)?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
-  export let sortSelected:
-    | boolean
-    | ((op1: InferredOption, op2: InferredOption) => number) = false
+  export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let selectedOptionsDraggable: boolean = !sortSelected
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
-  export let value: InferredOption | InferredOption[] | null = null
+  export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
-  const get_label = (op: InferredOption) => (op instanceof Object ? op.label : op)
+  const get_label = (op: Option) => (op instanceof Object ? op.label : op)
 
   // if maxSelect=1, value is the single item in selected (or null if selected is empty)
   // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
@@ -188,7 +184,7 @@
       } else {
         selected = [...selected, option]
         if (sortSelected === true) {
-          selected = selected.sort((op1: InferredOption, op2: InferredOption) => {
+          selected = selected.sort((op1: Option, op2: Option) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
             // coerce to string if labels are numbers
             return `${label1}`.localeCompare(`${label2}`)
