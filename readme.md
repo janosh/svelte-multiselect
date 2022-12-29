@@ -441,8 +441,32 @@ The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutor
 
 ## 🦺 &nbsp; TypeScript
 
-The type of the `options` prop will be automatically inferred and type-safety
-will be enforced for all related props (e.g. `selected`).
+The type of `options` is inferred automatically from the data you pass. E.g.
+
+```ts
+const options = [
+   { label: `foo`, value: 42 }
+   { label: `bar`, value: 69 }
+]
+// type Option = { label: string, value: number }
+const options = [`foo`, `bar`]
+// type Option = string
+const options = [42, 69]
+// type Option = number
+```
+
+The inferred type of `Option` is used to enforce type-safety on derived props like `selected` as well as slot components. E.g. you'll get an error when trying to use a slot component that expects a string if your options are objects (see [this comment](https://github.com/janosh/svelte-multiselect/pull/189/files#r1058853697) for example screenshots).
+
+You can also import [the types this component uses](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) for downstream applications:
+
+```ts
+import {
+  Option,
+  ObjectOption,
+  DispatchEvents,
+  MultiSelectEvents,
+} from 'svelte-multiselect'
+```
 
 ## ✨ &nbsp; Styling
 
