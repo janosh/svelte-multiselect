@@ -1,16 +1,10 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
-  import type {
-    DispatchEvents,
-    MultiSelectEvents,
-    ObjectOption,
-    Option as GenericOption,
-  } from './'
+  import type { DispatchEvents, MultiSelectEvents, Option as GenericOption } from './'
   import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import Wiggle from './Wiggle.svelte'
-
   type Option = $$Generic<GenericOption>
 
   export let activeIndex: number | null = null
@@ -67,7 +61,7 @@
   export let searchText: string = ``
   export let selected: Option[] =
     options
-      ?.filter((op) => (op as ObjectOption)?.preselected)
+      ?.filter((op) => op instanceof Object && op?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let selectedOptionsDraggable: boolean = !sortSelected
@@ -76,7 +70,7 @@
   export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
-  const get_label = (op: Option) => (op instanceof Object ? op.label : op)
+  const get_label = (op: GenericOption) => (op instanceof Object ? op.label : op)
 
   // if maxSelect=1, value is the single item in selected (or null if selected is empty)
   // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
