@@ -9,7 +9,7 @@ All notable changes to this project will be documented in this file. Dates are d
 > 28 December 2022
 
 - add 'Open in StackBlitz' links to example code fences [`ac07557`](https://github.com/janosh/svelte-multiselect/commit/ac075576c261892807faa0071b5f3e0b5b4fcd2c)
-- v8.2.2 contains unintended breaking changes and was deprecated on NPM (see [#188](https://github.com/janosh/svelte-multiselect/issues/188)). Use this fixed release instead.
+- v8.2.2 contains unintended breaking changes and was deprecated on NPM (see [#188](https://github.com/janosh/svelte-multiselect/issues/188)). Use this fixed release instead. [`ef4d669`](https://github.com/janosh/svelte-multiselect/commit/ef4d669)
 
 #### [v8.2.2](https://github.com/janosh/svelte-multiselect/compare/v8.2.1...v8.2.2)
 
@@ -116,7 +116,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Fix single select with arrow and enter keys [`#128`](https://github.com/janosh/svelte-multiselect/pull/128)
 - Add SCSS preprocessing [`#126`](https://github.com/janosh/svelte-multiselect/pull/126)
-- [pre-commit.ci] pre-commit autoupdate [`#124`](https://github.com/janosh/svelte-multiselect/pull/124)
+- pre-commit autoupdate [`#124`](https://github.com/janosh/svelte-multiselect/pull/124)
 - more unit tests [`1adbc99`](https://github.com/janosh/svelte-multiselect/commit/1adbc994b746b39c4ad081dc2573bf37f27c96c0)
 - test required but empty MultiSelect fails form validity check (i.e. causes unsubmittable form) and filled one passes it [`fd8b377`](https://github.com/janosh/svelte-multiselect/commit/fd8b37782cd508aacfc8125c6647cefe56144b80)
 
@@ -186,7 +186,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Convert E2E tests from`vitest` to `@playwright/test` [`#95`](https://github.com/janosh/svelte-multiselect/pull/95)
 - Allow empty Multiselect [`#94`](https://github.com/janosh/svelte-multiselect/pull/94)
 - Add new slot `'remove-icon'` [`#93`](https://github.com/janosh/svelte-multiselect/pull/93)
-- [pre-commit.ci] pre-commit autoupdate [`#92`](https://github.com/janosh/svelte-multiselect/pull/92)
+- pre-commit autoupdate [`#92`](https://github.com/janosh/svelte-multiselect/pull/92)
 
 #### [v5.0.3](https://github.com/janosh/svelte-multiselect/compare/v5.0.2...v5.0.3)
 
@@ -224,7 +224,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Fix backspace deleting multiple selected options if identical labels [`#72`](https://github.com/janosh/svelte-multiselect/pull/72)
 - Several fixes for `allowUserOptions` [`#69`](https://github.com/janosh/svelte-multiselect/pull/69)
-- [pre-commit.ci] pre-commit autoupdate [`#70`](https://github.com/janosh/svelte-multiselect/pull/70)
+- pre-commit autoupdate [`#70`](https://github.com/janosh/svelte-multiselect/pull/70)
 
 #### [v4.0.5](https://github.com/janosh/svelte-multiselect/compare/v4.0.4...v4.0.5)
 
@@ -347,7 +347,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - favorite web framework show Confetti.svelte on:add Svelte [`8d109ee`](https://github.com/janosh/svelte-multiselect/commit/8d109ee5c7755e447fcb72419f3b7ecc19cac0b2)
 - bump svelte@3.45.0 to silence warning: MultiSelect has unused export property 'defaultDisabledTitle' (sveltejs/svelte#6964) [`f80a7a6`](https://github.com/janosh/svelte-multiselect/commit/f80a7a622310005407585298f2611597c0941990)
 - update readme + svelte-toc@0.2.0 [`40013ba`](https://github.com/janosh/svelte-multiselect/commit/40013badd61dd0fcade7ab295dabd26693e3cc51)
-- [pre-commit.ci] pre-commit autoupdate [`0d05864`](https://github.com/janosh/svelte-multiselect/commit/0d05864d19987460dd30d667eb22deb91a520668)
+- pre-commit autoupdate [`0d05864`](https://github.com/janosh/svelte-multiselect/commit/0d05864d19987460dd30d667eb22deb91a520668)
 - iOS Safari prevent zoom into page on focus MultiSelect input [`44f17be`](https://github.com/janosh/svelte-multiselect/commit/44f17be53378e38f4a8748b815737d25cdebc85f)
 
 ### [v3.0.0](https://github.com/janosh/svelte-multiselect/compare/v2.0.0...v3.0.0)
@@ -398,7 +398,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Add new prop disabledOptions [`#9`](https://github.com/janosh/svelte-multiselect/pull/9)
 - add pre-commit hooks [`dfb6399`](https://github.com/janosh/svelte-multiselect/commit/dfb6399a77b705f8e5979eb887d345a5f52ff929)
-- [pre-commit.ci] pre-commit autoupdate [`b69425d`](https://github.com/janosh/svelte-multiselect/commit/b69425d18473122f1af889d2f48c60d02e43b99f)
+- pre-commit autoupdate [`b69425d`](https://github.com/janosh/svelte-multiselect/commit/b69425d18473122f1af889d2f48c60d02e43b99f)
 
 #### [v1.1.11](https://github.com/janosh/svelte-multiselect/compare/v1.1.10...v1.1.11)
 

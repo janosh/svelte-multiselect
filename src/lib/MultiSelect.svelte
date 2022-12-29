@@ -155,15 +155,15 @@
         // a new option from the user-entered text
         if (typeof options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
-          option = { label: searchText, value: searchText }
+          option = { label: searchText, value: searchText } as Option
         } else {
           if (
             [`number`, `undefined`].includes(typeof options[0]) &&
             !isNaN(Number(searchText))
           ) {
             // create new option as number if it parses to a number and 1st option is also number or missing
-            option = Number(searchText)
-          } else option = searchText // else create custom option as string
+            option = Number(searchText) as Option
+          } else option = searchText as Option // else create custom option as string
         }
         if (allowUserOptions === `append`) options = [...options, option]
       }
@@ -414,9 +414,10 @@
         on:dragstart={dragstart(idx)}
         on:drop|preventDefault={drop(idx)}
         on:dragenter={() => (drag_idx = idx)}
+        on:dragover|preventDefault
         class:active={drag_idx === idx}
-        ondragover="return false"
       >
+        <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
         <slot name="selected" {option} {idx}>
           {#if parseLabelsAsHtml}
             {@html get_label(option)}

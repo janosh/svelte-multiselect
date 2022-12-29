@@ -16,7 +16,7 @@
     node.innerHTML = node.innerHTML.replaceAll(`$lib`, name)
   })
   $: stackblitz_url = `https://stackblitz.com/github/janosh/svelte-multiselect?file=${encodeURIComponent(
-    `src/routes${$page.route.id}/+page.svx`
+    `src/routes${$page.url.pathname}/+page.svx`
   )}`
 </script>
 

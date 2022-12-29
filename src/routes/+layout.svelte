@@ -6,18 +6,18 @@
   import { _demo_routes } from './+layout'
 
   $: is_current = (path: string) => {
-    if (path === $page.route.id) return `page`
-    if (path !== `/` && $page.route.id.includes(path)) return `page`
+    if (path === $page.url.pathname) return `page`
+    if (path !== `/` && $page.url.pathname.includes(path)) return `page`
     return undefined
   }
 </script>
 
 <GitHubCorner href={repository} />
 
-{#if !$page.error && $page.route.id !== `/`}
+{#if !$page.error && $page.url.pathname !== `/`}
   <a href="." aria-label="Back to index page">&laquo; home</a>
 {/if}
-{#if _demo_routes.some((route) => $page.route.id.endsWith(route))}
+{#if _demo_routes.some((route) => $page.url.pathname.endsWith(route))}
   <h1>
     <img src="favicon.svg" alt="Svelte MultiSelect" height="50" width="50" />&ensp;Svelte
     MultiSelect Examples

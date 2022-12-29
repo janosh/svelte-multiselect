@@ -30,7 +30,7 @@
   }
 </script>
 
-<h2>👇 &nbsp; Examples</h2>
+<h2>👇 &thinsp; Examples</h2>
 
 <section>
   <h3>Multi Select</h3>

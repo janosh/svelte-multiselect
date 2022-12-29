@@ -9,7 +9,7 @@
   <Readme>
     <Examples slot="examples" />
     <svelte:fragment slot="nav">
-      <h2>📝 &nbsp; More examples</h2>
+      <h2>📝 &thinsp; More examples</h2>
       <p>
         Some more in-depth examples for specific features of <code>
           svelte-multiselect
