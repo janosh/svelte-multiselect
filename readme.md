@@ -441,21 +441,8 @@ The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutor
 
 ## 🦺 &nbsp; TypeScript
 
-TypeScript users can import the types used for internal type safety:
-
-```svelte
-<script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
-  import type { Option, ObjectOption } from 'svelte-multiselect'
-
-  const myOptions: ObjectOption[] = [
-    { label: 'foo', value: 42 },
-    { label: 'bar', value: 69 },
-  ]
-  // an Option can be string | number | ObjectOption
-  const myNumbers: Option[] = [42, 69]
-</script>
-```
+The type of the `options` prop will be automatically inferred and type-safety
+will be enforced for all related props (e.g. `selected`).
 
 ## ✨ &nbsp; Styling
 
