@@ -34,6 +34,12 @@
 
 <slot name="nav" />
 
+## 🧪 &thinsp; Coverage
+
+| Statements                                                                                 | Branches                                                                             | Lines                                                                            |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| ![Statements](https://img.shields.io/badge/statements-92.95%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-100%25-brightgreen.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-92.95%25-brightgreen.svg?style=flat) |
+
 ## 📜 &thinsp; Breaking changes
 
 - **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).

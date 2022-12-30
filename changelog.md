@@ -490,7 +490,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - remove hidden input for storing currently selected options as JSON [`802a219`](https://github.com/janosh/svelte-multiselect/commit/802a2195a28986c219298d7d9e7ca47f2aaf7db6)
 
-#### v1.0.0
+### v1.0.0
 
 > 7 May 2021
 
