@@ -69,7 +69,8 @@ export function scroll_into_view_if_needed_polyfill(
 
 if (
   typeof Element !== `undefined` &&
-  !Element.prototype?.scrollIntoViewIfNeeded
+  !Element.prototype?.scrollIntoViewIfNeeded &&
+  typeof IntersectionObserver !== `undefined`
 ) {
   Element.prototype.scrollIntoViewIfNeeded = scroll_into_view_if_needed_polyfill
 }
