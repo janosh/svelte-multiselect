@@ -47,11 +47,23 @@ To make a release, increase the `"version"` field in `package.json`. This packag
 - `v[x.y.z] -> v[x.y+1.z]`: minor release with new features
 - `v[x.y.z] -> v[x.y.z+1]`: patch release with bug fixes
 
-Now run the `changelog` script from `package.json` to update `changelog.md`, then commit both files to the `main` branch using the new version number prefixed by `'v'` as commit message and tag:
+Now run the `changelog` script from `package.json` to update `changelog.md`.
 
 ```sh
 pnpm changelog  # or npm run changelog
-git add package.json changelog.md
+```
+
+If there have been significant code changes since the last release, it's good to update the coverage badges in the readme.
+
+```sh
+pnpm test:unit --run --coverage
+npx istanbul-badges-readme
+```
+
+Then commit `package.json`, `changelog.md` and `readme.md` files to the `main` branch using the new version number prefixed by `'v'` as commit message and tag:
+
+```sh
+git add package.json changelog.md readme.md
 git commit -m vx.y.z
 git tag $(git log -1 --pretty=%B)
 ```

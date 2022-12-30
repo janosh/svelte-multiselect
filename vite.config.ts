@@ -11,7 +11,8 @@ const vite_config: UserConfig & { test: VitestConfig } = {
     environment: `jsdom`,
     css: true,
     coverage: {
-      reporter: [`text`, `json`, `html`],
+      // add 'json'/'html' for more detailed reports
+      reporter: [`text`, `json-summary`],
     },
   },
 
