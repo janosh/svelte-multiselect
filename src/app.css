@@ -13,9 +13,10 @@
   --sms-margin: 1em 0;
 
   --toc-mobile-bg: #1c0e3e;
-  --toc-li-padding: 4pt 1ex;
+  --toc-li-padding: 3pt 1ex;
   --toc-mobile-btn-color: white;
   --toc-desktop-nav-margin: 0 0 0 1em;
+  --toc-active-bg: teal;
 
   --ghc-color: var(--night);
   --ghc-bg: white;
@@ -85,11 +86,13 @@ label {
 
 table {
   border-collapse: collapse;
-  width: 100%;
 }
 table :is(td, th) {
-  border: 1px solid gray;
-  padding: 0.4em 0.8em;
+  border: 1px dashed teal;
+  padding: 5pt 9pt;
+}
+table img {
+  vertical-align: middle;
 }
 tbody tr:nth-child(odd) {
   background: black;

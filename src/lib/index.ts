@@ -46,23 +46,31 @@ export type MultiSelectEvents = {
 // https://github.com/janosh/svelte-multiselect/issues/87
 // this polyfill was copied from
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
+// exported for testing
+export function scroll_into_view_if_needed_polyfill(
+  centerIfNeeded: boolean = true
+) {
+  const el = this as Element
+  const observer = new IntersectionObserver(function ([entry]) {
+    const ratio = entry.intersectionRatio
+    if (ratio < 1) {
+      const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
+      el.scrollIntoView({
+        block: place,
+        inline: place,
+      })
+    }
+    this.disconnect()
+  })
+  observer.observe(this)
+
+  return observer // return for testing
+}
+
 if (
   typeof Element !== `undefined` &&
   !Element.prototype?.scrollIntoViewIfNeeded &&
   typeof IntersectionObserver !== `undefined`
 ) {
-  Element.prototype.scrollIntoViewIfNeeded = function (centerIfNeeded = true) {
-    const el = this as Element
-    new IntersectionObserver(function ([entry]) {
-      const ratio = entry.intersectionRatio
-      if (ratio < 1) {
-        const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-        el.scrollIntoView({
-          block: place,
-          inline: place,
-        })
-      }
-      this.disconnect()
-    }).observe(this)
-  }
+  Element.prototype.scrollIntoViewIfNeeded = scroll_into_view_if_needed_polyfill
 }

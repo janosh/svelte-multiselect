@@ -36,6 +36,9 @@ jobs:
     needs: tests
     if: github.event_name == 'release' && needs.tests.result == 'success'
     steps:
+      - name: Check out repo
+        uses: actions/checkout@v3
+
       - name: Build package and publish to NPM
         run: |
           npm install
