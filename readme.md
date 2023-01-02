@@ -51,9 +51,9 @@
 ## 🔨 &thinsp; Installation
 
 ```sh
-npm install -D svelte-multiselect
-pnpm add -D svelte-multiselect
-yarn add -D svelte-multiselect
+npm install --dev svelte-multiselect
+pnpm add --dev svelte-multiselect
+yarn add --dev svelte-multiselect
 ```
 
 ## 📙 &thinsp; Usage

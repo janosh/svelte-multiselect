@@ -20,7 +20,8 @@
     "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
     "test:unit": "vitest tests/unit/*.ts",
     "test:e2e": "playwright test tests/*.test.ts",
-    "changelog": "npx auto-changelog --package --output changelog.md --unreleased-only --hide-credit --commit-limit false"
+    "changelog": "npx auto-changelog --package --output changelog.md --unreleased-only --hide-credit --commit-limit false",
+    "update-coverage": "pnpm test:unit --run --coverage && npx istanbul-badges-readme"
   },
   "devDependencies": {
     "@iconify/svelte": "^3.0.1",

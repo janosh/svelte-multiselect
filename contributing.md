@@ -1,6 +1,6 @@
 # Contributing
 
-## 🙋 What can I help out with?
+## 🙋 How can I help?
 
 If you submitted a feature request and it got the green light, by all means implement it yourself. Or look for [issues labeled 'help wanted'](https://github.com/janosh/svelte-multiselect/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and start working on those. If you don't finish but have a sizeable chunk of code, feel free to submit as draft PR anyway. Someone else might take over.
 
@@ -56,8 +56,7 @@ pnpm changelog  # or npm run changelog
 If there have been significant code changes since the last release, it's good to update the coverage badges in the readme.
 
 ```sh
-pnpm test:unit --run --coverage
-npx istanbul-badges-readme
+pnpm update-coverage
 ```
 
 Then commit `package.json`, `changelog.md` and `readme.md` files to the `main` branch using the new version number prefixed by `'v'` as commit message and tag:
