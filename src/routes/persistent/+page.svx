@@ -12,7 +12,7 @@
 
 <br />
 
-```svelte example id="languages"
+```svelte example stackblitz id="languages"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'

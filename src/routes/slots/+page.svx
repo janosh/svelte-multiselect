@@ -2,7 +2,7 @@
 
 ### Svelte SVG component as `slot="remove-icon"`
 
-```svelte example id="languages-1"
+```svelte example stackblitz id="languages-1"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
@@ -33,7 +33,7 @@
 
 ### Simple HTML tag as `slot="remove-icon"`
 
-```svelte example id="languages-2"
+```svelte example stackblitz id="languages-2"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'

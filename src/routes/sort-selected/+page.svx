@@ -2,7 +2,7 @@
 
 ### Frontend Lib Picker (default sorting)
 
-```svelte example id="default-sort"
+```svelte example stackblitz id="default-sort"
 <script>
   import MultiSelect from '$lib'
   import { frontend_libs } from '$src/options'
@@ -19,7 +19,7 @@
 
 ### Frontend Lib Picker (custom sorting by programming language)
 
-```svelte example id="custom-sort"
+```svelte example stackblitz id="custom-sort"
 <script lang="ts">
   import MultiSelect, { type Option } from '$lib'
   import { frontend_libs } from '$src/options'
