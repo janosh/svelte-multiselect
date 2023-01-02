@@ -11,9 +11,8 @@
     <svelte:fragment slot="nav">
       <h2>📝 &thinsp; More examples</h2>
       <p>
-        Some more in-depth examples for specific features of <code>
-          svelte-multiselect
-        </code>:
+        Some more in-depth examples for specific features of
+        <code>svelte-multiselect</code>:
       </p>
       <nav>
         {#each _demo_routes as route, idx}
@@ -47,11 +46,5 @@
   }
   :global(.hide-in-docs) {
     display: none;
-  }
-  :global(aside.toc.desktop) {
-    position: fixed;
-    top: 3em;
-    left: calc(50vw + 50em / 2);
-    max-width: 16em;
   }
 </style>

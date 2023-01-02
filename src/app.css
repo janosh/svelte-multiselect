@@ -138,3 +138,11 @@ blockquote p:first-child {
 div.multiselect.invalid {
   border: 1px solid red !important;
 }
+
+/* svelte-toc styles */
+aside.toc.desktop {
+  position: fixed;
+  top: 3em;
+  left: calc(50vw + 50em / 2);
+  max-width: 16em;
+}
