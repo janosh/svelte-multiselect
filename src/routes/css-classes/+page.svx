@@ -3,7 +3,7 @@
 
 ## External CSS Classes
 
-```svelte example id="foods"
+```svelte example stackblitz id="foods"
 <script>
   import MultiSelect from '$lib'
 

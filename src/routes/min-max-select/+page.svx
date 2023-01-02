@@ -2,7 +2,7 @@
 
 `maxSelect={5}` prevents users from selecting more than 5 options.
 
-```svelte example id="languages"
+```svelte example stackblitz id="languages"
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
@@ -28,7 +28,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 `required={3}` means users have to pick at least 3 options before they can submit a form.
 
-```svelte example
+```svelte example stackblitz
 <script lang="ts">
   import MultiSelect from '$lib'
 
@@ -48,7 +48,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 Of course you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
-```svelte example
+```svelte example stackblitz
 <script lang="ts">
   import MultiSelect from '$lib'
 
