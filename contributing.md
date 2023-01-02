@@ -2,9 +2,7 @@
 
 ## 🙋 How can I help?
 
-If you submitted a feature request and it got the green light, by all means implement it yourself. Or look for [issues labeled 'help wanted'](https://github.com/janosh/svelte-multiselect/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and start working on those. If you don't finish but have a sizeable chunk of code, feel free to submit as draft PR anyway. Someone else might take over.
-
-PRs don't always have to add functionality. If you have ideas for new examples or how to improve the docs, let's hear'em! Likewise new tests for existing functionality are always welcome.
+Pull requests to improve docs, test coverage or examples are always welcome! If you want to implement a new feature, please submit an issue first so we can discuss project-fit. You can also look for [issues labeled 'help wanted'](https://github.com/janosh/svelte-multiselect/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and open a PR to close one of those. If you don't finish, you're welcome to submit it as draft PR anyway. Someone else might take over.
 
 ## 🚀 Submit a PR
 
@@ -17,10 +15,14 @@ pnpm install
 pnpm dev
 ```
 
-Before you start committing, make sure you checked out a new descriptively named branch:
+Before you start committing, create and check out a descriptively named branch:
 
 ```sh
 git checkout -b <my-cool-new-feature>
+# or
+git checkout -b <docs-on-something>
+# or
+git checkout -b <test-some-feature>
 ```
 
 To ensure your changes didn't break anything, run the full test suite (which also runs in CI):
@@ -41,7 +43,7 @@ This repo has 3 required CI checks that have to pass for every PR before merging
 
 ## 🆕 New release
 
-To make a release, increase the `"version"` field in `package.json`. This package (mostly) follows semantic versioning, meaning
+To make a release, increase the `"version"` field in `package.json`. This package follows semantic versioning, meaning
 
 - `v[x.y.z] -> v[x+1.y.z]`: major release with breaking changes
 - `v[x.y.z] -> v[x.y+1.z]`: minor release with new features

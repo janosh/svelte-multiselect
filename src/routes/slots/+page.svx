@@ -6,10 +6,10 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
-  import LanguageSlot from '$src/components/LanguageSlot.svelte'
-  import CollapseIcon from '$src/components/CollapseIcon.svelte'
-  import ExpandIcon from '$src/components/ExpandIcon.svelte'
-  import MinusIcon from '$src/components/MinusIcon.svelte'
+  import LanguageSlot from '$src/site/LanguageSlot.svelte'
+  import CollapseIcon from '$src/site/CollapseIcon.svelte'
+  import ExpandIcon from '$src/site/ExpandIcon.svelte'
+  import MinusIcon from '$src/site/MinusIcon.svelte'
 </script>
 
 <MultiSelect
@@ -37,9 +37,9 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
-  import LanguageSlot from '$src/components/LanguageSlot.svelte'
-  import CollapseIcon from '$src/components/CollapseIcon.svelte'
-  import ExpandIcon from '$src/components/ExpandIcon.svelte'
+  import LanguageSlot from '$src/site/LanguageSlot.svelte'
+  import CollapseIcon from '$src/site/CollapseIcon.svelte'
+  import ExpandIcon from '$src/site/ExpandIcon.svelte'
 
   // local variable used in CollapseIcon on:click callback to close dropdown
   let open
