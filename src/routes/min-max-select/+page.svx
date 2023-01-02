@@ -6,7 +6,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
-  import LanguageSlot from '$src/components/LanguageSlot.svelte'
+  import LanguageSlot from '$src/site/LanguageSlot.svelte'
 </script>
 
 <MultiSelect

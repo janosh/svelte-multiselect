@@ -23,7 +23,7 @@ const rehypePlugins = [
   ],
 ]
 const remarkPlugins = [
-  [examples, { defaults: { Wrapper: `/src/components/ExampleCode.svelte` } }],
+  [examples, { defaults: { Wrapper: `/src/site/ExampleCode.svelte` } }],
 ]
 
 /** @type {import('@sveltejs/kit').Config} */

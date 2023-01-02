@@ -1,7 +1,7 @@
 <script lang="ts">
   import Toc from 'svelte-toc'
   import Readme from '../../readme.md'
-  import Examples from '../components/Examples.svelte'
+  import Examples from '../site/Examples.svelte'
   import { _demo_routes } from './+layout'
 </script>
 
