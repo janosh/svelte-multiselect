@@ -7,7 +7,7 @@
   import CopyButton from './CopyButton.svelte'
 
   // src+meta are passed in by mdsvexamples
-  export let src: string // code fence content
+  export let src: string // code fence content, sadly without indentation so we prefer node?.innerText below
   export let meta: {
     // code fence metadata
     collapsible?: boolean
@@ -16,11 +16,10 @@
     github?: string
     stackblitz?: string | boolean
   }
-
-  export let duration: number = 200
   export let open: boolean = !meta.collapsible
 
   let node: HTMLElement // the <code> element
+  $: ({ repl, github, stackblitz } = meta)
 
   onMount(() => {
     // replace $lib with package name in code
@@ -28,25 +27,25 @@
   })
 </script>
 
+{#if meta.collapsible}
+  <nav>
+    <slot name="title" />
+    <button on:click={() => (open = !open)}>
+      <Icon icon="carbon:chevron-{open ? `up` : `down`}" inline />
+      {open ? `Close` : `View code`}
+    </button>
+    <CodeLinks {repl} {github} {stackblitz} />
+  </nav>
+{/if}
 <!-- wrap in div with id for precise CSS selectors in playwright E2E tests -->
 <div id={meta.id}>
   <slot name="example" />
-  {#if meta.collapsible}
-    <nav>
-      <CodeLinks {...meta} />
-      <slot name="title" />
-      <button on:click={() => (open = !open)}>
-        <Icon icon="carbon:chevron-{open ? `up` : `down`}" inline />
-        {open ? `Close` : `View code`}
-      </button>
-    </nav>
-  {/if}
 
   <div class="collapsible" class:open>
     <aside>
-      <CopyButton content={src} />
+      <CopyButton content={node?.innerText ?? src} />
       {#if !meta.collapsible}
-        <CodeLinks {...meta} />
+        <CodeLinks {repl} {github} {stackblitz} />
       {/if}
     </aside>
     <pre><code bind:this={node}><slot name="code" /></code></pre>
@@ -54,17 +53,6 @@
 </div>
 
 <style>
-  pre {
-    margin-top: 2em;
-  }
-  aside {
-    position: absolute;
-    top: 1em;
-    right: 1em;
-    display: flex;
-    gap: 1ex;
-  }
-
   div.collapsible {
     position: relative;
     visibility: hidden;
@@ -76,12 +64,19 @@
     visibility: visible;
     opacity: 1;
     max-height: 9999vh;
+    margin-top: 2em;
+  }
+  aside {
+    position: absolute;
+    top: 1em;
+    right: 1em;
+    display: flex;
+    gap: 1ex;
   }
   nav {
     display: flex;
     gap: 1ex;
-  }
-  nav > button {
-    line-height: 15pt;
+    justify-content: end;
+    margin-top: 1em;
   }
 </style>

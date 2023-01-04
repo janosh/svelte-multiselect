@@ -34,6 +34,15 @@
   let value: { label: string, disabled: boolean, preselected: boolean }
   let searchText = ''
   let loading = false
+  let options = ml_libs
+  $: if (searchText) {
+    loading = true
+    setTimeout(async () => {
+      // perform some fetch/database request here to get list of options matching searchText
+      // options = await fetch(`https://example.com?search=${searchText}`)
+      loading = false
+    }, 1000)
+  }
 </script>
 
 <pre>value = {JSON.stringify(value)}</pre>
@@ -42,7 +51,7 @@
   id="fav-ml-tool"
   maxSelect={1}
   maxSelectMsg={(current, max) => `${current} of ${max} selected`}
-  options={ml_libs}
+  bind:options
   bind:value
   bind:searchText
   placeholder="Favorite machine learning tool?"
