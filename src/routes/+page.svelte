@@ -1,6 +1,6 @@
 <script lang="ts">
+  import Readme from '$root/readme.md'
   import Toc from 'svelte-toc'
-  import Readme from '../../readme.md'
   import Examples from '../site/Examples.svx'
   import { _demo_routes } from './+layout'
 </script>

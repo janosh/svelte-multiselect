@@ -1,7 +1,7 @@
 <script lang="ts">
   import { page } from '$app/stores'
+  import { repository } from '$root/package.json'
   import GitHubCorner from 'svelte-github-corner'
-  import { repository } from '../../package.json'
   import '../app.css'
   import { _demo_routes } from './+layout'
 
