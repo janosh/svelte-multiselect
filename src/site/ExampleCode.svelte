@@ -1,8 +1,8 @@
 <script lang="ts">
   // see svelte.config.js where this component is passed to mdsvexamples
+  import { name } from '$root/package.json'
   import Icon from '@iconify/svelte'
   import { onMount } from 'svelte'
-  import { name } from '../../package.json'
   import CodeLinks from './CodeLinks.svelte'
   import CopyButton from './CopyButton.svelte'
 

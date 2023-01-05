@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { foods, languages } from '$src/options'
   import LanguageSlot from '$src/site/LanguageSlot.svelte'

@@ -334,7 +334,7 @@ test.each([
 
   expect(console.error).toHaveBeenCalledTimes(expected)
   if (expected > 0) {
-    expect(console.error.mock.calls[0][0]).toContain(
+    expect(console.error).toHaveBeenCalledWith(
       `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
     )
   }
@@ -673,7 +673,7 @@ test.each([
       props: { options: [1, 2, 3], resetFilterOnAdd },
     })
 
-    const input = doc_query(`ul.selected input`)
+    const input = doc_query<HTMLInputElement>(`ul.selected input`)
     input.value = `1`
     input.dispatchEvent(new InputEvent(`input`))
     await sleep()

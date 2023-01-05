@@ -8,7 +8,6 @@
   "version": "8.2.3",
   "type": "module",
   "svelte": "index.js",
-  "main": "index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
   "scripts": {
     "dev": "vite dev",

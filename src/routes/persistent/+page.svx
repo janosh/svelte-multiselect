@@ -1,9 +1,7 @@
-<script>
+<script lang="ts">
   import hljs from 'highlight.js/lib/common'
   import 'highlight.js/styles/vs2015.css'
-
-  const glob = import.meta.glob(`/src/stores.ts`, { eager: true, as: `raw` })
-  const store_code = glob[`/src/stores.ts`]
+  import store_code from '/src/stores.ts?raw'
 </script>
 
 ## Page-Reload Persistent MultiSelect

@@ -1,6 +1,3 @@
-<script>
-</script>
-
 ## External CSS Classes
 
 ```svelte example stackblitz id="foods"

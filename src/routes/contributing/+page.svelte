@@ -1,6 +1,6 @@
 <script lang="ts">
+  import Contributing from '$root/contributing.md'
   import Toc from 'svelte-toc'
-  import Contributing from '../../../contributing.md'
 </script>
 
 <main>

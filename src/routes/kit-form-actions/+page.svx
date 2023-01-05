@@ -1,9 +1,7 @@
 <script>
-  import hljs from 'highlight.js/lib/common'
-  import 'highlight.js/styles/vs2015.css'
-
-  // const glob = import.meta.glob(`./*`, { eager: true, as: `raw` })
-  // const server_code = glob[`./+page.server.ts`]
+  // import hljs from 'highlight.js/lib/common'
+  // import 'highlight.js/styles/vs2015.css'
+  // import server_code from './+page.server.ts?raw'
 </script>
 
 ## Hook up Multiselect to SvelteKit form action incl. form validation
@@ -19,7 +17,7 @@ HTML.
   import MultiSelect from '$lib'
   import ColorSlot from '$src/site/ColorSlot.svelte'
   import { colors } from '$src/options'
-  import { repository } from '../../../package.json'
+  import { repository } from '$root/package.json'
   import type { ActionData, PageServerData } from './$types'
 
   export let form: ActionData

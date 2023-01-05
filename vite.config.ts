@@ -19,6 +19,7 @@ const vite_config: UserConfig & { test: VitestConfig } = {
   resolve: {
     alias: {
       $src: resolve(`./src`),
+      $root: resolve(`.`),
     },
   },
 

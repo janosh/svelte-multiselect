@@ -18,7 +18,8 @@
   export let disabled: boolean = false
   export let disabledInputTitle: string = `This input is disabled`
   // case-insensitive equality comparison after string coercion (looking only at the `label` key of object options)
-  export let duplicateFunc: (op1: Option, op2: Option) => boolean = (op1, op2) =>
+  // prettier-ignore
+  export let duplicateFunc: (op1: GenericOption, op2: GenericOption) => boolean = (op1, op2) =>
     `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
   export let duplicateOptionMsg: string = `This option is already selected`
   export let duplicates: boolean = false // whether to allow duplicate options
@@ -155,7 +156,7 @@
         // a new option from the user-entered text
         if (typeof options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
-          option = { label: searchText, value: searchText } as Option
+          option = { label: searchText } as Option
         } else {
           if (
             [`number`, `undefined`].includes(typeof options[0]) &&
@@ -178,7 +179,7 @@
         return
       }
       if (maxSelect === 1) {
-        // for maxselect = 1 we always replace current option with new one
+        // for maxSelect = 1 we always replace current option with new one
         selected = [option]
       } else {
         selected = [...selected, option]
@@ -217,7 +218,7 @@
     const option =
       options.find((option) => get_label(option) === label) ??
       // if option with label could not be found but allowUserOptions is truthy,
-      // assume it was created by user and create correspondidng option object
+      // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
       (allowUserOptions && { label, value: label })
 
@@ -250,7 +251,7 @@
 
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
-    // on escape or tab out of input: dismiss options dropdown and reset search text
+    // on escape or tab out of input: close options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
       close_dropdown(event)
       searchText = ``
