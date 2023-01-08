@@ -20,22 +20,18 @@ jobs:
       - name: Check out repo
         uses: actions/checkout@v3
 
-      - name: Set up pnpm
-        uses: pnpm/action-setup@v2
-        with:
-          version: latest
-
       - name: Set up node
         uses: actions/setup-node@v3
         with:
           node-version: 18
-          cache: pnpm
+          cache: npm
+          cache-dependency-path: package.json
 
       - name: Install dependencies
-        run: pnpm install
+        run: npm install
 
       - name: Build site
-        run: pnpm build
+        run: npm run build
 
       - name: Upload build artifact
         uses: actions/upload-pages-artifact@v1

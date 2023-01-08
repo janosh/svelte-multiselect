@@ -66,7 +66,7 @@
   import MultiSelect from '$lib'
   import { frontend_libs } from '../options'
   import RepoSlot from './RepoSlot.svelte'
-  import Confetti from './Confetti.svelte'
+  import { Confetti } from 'svelte-zoo'
   import type { ObjectOption } from '$lib'
 
   const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {

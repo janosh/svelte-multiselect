@@ -22,9 +22,16 @@ const rehypePlugins = [
     },
   ],
 ]
-const remarkPlugins = [
-  [examples, { defaults: { Wrapper: `/src/site/ExampleCode.svelte` } }],
-]
+const { default: pkg } = await import(`./package.json`, {
+  assert: { type: `json` },
+})
+const defaults = {
+  Wrapper: `svelte-zoo/CodeExample.svelte`,
+  pkg: pkg.name,
+  repo: pkg.repository,
+}
+
+const remarkPlugins = [[examples, { defaults }]]
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {
