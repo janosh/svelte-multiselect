@@ -11,7 +11,6 @@ const vite_config: UserConfig & { test: VitestConfig } = {
     environment: `jsdom`,
     css: true,
     coverage: {
-      // add 'json'/'html' for more detailed reports
       reporter: [`text`, `json-summary`],
     },
   },
@@ -24,7 +23,7 @@ const vite_config: UserConfig & { test: VitestConfig } = {
   },
 
   server: {
-    fs: { allow: [`..`] }, // needed to import readme.md
+    fs: { allow: [`..`] }, // needed to import from $root
     port: 3000,
   },
 

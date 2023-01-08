@@ -7,8 +7,7 @@
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
   import LanguageSlot from '$src/site/LanguageSlot.svelte'
-  import CollapseIcon from '$src/site/CollapseIcon.svelte'
-  import ExpandIcon from '$src/site/ExpandIcon.svelte'
+  import { Icon } from 'svelte-zoo'
   import MinusIcon from '$src/site/MinusIcon.svelte'
 </script>
 
@@ -20,13 +19,7 @@
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
-  <svelte:fragment slot="expand-icon" let:open>
-    {#if open}
-      <CollapseIcon width="1em" />
-    {:else}
-      <ExpandIcon width="1em" />
-    {/if}
-  </svelte:fragment>
+  <Icon slot="expand-icon" let:open icon={open ? 'Collapse' : 'Expand'} />
   <MinusIcon slot="remove-icon" width="1em" />
 </MultiSelect>
 ```
@@ -38,8 +31,7 @@
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
   import LanguageSlot from '$src/site/LanguageSlot.svelte'
-  import CollapseIcon from '$src/site/CollapseIcon.svelte'
-  import ExpandIcon from '$src/site/ExpandIcon.svelte'
+  import { Icon } from 'svelte-zoo'
 
   // local variable used in CollapseIcon on:click callback to close dropdown
   let open
@@ -49,18 +41,22 @@
   options={languages}
   maxSelect={5}
   placeholder="What languages do you know?"
-  selected={['Python', 'TypeScript', 'Julia']}
+  selected={[`Python`, `TypeScript`, `Julia`]}
   bind:open
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
-  <svelte:fragment slot="expand-icon">
-    {#if open}
-      <CollapseIcon width="1em" on:click={() => (open = false)} />
-    {:else}
-      <ExpandIcon width="1em" />
-    {/if}
-  </svelte:fragment>
+  <button
+    slot="expand-icon"
+    let:open
+    on:click={() => (open = false)}
+    on:keyup|preventDefault={(event) => {
+      if ([`Enter`, `Space`].includes(event.code)) open = !open
+    }}
+  >
+    <Icon icon={open ? `Collapse` : `Expand`} />
+  </button>
   <span slot="remove-icon">x</span>
 </MultiSelect>
+
 ```

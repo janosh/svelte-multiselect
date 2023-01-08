@@ -4,7 +4,7 @@ import type { LayoutLoad } from './$types'
 export const prerender = true
 
 export const _demo_routes = Object.keys(
-  import.meta.glob(`./*/+page.{svx,svelte}`)
+  import.meta.glob(`./*/+page.{svx,md,svelte}`)
 )
   .map((filename) => filename.split(`/`)[1])
   .filter((name) => ![`contributing`, `changelog`].includes(name))
