@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v8.2.4](https://github.com/janosh/svelte-multiselect/compare/v8.2.3...v8.2.4)
+
+> 8 January 2023
+
+- Coverage badges [`#190`](https://github.com/janosh/svelte-multiselect/pull/190)
+- feat: add type inference for the `options` prop [`#189`](https://github.com/janosh/svelte-multiselect/pull/189)
+- feat: add type inference for the `options` prop (#189) [`#78`](https://github.com/janosh/svelte-multiselect/issues/78)
+- merge ExampleCode.svelte with CollapsibleCode.svelte [`56ff99b`](https://github.com/janosh/svelte-multiselect/commit/56ff99bcc378c5582b303aa1c03302cdbceb3076)
+- pnpm add -D svelte-zoo to outsource some site components and icons [`6ee64f3`](https://github.com/janosh/svelte-multiselect/commit/6ee64f376dfe166b993c94a36d376d1dce5f44f5)
+- restore reactive searchText block in loading example [`846da66`](https://github.com/janosh/svelte-multiselect/commit/846da66af058ac1f448c8aaa513d12fb4c2ac4cc)
+- fix bunch of TS errors, add playwright test for dragging selected options to reorder [`a483217`](https://github.com/janosh/svelte-multiselect/commit/a4832176f6fceb5346af2d4cd8ecc01a5626ab43)
+- add update-coverage package.json script [`1094f08`](https://github.com/janosh/svelte-multiselect/commit/1094f08cec9d6fd2f54b058af05022ab35ec4ac9)
+- add vite alias $root to clean up package.json, readme|contributing|changelog.md imports [`c19cbe4`](https://github.com/janosh/svelte-multiselect/commit/c19cbe4e38413bbcd04d4e35eddcd4cd88c67662)
+- mv src/components src/site [`3683ed7`](https://github.com/janosh/svelte-multiselect/commit/3683ed70f19498070ffe9e95c0261c688fb2f7c7)
+
 <!-- auto-changelog-above -->
 
 #### [v8.2.3](https://github.com/janosh/svelte-multiselect/compare/v8.2.2...v8.2.3)
