@@ -1,6 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import examples from 'mdsvexamples/vite'
-import { resolve } from 'path'
 import type { UserConfig } from 'vite'
 import type { UserConfig as VitestConfig } from 'vitest'
 
@@ -12,13 +11,6 @@ const vite_config: UserConfig & { test: VitestConfig } = {
     css: true,
     coverage: {
       reporter: [`text`, `json-summary`],
-    },
-  },
-
-  resolve: {
-    alias: {
-      $src: resolve(`./src`),
-      $root: resolve(`.`),
     },
   },
 

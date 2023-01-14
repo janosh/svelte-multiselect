@@ -15,7 +15,7 @@ HTML.
 ```svelte example stackblitz
 <script lang="ts">
   import MultiSelect from '$lib'
-  import ColorSlot from '$src/site/ColorSlot.svelte'
+  import { ColorSlot } from '$site'
   import { colors } from '$src/options'
   import { repository } from '$root/package.json'
   import type { ActionData, PageServerData } from './$types'
@@ -92,7 +92,7 @@ HTML.
 
 ### +page.server.ts
 
-The above codes needs to be in a `+page.svelte` file with the following `+page.server.ts` file in the same directory next to it.
+The above code needs to be in a `+page.svelte` file with the following `+page.server.ts` file in the same directory next to it.
 
 ```ts
 import { invalid } from '@sveltejs/kit'

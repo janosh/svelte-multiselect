@@ -1,7 +1,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { foods, languages } from '$src/options'
-  import LanguageSlot from '$src/site/LanguageSlot.svelte'
+  import { LanguageSlot } from '$site'
 
   let selected_empty = []
 </script>
@@ -35,7 +35,7 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
-  import LanguageSlot from '$src/site/LanguageSlot.svelte'
+  import { LanguageSlot } from '$site'
 
   let selected_append = ['Haskell', 'TypeScript']
 </script>

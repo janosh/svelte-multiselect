@@ -6,7 +6,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$src/options'
-  import LanguageSlot from '$src/site/LanguageSlot.svelte'
+  import { LanguageSlot } from '$site'
 </script>
 
 <MultiSelect
@@ -46,7 +46,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 <br />
 
-Of course you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
+Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
 ```svelte example stackblitz
 <script lang="ts">
