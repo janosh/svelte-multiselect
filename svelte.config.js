@@ -2,14 +2,14 @@ import adapter from '@sveltejs/adapter-static'
 import { s } from 'hastscript'
 import { mdsvex } from 'mdsvex'
 import examples from 'mdsvexamples'
-import linkHeadings from 'rehype-autolink-headings'
-import headingSlugs from 'rehype-slug'
+import link_headings from 'rehype-autolink-headings'
+import heading_slugs from 'rehype-slug'
 import preprocess from 'svelte-preprocess'
 
 const rehypePlugins = [
-  headingSlugs,
+  heading_slugs,
   [
-    linkHeadings,
+    link_headings,
     {
       behavior: `append`,
       test: [`h2`, `h3`, `h4`, `h5`, `h6`], // don't auto-link <h1>
@@ -30,7 +30,6 @@ const defaults = {
   pkg: pkg.name,
   repo: pkg.repository,
 }
-
 const remarkPlugins = [[examples, { defaults }]]
 
 /** @type {import('@sveltejs/kit').Config} */
@@ -44,6 +43,12 @@ export default {
 
   kit: {
     adapter: adapter(),
+
+    alias: {
+      $root: `.`,
+      $src: `./src`,
+      $site: `./src/site`,
+    },
   },
 
   package: {

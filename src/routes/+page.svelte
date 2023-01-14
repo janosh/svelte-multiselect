@@ -1,8 +1,7 @@
 <script lang="ts">
   import Readme from '$root/readme.md'
+  import { DemoNav, Examples } from '$site'
   import Toc from 'svelte-toc'
-  import Examples from '../site/Examples.svx'
-  import { _demo_routes } from './+layout'
 </script>
 
 <main>
@@ -14,12 +13,7 @@
         Some more in-depth examples for specific features of
         <code>svelte-multiselect</code>:
       </p>
-      <nav>
-        {#each _demo_routes as route, idx}
-          {#if idx > 0}<strong>&bull;</strong>{/if}
-          <a href={route}>{route}</a>
-        {/each}
-      </nav>
+      <DemoNav />
     </svelte:fragment>
   </Readme>
 </main>
@@ -27,16 +21,6 @@
 <Toc headingSelector="main > :where(h2, h3)" breakpoint={1250} />
 
 <style>
-  nav {
-    display: flex;
-    gap: 2ex 1ex;
-    flex-wrap: wrap;
-  }
-  nav a {
-    padding: 1pt 4pt;
-    background-color: rgba(255, 255, 255, 0.1);
-    border-radius: 3pt;
-  }
   @media (max-width: 600px) {
     :global(h1[align='center']) {
       display: flex;
