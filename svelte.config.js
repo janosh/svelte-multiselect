@@ -56,4 +56,8 @@ export default {
     exports: (filepath) =>
       [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
   },
+
+  compilerOptions: {
+    immutable: true,
+  },
 }

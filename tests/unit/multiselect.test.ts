@@ -35,9 +35,9 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   })
 
   // test internal change to activeOption binds outwards
-  let activeOption: Option
+  let active_option: Option
   binder.$on(`activeOption-changed`, (e: CustomEvent) => {
-    activeOption = e.detail
+    active_option = e.detail
   })
   const cb = vi.fn()
   binder.$on(`activeOption-changed`, cb)
@@ -46,7 +46,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   first_option.dispatchEvent(new MouseEvent(`mouseover`))
 
   await sleep()
-  expect(activeOption).toBe(1)
+  expect(active_option).toBe(1)
   expect(cb).toBeCalledTimes(1)
 })
 
