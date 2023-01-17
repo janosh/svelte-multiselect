@@ -212,8 +212,7 @@
   function remove(label: string | number) {
     if (selected.length === 0) return
 
-    selected.splice(selected.map(get_label).lastIndexOf(label), 1)
-    selected = selected // Svelte rerender after in-place splice
+    selected = selected.filter((op) => get_label(op) !== label)
 
     const option =
       options.find((option) => get_label(option) === label) ??
@@ -337,7 +336,7 @@
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
     const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
-    const new_selected = selected
+    const new_selected = [...selected]
 
     if (start_idx < target_idx) {
       new_selected.splice(target_idx + 1, 0, new_selected[start_idx])
