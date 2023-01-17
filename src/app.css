@@ -18,8 +18,8 @@
   --toc-desktop-nav-margin: 0 0 0 1em;
   --toc-active-bg: teal;
 
-  --ghc-color: var(--night);
-  --ghc-bg: white;
+  --zoo-github-corner-color: var(--night);
+  --zoo-github-corner-bg: white;
 }
 body {
   background: var(--night);
@@ -145,4 +145,9 @@ aside.toc.desktop {
   top: 3em;
   left: calc(50vw + 50em / 2);
   max-width: 16em;
+}
+
+/* TODO remove this tmp style */
+nav:has(+ div.code-example) > a {
+  margin: 0;
 }
