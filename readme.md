@@ -97,6 +97,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.
 
 1. ```ts
+   allowEmpty: boolean = false
+   ```
+
+   Whether to `console.error` if dropdown list of options is empty. `allowEmpty={false}` will suppress errors. `allowEmpty={true}` will report a console error if component is not `disabled`, not in `loading` state and doesn't `allowUserOptions`.
+
+1. ```ts
    allowUserOptions: boolean | 'append' = false
    ```
 
