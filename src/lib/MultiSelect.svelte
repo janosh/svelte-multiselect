@@ -11,6 +11,7 @@
   export let activeOption: Option | null = null
   export let addOptionMsg: string = `Create this option...`
   export let allowUserOptions: boolean | 'append' = false
+  export let allowEmpty: boolean = false // added for https://github.com/janosh/svelte-multiselect/issues/192
   export let autocomplete: string = `off`
   export let autoScroll: boolean = true
   export let breakpoint: number = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
@@ -83,18 +84,13 @@
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
   if (!(options?.length > 0)) {
-    if (allowUserOptions || loading || disabled) {
+    if (allowUserOptions || loading || disabled || allowEmpty) {
       options = [] // initializing as array avoids errors when component mounts
     } else {
-      // only error for empty options if user is not allowed to create custom
-      // options and loading is false
+      // error on empty options if user is not allowed to create custom options and loading is false
+      // and component is not disabled and allowEmpty is false
       console.error(`MultiSelect received no options`)
     }
-  }
-  if (parseLabelsAsHtml && allowUserOptions) {
-    console.warn(
-      `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
-    )
   }
   if (maxSelect !== null && maxSelect < 1) {
     console.error(
@@ -109,6 +105,11 @@
   if (maxSelect && typeof required === `number` && required > maxSelect) {
     console.error(
       `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
+    )
+  }
+  if (parseLabelsAsHtml && allowUserOptions) {
+    console.warn(
+      `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
     )
   }
   if (sortSelected && selectedOptionsDraggable) {
