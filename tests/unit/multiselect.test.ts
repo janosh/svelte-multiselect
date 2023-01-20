@@ -904,3 +904,28 @@ test.each([[true], [false]])(
     }
   }
 )
+
+describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
+  describe.each([[true], [false]])(`disabled=%s`, (disabled) => {
+    test.each([[true], [false]])(
+      `console.error when allowEmpty=false and multiselect has no options`,
+      async (allowEmpty) => {
+        console.error = vi.fn()
+
+        new MultiSelect({
+          target: document.body,
+          props: { options: [], allowEmpty, disabled, allowUserOptions },
+        })
+
+        if (!allowEmpty && !disabled && !allowUserOptions) {
+          expect(console.error).toHaveBeenCalledTimes(1)
+          expect(console.error).toHaveBeenCalledWith(
+            `MultiSelect received no options`
+          )
+        } else {
+          expect(console.error).toHaveBeenCalledTimes(0)
+        }
+      }
+    )
+  })
+})
