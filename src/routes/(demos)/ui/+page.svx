@@ -25,19 +25,19 @@ This page is used for Playwright testing to ensure
   - removes all currently selected options from the input
   - only appears if 2 or more elements are selected
   - has custom title (if supplied via prop `removeAllTitle`)
-- component can be focused
+- the component can be focused
   - which opens dropdown
-  - and closes dropdown when user tabs out of input or clicks/taps outside component
-  - importantly, we don't close dropdown when input looses focus
+  - and closes the dropdown when the user tabs out of input or clicks/taps outside component
+  - importantly, don't close the dropdown when input loses focus
 - filters options to only list matches when entering text
 - accessibility
-  - input is `aria-invalid` when component has `invalid=true`
+  - input is `aria-invalid` when the component has `invalid=true`
   - has `aria-expanded='false'` when closed
   - has `aria-expanded='true'` when open
   - options have `aria-selected='false'` and selected items have `aria-selected='true`
   - invisible `input.form-control` is `aria-hidden`
 
-<!-- TODO figure out why the Playwright test 'loops through dropdown list with arrow keys making...'
+<!-- TODO figure out why Playwright test 'loops through the dropdown list with arrow keys making...'
 depends on `html { scroll-behavior: smooth; }` -->
 <style>
   :global(html) {

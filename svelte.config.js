@@ -58,6 +58,7 @@ export default {
   },
 
   compilerOptions: {
+    // https://github.com/janosh/svelte-multiselect/issues/196
     immutable: true,
   },
 }

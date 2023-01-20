@@ -148,6 +148,7 @@ aside.toc.desktop {
 }
 
 /* TODO remove this tmp style */
-nav:has(+ div.code-example) > a {
+nav:has(+ div.code-example) > a,
+section > aside > a.btn {
   margin: 0;
 }
