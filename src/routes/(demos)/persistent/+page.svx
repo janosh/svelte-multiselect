@@ -6,7 +6,7 @@
 
 ## Page-Reload Persistent MultiSelect
 
-`language_store` is bound to the browser's `sessionStorage`. This example shows that MultiSelect retains its `selected` state on page reload correctly.
+`language_store` is a Svelte [`writable`](https://svelte.dev/tutorial/writable-stores) that's bound to the browser's `sessionStorage`. This example shows how MultiSelect retains its `selected` state on page reload.
 
 <br />
 
@@ -27,6 +27,6 @@
 </MultiSelect>
 ```
 
-where `language_store` is a Svelte `writable` with custom initialization logic and a wrapper around `set` method to update `sessionStorage`:
+`language_store` uses custom initialization logic and a wrapper around `set` method to update `sessionStorage` on new values:
 
 <pre><code>{@html hljs.highlight(store_code, { language: 'typescript' }).value}</code></pre>

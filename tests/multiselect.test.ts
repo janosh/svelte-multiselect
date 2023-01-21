@@ -352,14 +352,14 @@ test.describe(`allowUserOptions`, async () => {
     expect(ul_selected).toBeTruthy()
   })
 
-  test(`shows custom addOptionMsg if no options match`, async ({ page }) => {
+  test(`shows custom createOptionMsg if no options match`, async ({ page }) => {
     const selector = `#languages ul input`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
 
-    // enter some search text so no options match, should cause addOptionMsg to be shown
+    // enter some search text so no options match, should cause createOptionMsg to be shown
     await page.fill(selector, `foobar`)
 
     const custom_msg_li = await page.$(
