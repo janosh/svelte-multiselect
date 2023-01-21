@@ -42,11 +42,10 @@
 
 ## 📜 &thinsp; Breaking changes
 
-- **6.1.0**&nbsp; The `dispatch` events `focus` and `blur` were renamed to `open` and `close`, respectively. These actions refer to the dropdown list, i.e. `<MultiSelect on:open={(event) => console.log(event)}>` will trigger when the dropdown list opens. The focus and blur events are now regular DOM (not Svelte `dispatch`) events emitted by the `<input>` node. [PR 120](https://github.com/janosh/svelte-multiselect/pull/120).
-- **v7.0.0**&nbsp; `selected` (as well `selectedLabels` and `selectedValues`) used to be arrays always. Now, if `maxSelect=1`, they will no longer be a length-1 array but simply a single a option (label/value respectively) or `null` if no option is selected. [PR 123](https://github.com/janosh/svelte-multiselect/pull/123).
 - **8.0.0**&nbsp;
   - Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)` if your options were objects with `label` and `value` keys. If they were simple strings/numbers, there was no point in using `selected{Labels,Values}` anyway. [PR 138](https://github.com/janosh/svelte-multiselect/pull/138)
   - Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. [PR 133](https://github.com/janosh/svelte-multiselect/pull/133).
+- **v8.3.0**&nbsp; `addOptionMsg` was renamed to `createOptionMsg` (no major since version since it's rarely used) [sha](https://github.com/janosh/svelte-multiselect/commits).
 
 ## 🔨 &thinsp; Installation
 
@@ -91,7 +90,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.
 
 1. ```ts
-   addOptionMsg: string = `Create this option...`
+   createOptionMsg: string = `Create this option...`
    ```
 
    Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.

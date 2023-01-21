@@ -9,7 +9,7 @@
 
   export let activeIndex: number | null = null
   export let activeOption: Option | null = null
-  export let addOptionMsg: string = `Create this option...`
+  export let createOptionMsg: string = `Create this option...`
   export let allowUserOptions: boolean | 'append' = false
   export let allowEmpty: boolean = false // added for https://github.com/janosh/svelte-multiselect/issues/192
   export let autocomplete: string = `off`
@@ -119,7 +119,7 @@
   }
 
   const dispatch = createEventDispatcher<DispatchEvents>()
-  let add_option_msg_is_active: boolean = false // controls active state of <li>{addOptionMsg}</li>
+  let add_option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
   let window_width: number
 
   // options matching the current search text
@@ -506,7 +506,7 @@
   {/if}
 
   <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
-  {#if searchText || options?.length > 0}
+  {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul class:hidden={!open} class="options {ulOptionsClass}">
       {#each matchingOptions as option, idx}
         {@const {
@@ -552,7 +552,7 @@
           <li
             on:mousedown|stopPropagation
             on:mouseup|stopPropagation={(event) => add(searchText, event)}
-            title={addOptionMsg}
+            title={createOptionMsg}
             class:active={add_option_msg_is_active}
             on:mouseover={() => (add_option_msg_is_active = true)}
             on:focus={() => (add_option_msg_is_active = true)}
@@ -562,7 +562,7 @@
           >
             {!duplicates && selected.some((option) => duplicateFunc(option, searchText))
               ? duplicateOptionMsg
-              : addOptionMsg}
+              : createOptionMsg}
           </li>
         {:else}
           <span>{noMatchingOptionsMsg}</span>

@@ -764,10 +764,10 @@ test.each([
 )
 
 test.each([[null], [`custom add option message`]])(
-  `arrow keys on empty multiselect toggle addOptionMsg as active`,
-  async (addOptionMsg) => {
+  `arrow keys on empty multiselect toggle createOptionMsg as active`,
+  async (createOptionMsg) => {
     let props = { options: [], allowUserOptions: true, searchText: `foo` }
-    if (addOptionMsg) props = { ...props, addOptionMsg }
+    if (createOptionMsg) props = { ...props, createOptionMsg }
     new MultiSelect({ target: document.body, props })
 
     const input = doc_query(`ul.selected input`)
@@ -776,7 +776,7 @@ test.each([[null], [`custom add option message`]])(
 
     const li_active = doc_query(`ul.options li.active`)
     expect(li_active.textContent?.trim()).toBe(
-      addOptionMsg ?? `Create this option...`
+      createOptionMsg ?? `Create this option...`
     )
   }
 )

@@ -1,4 +1,4 @@
-import { invalid } from '@sveltejs/kit'
+import { fail } from '@sveltejs/kit'
 import type { Actions } from './$types'
 
 // remove leading underscore to activate this example
@@ -12,14 +12,14 @@ export const _actions: Actions = {
     try {
       colors = JSON.parse(colors)
     } catch (err) {
-      return invalid(400, { colors, error: `json` })
+      return fail(400, { colors, error: `json` })
     }
 
     if (!Array.isArray(colors)) {
-      return invalid(400, { colors, error: `array` })
+      return fail(400, { colors, error: `array` })
     }
     if (colors.length === 1 && colors[0] === `Red`) {
-      return invalid(400, { colors, error: `boring` })
+      return fail(400, { colors, error: `boring` })
     }
 
     return { colors, success: true }

@@ -29,7 +29,7 @@
 
 ## Append User Input
 
-`allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection should the user remove their custom option from the list of selected items.
+`allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection if users remove their custom options from selected items.
 
 ```svelte example stackblitz id="languages"
 <script>
@@ -44,7 +44,7 @@
   options={languages}
   allowUserOptions="append"
   bind:selected={selected_append}
-  addOptionMsg="True polyglots can enter custom languages!"
+  createOptionMsg="True polyglots can enter custom languages!"
 >
   <LanguageSlot let:option {option} slot="selected" />
   <LanguageSlot let:option {option} slot="option" />
@@ -55,7 +55,7 @@
 
 ## Start empty
 
-Starting with no options and letting the user populate their selection from scratch.
+You can start with no options and let users populate MultiSelect from scratch. In this case MultiSelect acts more like a tagging component.
 
 ```svelte example stackblitz id="no-default-options"
 <script>
@@ -72,5 +72,6 @@ Starting with no options and letting the user populate their selection from scra
   allowUserOptions="append"
   bind:selected
   noMatchingOptionsMsg=""
+  createOptionMsg=""
 />
 ```

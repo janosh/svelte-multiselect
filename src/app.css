@@ -62,7 +62,7 @@ code {
   overflow-wrap: break-word;
   padding: 0 2pt;
   border-radius: 2pt;
-  font-size: 1.2em;
+  font-size: 12pt;
   background-color: rgba(255, 255, 255, 0.15);
 }
 pre code {
@@ -71,7 +71,7 @@ pre code {
 }
 pre {
   border-radius: 4pt;
-  font-size: 9.5pt;
+  font-size: 9pt;
   background-color: rgba(255, 255, 255, 0.05);
   padding: 1em;
   overflow-x: auto;
