@@ -1,10 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
+  import { CircleSpinner, Wiggle } from '.'
   import type { DispatchEvents, MultiSelectEvents, Option as GenericOption } from './'
-  import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-  import Wiggle from './Wiggle.svelte'
   type Option = $$Generic<GenericOption>
 
   export let activeIndex: number | null = null
