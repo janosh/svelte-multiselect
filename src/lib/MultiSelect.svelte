@@ -1,10 +1,9 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
+  import { CircleSpinner, Wiggle } from '.'
   import type { DispatchEvents, MultiSelectEvents, Option as GenericOption } from './'
-  import CircleSpinner from './CircleSpinner.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-  import Wiggle from './Wiggle.svelte'
   type Option = $$Generic<GenericOption>
 
   export let activeIndex: number | null = null
@@ -432,6 +431,7 @@
             on:keydown={if_enter_or_space(() => remove(get_label(option)))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
+            class="remove"
           >
             <slot name="remove-icon">
               <CrossIcon width="15px" />
@@ -493,7 +493,7 @@
     {#if maxSelect !== 1 && selected.length > 1}
       <button
         type="button"
-        class="remove-all"
+        class="remove remove-all"
         title={removeAllTitle}
         on:mouseup|stopPropagation={remove_all}
         on:keydown={if_enter_or_space(remove_all)}

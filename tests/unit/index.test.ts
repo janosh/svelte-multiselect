@@ -1,9 +1,22 @@
-import IndexMultiSelect, { scroll_into_view_if_needed_polyfill } from '$lib'
+import * as lib from '$lib'
+import DefaultExport, {
+  MultiSelect as NamedExport,
+  scroll_into_view_if_needed_polyfill,
+} from '$lib'
 import MultiSelect from '$lib/MultiSelect.svelte'
 import { expect, test, vi } from 'vitest'
 
 test(`default export from index.ts is same as component file`, () => {
-  expect(IndexMultiSelect).toBe(MultiSelect)
+  expect(DefaultExport).toBe(MultiSelect)
+  expect(NamedExport).toBe(MultiSelect)
+})
+
+test(`src/lib/index.ts re-exports all Svelte components`, () => {
+  const components = Object.keys(import.meta.glob(`$lib/*.svelte`)).map(
+    (path) => path.split(`/`).pop()?.split(`.`).shift()
+  )
+  // $lib is also allowed to export other things, so we use arrayContaining()
+  expect(Object.keys(lib)).toEqual(expect.arrayContaining(components))
 })
 
 const Spy = vi.fn()

@@ -929,3 +929,24 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
     )
   })
 })
+
+test.each([[[1]], [[1, 2, 3]]])(
+  `buttons to remove selected options have CSS class "remove"`,
+
+  (selected) => {
+    new MultiSelect({
+      target: document.body,
+      props: { options: selected, selected },
+    })
+
+    // every selected should have a remove button
+    expect(document.querySelectorAll(`ul.selected button.remove`)).toHaveLength(
+      selected.length
+    )
+
+    // if more than 1 selected, there should be a remove-all button
+    expect(document.querySelectorAll(`button.remove.remove-all`)).toHaveLength(
+      selected.length > 1 ? 1 : 0
+    )
+  }
+)
