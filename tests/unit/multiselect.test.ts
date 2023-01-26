@@ -950,3 +950,16 @@ test.each([[[1]], [[1, 2, 3]]])(
     )
   }
 )
+
+test(`logs error to console when asked to remove selected option that does not exist`, async () => {
+  console.error = vi.fn()
+
+  new MultiSelect({
+    target: document.body,
+    props: { options: [{ foo: 42 }] },
+  })
+
+  expect(console.error).toHaveBeenCalledWith(
+    `MultiSelect option {"foo":42} is an object but has no label key`
+  )
+})
