@@ -7,9 +7,11 @@ A concise description of what's going wrong.
 
 ## Repro
 
-StackBlitz or REPL link (start from this [repro template](https://stackblitz.com/edit/svelte-multiselect-repro-template) or [this Svelte REPL](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05))
+Start from any of these templates and paste the link of your finished repro into this issue.
 
-Steps to reproduce the problem (if needed to encounter error in StackBlitz):
+[![REPL](https://img.shields.io/badge/Svelte-REPL-blue?label=Svelte)](https://svelte.dev/repl/3a217c39932047a09f61d6425b04a7c3) [![Open in StackBlitz](https://img.shields.io/badge/StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
+
+Steps to reproduce the problem:
 
 1. Go to '...'
 2. Click on '....'
@@ -22,4 +24,4 @@ Only describe if not obvious from error.
 
 ## Additional context
 
-Add any other context about the problem (if potentially relevant).
+Anything potentially relevant (like OS, browser, versions used).
