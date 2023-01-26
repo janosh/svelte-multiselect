@@ -212,18 +212,21 @@
   function remove(label: string | number) {
     if (selected.length === 0) return
 
-    selected = selected.filter((op) => get_label(op) !== label)
+    let option = selected.find((op) => get_label(op) === label)
 
-    const option =
-      options.find((option) => get_label(option) === label) ??
+    if (option === undefined && allowUserOptions) {
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
-      (allowUserOptions && { label, value: label })
-
-    if (!option) {
-      return console.error(`MultiSelect: option with label ${label} not found`)
+      option = (typeof options[0] == `object` ? { label } : label) as Option
     }
+    if (option === undefined) {
+      return console.error(
+        `Multiselect can't remove selected option ${label}, not found in selected list`
+      )
+    }
+
+    selected = selected.filter((op) => get_label(op) !== label) // remove option from selected list
 
     dispatch(`remove`, { option })
     dispatch(`change`, { option, type: `remove` })
