@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+<!-- auto-changelog-above -->
+
+#### [v8.3.0](https://github.com/janosh/svelte-multiselect/compare/v8.2.4...v8.3.0)
+
+> 25 January 2023
+
+- Don't error on removing options that are in `selected` but not in `options` array [`#204`](https://github.com/janosh/svelte-multiselect/pull/204)
+- Add class 'remove' to buttons that remove selected options [`#202`](https://github.com/janosh/svelte-multiselect/pull/202)
+- Add prop allowEmpty: boolean = false [`#198`](https://github.com/janosh/svelte-multiselect/pull/198)
+- Support `immutable` Svelte compiler option [`#197`](https://github.com/janosh/svelte-multiselect/pull/197)
+- group demo routes [`e813e48`](https://github.com/janosh/svelte-multiselect/commit/e813e480716f29ab4bdd53f90afe56485507fb1c)
+- breaking: rename addOptionMsg to createOptionMsg [`f24e025`](https://github.com/janosh/svelte-multiselect/commit/f24e0256fcdc32c90ed798edbb663a6be18ebe00)
+
 #### [v8.2.4](https://github.com/janosh/svelte-multiselect/compare/v8.2.3...v8.2.4)
 
 > 8 January 2023
@@ -16,8 +29,6 @@ All notable changes to this project will be documented in this file. Dates are d
 - add update-coverage package.json script [`1094f08`](https://github.com/janosh/svelte-multiselect/commit/1094f08cec9d6fd2f54b058af05022ab35ec4ac9)
 - add vite alias $root to clean up package.json, readme|contributing|changelog.md imports [`c19cbe4`](https://github.com/janosh/svelte-multiselect/commit/c19cbe4e38413bbcd04d4e35eddcd4cd88c67662)
 - mv src/components src/site [`3683ed7`](https://github.com/janosh/svelte-multiselect/commit/3683ed70f19498070ffe9e95c0261c688fb2f7c7)
-
-<!-- auto-changelog-above -->
 
 #### [v8.2.3](https://github.com/janosh/svelte-multiselect/compare/v8.2.2...v8.2.3)
 
