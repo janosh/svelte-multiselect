@@ -71,7 +71,17 @@
   export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
-  const get_label = (op: GenericOption) => (op instanceof Object ? op.label : op)
+  const get_label = (op: GenericOption) => {
+    if (op instanceof Object) {
+      if (op.label === undefined) {
+        console.error(
+          `MultiSelect option ${JSON.stringify(op)} is an object but has no label key`
+        )
+      }
+      return op.label
+    }
+    return op
+  }
 
   // if maxSelect=1, value is the single item in selected (or null if selected is empty)
   // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
