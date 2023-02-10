@@ -182,7 +182,7 @@
         throw `Run time error, option with label ${label} not found in options list`
       }
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
-      if ([``, undefined, null].includes(option)) {
+      if ([``, undefined, null].includes(option as string | null)) {
         console.error(
           `MultiSelect: encountered missing option with label ${label} (or option is poorly labeled)`
         )
@@ -423,7 +423,7 @@
         class={liSelectedClass}
         aria-selected="true"
         animate:flip={{ duration: 100 }}
-        draggable={selectedOptionsDraggable}
+        draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
         on:dragstart={dragstart(idx)}
         on:drop|preventDefault={drop(idx)}
         on:dragenter={() => (drag_idx = idx)}
@@ -635,7 +635,7 @@
     padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
-  :where(div.multiselect > ul.selected > li[draggable]) {
+  :where(div.multiselect > ul.selected > li[draggable='true']) {
     cursor: grab;
   }
   :where(div.multiselect > ul.selected > li.active) {
