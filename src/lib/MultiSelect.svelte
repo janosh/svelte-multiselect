@@ -319,6 +319,10 @@
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       remove(selected.map(get_label).at(-1) as string | number)
     }
+    // make first matching option active on any keypress (if none of the above special cases match)
+    else if (matchingOptions.length > 0) {
+      activeIndex = 0
+    }
   }
 
   function remove_all() {

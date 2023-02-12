@@ -963,3 +963,20 @@ test(`logs error to console when asked to remove selected option that does not e
     `MultiSelect option {"foo":42} is an object but has no label key`
   )
 })
+
+test(`first matching option becomes active automatically on entering searchText`, async () => {
+  new MultiSelect({
+    target: document.body,
+    props: { options: [`foo`, `bar`, `baz`] },
+  })
+
+  const input = doc_query<HTMLInputElement>(`ul.selected input`)
+  input.value = `ba`
+  // updates input value
+  input.dispatchEvent(new InputEvent(`input`))
+  // triggers handle_keydown callback (which sets activeIndex)
+  input.dispatchEvent(new KeyboardEvent(`keydown`))
+  await sleep()
+
+  expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`bar`)
+})

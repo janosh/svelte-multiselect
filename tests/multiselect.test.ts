@@ -1,6 +1,6 @@
-import type { Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 import { foods } from '../src/options.ts'
+import { wait_for_animation_end } from './index.ts'
 
 // to run tests in this file, use `npm run test:e2e`
 
@@ -572,11 +572,3 @@ test(`dragging selected options across each other changes their order`, async ({
   selected = await page.textContent(`ul.selected`)
   expect(selected?.trim()).toBe(`TypeScript  Python  C  Haskell`)
 })
-
-function wait_for_animation_end(page: Page, selector: string) {
-  // https://github.com/microsoft/playwright/issues/15660
-  const locator = page.locator(selector)
-  return locator.evaluate((element) =>
-    Promise.all(element.getAnimations().map((animation) => animation.finished))
-  )
-}
