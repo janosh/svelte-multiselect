@@ -1,7 +1,7 @@
 import adapter from '@sveltejs/adapter-static'
 import { s } from 'hastscript'
 import { mdsvex } from 'mdsvex'
-import examples from 'mdsvexamples'
+import mdsvexamples from 'mdsvexamples'
 import link_headings from 'rehype-autolink-headings'
 import heading_slugs from 'rehype-slug'
 import preprocess from 'svelte-preprocess'
@@ -30,7 +30,7 @@ const defaults = {
   pkg: pkg.name,
   repo: pkg.repository,
 }
-const remarkPlugins = [[examples, { defaults }]]
+const remarkPlugins = [[mdsvexamples, { defaults }]]
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {
