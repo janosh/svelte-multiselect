@@ -51,12 +51,6 @@ export default {
     },
   },
 
-  package: {
-    // exclude icon and helper component files from package.json "exports"
-    exports: (filepath) =>
-      [`MultiSelect.svelte`, `index.ts`, `package.json`].includes(filepath),
-  },
-
   compilerOptions: {
     // https://github.com/janosh/svelte-multiselect/issues/196
     immutable: true,

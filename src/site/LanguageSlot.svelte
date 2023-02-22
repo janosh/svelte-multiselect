@@ -1,5 +1,6 @@
 <script lang="ts">
   export let option: string
+  export let idx: number | undefined = undefined
   export let height = `20px`
   export let gap = '5pt'
 
@@ -13,8 +14,10 @@
 </script>
 
 <span style:gap>
+  {#if idx !== undefined}
+    <strong>{idx + 1}</strong>
+  {/if}
   <img {src} {height} alt={option} {hidden} on:error={() => (hidden = true)} />
-
   {option}
 </span>
 

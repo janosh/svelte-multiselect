@@ -75,4 +75,4 @@ Push the release commit and tag to `origin/main`:
 git push && git push --tags
 ```
 
-Finally [publish a new release on GitHub](https://github.com/janosh/svelte-multiselect/releases/new).
+Finally, [publish a new release on GitHub](https://github.com/janosh/svelte-multiselect/releases/new).

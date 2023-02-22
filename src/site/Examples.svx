@@ -19,8 +19,8 @@
   placeholder="Take your pick..."
   bind:selected
 >
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
+  <LanguageSlot let:idx {idx} let:option {option} slot="selected" />
+  <LanguageSlot let:idx {idx} let:option {option} slot="option" gap="1em" />
 </MultiSelect>
 ```
 

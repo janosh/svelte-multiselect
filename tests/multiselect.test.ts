@@ -297,7 +297,7 @@ test.describe(`multiselect`, async () => {
 
     await page.reload()
 
-    const selected_text = await page.textContent(`text=Haskell JavaScript`)
+    const selected_text = await page.textContent(`text=4 Haskell 5 JavaScript`)
     expect(selected_text).toContain(`JavaScript`)
     expect(selected_text).toContain(`Haskell`)
   })
@@ -563,12 +563,12 @@ test(`dragging selected options across each other changes their order`, async ({
   // https://github.com/janosh/svelte-multiselect/issues/176
   await page.goto(`/persistent`, { waitUntil: `networkidle` })
   let selected = await page.textContent(`ul.selected`)
-  expect(selected?.trim()).toBe(`Python  TypeScript  C  Haskell`)
+  expect(selected?.trim()).toBe(`1  Python 2  TypeScript 3  C 4  Haskell`)
 
   // swap selected options 1 and 2
   const li1 = await page.locator(`ul.selected li:nth-child(1)`)
   const li2 = await page.locator(`ul.selected li:nth-child(2)`)
   await li1?.dragTo(li2)
   selected = await page.textContent(`ul.selected`)
-  expect(selected?.trim()).toBe(`TypeScript  Python  C  Haskell`)
+  expect(selected?.trim()).toBe(`1  TypeScript 2  Python 3  C 4  Haskell`)
 })

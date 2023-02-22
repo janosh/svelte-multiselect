@@ -7,7 +7,7 @@
   "license": "MIT",
   "version": "8.3.0",
   "type": "module",
-  "svelte": "index.js",
+  "svelte": "./dist/index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
   "scripts": {
     "dev": "vite dev",
@@ -15,23 +15,26 @@
     "preview": "vite preview",
     "package": "svelte-package",
     "serve": "vite build && vite preview",
-    "check": "svelte-check --ignore package",
+    "check": "svelte-check --ignore dist",
     "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
     "test:unit": "vitest tests/unit/*.ts",
     "test:e2e": "playwright test tests/*.test.ts",
     "changelog": "npx auto-changelog --package --output changelog.md --unreleased-only --hide-credit --commit-limit false",
     "update-coverage": "vitest tests/unit --run --coverage && npx istanbul-badges-readme"
   },
+  "dependencies": {
+    "svelte": "^3.55.1"
+  },
   "devDependencies": {
     "@iconify/svelte": "^3.1.0",
-    "@playwright/test": "^1.30.0",
+    "@playwright/test": "^1.31.0",
     "@sveltejs/adapter-static": "^2.0.1",
-    "@sveltejs/kit": "^1.5.5",
-    "@sveltejs/package": "1.0.2",
+    "@sveltejs/kit": "^1.8.3",
+    "@sveltejs/package": "2.0.2",
     "@sveltejs/vite-plugin-svelte": "^2.0.2",
-    "@typescript-eslint/eslint-plugin": "^5.51.0",
-    "@typescript-eslint/parser": "^5.51.0",
-    "@vitest/coverage-c8": "^0.28.4",
+    "@typescript-eslint/eslint-plugin": "^5.53.0",
+    "@typescript-eslint/parser": "^5.53.0",
+    "@vitest/coverage-c8": "^0.28.5",
     "eslint": "^8.34.0",
     "eslint-plugin-svelte3": "^4.0.0",
     "hastscript": "^7.2.0",
@@ -43,15 +46,14 @@
     "prettier-plugin-svelte": "^2.9.0",
     "rehype-autolink-headings": "^6.1.1",
     "rehype-slug": "^5.1.0",
-    "svelte": "^3.55.1",
     "svelte-check": "^3.0.3",
     "svelte-preprocess": "^5.0.1",
     "svelte-toc": "^0.5.2",
-    "svelte-zoo": "^0.2.4",
+    "svelte-zoo": "^0.3.4",
     "svelte2tsx": "^0.6.1",
     "typescript": "^4.9.5",
-    "vite": "^4.1.1",
-    "vitest": "^0.28.4"
+    "vite": "^4.1.4",
+    "vitest": "^0.28.5"
   },
   "keywords": [
     "svelte",
@@ -62,5 +64,20 @@
   ],
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "exports": {
+    "./MultiSelect.svelte": {
+      "types": "./dist/MultiSelect.svelte.d.ts",
+      "svelte": "./dist/MultiSelect.svelte",
+      "default": "./dist/MultiSelect.svelte"
+    },
+    ".": {
+      "types": "./dist/index.d.ts",
+      "svelte": "./dist/index.js",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ]
 }
