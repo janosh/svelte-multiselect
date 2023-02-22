@@ -44,6 +44,6 @@ jobs:
           npm install
           npm run package
           npm login
-          npm publish ./package
+          npm publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}

@@ -23,7 +23,7 @@
   placeholder="What languages do you know?"
   bind:selected={$language_store}
 >
-  <LanguageSlot let:option {option} slot="selected" />
+  <LanguageSlot let:option {option} let:idx {idx} slot="selected" />
 </MultiSelect>
 ```
 

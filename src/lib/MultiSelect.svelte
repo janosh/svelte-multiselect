@@ -140,7 +140,7 @@
     throw `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`
   }
   // update activeOption when activeIndex changes
-  $: activeOption = activeIndex !== null ? matchingOptions[activeIndex] : null
+  $: activeOption = matchingOptions[activeIndex ?? -1] ?? null
 
   // add an option to selected list
   function add(label: string | number, event: Event) {
@@ -257,7 +257,7 @@
   function close_dropdown(event: Event) {
     open = false
     input?.blur()
-    activeOption = null
+    activeIndex = null
     dispatch(`close`, { event })
   }
 
