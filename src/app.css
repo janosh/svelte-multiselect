@@ -4,7 +4,7 @@
   --text-color: #ccc;
 
   --sms-active-color: var(--blue);
-  --sms-options-bg: rgb(0, 0, 32);
+  --sms-options-bg: rgb(33, 31, 47);
   --sms-selected-bg: rgba(255, 255, 255, 0.2);
   --sms-text-color: white;
   --sms-disabled-bg: rgba(7, 1, 34, 0.87);
@@ -68,10 +68,10 @@ code {
 pre code {
   background-color: transparent;
   display: inline-block;
+  font-size: 10pt;
 }
 pre {
   border-radius: 4pt;
-  font-size: 9pt;
   background-color: rgba(255, 255, 255, 0.05);
   padding: 1em;
   overflow-x: auto;

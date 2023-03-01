@@ -1,20 +1,23 @@
 <script lang="ts">
+  import { goto } from '$app/navigation'
   import { page } from '$app/stores'
-  import { NavPalette } from '$lib'
+  import { CmdPalette } from '$lib'
   import { repository } from '$root/package.json'
   import { GitHubCorner } from 'svelte-zoo'
   import '../app.css'
   import Footer from '../site/Footer.svelte'
 
-  const routes = Object.keys(import.meta.glob(`./**/+page.{svx,svelte,md}`)).map(
+  const actions = Object.keys(import.meta.glob(`./**/+page.{svx,svelte,md}`)).map(
     (filename) => {
       const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
-      return `/${parts.slice(1, -1).join(`/`)}`
+      const route = `/${parts.slice(1, -1).join(`/`)}`
+
+      return { label: route, action: () => goto(route) }
     }
   )
 </script>
 
-<NavPalette {routes} />
+<CmdPalette {actions} />
 
 <GitHubCorner href={repository} />
 

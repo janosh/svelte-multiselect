@@ -1,6 +1,6 @@
 export { default as CircleSpinner } from './CircleSpinner.svelte'
+export { default as CmdPalette } from './CmdPalette.svelte'
 export { default, default as MultiSelect } from './MultiSelect.svelte'
-export { default as NavPalette } from './NavPalette.svelte'
 export { default as Wiggle } from './Wiggle.svelte'
 
 export type Option = string | number | ObjectOption
@@ -16,13 +16,13 @@ export type ObjectOption = {
   [key: string]: unknown // allow any other keys users might want
 }
 
-export type DispatchEvents = {
-  add: { option: Option }
-  remove: { option: Option }
-  removeAll: { options: Option[] }
+export type DispatchEvents<T = Option> = {
+  add: { option: T }
+  remove: { option: T }
+  removeAll: { options: T[] }
   change: {
-    option?: Option
-    options?: Option[]
+    option?: T
+    options?: T[]
     type: 'add' | 'remove' | 'removeAll'
   }
   open: { event: Event }
