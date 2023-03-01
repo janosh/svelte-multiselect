@@ -1,0 +1,29 @@
+<script lang="ts">
+  export let data: PageServerData
+  import hljs from 'highlight.js/lib/common'
+  import 'highlight.js/styles/vs2015.css'
+  import nav_palette from '$lib/NavPalette.svelte?raw'
+</script>
+
+## Nav Palette
+
+You can use `<MultiSelect />` to build a navigation palette in just 70 lines of code (40 without styles).
+
+```svelte stackblitz id="disabled-input-title"
+<script>
+  import { NavPalette } from '$lib'
+
+  const routes = Object.keys(import.meta.glob(`./**/+page.{svx,svelte,md}`)).map(
+    (filename) => {
+      const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
+      return `/${parts.slice(1, -1).join(`/`)}`
+    }
+  )
+</script>
+
+<NavPalette {routes} />
+```
+
+Here's `<NavPalette />` component
+
+<pre><code>{@html hljs.highlight(nav_palette, { language: 'typescript' }).value}</code></pre>
