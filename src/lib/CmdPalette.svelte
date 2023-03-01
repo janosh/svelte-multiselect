@@ -1,9 +1,11 @@
 <script lang="ts">
   import { tick } from 'svelte/internal'
+  import { fade } from 'svelte/transition'
   import Select from '.'
 
   export let actions: Action[]
   export let trigger: string = `k`
+  export let fade_duration: number = 200 // in ms
 
   type Action = { label: string; action: () => void }
 
@@ -13,7 +15,7 @@
 
   async function toggle(event: KeyboardEvent) {
     if (event.key === trigger && event.metaKey && !open) {
-      // open on cmd+k
+      // open on cmd+trigger
       open = true
       await tick() // wait for dialog to open and input to be mounted
       input?.focus()
@@ -38,7 +40,7 @@
 <svelte:window on:keydown={toggle} on:click={close_if_outside} />
 
 {#if open}
-  <dialog class:open bind:this={dialog}>
+  <dialog class:open bind:this={dialog} transition:fade={{ duration: fade_duration }}>
     <Select
       options={actions}
       bind:input

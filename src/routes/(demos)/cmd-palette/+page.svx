@@ -7,7 +7,7 @@
 
 ## Nav Palette
 
-You can use `<MultiSelect />` to build a navigation palette in just 70 lines of code (40 without styles).
+You can use `<MultiSelect />` to build a navigation palette in just 70 lines of code (50 without styles).
 
 ```svelte stackblitz id="disabled-input-title"
 <script>
