@@ -461,7 +461,6 @@
       <input
         class={inputClass}
         bind:this={input}
-        {autocomplete}
         bind:value={searchText}
         on:mouseup|self|stopPropagation={open_dropdown}
         on:keydown|stopPropagation={handle_keydown}
@@ -469,6 +468,7 @@
         on:focus={open_dropdown}
         {id}
         {disabled}
+        {autocomplete}
         {inputmode}
         {pattern}
         placeholder={selected.length == 0 ? placeholder : null}

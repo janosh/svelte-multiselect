@@ -1,6 +1,6 @@
 <script lang="ts">
   import { name } from '$root/package.json'
-  import { DemoNav, Footer } from '$site'
+  import { DemoNav } from '$site'
 </script>
 
 <h1>
@@ -12,8 +12,6 @@
 
   <slot />
 </main>
-
-<Footer />
 
 <style>
   h1 {

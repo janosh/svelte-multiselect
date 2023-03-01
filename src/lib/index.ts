@@ -1,5 +1,6 @@
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default, default as MultiSelect } from './MultiSelect.svelte'
+export { default as NavPalette } from './NavPalette.svelte'
 export { default as Wiggle } from './Wiggle.svelte'
 
 export type Option = string | number | ObjectOption

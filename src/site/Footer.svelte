@@ -13,6 +13,7 @@
     Edit this page
   </a>
 </footer>
+<small>Use <kbd>cmd+k</kbd> to bring up a nav palette.</small>
 
 <style>
   footer {
@@ -21,5 +22,15 @@
     gap: 15pt;
     place-content: center;
     flex-wrap: wrap;
+  }
+  small {
+    text-align: center;
+    display: block;
+  }
+  small kbd {
+    background-color: rgba(255, 255, 255, 0.1);
+    padding: 1pt 3pt;
+    font-size: larger;
+    border-radius: 2pt;
   }
 </style>
