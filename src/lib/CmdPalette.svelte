@@ -1,10 +1,11 @@
 <script lang="ts">
-  import { goto } from '$app/navigation'
   import { tick } from 'svelte/internal'
   import Select from '.'
 
-  export let routes: string[] | { label: string; route: string }[]
+  export let actions: Action[]
   export let trigger: string = `k`
+
+  type Action = { label: string; action: () => void }
 
   let open = false
   let dialog: HTMLDialogElement
@@ -28,12 +29,8 @@
     }
   }
 
-  function move(
-    event: CustomEvent<{ option: string | { label: string; route: string } }>
-  ) {
-    const { option } = event.detail
-    if (typeof option == `object`) goto(option.route)
-    else goto(option)
+  function move(event: CustomEvent<{ option: Action }>) {
+    event.detail.option.action()
     open = false
   }
 </script>
@@ -43,20 +40,17 @@
 {#if open}
   <dialog class:open bind:this={dialog}>
     <Select
-      options={routes}
+      options={actions}
       bind:input
       placeholder="Go to..."
       on:add={move}
       on:keydown={toggle}
-      --sms-bg="var(--sms-options-bg)"
-      --sms-width="min(20em, 90vw)"
-      --sms-max-width="none"
     />
   </dialog>
 {/if}
 
 <style>
-  dialog {
+  :where(dialog) {
     position: fixed;
     top: 30%;
     border: none;
@@ -66,5 +60,13 @@
     color: white;
     z-index: 10;
     font-size: 2.4ex;
+  }
+  dialog :global(div.multiselect) {
+    --sms-bg: var(--sms-options-bg);
+    --sms-width: min(20em, 90vw);
+    --sms-max-width: none;
+    --sms-placeholder-color: lightgray;
+    --sms-options-margin: 1px 0;
+    --sms-options-border-radius: 0 0 1ex 1ex;
   }
 </style>

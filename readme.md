@@ -532,6 +532,11 @@ If you only want to make small adjustments, you can pass the following CSS varia
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
   - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black)`: Box shadow of dropdown list.
+  - `border: var(--sms-options-border)`
+  - `border-width: var(--sms-options-border-width)`
+  - `border-radius: var(--sms-options-border-radius, 1ex)`
+  - `padding: var(--sms-options-padding)`
+  - `margin: var(--sms-options-margin, inherit)`
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`

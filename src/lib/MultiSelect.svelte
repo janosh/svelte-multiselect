@@ -127,7 +127,7 @@
     )
   }
 
-  const dispatch = createEventDispatcher<DispatchEvents>()
+  const dispatch = createEventDispatcher<DispatchEvents<Option>>()
   let add_option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
   let window_width: number
 
@@ -681,7 +681,8 @@
     cursor: inherit; /* needed for disabled state */
     border-radius: 0; /* reset ul.selected > li */
   }
-  :where(div.multiselect > ul.selected > li > input::placeholder) {
+  /* don't wrap ::placeholder rules in :where() as it seems to be overpowered by browser defaults i.t.o. specificity */
+  div.multiselect > ul.selected > li > input::placeholder {
     padding-left: 5pt;
     color: var(--sms-placeholder-color);
     opacity: var(--sms-placeholder-opacity);
@@ -699,18 +700,22 @@
 
   :where(div.multiselect > ul.options) {
     list-style: none;
-    padding: 4pt 0;
     top: 100%;
     left: 0;
     width: 100%;
     position: absolute;
-    border-radius: 1ex;
     overflow: auto;
+    transition: all 0.2s;
+    box-sizing: border-box;
     background: var(--sms-options-bg, white);
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
-    transition: all 0.2s;
+    border: var(--sms-options-border);
+    border-width: var(--sms-options-border-width);
+    border-radius: var(--sms-options-border-radius, 1ex);
+    padding: var(--sms-options-padding);
+    margin: var(--sms-options-margin, inherit);
   }
   :where(div.multiselect > ul.options.hidden) {
     visibility: hidden;
