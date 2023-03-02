@@ -4,7 +4,7 @@
 <script>
   import MultiSelect from '$lib'
 
-  const options = [...Array(7).keys()].map(idx => `Option ${idx + 1}`)
+  const options = [...Array(7).keys()].map((idx) => `Option ${idx + 1}`)
 </script>
 
 <MultiSelect
@@ -23,12 +23,13 @@
 />
 <!-- maxSelect={2} needed for maxSelectMsg to show up -->
 
+<!-- !important needed until https://github.com/sveltejs/svelte/issues/4374 is solved -->
 <style>
   :global(.wrapper) {
-    background: black;
+    background: darkblue !important;
   }
   :global(.dropdown) {
-    background: darkgreen;
+    background: darkgreen !important;
   }
 </style>
 ```

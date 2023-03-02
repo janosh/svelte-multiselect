@@ -12,19 +12,22 @@
     <Icon icon="carbon:edit" inline />
     Edit this page
   </a>
+  <small title="For keyboad-only site navigation">
+    Use <kbd>cmd+k</kbd> to bring up a nav palette.
+  </small>
 </footer>
-<small>Use <kbd>cmd+k</kbd> to bring up a nav palette.</small>
 
 <style>
   footer {
-    display: flex;
-    margin: 2em;
-    gap: 15pt;
-    place-content: center;
-    flex-wrap: wrap;
+    padding: 3vh 3vw;
+    background: #00061a;
+    text-align: center;
+  }
+  footer > a {
+    margin: 0 0 0 4pt;
   }
   small {
-    text-align: center;
+    margin: 1em;
     display: block;
   }
   small kbd {
