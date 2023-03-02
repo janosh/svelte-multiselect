@@ -43,7 +43,7 @@ jobs:
         run: |
           npm install
           npm run package
-          npm login
+          npm login --auth-type=legacy
           npm publish
         env:
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
