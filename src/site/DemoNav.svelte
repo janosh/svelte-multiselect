@@ -12,8 +12,7 @@
     throw new Error(`Too few demo routes found: ${routes.length}`)
   }
   $: is_current = (path: string) => {
-    if (path === $page.url.pathname) return `page`
-    if (path !== `/` && $page.url.pathname.includes(path)) return `page`
+    if (`/${path}` == $page.url.pathname) return `page`
     return undefined
   }
 </script>

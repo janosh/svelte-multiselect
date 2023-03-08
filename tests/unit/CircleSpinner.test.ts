@@ -1,4 +1,4 @@
-import CircleSpinner from '$lib/CircleSpinner.svelte'
+import { CircleSpinner } from '$lib'
 import { expect, test } from 'vitest'
 import { doc_query } from '.'
 
