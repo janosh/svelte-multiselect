@@ -326,10 +326,10 @@
   }
 
   function remove_all() {
-    dispatch(`removeAll`, { options: selected })
-    dispatch(`change`, { options: selected, type: `removeAll` })
     selected = []
     searchText = ``
+    dispatch(`removeAll`, { options: selected })
+    dispatch(`change`, { options: selected, type: `removeAll` })
   }
 
   $: is_selected = (label: string | number) => selected.map(get_label).includes(label)
