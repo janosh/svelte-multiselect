@@ -1,6 +1,7 @@
 import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
+import { tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
-import { doc_query, sleep } from '.'
+import { doc_query } from '.'
 import Test2WayBind from './Test2WayBind.svelte'
 
 test(`2-way binding of activeIndex`, async () => {
@@ -17,14 +18,14 @@ test(`2-way binding of activeIndex`, async () => {
   for (const idx of [1, 2]) {
     const li = doc_query(`ul.options li:nth-child(${idx})`)
     li.dispatchEvent(new MouseEvent(`mouseover`))
-    await sleep()
+    await tick()
     expect(activeIndex).toEqual(idx - 1)
   }
 
   // test external changes to activeIndex bind inwards
   activeIndex = 2
   binder.$set({ activeIndex })
-  await sleep()
+  await tick()
   expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`3`)
 })
 
@@ -45,7 +46,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   const first_option = doc_query(`ul.options > li`)
   first_option.dispatchEvent(new MouseEvent(`mouseover`))
 
-  await sleep()
+  await tick()
   expect(active_option).toBe(1)
   expect(cb).toBeCalledTimes(1)
 })
@@ -67,7 +68,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   const first_option = doc_query(`ul.options > li`)
   first_option.dispatchEvent(new MouseEvent(`mouseover`))
 
-  await sleep()
+  await tick()
   expect(activeOption).toBe(1)
   expect(cb).toBeCalledTimes(1)
 })
@@ -162,7 +163,7 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
   document
     .querySelector(`ul.options > li`)
     ?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
-  await sleep()
+  await tick()
 
   for (const [class_name, elem_type] of Object.entries(prop_elem_map)) {
     const el = doc_query(`.${class_name}`)
@@ -182,7 +183,7 @@ test(`arrow down makes first option active`, async () => {
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
 
-  await sleep()
+  await tick()
 
   const active_option = doc_query(`ul.options > li.active`)
 
@@ -196,17 +197,17 @@ test(`can select 1st and last option with arrow and enter key`, async () => {
   const input = doc_query(`ul.selected input`)
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
-  await sleep()
+  await tick()
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
-  await sleep()
+  await tick()
   const selected = doc_query(`ul.selected`)
 
   expect(selected.textContent?.trim()).toBe(`1`)
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp` }))
-  await sleep()
+  await tick()
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
-  await sleep()
+  await tick()
 
   expect(selected.textContent?.trim()).toBe(`1 3`)
 })
@@ -382,12 +383,12 @@ test.each([
     for (const _ of Array(3)) {
       const li = doc_query(`ul.options li`)
       li.dispatchEvent(new MouseEvent(`mouseup`))
-      await sleep()
+      await tick()
     }
     expect(form.checkValidity()).toBe(true)
 
     btn.dispatchEvent(new MouseEvent(`click`)) // submit form
-    await sleep()
+    await tick()
     const form_data = new FormData(form)
     expect(form_data.get(field_name)).toEqual(JSON.stringify(options))
   }
@@ -408,7 +409,7 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
   // assert aria-invalid attribute is removed on selecting a new option
   const option = doc_query(`ul.options > li`)
   option.dispatchEvent(new MouseEvent(`mouseup`))
-  await sleep()
+  await tick()
 
   expect(input.getAttribute(`aria-invalid`)).toBe(null)
 
@@ -441,7 +442,7 @@ test(`filters dropdown to show only matching options when entering text`, async 
 
   input.value = `ba`
   input.dispatchEvent(new InputEvent(`input`))
-  await sleep()
+  await tick()
 
   const dropdown = doc_query(`ul.options`)
   expect(dropdown.textContent?.trim()).toBe(`bar baz`)
@@ -460,7 +461,7 @@ test.each([undefined, `Custom no options message`])(
 
     input.value = `4`
     input.dispatchEvent(new InputEvent(`input`))
-    await sleep()
+    await tick()
 
     if (noMatchingOptionsMsg === undefined) {
       // get default value for noMatchingOptionsMsg
@@ -483,7 +484,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   const input = doc_query(`ul.selected input`)
   input.value = `ba`
   input.dispatchEvent(new InputEvent(`input`))
-  await sleep()
+  await tick()
 
   const dropdown = doc_query(`ul.options`)
   expect(dropdown.textContent?.trim()).toBe(`bar baz`)
@@ -492,7 +493,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   for (const text of [`bar`, `baz`, `bar`, `baz`]) {
     // down arrow key
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
-    await sleep()
+    await tick()
     const li_active = doc_query(`ul.options li.active`)
     expect(li_active.textContent?.trim()).toBe(text)
   }
@@ -509,7 +510,7 @@ test(`single remove button removes 1 selected option`, async () => {
     ?.dispatchEvent(new MouseEvent(`mouseup`))
 
   const selected = doc_query(`ul.selected`)
-  await sleep()
+  await tick()
 
   expect(selected.textContent?.trim()).toEqual(`2 3`)
 })
@@ -525,7 +526,7 @@ test(`remove all button removes all selected options and is visible only if more
   document
     .querySelector(`button[title='Remove all']`)
     ?.dispatchEvent(new MouseEvent(`mouseup`))
-  await sleep()
+  await tick()
 
   selected = doc_query(`ul.selected`)
   expect(selected.textContent?.trim()).toEqual(``)
@@ -539,7 +540,7 @@ test(`remove all button removes all selected options and is visible only if more
 
     const li = doc_query(`ul.options li`)
     li.dispatchEvent(new MouseEvent(`mouseup`))
-    await sleep()
+    await tick()
   }
 
   expect(doc_query(`button[title='Remove all']`)).toBeInstanceOf(
@@ -577,7 +578,7 @@ test(`can't select disabled options`, async () => {
   }
 
   const selected = doc_query(`ul.selected`)
-  await sleep()
+  await tick()
 
   expect(selected.textContent?.trim()).toEqual(`2 3`)
 })
@@ -595,7 +596,7 @@ test.each([2, 5, 10])(
       ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
 
     const selected = doc_query(`ul.selected`)
-    await sleep()
+    await tick()
 
     expect(selected.textContent?.trim()).toEqual(
       [...Array(maxSelect).keys()].join(` `)
@@ -613,14 +614,14 @@ test(`closes dropdown on tab out`, async () => {
 
   // opens dropdown on focus
   doc_query(`ul.selected input`).focus()
-  await sleep()
+  await tick()
   expect(document.querySelector(`ul.options.hidden`)).toBeNull()
 
   // closes dropdown again on tab out
   doc_query(`ul.selected input`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Tab` })
   )
-  await sleep()
+  await tick()
   expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 })
 
@@ -651,7 +652,7 @@ describe.each([
 
         input.value = selected[0]
         input.dispatchEvent(new InputEvent(`input`))
-        await sleep()
+        await tick()
 
         const dropdown = doc_query(`ul.options`)
 
@@ -676,11 +677,11 @@ test.each([
     const input = doc_query<HTMLInputElement>(`ul.selected input`)
     input.value = `1`
     input.dispatchEvent(new InputEvent(`input`))
-    await sleep()
+    await tick()
 
     const li = doc_query(`ul.options li`)
     li.dispatchEvent(new MouseEvent(`mouseup`))
-    await sleep()
+    await tick()
 
     expect(input.value).toBe(expected)
   }
@@ -700,7 +701,7 @@ test(`2-way binding of selected`, async () => {
   for (const _ of Array(2)) {
     const li = doc_query(`ul.options li`)
     li.dispatchEvent(new MouseEvent(`mouseup`))
-    await sleep()
+    await tick()
   }
 
   expect(selected).toEqual([1, 2])
@@ -708,7 +709,7 @@ test(`2-way binding of selected`, async () => {
   // test external changes to selected bind inwards
   selected = [3]
   binder.$set({ selected })
-  await sleep()
+  await tick()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`3`)
 })
 
@@ -732,7 +733,7 @@ test.each([
     for (const _ of [1, 2]) {
       const li = doc_query(`ul.options li`)
       li.dispatchEvent(new MouseEvent(`mouseup`))
-      await sleep()
+      await tick()
     }
 
     expect(value).toEqual(expected)
@@ -772,7 +773,7 @@ test.each([[null], [`custom add option message`]])(
 
     const input = doc_query(`ul.selected input`)
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
-    await sleep()
+    await tick()
 
     const li_active = doc_query(`ul.options li.active`)
     expect(li_active.textContent?.trim()).toBe(
@@ -804,17 +805,17 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   const input = doc_query(`ul.selected input`)
   input.value = `foo`
   input.dispatchEvent(new InputEvent(`input`))
-  await sleep()
+  await tick()
 
   const li = doc_query(`ul.options li[title='Create this option...']`)
   li.dispatchEvent(new MouseEvent(`mouseup`))
-  await sleep()
+  await tick()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`foo`)
 
   // remove the new option
   const li_selected = doc_query(`ul.selected li button[title*='Remove']`)
   li_selected.dispatchEvent(new MouseEvent(`mouseup`))
-  await sleep()
+  await tick()
 
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
 })
@@ -867,7 +868,7 @@ test(`dragging selected options across each other changes their order`, async ()
   dataTransfer.setData(`text/plain`, `1`)
 
   li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
-  await sleep()
+  await tick()
 
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`2 1 3`)
 
@@ -876,7 +877,7 @@ test(`dragging selected options across each other changes their order`, async ()
   dataTransfer.setData(`text/plain`, `0`)
 
   li2.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
-  await sleep()
+  await tick()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
 
@@ -976,7 +977,7 @@ test(`first matching option becomes active automatically on entering searchText`
   input.dispatchEvent(new InputEvent(`input`))
   // triggers handle_keydown callback (which sets activeIndex)
   input.dispatchEvent(new KeyboardEvent(`keydown`))
-  await sleep()
+  await tick()
 
   expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`bar`)
 })

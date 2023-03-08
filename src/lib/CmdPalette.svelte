@@ -1,17 +1,22 @@
 <script lang="ts">
-  import { tick } from 'svelte/internal'
+  /* eslint-disable no-undef */ // TODO: remove when fixed
+  // https://github.com/sveltejs/eslint-plugin-svelte3/issues/201
+  import { tick } from 'svelte'
   import { fade } from 'svelte/transition'
   import Select from '.'
 
   export let actions: Action[]
   export let trigger: string = `k`
   export let fade_duration: number = 200 // in ms
+  export let style: string = `` // for dialog
+  // for span in option slot, has no effect when passing slot="option"
+  export let span_style: string = ``
+  export let open: boolean = false
+  export let dialog: HTMLDialogElement
+  export let input: HTMLInputElement
+  export let placeholder: string = `Filter actions...`
 
   type Action = { label: string; action: () => void }
-
-  let open = false
-  let dialog: HTMLDialogElement
-  let input: HTMLInputElement
 
   async function toggle(event: KeyboardEvent) {
     if (event.key === trigger && event.metaKey && !open) {
@@ -31,7 +36,7 @@
     }
   }
 
-  function move(event: CustomEvent<{ option: Action }>) {
+  function run_and_close(event: CustomEvent<{ option: Action }>) {
     event.detail.option.action()
     open = false
   }
@@ -40,14 +45,25 @@
 <svelte:window on:keydown={toggle} on:click={close_if_outside} />
 
 {#if open}
-  <dialog class:open bind:this={dialog} transition:fade={{ duration: fade_duration }}>
+  <dialog
+    class:open
+    bind:this={dialog}
+    transition:fade={{ duration: fade_duration }}
+    {style}
+  >
     <Select
       options={actions}
       bind:input
-      placeholder="Go to..."
-      on:add={move}
+      {placeholder}
+      on:add={run_and_close}
       on:keydown={toggle}
-    />
+      {...$$props}
+    >
+      <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
+      <slot slot="option" name="option" let:option>
+        <span style={span_style}>{option.label}</span>
+      </slot>
+    </Select>
   </dialog>
 {/if}
 
