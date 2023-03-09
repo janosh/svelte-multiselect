@@ -386,13 +386,10 @@
   class:disabled
   class:single={maxSelect === 1}
   class:open
-  aria-expanded={open}
-  aria-multiselectable={maxSelect === null || maxSelect > 1}
   class:invalid
   class="multiselect {outerDivClass}"
   on:mouseup|stopPropagation={open_dropdown}
   title={disabled ? disabledInputTitle : null}
-  aria-disabled={disabled ? `true` : null}
   data-id={id}
 >
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
@@ -421,10 +418,16 @@
   <slot name="expand-icon" {open}>
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
-  <ul class="selected {ulSelectedClass}">
+  <ul
+    class="selected {ulSelectedClass}"
+    role="listbox"
+    aria-multiselectable={maxSelect === null || maxSelect > 1}
+    aria-label="selected options"
+  >
     {#each selected as option, idx (get_label(option))}
       <li
         class={liSelectedClass}
+        role="option"
         aria-selected="true"
         animate:flip={{ duration: 100 }}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
@@ -457,39 +460,37 @@
         {/if}
       </li>
     {/each}
-    <li style="display: contents;">
-      <input
-        class={inputClass}
-        bind:this={input}
-        bind:value={searchText}
-        on:mouseup|self|stopPropagation={open_dropdown}
-        on:keydown|stopPropagation={handle_keydown}
-        on:focus
-        on:focus={open_dropdown}
-        {id}
-        {disabled}
-        {autocomplete}
-        {inputmode}
-        {pattern}
-        placeholder={selected.length == 0 ? placeholder : null}
-        aria-invalid={invalid ? `true` : null}
-        ondrop="return false"
-        on:blur
-        on:change
-        on:click
-        on:keydown
-        on:keyup
-        on:mousedown
-        on:mouseenter
-        on:mouseleave
-        on:touchcancel
-        on:touchend
-        on:touchmove
-        on:touchstart
-      />
-      <!-- the above on:* lines forward potentially useful DOM events -->
-    </li>
+    <!-- the above on:* lines forward potentially useful DOM events -->
   </ul>
+  <input
+    class={inputClass}
+    bind:this={input}
+    bind:value={searchText}
+    on:mouseup|self|stopPropagation={open_dropdown}
+    on:keydown|stopPropagation={handle_keydown}
+    on:focus
+    on:focus={open_dropdown}
+    {id}
+    {disabled}
+    {autocomplete}
+    {inputmode}
+    {pattern}
+    placeholder={selected.length == 0 ? placeholder : null}
+    aria-invalid={invalid ? `true` : null}
+    ondrop="return false"
+    on:blur
+    on:change
+    on:click
+    on:keydown
+    on:keyup
+    on:mousedown
+    on:mouseenter
+    on:mouseleave
+    on:touchcancel
+    on:touchend
+    on:touchmove
+    on:touchstart
+  />
   {#if loading}
     <slot name="spinner">
       <CircleSpinner />
@@ -524,7 +525,14 @@
 
   <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
-    <ul class:hidden={!open} class="options {ulOptionsClass}">
+    <ul
+      class:hidden={!open}
+      class="options {ulOptionsClass}"
+      role="listbox"
+      aria-multiselectable={maxSelect === null || maxSelect > 1}
+      aria-expanded={open}
+      aria-disabled={disabled ? `true` : null}
+    >
       {#each matchingOptions as option, idx}
         {@const {
           label,
@@ -554,6 +562,7 @@
           }}
           on:mouseout={() => (activeIndex = null)}
           on:blur={() => (activeIndex = null)}
+          role="option"
           aria-selected="false"
         >
           <slot name="option" {option} {idx}>
@@ -621,8 +630,7 @@
   }
 
   :where(div.multiselect > ul.selected) {
-    display: flex;
-    flex: 1;
+    display: inline-flex;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
@@ -669,7 +677,7 @@
     margin: auto 0; /* CSS reset */
     padding: 0; /* CSS reset */
   }
-  :where(div.multiselect > ul.selected > li > input) {
+  :where(div.multiselect > input) {
     border: none;
     outline: none;
     background: none;
@@ -682,7 +690,7 @@
     border-radius: 0; /* reset ul.selected > li */
   }
   /* don't wrap ::placeholder rules in :where() as it seems to be overpowered by browser defaults i.t.o. specificity */
-  div.multiselect > ul.selected > li > input::placeholder {
+  div.multiselect > input::placeholder {
     padding-left: 5pt;
     color: var(--sms-placeholder-color);
     opacity: var(--sms-placeholder-opacity);
