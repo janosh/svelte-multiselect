@@ -12,7 +12,7 @@ test.describe(`input`, async () => {
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
 
-    await page.click(`#foods ul input`)
+    await page.click(`#foods input[autocomplete]`)
 
     expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
@@ -26,7 +26,7 @@ test.describe(`input`, async () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     // note we only test for close on tab out, not on blur since blur should not close in case user
     // clicked anywhere else inside component
-    await page.focus(`#foods ul input`)
+    await page.focus(`#foods input[autocomplete]`)
 
     await page.keyboard.press(`Tab`)
 
@@ -47,7 +47,7 @@ test.describe(`input`, async () => {
   }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.fill(`#foods ul input`, `Pineapple`)
+    await page.fill(`#foods input[autocomplete]`, `Pineapple`)
 
     expect(
       await page.$$(`div.multiselect.open > ul.options > li`)
@@ -61,7 +61,7 @@ test.describe(`remove single button`, async () => {
   test(`should remove 1 option`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.click(`#foods ul input`)
+    await page.click(`#foods input[autocomplete]`)
     await page.click(`text=🍌 Banana`)
 
     await page.click(`button[title='Remove 🍌 Banana']`)
@@ -122,7 +122,7 @@ test.describe(`external CSS classes`, async () => {
     [`ulSelected`, `ul.selected`, `user-choices`],
     [`ulOptions`, `ul.options`, `dropdown`],
     [`liOption`, `ul.options > li`, `selectable-li`],
-    [`input`, `ul.selected > li > input`, `search-text-input`],
+    [`input`, `input[autocomplete]`, `search-text-input`],
     // below classes requires component interaction before appearing in DOM
     [`liSelected`, `ul.selected > li`, `selected-li`],
     [`liActiveOption`, `ul.options > li.active`, `hovered-or-arrow-keyed-li`],
@@ -131,7 +131,7 @@ test.describe(`external CSS classes`, async () => {
     test(`${prop}Class`, async ({ page }) => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
-      await page.click(`#foods ul input`)
+      await page.click(`#foods input[autocomplete]`)
       await page.hover(`ul.options > li`) // hover any option to give it active state
 
       const node = await page.$(`${selector}.${cls}`)
@@ -146,7 +146,7 @@ test.describe(`disabled multiselect`, async () => {
   })
 
   test(`has attribute aria-disabled`, async ({ page }) => {
-    const div = await page.$(`div.multiselect.disabled`)
+    const div = await page.$(`div.multiselect.disabled ul.options`)
     expect(await div?.getAttribute(`aria-disabled`)).toBe(`true`)
   })
 
@@ -158,7 +158,7 @@ test.describe(`disabled multiselect`, async () => {
   })
 
   test(`has input attribute disabled`, async ({ page }) => {
-    const input = await page.$(`.disabled > ul.selected > li > input`)
+    const input = await page.$(`.disabled input[autocomplete]`)
     expect(await input?.isDisabled()).toBe(true)
   })
 
@@ -183,24 +183,32 @@ test.describe(`accessibility`, async () => {
     page,
   }) => {
     // don't interact with component before this test as it will set invalid=false
-    const invalid = await page.getAttribute(`#foods ul input`, `aria-invalid`, {
-      strict: true,
-    })
+    const invalid = await page.getAttribute(
+      `#foods input[autocomplete]`,
+      `aria-invalid`,
+      {
+        strict: true,
+      }
+    )
     expect(invalid).toBe(`true`)
   })
 
   test(`has aria-expanded='false' when closed`, async ({ page }) => {
-    const before = await page.getAttribute(`div.multiselect`, `aria-expanded`, {
-      strict: true,
-    })
+    const before = await page.getAttribute(
+      `div.multiselect ul.options`,
+      `aria-expanded`,
+      { strict: true }
+    )
     expect(before).toBe(`false`)
   })
 
   test(`has aria-expanded='true' when open`, async ({ page }) => {
     await page.click(`div.multiselect`) // open the dropdown
-    const after = await page.getAttribute(`div.multiselect`, `aria-expanded`, {
-      strict: true,
-    })
+    const after = await page.getAttribute(
+      `div.multiselect ul.options`,
+      `aria-expanded`,
+      { strict: true }
+    )
     expect(after).toBe(`true`)
   })
 
@@ -237,7 +245,7 @@ test.describe(`multiselect`, async () => {
   test(`can select and remove many options`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.click(`#foods ul input`)
+    await page.click(`#foods input[autocomplete]`)
     for (const idx of [2, 5, 8]) {
       await page.click(`ul.options > li >> nth=${idx}`)
     }
@@ -263,7 +271,7 @@ test.describe(`multiselect`, async () => {
   }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
-    await page.click(`#foods ul input`)
+    await page.click(`#foods input[autocomplete]`)
 
     for (const expected_fruit of foods) {
       await page.keyboard.press(`ArrowDown`)
@@ -287,11 +295,11 @@ test.describe(`multiselect`, async () => {
   }) => {
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
 
-    await page.click(`#languages ul input`)
+    await page.click(`#languages input[autocomplete]`)
 
     await page.click(`text=Haskell >> nth=0`)
 
-    await page.fill(`#languages ul input`, `java`)
+    await page.fill(`#languages input[autocomplete]`, `java`)
 
     await page.click(`text=JavaScript`)
 
@@ -307,7 +315,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`entering custom option adds it to selected but not to options`, async ({
     page,
   }) => {
-    const selector = `#foods ul input`
+    const selector = `#foods input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
     await page.click(selector)
@@ -333,7 +341,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`entering custom option in append mode adds it to selected
       list _and_ to options in dropdown menu`, async ({ page }) => {
     // i.e. it remains selectable from the dropdown after removing from selected
-    const selector = `#languages ul input`
+    const selector = `#languages input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -353,7 +361,7 @@ test.describe(`allowUserOptions`, async () => {
   })
 
   test(`shows custom createOptionMsg if no options match`, async ({ page }) => {
-    const selector = `#languages ul input`
+    const selector = `#languages input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -376,7 +384,7 @@ test.describe(`allowUserOptions`, async () => {
   test(`creates custom option correctly after selecting a provided option`, async ({
     page,
   }) => {
-    const selector = `#languages ul input`
+    const selector = `#languages input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -398,7 +406,7 @@ test.describe(`allowUserOptions`, async () => {
     page.on(`console`, (msg) => {
       if (msg.type() === `error`) logs.push(msg.text())
     })
-    const selector = `#no-default-options ul input`
+    const selector = `#no-default-options input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
@@ -425,7 +433,7 @@ test.describe(`sortSelected`, async () => {
   test(`default sorting is alphabetical by label`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`#default-sort ul input`) // open dropdown
+    await page.click(`#default-sort input[autocomplete]`) // open dropdown
 
     for (const label of labels) {
       await page.click(`ul.options >> text=${label}`)
@@ -442,7 +450,7 @@ test.describe(`sortSelected`, async () => {
   test(`custom sorting`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`#custom-sort ul input`) // open dropdown
+    await page.click(`#custom-sort input[autocomplete]`) // open dropdown
     for (const label of labels) {
       await page.click(`ul.options:visible >> text=${label}`)
     }
@@ -487,7 +495,7 @@ test.describe(`maxSelect`, async () => {
 
   test.beforeEach(async ({ page }) => {
     await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
-    await page.click(`#languages ul input`)
+    await page.click(`#languages input[autocomplete]`)
 
     // select maxSelect options
     for (const idx of Array(max_select).fill(0)) {
@@ -511,7 +519,7 @@ test.describe(`maxSelect`, async () => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
     let selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
     expect(selected_lis).toHaveLength(max_select)
-    await page.click(`#languages ul input`) // re-open options dropdown
+    await page.click(`#languages input[autocomplete]`) // re-open options dropdown
     await page.click(`ul.options > li >> nth=0`)
     selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
     expect(selected_lis).toHaveLength(max_select)

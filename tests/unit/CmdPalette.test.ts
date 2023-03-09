@@ -16,7 +16,7 @@ test.each([[`k`], [`o`]])(`CircleSpinner prop size`, async (trigger) => {
   const dialog = doc_query(`dialog.open`)
   expect(dialog).toBeTruthy()
 
-  const input = doc_query(`dialog.open div.multiselect ul.selected input`)
+  const input = doc_query(`dialog.open div.multiselect input[autocomplete]`)
   // press down arrow, then enter to select the first action
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
   await tick()

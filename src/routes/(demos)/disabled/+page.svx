@@ -9,6 +9,7 @@
 </script>
 
 <MultiSelect
+  id="disabled"
   options={[`Svelte`]}
   selected={[`Svelte`]}
   disabled
