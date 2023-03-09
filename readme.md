@@ -611,7 +611,7 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 :global(div.multiselect > ul.selected > li button, button.remove-all) {
   /* buttons to remove a single or all selected options at once */
 }
-:global(div.multiselect > ul.selected > li > input) {
+:global(div.multiselect > input[autocomplete]) {
   /* input inside the top-level wrapper div */
 }
 :global(div.multiselect > ul.options) {
