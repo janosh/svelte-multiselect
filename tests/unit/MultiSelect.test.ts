@@ -122,7 +122,7 @@ test(`applies DOM attributes to input node`, () => {
   })
 
   const lis = document.querySelectorAll(`ul.options > li`)
-  const input = doc_query(`ul.selected input`) as HTMLInputElement
+  const input = doc_query(`input[autocomplete]`) as HTMLInputElement
   const form_input = doc_query(`input.form-control`) as HTMLInputElement
 
   // make sure the search text filtered the dropdown options
@@ -179,7 +179,7 @@ test(`arrow down makes first option active`, async () => {
     props: { options: [1, 2, 3], open: true },
   })
 
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
 
@@ -194,7 +194,7 @@ test(`arrow down makes first option active`, async () => {
 test(`can select 1st and last option with arrow and enter key`, async () => {
   new MultiSelect({ target: document.body, props: { options: [1, 2, 3] } })
 
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
   await tick()
@@ -234,7 +234,7 @@ test(`invokes callback functions on input node DOM events`, async () => {
     props: { options },
   })
 
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
 
   for (const [event_name, event] of events) {
     const callback = vi.fn()
@@ -400,7 +400,7 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
     props: { options: [1, 2, 3], invalid: true },
   })
 
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
 
   expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
   const multiselect = doc_query(`div.multiselect`)
@@ -438,7 +438,7 @@ test(`filters dropdown to show only matching options when entering text`, async 
     props: { options },
   })
 
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
 
   input.value = `ba`
   input.dispatchEvent(new InputEvent(`input`))
@@ -457,7 +457,7 @@ test.each([undefined, `Custom no options message`])(
       props: { options: [1, 2, 3], noMatchingOptionsMsg },
     })
 
-    const input = doc_query(`ul.selected input`)
+    const input = doc_query(`input[autocomplete]`)
 
     input.value = `4`
     input.dispatchEvent(new InputEvent(`input`))
@@ -481,7 +481,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
     props: { options, allowUserOptions: true },
   })
 
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
   input.value = `ba`
   input.dispatchEvent(new InputEvent(`input`))
   await tick()
@@ -613,12 +613,12 @@ test(`closes dropdown on tab out`, async () => {
   expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 
   // opens dropdown on focus
-  doc_query(`ul.selected input`).focus()
+  doc_query(`input[autocomplete]`).focus()
   await tick()
   expect(document.querySelector(`ul.options.hidden`)).toBeNull()
 
   // closes dropdown again on tab out
-  doc_query(`ul.selected input`).dispatchEvent(
+  doc_query(`input[autocomplete]`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Tab` })
   )
   await tick()
@@ -648,7 +648,7 @@ describe.each([
           },
         })
 
-        const input = doc_query(`ul.selected input`)
+        const input = doc_query(`input[autocomplete]`)
 
         input.value = selected[0]
         input.dispatchEvent(new InputEvent(`input`))
@@ -674,7 +674,7 @@ test.each([
       props: { options: [1, 2, 3], resetFilterOnAdd },
     })
 
-    const input = doc_query<HTMLInputElement>(`ul.selected input`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.value = `1`
     input.dispatchEvent(new InputEvent(`input`))
     await tick()
@@ -771,7 +771,7 @@ test.each([[null], [`custom add option message`]])(
     if (createOptionMsg) props = { ...props, createOptionMsg }
     new MultiSelect({ target: document.body, props })
 
-    const input = doc_query(`ul.selected input`)
+    const input = doc_query(`input[autocomplete]`)
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
     await tick()
 
@@ -788,9 +788,9 @@ test(`disabled multiselect has disabled icon`, () => {
     props: { options: [1, 2, 3], disabled: true },
   })
 
-  expect(
-    doc_query(`ul.selected + svg[data-name='disabled-icon']`)
-  ).toBeInstanceOf(SVGSVGElement)
+  expect(doc_query(`svg[data-name='disabled-icon']`)).toBeInstanceOf(
+    SVGSVGElement
+  )
 })
 
 test(`can remove user-created selected option which is not in dropdown list`, async () => {
@@ -802,7 +802,7 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   })
 
   // add a new option created from user text input
-  const input = doc_query(`ul.selected input`)
+  const input = doc_query(`input[autocomplete]`)
   input.value = `foo`
   input.dispatchEvent(new InputEvent(`input`))
   await tick()
@@ -971,7 +971,7 @@ test(`first matching option becomes active automatically on entering searchText`
     props: { options: [`foo`, `bar`, `baz`] },
   })
 
-  const input = doc_query<HTMLInputElement>(`ul.selected input`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `ba`
   // updates input value
   input.dispatchEvent(new InputEvent(`input`))
