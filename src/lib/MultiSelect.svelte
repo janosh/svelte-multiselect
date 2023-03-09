@@ -442,10 +442,10 @@
           {#if parseLabelsAsHtml}
             {@html get_label(option)}
           {:else}
-            {get_label(option)}
-          {/if}
-        </slot>
-        {#if !disabled && (minSelect === null || selected.length > minSelect)}
+            {get_label(
+              option
+            )}{/if}<!-- keep this on one line to not add white space, breaks test if removed --></slot
+        >{#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
             on:keydown={if_enter_or_space(() => remove(get_label(option)))}
