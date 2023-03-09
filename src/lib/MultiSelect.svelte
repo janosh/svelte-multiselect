@@ -442,10 +442,9 @@
           {#if parseLabelsAsHtml}
             {@html get_label(option)}
           {:else}
-            {get_label(
-              option
-            )}{/if}<!-- keep this on one line to not add white space, breaks test if removed --></slot
-        >{#if !disabled && (minSelect === null || selected.length > minSelect)}
+            {get_label(option)}{/if}
+        </slot>
+        {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
             on:mouseup|stopPropagation={() => remove(get_label(option))}
             on:keydown={if_enter_or_space(() => remove(get_label(option)))}
@@ -460,37 +459,37 @@
         {/if}
       </li>
     {/each}
+    <input
+      class={inputClass}
+      bind:this={input}
+      bind:value={searchText}
+      on:mouseup|self|stopPropagation={open_dropdown}
+      on:keydown|stopPropagation={handle_keydown}
+      on:focus
+      on:focus={open_dropdown}
+      {id}
+      {disabled}
+      {autocomplete}
+      {inputmode}
+      {pattern}
+      placeholder={selected.length == 0 ? placeholder : null}
+      aria-invalid={invalid ? `true` : null}
+      ondrop="return false"
+      on:blur
+      on:change
+      on:click
+      on:keydown
+      on:keyup
+      on:mousedown
+      on:mouseenter
+      on:mouseleave
+      on:touchcancel
+      on:touchend
+      on:touchmove
+      on:touchstart
+    />
     <!-- the above on:* lines forward potentially useful DOM events -->
   </ul>
-  <input
-    class={inputClass}
-    bind:this={input}
-    bind:value={searchText}
-    on:mouseup|self|stopPropagation={open_dropdown}
-    on:keydown|stopPropagation={handle_keydown}
-    on:focus
-    on:focus={open_dropdown}
-    {id}
-    {disabled}
-    {autocomplete}
-    {inputmode}
-    {pattern}
-    placeholder={selected.length == 0 ? placeholder : null}
-    aria-invalid={invalid ? `true` : null}
-    ondrop="return false"
-    on:blur
-    on:change
-    on:click
-    on:keydown
-    on:keyup
-    on:mousedown
-    on:mouseenter
-    on:mouseleave
-    on:touchcancel
-    on:touchend
-    on:touchmove
-    on:touchstart
-  />
   {#if loading}
     <slot name="spinner">
       <CircleSpinner />
@@ -630,7 +629,8 @@
   }
 
   :where(div.multiselect > ul.selected) {
-    display: inline-flex;
+    display: flex;
+    flex: 1;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
@@ -677,7 +677,7 @@
     margin: auto 0; /* CSS reset */
     padding: 0; /* CSS reset */
   }
-  :where(div.multiselect > input) {
+  :where(div.multiselect > ul.selected > input) {
     border: none;
     outline: none;
     background: none;
@@ -690,7 +690,7 @@
     border-radius: 0; /* reset ul.selected > li */
   }
   /* don't wrap ::placeholder rules in :where() as it seems to be overpowered by browser defaults i.t.o. specificity */
-  div.multiselect > input::placeholder {
+  div.multiselect > ul.selected > input::placeholder {
     padding-left: 5pt;
     color: var(--sms-placeholder-color);
     opacity: var(--sms-placeholder-opacity);

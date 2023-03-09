@@ -158,7 +158,7 @@ test.describe(`disabled multiselect`, async () => {
   })
 
   test(`has input attribute disabled`, async ({ page }) => {
-    const input = await page.$(`.disabled > input[autocomplete]`)
+    const input = await page.$(`.disabled input[autocomplete]`)
     expect(await input?.isDisabled()).toBe(true)
   })
 
