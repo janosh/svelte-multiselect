@@ -4,6 +4,25 @@ All notable changes to this project will be documented in this file. Dates are d
 
 <!-- auto-changelog-above -->
 
+#### [v8.5.0](https://github.com/janosh/svelte-multiselect/compare/v8.4.0...v8.5.0)
+
+> 9 March 2023
+
+- Fix Lighthouse a11y issues [`#210`](https://github.com/janosh/svelte-multiselect/pull/210)
+- clear selected and searchText first, then trigger removeAll and change events in remove_all() [`#208`](https://github.com/janosh/svelte-multiselect/issues/208)
+- add props style, span_style, open, dialog, input, placeholder to CmdPalette + pipe through all other props to MultiSelect [`97e6815`](https://github.com/janosh/svelte-multiselect/commit/97e6815cf0eb87a13303922f0186ceb0434b72a9)
+- fix /css-classes example not applying styles from external classes [`aa1e28e`](https://github.com/janosh/svelte-multiselect/commit/aa1e28e482999ff496a2b12a1aefc4cc80ada798)
+
+#### [v8.4.0](https://github.com/janosh/svelte-multiselect/compare/v8.3.0...v8.4.0)
+
+> 1 March 2023
+
+- Make first matching option active automatically on entering searchText [`#206`](https://github.com/janosh/svelte-multiselect/pull/206)
+- add src/lib/NavPalette.svelte invoked with cmd+k for keyboard-only site navigation [`e3f4ea9`](https://github.com/janosh/svelte-multiselect/commit/e3f4ea955970bc81973420fb197ce68ac55cc391)
+- rename NavPalette to CmdPalette and make it execute generic actions on item select [`b27cd80`](https://github.com/janosh/svelte-multiselect/commit/b27cd806c4c7c1bbf3d311e2d5ba6c7844eabb8d)
+- update to svelte-package v2 [`8d3df3e`](https://github.com/janosh/svelte-multiselect/commit/8d3df3ef5d742f3f3b7041f339d4b8cac556e0e6)
+- fix selected options having cursor: grab (to indicate drag and drop support to change order) even if only single option selected [`3309e1e`](https://github.com/janosh/svelte-multiselect/commit/3309e1e176e0a55945fdc9b30e7ff290dabe3cf0)
+
 #### [v8.3.0](https://github.com/janosh/svelte-multiselect/compare/v8.2.4...v8.3.0)
 
 > 25 January 2023

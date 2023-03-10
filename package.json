@@ -5,7 +5,7 @@
   "homepage": "https://janosh.github.io/svelte-multiselect",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
-  "version": "8.4.0",
+  "version": "8.5.0",
   "type": "module",
   "svelte": "./dist/index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
@@ -23,17 +23,17 @@
     "update-coverage": "vitest tests/unit --run --coverage && npx istanbul-badges-readme"
   },
   "dependencies": {
-    "svelte": "^3.55.1"
+    "svelte": "^3.56.0"
   },
   "devDependencies": {
     "@iconify/svelte": "^3.1.0",
-    "@playwright/test": "^1.31.1",
+    "@playwright/test": "^1.31.2",
     "@sveltejs/adapter-static": "^2.0.1",
-    "@sveltejs/kit": "^1.9.2",
+    "@sveltejs/kit": "^1.11.0",
     "@sveltejs/package": "2.0.2",
     "@sveltejs/vite-plugin-svelte": "^2.0.3",
-    "@typescript-eslint/eslint-plugin": "^5.54.0",
-    "@typescript-eslint/parser": "^5.54.0",
+    "@typescript-eslint/eslint-plugin": "^5.54.1",
+    "@typescript-eslint/parser": "^5.54.1",
     "@vitest/coverage-c8": "^0.29.2",
     "eslint": "^8.35.0",
     "eslint-plugin-svelte3": "^4.0.0",
@@ -46,11 +46,11 @@
     "prettier-plugin-svelte": "^2.9.0",
     "rehype-autolink-headings": "^6.1.1",
     "rehype-slug": "^5.1.0",
-    "svelte-check": "^3.0.4",
+    "svelte-check": "^3.1.0",
     "svelte-preprocess": "^5.0.1",
     "svelte-toc": "^0.5.2",
     "svelte-zoo": "^0.3.4",
-    "svelte2tsx": "^0.6.2",
+    "svelte2tsx": "^0.6.3",
     "typescript": "^4.9.5",
     "vite": "^4.1.4",
     "vitest": "^0.29.2"
