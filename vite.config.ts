@@ -3,7 +3,7 @@ import mdsvexamples from 'mdsvexamples/vite'
 import type { UserConfig } from 'vite'
 import type { UserConfig as VitestConfig } from 'vitest'
 
-const vite_config: UserConfig & { test: VitestConfig } = {
+export default {
   plugins: [sveltekit(), mdsvexamples],
 
   test: {
@@ -22,6 +22,4 @@ const vite_config: UserConfig & { test: VitestConfig } = {
   preview: {
     port: 3000,
   },
-}
-
-export default vite_config
+} satisfies UserConfig & { test: VitestConfig }
