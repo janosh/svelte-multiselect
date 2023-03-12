@@ -583,6 +583,7 @@
             on:focus={() => (add_option_msg_is_active = true)}
             on:mouseout={() => (add_option_msg_is_active = false)}
             on:blur={() => (add_option_msg_is_active = false)}
+            role="option"
             aria-selected="false"
           >
             {!duplicates && selected.some((option) => duplicateFunc(option, searchText))
