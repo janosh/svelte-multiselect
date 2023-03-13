@@ -1,3 +1,5 @@
+<svelte:options accessors />
+
 <script lang="ts">
   import MultiSelect, { type Option } from '$lib'
   import { createEventDispatcher } from 'svelte'
@@ -25,4 +27,5 @@
   bind:options
   bind:selected
   bind:value
+  {...$$props}
 />

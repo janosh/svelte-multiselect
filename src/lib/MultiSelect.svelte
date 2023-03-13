@@ -29,6 +29,7 @@
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
   export let form_input: HTMLInputElement | null = null
+  export let highlightMatches: boolean = true
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
@@ -162,7 +163,7 @@
         [true, `append`].includes(allowUserOptions) &&
         searchText.length > 0
       ) {
-        // user entered text but no options match, so if allowUserOptions=true | 'append', we create
+        // user entered text but no options match, so if allowUserOptions = true | 'append', we create
         // a new option from the user-entered text
         if (typeof options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
@@ -174,7 +175,10 @@
           ) {
             // create new option as number if it parses to a number and 1st option is also number or missing
             option = Number(searchText) as Option
-          } else option = searchText as Option // else create custom option as string
+          } else {
+            option = searchText as Option // else create custom option as string
+          }
+          dispatch(`create`, { option })
         }
         if (allowUserOptions === `append`) options = [...options, option]
       }
@@ -238,10 +242,10 @@
 
     selected = selected.filter((op) => get_label(op) !== label) // remove option from selected list
 
-    dispatch(`remove`, { option })
-    dispatch(`change`, { option, type: `remove` })
     invalid = false // reset error status whenever items are removed
     form_input?.setCustomValidity(``)
+    dispatch(`remove`, { option })
+    dispatch(`change`, { option, type: `remove` })
   }
 
   function open_dropdown(event: Event) {
@@ -373,6 +377,51 @@
     event.dataTransfer.dropEffect = `move`
     event.dataTransfer.setData(`text/plain`, `${idx}`)
   }
+
+  let ul_options: HTMLUListElement
+  function highlight_matching_options(event: KeyboardEvent) {
+    if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // don't try if CSS highlight API not supported
+
+    // clear previous ranges from HighlightRegistry
+    CSS.highlights.clear()
+
+    // get input's search query
+    const query = event?.target?.value.trim().toLowerCase()
+    if (!query) return
+
+    const tree_walker = document.createTreeWalker(ul_options, NodeFilter.SHOW_TEXT)
+    const text_nodes: Node[] = []
+    let current_node = tree_walker.nextNode()
+    while (current_node) {
+      text_nodes.push(current_node)
+      current_node = tree_walker.nextNode()
+    }
+
+    // iterate over all text nodes and find matches
+    const ranges = text_nodes.map((el) => {
+      const text = el.textContent.toLowerCase()
+      const indices = []
+      let start_pos = 0
+      while (start_pos < text.length) {
+        const index = text.indexOf(query, start_pos)
+        if (index === -1) break
+        indices.push(index)
+        start_pos = index + query.length
+      }
+
+      // create range object for each str found in the text node
+      return indices.map((index) => {
+        const range = new Range()
+        range.setStart(el, index)
+        range.setEnd(el, index + query.length)
+        return range
+      })
+    })
+
+    // create Highlight object from ranges and add to registry
+    // eslint-disable-next-line no-undef
+    CSS.highlights.set(`search-results`, new Highlight(...ranges.flat()))
+  }
 </script>
 
 <svelte:window
@@ -467,6 +516,7 @@
       on:keydown|stopPropagation={handle_keydown}
       on:focus
       on:focus={open_dropdown}
+      on:input={highlight_matching_options}
       {id}
       {disabled}
       {autocomplete}
@@ -531,6 +581,7 @@
       aria-multiselectable={maxSelect === null || maxSelect > 1}
       aria-expanded={open}
       aria-disabled={disabled ? `true` : null}
+      bind:this={ul_options}
     >
       {#each matchingOptions as option, idx}
         {@const {
@@ -755,5 +806,11 @@
 
   :where(span.max-select-msg) {
     padding: 0 3pt;
+  }
+  ::highlight(search-results) {
+    color: var(--sms-highlight-color, orange);
+    background: var(--sms-highlight-bg);
+    text-decoration: var(--sms-highlight-text-decoration);
+    text-decoration-color: var(--sms-highlight-text-decoration-color);
   }
 </style>
