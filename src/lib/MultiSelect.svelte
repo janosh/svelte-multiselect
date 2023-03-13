@@ -29,6 +29,7 @@
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
   export let form_input: HTMLInputElement | null = null
+  export let highlightMatches: boolean = true
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
@@ -376,6 +377,50 @@
     event.dataTransfer.dropEffect = `move`
     event.dataTransfer.setData(`text/plain`, `${idx}`)
   }
+
+  let ul_options: HTMLUListElement
+  function highlight_matching_options(event: KeyboardEvent) {
+    if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // don't try if CSS highlight API not supported
+
+    // clear previous ranges from HighlightRegistry
+    CSS.highlights.clear()
+
+    // get input's search query
+    const query = event?.target?.value.trim().toLowerCase()
+    if (!query) return
+
+    const tree_walker = document.createTreeWalker(ul_options, NodeFilter.SHOW_TEXT)
+    const text_nodes: Node[] = []
+    let current_node = tree_walker.nextNode()
+    while (current_node) {
+      text_nodes.push(current_node)
+      current_node = tree_walker.nextNode()
+    }
+
+    // iterate over all text nodes and find matches
+    const ranges = text_nodes.map((el) => {
+      const text = el.textContent.toLowerCase()
+      const indices = []
+      let start_pos = 0
+      while (start_pos < text.length) {
+        const index = text.indexOf(query, start_pos)
+        if (index === -1) break
+        indices.push(index)
+        start_pos = index + query.length
+      }
+
+      // create range object for each str found in the text node
+      return indices.map((index) => {
+        const range = new Range()
+        range.setStart(el, index)
+        range.setEnd(el, index + query.length)
+        return range
+      })
+    })
+
+    // create Highlight object from ranges and add to registry
+    CSS.highlights.set(`search-results`, new Highlight(...ranges.flat()))
+  }
 </script>
 
 <svelte:window
@@ -470,6 +515,7 @@
       on:keydown|stopPropagation={handle_keydown}
       on:focus
       on:focus={open_dropdown}
+      on:input={highlight_matching_options}
       {id}
       {disabled}
       {autocomplete}
@@ -534,6 +580,7 @@
       aria-multiselectable={maxSelect === null || maxSelect > 1}
       aria-expanded={open}
       aria-disabled={disabled ? `true` : null}
+      bind:this={ul_options}
     >
       {#each matchingOptions as option, idx}
         {@const {
@@ -758,5 +805,11 @@
 
   :where(span.max-select-msg) {
     padding: 0 3pt;
+  }
+  ::highlight(search-results) {
+    color: var(--sms-highlight-color, orange);
+    background: var(--sms-highlight-bg);
+    text-decoration: var(--sms-highlight-text-decoration);
+    text-decoration-color: var(--sms-highlight-text-decoration-color);
   }
 </style>
