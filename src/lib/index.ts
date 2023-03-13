@@ -18,6 +18,7 @@ export type ObjectOption = {
 
 export type DispatchEvents<T = Option> = {
   add: { option: T }
+  create: { option: T }
   remove: { option: T }
   removeAll: { options: T[] }
   change: {

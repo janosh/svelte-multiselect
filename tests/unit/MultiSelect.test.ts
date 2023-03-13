@@ -4,6 +4,9 @@ import { describe, expect, test, vi } from 'vitest'
 import { doc_query } from '.'
 import Test2WayBind from './Test2WayBind.svelte'
 
+const mouseup = new MouseEvent(`mouseup`)
+const mouseover = new MouseEvent(`mouseover`)
+
 test(`2-way binding of activeIndex`, async () => {
   let activeIndex: number
   const binder = new Test2WayBind({
@@ -17,7 +20,7 @@ test(`2-way binding of activeIndex`, async () => {
   // test internal changes to activeIndex bind outwards
   for (const idx of [1, 2]) {
     const li = doc_query(`ul.options li:nth-child(${idx})`)
-    li.dispatchEvent(new MouseEvent(`mouseover`))
+    li.dispatchEvent(mouseover)
     await tick()
     expect(activeIndex).toEqual(idx - 1)
   }
@@ -44,7 +47,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   binder.$on(`activeOption-changed`, cb)
 
   const first_option = doc_query(`ul.options > li`)
-  first_option.dispatchEvent(new MouseEvent(`mouseover`))
+  first_option.dispatchEvent(mouseover)
 
   await tick()
   expect(active_option).toBe(1)
@@ -66,7 +69,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   binder.$on(`activeOption-changed`, cb)
 
   const first_option = doc_query(`ul.options > li`)
-  first_option.dispatchEvent(new MouseEvent(`mouseover`))
+  first_option.dispatchEvent(mouseover)
 
   await tick()
   expect(activeOption).toBe(1)
@@ -160,9 +163,7 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
   })
 
   // make an option active hovering it so it gets the active class
-  document
-    .querySelector(`ul.options > li`)
-    ?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
+  document.querySelector(`ul.options > li`)?.dispatchEvent(mouseover)
   await tick()
 
   for (const [class_name, elem_type] of Object.entries(prop_elem_map)) {
@@ -213,7 +214,7 @@ test(`can select 1st and last option with arrow and enter key`, async () => {
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/119
-test(`invokes callback functions on input node DOM events`, async () => {
+test(`bubbles <input> node DOM events`, async () => {
   const options = [1, 2, 3]
 
   const events: [keyof MultiSelectEvents, Event][] = [
@@ -229,7 +230,7 @@ test(`invokes callback functions on input node DOM events`, async () => {
     [`touchstart`, new TouchEvent(`touchstart`)],
   ]
 
-  const instance = new MultiSelect({
+  const select = new MultiSelect({
     target: document.body,
     props: { options },
   })
@@ -237,36 +238,36 @@ test(`invokes callback functions on input node DOM events`, async () => {
   const input = doc_query(`input[autocomplete]`)
 
   for (const [event_name, event] of events) {
-    const callback = vi.fn()
-    instance.$on(event_name, callback)
+    const spy = vi.fn()
+    select.$on(event_name, spy)
 
     input.dispatchEvent(event)
-    expect(callback, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
-    expect(callback, `event type '${event_name}'`).toHaveBeenCalledWith(event)
+    expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
+    expect(spy, `event type '${event_name}'`).toHaveBeenCalledWith(event)
   }
 })
 
 test(`value is a single option (i.e. selected[0]) when maxSelect=1`, async () => {
   const options = [1, 2, 3]
 
-  const instance = new MultiSelect({
+  const select = new MultiSelect({
     target: document.body,
     props: { options, maxSelect: 1, selected: options },
   })
 
-  const value = instance.$$.ctx[instance.$$.props.value]
+  const value = select.$$.ctx[select.$$.props.value]
 
   // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
   expect(value).toBe(options[0])
 })
 
 test(`selected is null when maxSelect=1 and no option is pre-selected`, async () => {
-  const instance = new MultiSelect({
+  const select = new MultiSelect({
     target: document.body,
     props: { options: [1, 2, 3], maxSelect: 1 },
   })
 
-  const value = instance.$$.ctx[instance.$$.props.value]
+  const value = select.$$.ctx[select.$$.props.value]
 
   expect(value).toBe(null)
 })
@@ -278,12 +279,12 @@ test(`selected is array of first two options when maxSelect=2`, async () => {
     preselected: true,
   }))
 
-  const instance = new MultiSelect({
+  const select = new MultiSelect({
     target: document.body,
     props: { options, maxSelect: 2 },
   })
 
-  const selected = instance.$$.ctx[instance.$$.props.selected]
+  const selected = select.$$.ctx[select.$$.props.selected]
 
   expect(selected).toEqual(options.slice(0, 2))
 })
@@ -382,7 +383,7 @@ test.each([
     // select 3 options
     for (const _ of Array(3)) {
       const li = doc_query(`ul.options li`)
-      li.dispatchEvent(new MouseEvent(`mouseup`))
+      li.dispatchEvent(mouseup)
       await tick()
     }
     expect(form.checkValidity()).toBe(true)
@@ -408,7 +409,7 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
 
   // assert aria-invalid attribute is removed on selecting a new option
   const option = doc_query(`ul.options > li`)
-  option.dispatchEvent(new MouseEvent(`mouseup`))
+  option.dispatchEvent(mouseup)
   await tick()
 
   expect(input.getAttribute(`aria-invalid`)).toBe(null)
@@ -507,7 +508,7 @@ test(`single remove button removes 1 selected option`, async () => {
 
   document
     .querySelector(`ul.selected button[title='Remove 1']`)
-    ?.dispatchEvent(new MouseEvent(`mouseup`))
+    ?.dispatchEvent(mouseup)
 
   const selected = doc_query(`ul.selected`)
   await tick()
@@ -523,9 +524,7 @@ test(`remove all button removes all selected options and is visible only if more
   let selected = doc_query(`ul.selected`)
   expect(selected.textContent?.trim()).toEqual(`1 2 3`)
 
-  document
-    .querySelector(`button[title='Remove all']`)
-    ?.dispatchEvent(new MouseEvent(`mouseup`))
+  document.querySelector(`button[title='Remove all']`)?.dispatchEvent(mouseup)
   await tick()
 
   selected = doc_query(`ul.selected`)
@@ -539,7 +538,7 @@ test(`remove all button removes all selected options and is visible only if more
     ).toBeNull()
 
     const li = doc_query(`ul.options li`)
-    li.dispatchEvent(new MouseEvent(`mouseup`))
+    li.dispatchEvent(mouseup)
     await tick()
   }
 
@@ -574,7 +573,7 @@ test(`can't select disabled options`, async () => {
   new MultiSelect({ target: document.body, props: { options } })
 
   for (const li of document.querySelectorAll(`ul.options > li`)) {
-    li.dispatchEvent(new MouseEvent(`mouseup`))
+    li.dispatchEvent(mouseup)
   }
 
   const selected = doc_query(`ul.selected`)
@@ -593,7 +592,7 @@ test.each([2, 5, 10])(
 
     document
       .querySelectorAll(`ul.options > li`)
-      ?.forEach((li) => li.dispatchEvent(new MouseEvent(`mouseup`)))
+      ?.forEach((li) => li.dispatchEvent(mouseup))
 
     const selected = doc_query(`ul.selected`)
     await tick()
@@ -680,7 +679,7 @@ test.each([
     await tick()
 
     const li = doc_query(`ul.options li`)
-    li.dispatchEvent(new MouseEvent(`mouseup`))
+    li.dispatchEvent(mouseup)
     await tick()
 
     expect(input.value).toBe(expected)
@@ -700,7 +699,7 @@ test(`2-way binding of selected`, async () => {
   // test internal changes to selected bind outwards
   for (const _ of Array(2)) {
     const li = doc_query(`ul.options li`)
-    li.dispatchEvent(new MouseEvent(`mouseup`))
+    li.dispatchEvent(mouseup)
     await tick()
   }
 
@@ -732,7 +731,7 @@ test.each([
     // test internal changes bind outwards
     for (const _ of [1, 2]) {
       const li = doc_query(`ul.options li`)
-      li.dispatchEvent(new MouseEvent(`mouseup`))
+      li.dispatchEvent(mouseup)
       await tick()
     }
 
@@ -808,13 +807,13 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   await tick()
 
   const li = doc_query(`ul.options li[title='Create this option...']`)
-  li.dispatchEvent(new MouseEvent(`mouseup`))
+  li.dispatchEvent(mouseup)
   await tick()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`foo`)
 
   // remove the new option
   const li_selected = doc_query(`ul.selected li button[title*='Remove']`)
-  li_selected.dispatchEvent(new MouseEvent(`mouseup`))
+  li_selected.dispatchEvent(mouseup)
   await tick()
 
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
@@ -980,4 +979,26 @@ test(`first matching option becomes active automatically on entering searchText`
   await tick()
 
   expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`bar`)
+})
+
+test.each([
+  [`add`, `ul.options li`, mouseup],
+  [`change`, `ul.options li`, mouseup],
+  [`remove`, `ul.selected button.remove`, mouseup],
+  [`change`, `ul.selected button.remove`, mouseup],
+  [`removeAll`, `button.remove-all`, mouseup],
+  [`change`, `button.remove-all`, mouseup],
+])(`bubbles <input> node DOM events`, async (event_name, selector, trigger) => {
+  const select = new MultiSelect({
+    target: document.body,
+    props: { options: [1, 2, 3], selected: [1, 2] },
+  })
+
+  const spy = vi.fn()
+  select.$on(event_name as keyof MultiSelectEvents, spy)
+
+  doc_query(selector).dispatchEvent(trigger)
+  await tick()
+
+  expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
 })
