@@ -186,6 +186,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Handle to the `<input>` DOM node that's responsible for form validity checks and passing selected options to form submission handlers. Only available after component mounts (`null` before then).
 
 1. ```ts
+   highlightMatches: boolean = true
+   ```
+
+   Whether to highlight text in the dropdown options that matches the current user-entered search query. Uses the [CSS Custom Highlight API](https://developer.mozilla.org/docs/Web/API/CSS_Custom_Highlight_API) with limited browser support and [styling options](https://developer.mozilla.org/docs/Web/CSS/::highlight). See `::highlight(search-results)` below for available CSS variables.
+
+1. ```ts
    id: string | null = null
    ```
 
@@ -500,6 +506,12 @@ There are 3 ways to style this component. To understand which options do what, i
 
 If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context. See [`app.css`](https://github.com/janosh/svelte-multiselect/blob/main/src/app.css) for how these variables are set on the demo site of this component.
 
+Minimal example that changes the background color of the options dropdown:
+
+```svelte
+<MultiSelect --sms-options-bg="white" />
+```
+
 - `div.multiselect`
   - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
   - `border-radius: var(--sms-border-radius, 3pt)`
@@ -547,12 +559,11 @@ If you only want to make small adjustments, you can pass the following CSS varia
 - `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
-
-For example, to change the background color of the options dropdown:
-
-```svelte
-<MultiSelect --sms-options-bg="white" />
-```
+- `::highlight(search-results)`: applies to search results in dropdown list that match the current search query if `highlightMatches=true`
+  - `color: var(--sms-highlight-color, orange)`
+  - `background: var(--sms-highlight-bg)`
+  - `text-decoration: var(--sms-highlight-text-decoration)`
+  - `text-decoration-color: var(--sms-highlight-text-decoration-color)`
 
 ### With CSS frameworks
 
