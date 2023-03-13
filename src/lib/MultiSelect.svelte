@@ -419,6 +419,7 @@
     })
 
     // create Highlight object from ranges and add to registry
+    // eslint-disable-next-line no-undef
     CSS.highlights.set(`search-results`, new Highlight(...ranges.flat()))
   }
 </script>
