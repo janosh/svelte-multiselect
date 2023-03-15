@@ -3,18 +3,27 @@
   import { page } from '$app/stores'
   import { CmdPalette } from '$lib'
   import { repository } from '$root/package.json'
+  import { Footer } from '$site'
+  import { demos } from '$site/stores'
   import { GitHubCorner } from 'svelte-zoo'
   import '../app.css'
-  import Footer from '../site/Footer.svelte'
 
-  const actions = Object.keys(import.meta.glob(`./**/+page.{svx,svelte,md}`)).map(
+  const routes = Object.keys(import.meta.glob(`./**/+page.{svx,svelte,md}`)).map(
     (filename) => {
       const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
-      const route = `/${parts.slice(1, -1).join(`/`)}`
-
-      return { label: route, action: () => goto(route) }
+      return { route: `/${parts.slice(1, -1).join(`/`)}`, filename }
     }
   )
+
+  if (routes.length < 3) {
+    console.error(`Too few demo routes found: ${routes.length}`)
+  }
+
+  $demos = routes
+    .filter(({ filename }) => filename.includes(`/(demos)/`))
+    .map(({ route }) => route)
+
+  const actions = routes.map(({ route }) => ({ label: route, action: () => goto(route) }))
 </script>
 
 <CmdPalette {actions} placeholder="Go to..." />

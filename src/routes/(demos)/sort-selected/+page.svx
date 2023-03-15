@@ -5,7 +5,7 @@
 ```svelte example stackblitz id="default-sort"
 <script>
   import MultiSelect from '$lib'
-  import { frontend_libs } from '$src/options'
+  import { frontend_libs } from '$site/options'
 </script>
 
 <MultiSelect
@@ -22,7 +22,7 @@
 ```svelte example stackblitz id="custom-sort"
 <script lang="ts">
   import MultiSelect, { type Option } from '$lib'
-  import { frontend_libs } from '$src/options'
+  import { frontend_libs } from '$site/options'
 
   const sortSelected = (op1: Option, op2: Option) => {
     if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)

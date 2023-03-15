@@ -5,7 +5,7 @@
 ```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7" stackblitz="src/site/Examples.svx"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { languages } from '../options'
+  import { languages } from '$site/options'
   import LanguageSlot from './LanguageSlot.svelte'
 
   let selected: string[]
@@ -29,7 +29,7 @@
 ```svelte example collapsible repl="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759" stackblitz="src/site/Examples.svx"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { ml_libs } from '../options'
+  import { ml_libs } from '$site/options'
 
   let value: { label: string, disabled: boolean, preselected: boolean }
   let searchText = ''
@@ -64,7 +64,7 @@
 ```svelte example collapsible repl="https://svelte.dev/repl/516279bd62ec424986115263c2cdc169" stackblitz="src/site/Examples.svx"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { frontend_libs } from '../options'
+  import { frontend_libs } from '$site/options'
   import RepoSlot from './RepoSlot.svelte'
   import { Confetti } from 'svelte-zoo'
   import type { ObjectOption } from '$lib'
@@ -105,7 +105,7 @@
 ```svelte example collapsible repl="https://svelte.dev/repl/3a217c39932047a09f61d6425b04a7c3" stackblitz="src/site/Examples.svx"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { colors } from '../options'
+  import { colors } from '$site/options'
   import ColorSlot from './ColorSlot.svelte'
 
   let selected: string[]
@@ -142,7 +142,7 @@
 ```svelte example collapsible repl="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1" stackblitz="src/site/Examples.svx"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { countries } from '../options'
+  import { countries } from '$site/options'
 
   let selected: string[]
   // required={1} means form validation will prevent submission if no option selected

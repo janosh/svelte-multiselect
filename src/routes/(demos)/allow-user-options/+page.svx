@@ -1,6 +1,6 @@
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { foods, languages } from '$src/options'
+  import { foods, languages } from '$site/options'
   import { LanguageSlot } from '$site'
 
   let selected_empty = []
@@ -13,7 +13,7 @@
 ```svelte example stackblitz id="foods"
 <script>
   import MultiSelect from '$lib'
-  import { foods } from '$src/options'
+  import { foods } from '$site/options'
 
   let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
 </script>
@@ -34,7 +34,7 @@
 ```svelte example stackblitz id="languages"
 <script>
   import MultiSelect from '$lib'
-  import { languages } from '$src/options'
+  import { languages } from '$site/options'
   import { LanguageSlot } from '$site'
 
   let selected_append = ['Haskell', 'TypeScript']

@@ -16,7 +16,7 @@ HTML.
 <script lang="ts">
   import MultiSelect from '$lib'
   import { ColorSlot } from '$site'
-  import { colors } from '$src/options'
+  import { colors } from '$site/options'
   import { repository } from '$root/package.json'
   import type { ActionData, PageServerData } from './$types'
 

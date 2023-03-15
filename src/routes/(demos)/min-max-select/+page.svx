@@ -5,7 +5,7 @@
 ```svelte example stackblitz id="languages"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { languages } from '$src/options'
+  import { languages } from '$site/options'
   import { LanguageSlot } from '$site'
 </script>
 
