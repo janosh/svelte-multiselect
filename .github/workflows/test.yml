@@ -24,7 +24,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          npm install
+          npm install --force
           npx playwright install chromium
 
       - name: Run tests
@@ -41,7 +41,7 @@ jobs:
 
       - name: Build package and publish to NPM
         run: |
-          npm install
+          npm install --force
           npm run package
           npm login --auth-type=legacy
           npm publish

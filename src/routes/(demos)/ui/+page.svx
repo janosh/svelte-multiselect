@@ -6,7 +6,7 @@
 ```svelte example stackblitz id="foods"
 <script>
   import MultiSelect from '$lib'
-  import { foods } from '$src/options'
+  import { foods } from '$site/options'
 </script>
 
 <MultiSelect

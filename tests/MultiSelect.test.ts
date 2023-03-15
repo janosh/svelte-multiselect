@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { foods } from '../src/options.ts'
+import { foods } from '../src/site/options.ts'
 import { wait_for_animation_end } from './index.ts'
 
 // to run tests in this file, use `npm run test:e2e`

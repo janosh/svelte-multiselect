@@ -1,6 +1,9 @@
 <script lang="ts">
+  import { page } from '$app/stores'
   import { name } from '$root/package.json'
   import { DemoNav } from '$site'
+  import { demos } from '$site/stores'
+  import { PrevNext } from 'svelte-zoo'
 </script>
 
 <h1>
@@ -11,6 +14,12 @@
   <DemoNav style="place-content: center;" />
 
   <slot />
+
+  <PrevNext
+    items={$demos}
+    current={$page.url.pathname}
+    style="max-width: 55em; margin: auto;"
+  />
 </main>
 
 <style>

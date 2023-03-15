@@ -8,7 +8,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 <script lang="ts">
   import MultiSelect from '$lib'
   import { ColorSlot } from '$site'
-  import { colors } from '$src/options'
+  import { colors } from '$site/options'
 
   async function handle_submit(event: SubmitEvent) {
     // use bind:this={form} or event.target as arg to new FormData()
