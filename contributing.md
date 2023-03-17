@@ -18,11 +18,11 @@ npm run dev
 Before you start committing, create and check out a descriptively named branch:
 
 ```sh
-git checkout -b <my-cool-new-feature>
+git checkout -b my-cool-new-feature
 # or
-git checkout -b <docs-on-something>
+git checkout -b docs-on-something
 # or
-git checkout -b <test-some-feature>
+git checkout -b test-some-feature
 ```
 
 To ensure your changes didn't break anything, run the full test suite (which also runs in CI):
