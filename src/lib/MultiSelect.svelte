@@ -467,17 +467,10 @@
   <slot name="expand-icon" {open}>
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
-  <ul
-    class="selected {ulSelectedClass}"
-    role="listbox"
-    aria-multiselectable={maxSelect === null || maxSelect > 1}
-    aria-label="selected options"
-  >
+  <ul class="selected {ulSelectedClass}" aria-label="selected options">
     {#each selected as option, idx (get_label(option))}
       <li
         class={liSelectedClass}
-        role="option"
-        aria-selected="true"
         animate:flip={{ duration: 100 }}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
         on:dragstart={dragstart(idx)}
@@ -574,15 +567,7 @@
 
   <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
-    <ul
-      class:hidden={!open}
-      class="options {ulOptionsClass}"
-      role="listbox"
-      aria-multiselectable={maxSelect === null || maxSelect > 1}
-      aria-expanded={open}
-      aria-disabled={disabled ? `true` : null}
-      bind:this={ul_options}
-    >
+    <ul class:hidden={!open} class="options {ulOptionsClass}" bind:this={ul_options}>
       {#each matchingOptions as option, idx}
         {@const {
           label,
@@ -612,8 +597,6 @@
           }}
           on:mouseout={() => (activeIndex = null)}
           on:blur={() => (activeIndex = null)}
-          role="option"
-          aria-selected="false"
         >
           <slot name="option" {option} {idx}>
             {#if parseLabelsAsHtml}
@@ -634,8 +617,6 @@
             on:focus={() => (add_option_msg_is_active = true)}
             on:mouseout={() => (add_option_msg_is_active = false)}
             on:blur={() => (add_option_msg_is_active = false)}
-            role="option"
-            aria-selected="false"
           >
             {!duplicates && selected.some((option) => duplicateFunc(option, searchText))
               ? duplicateOptionMsg
