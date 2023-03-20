@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file. Dates are d
 
 <!-- auto-changelog-above -->
 
+#### [v8.6.0](https://github.com/janosh/svelte-multiselect/compare/v8.5.0...v8.6.0)
+
+> 19 March 2023
+
+- Fix Svelte 3.57 a11y [`#215`](https://github.com/janosh/svelte-multiselect/pull/215)
+- Add prop `highlightMatches` to `MultiSelect` [`#212`](https://github.com/janosh/svelte-multiselect/pull/212)
+- fix: add missing role attr for `<li>` [`#211`](https://github.com/janosh/svelte-multiselect/pull/211)
+- update deps, set TS `moduleResolution='bundler'` [`a12835e`](https://github.com/janosh/svelte-multiselect/commit/a12835ee312174fa247a38742a8724ac540c8808)
+
 #### [v8.5.0](https://github.com/janosh/svelte-multiselect/compare/v8.4.0...v8.5.0)
 
 > 9 March 2023
