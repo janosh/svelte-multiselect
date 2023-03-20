@@ -5,7 +5,7 @@
   "homepage": "https://janosh.github.io/svelte-multiselect",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
-  "version": "8.5.0",
+  "version": "8.6.0",
   "type": "module",
   "svelte": "./dist/index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
