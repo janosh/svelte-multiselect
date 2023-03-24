@@ -468,7 +468,7 @@
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
   <ul class="selected {ulSelectedClass}" aria-label="selected options">
-    {#each selected as option, idx (get_label(option))}
+    {#each selected as option, idx (option)}
       <li
         class={liSelectedClass}
         animate:flip={{ duration: 100 }}
