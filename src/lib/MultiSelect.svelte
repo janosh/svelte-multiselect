@@ -134,7 +134,7 @@
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op) => filterFunc(op, searchText) && !selected.map(get_label).includes(get_label(op)) // remove already selected options from dropdown list
+    (op) => filterFunc(op, searchText) && !selected.includes(op) // remove already selected options from dropdown list
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
@@ -144,21 +144,20 @@
   $: activeOption = matchingOptions[activeIndex ?? -1] ?? null
 
   // add an option to selected list
-  function add(label: string | number, event: Event) {
+  function add(option: Option, event: Event) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
-    if (!isNaN(Number(label)) && typeof selected.map(get_label)[0] === `number`)
-      label = Number(label) // convert to number if possible
+    if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
+      option = Number(option) // convert to number if possible
+    }
+    const is_duplicate = selected.some((op) => duplicateFunc(op, option))
 
-    const is_duplicate = selected.some((option) => duplicateFunc(option, label))
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
     ) {
-      // first check if we find option in the options list
-
-      let option = options.find((op) => get_label(op) === label)
       if (
-        !option && // this has the side-effect of not allowing to user to add the same
+        !options.includes(option) && // first check if we find option in the options list
+        // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
         searchText.length > 0
@@ -182,14 +181,10 @@
         }
         if (allowUserOptions === `append`) options = [...options, option]
       }
-      if (option === undefined) {
-        throw `Run time error, option with label ${label} not found in options list`
-      }
+
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
       if ([``, undefined, null].includes(option as string | null)) {
-        console.error(
-          `MultiSelect: encountered missing option with label ${label} (or option is poorly labeled)`
-        )
+        console.error(`MultiSelect: encountered falsy option ${option}`)
         return
       }
       if (maxSelect === 1) {
@@ -223,7 +218,7 @@
   }
 
   // remove an option from selected list
-  function remove(label: string | number) {
+  function remove(label: Option) {
     if (selected.length === 0) return
 
     let option = selected.find((op) => get_label(op) === label)
@@ -277,8 +272,7 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        const label = get_label(activeOption)
-        selected.map(get_label).includes(label) ? remove(label) : add(label, event)
+        selected.includes(activeOption) ? remove(activeOption) : add(activeOption, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -321,7 +315,7 @@
     }
     // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
-      remove(selected.map(get_label).at(-1) as string | number)
+      remove(selected.at(-1) as Option)
     }
     // make first matching option active on any keypress (if none of the above special cases match)
     else if (matchingOptions.length > 0) {
@@ -468,7 +462,7 @@
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
   <ul class="selected {ulSelectedClass}" aria-label="selected options">
-    {#each selected as option, idx (get_label(option))}
+    {#each selected as option, idx (option)}
       <li
         class={liSelectedClass}
         animate:flip={{ duration: 100 }}
@@ -488,8 +482,8 @@
         </slot>
         {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
-            on:mouseup|stopPropagation={() => remove(get_label(option))}
-            on:keydown={if_enter_or_space(() => remove(get_label(option)))}
+            on:mouseup|stopPropagation={() => remove(option)}
+            on:keydown={if_enter_or_space(() => remove(option))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
             class="remove"
@@ -580,7 +574,7 @@
         <li
           on:mousedown|stopPropagation
           on:mouseup|stopPropagation={(event) => {
-            if (!disabled) add(label, event)
+            if (!disabled) add(option, event)
           }}
           title={disabled
             ? disabledTitle

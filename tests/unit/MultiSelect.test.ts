@@ -1002,3 +1002,26 @@ test.each([
 
   expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
 })
+
+test.each([[true], [false]])(
+  `can select the same object option multiple times if duplicates=true`,
+  async (duplicates) => {
+    new MultiSelect({
+      target: document.body,
+      props: {
+        options: [{ label: `foo` }, { label: `foo` }],
+        selected: [{ label: `foo` }],
+        duplicates,
+      },
+    })
+    const input = doc_query(`input[autocomplete]`)
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    await tick()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+    await tick()
+
+    expect(doc_query(`ul.selected`).textContent?.trim()).toBe(
+      duplicates ? `foo foo` : `foo`
+    )
+  }
+)
