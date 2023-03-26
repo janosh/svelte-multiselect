@@ -383,7 +383,13 @@
     const query = event?.target?.value.trim().toLowerCase()
     if (!query) return
 
-    const tree_walker = document.createTreeWalker(ul_options, NodeFilter.SHOW_TEXT)
+    const tree_walker = document.createTreeWalker(ul_options, NodeFilter.SHOW_TEXT, {
+      acceptNode: (node) => {
+        // don't highlight text in the "no matching options" message
+        if (node?.textContent === noMatchingOptionsMsg) return NodeFilter.FILTER_REJECT
+        return NodeFilter.FILTER_ACCEPT
+      },
+    })
     const text_nodes: Node[] = []
     let current_node = tree_walker.nextNode()
     while (current_node) {
@@ -414,7 +420,7 @@
 
     // create Highlight object from ranges and add to registry
     // eslint-disable-next-line no-undef
-    CSS.highlights.set(`search-results`, new Highlight(...ranges.flat()))
+    CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
 </script>
 
@@ -782,10 +788,7 @@
   :where(span.max-select-msg) {
     padding: 0 3pt;
   }
-  ::highlight(search-results) {
-    color: var(--sms-highlight-color, orange);
-    background: var(--sms-highlight-bg);
-    text-decoration: var(--sms-highlight-text-decoration);
-    text-decoration-color: var(--sms-highlight-text-decoration-color);
+  ::highlight(sms-search-matches) {
+    color: mediumaquamarine;
   }
 </style>

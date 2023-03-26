@@ -189,7 +189,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    highlightMatches: boolean = true
    ```
 
-   Whether to highlight text in the dropdown options that matches the current user-entered search query. Uses the [CSS Custom Highlight API](https://developer.mozilla.org/docs/Web/API/CSS_Custom_Highlight_API) with limited browser support and [styling options](https://developer.mozilla.org/docs/Web/CSS/::highlight). See `::highlight(search-results)` below for available CSS variables.
+   Whether to highlight text in the dropdown options that matches the current user-entered search query. Uses the [CSS Custom Highlight API](https://developer.mozilla.org/docs/Web/API/CSS_Custom_Highlight_API) with limited browser support and [styling options](https://developer.mozilla.org/docs/Web/CSS/::highlight). See `::highlight(sms-search-matches)` below for available CSS variables.
 
 1. ```ts
    id: string | null = null
@@ -526,7 +526,7 @@ Minimal example that changes the background color of the options dropdown:
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
-  - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` if not set which defaults to `cornflowerblue`.
+  - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` which in turn defaults to `cornflowerblue`.
 - `div.multiselect.disabled`
   - `background: var(--sms-disabled-bg, lightgray)`: Background when in disabled state.
 - `div.multiselect input::placeholder`
@@ -559,11 +559,15 @@ Minimal example that changes the background color of the options dropdown:
 - `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
-- `::highlight(search-results)`: applies to search results in dropdown list that match the current search query if `highlightMatches=true`
-  - `color: var(--sms-highlight-color, orange)`
-  - `background: var(--sms-highlight-bg)`
-  - `text-decoration: var(--sms-highlight-text-decoration)`
-  - `text-decoration-color: var(--sms-highlight-text-decoration-color)`
+- `::highlight(sms-search-matches)`: applies to search results in dropdown list that match the current search query if `highlightMatches=true`. These styles [cannot be set via CSS variables](https://stackoverflow.com/a/56799215). Instead, use a new rule set. For example:
+
+  ```css
+  ::highlight(sms-search-matches) {
+    color: orange;
+    background: rgba(0, 0, 0, 0.15);
+    text-decoration: underline;
+  }
+  ```
 
 ### With CSS frameworks
 
