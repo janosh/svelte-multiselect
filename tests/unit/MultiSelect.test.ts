@@ -906,6 +906,30 @@ test.each([[true], [false]])(
 )
 
 describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
+  test.each([[`create option`], [``], [null]])(
+    `console.error when allowUserOptions is truthy but createOptionMsg is falsy`,
+    async (createOptionMsg) => {
+      console.error = vi.fn()
+
+      new MultiSelect({
+        target: document.body,
+        props: { options: [1, 2, 3], createOptionMsg, allowUserOptions },
+      })
+
+      if (allowUserOptions && !createOptionMsg) {
+        expect(console.error).toHaveBeenCalledTimes(1)
+        expect(console.error).toHaveBeenCalledWith(
+          `MultiSelect's allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+            `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`
+        )
+      } else {
+        expect(console.error).toHaveBeenCalledTimes(0)
+      }
+    }
+  )
+})
+
+describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
   describe.each([[true], [false]])(`disabled=%s`, (disabled) => {
     test.each([[true], [false]])(
       `console.error when allowEmpty=false and multiselect has no options`,
