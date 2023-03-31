@@ -774,8 +774,9 @@
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
-  /* for noOptionsMsg */
-  :where(div.multiselect > ul.options span) {
+  :where(div.multiselect > ul.options .user-msg) {
+    /* block needed so vertical padding applies to span */
+    display: block;
     padding: 3pt 2ex;
   }
   :where(div.multiselect > ul.options > li.selected) {
