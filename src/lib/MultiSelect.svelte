@@ -607,10 +607,12 @@
           </slot>
         </li>
       {:else}
-        {@const hasDuplicates =
-          !duplicates && selected.some((option) => duplicateFunc(option, searchText))}
-        {@const optionMessage = hasDuplicates ? duplicateOptionMsg : createOptionMsg}
-        {#if allowUserOptions && searchText && optionMessage}
+        {@const search_is_duplicate = selected.some((option) =>
+          duplicateFunc(option, searchText)
+        )}
+        {@const msg =
+          !duplicates && search_is_duplicate ? duplicateOptionMsg : createOptionMsg}
+        {#if allowUserOptions && searchText && msg}
           <li
             on:mousedown|stopPropagation
             on:mouseup|stopPropagation={(event) => add(searchText, event)}
@@ -620,13 +622,15 @@
             on:focus={() => (option_msg_is_active = true)}
             on:mouseout={() => (option_msg_is_active = false)}
             on:blur={() => (option_msg_is_active = false)}
+            class="user-msg"
           >
-            {optionMessage}
+            {msg}
           </li>
         {:else if noMatchingOptionsMsg}
-          <span>{noMatchingOptionsMsg}</span>
+          <!-- use span to not have cursor: pointer -->
+          <span class="user-msg">{noMatchingOptionsMsg}</span>
         {/if}
-        <!-- Show nothing if no messages are empty -->
+        <!-- Show nothing if all messages are empty -->
       {/each}
     </ul>
   {/if}
