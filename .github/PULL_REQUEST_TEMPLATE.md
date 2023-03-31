@@ -11,5 +11,5 @@ Closes #issue.
 
 ## Checklist
 
-[ ] has tests for any new functionality or bug fixes
-[ ] has examples/docs for any new functionality
+[ ] has tests (only needed if any new functionality was added or bugs fixed)
+[ ] has examples/docs (only needed if any new functionality was added)
