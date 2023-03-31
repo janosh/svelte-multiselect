@@ -129,7 +129,7 @@
   }
 
   const dispatch = createEventDispatcher<DispatchEvents<Option>>()
-  let add_option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
+  let option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
   let window_width: number
 
   // options matching the current search text
@@ -291,7 +291,7 @@
       } else if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
-        add_option_msg_is_active = !add_option_msg_is_active
+        option_msg_is_active = !option_msg_is_active
         return
       } else if (activeIndex === null) {
         // if no option is active and no options are matching, do nothing
@@ -607,24 +607,26 @@
           </slot>
         </li>
       {:else}
-        {#if allowUserOptions && searchText}
+        {@const hasDuplicates =
+          !duplicates && selected.some((option) => duplicateFunc(option, searchText))}
+        {@const optionMessage = hasDuplicates ? duplicateOptionMsg : createOptionMsg}
+        {#if allowUserOptions && searchText && optionMessage}
           <li
             on:mousedown|stopPropagation
             on:mouseup|stopPropagation={(event) => add(searchText, event)}
             title={createOptionMsg}
-            class:active={add_option_msg_is_active}
-            on:mouseover={() => (add_option_msg_is_active = true)}
-            on:focus={() => (add_option_msg_is_active = true)}
-            on:mouseout={() => (add_option_msg_is_active = false)}
-            on:blur={() => (add_option_msg_is_active = false)}
+            class:active={option_msg_is_active}
+            on:mouseover={() => (option_msg_is_active = true)}
+            on:focus={() => (option_msg_is_active = true)}
+            on:mouseout={() => (option_msg_is_active = false)}
+            on:blur={() => (option_msg_is_active = false)}
           >
-            {!duplicates && selected.some((option) => duplicateFunc(option, searchText))
-              ? duplicateOptionMsg
-              : createOptionMsg}
+            {optionMessage}
           </li>
-        {:else}
+        {:else if noMatchingOptionsMsg}
           <span>{noMatchingOptionsMsg}</span>
         {/if}
+        <!-- Show nothing if no messages are empty -->
       {/each}
     </ul>
   {/if}
