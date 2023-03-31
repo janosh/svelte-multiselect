@@ -906,7 +906,7 @@ test.each([[true], [false]])(
 )
 
 describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
-  test.each([[`create option`], [``], [null]])(
+  test.each([[`create option`], [``]])(
     `console.error when allowUserOptions is truthy but createOptionMsg is falsy`,
     async (createOptionMsg) => {
       console.error = vi.fn()
@@ -1049,3 +1049,47 @@ test.each([[true], [false]])(
     )
   }
 )
+
+describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
+  describe.each([[``], [`no matches`]])(
+    `noMatchingOptionsMsg=%s`,
+    (noMatchingOptionsMsg) => {
+      describe.each([[`make option`], [``]])(
+        `createOptionMsg='%s'`,
+        (createOptionMsg) => {
+          test(`no .user-msg node is rendered if in a state where noMatchingOptionsMsg or createOptionMsg would be shown but are falsy`, async () => {
+            new MultiSelect({
+              target: document.body,
+              props: {
+                options: [`foo`],
+                selected: [`foo`],
+                noMatchingOptionsMsg,
+                createOptionMsg,
+                allowUserOptions,
+              },
+            })
+
+            const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+            // create a state where no options match the search text
+            input.value = `bar`
+            input.dispatchEvent(new InputEvent(`input`))
+
+            await tick()
+
+            if (allowUserOptions && createOptionMsg) {
+              expect(doc_query(`.user-msg`).textContent?.trim()).toBe(
+                createOptionMsg
+              )
+            } else if (noMatchingOptionsMsg) {
+              expect(doc_query(`.user-msg`).textContent?.trim()).toBe(
+                noMatchingOptionsMsg
+              )
+            } else {
+              expect(document.querySelector(`.user-msg`)).toBeNull()
+            }
+          })
+        }
+      )
+    }
+  )
+})
