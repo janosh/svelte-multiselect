@@ -124,12 +124,19 @@
   }
   if (sortSelected && selectedOptionsDraggable) {
     console.warn(
-      `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user re-orderings of selected options will be undone by sortSelected on component re-renders.`
+      `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any ` +
+        `user re-orderings of selected options will be undone by sortSelected on component re-renders.`
+    )
+  }
+  if (allowUserOptions && !createOptionMsg) {
+    console.error(
+      `MultiSelect's allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+        `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`
     )
   }
 
   const dispatch = createEventDispatcher<DispatchEvents<Option>>()
-  let add_option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
+  let option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
   let window_width: number
 
   // options matching the current search text
@@ -291,7 +298,7 @@
       } else if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
-        add_option_msg_is_active = !add_option_msg_is_active
+        option_msg_is_active = !option_msg_is_active
         return
       } else if (activeIndex === null) {
         // if no option is active and no options are matching, do nothing
@@ -607,24 +614,30 @@
           </slot>
         </li>
       {:else}
-        {#if allowUserOptions && searchText}
+        {@const search_is_duplicate = selected.some((option) =>
+          duplicateFunc(option, searchText)
+        )}
+        {@const msg =
+          !duplicates && search_is_duplicate ? duplicateOptionMsg : createOptionMsg}
+        {#if allowUserOptions && searchText && msg}
           <li
             on:mousedown|stopPropagation
             on:mouseup|stopPropagation={(event) => add(searchText, event)}
             title={createOptionMsg}
-            class:active={add_option_msg_is_active}
-            on:mouseover={() => (add_option_msg_is_active = true)}
-            on:focus={() => (add_option_msg_is_active = true)}
-            on:mouseout={() => (add_option_msg_is_active = false)}
-            on:blur={() => (add_option_msg_is_active = false)}
+            class:active={option_msg_is_active}
+            on:mouseover={() => (option_msg_is_active = true)}
+            on:focus={() => (option_msg_is_active = true)}
+            on:mouseout={() => (option_msg_is_active = false)}
+            on:blur={() => (option_msg_is_active = false)}
+            class="user-msg"
           >
-            {!duplicates && selected.some((option) => duplicateFunc(option, searchText))
-              ? duplicateOptionMsg
-              : createOptionMsg}
+            {msg}
           </li>
-        {:else}
-          <span>{noMatchingOptionsMsg}</span>
+        {:else if noMatchingOptionsMsg}
+          <!-- use span to not have cursor: pointer -->
+          <span class="user-msg">{noMatchingOptionsMsg}</span>
         {/if}
+        <!-- Show nothing if all messages are empty -->
       {/each}
     </ul>
   {/if}
@@ -768,8 +781,9 @@
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
-  /* for noOptionsMsg */
-  :where(div.multiselect > ul.options span) {
+  :where(div.multiselect > ul.options .user-msg) {
+    /* block needed so vertical padding applies to span */
+    display: block;
     padding: 3pt 2ex;
   }
   :where(div.multiselect > ul.options > li.selected) {
