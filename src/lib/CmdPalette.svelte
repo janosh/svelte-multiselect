@@ -12,8 +12,8 @@
   // for span in option slot, has no effect when passing slot="option"
   export let span_style: string = ``
   export let open: boolean = false
-  export let dialog: HTMLDialogElement
-  export let input: HTMLInputElement
+  export let dialog: HTMLDialogElement | null = null
+  export let input: HTMLInputElement | null = null
   export let placeholder: string = `Filter actions...`
 
   type Action = { label: string; action: () => void }
