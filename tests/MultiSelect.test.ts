@@ -1,6 +1,5 @@
 import { expect, test } from '@playwright/test'
 import { foods } from '../src/site/options.ts'
-import { wait_for_animation_end } from './index.ts'
 
 // to run tests in this file, use `npm run test:e2e`
 
@@ -466,9 +465,8 @@ test.describe(`maxSelect`, async () => {
     page,
   }) => {
     const ul_selector = `#languages ul.options`
-    await wait_for_animation_end(page, ul_selector)
 
-    expect(await page.locator(ul_selector)).toBeHidden()
+    await expect(page.locator(ul_selector)).toBeHidden()
     expect(await page.getAttribute(ul_selector, `class`)).toContain(`hidden`)
   })
 
@@ -504,7 +502,6 @@ test.describe(`slots`, async () => {
 
     // then click on the expand icon to open the dropdown and change open to true
     await page.click(`#languages-1 input + svg`)
-    await wait_for_animation_end(page, `#languages-1 ul.options`)
 
     // assert that the collapse icon path differs from expand icon path
     const collapse_icon_path = await page.$eval(
