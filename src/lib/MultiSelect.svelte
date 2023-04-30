@@ -2,7 +2,7 @@
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import { CircleSpinner, Wiggle } from '.'
-  import type { DispatchEvents, MultiSelectEvents, Option as GenericOption } from './'
+  import type { DispatchEvents, Option as GenericOption, MultiSelectEvents } from './'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   type Option = $$Generic<GenericOption>
 
@@ -426,7 +426,6 @@
     })
 
     // create Highlight object from ranges and add to registry
-    // eslint-disable-next-line no-undef
     CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
 </script>

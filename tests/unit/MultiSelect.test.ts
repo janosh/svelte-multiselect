@@ -1,4 +1,4 @@
-import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
+import MultiSelect, { type MultiSelectEvents } from '$lib'
 import { tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 import { doc_query } from '.'
@@ -8,7 +8,7 @@ const mouseup = new MouseEvent(`mouseup`)
 const mouseover = new MouseEvent(`mouseover`)
 
 test(`2-way binding of activeIndex`, async () => {
-  let activeIndex: number
+  let activeIndex: number = 0
   const binder = new Test2WayBind({
     target: document.body,
     props: { options: [1, 2, 3] },
@@ -39,7 +39,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   })
 
   // test internal change to activeOption binds outwards
-  let active_option: Option
+  let active_option: number = 0
   binder.$on(`activeOption-changed`, (e: CustomEvent) => {
     active_option = e.detail
   })
@@ -61,7 +61,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   })
 
   // test internal change to activeOption binds outwards
-  let activeOption: Option
+  let activeOption: number = 0
   binder.$on(`activeOption-changed`, (e: CustomEvent) => {
     activeOption = e.detail
   })
@@ -125,8 +125,12 @@ test(`applies DOM attributes to input node`, () => {
   })
 
   const lis = document.querySelectorAll(`ul.options > li`)
-  const input = doc_query(`input[autocomplete]`) as HTMLInputElement
-  const form_input = doc_query(`input.form-control`) as HTMLInputElement
+  const input = doc_query<HTMLInputElement>(
+    `input[autocomplete]`
+  ) as HTMLInputElement
+  const form_input = doc_query<HTMLInputElement>(
+    `input.form-control`
+  ) as HTMLInputElement
 
   // make sure the search text filtered the dropdown options
   expect(lis.length).toBe(1)
@@ -180,7 +184,7 @@ test(`arrow down makes first option active`, async () => {
     props: { options: [1, 2, 3], open: true },
   })
 
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
 
@@ -195,7 +199,7 @@ test(`arrow down makes first option active`, async () => {
 test(`can select 1st and last option with arrow and enter key`, async () => {
   new MultiSelect({ target: document.body, props: { options: [1, 2, 3] } })
 
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
   await tick()
@@ -235,7 +239,7 @@ test(`bubbles <input> node DOM events`, async () => {
     props: { options },
   })
 
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   for (const [event_name, event] of events) {
     const spy = vi.fn()
@@ -255,7 +259,7 @@ test(`value is a single option (i.e. selected[0]) when maxSelect=1`, async () =>
     props: { options, maxSelect: 1, selected: options },
   })
 
-  const value = select.$$.ctx[select.$$.props.value]
+  const value = select.$$.ctx[select.$$.props.value as number]
 
   // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
   expect(value).toBe(options[0])
@@ -267,7 +271,7 @@ test(`selected is null when maxSelect=1 and no option is pre-selected`, async ()
     props: { options: [1, 2, 3], maxSelect: 1 },
   })
 
-  const value = select.$$.ctx[select.$$.props.value]
+  const value = select.$$.ctx[select.$$.props.value as number]
 
   expect(value).toBe(null)
 })
@@ -284,7 +288,7 @@ test(`selected is array of first two options when maxSelect=2`, async () => {
     props: { options, maxSelect: 2 },
   })
 
-  const selected = select.$$.ctx[select.$$.props.selected]
+  const selected = select.$$.ctx[select.$$.props.selected as number]
 
   expect(selected).toEqual(options.slice(0, 2))
 })
@@ -401,7 +405,7 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
     props: { options: [1, 2, 3], invalid: true },
   })
 
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
   const multiselect = doc_query(`div.multiselect`)
@@ -439,7 +443,7 @@ test(`filters dropdown to show only matching options when entering text`, async 
     props: { options },
   })
 
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   input.value = `ba`
   input.dispatchEvent(new InputEvent(`input`))
@@ -458,7 +462,7 @@ test.each([undefined, `Custom no options message`])(
       props: { options: [1, 2, 3], noMatchingOptionsMsg },
     })
 
-    const input = doc_query(`input[autocomplete]`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
     input.value = `4`
     input.dispatchEvent(new InputEvent(`input`))
@@ -466,7 +470,8 @@ test.each([undefined, `Custom no options message`])(
 
     if (noMatchingOptionsMsg === undefined) {
       // get default value for noMatchingOptionsMsg
-      noMatchingOptionsMsg = select.$$.ctx[select.$$.props.noMatchingOptionsMsg]
+      const idx = select.$$.props.noMatchingOptionsMsg as number
+      noMatchingOptionsMsg = select.$$.ctx[idx]
     }
 
     const dropdown = doc_query(`ul.options`)
@@ -482,7 +487,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
     props: { options, allowUserOptions: true },
   })
 
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `ba`
   input.dispatchEvent(new InputEvent(`input`))
   await tick()
@@ -556,8 +561,10 @@ test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
     target: document.body,
     props: { removeAllTitle, removeBtnTitle, options, selected: options },
   })
-  const remove_all_btn = doc_query(`button.remove-all`) as HTMLButtonElement
-  const remove_btns = document.querySelectorAll(`ul.selected > li > button`)
+  const remove_all_btn = doc_query<HTMLButtonElement>(`button.remove-all`)
+  const remove_btns = document.querySelectorAll<HTMLButtonElement>(
+    `ul.selected > li > button`
+  )
 
   expect(remove_all_btn.title).toBe(removeAllTitle)
   expect([...remove_btns].map((btn) => btn.title)).toEqual(
@@ -612,12 +619,12 @@ test(`closes dropdown on tab out`, async () => {
   expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 
   // opens dropdown on focus
-  doc_query(`input[autocomplete]`).focus()
+  doc_query<HTMLInputElement>(`input[autocomplete]`).focus()
   await tick()
   expect(document.querySelector(`ul.options.hidden`)).toBeNull()
 
   // closes dropdown again on tab out
-  doc_query(`input[autocomplete]`).dispatchEvent(
+  doc_query<HTMLInputElement>(`input[autocomplete]`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Tab` })
   )
   await tick()
@@ -647,9 +654,9 @@ describe.each([
           },
         })
 
-        const input = doc_query(`input[autocomplete]`)
+        const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-        input.value = selected[0]
+        input.value = `${selected[0]}`
         input.dispatchEvent(new InputEvent(`input`))
         await tick()
 
@@ -687,7 +694,7 @@ test.each([
 )
 
 test(`2-way binding of selected`, async () => {
-  let selected: Option[]
+  let selected: number[] = []
   const binder = new Test2WayBind({
     target: document.body,
     props: { options: [1, 2, 3] },
@@ -717,15 +724,15 @@ test.each([
   [1, 2],
   [2, [1, 2]],
 ])(
-  `1-way bind value when maxSelect=%s, expected value=%s`,
+  `1-way (outward) binding of value works when maxSelect=%s, expected value=%s`,
   async (maxSelect, expected) => {
     const binder = new Test2WayBind({
       target: document.body,
       props: { options: [1, 2, 3], maxSelect },
     })
-    let value: Option[]
-    binder.$on(`value-changed`, (e: CustomEvent) => {
-      value = e.detail
+    let value: number = 0
+    binder.$on(`value-changed`, (event: CustomEvent) => {
+      value = event.detail
     })
 
     // test internal changes bind outwards
@@ -764,20 +771,22 @@ test.each([
 )
 
 test.each([[null], [`custom add option message`]])(
-  `arrow keys on empty multiselect toggle createOptionMsg as active`,
+  `arrow keys on empty multiselect toggle createOptionMsg as active with createOptionMsg=%s`,
   async (createOptionMsg) => {
-    let props = { options: [], allowUserOptions: true, searchText: `foo` }
-    if (createOptionMsg) props = { ...props, createOptionMsg }
-    new MultiSelect({ target: document.body, props })
+    const props = { options: [], allowUserOptions: true, searchText: `foo` }
+    const select = new MultiSelect({ target: document.body, props })
+    if (createOptionMsg) select.$set({ createOptionMsg })
 
-    const input = doc_query(`input[autocomplete]`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
     await tick()
 
     const li_active = doc_query(`ul.options li.active`)
-    expect(li_active.textContent?.trim()).toBe(
-      createOptionMsg ?? `Create this option...`
-    )
+
+    // get default value for createOptionMsg
+    const idx = select.$$.props.createOptionMsg as number
+    const default_msg = select.$$.ctx[idx]
+    expect(li_active.textContent?.trim()).toBe(createOptionMsg ?? default_msg)
   }
 )
 
@@ -801,7 +810,7 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   })
 
   // add a new option created from user text input
-  const input = doc_query(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `foo`
   input.dispatchEvent(new InputEvent(`input`))
   await tick()
@@ -975,11 +984,12 @@ test.each([[[1]], [[1, 2, 3]]])(
   }
 )
 
-test(`logs error to console when asked to remove selected option that does not exist`, async () => {
+test(`errors to console when option is an object but has no label key`, async () => {
   console.error = vi.fn()
 
   new MultiSelect({
     target: document.body,
+    // @ts-expect-error test invalid option
     props: { options: [{ foo: 42 }] },
   })
 
@@ -1038,7 +1048,7 @@ test.each([[true], [false]])(
         duplicates,
       },
     })
-    const input = doc_query(`input[autocomplete]`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
     await tick()
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
