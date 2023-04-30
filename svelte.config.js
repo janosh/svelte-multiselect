@@ -29,6 +29,7 @@ const defaults = {
   Wrapper: `svelte-zoo/CodeExample.svelte`,
   pkg: pkg.name,
   repo: pkg.repository,
+  hideStyle: true,
 }
 const remarkPlugins = [[mdsvexamples, { defaults }]]
 

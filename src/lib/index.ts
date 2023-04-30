@@ -1,6 +1,6 @@
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CmdPalette } from './CmdPalette.svelte'
-export { default, default as MultiSelect } from './MultiSelect.svelte'
+export { default as MultiSelect, default } from './MultiSelect.svelte'
 export { default as Wiggle } from './Wiggle.svelte'
 
 export type Option = string | number | ObjectOption
@@ -46,27 +46,27 @@ export type MultiSelectEvents = {
   touchstart: TouchEvent
 }
 
-// Firefox lacks support for scrollIntoViewIfNeeded, see
-// https://github.com/janosh/svelte-multiselect/issues/87
-// this polyfill was copied from
+// Firefox lacks support for scrollIntoViewIfNeeded (https://caniuse.com/scrollintoviewifneeded).
+// See https://github.com/janosh/svelte-multiselect/issues/87
+// Polyfill copied from
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
 // exported for testing
 export function scroll_into_view_if_needed_polyfill(
   centerIfNeeded: boolean = true
 ) {
-  const el = this as Element
+  const elem = this as Element
   const observer = new IntersectionObserver(function ([entry]) {
     const ratio = entry.intersectionRatio
     if (ratio < 1) {
       const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-      el.scrollIntoView({
+      elem.scrollIntoView({
         block: place,
         inline: place,
       })
     }
     this.disconnect()
   })
-  observer.observe(this)
+  observer.observe(elem)
 
   return observer // return for testing
 }

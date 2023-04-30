@@ -9,6 +9,9 @@ export const _actions: Actions = {
     const data = await request.formData()
     let colors = data.get(`colors`)
 
+    if (!colors || typeof colors !== `string`)
+      return fail(400, { colors, error: `missing` })
+
     try {
       colors = JSON.parse(colors)
     } catch (err) {
