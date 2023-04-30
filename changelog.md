@@ -4,6 +4,17 @@ All notable changes to this project will be documented in this file. Dates are d
 
 <!-- auto-changelog-above -->
 
+#### [v8.6.1](https://github.com/janosh/svelte-multiselect/compare/v8.6.0...v8.6.1)
+
+> 30 April 2023
+
+- Fix `svelte-check` errors [`#223`](https://github.com/janosh/svelte-multiselect/pull/223)
+- fix: hide dropdown when custom messages are empty [`#220`](https://github.com/janosh/svelte-multiselect/pull/220)
+- DRY workflows [`#218`](https://github.com/janosh/svelte-multiselect/pull/218)
+- fix: allow object options to share the same label [`#217`](https://github.com/janosh/svelte-multiselect/pull/217)
+- delete wait_for_animation_end() and fix tests to use playwright auto-waiting correctly [`2493029`](https://github.com/janosh/svelte-multiselect/commit/249302938315a69dd6d16c9f35b0a1fb5471bbeb)
+- don't highlight noMatchingOptionsMsg &lt;span&gt; in sms-search-matches [`a1feca7`](https://github.com/janosh/svelte-multiselect/commit/a1feca747ac5cf7de4e2de2408d14b9a033e8afa)
+
 #### [v8.6.0](https://github.com/janosh/svelte-multiselect/compare/v8.5.0...v8.6.0)
 
 > 19 March 2023
