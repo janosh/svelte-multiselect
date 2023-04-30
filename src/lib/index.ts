@@ -54,19 +54,19 @@ export type MultiSelectEvents = {
 export function scroll_into_view_if_needed_polyfill(
   centerIfNeeded: boolean = true
 ) {
-  const el = this as Element
+  const elem = this as Element
   const observer = new IntersectionObserver(function ([entry]) {
     const ratio = entry.intersectionRatio
     if (ratio < 1) {
       const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-      el.scrollIntoView({
+      elem.scrollIntoView({
         block: place,
         inline: place,
       })
     }
     this.disconnect()
   })
-  observer.observe(this)
+  observer.observe(elem)
 
   return observer // return for testing
 }

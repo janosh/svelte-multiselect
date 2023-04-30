@@ -9,3 +9,7 @@ declare module '*package.json'
 declare class Highlight {
   constructor(...ranges: Range[])
 }
+
+interface Element {
+  scrollIntoViewIfNeeded(centerIfNeeded?: boolean): void
+}

@@ -90,7 +90,7 @@ test(`defaultDisabledTitle and custom per-option disabled titles are applied cor
     props: { options, defaultDisabledTitle },
   })
 
-  const lis = document.querySelectorAll(`ul.options > li`)
+  const lis = document.querySelectorAll<HTMLLIElement>(`ul.options > li`)
 
   expect(lis.length).toBe(3)
 

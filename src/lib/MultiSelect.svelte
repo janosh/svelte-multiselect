@@ -154,7 +154,7 @@
   function add(option: Option, event: Event) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
-      option = Number(option) // convert to number if possible
+      option = Number(option) as Option // convert to number if possible
     }
     const is_duplicate = selected.some((op) => duplicateFunc(op, option))
 
@@ -380,14 +380,14 @@
   }
 
   let ul_options: HTMLUListElement
-  function highlight_matching_options(event: KeyboardEvent) {
+  function highlight_matching_options(event: InputEvent) {
     if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // don't try if CSS highlight API not supported
 
     // clear previous ranges from HighlightRegistry
     CSS.highlights.clear()
 
     // get input's search query
-    const query = event?.target?.value.trim().toLowerCase()
+    const query = (event?.target as HTMLInputElement)?.value.trim().toLowerCase()
     if (!query) return
 
     const tree_walker = document.createTreeWalker(ul_options, NodeFilter.SHOW_TEXT, {
@@ -406,10 +406,10 @@
 
     // iterate over all text nodes and find matches
     const ranges = text_nodes.map((el) => {
-      const text = el.textContent.toLowerCase()
+      const text = el.textContent?.toLowerCase()
       const indices = []
       let start_pos = 0
-      while (start_pos < text.length) {
+      while (text && start_pos < text.length) {
         const index = text.indexOf(query, start_pos)
         if (index === -1) break
         indices.push(index)
@@ -452,7 +452,7 @@
   <input
     {name}
     required={Boolean(required)}
-    value={selected.length >= required ? JSON.stringify(selected) : null}
+    value={selected.length >= Number(required) ? JSON.stringify(selected) : null}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
@@ -461,9 +461,9 @@
     on:invalid={() => {
       invalid = true
       let msg
-      if (maxSelect && maxSelect > 1 && required > 1) {
+      if (maxSelect && maxSelect > 1 && Number(required) > 1) {
         msg = `Please select between ${required} and ${maxSelect} options`
-      } else if (required > 1) {
+      } else if (Number(required) > 1) {
         msg = `Please select at least ${required} options`
       } else {
         msg = `Please select an option`
