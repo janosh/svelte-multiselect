@@ -426,6 +426,7 @@
     })
 
     // create Highlight object from ranges and add to registry
+    // eslint-disable-next-line no-undef
     CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
 </script>
