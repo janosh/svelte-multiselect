@@ -51,7 +51,7 @@
 
 ```sh
 npm install --dev svelte-multiselect
-pnpm add --dev svelte-multiselect
+pnpm add -D svelte-multiselect
 yarn add --dev svelte-multiselect
 ```
 
