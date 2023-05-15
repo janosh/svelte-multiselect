@@ -4,6 +4,16 @@ All notable changes to this project will be documented in this file. Dates are d
 
 <!-- auto-changelog-above -->
 
+#### [v8.6.2](https://github.com/janosh/svelte-multiselect/compare/v8.6.1...v8.6.2)
+
+> 15 May 2023
+
+- Remove circular import between `MultiSelect` and `index.ts` [`#230`](https://github.com/janosh/svelte-multiselect/pull/230)
+- Automatically add "bug" label to bug report issues [`#229`](https://github.com/janosh/svelte-multiselect/pull/229)
+- Allow `createOptionMsg=null` to suppress console error when `allowUserOptions` thruthy [`#227`](https://github.com/janosh/svelte-multiselect/pull/227)
+- Fix MultiSelect unable to deselect object options [`#226`](https://github.com/janosh/svelte-multiselect/pull/226)
+- Update pnpm instructions [`#224`](https://github.com/janosh/svelte-multiselect/pull/224)
+
 #### [v8.6.1](https://github.com/janosh/svelte-multiselect/compare/v8.6.0...v8.6.1)
 
 > 30 April 2023
