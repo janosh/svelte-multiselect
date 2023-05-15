@@ -505,20 +505,30 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   }
 })
 
-test(`single remove button removes 1 selected option`, async () => {
-  new MultiSelect({
+test.each([
+  [[`foo`, `bar`, `baz`]],
+  [[1, 2, 3]],
+  [[`foo`, 2, `baz`]],
+  [[{ label: `foo` }, { label: `bar` }, { label: `baz` }]],
+  [[{ label: `foo`, value: 1, key: `whatever` }]],
+])(`single remove button removes 1 selected option`, async (options) => {
+  const { get_label } = new MultiSelect({
     target: document.body,
-    props: { options: [1, 2, 3], selected: [1, 2, 3] },
+    props: { options, selected: [...options] },
   })
 
   document
-    .querySelector(`ul.selected button[title='Remove 1']`)
+    .querySelector(
+      `ul.selected button[title='Remove ${get_label(options[0])}']`
+    )
     ?.dispatchEvent(mouseup)
 
   const selected = doc_query(`ul.selected`)
   await tick()
 
-  expect(selected.textContent?.trim()).toEqual(`2 3`)
+  expect(selected.textContent?.trim()).toEqual(
+    options.slice(1).map(get_label).join(` `)
+  )
 })
 
 test(`remove all button removes all selected options and is visible only if more than 1 option is selected`, async () => {
