@@ -146,7 +146,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
 <!-- prettier-ignore -->
 1. ```ts
-   duplicateFunc: (op1: GenericOption, op2: GenericOption) => boolean = (op1, op2) =>
+   duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) =>
     `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
    ```
 

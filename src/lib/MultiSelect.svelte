@@ -5,7 +5,7 @@
   import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
-  type Option = $$Generic<GenericOption>
+  type Option = $$Generic<T>
 
   export let activeIndex: number | null = null
   export let activeOption: Option | null = null
