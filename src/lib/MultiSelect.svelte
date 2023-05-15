@@ -72,7 +72,7 @@
   export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
-  const get_label = (op: GenericOption) => {
+  export const get_label = (op: GenericOption) => {
     if (op instanceof Object) {
       if (op.label === undefined) {
         console.error(
@@ -225,24 +225,31 @@
   }
 
   // remove an option from selected list
-  function remove(label: Option) {
+  function remove(to_remove: Option) {
     if (selected.length === 0) return
 
-    let option = selected.find((op) => get_label(op) === label)
+    const idx = selected.findIndex(
+      (op) => JSON.stringify(op) === JSON.stringify(to_remove)
+    )
+
+    let [option] = selected.splice(idx, 1) // remove option from selected list
 
     if (option === undefined && allowUserOptions) {
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
-      option = (typeof options[0] == `object` ? { label } : label) as Option
+      const other_ops_type = typeof options[0]
+      option = (other_ops_type ? { label: to_remove } : to_remove) as Option
     }
     if (option === undefined) {
       return console.error(
-        `Multiselect can't remove selected option ${label}, not found in selected list`
+        `Multiselect can't remove selected option ${JSON.stringify(
+          to_remove
+        )}, not found in selected list`
       )
     }
 
-    selected = selected.filter((op) => get_label(op) !== label) // remove option from selected list
+    selected = [...selected] // remove option from selected list
 
     invalid = false // reset error status whenever items are removed
     form_input?.setCustomValidity(``)
