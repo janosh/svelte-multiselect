@@ -1,9 +1,14 @@
 <script lang="ts">
   import { createEventDispatcher, tick } from 'svelte'
   import { flip } from 'svelte/animate'
-  import { CircleSpinner, Wiggle } from '.'
-  import type { DispatchEvents, Option as GenericOption, MultiSelectEvents } from './'
+  import CircleSpinner from './CircleSpinner.svelte'
+  import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
+  import type {
+    DispatchEvents,
+    Option as GenericOption,
+    MultiSelectEvents,
+  } from './types'
   type Option = $$Generic<GenericOption>
 
   export let activeIndex: number | null = null
@@ -249,7 +254,7 @@
       )
     }
 
-    selected = [...selected] // remove option from selected list
+    selected = [...selected] // trigger Svelte rerender
 
     invalid = false // reset error status whenever items are removed
     form_input?.setCustomValidity(``)
