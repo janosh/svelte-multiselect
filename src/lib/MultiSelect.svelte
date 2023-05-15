@@ -8,7 +8,7 @@
 
   export let activeIndex: number | null = null
   export let activeOption: Option | null = null
-  export let createOptionMsg: string = `Create this option...`
+  export let createOptionMsg: string | null = `Create this option...`
   export let allowUserOptions: boolean | 'append' = false
   export let allowEmpty: boolean = false // added for https://github.com/janosh/svelte-multiselect/issues/192
   export let autocomplete: string = `off`
@@ -128,9 +128,9 @@
         `user re-orderings of selected options will be undone by sortSelected on component re-renders.`
     )
   }
-  if (allowUserOptions && !createOptionMsg) {
+  if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
     console.error(
-      `MultiSelect's allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+      `MultiSelect has allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
         `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`
     )
   }

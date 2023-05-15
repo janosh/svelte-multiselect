@@ -90,10 +90,10 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.
 
 1. ```ts
-   createOptionMsg: string = `Create this option...`
+   createOptionMsg: string | null = `Create this option...`
    ```
 
-   Message shown to users after entering text when no options match their query and `allowUserOptions` is truthy.
+   The message shown to users when `allowUserOptions` is truthy and they entered text that doesn't match any existing options to suggest creating a new option from the entered text. Emits `console.error` if `allowUserOptions` is `true` or `'append'` and `createOptionMsg=''` to since users might be unaware they can create new option. The error can be silenced by setting `createOptionMsg=null` indicating developer intent is to e.g. use MultiSelect as a tagging component where a user message might be unwanted.
 
 1. ```ts
    allowEmpty: boolean = false

@@ -55,7 +55,7 @@
 
 ## Start empty
 
-You can start with no options and let users populate MultiSelect from scratch. In this case MultiSelect acts more like a tagging component.
+You can start with no options and let users populate MultiSelect from scratch. In this case, MultiSelect acts more like a tagging component.
 
 ```svelte example stackblitz id="no-default-options"
 <script>
@@ -72,6 +72,6 @@ You can start with no options and let users populate MultiSelect from scratch. I
   allowUserOptions="append"
   bind:selected
   noMatchingOptionsMsg=""
-  createOptionMsg=""
+  createOptionMsg={null}
 />
 ```
