@@ -4,11 +4,7 @@
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-  import type {
-    DispatchEvents,
-    Option as GenericOption,
-    MultiSelectEvents,
-  } from './types'
+  import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
   type Option = $$Generic<GenericOption>
 
   export let activeIndex: number | null = null
@@ -24,7 +20,7 @@
   export let disabledInputTitle: string = `This input is disabled`
   // case-insensitive equality comparison after string coercion (looking only at the `label` key of object options)
   // prettier-ignore
-  export let duplicateFunc: (op1: GenericOption, op2: GenericOption) => boolean = (op1, op2) =>
+  export let duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) =>
     `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
   export let duplicateOptionMsg: string = `This option is already selected`
   export let duplicates: boolean = false // whether to allow duplicate options
@@ -77,7 +73,7 @@
   export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
-  export const get_label = (op: GenericOption) => {
+  export const get_label = (op: T) => {
     if (op instanceof Object) {
       if (op.label === undefined) {
         console.error(
