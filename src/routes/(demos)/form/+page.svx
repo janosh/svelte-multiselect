@@ -28,9 +28,10 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     placeholder="Pick some colors..."
     {name}
     required={2}
+    let:idx
+    let:option
   >
-    <ColorSlot let:idx {idx} let:option {option} slot="selected" />
-    <ColorSlot let:idx {idx} let:option {option} slot="option" />
+    <ColorSlot {idx} {option} />
   </MultiSelect>
   <button>Submit</button>
   <small
@@ -42,7 +43,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 {#if form_data}
   Received form data:
   <pre><code>{JSON.stringify(...form_data)}</code></pre>
-  After JSON parsing <code>form_data.get(field_name)</code>:
+  After JSON parsing<code>form_data.get(field_name)</code>:
   <pre><code>{form_data.get(name)}</code></pre>
 {/if}
 

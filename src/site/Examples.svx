@@ -18,9 +18,10 @@
   options={languages}
   placeholder="Take your pick..."
   bind:selected
+  let:idx
+  let:option
 >
-  <LanguageSlot let:idx {idx} let:option {option} slot="selected" />
-  <LanguageSlot let:idx {idx} let:option {option} slot="option" gap="1em" />
+  <LanguageSlot {idx} {option} gap="1ex" />
 </MultiSelect>
 ```
 
@@ -123,9 +124,10 @@
     placeholder="Pick some colors..."
     allowUserOptions="append"
     required
+    let:idx
+    let:option
   >
-    <ColorSlot let:idx {idx} let:option {option} slot="selected" />
-    <ColorSlot let:idx {idx} let:option {option} slot="option" />
+    <ColorSlot {idx} {option} />
   </MultiSelect>
   <button>submit</button>
   (due to passing <code>required={true}</code> here, form submission will abort if

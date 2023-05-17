@@ -45,9 +45,9 @@
   allowUserOptions="append"
   bind:selected={selected_append}
   createOptionMsg="True polyglots can enter custom languages!"
+  let:option
 >
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
+  <LanguageSlot {option} />
 </MultiSelect>
 ```
 

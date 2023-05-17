@@ -58,9 +58,10 @@
       on:add={run_and_close}
       on:keydown={toggle}
       {...$$props}
+      let:option
     >
       <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
-      <slot slot="option" name="option" let:option>
+      <slot>
         <span style={span_style}>{option.label}</span>
       </slot>
     </Select>

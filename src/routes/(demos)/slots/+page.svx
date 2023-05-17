@@ -15,9 +15,9 @@
   maxSelect={5}
   placeholder="What languages do you know?"
   selected={['Python', 'TypeScript', 'Julia']}
+  let:option
 >
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
+  <LanguageSlot {option} />
   <Icon slot="expand-icon" let:open icon={open ? 'Collapse' : 'Expand'} />
   <MinusIcon slot="remove-icon" width="1em" />
 </MultiSelect>

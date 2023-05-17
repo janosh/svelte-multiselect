@@ -375,14 +375,9 @@ Full list of props/bindable variables for this component. The `Option` type you 
 Example:
 
 ```svelte
-<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]}>
-  <span let:idx let:option slot="option">
-    {idx + 1}
-    {option.label}
-    <span style:background={option.label} style=" width: 1em; height: 1em;" />
-  </span>
-
-  <span let:idx let:option slot="selected">
+<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]} let:idx let:option>
+   <!-- default slot overrides rendering of both dropdown-listed and selected options -->
+  <span>
     {idx + 1}
     {option.label}
     <span style:background={option.label} style=" width: 1em; height: 1em;" />
