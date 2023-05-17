@@ -496,10 +496,12 @@
       >
         <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
         <slot name="selected" {option} {idx}>
-          {#if parseLabelsAsHtml}
-            {@html get_label(option)}
-          {:else}
-            {get_label(option)}{/if}
+          <slot {option} {idx}>
+            {#if parseLabelsAsHtml}
+              {@html get_label(option)}
+            {:else}
+              {get_label(option)}{/if}
+          </slot>
         </slot>
         {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
@@ -614,11 +616,13 @@
           on:blur={() => (activeIndex = null)}
         >
           <slot name="option" {option} {idx}>
-            {#if parseLabelsAsHtml}
-              {@html get_label(option)}
-            {:else}
-              {get_label(option)}
-            {/if}
+            <slot {option} {idx}>
+              {#if parseLabelsAsHtml}
+                {@html get_label(option)}
+              {:else}
+                {get_label(option)}
+              {/if}
+            </slot>
           </slot>
         </li>
       {:else}
