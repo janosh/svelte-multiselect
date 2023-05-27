@@ -6,10 +6,11 @@
   import Select from './MultiSelect.svelte'
 
   export let actions: Action[]
-  export let trigger: string = `k`
+  export let triggers: string[] = [`k`]
+  export let close_keys: string[] = [`Escape`]
   export let fade_duration: number = 200 // in ms
   export let style: string = `` // for dialog
-  // for span in option slot, has no effect when passing slot="option"
+  // for span in option slot, has no effect when passing a slot
   export let span_style: string = ``
   export let open: boolean = false
   export let dialog: HTMLDialogElement | null = null
@@ -19,13 +20,12 @@
   type Action = { label: string; action: () => void }
 
   async function toggle(event: KeyboardEvent) {
-    if (event.key === trigger && event.metaKey && !open) {
+    if (triggers.includes(event.key) && event.metaKey && !open) {
       // open on cmd+trigger
       open = true
       await tick() // wait for dialog to open and input to be mounted
       input?.focus()
-    } else if (event.key === `Escape` && open) {
-      // close on escape
+    } else if (close_keys.includes(event.key) && open) {
       open = false
     }
   }
@@ -45,19 +45,14 @@
 <svelte:window on:keydown={toggle} on:click={close_if_outside} />
 
 {#if open}
-  <dialog
-    class:open
-    bind:this={dialog}
-    transition:fade={{ duration: fade_duration }}
-    {style}
-  >
+  <dialog open bind:this={dialog} transition:fade={{ duration: fade_duration }} {style}>
     <Select
       options={actions}
       bind:input
       {placeholder}
       on:add={run_and_close}
       on:keydown={toggle}
-      {...$$props}
+      {...$$restProps}
       let:option
     >
       <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
