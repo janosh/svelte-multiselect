@@ -1,3 +1,7 @@
+<script lang="ts">
+  import { FileDetails } from 'svelte-zoo'
+</script>
+
 ## Sorting Selected Items
 
 ### Frontend Lib Picker (default sorting)
@@ -36,6 +40,8 @@
   {sortSelected}
 />
 ```
+
+<FileDetails paths={[`./options.ts`]} />
 
 <br />
 
