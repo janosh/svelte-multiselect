@@ -12,7 +12,7 @@
 <MultiSelect
   options={foods}
   placeholder="Pick your favorite foods"
-  removeAllTitle="Delete all foods"
+  removeAllTitle="Remove all foods"
   invalid
 />
 ```
@@ -32,6 +32,8 @@ This page is used for Playwright testing to ensure
 - filters options to only list matches when entering text
 - accessibility
   - input is `aria-invalid` when the component has `invalid=true`
+  - has `aria-expanded='false'` when closed
+  - has `aria-expanded='true'` when open
   - options have `aria-selected='false'` and selected items have `aria-selected='true`
   - invisible `input.form-control` is `aria-hidden`
 
