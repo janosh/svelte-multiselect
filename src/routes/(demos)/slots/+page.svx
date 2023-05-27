@@ -1,3 +1,7 @@
+<script lang="ts">
+  import { FileDetails } from 'svelte-zoo'
+</script>
+
 ## Slot Components
 
 ### Svelte SVG component as `slot="remove-icon"`
@@ -22,6 +26,8 @@
   <MinusIcon slot="remove-icon" width="1em" />
 </MultiSelect>
 ```
+
+<FileDetails paths={[`./LanguageSlot.svelte`, `./MinusIcon.svelte`]} />
 
 ### Simple HTML tag as `slot="remove-icon"`
 
@@ -57,5 +63,4 @@
   </button>
   <span slot="remove-icon">x</span>
 </MultiSelect>
-
 ```
