@@ -106,7 +106,7 @@ test.describe(`remove all button`, async () => {
 
   test(`has custom title`, async ({ page }) => {
     const button_title = await page.getAttribute(`button.remove-all`, `title`)
-    expect(await button_title).toBe(`Delete all foods`)
+    expect(await button_title).toBe(`Remove all foods`)
   })
 
   // TODO: test button emits removeAll event
@@ -142,6 +142,11 @@ test.describe(`external CSS classes`, async () => {
 test.describe(`disabled multiselect`, async () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/disabled`, { waitUntil: `networkidle` })
+  })
+
+  test(`has attribute aria-disabled`, async ({ page }) => {
+    const div = await page.$(`div.multiselect.disabled ul.options`)
+    expect(await div?.getAttribute(`aria-disabled`)).toBe(`true`)
   })
 
   test(`has disabled title`, async ({ page }) => {
@@ -185,6 +190,42 @@ test.describe(`accessibility`, async () => {
       }
     )
     expect(invalid).toBe(`true`)
+  })
+
+  test(`has aria-expanded='false' when closed`, async ({ page }) => {
+    const before = await page.getAttribute(
+      `div.multiselect ul.options`,
+      `aria-expanded`,
+      { strict: true }
+    )
+    expect(before).toBe(`false`)
+  })
+
+  test(`has aria-expanded='true' when open`, async ({ page }) => {
+    await page.click(`div.multiselect`) // open the dropdown
+    const after = await page.getAttribute(
+      `div.multiselect ul.options`,
+      `aria-expanded`,
+      { strict: true }
+    )
+    expect(after).toBe(`true`)
+  })
+
+  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({
+    page,
+  }) => {
+    await page.click(`div.multiselect`) // open the dropdown
+    await page.click(`div.multiselect > ul.options > li`) // select 1st option
+    const aria_option = await page.getAttribute(
+      `div.multiselect > ul.options > li`,
+      `aria-selected`
+    )
+    expect(aria_option).toBe(`false`)
+    const aria_selected = await page.getAttribute(
+      `div.multiselect > ul.selected > li`,
+      `aria-selected`
+    )
+    expect(aria_selected).toBe(`true`)
   })
 
   test(`invisible input.form-control is aria-hidden`, async ({ page }) => {
@@ -473,12 +514,12 @@ test.describe(`maxSelect`, async () => {
   test(`no more options can be added after reaching maxSelect items`, async ({
     page,
   }) => {
-    // query for li:not(:has(input)) to avoid matching the ul.selected > li containing the <input/>
-    let selected_lis = await page.$$(`ul.selected > li:not(:has(input))`)
+    // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
+    let selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
     expect(selected_lis).toHaveLength(max_select)
     await page.click(`#languages input[autocomplete]`) // re-open options dropdown
     await page.click(`ul.options > li >> nth=0`)
-    selected_lis = await page.$$(`ul.selected > li:not(:has(input))`)
+    selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
     expect(selected_lis).toHaveLength(max_select)
   })
 })
