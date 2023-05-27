@@ -3,15 +3,15 @@ import { tick } from 'svelte'
 import { expect, test, vi } from 'vitest'
 import { doc_query } from '.'
 
-const actions = [{ label: `action 1`, action: () => {} }]
+const actions = [{ label: `action 1`, action: vi.fn() }]
 
-test.each([[[`k`]], [[`o`]], [['k', 'o']]])(
+test.each([[[`k`]], [[`o`]], [[`k`, `o`]]])(
   `opens the dialog on cmd+ custom trigger keys`,
   async (triggers) => {
     new CmdPalette({ target: document.body, props: { triggers, actions } })
 
     // dialog should initially be absent
-    expect(document.querySelector('dialog')).toBe(null)
+    expect(document.querySelector(`dialog`)).toBe(null)
 
     // press cmd + trigger to open the palette
     window.dispatchEvent(
@@ -36,7 +36,7 @@ test(`calls the action when an option is selected`, async () => {
   expect(spy).toHaveBeenCalledOnce()
 })
 
-test.each([[[`Escape`]], [[`x`]], [['Escape', 'x']]])(
+test.each([[[`Escape`]], [[`x`]], [[`Escape`, `x`]]])(
   `closes the dialog on close keys`,
   async (close_keys) => {
     const component = new CmdPalette({
@@ -50,7 +50,7 @@ test.each([[[`Escape`]], [[`x`]], [['Escape', 'x']]])(
     window.dispatchEvent(new KeyboardEvent(`keydown`, { key: close_keys[0] }))
     expect(component.open).toBe(false)
     // TODO somehow dialog isn't removed from the DOM
-    // expect(document.querySelector('dialog')).toBe(null)
+    // expect(document.querySelector(`dialog`)).toBe(null)
   }
 )
 

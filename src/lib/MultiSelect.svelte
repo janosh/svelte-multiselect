@@ -388,6 +388,7 @@
   }
 
   let ul_options: HTMLUListElement
+  // highlight text matching user-entered search text in available options
   function highlight_matching_options(event: InputEvent) {
     if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // don't try if CSS highlight API not supported
 
@@ -455,6 +456,8 @@
   on:mouseup|stopPropagation={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
+  role="searchbox"
+  tabindex="-1"
 >
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
@@ -486,6 +489,8 @@
     {#each selected as option, idx (option)}
       <li
         class={liSelectedClass}
+        role="option"
+        aria-selected="true"
         animate:flip={{ duration: 100 }}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
         on:dragstart={dragstart(idx)}
@@ -585,7 +590,15 @@
 
   <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
-    <ul class:hidden={!open} class="options {ulOptionsClass}" bind:this={ul_options}>
+    <ul
+      class:hidden={!open}
+      class="options {ulOptionsClass}"
+      role="listbox"
+      aria-multiselectable={maxSelect === null || maxSelect > 1}
+      aria-expanded={open}
+      aria-disabled={disabled ? `true` : null}
+      bind:this={ul_options}
+    >
       {#each matchingOptions as option, idx}
         {@const {
           label,
@@ -615,6 +628,8 @@
           }}
           on:mouseout={() => (activeIndex = null)}
           on:blur={() => (activeIndex = null)}
+          role="option"
+          aria-selected="false"
         >
           <slot name="option" {option} {idx}>
             <slot {option} {idx}>
@@ -642,6 +657,8 @@
             on:focus={() => (option_msg_is_active = true)}
             on:mouseout={() => (option_msg_is_active = false)}
             on:blur={() => (option_msg_is_active = false)}
+            role="option"
+            aria-selected="false"
             class="user-msg"
           >
             {msg}

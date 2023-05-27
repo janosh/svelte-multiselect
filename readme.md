@@ -189,7 +189,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    highlightMatches: boolean = true
    ```
 
-   Whether to highlight text in the dropdown options that matches the current user-entered search query. Uses the [CSS Custom Highlight API](https://developer.mozilla.org/docs/Web/API/CSS_Custom_Highlight_API) with limited browser support and [styling options](https://developer.mozilla.org/docs/Web/CSS/::highlight). See `::highlight(sms-search-matches)` below for available CSS variables.
+   Whether to highlight text in the dropdown options that matches the current user-entered search query. Uses the [CSS Custom Highlight API](https://developer.mozilla.org/docs/Web/API/CSS_Custom_Highlight_API) with [limited browser support](https://caniuse.com/mdn-api_css_highlights) (70% as of May 2023) and [styling options](https://developer.mozilla.org/docs/Web/CSS/::highlight). See `::highlight(sms-search-matches)` below for available CSS variables.
 
 1. ```ts
    id: string | null = null
