@@ -500,7 +500,8 @@
             {#if parseLabelsAsHtml}
               {@html get_label(option)}
             {:else}
-              {get_label(option)}{/if}
+              {get_label(option)}
+            {/if}
           </slot>
         </slot>
         {#if !disabled && (minSelect === null || selected.length > minSelect)}
