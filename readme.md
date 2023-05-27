@@ -36,9 +36,9 @@
 
 ## 🧪 &thinsp; Coverage
 
-| Statements                                                                                 | Branches                                                                             | Lines                                                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| ![Statements](https://img.shields.io/badge/statements-92.95%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-100%25-brightgreen.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-92.95%25-brightgreen.svg?style=flat) |
+| Statements                                                                                 | Branches                                                                       | Lines                                                                            |
+| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
+| ![Statements](https://img.shields.io/badge/statements-97.94%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-79.39%25-red.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-97.94%25-brightgreen.svg?style=flat) |
 
 ## 📜 &thinsp; Breaking changes
 
@@ -375,14 +375,9 @@ Full list of props/bindable variables for this component. The `Option` type you 
 Example:
 
 ```svelte
-<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]}>
-  <span let:idx let:option slot="option">
-    {idx + 1}
-    {option.label}
-    <span style:background={option.label} style=" width: 1em; height: 1em;" />
-  </span>
-
-  <span let:idx let:option slot="selected">
+<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]} let:idx let:option>
+   <!-- default slot overrides rendering of both dropdown-listed and selected options -->
+  <span>
     {idx + 1}
     {option.label}
     <span style:background={option.label} style=" width: 1em; height: 1em;" />

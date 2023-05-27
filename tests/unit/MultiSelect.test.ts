@@ -259,10 +259,8 @@ test(`value is a single option (i.e. selected[0]) when maxSelect=1`, async () =>
     props: { options, maxSelect: 1, selected: options },
   })
 
-  const value = select.$$.ctx[select.$$.props.value as number]
-
   // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
-  expect(value).toBe(options[0])
+  expect(select.value).toBe(options[0])
 })
 
 test(`selected is null when maxSelect=1 and no option is pre-selected`, async () => {
@@ -271,9 +269,7 @@ test(`selected is null when maxSelect=1 and no option is pre-selected`, async ()
     props: { options: [1, 2, 3], maxSelect: 1 },
   })
 
-  const value = select.$$.ctx[select.$$.props.value as number]
-
-  expect(value).toBe(null)
+  expect(select.value).toBe(null)
 })
 
 test(`selected is array of first two options when maxSelect=2`, async () => {
@@ -288,9 +284,7 @@ test(`selected is array of first two options when maxSelect=2`, async () => {
     props: { options, maxSelect: 2 },
   })
 
-  const selected = select.$$.ctx[select.$$.props.selected as number]
-
-  expect(selected).toEqual(options.slice(0, 2))
+  expect(select.selected).toEqual(options.slice(0, 2))
 })
 
 describe.each([
@@ -469,9 +463,7 @@ test.each([undefined, `Custom no options message`])(
     await tick()
 
     if (noMatchingOptionsMsg === undefined) {
-      // get default value for noMatchingOptionsMsg
-      const idx = select.$$.props.noMatchingOptionsMsg as number
-      noMatchingOptionsMsg = select.$$.ctx[idx]
+      noMatchingOptionsMsg = select.noMatchingOptionsMsg
     }
 
     const dropdown = doc_query(`ul.options`)
@@ -793,9 +785,7 @@ test.each([[null], [`custom add option message`]])(
 
     const li_active = doc_query(`ul.options li.active`)
 
-    // get default value for createOptionMsg
-    const idx = select.$$.props.createOptionMsg as number
-    const default_msg = select.$$.ctx[idx]
+    const default_msg = select.createOptionMsg
     expect(li_active.textContent?.trim()).toBe(createOptionMsg ?? default_msg)
   }
 )

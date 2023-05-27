@@ -3,7 +3,7 @@
   // https://github.com/sveltejs/eslint-plugin-svelte3/issues/201
   import { tick } from 'svelte'
   import { fade } from 'svelte/transition'
-  import Select from '.'
+  import Select from './MultiSelect.svelte'
 
   export let actions: Action[]
   export let trigger: string = `k`
@@ -58,9 +58,10 @@
       on:add={run_and_close}
       on:keydown={toggle}
       {...$$props}
+      let:option
     >
       <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
-      <slot slot="option" name="option" let:option>
+      <slot>
         <span style={span_style}>{option.label}</span>
       </slot>
     </Select>
