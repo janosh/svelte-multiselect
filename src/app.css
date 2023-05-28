@@ -41,7 +41,7 @@ a.btn {
   cursor: pointer;
   border: none;
   border-radius: 3pt;
-  background-color: darkcyan;
+  background-color: teal;
   padding: 2pt 4pt;
   font-size: 12pt;
   line-height: initial;
@@ -72,6 +72,7 @@ pre code {
   font-size: 10pt;
 }
 pre {
+  position: relative;
   border-radius: 4pt;
   background-color: rgba(255, 255, 255, 0.05);
   padding: 1em;
