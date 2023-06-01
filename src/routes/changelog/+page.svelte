@@ -1,10 +1,11 @@
 <script lang="ts">
-  import Changelog from '$root/changelog.md'
   import Toc from 'svelte-toc'
+
+  export let data
 </script>
 
 <main>
-  <Changelog />
+  {@html data.changelog?.code}
 </main>
 
-<Toc headingSelector="main > :where(h3, h4)" breakpoint={1250} />
+<Toc breakpoint={1250} />
