@@ -42,10 +42,22 @@
 
 ## 📜 &thinsp; Breaking changes
 
-- **8.0.0**&nbsp;
+- **8.0.0** (2022-10-22)&nbsp;
   - Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)` if your options were objects with `label` and `value` keys. If they were simple strings/numbers, there was no point in using `selected{Labels,Values}` anyway. [PR 138](https://github.com/janosh/svelte-multiselect/pull/138)
   - Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. [PR 133](https://github.com/janosh/svelte-multiselect/pull/133).
-- **v8.3.0**&nbsp; `addOptionMsg` was renamed to `createOptionMsg` (no major since version since it's rarely used) [sha](https://github.com/janosh/svelte-multiselect/commits).
+- **v8.3.0** (2023-01-25)&nbsp; `addOptionMsg` was renamed to `createOptionMsg` (no major since version since it's rarely used) [sha](https://github.com/janosh/svelte-multiselect/commits).
+- **v9.0.0** (2023-06-01)&nbsp; Svelte bumped from v3 to v4. Also, not breaking but noteworthy: MultiSelect received a default slot that functions as both `"option"` and `"selected"`. If you previously had two identical slots for `"option"` and `"selected"`, you can now remove the `name` from one of them and drop the other:
+
+  ```diff
+  <MultiSelect
+    {options}
+  + let:option
+  >
+  - <SlotComponent let:option {option} slot="selected" />
+  - <SlotComponent let:option {option} slot="option" />
+  + <SlotComponent {option} />
+  </MultiSelect>
+  ```
 
 ## 🔨 &thinsp; Installation
 
