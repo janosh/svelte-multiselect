@@ -5,7 +5,7 @@
   "homepage": "https://janosh.github.io/svelte-multiselect",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
-  "version": "8.6.2",
+  "version": "9.0.0",
   "type": "module",
   "svelte": "./dist/index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
@@ -19,7 +19,7 @@
     "test": "vitest --run --coverage tests/unit/*.ts && playwright test tests/*.test.ts",
     "test:unit": "vitest tests/unit/*.ts",
     "test:e2e": "playwright test tests/*.test.ts",
-    "changelog": "npx auto-changelog --package --output changelog.md --unreleased-only --hide-credit --commit-limit false",
+    "changelog": "npx auto-changelog --package --output changelog.md --hide-empty-releases --hide-credit --commit-limit false",
     "update-coverage": "vitest tests/unit --run --coverage && npx istanbul-badges-readme"
   },
   "dependencies": {
