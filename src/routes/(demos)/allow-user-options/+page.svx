@@ -14,15 +14,23 @@
 <script>
   import MultiSelect from '$lib'
   import { foods } from '$site/options'
+  import { Toggle } from 'svelte-zoo'
 
   let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
+  let duplicates = false
 </script>
 
 <MultiSelect
   options={foods}
   allowUserOptions={true}
+  {duplicates}
   bind:selected
 />
+
+<label for="duplicates">
+  Allow duplicates
+  <Toggle bind:checked={duplicates} id="duplicates" />
+</label>
 ```
 
 <br />
