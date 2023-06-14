@@ -18,12 +18,13 @@
   export let defaultDisabledTitle: string = `This option is disabled`
   export let disabled: boolean = false
   export let disabledInputTitle: string = `This input is disabled`
-  // case-insensitive equality comparison after string coercion (looking only at the `label` key of object options)
   // prettier-ignore
-  export let duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) =>
-    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
   export let duplicateOptionMsg: string = `This option is already selected`
   export let duplicates: boolean = false // whether to allow duplicate options
+  // takes two options and returns true if they are equal
+  // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
+  export let equal: (op1: T, op2: T) => boolean = (op1, op2) =>
+    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
   export let filterFunc = (op: Option, searchText: string): boolean => {
     if (!searchText) return true
     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
@@ -142,7 +143,10 @@
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op) => filterFunc(op, searchText) && !selected.includes(op) // remove already selected options from dropdown list
+    (op1) =>
+      filterFunc(op1, searchText) &&
+      // remove already selected options from dropdown list unless duplicate selections are allowed
+      (!selected.some((op2) => equal(op1, op2)) || duplicates)
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
@@ -157,7 +161,7 @@
     if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
       option = Number(option) as Option // convert to number if possible
     }
-    const is_duplicate = selected.some((op) => duplicateFunc(op, option))
+    const is_duplicate = selected.some((op) => equal(op, option))
 
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
@@ -229,9 +233,7 @@
   function remove(to_remove: Option) {
     if (selected.length === 0) return
 
-    const idx = selected.findIndex(
-      (op) => JSON.stringify(op) === JSON.stringify(to_remove)
-    )
+    const idx = selected.findIndex((op) => equal(op, to_remove))
 
     let [option] = selected.splice(idx, 1) // remove option from selected list
 
@@ -486,7 +488,7 @@
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
   <ul class="selected {ulSelectedClass}" aria-label="selected options">
-    {#each selected as option, idx (option)}
+    {#each selected as option, idx ([option, idx])}
       <li
         class={liSelectedClass}
         role="option"
@@ -642,11 +644,11 @@
           </slot>
         </li>
       {:else}
-        {@const search_is_duplicate = selected.some((option) =>
-          duplicateFunc(option, searchText)
+        {@const text_input_is_duplicate = selected.some((option) =>
+          equal(option, searchText)
         )}
         {@const msg =
-          !duplicates && search_is_duplicate ? duplicateOptionMsg : createOptionMsg}
+          !duplicates && text_input_is_duplicate ? duplicateOptionMsg : createOptionMsg}
         {#if allowUserOptions && searchText && msg}
           <li
             on:mousedown|stopPropagation
