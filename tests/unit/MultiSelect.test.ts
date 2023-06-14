@@ -665,7 +665,9 @@ describe.each([
         const dropdown = doc_query(`ul.options`)
 
         const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
-        expect(dropdown.textContent?.trim(), fail_msg).toBe(duplicateOptionMsg)
+        expect(dropdown.textContent?.trim(), fail_msg).toBe(
+          duplicates ? `${selected[0]}` : duplicateOptionMsg
+        )
       }
     )
   }
