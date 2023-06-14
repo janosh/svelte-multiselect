@@ -156,25 +156,25 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    Tooltip text to display on hover when the component is in `disabled` state.
 
-<!-- prettier-ignore -->
-1. ```ts
-   duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) =>
-    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
-   ```
-
-   This option determines when two options are considered duplicates. Defaults to case-insensitive equality comparison after string coercion (looking only at the `label` key of object options). I.e. the default `duplicateFunc` considers `'Foo' == 'foo'`, `'42' == 42` and ``{ label: `Foo`, value: 0 } == { label: `foo`, value: 42 }``.
-
 1. ```ts
    duplicates: boolean = false
    ```
 
-   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `duplicateFunc` to customize when a pair of options is considered a duplicate.
+   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `equal` to customize when a pair of options is considered a duplicate.
 
 1. ```ts
    duplicateOptionMsg: string = `This option is already selected`
    ```
 
    Text to display to users when `allowUserOptions` is truthy and they try to create a new option that's already selected.
+
+<!-- prettier-ignore -->
+1. ```ts
+   equal: (op1: T, op2: T) => boolean = (op1, op2) =>
+    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
+   ```
+
+   A function that determines if two options are equal. Defaults to case-insensitive equality comparison after string coercion (looking only at the `label` key of object options). I.e. the default `equal` considers `'Foo' == 'foo'`, `'42' == 42` and ``{ label: `Foo`, value: 0 } == { label: `foo`, value: 42 }``.
 
 1. ```ts
    filterFunc = (op: Option, searchText: string): boolean => {
