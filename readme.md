@@ -139,6 +139,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Screens wider than `breakpoint` in pixels will be considered `'desktop'`, everything narrower as `'mobile'`.
 
 1. ```ts
+   disableSearch: boolean = false
+   ```
+
+   `true` disables search funcitonality - users will still be able to interact with component.
+
+1. ```ts
    defaultDisabledTitle: string = `This option is disabled`
    ```
 

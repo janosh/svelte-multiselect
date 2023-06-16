@@ -15,6 +15,7 @@
   export let autocomplete: string = `off`
   export let autoScroll: boolean = true
   export let breakpoint: number = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
+  export let disableSearch: boolean = false
   export let defaultDisabledTitle: string = `This option is disabled`
   export let disabled: boolean = false
   export let disabledInputTitle: string = `This input is disabled`
@@ -461,6 +462,7 @@
 >
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
+    readonly={disableSearch}
     {name}
     required={Boolean(required)}
     value={selected.length >= Number(required) ? JSON.stringify(selected) : null}
@@ -525,6 +527,7 @@
       </li>
     {/each}
     <input
+      readonly={disableSearch}
       class={inputClass}
       bind:this={input}
       bind:value={searchText}
