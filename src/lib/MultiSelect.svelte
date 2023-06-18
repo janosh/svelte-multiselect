@@ -460,6 +460,7 @@
   role="searchbox"
   tabindex="-1"
 >
+  <!-- form control input invisible to the user, only purpose is to abort form submission if this component fails data validation -->
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
     {name}
