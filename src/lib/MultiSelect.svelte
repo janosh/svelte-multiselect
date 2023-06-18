@@ -23,11 +23,10 @@
   export let duplicates: boolean = false // whether to allow duplicate options
   // takes two options and returns true if they are equal
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
-  export let equal: (op1: T, op2: T) => boolean = (op1, op2) =>
-    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
-  export let filterFunc = (op: Option, searchText: string): boolean => {
+  export let key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
+  export let filterFunc = (opt: Option, searchText: string): boolean => {
     if (!searchText) return true
-    return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
+    return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
   }
   export let focusInputOnSelect: boolean | 'desktop' = `desktop`
   export let form_input: HTMLInputElement | null = null
@@ -65,7 +64,7 @@
   export let searchText: string = ``
   export let selected: Option[] =
     options
-      ?.filter((op) => op instanceof Object && op?.preselected)
+      ?.filter((opt) => opt instanceof Object && opt?.preselected)
       .slice(0, maxSelect ?? undefined) ?? []
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let selectedOptionsDraggable: boolean = !sortSelected
@@ -74,16 +73,16 @@
   export let value: Option | Option[] | null = null
 
   // get the label key from an option object or the option itself if it's a string or number
-  export const get_label = (op: T) => {
-    if (op instanceof Object) {
-      if (op.label === undefined) {
+  export const get_label = (opt: T) => {
+    if (opt instanceof Object) {
+      if (opt.label === undefined) {
         console.error(
-          `MultiSelect option ${JSON.stringify(op)} is an object but has no label key`
+          `MultiSelect option ${JSON.stringify(opt)} is an object but has no label key`
         )
       }
-      return op.label
+      return opt.label
     }
-    return op
+    return `${opt}`
   }
 
   // if maxSelect=1, value is the single item in selected (or null if selected is empty)
@@ -143,10 +142,10 @@
 
   // options matching the current search text
   $: matchingOptions = options.filter(
-    (op1) =>
-      filterFunc(op1, searchText) &&
+    (opt) =>
+      filterFunc(opt, searchText) &&
       // remove already selected options from dropdown list unless duplicate selections are allowed
-      (!selected.some((op2) => equal(op1, op2)) || duplicates)
+      (!selected.map(key).includes(key(opt)) || duplicates)
   )
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
@@ -156,12 +155,12 @@
   $: activeOption = matchingOptions[activeIndex ?? -1] ?? null
 
   // add an option to selected list
-  function add(option: Option, event: Event) {
+  function add(option: T, event: Event) {
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
       option = Number(option) as Option // convert to number if possible
     }
-    const is_duplicate = selected.some((op) => equal(op, option))
+    const is_duplicate = selected.map(key).includes(key(option))
 
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
@@ -230,10 +229,10 @@
   }
 
   // remove an option from selected list
-  function remove(to_remove: Option) {
+  function remove(to_remove: T) {
     if (selected.length === 0) return
 
-    const idx = selected.findIndex((op) => equal(op, to_remove))
+    const idx = selected.findIndex((opt) => key(opt) === key(to_remove))
 
     let [option] = selected.splice(idx, 1) // remove option from selected list
 
@@ -488,7 +487,7 @@
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
   <ul class="selected {ulSelectedClass}" aria-label="selected options">
-    {#each selected as option, idx ([option, idx])}
+    {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
       <li
         class={liSelectedClass}
         role="option"
@@ -644,9 +643,7 @@
           </slot>
         </li>
       {:else}
-        {@const text_input_is_duplicate = selected.some((option) =>
-          equal(option, searchText)
-        )}
+        {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
         {@const msg =
           !duplicates && text_input_is_duplicate ? duplicateOptionMsg : createOptionMsg}
         {#if allowUserOptions && searchText && msg}
