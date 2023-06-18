@@ -1,4 +1,4 @@
-import MultiSelect, { type MultiSelectEvents } from '$lib'
+import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
 import { tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 import { doc_query } from '.'
@@ -6,6 +6,9 @@ import Test2WayBind from './Test2WayBind.svelte'
 
 const mouseup = new MouseEvent(`mouseup`)
 const mouseover = new MouseEvent(`mouseover`)
+const input_event = new InputEvent(`input`)
+const arrow_down = new KeyboardEvent(`keydown`, { key: `ArrowDown` })
+const enter = new KeyboardEvent(`keydown`, { key: `Enter` })
 
 test(`2-way binding of activeIndex`, async () => {
   let activeIndex: number = 0
@@ -186,7 +189,7 @@ test(`arrow down makes first option active`, async () => {
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+  input.dispatchEvent(arrow_down)
 
   await tick()
 
@@ -201,9 +204,9 @@ test(`can select 1st and last option with arrow and enter key`, async () => {
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+  input.dispatchEvent(arrow_down)
   await tick()
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+  input.dispatchEvent(enter)
   await tick()
   const selected = doc_query(`ul.selected`)
 
@@ -211,7 +214,7 @@ test(`can select 1st and last option with arrow and enter key`, async () => {
 
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp` }))
   await tick()
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+  input.dispatchEvent(enter)
   await tick()
 
   expect(selected.textContent?.trim()).toBe(`1 3`)
@@ -440,7 +443,7 @@ test(`filters dropdown to show only matching options when entering text`, async 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   input.value = `ba`
-  input.dispatchEvent(new InputEvent(`input`))
+  input.dispatchEvent(input_event)
   await tick()
 
   const dropdown = doc_query(`ul.options`)
@@ -459,7 +462,7 @@ test.each([undefined, `Custom no options message`])(
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
     input.value = `4`
-    input.dispatchEvent(new InputEvent(`input`))
+    input.dispatchEvent(input_event)
     await tick()
 
     if (noMatchingOptionsMsg === undefined) {
@@ -481,7 +484,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `ba`
-  input.dispatchEvent(new InputEvent(`input`))
+  input.dispatchEvent(input_event)
   await tick()
 
   const dropdown = doc_query(`ul.options`)
@@ -490,7 +493,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   // loop through the dropdown list twice
   for (const text of [`bar`, `baz`, `bar`, `baz`]) {
     // down arrow key
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    input.dispatchEvent(arrow_down)
     await tick()
     const li_active = doc_query(`ul.options li.active`)
     expect(li_active.textContent?.trim()).toBe(text)
@@ -640,8 +643,8 @@ describe.each([
   `shows duplicateOptionMsg when searchText is already selected for options=%j`,
   (options, selected) => {
     test.each([
-      [true, `Create this option...`],
-      [false, `Custom duplicate option message`],
+      [true, `Option not found. Create it?`],
+      [false, `Another custom duplicate option message`],
     ])(
       `allowUserOptions=true, duplicates=%j`,
       async (duplicates, duplicateOptionMsg) => {
@@ -659,13 +662,16 @@ describe.each([
         const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
         input.value = `${selected[0]}`
-        input.dispatchEvent(new InputEvent(`input`))
+        input.dispatchEvent(input_event)
+
         await tick()
 
         const dropdown = doc_query(`ul.options`)
 
         const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
-        expect(dropdown.textContent?.trim(), fail_msg).toBe(duplicateOptionMsg)
+        expect(dropdown.textContent?.trim(), fail_msg).toBe(
+          duplicates ? `${selected[0]}` : duplicateOptionMsg
+        )
       }
     )
   }
@@ -684,7 +690,7 @@ test.each([
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.value = `1`
-    input.dispatchEvent(new InputEvent(`input`))
+    input.dispatchEvent(input_event)
     await tick()
 
     const li = doc_query(`ul.options li`)
@@ -780,7 +786,7 @@ test.each([[null], [`custom add option message`]])(
     if (createOptionMsg) select.$set({ createOptionMsg })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    input.dispatchEvent(arrow_down)
     await tick()
 
     const li_active = doc_query(`ul.options li.active`)
@@ -812,7 +818,7 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   // add a new option created from user text input
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `foo`
-  input.dispatchEvent(new InputEvent(`input`))
+  input.dispatchEvent(input_event)
   await tick()
 
   const li = doc_query(`ul.options li[title='Create this option...']`)
@@ -906,7 +912,8 @@ test.each([[true], [false]])(
     if (sortSelected) {
       expect(console.warn).toHaveBeenCalledTimes(1)
       expect(console.warn).toHaveBeenCalledWith(
-        `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user re-orderings of selected options will be undone by sortSelected on component re-renders.`
+        `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user` +
+          ` re-orderings of selected options will be undone by sortSelected on component re-renders.`
       )
     } else {
       expect(console.warn).toHaveBeenCalledTimes(0)
@@ -1007,7 +1014,7 @@ test(`first matching option becomes active automatically on entering searchText`
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `ba`
   // updates input value
-  input.dispatchEvent(new InputEvent(`input`))
+  input.dispatchEvent(input_event)
   // triggers handle_keydown callback (which sets activeIndex)
   input.dispatchEvent(new KeyboardEvent(`keydown`))
   await tick()
@@ -1037,28 +1044,35 @@ test.each([
   expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
 })
 
-test.each([[true], [false]])(
-  `can select the same object option multiple times if duplicates=true`,
-  async (duplicates) => {
+describe.each([
+  [true, (opt: Option) => opt],
+  [false, (opt: Option) => opt],
+  [true, JSON.stringify],
+  [false, JSON.stringify],
+])(`MultiSelect component`, (duplicates, key) => {
+  test(`can select the same object option multiple times if duplicates=${duplicates}`, async () => {
+    const options = [
+      { label: `foo`, id: 1 },
+      { label: `foo`, id: 2 },
+    ]
     new MultiSelect({
       target: document.body,
-      props: {
-        options: [{ label: `foo` }, { label: `foo` }],
-        selected: [{ label: `foo` }],
-        duplicates,
-      },
+      props: { options, selected: [{ ...options[0] }], duplicates, key },
     })
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
+    input.dispatchEvent(arrow_down)
     await tick()
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+    input.dispatchEvent(enter)
     await tick()
 
-    expect(doc_query(`ul.selected`).textContent?.trim()).toBe(
-      duplicates ? `foo foo` : `foo`
-    )
-  }
-)
+    const options_equal = key(options[0]) === key(options[1])
+    // 2 options can be selected if they're different or duplicates allowed
+    const expected = duplicates || !options_equal ? `foo foo` : `foo`
+    const actual = doc_query(`ul.selected`).textContent?.trim()
+    const fail_msg = `duplicates=${duplicates}, options_equal=${options_equal}, key=${key.name}`
+    expect(actual, fail_msg).toBe(expected)
+  })
+})
 
 describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
   describe.each([[``], [`no matches`]])(
@@ -1082,7 +1096,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
             const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
             // create a state where no options match the search text
             input.value = `bar`
-            input.dispatchEvent(new InputEvent(`input`))
+            input.dispatchEvent(input_event)
 
             await tick()
 
