@@ -25,32 +25,6 @@
 </MultiSelect>
 ```
 
-<label for="fav-languages-no-search"><i>(search disabled)</i> Favorite programming languages? <span>multi select</span></label>
-
-```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7" stackblitz="src/site/Examples.svx"
-<script lang="ts">
-  import MultiSelect from '$lib'
-  import { languages } from '$site/options'
-  import LanguageSlot from './LanguageSlot.svelte'
-
-  let selected: string[]
-</script>
-
-<pre>selected = {JSON.stringify(selected)}</pre>
-
-<MultiSelect
-  id="fav-languages-no-search"
-  options={languages}
-  placeholder="Take your pick..."
-  disableSearch={true}
-  bind:selected
-  let:idx
-  let:option
->
-  <LanguageSlot {idx} {option} gap="1ex" />
-</MultiSelect>
-```
-
 <label for="fav-ml-tool">Favorite machine learning tool? <span>single select with loading indicator on text input</span></label>
 
 ```svelte example collapsible repl="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759" stackblitz="src/site/Examples.svx"
