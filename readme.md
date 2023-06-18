@@ -219,7 +219,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    inputmode: string | null = null
    ```
 
-   The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow browsers to display an appropriate virtual keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details.
+   The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow mobile browsers to display an appropriate virtual on-screen keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details. If you want to suppress the on-screen keyboard to leave full-screen real estate for the dropdown list of options, set `inputmode="none"`.
 
 1. ```ts
    invalid: boolean = false
