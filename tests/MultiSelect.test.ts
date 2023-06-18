@@ -15,7 +15,6 @@ test.describe(`input`, async () => {
 
     expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
-    await page.waitForTimeout(100)
     const options = page.locator(`div.multiselect.open > ul.options`)
     await expect(options).toBeVisible()
   })

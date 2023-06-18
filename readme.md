@@ -156,19 +156,11 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    Tooltip text to display on hover when the component is in `disabled` state.
 
-<!-- prettier-ignore -->
-1. ```ts
-   duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) =>
-    `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
-   ```
-
-   This option determines when two options are considered duplicates. Defaults to case-insensitive equality comparison after string coercion (looking only at the `label` key of object options). I.e. the default `duplicateFunc` considers `'Foo' == 'foo'`, `'42' == 42` and ``{ label: `Foo`, value: 0 } == { label: `foo`, value: 42 }``.
-
 1. ```ts
    duplicates: boolean = false
    ```
 
-   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `duplicateFunc` to customize when a pair of options is considered a duplicate.
+   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `key` to customize when a pair of options is considered equal.
 
 1. ```ts
    duplicateOptionMsg: string = `This option is already selected`
@@ -176,10 +168,17 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    Text to display to users when `allowUserOptions` is truthy and they try to create a new option that's already selected.
 
+<!-- prettier-ignore -->
 1. ```ts
-   filterFunc = (op: Option, searchText: string): boolean => {
+   key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
+   ```
+
+   A function that maps options to a value by which equality of options is determined. Defaults to mapping options to their lower-cased label. E.g. by default ``const opt1 = { label: `foo`, id: 1 }`` and ``const opt2 = { label: `foo`, id: 2 }`` are considered equal. If you want to consider them different, you can set `key` to e.g. `key={(opt) => opt.id}` or ``key={(opt) => `${opt.label}-${opt.id}}`` or even `key={JSON.stringify}`.
+
+1. ```ts
+   filterFunc = (opt: Option, searchText: string): boolean => {
      if (!searchText) return true
-     return `${get_label(op)}`.toLowerCase().includes(searchText.toLowerCase())
+     return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
    }
    ```
 

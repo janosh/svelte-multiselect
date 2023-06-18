@@ -1,6 +1,4 @@
 <script lang="ts">
-  /* eslint-disable no-undef */ // TODO: remove when fixed
-  // https://github.com/sveltejs/eslint-plugin-svelte3/issues/201
   import { tick } from 'svelte'
   import { fade } from 'svelte/transition'
   import Select from './MultiSelect.svelte'

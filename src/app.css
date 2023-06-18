@@ -3,7 +3,7 @@
   --blue: cornflowerblue;
   --text-color: #ccc;
 
-  --sms-active-color: rgba(0, 0, 0, 0.4);
+  --sms-active-color: rgba(255, 255, 255, 0.1);
   --sms-focus-border: 1pt solid cornflowerblue;
   --sms-options-bg: rgb(33, 31, 47);
   --sms-selected-bg: rgba(255, 255, 255, 0.2);
