@@ -382,6 +382,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
 1. `slot="disabled-icon"`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `<span slot="disabled-icon" />` or `div` to remove the default disabled icon.
 1. `slot="expand-icon"`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. Receives prop `open: boolean` which is true if the Multiselect dropdown is visible and false if it's hidden.
 1. `slot="remove-icon"`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
+1. `slot="user-msg"`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). `let:props`:
+   - `duplicateOptionMsg: string`: See [props](#🔣-props).
+   - `createOptionMsg: string`: See [props](#🔣-props).
+   - `textInputIsDuplicate: boolean`: Whether user has typed text that matches an already existing option.
+   - `searchText: string`: The text user typed into search input.
+   - `msg: string`: `duplicateOptionMsg` if user input is a duplicate else `createOptionMsg`.
 
 Example:
 

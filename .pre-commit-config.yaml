@@ -41,7 +41,7 @@ repos:
     hooks:
       - id: eslint
         types: [file]
-        args: [--fix, --resolve-plugins-relative-to, ~/.cache/pre-commit]
+        args: [--fix, --plugin, 'svelte3, @typescript-eslint']
         files: \.(js|ts|svelte)$
         additional_dependencies:
           - eslint
