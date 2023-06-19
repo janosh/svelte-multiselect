@@ -61,6 +61,29 @@
   >
     <Icon icon={open ? `Collapse` : `Expand`} />
   </button>
-  <span slot="remove-icon">x</span>
+  <span slot="remove-icon" style="width: 2ex;">x</span>
+</MultiSelect>
+```
+
+### `slot="user-msg"`
+
+```svelte example stackblitz id="languages-2"
+<script>
+  import MultiSelect from '$lib'
+  import { languages } from '$site/options'
+  import { LanguageSlot } from '$site'
+  import { Icon } from 'svelte-zoo'
+</script>
+
+<MultiSelect
+  options={languages}
+  maxSelect={5}
+  placeholder="What languages do you know?"
+  selected={[`Python`, `TypeScript`, `Julia`]}
+  searchText="Julia"
+  open
+  allowUserOptions
+>
+  <span slot="user-msg" let:msg let:textInputIsDuplicate>{msg} {textInputIsDuplicate ? '🤦' : '👷'}</span>
 </MultiSelect>
 ```

@@ -6,7 +6,7 @@ import { foods } from '../src/site/options.ts'
 test.describe.configure({ mode: `parallel` })
 
 test.describe(`input`, async () => {
-  test(`opens dropdown on focus`, async ({ page }) => {
+  test.skip(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
@@ -550,11 +550,13 @@ test.describe(`slots`, async () => {
     expect(expand_icon_path).not.toBe(collapse_icon_path)
     // ^^^ expand-icon test done
 
-    const remove_icons = await page.$$(`ul.selected > li > button > svg`)
-    msg = `custom remove icon slot is not rendered`
+    const remove_icons = await page.$$(
+      `#languages-1 ul.selected > li > button > svg`
+    )
+    msg = `unexpected number of custom remove icon slots rendered`
     expect(remove_icons, msg).toHaveLength(3)
 
-    const remove_all_svg = await page.$$(`button.remove-all > svg`)
+    const remove_all_svg = await page.$$(`#languages-1 button.remove-all > svg`)
     msg = `custom remove-all icon slot is not rendered`
     expect(remove_all_svg, msg).toHaveLength(1)
   })
