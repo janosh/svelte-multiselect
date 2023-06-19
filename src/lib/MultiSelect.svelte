@@ -645,6 +645,8 @@
         </li>
       {:else}
         {@const textInputIsDuplicate = selected.map(get_label).includes(searchText)}
+        <!-- set msg to duplicateOptionMsg if duplicates are not allowed and the user-entered
+          searchText is a duplicate, else set to createOptionMsg -->
         {@const msg =
           !duplicates && textInputIsDuplicate ? duplicateOptionMsg : createOptionMsg}
         {#if allowUserOptions && searchText && msg}
