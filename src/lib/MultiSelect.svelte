@@ -644,9 +644,9 @@
           </slot>
         </li>
       {:else}
-        {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
+        {@const textInputIsDuplicate = selected.map(get_label).includes(searchText)}
         {@const msg =
-          !duplicates && text_input_is_duplicate ? duplicateOptionMsg : createOptionMsg}
+          !duplicates && textInputIsDuplicate ? duplicateOptionMsg : createOptionMsg}
         {#if allowUserOptions && searchText && msg}
           <li
             on:mousedown|stopPropagation
@@ -661,7 +661,16 @@
             aria-selected="false"
             class="user-msg"
           >
-            {msg}
+            <slot
+              name="user-msg"
+              {duplicateOptionMsg}
+              {createOptionMsg}
+              {textInputIsDuplicate}
+              {searchText}
+              {msg}
+            >
+              {msg}
+            </slot>
           </li>
         {:else if noMatchingOptionsMsg}
           <!-- use span to not have cursor: pointer -->
