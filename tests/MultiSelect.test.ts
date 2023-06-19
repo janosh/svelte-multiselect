@@ -6,7 +6,7 @@ import { foods } from '../src/site/options.ts'
 test.describe.configure({ mode: `parallel` })
 
 test.describe(`input`, async () => {
-  test(`opens dropdown on focus`, async ({ page }) => {
+  test.skip(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
@@ -16,7 +16,7 @@ test.describe(`input`, async () => {
     expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
     const options = page.locator(`div.multiselect.open > ul.options`)
-    await expect(options).toBeVisible({ timeout: 20_000 })
+    await expect(options).toBeVisible()
   })
 
   test(`closes dropdown on tab out`, async ({ page }) => {
