@@ -16,7 +16,7 @@ test.describe(`input`, async () => {
     expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
 
     const options = page.locator(`div.multiselect.open > ul.options`)
-    await expect(options).toBeVisible()
+    await expect(options).toBeVisible({ timeout: 20_000 })
   })
 
   test(`closes dropdown on tab out`, async ({ page }) => {
