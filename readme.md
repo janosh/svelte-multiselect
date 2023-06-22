@@ -242,7 +242,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    maxOptions: number | undefined = undefined
    ```
 
-   Positive integer to limit the number of options displayed in the dropdown. `undefined` means no limit.
+   Positive integer to limit the number of options displayed in the dropdown. `undefined` and 0 mean no limit.
 
 1. ```ts
    maxSelect: number | null = null

@@ -136,6 +136,14 @@
         `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`
     )
   }
+  if (
+    maxOptions &&
+    (typeof maxOptions != `number` || maxOptions < 0 || maxOptions % 1 != 0)
+  ) {
+    console.error(
+      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`
+    )
+  }
 
   const dispatch = createEventDispatcher<DispatchEvents<Option>>()
   let option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
@@ -603,7 +611,7 @@
       aria-disabled={disabled ? `true` : null}
       bind:this={ul_options}
     >
-      {#each matchingOptions.slice(0, maxOptions || Infinity) as option, idx}
+      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as option, idx}
         {@const {
           label,
           disabled = null,
