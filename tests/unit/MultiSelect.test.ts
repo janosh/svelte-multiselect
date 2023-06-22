@@ -1117,3 +1117,42 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
     }
   )
 })
+
+test.each([[0], [1], [2], [5], [undefined]])(
+  `no more than maxOptions are rendered if a positive integer, all options are rendered undefined or 0`,
+  async (maxOptions) => {
+    const options = [`foo`, `bar`, `baz`]
+
+    new MultiSelect({
+      target: document.body,
+      props: { options, maxOptions },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(input_event)
+
+    await tick()
+
+    expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
+      Math.min(options.length, maxOptions || options.length)
+    )
+  }
+)
+
+test.each([[true], [-1], [3.5], [`foo`], [{}]])(
+  `console.error when maxOptions=%s is not a positive integer or undefined`,
+  async (maxOptions) => {
+    console.error = vi.fn()
+
+    new MultiSelect({
+      target: document.body,
+      // @ts-expect-error test invalid maxOptions
+      props: { options: [1, 2, 3], maxOptions },
+    })
+
+    expect(console.error).toHaveBeenCalledTimes(1)
+    expect(console.error).toHaveBeenCalledWith(
+      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`
+    )
+  }
+)
