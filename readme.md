@@ -239,6 +239,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    List of options currently displayed to the user. Same as `options` unless the user entered `searchText` in which case this array contains only those options for which `filterFunc = (op: Option, searchText: string) => boolean` returned `true`.
 
 1. ```ts
+   maxOptions: number | undefined = undefined
+   ```
+
+   Positive integer to limit the number of options displayed in the dropdown. `undefined` and 0 mean no limit.
+
+1. ```ts
    maxSelect: number | null = null
    ```
 
