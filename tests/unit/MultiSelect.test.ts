@@ -1138,3 +1138,21 @@ test.each([[0], [1], [2], [5], [undefined]])(
     )
   }
 )
+
+test.each([[true], [-1], [3.5], [`foo`], [{}]])(
+  `console.error when maxOptions=%s is not a positive integer or undefined`,
+  async (maxOptions) => {
+    console.error = vi.fn()
+
+    new MultiSelect({
+      target: document.body,
+      // @ts-expect-error test invalid maxOptions
+      props: { options: [1, 2, 3], maxOptions },
+    })
+
+    expect(console.error).toHaveBeenCalledTimes(1)
+    expect(console.error).toHaveBeenCalledWith(
+      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`
+    )
+  }
+)
