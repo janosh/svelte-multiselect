@@ -1117,3 +1117,24 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
     }
   )
 })
+
+test.each([[0], [1], [2], [5], [undefined]])(
+  `no more than maxOptions are rendered if a positive integer, all options are rendered undefined or 0`,
+  async (maxOptions) => {
+    const options = [`foo`, `bar`, `baz`]
+
+    new MultiSelect({
+      target: document.body,
+      props: { options, maxOptions },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(input_event)
+
+    await tick()
+
+    expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
+      Math.min(options.length, maxOptions || options.length)
+    )
+  }
+)
