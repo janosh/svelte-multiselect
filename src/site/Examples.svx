@@ -148,6 +148,7 @@
 
   let selected: string[]
   // required={1} means form validation will prevent submission if no option selected
+  let maxOptions: number = 10
 </script>
 
 <MultiSelect
@@ -156,8 +157,23 @@
   required={1}
   minSelect={1}
   maxSelect={1}
+  {maxOptions}
   selected={[`Canada`]}
 />
+
+<label>
+  maxOptions <input type="range" min=0 max={30} bind:value={maxOptions}>
+  {maxOptions} <small>(0 means no limit)</small>
+</label>
+
+<style>
+  label {
+    display: flex;
+    align-items: center;
+    gap: 5pt;
+    font-weight: normal;
+  }
+</style>
 ```
 
 <style>
