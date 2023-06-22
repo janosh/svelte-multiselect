@@ -49,6 +49,12 @@ export default {
       $root: `.`,
       $site: `./src/site`,
     },
+
+    prerender: {
+      handleMissingId: ({ id }) => {
+        if (![`🔣-props`].includes(id)) throw id
+      },
+    },
   },
 
   compilerOptions: {
