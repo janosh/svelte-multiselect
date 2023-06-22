@@ -41,6 +41,7 @@
   export let liSelectedClass: string = ``
   export let loading: boolean = false
   export let matchingOptions: Option[] = []
+  export let maxOptions: number | undefined = undefined
   export let maxSelect: number | null = null // null means there is no upper limit for selected.length
   export let maxSelectMsg: ((current: number, max: number) => string) | null = (
     current: number,
@@ -147,6 +148,7 @@
       // remove already selected options from dropdown list unless duplicate selections are allowed
       (!selected.map(key).includes(key(opt)) || duplicates)
   )
+
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
     throw `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`
@@ -590,7 +592,7 @@
     {/if}
   {/if}
 
-  <!-- only render options dropdown if options or searchText is not empty needed to avoid briefly flashing empty dropdown -->
+  <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
       class:hidden={!open}
@@ -601,7 +603,7 @@
       aria-disabled={disabled ? `true` : null}
       bind:this={ul_options}
     >
-      {#each matchingOptions as option, idx}
+      {#each matchingOptions.slice(0, maxOptions || Infinity) as option, idx}
         {@const {
           label,
           disabled = null,
