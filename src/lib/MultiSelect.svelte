@@ -567,6 +567,16 @@
       on:touchstart
     />
     <!-- the above on:* lines forward potentially useful DOM events -->
+    <slot
+      name="after-input"
+      {selected}
+      {disabled}
+      {invalid}
+      {id}
+      {placeholder}
+      {open}
+      {required}
+    />
   </ul>
   {#if loading}
     <slot name="spinner">
