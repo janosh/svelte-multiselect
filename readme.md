@@ -8,7 +8,7 @@
 [![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
 [![GitHub Pages](https://github.com/janosh/svelte-multiselect/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/gh-pages.yml)
 [![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
-[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/CHANGELOG.md)
+[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/packages/svelte/CHANGELOG.md)
 [![REPL](https://img.shields.io/badge/Svelte-REPL-blue?label=Try%20it!)](https://svelte.dev/repl/a5a14b8f15d64cb083b567292480db05)
 [![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
 
@@ -394,8 +394,9 @@ Full list of props/bindable variables for this component. The `Option` type you 
    - `textInputIsDuplicate: boolean`: Whether user has typed text that matches an already existing option.
    - `searchText: string`: The text user typed into search input.
    - `msg: string`: `duplicateOptionMsg` if user input is a duplicate else `createOptionMsg`.
+1. `slot='after-input'`: ForPlaced after the search input. For arbitrary content like icons or temporary messages. Receives props `selected`, `disabled`, `invalid`, `id`, `placeholder`, `open`, `required`.
 
-Example:
+Example using several slots:
 
 ```svelte
 <MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]} let:idx let:option>
