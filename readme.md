@@ -59,6 +59,15 @@
   </MultiSelect>
   ```
 
+- **v10.0.0** (2023-06-23)&nbsp; `duplicateFunc()` renamed to `key` in [#238](https://github.com/janosh/svelte-multiselect/pull/238). Signature changed:
+
+  ```diff
+  - duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) => `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
+  + key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
+  ```
+
+  Rather than implementing custom equality in `duplicateFunc`, the `key` function is now expected to map options to a unique identifier. `key(op1) === key(op2)` should mean `op1` and `op2` are the same option. `key` can return any type but usually best to return primitives (`string`, `number`, ...) for Svelte keyed each blocks (see [#217](https://github.com/janosh/svelte-multiselect/pull/217)).
+
 ## 🔨 &thinsp; Installation
 
 ```sh
