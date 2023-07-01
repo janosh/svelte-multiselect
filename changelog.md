@@ -2,11 +2,19 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v10.0.0](https://github.com/janosh/svelte-multiselect/compare/v9.0.0...v10.0.0)
+
+- Add Multiselect prop `maxOptions: number` [`#243`](https://github.com/janosh/svelte-multiselect/pull/243)
+- Add `&lt;slot name="user-msg"&gt;` [`#240`](https://github.com/janosh/svelte-multiselect/pull/240)
+- Rename prop `duplicateFunc()` to `key()` [`#238`](https://github.com/janosh/svelte-multiselect/pull/238)
+- declare types [`#236`](https://github.com/janosh/svelte-multiselect/pull/236)
+- add &lt;slot name="after-input"&gt; [`0fe8e8d`](https://github.com/janosh/svelte-multiselect/commit/0fe8e8d59e7dbfe8a650079c052a1ed7902c69fa)
+- add sentence on inputmode='none' use case for hiding on-screen keyboards to readme [`466f0a1`](https://github.com/janosh/svelte-multiselect/commit/466f0a12e866ba525194924902b67401397aa21f)
+
 ### [v9.0.0](https://github.com/janosh/svelte-multiselect/compare/v8.6.2...v9.0.0)
 
 > 1 June 2023
 
-- Prep v9 release [`#235`](https://github.com/janosh/svelte-multiselect/pull/235)
 - Revert "Fix Svelte 3.57 a11y (#215)" [`#232`](https://github.com/janosh/svelte-multiselect/pull/232)
 - Add default slot [`#231`](https://github.com/janosh/svelte-multiselect/pull/231)
 - CmdPalette add prop close_keys [`099e1ac`](https://github.com/janosh/svelte-multiselect/commit/099e1acbae8b66b0a10129ecb2930bb10920974f)
