@@ -2,7 +2,7 @@
   export let option: string
   export let idx: number | undefined = undefined
   export let height = `20px`
-  export let gap = '5pt'
+  export let gap = `5pt`
 
   $: lang = option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`)
 
