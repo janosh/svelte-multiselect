@@ -93,6 +93,7 @@
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
 
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   type $$Events = MultiSelectEvents // for type-safe event listening on this component
 
   if (!(options?.length > 0)) {
