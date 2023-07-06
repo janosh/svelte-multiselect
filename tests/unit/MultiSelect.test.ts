@@ -129,10 +129,10 @@ test(`applies DOM attributes to input node`, () => {
 
   const lis = document.querySelectorAll(`ul.options > li`)
   const input = doc_query<HTMLInputElement>(
-    `input[autocomplete]`
+    `input[autocomplete]`,
   ) as HTMLInputElement
   const form_input = doc_query<HTMLInputElement>(
-    `input.form-control`
+    `input.form-control`,
   ) as HTMLInputElement
 
   // make sure the search text filtered the dropdown options
@@ -159,7 +159,7 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
     maxSelectMsg: HTMLSpanElement,
   }
   const css_classes = Object.fromEntries(
-    Object.keys(prop_elem_map).map((cls) => [`${cls}Class`, cls])
+    Object.keys(prop_elem_map).map((cls) => [`${cls}Class`, cls]),
   )
 
   new MultiSelect({
@@ -317,9 +317,9 @@ describe.each([
         })
 
         expect(form.checkValidity()).toBe(form_valid)
-      }
+      },
     )
-  }
+  },
 )
 
 test.each([
@@ -338,7 +338,7 @@ test.each([
   expect(console.error).toHaveBeenCalledTimes(expected)
   if (expected > 0) {
     expect(console.error).toHaveBeenCalledWith(
-      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
+      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
     )
   }
 })
@@ -393,7 +393,7 @@ test.each([
     await tick()
     const form_data = new FormData(form)
     expect(form_data.get(field_name)).toEqual(JSON.stringify(options))
-  }
+  },
 )
 
 test(`invalid=true gives top-level div class 'invalid' and input attribute of 'aria-invalid'`, async () => {
@@ -471,7 +471,7 @@ test.each([undefined, `Custom no options message`])(
 
     const dropdown = doc_query(`ul.options`)
     expect(dropdown.textContent?.trim()).toBe(noMatchingOptionsMsg)
-  }
+  },
 )
 
 // https://github.com/janosh/svelte-multiselect/issues/183
@@ -514,7 +514,7 @@ test.each([
 
   document
     .querySelector(
-      `ul.selected button[title='Remove ${get_label(options[0])}']`
+      `ul.selected button[title='Remove ${get_label(options[0])}']`,
     )
     ?.dispatchEvent(mouseup)
 
@@ -522,7 +522,7 @@ test.each([
   await tick()
 
   expect(selected.textContent?.trim()).toEqual(
-    options.slice(1).map(get_label).join(` `)
+    options.slice(1).map(get_label).join(` `),
   )
 })
 
@@ -544,7 +544,7 @@ test(`remove all button removes all selected options and is visible only if more
   for (const _ of Array(2)) {
     expect(
       document.querySelector(`button[title='Remove all']`),
-      `remove all button should only appear if more than 1 option is selected`
+      `remove all button should only appear if more than 1 option is selected`,
     ).toBeNull()
 
     const li = doc_query(`ul.options li`)
@@ -553,7 +553,7 @@ test(`remove all button removes all selected options and is visible only if more
   }
 
   expect(doc_query(`button[title='Remove all']`)).toBeInstanceOf(
-    HTMLButtonElement
+    HTMLButtonElement,
   )
 })
 
@@ -568,12 +568,12 @@ test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
   })
   const remove_all_btn = doc_query<HTMLButtonElement>(`button.remove-all`)
   const remove_btns = document.querySelectorAll<HTMLButtonElement>(
-    `ul.selected > li > button`
+    `ul.selected > li > button`,
   )
 
   expect(remove_all_btn.title).toBe(removeAllTitle)
   expect([...remove_btns].map((btn) => btn.title)).toEqual(
-    options.map((op) => `${removeBtnTitle} ${op}`)
+    options.map((op) => `${removeBtnTitle} ${op}`),
   )
 })
 
@@ -610,9 +610,9 @@ test.each([2, 5, 10])(
     await tick()
 
     expect(selected.textContent?.trim()).toEqual(
-      [...Array(maxSelect).keys()].join(` `)
+      [...Array(maxSelect).keys()].join(` `),
     )
-  }
+  },
 )
 
 test(`closes dropdown on tab out`, async () => {
@@ -630,7 +630,7 @@ test(`closes dropdown on tab out`, async () => {
 
   // closes dropdown again on tab out
   doc_query<HTMLInputElement>(`input[autocomplete]`).dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `Tab` })
+    new KeyboardEvent(`keydown`, { key: `Tab` }),
   )
   await tick()
   expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
@@ -670,11 +670,11 @@ describe.each([
 
         const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
         expect(dropdown.textContent?.trim(), fail_msg).toBe(
-          duplicates ? `${selected[0]}` : duplicateOptionMsg
+          duplicates ? `${selected[0]}` : duplicateOptionMsg,
         )
-      }
+      },
     )
-  }
+  },
 )
 
 test.each([
@@ -698,7 +698,7 @@ test.each([
     await tick()
 
     expect(input.value).toBe(expected)
-  }
+  },
 )
 
 test(`2-way binding of selected`, async () => {
@@ -751,7 +751,7 @@ test.each([
     }
 
     expect(value).toEqual(expected)
-  }
+  },
 )
 
 test.each([
@@ -772,10 +772,10 @@ test.each([
     expect(console.error).toHaveBeenCalledTimes(expected)
     if (expected > 0) {
       expect(console.error).toHaveBeenCalledWith(
-        `MultiSelect received no options`
+        `MultiSelect received no options`,
       )
     }
-  }
+  },
 )
 
 test.each([[null], [`custom add option message`]])(
@@ -793,7 +793,7 @@ test.each([[null], [`custom add option message`]])(
 
     const default_msg = select.createOptionMsg
     expect(li_active.textContent?.trim()).toBe(createOptionMsg ?? default_msg)
-  }
+  },
 )
 
 test(`disabled multiselect has disabled icon`, () => {
@@ -803,7 +803,7 @@ test(`disabled multiselect has disabled icon`, () => {
   })
 
   expect(doc_query(`svg[data-name='disabled-icon']`)).toBeInstanceOf(
-    SVGSVGElement
+    SVGSVGElement,
   )
 })
 
@@ -844,9 +844,9 @@ test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
     })
 
     expect(
-      document.querySelectorAll(`ul.selected button[title*='Remove']`)
+      document.querySelectorAll(`ul.selected button[title*='Remove']`),
     ).toHaveLength(selected.length > minSelect ? selected.length : 0)
-  }
+  },
 )
 
 class DataTransfer {
@@ -913,12 +913,12 @@ test.each([[true], [false]])(
       expect(console.warn).toHaveBeenCalledTimes(1)
       expect(console.warn).toHaveBeenCalledWith(
         `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user` +
-          ` re-orderings of selected options will be undone by sortSelected on component re-renders.`
+          ` re-orderings of selected options will be undone by sortSelected on component re-renders.`,
       )
     } else {
       expect(console.warn).toHaveBeenCalledTimes(0)
     }
-  }
+  },
 )
 
 describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
@@ -936,12 +936,12 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
         expect(console.error).toHaveBeenCalledTimes(1)
         expect(console.error).toHaveBeenCalledWith(
           `MultiSelect has allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
-            `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`
+            `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
         )
       } else {
         expect(console.error).toHaveBeenCalledTimes(0)
       }
-    }
+    },
   )
 })
 
@@ -960,12 +960,12 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
         if (!allowEmpty && !disabled && !allowUserOptions) {
           expect(console.error).toHaveBeenCalledTimes(1)
           expect(console.error).toHaveBeenCalledWith(
-            `MultiSelect received no options`
+            `MultiSelect received no options`,
           )
         } else {
           expect(console.error).toHaveBeenCalledTimes(0)
         }
-      }
+      },
     )
   })
 })
@@ -981,14 +981,14 @@ test.each([[[1]], [[1, 2, 3]]])(
 
     // every selected should have a remove button
     expect(document.querySelectorAll(`ul.selected button.remove`)).toHaveLength(
-      selected.length
+      selected.length,
     )
 
     // if more than 1 selected, there should be a remove-all button
     expect(document.querySelectorAll(`button.remove.remove-all`)).toHaveLength(
-      selected.length > 1 ? 1 : 0
+      selected.length > 1 ? 1 : 0,
     )
-  }
+  },
 )
 
 test(`errors to console when option is an object but has no label key`, async () => {
@@ -1001,7 +1001,7 @@ test(`errors to console when option is an object but has no label key`, async ()
   })
 
   expect(console.error).toHaveBeenCalledWith(
-    `MultiSelect option {"foo":42} is an object but has no label key`
+    `MultiSelect option {"foo":42} is an object but has no label key`,
   )
 })
 
@@ -1102,19 +1102,19 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
 
             if (allowUserOptions && createOptionMsg) {
               expect(doc_query(`.user-msg`).textContent?.trim()).toBe(
-                createOptionMsg
+                createOptionMsg,
               )
             } else if (noMatchingOptionsMsg) {
               expect(doc_query(`.user-msg`).textContent?.trim()).toBe(
-                noMatchingOptionsMsg
+                noMatchingOptionsMsg,
               )
             } else {
               expect(document.querySelector(`.user-msg`)).toBeNull()
             }
           })
-        }
+        },
       )
-    }
+    },
   )
 })
 
@@ -1134,9 +1134,9 @@ test.each([[0], [1], [2], [5], [undefined]])(
     await tick()
 
     expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
-      Math.min(options.length, maxOptions || options.length)
+      Math.min(options.length, maxOptions || options.length),
     )
-  }
+  },
 )
 
 test.each([[true], [-1], [3.5], [`foo`], [{}]])(
@@ -1152,7 +1152,7 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
 
     expect(console.error).toHaveBeenCalledTimes(1)
     expect(console.error).toHaveBeenCalledWith(
-      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`
+      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`,
     )
-  }
+  },
 )

@@ -30,10 +30,10 @@ test.describe(`input`, async () => {
     const dropdown = await page.locator(`div.multiselect > ul.options`)
     await dropdown.waitFor({ state: `hidden` })
     const visibility = await dropdown.evaluate(
-      (el) => getComputedStyle(el).visibility
+      (el) => getComputedStyle(el).visibility,
     )
     const opacity = await dropdown.evaluate(
-      (el) => getComputedStyle(el).opacity
+      (el) => getComputedStyle(el).opacity,
     )
     expect(visibility).toBe(`hidden`)
     expect(opacity).toBe(`0`)
@@ -47,7 +47,7 @@ test.describe(`input`, async () => {
     await page.fill(`#foods input[autocomplete]`, `Pineapple`)
 
     expect(
-      await page.$$(`div.multiselect.open > ul.options > li`)
+      await page.$$(`div.multiselect.open > ul.options > li`),
     ).toHaveLength(1)
     const text = await page.textContent(`div.multiselect.open > ul.options`)
     expect(text?.trim()).toBe(`🍍 Pineapple`)
@@ -64,7 +64,7 @@ test.describe(`remove single button`, async () => {
     await page.click(`button[title='Remove 🍌 Banana']`)
 
     const selected = await page.$$(
-      `div.multiselect > ul.selected > li > button`
+      `div.multiselect > ul.selected > li > button`,
     )
     expect(selected.length).toBe(0)
   })
@@ -86,7 +86,7 @@ test.describe(`remove all button`, async () => {
     page,
   }) => {
     let selected_items = await page.$$(
-      `div.multiselect > ul.selected > li > button`
+      `div.multiselect > ul.selected > li > button`,
     )
     expect(selected_items).toHaveLength(2)
 
@@ -97,7 +97,7 @@ test.describe(`remove all button`, async () => {
     expect(await page.$(`button.remove-all`)).toBeNull() // remove-all button is hidden when nothing selected
 
     selected_items = await page.$$(
-      `div.multiselect > ul.selected > li > button`
+      `div.multiselect > ul.selected > li > button`,
     )
     expect(selected_items).toHaveLength(0)
   })
@@ -150,7 +150,7 @@ test.describe(`disabled multiselect`, async () => {
   test(`has disabled title`, async ({ page }) => {
     const div = await page.$(`div.multiselect.disabled`)
     expect(await div?.getAttribute(`title`)).toBe(
-      `Super special disabled message (shows on hover)`
+      `Super special disabled message (shows on hover)`,
     )
   })
 
@@ -161,7 +161,7 @@ test.describe(`disabled multiselect`, async () => {
 
   test(`renders no buttons`, async ({ page }) => {
     expect(
-      await page.$$(`#disabled-input-title div.multiselect button`)
+      await page.$$(`#disabled-input-title div.multiselect button`),
     ).toHaveLength(0)
   })
 
@@ -185,7 +185,7 @@ test.describe(`accessibility`, async () => {
       `aria-invalid`,
       {
         strict: true,
-      }
+      },
     )
     expect(invalid).toBe(`true`)
   })
@@ -194,7 +194,7 @@ test.describe(`accessibility`, async () => {
     const before = await page.getAttribute(
       `div.multiselect ul.options`,
       `aria-expanded`,
-      { strict: true }
+      { strict: true },
     )
     expect(before).toBe(`false`)
   })
@@ -204,7 +204,7 @@ test.describe(`accessibility`, async () => {
     const after = await page.getAttribute(
       `div.multiselect ul.options`,
       `aria-expanded`,
-      { strict: true }
+      { strict: true },
     )
     expect(after).toBe(`true`)
   })
@@ -216,12 +216,12 @@ test.describe(`accessibility`, async () => {
     await page.click(`div.multiselect > ul.options > li`) // select 1st option
     const aria_option = await page.getAttribute(
       `div.multiselect > ul.options > li`,
-      `aria-selected`
+      `aria-selected`,
     )
     expect(aria_option).toBe(`false`)
     const aria_selected = await page.getAttribute(
       `div.multiselect > ul.selected > li`,
-      `aria-selected`
+      `aria-selected`,
     )
     expect(aria_selected).toBe(`true`)
   })
@@ -232,7 +232,7 @@ test.describe(`accessibility`, async () => {
     const hidden = await page.getAttribute(
       `input.form-control`,
       `aria-hidden`,
-      { strict: true }
+      { strict: true },
     )
     expect(hidden).toBe(`true`)
   })
@@ -255,7 +255,7 @@ test.describe(`multiselect`, async () => {
     }
 
     const selected_text = await page.textContent(
-      `div.multiselect > ul.selected`
+      `div.multiselect > ul.selected`,
     )
     for (const food of `Grapes Melon Watermelon`.split(` `)) {
       expect(selected_text).toContain(food)
@@ -368,7 +368,7 @@ test.describe(`allowUserOptions`, async () => {
     await page.fill(selector, `foobar`)
 
     const custom_msg_li = await page.$(
-      `text=True polyglots can enter custom languages!`
+      `text=True polyglots can enter custom languages!`,
     )
     expect(custom_msg_li).toBeTruthy()
   })
@@ -418,7 +418,7 @@ test.describe(`allowUserOptions`, async () => {
     expect(ul_selected).toBeTruthy()
 
     const logged_err_msg = logs.some((msg) =>
-      msg.includes(`MultiSelect received no options`)
+      msg.includes(`MultiSelect received no options`),
     )
     expect(logged_err_msg).toBe(false)
   })
@@ -437,10 +437,10 @@ test.describe(`sortSelected`, async () => {
     }
 
     const selected = await page.textContent(
-      `div.multiselect.open > ul.selected`
+      `div.multiselect.open > ul.selected`,
     )
     expect(selected?.trim()).toBe(
-      `Angular Django Laravel Polymer React Svelte Vue`
+      `Angular Django Laravel Polymer React Svelte Vue`,
     )
   })
 
@@ -453,10 +453,10 @@ test.describe(`sortSelected`, async () => {
     }
 
     const selected = await page.textContent(
-      `div.multiselect.open > ul.selected`
+      `div.multiselect.open > ul.selected`,
     )
     expect(selected?.trim()).toBe(
-      `Angular Polymer React Svelte Vue Laravel Django`
+      `Angular Polymer React Svelte Vue Laravel Django`,
     )
   })
 })
@@ -466,7 +466,7 @@ test.describe(`parseLabelsAsHtml`, async () => {
     await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
 
     const anchor = await page.$(
-      `a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`
+      `a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`,
     )
     expect(anchor).toBeTruthy()
   })
@@ -479,8 +479,8 @@ test.describe(`parseLabelsAsHtml`, async () => {
 
     const has_expected_error = logs.some((msg) =>
       msg.includes(
-        `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
-      )
+        `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
+      ),
     )
 
     expect(has_expected_error).toBe(true)
@@ -536,7 +536,7 @@ test.describe(`slots`, async () => {
     // for that, first get d attribute of path inside svg
     const expand_icon_path = await page.$eval(
       `#languages-1 input + svg path`,
-      (el) => el.getAttribute(`d`)
+      (el) => el.getAttribute(`d`),
     )
 
     // then click on the expand icon to open the dropdown and change open to true
@@ -545,13 +545,13 @@ test.describe(`slots`, async () => {
     // assert that the collapse icon path differs from expand icon path
     const collapse_icon_path = await page.$eval(
       `#languages-1 input + svg path`,
-      (el) => el.getAttribute(`d`)
+      (el) => el.getAttribute(`d`),
     )
     expect(expand_icon_path).not.toBe(collapse_icon_path)
     // ^^^ expand-icon test done
 
     const remove_icons = await page.$$(
-      `#languages-1 ul.selected > li > button > svg`
+      `#languages-1 ul.selected > li > button > svg`,
     )
     msg = `unexpected number of custom remove icon slots rendered`
     expect(remove_icons, msg).toHaveLength(3)

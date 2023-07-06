@@ -13,6 +13,6 @@ const section_level = (str: string) =>
 
 export const load = async () => ({
   changelog: compile(
-    backticks_to_lt_gt(brace_to_paren(section_level(changelog)))
+    backticks_to_lt_gt(brace_to_paren(section_level(changelog))),
   ),
 })

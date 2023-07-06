@@ -13,7 +13,7 @@ test(`default export from index.ts is same as component file`, () => {
 
 test(`src/lib/index.ts re-exports all Svelte components`, () => {
   const components = Object.keys(import.meta.glob(`$lib/*.svelte`)).map(
-    (path) => path.split(`/`).pop()?.split(`.`).shift()
+    (path) => path.split(`/`).pop()?.split(`.`).shift(),
   )
   // $lib is also allowed to export other things, so we use arrayContaining()
   expect(Object.keys(lib)).toEqual(expect.arrayContaining(components))
@@ -37,5 +37,5 @@ test.each([[true, false]])(
     expect(mock_observer.disconnect).toBeCalledTimes(0)
     expect(mock_observer.takeRecords).toBeCalledTimes(0)
     expect(mock_observer.unobserve).toBeCalledTimes(0)
-  }
+  },
 )
