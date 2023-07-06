@@ -15,11 +15,11 @@ test.each([[[`k`]], [[`o`]], [[`k`, `o`]]])(
 
     // press cmd + trigger to open the palette
     window.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: triggers[0], metaKey: true })
+      new KeyboardEvent(`keydown`, { key: triggers[0], metaKey: true }),
     )
     await tick()
     expect(doc_query(`dialog`)).toBeTruthy()
-  }
+  },
 )
 
 test(`calls the action when an option is selected`, async () => {
@@ -51,7 +51,7 @@ test.each([[[`Escape`]], [[`x`]], [[`Escape`, `x`]]])(
     expect(component.open).toBe(false)
     // TODO somehow dialog isn't removed from the DOM
     // expect(document.querySelector(`dialog`)).toBe(null)
-  }
+  },
 )
 
 test(`closes the dialog on click outside`, async () => {
