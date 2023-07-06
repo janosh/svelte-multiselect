@@ -170,6 +170,12 @@ Full list of props/bindable variables for this component. The `Option` type you 
    ```
 
    Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `key` to customize when a pair of options is considered equal.
+ 
+1. ```ts
+   headless: boolean = false
+   ```
+
+   When `true`, the component will render without any styling. This is useful if you want to use your own styling or if you want to use the component as a headless component (i.e. without any UI).
 
 1. ```ts
    duplicateOptionMsg: string = `This option is already selected`
@@ -608,6 +614,8 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `liOptionClass`: list items selectable from dropdown list
 - `liActiveOptionClass`: the currently active dropdown list item (i.e. hovered or navigated to with arrow keys)
 - `maxSelectMsgClass`: small span towards the right end of the input field displaying to the user how many of the allowed number of options they've already selected
+
+You can also use `headless = true` if you want to completely disable default classes.
 
 This simplified version of the DOM structure of the component shows where these classes are inserted:
 

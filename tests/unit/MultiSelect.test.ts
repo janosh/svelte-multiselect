@@ -1156,3 +1156,16 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
     )
   },
 )
+
+test(`headless=true to remove default classes`, async () => {
+  new MultiSelect({
+    target: document.body,
+    props: {
+      options: [`<a href="https://example.com">example.com</a>`],
+      headless: true,
+    },
+  })
+  for (const missingClass of [`multiselect`, `options`, `selected`, `max-select-msg`, `remove-all`]) {
+    expect(document.querySelector(`.${missingClass}`), `when headless=true, the .multiselect node should not have the class .${missingClass}`).toBeNull()
+  }
+})

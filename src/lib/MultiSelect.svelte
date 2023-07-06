@@ -21,6 +21,7 @@
   // prettier-ignore
   export let duplicateOptionMsg: string = `This option is already selected`
   export let duplicates: boolean = false // whether to allow duplicate options
+  export let headless: boolean = false
   // takes two options and returns true if they are equal
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
   export let key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
@@ -464,7 +465,8 @@
   class:single={maxSelect === 1}
   class:open
   class:invalid
-  class="multiselect {outerDivClass}"
+  class:multiselect={!headless}
+  class={outerDivClass}
   on:mouseup|stopPropagation={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
@@ -498,7 +500,7 @@
   <slot name="expand-icon" {open}>
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
-  <ul class="selected {ulSelectedClass}" aria-label="selected options">
+  <ul class:selected={!headless} class={ulSelectedClass} aria-label="selected options">
     {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
       <li
         class={liSelectedClass}
@@ -591,7 +593,7 @@
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
-        <span class="max-select-msg {maxSelectMsgClass}">
+        <span class:max-select-msg={!headless} class={maxSelectMsgClass}>
           {maxSelectMsg?.(selected.length, maxSelect)}
         </span>
       </Wiggle>
@@ -615,7 +617,8 @@
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
       class:hidden={!open}
-      class="options {ulOptionsClass}"
+      class:options={!headless}
+      class={ulOptionsClass}
       role="listbox"
       aria-multiselectable={maxSelect === null || maxSelect > 1}
       aria-expanded={open}
