@@ -10,7 +10,7 @@ export * from './types'
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
 // exported for testing
 export function scroll_into_view_if_needed_polyfill(
-  centerIfNeeded: boolean = true
+  centerIfNeeded: boolean = true,
 ) {
   const elem = this as Element
   const observer = new IntersectionObserver(function ([entry]) {
