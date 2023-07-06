@@ -170,7 +170,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    ```
 
    Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `key` to customize when a pair of options is considered equal.
- 
+
 1. ```ts
    headless: boolean = false
    ```
