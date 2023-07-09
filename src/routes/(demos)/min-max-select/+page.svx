@@ -80,3 +80,20 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   <button>submit</button>
 </form>
 ```
+
+```svelte example stackblitz
+<script>
+  // for https://github.com/janosh/svelte-multiselect/issues/249
+  import MultiSelect from '$lib'
+  import { onMount } from 'svelte'
+
+  const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`
+  const blue_pill = `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none" target="_blank">show me</a>)`
+  const options = [ { label: red_pill, value: `red pill` }, { label: blue_pill, value: `blue pill` }]
+
+  let value
+  onMount(() => value = options[0])
+</script>
+
+<MultiSelect {options} maxSelect={1} parseLabelsAsHtml bind:value />
+```

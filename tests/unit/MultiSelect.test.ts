@@ -254,19 +254,24 @@ test(`bubbles <input> node DOM events`, async () => {
   }
 })
 
-test(`value is a single option (i.e. selected[0]) when maxSelect=1`, async () => {
-  const options = [1, 2, 3]
+describe.each([[null], [1]])(`value is `, (maxSelect) => {
+  test.each([[[1, 2, 3]], [[`a`, `b`, `c`]]])(
+    `${
+      maxSelect == 1 ? `single` : `multiple`
+    } options when maxSelect=${maxSelect}`,
+    async (options) => {
+      const select = new MultiSelect({
+        target: document.body,
+        props: { options, maxSelect, selected: options },
+      })
 
-  const select = new MultiSelect({
-    target: document.body,
-    props: { options, maxSelect: 1, selected: options },
-  })
-
-  // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
-  expect(select.value).toBe(options[0])
+      // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
+      expect(select.value).toBe(maxSelect == 1 ? options[0] : options)
+    },
+  )
 })
 
-test(`selected is null when maxSelect=1 and no option is pre-selected`, async () => {
+test(`value is null when maxSelect=1 and no option is pre-selected`, async () => {
   const select = new MultiSelect({
     target: document.body,
     props: { options: [1, 2, 3], maxSelect: 1 },
@@ -274,6 +279,29 @@ test(`selected is null when maxSelect=1 and no option is pre-selected`, async ()
 
   expect(select.value).toBe(null)
 })
+
+test.each([[null], [1]])(
+  `2-way binding of value updates selected`,
+  async (maxSelect) => {
+    const select = new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], maxSelect },
+    })
+
+    expect(select.value).toEqual(maxSelect == 1 ? null : [])
+
+    await tick()
+    if (maxSelect == 1) {
+      select.value = 2
+      expect(select.value).toEqual(2)
+      expect(select.selected).toEqual([2])
+    } else {
+      select.value = [1, 2]
+      expect(select.value).toEqual([1, 2])
+      expect(select.selected).toEqual([1, 2])
+    }
+  },
+)
 
 test(`selected is array of first two options when maxSelect=2`, async () => {
   // even though all options have preselected=true
@@ -291,36 +319,33 @@ test(`selected is array of first two options when maxSelect=2`, async () => {
 })
 
 describe.each([
-  [false, [], true], // unrequired + empty selected = valid form
-  [true, [], false], // required + empty selected = invalid form
-  [1, [1], true], // required=1 + 1 selected = valid form
-  [2, [1], false], // required=2 + 1 selected = invalid form
-  [2, [1, 2], true], // required=2 + 2 selected = valid form
-])(
-  `MultiSelect with required=%s, selected=%s`,
-  (required, selected, form_valid) => {
-    test.each([1, 2, null])(
-      `${
-        form_valid ? `passes` : `doesn't pass`
-      } form validity check and maxSelect=%s`,
-      (maxSelect) => {
-        // i think, not passing validity check means form won't submit
-        // maybe TODO: simulating form submission event and checking
-        // event.defaultPrevented == true seems closer to ground truth but harder to test
+  [false, []],
+  [true, []],
+  [1, [1]],
+  [2, [1]],
+  [2, [1, 2]],
+])(`MultiSelect with required=%s, selected=%s`, (required, selected) => {
+  test.each([1, 2, null])(`and maxSelect=%s form validation`, (maxSelect) => {
+    // not passing validity check hopefully means form won't submit
+    // maybe TODO: simulate form submission event and check
+    // event.defaultPrevented == true seems closer to ground truth but harder to test
 
-        const form = document.createElement(`form`)
-        document.body.appendChild(form)
+    const form = document.createElement(`form`)
+    document.body.appendChild(form)
+    new MultiSelect({
+      target: form,
+      props: { options: [1, 2, 3], required, selected, maxSelect },
+    })
 
-        new MultiSelect({
-          target: form,
-          props: { options: [1, 2, 3], required, selected, maxSelect },
-        })
+    const form_valid =
+      !required ||
+      (selected.length >= Number(required) &&
+        selected.length <= (maxSelect ?? Infinity))
+    const msg = `form_valid=${form_valid}`
 
-        expect(form.checkValidity()).toBe(form_valid)
-      },
-    )
-  },
-)
+    expect(form.checkValidity(), msg).toBe(form_valid)
+  })
+})
 
 test.each([
   [0, 1, 0],

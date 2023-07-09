@@ -66,7 +66,7 @@
   export let selected: Option[] =
     options
       ?.filter((opt) => opt instanceof Object && opt?.preselected)
-      .slice(0, maxSelect ?? undefined) ?? []
+      .slice(0, maxSelect ?? undefined) ?? [] // don't allow more than maxSelect preselected options
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let selectedOptionsDraggable: boolean = !sortSelected
   export let ulOptionsClass: string = ``
@@ -86,10 +86,19 @@
     return `${opt}`
   }
 
+  const selected_to_value = (selected: Option[]) => {
+    value = maxSelect === 1 ? selected[0] ?? null : selected
+  }
+  const value_to_selected = (value: Option | Option[] | null) => {
+    if (maxSelect === 1) selected = value ? [value as Option] : []
+    else selected = (value as Option[]) ?? []
+  }
+
   // if maxSelect=1, value is the single item in selected (or null if selected is empty)
   // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
   // https://github.com/janosh/svelte-multiselect/issues/136
-  $: value = maxSelect === 1 ? selected[0] ?? null : selected
+  $: selected_to_value(selected)
+  $: value_to_selected(value)
 
   let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
 

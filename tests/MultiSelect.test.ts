@@ -513,11 +513,15 @@ test.describe(`maxSelect`, async () => {
     page,
   }) => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
-    let selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
+    let selected_lis = await page.$$(
+      `#languages ul.selected > li[aria-selected=true]`,
+    )
     expect(selected_lis).toHaveLength(max_select)
     await page.click(`#languages input[autocomplete]`) // re-open options dropdown
     await page.click(`ul.options > li >> nth=0`)
-    selected_lis = await page.$$(`ul.selected > li[aria-selected=true]`)
+    selected_lis = await page.$$(
+      `#languages ul.selected > li[aria-selected=true]`,
+    )
     expect(selected_lis).toHaveLength(max_select)
   })
 })

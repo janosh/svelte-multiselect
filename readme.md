@@ -385,7 +385,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    value: Option | Option[] | null = null
    ```
 
-   If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: `value` supports 1-way binding only, meaning `bind:value` will update `value` when internal component state changes but changing `value` externally will not update internal component state. This is because `value` is already reactive to `selected` and making `selected` reactive to `value` would be cyclic. Suggestions for better solutions that solve both [#86](https://github.com/janosh/svelte-multiselect/issues/86) and [#136](https://github.com/janosh/svelte-multiselect/issues/136) welcome!
+   If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: Setting `value` does not rendered state on initial mount, meaning `bind:value` will update local variable `value` whenever internal component state changes but passing a `value` when component first mounts won't be reflected in UI. This is because the source of truth for rendering is `bind:selected`. `selected` is reactive to `value` internally but only on reassignment from initial value. Suggestions for better solutions than [#249](https://github.com/janosh/svelte-multiselect/issues/249) welcome!
 
 ## 🎰 &thinsp; Slots
 
