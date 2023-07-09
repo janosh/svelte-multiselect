@@ -178,7 +178,8 @@
 
 <style>
   label:not(:first-of-type) {
-    margin-top: 3em;
+    border-top: 0.5px solid #ccc;
+    padding-top: 2em;
     display: block;
   }
   label span {
