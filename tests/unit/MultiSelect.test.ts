@@ -280,6 +280,29 @@ test(`value is null when maxSelect=1 and no option is pre-selected`, async () =>
   expect(select.value).toBe(null)
 })
 
+test.each([[null], [1]])(
+  `2-way binding of value updates selected`,
+  async (maxSelect) => {
+    const select = new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], maxSelect },
+    })
+
+    expect(select.value).toEqual(maxSelect == 1 ? null : [])
+
+    await tick()
+    if (maxSelect == 1) {
+      select.value = 2
+      expect(select.value).toEqual(2)
+      expect(select.selected).toEqual([2])
+    } else {
+      select.value = [1, 2]
+      expect(select.value).toEqual([1, 2])
+      expect(select.selected).toEqual([1, 2])
+    }
+  },
+)
+
 test(`selected is array of first two options when maxSelect=2`, async () => {
   // even though all options have preselected=true
   const options = [1, 2, 3].map((itm) => ({
