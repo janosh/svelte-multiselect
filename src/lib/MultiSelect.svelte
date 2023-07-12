@@ -459,6 +459,24 @@
     // eslint-disable-next-line no-undef
     CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
+
+  function get_style(option: Option, key: 'selected' | 'option' | null = null) {
+    if (![`selected`, `option`, null].includes(key)) {
+      console.error(`MultiSelect: Invalid key=${key} for get_style`)
+      return
+    }
+    if (typeof option == `object` && option.style) {
+      if (typeof option.style == `string`) return option.style
+      if (typeof option.style == `object`) {
+        if (key && key in option.style) return option.style[key]
+        else {
+          console.error(`Invalid style object for option=${option}`)
+
+        }
+      }
+
+    }
+  }
 </script>
 
 <svelte:window
@@ -520,6 +538,7 @@
         on:dragenter={() => (drag_idx = idx)}
         on:dragover|preventDefault
         class:active={drag_idx === idx}
+        style={get_style(option)}
       >
         <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
         <slot name="selected" {option} {idx}>
@@ -662,6 +681,7 @@
           on:blur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
+          style={get_style(option)}
         >
           <slot name="option" {option} {idx}>
             <slot {option} {idx}>
