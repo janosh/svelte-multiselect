@@ -8,6 +8,9 @@ export type ObjectOption = {
   preselected?: boolean // make this option selected on page load (before any user interaction)
   disabledTitle?: string // override the default disabledTitle = 'This option is disabled'
   selectedTitle?: string // tooltip to display when this option is selected and hovered
+  style?: string | { option: string; selected: string } // single CSS string or an object with keys
+  // 'option' and 'selected' for styles that only apply to the dropdown and list of selected
+  // options, respectively
   [key: string]: unknown // allow any other keys users might want
 }
 
