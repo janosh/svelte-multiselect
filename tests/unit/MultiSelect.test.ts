@@ -1181,3 +1181,48 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
     )
   },
 )
+
+const css_str = `test-style`
+
+test.each([
+  // Invalid key cases
+  [css_str, `invalid`, `MultiSelect: Invalid key=invalid for get_style`],
+  // Valid key cases
+  [css_str, `selected`, css_str],
+  [css_str, `option`, css_str],
+  [css_str, null, css_str],
+  // Object style cases
+  [
+    { selected: `selected-style`, option: `option-style` },
+    `selected`,
+    `selected-style`,
+  ],
+  [
+    { selected: `selected-style`, option: `option-style` },
+    `option`,
+    `option-style`,
+  ],
+  // Invalid object style cases
+  [
+    { invalid: `invalid-style` },
+    `selected`,
+    `Invalid style object for option=${JSON.stringify({
+      style: { invalid: `invalid-style` },
+    })}`,
+  ],
+])(
+  `get_style returns correct style for different option and key combinations`,
+  async (style, key, expected) => {
+    console.error = vi.fn()
+
+    // @ts-expect-error test invalid option
+    const result = get_style({ style }, key)
+
+    if (expected.startsWith(`Invalid`) || expected.startsWith(`MultiSelect`)) {
+      expect(console.error).toHaveBeenCalledTimes(1)
+      expect(console.error).toHaveBeenCalledWith(expected)
+    } else {
+      expect(result).toBe(expected)
+    }
+  },
+)
