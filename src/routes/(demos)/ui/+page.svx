@@ -7,10 +7,17 @@
 <script>
   import MultiSelect from '$lib'
   import { foods } from '$site/options'
+
+  function random_color() {
+    const r = Math.floor(Math.random() * 255)
+    const g = Math.floor(Math.random() * 255)
+    const b = Math.floor(Math.random() * 255)
+    return `rgb(${r}, ${g}, ${b})`
+  }
 </script>
 
 <MultiSelect
-  options={foods}
+  options={foods.map(label => ({ label, style: `background-color: ${random_color()}` }))}
   placeholder="Pick your favorite foods"
   removeAllTitle="Remove all foods"
   invalid

@@ -1,4 +1,5 @@
 import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
+import { get_label, get_style } from '$lib/utils'
 import { tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 import { doc_query } from '.'
@@ -532,7 +533,7 @@ test.each([
   [[{ label: `foo` }, { label: `bar` }, { label: `baz` }]],
   [[{ label: `foo`, value: 1, key: `whatever` }]],
 ])(`single remove button removes 1 selected option`, async (options) => {
-  const { get_label } = new MultiSelect({
+  new MultiSelect({
     target: document.body,
     props: { options, selected: [...options] },
   })
@@ -1179,5 +1180,92 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
     expect(console.error).toHaveBeenCalledWith(
       `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`,
     )
+  },
+)
+
+const css_str = `test-style`
+
+test.each([
+  // Invalid key cases
+  [css_str, `invalid`, `MultiSelect: Invalid key=invalid for get_style`],
+  // Valid key cases
+  [css_str, `selected`, css_str],
+  [css_str, `option`, css_str],
+  [css_str, null, css_str],
+  // Object style cases
+  [
+    { selected: `selected-style`, option: `option-style` },
+    `selected`,
+    `selected-style`,
+  ],
+  [
+    { selected: `selected-style`, option: `option-style` },
+    `option`,
+    `option-style`,
+  ],
+  // Invalid object style cases
+  [
+    { invalid: `invalid-style` },
+    `selected`,
+    `Invalid style object for option=${JSON.stringify({
+      style: { invalid: `invalid-style` },
+    })}`,
+  ],
+])(
+  `get_style returns correct style for different option and key combinations`,
+  async (style, key, expected) => {
+    console.error = vi.fn()
+
+    // @ts-expect-error test invalid option
+    const result = get_style({ style }, key)
+
+    if (expected.startsWith(`Invalid`) || expected.startsWith(`MultiSelect`)) {
+      expect(console.error).toHaveBeenCalledTimes(1)
+      expect(console.error).toHaveBeenCalledWith(expected)
+    } else {
+      expect(result).toBe(expected)
+    }
+  },
+)
+
+test.each([
+  // Invalid key cases
+  [`color: red;`, `invalid`, ``],
+  // Valid key cases
+  [`color: red;`, `selected`, `color: red;`],
+  [`color: red;`, `option`, `color: red;`],
+  [`color: red;`, null, `color: red;`],
+  // Object style cases
+  [
+    { selected: `color: red;`, option: `color: blue;` },
+    `selected`,
+    `color: red;`,
+  ],
+  [
+    { selected: `color: red;`, option: `color: blue;` },
+    `option`,
+    `color: blue;`,
+  ],
+  // Invalid object style cases
+  [{ invalid: `color: green;` }, `selected`, ``],
+])(
+  `MultiSelect applies correct styles to <li> elements for different option and key combinations`,
+  async (style, key, expected_css) => {
+    const options = [{ label: `foo`, style }]
+
+    new MultiSelect({
+      target: document.body,
+      props: { options, selected: key === `selected` ? options : [] },
+    })
+
+    await tick()
+
+    if (key === `selected`) {
+      const selected_li = document.querySelector(`ul.selected > li`)
+      expect(selected_li.style.cssText).toBe(expected_css)
+    } else if (key === `option`) {
+      const option_li = document.querySelector(`ul.options > li`)
+      expect(option_li.style.cssText).toBe(expected_css)
+    }
   },
 )
