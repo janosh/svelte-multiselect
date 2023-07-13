@@ -1,4 +1,5 @@
 import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
+import { get_label, get_style } from '$lib/utils'
 import { tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 import { doc_query } from '.'
@@ -532,7 +533,7 @@ test.each([
   [[{ label: `foo` }, { label: `bar` }, { label: `baz` }]],
   [[{ label: `foo`, value: 1, key: `whatever` }]],
 ])(`single remove button removes 1 selected option`, async (options) => {
-  const { get_label } = new MultiSelect({
+  new MultiSelect({
     target: document.body,
     props: { options, selected: [...options] },
   })
@@ -1223,6 +1224,48 @@ test.each([
       expect(console.error).toHaveBeenCalledWith(expected)
     } else {
       expect(result).toBe(expected)
+    }
+  },
+)
+
+test.each([
+  // Invalid key cases
+  [`color: red;`, `invalid`, ``],
+  // Valid key cases
+  [`color: red;`, `selected`, `color: red;`],
+  [`color: red;`, `option`, `color: red;`],
+  [`color: red;`, null, `color: red;`],
+  // Object style cases
+  [
+    { selected: `color: red;`, option: `color: blue;` },
+    `selected`,
+    `color: red;`,
+  ],
+  [
+    { selected: `color: red;`, option: `color: blue;` },
+    `option`,
+    `color: blue;`,
+  ],
+  // Invalid object style cases
+  [{ invalid: `color: green;` }, `selected`, ``],
+])(
+  `MultiSelect applies correct styles to <li> elements for different option and key combinations`,
+  async (style, key, expected_css) => {
+    const options = [{ label: `foo`, style }]
+
+    new MultiSelect({
+      target: document.body,
+      props: { options, selected: key === `selected` ? options : [] },
+    })
+
+    await tick()
+
+    if (key === `selected`) {
+      const selected_li = document.querySelector(`ul.selected > li`)
+      expect(selected_li.style.cssText).toBe(expected_css)
+    } else if (key === `option`) {
+      const option_li = document.querySelector(`ul.options > li`)
+      expect(option_li.style.cssText).toBe(expected_css)
     }
   },
 )
