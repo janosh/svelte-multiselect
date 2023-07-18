@@ -2,8 +2,20 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
-#### [v10.0.0](https://github.com/janosh/svelte-multiselect/compare/v9.0.0...v10.0.0)
+#### [v10.1.0](https://github.com/janosh/svelte-multiselect/compare/v10.0.0...v10.1.0)
 
+> 18 July 2023
+
+- Always show `createOptionMsg` if `allowUserOptions` is truthy and user entered text [`#254`](https://github.com/janosh/svelte-multiselect/pull/254)
+- Add key `style` to `ObjectOption` for per-option inline CSS [`#252`](https://github.com/janosh/svelte-multiselect/pull/252)
+- Make `selected` and `value` each reactive to each other [`#250`](https://github.com/janosh/svelte-multiselect/pull/250)
+- [pre-commit.ci] pre-commit autoupdate [`#246`](https://github.com/janosh/svelte-multiselect/pull/246)
+
+### [v10.0.0](https://github.com/janosh/svelte-multiselect/compare/v9.0.0...v10.0.0)
+
+> 1 July 2023
+
+- v10.0.0 [`#245`](https://github.com/janosh/svelte-multiselect/pull/245)
 - Add Multiselect prop `maxOptions: number` [`#243`](https://github.com/janosh/svelte-multiselect/pull/243)
 - Add `&lt;slot name="user-msg"&gt;` [`#240`](https://github.com/janosh/svelte-multiselect/pull/240)
 - Rename prop `duplicateFunc()` to `key()` [`#238`](https://github.com/janosh/svelte-multiselect/pull/238)
