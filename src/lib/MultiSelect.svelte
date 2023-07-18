@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { createEventDispatcher, tick } from 'svelte'
-    import { flip } from 'svelte/animate'
-    import CircleSpinner from './CircleSpinner.svelte'
-    import Wiggle from './Wiggle.svelte'
-    import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-    import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
-    import { get_label, get_style } from './utils'
+  import { createEventDispatcher, tick } from 'svelte'
+  import { flip } from 'svelte/animate'
+  import CircleSpinner from './CircleSpinner.svelte'
+  import Wiggle from './Wiggle.svelte'
+  import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
+  import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
+  import { get_label, get_style } from './utils'
   type Option = $$Generic<T>
 
   export let activeIndex: number | null = null
@@ -73,7 +73,6 @@
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
   export let value: Option | Option[] | null = null
-
 
   const selected_to_value = (selected: Option[]) => {
     value = maxSelect === 1 ? selected[0] ?? null : selected
@@ -448,7 +447,6 @@
     // eslint-disable-next-line no-undef
     CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
-
 </script>
 
 <svelte:window
@@ -653,7 +651,7 @@
           on:blur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
-          style={get_style(option,`option`)}
+          style={get_style(option, `option`)}
         >
           <slot name="option" {option} {idx}>
             <slot {option} {idx}>
@@ -665,43 +663,42 @@
             </slot>
           </slot>
         </li>
-      {:else}
-        {@const textInputIsDuplicate = selected.map(get_label).includes(searchText)}
-        <!-- set msg to duplicateOptionMsg if duplicates are not allowed and the user-entered
-          searchText is a duplicate, else set to createOptionMsg -->
-        {@const msg =
-          !duplicates && textInputIsDuplicate ? duplicateOptionMsg : createOptionMsg}
-        {#if allowUserOptions && searchText && msg}
-          <li
-            on:mousedown|stopPropagation
-            on:mouseup|stopPropagation={(event) => add(searchText, event)}
-            title={createOptionMsg}
-            class:active={option_msg_is_active}
-            on:mouseover={() => (option_msg_is_active = true)}
-            on:focus={() => (option_msg_is_active = true)}
-            on:mouseout={() => (option_msg_is_active = false)}
-            on:blur={() => (option_msg_is_active = false)}
-            role="option"
-            aria-selected="false"
-            class="user-msg"
-          >
-            <slot
-              name="user-msg"
-              {duplicateOptionMsg}
-              {createOptionMsg}
-              {textInputIsDuplicate}
-              {searchText}
-              {msg}
-            >
-              {msg}
-            </slot>
-          </li>
-        {:else if noMatchingOptionsMsg}
-          <!-- use span to not have cursor: pointer -->
-          <span class="user-msg">{noMatchingOptionsMsg}</span>
-        {/if}
-        <!-- Show nothing if all messages are empty -->
       {/each}
+      {#if searchText}
+        {@const textInputIsDuplicate = selected.map(get_label).includes(searchText)}
+        <li
+          on:mousedown|stopPropagation
+          on:mouseup|stopPropagation={(event) => {
+            if (allowUserOptions) add(searchText, event)
+          }}
+          title={createOptionMsg}
+          class:active={option_msg_is_active}
+          on:mouseover={() => (option_msg_is_active = true)}
+          on:focus={() => (option_msg_is_active = true)}
+          on:mouseout={() => (option_msg_is_active = false)}
+          on:blur={() => (option_msg_is_active = false)}
+          role="option"
+          aria-selected="false"
+          class="user-msg"
+        >
+          <slot
+            name="user-msg"
+            {duplicateOptionMsg}
+            {createOptionMsg}
+            {textInputIsDuplicate}
+            {searchText}
+          >
+            {#if !duplicates && textInputIsDuplicate}
+              <span style="cursor: not-allowed !important;">{duplicateOptionMsg}</span>
+            {:else if allowUserOptions}
+              {createOptionMsg}
+            {:else if matchingOptions?.length == 0 && noMatchingOptionsMsg}
+              <!-- use span to not have cursor: pointer -->
+              <span style="cursor: default !important;">{noMatchingOptionsMsg}</span>
+            {/if}
+          </slot>
+        </li>
+      {/if}
     </ul>
   {/if}
 </div>
