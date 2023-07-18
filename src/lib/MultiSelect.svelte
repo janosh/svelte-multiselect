@@ -1,11 +1,11 @@
 <script lang="ts">
-    import { createEventDispatcher, tick } from 'svelte'
-    import { flip } from 'svelte/animate'
-    import CircleSpinner from './CircleSpinner.svelte'
-    import Wiggle from './Wiggle.svelte'
-    import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-    import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
-    import { get_label, get_style } from './utils'
+  import { createEventDispatcher, tick } from 'svelte'
+  import { flip } from 'svelte/animate'
+  import CircleSpinner from './CircleSpinner.svelte'
+  import Wiggle from './Wiggle.svelte'
+  import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
+  import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
+  import { get_label, get_style } from './utils'
   type Option = $$Generic<T>
 
   export let activeIndex: number | null = null
@@ -73,7 +73,6 @@
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
   export let value: Option | Option[] | null = null
-
 
   const selected_to_value = (selected: Option[]) => {
     value = maxSelect === 1 ? selected[0] ?? null : selected
@@ -448,7 +447,6 @@
     // eslint-disable-next-line no-undef
     CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
-
 </script>
 
 <svelte:window
@@ -653,7 +651,7 @@
           on:blur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
-          style={get_style(option,`option`)}
+          style={get_style(option, `option`)}
         >
           <slot name="option" {option} {idx}>
             <slot {option} {idx}>
@@ -665,16 +663,25 @@
             </slot>
           </slot>
         </li>
-      {:else}
-        {@const textInputIsDuplicate = selected.map(get_label).includes(searchText)}
-        <!-- set msg to duplicateOptionMsg if duplicates are not allowed and the user-entered
-          searchText is a duplicate, else set to createOptionMsg -->
-        {@const msg =
-          !duplicates && textInputIsDuplicate ? duplicateOptionMsg : createOptionMsg}
-        {#if allowUserOptions && searchText && msg}
+      {/each}
+      {#if searchText}
+        {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
+        {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
+        {@const can_create = allowUserOptions && createOptionMsg && `create`}
+        {@const no_match =
+          matchingOptions?.length == 0 && noMatchingOptionsMsg && `no-match`}
+        {@const msgType = is_dupe || can_create || no_match}
+        {#if msgType}
+          {@const msg = {
+            dupe: duplicateOptionMsg,
+            create: createOptionMsg,
+            'no-match': noMatchingOptionsMsg,
+          }[msgType]}
           <li
             on:mousedown|stopPropagation
-            on:mouseup|stopPropagation={(event) => add(searchText, event)}
+            on:mouseup|stopPropagation={(event) => {
+              if (allowUserOptions) add(searchText, event)
+            }}
             title={createOptionMsg}
             class:active={option_msg_is_active}
             on:mouseover={() => (option_msg_is_active = true)}
@@ -684,24 +691,18 @@
             role="option"
             aria-selected="false"
             class="user-msg"
+            style:cursor={{
+              dupe: `not-allowed`,
+              create: `pointer`,
+              'no-match': `default`,
+            }[msgType]}
           >
-            <slot
-              name="user-msg"
-              {duplicateOptionMsg}
-              {createOptionMsg}
-              {textInputIsDuplicate}
-              {searchText}
-              {msg}
-            >
+            <slot name="user-msg" {searchText} {msgType} {msg}>
               {msg}
             </slot>
           </li>
-        {:else if noMatchingOptionsMsg}
-          <!-- use span to not have cursor: pointer -->
-          <span class="user-msg">{noMatchingOptionsMsg}</span>
         {/if}
-        <!-- Show nothing if all messages are empty -->
-      {/each}
+      {/if}
     </ul>
   {/if}
 </div>
