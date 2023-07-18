@@ -665,39 +665,43 @@
         </li>
       {/each}
       {#if searchText}
-        {@const textInputIsDuplicate = selected.map(get_label).includes(searchText)}
-        <li
-          on:mousedown|stopPropagation
-          on:mouseup|stopPropagation={(event) => {
-            if (allowUserOptions) add(searchText, event)
-          }}
-          title={createOptionMsg}
-          class:active={option_msg_is_active}
-          on:mouseover={() => (option_msg_is_active = true)}
-          on:focus={() => (option_msg_is_active = true)}
-          on:mouseout={() => (option_msg_is_active = false)}
-          on:blur={() => (option_msg_is_active = false)}
-          role="option"
-          aria-selected="false"
-          class="user-msg"
-        >
-          <slot
-            name="user-msg"
-            {duplicateOptionMsg}
-            {createOptionMsg}
-            {textInputIsDuplicate}
-            {searchText}
+        {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
+        {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
+        {@const can_create = allowUserOptions && createOptionMsg && `create`}
+        {@const no_match =
+          matchingOptions?.length == 0 && noMatchingOptionsMsg && `no-match`}
+        {@const msgType = is_dupe || can_create || no_match}
+        {#if msgType}
+          {@const msg = {
+            dupe: duplicateOptionMsg,
+            create: createOptionMsg,
+            'no-match': noMatchingOptionsMsg,
+          }[msgType]}
+          <li
+            on:mousedown|stopPropagation
+            on:mouseup|stopPropagation={(event) => {
+              if (allowUserOptions) add(searchText, event)
+            }}
+            title={createOptionMsg}
+            class:active={option_msg_is_active}
+            on:mouseover={() => (option_msg_is_active = true)}
+            on:focus={() => (option_msg_is_active = true)}
+            on:mouseout={() => (option_msg_is_active = false)}
+            on:blur={() => (option_msg_is_active = false)}
+            role="option"
+            aria-selected="false"
+            class="user-msg"
+            style:cursor={{
+              dupe: `not-allowed`,
+              create: `pointer`,
+              'no-match': `default`,
+            }[msgType]}
           >
-            {#if !duplicates && textInputIsDuplicate}
-              <span style="cursor: not-allowed !important;">{duplicateOptionMsg}</span>
-            {:else if allowUserOptions}
-              {createOptionMsg}
-            {:else if matchingOptions?.length == 0 && noMatchingOptionsMsg}
-              <!-- use span to not have cursor: pointer -->
-              <span style="cursor: default !important;">{noMatchingOptionsMsg}</span>
-            {/if}
-          </slot>
-        </li>
+            <slot name="user-msg" {searchText} {msgType} {msg}>
+              {msg}
+            </slot>
+          </li>
+        {/if}
       {/if}
     </ul>
   {/if}
