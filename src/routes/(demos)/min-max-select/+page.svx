@@ -87,8 +87,8 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   import MultiSelect from '$lib'
   import { onMount } from 'svelte'
 
-  const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">wait what?</a>)`
-  const blue_pill = `🔵  &ensp; Blue Pill (<a href="https://i.guim.co.uk/img/media/b251ae63d78acf9389a8fce146580483ecdd2253/57_6_1416_849/master/1416.jpg?s=none" target="_blank">show me</a>)`
+  const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
+  const blue_pill = `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
   const options = [ { label: red_pill, value: `red pill` }, { label: blue_pill, value: `blue pill` }]
 
   let value

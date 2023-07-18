@@ -473,7 +473,7 @@ test(`filters dropdown to show only matching options when entering text`, async 
   await tick()
 
   const dropdown = doc_query(`ul.options`)
-  expect(dropdown.textContent?.trim()).toBe(`bar baz`)
+  expect(dropdown.textContent?.trim()).toBe(`barbaz`)
 })
 
 // test default case and custom message
@@ -503,7 +503,7 @@ test.each([undefined, `Custom no options message`])(
 // https://github.com/janosh/svelte-multiselect/issues/183
 test(`up/down arrow keys can traverse dropdown list even when user entered searchText into input`, async () => {
   const options = [`foo`, `bar`, `baz`]
-  new MultiSelect({
+  const select = new MultiSelect({
     target: document.body,
     props: { options, allowUserOptions: true },
   })
@@ -514,7 +514,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   await tick()
 
   const dropdown = doc_query(`ul.options`)
-  expect(dropdown.textContent?.trim()).toBe(`bar baz`)
+  expect(dropdown.textContent?.trim()).toBe(`barbaz ${select.createOptionMsg}`)
 
   // loop through the dropdown list twice
   for (const text of [`bar`, `baz`, `bar`, `baz`]) {
@@ -674,7 +674,7 @@ describe.each([
     ])(
       `allowUserOptions=true, duplicates=%j`,
       async (duplicates, duplicateOptionMsg) => {
-        new MultiSelect({
+        const select = new MultiSelect({
           target: document.body,
           props: {
             options,
@@ -696,7 +696,9 @@ describe.each([
 
         const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
         expect(dropdown.textContent?.trim(), fail_msg).toBe(
-          duplicates ? `${selected[0]}` : duplicateOptionMsg,
+          duplicates
+            ? `${selected[0]} ${select.createOptionMsg}`
+            : duplicateOptionMsg,
         )
       },
     )
