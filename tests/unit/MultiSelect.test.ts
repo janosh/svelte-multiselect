@@ -1051,26 +1051,41 @@ test(`first matching option becomes active automatically on entering searchText`
 })
 
 test.each([
-  [`add`, `ul.options li`, mouseup],
-  [`change`, `ul.options li`, mouseup],
-  [`remove`, `ul.selected button.remove`, mouseup],
-  [`change`, `ul.selected button.remove`, mouseup],
-  [`removeAll`, `button.remove-all`, mouseup],
-  [`change`, `button.remove-all`, mouseup],
-])(`bubbles <input> node DOM events`, async (event_name, selector, trigger) => {
-  const select = new MultiSelect({
-    target: document.body,
-    props: { options: [1, 2, 3], selected: [1, 2] },
-  })
+  [`add`, `ul.options li`],
+  [`change`, `ul.options li`],
+  [`remove`, `ul.selected button.remove`],
+  [`change`, `ul.selected button.remove`],
+  [`removeAll`, `button.remove-all`],
+  [`change`, `button.remove-all`],
+])(
+  `fires %s event with expected payload when clicking %s`,
+  async (event_name, selector, trigger = mouseup) => {
+    const select = new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], selected: [1, 2] },
+    })
 
-  const spy = vi.fn()
-  select.$on(event_name as keyof MultiSelectEvents, spy)
+    const is_event = (name: string, event: CustomEvent) =>
+      name === event_name ||
+      (event_name === `change` && event.detail.type === name)
 
-  doc_query(selector).dispatchEvent(trigger)
-  await tick()
+    const spy = vi.fn((event) => {
+      if (is_event(`removeAll`, event)) {
+        expect(event.detail.options).toEqual([1, 2])
+      } else if (is_event(`remove`, event)) {
+        expect(event.detail.option).toEqual(1)
+      } else if (is_event(`add`, event)) {
+        expect(event.detail.option).toEqual(3)
+      }
+    })
+    select.$on(event_name as keyof MultiSelectEvents, spy)
 
-  expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
-})
+    doc_query(selector).dispatchEvent(trigger)
+    await tick()
+
+    expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
+  },
+)
 
 describe.each([
   [true, (opt: Option) => opt],
