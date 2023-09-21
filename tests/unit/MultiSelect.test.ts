@@ -1288,11 +1288,11 @@ test.each([
 )
 
 test.each([true, false, `desktop`] as const)(
-  `focusInputOnSelect=%s controls input focus and dropdown closing`,
-  async (focusInputOnSelect) => {
+  `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
+  async (closeDropdownOnSelect) => {
     const select = new MultiSelect({
       target: document.body,
-      props: { options: [1, 2, 3], focusInputOnSelect },
+      props: { options: [1, 2, 3], closeDropdownOnSelect },
     })
 
     // simulate selecting an option
@@ -1302,20 +1302,19 @@ test.each([true, false, `desktop`] as const)(
     await tick() // wait for DOM updates
 
     const is_desktop = window.innerWidth > select.breakpoint
-    const should_be_focused =
-      focusInputOnSelect === true ||
-      (focusInputOnSelect === `desktop` && is_desktop)
+    const should_be_closed =
+      closeDropdownOnSelect === true ||
+      (closeDropdownOnSelect === `desktop` && !is_desktop)
+
+    // check that dropdown is closed when closeDropdownOnSelect = false
+    const dropdown = doc_query(`ul.options`)
+    expect(dropdown.classList.contains(`hidden`)).toBe(should_be_closed)
 
     // check that input is focused (or not)
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(document.activeElement === input).toBe(should_be_focused)
+    expect(document.activeElement === input).toBe(!should_be_closed)
 
-    // check that dropdown is closed when focusInputOnSelect = false
-    const dropdown = doc_query(`ul.options`)
-    const should_be_closed = focusInputOnSelect === false
-    expect(dropdown.classList.contains(`hidden`)).toBe(should_be_closed)
-
-    if (focusInputOnSelect === `desktop`) {
+    if (closeDropdownOnSelect === `desktop`) {
       // reduce window width to simulate mobile
       window.innerWidth = 400
       window.dispatchEvent(new Event(`resize`))

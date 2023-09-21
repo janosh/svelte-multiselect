@@ -29,7 +29,7 @@
     if (!searchText) return true
     return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
   }
-  export let focusInputOnSelect: boolean | 'desktop' = `desktop`
+  export let closeDropdownOnSelect: boolean | 'desktop' = `desktop`
   export let form_input: HTMLInputElement | null = null
   export let highlightMatches: boolean = true
   export let id: string | null = null
@@ -222,13 +222,15 @@
         }
       }
 
-      const focus_input =
-        focusInputOnSelect === true ||
-        (focusInputOnSelect === `desktop` && window_width > breakpoint)
+      const reached_max_select = selected.length === maxSelect
 
-      if (selected.length === maxSelect || !focus_input) {
+      const dropdown_should_close =
+        closeDropdownOnSelect === true ||
+        (closeDropdownOnSelect === `desktop` && window_width < breakpoint)
+
+      if (reached_max_select || dropdown_should_close) {
         close_dropdown(event)
-      } else if (focus_input) {
+      } else if (!dropdown_should_close) {
         input?.focus()
       }
       dispatch(`add`, { option })

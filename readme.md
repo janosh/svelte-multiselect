@@ -194,10 +194,10 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
 
 1. ```ts
-   focusInputOnSelect: boolean | 'desktop' = `desktop`
+   closeDropdownOnSelect: boolean | 'desktop' = `desktop`
    ```
 
-   One of `true`, `false` or `'desktop'`. Whether to move focus back to the input element after selecting a dropdown item. If `false`, component will loose focus and `dropdown` is closed. `'desktop'` means `true` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels).
+   One of `true`, `false` or `'desktop'`. Whether to close the dropdown list after selecting a dropdown item. If `true`, component will loose focus and `dropdown` is closed. `'desktop'` means `false` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels). This is to align with the default behavior of many mobile browsers like Safari which close dropdowns after selecting an option while desktop browsers facilitate multi-selection by leaving dropdowns open.
 
 1. ```ts
    form_input: HTMLInputElement | null = null
