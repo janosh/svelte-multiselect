@@ -667,9 +667,9 @@
       {#if searchText}
         {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
         {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
-        {@const can_create = allowUserOptions && createOptionMsg && `create`}
+        {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
         {@const no_match =
-          matchingOptions?.length == 0 && noMatchingOptionsMsg && `no-match`}
+          Boolean(matchingOptions?.length == 0 && noMatchingOptionsMsg) && `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {#if msgType}
           {@const msg = {
