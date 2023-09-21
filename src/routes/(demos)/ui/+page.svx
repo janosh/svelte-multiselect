@@ -20,6 +20,7 @@
   options={foods.map(label => ({ label, style: `background-color: ${random_color()}` }))}
   placeholder="Pick your favorite foods"
   removeAllTitle="Remove all foods"
+  closeDropdownOnSelect={true}
   invalid
 />
 ```
@@ -43,6 +44,7 @@ This page is used for Playwright testing to ensure
   - has `aria-expanded='true'` when open
   - options have `aria-selected='false'` and selected items have `aria-selected='true`
   - invisible `input.form-control` is `aria-hidden`
+- `closeDropdownOnSelect`: when `true`, the input is not focused when an option is selected and the dropdown is closed
 
 <!-- TODO figure out why Playwright test 'loops through the dropdown list with arrow keys making...'
 depends on `html { scroll-behavior: smooth; }` -->

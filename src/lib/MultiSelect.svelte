@@ -29,7 +29,7 @@
     if (!searchText) return true
     return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
   }
-  export let focusInputOnSelect: boolean | 'desktop' = `desktop`
+  export let closeDropdownOnSelect: boolean | 'desktop' = `desktop`
   export let form_input: HTMLInputElement | null = null
   export let highlightMatches: boolean = true
   export let id: string | null = null
@@ -221,11 +221,16 @@
           selected = selected.sort(sortSelected)
         }
       }
-      if (selected.length === maxSelect) close_dropdown(event)
-      else if (
-        focusInputOnSelect === true ||
-        (focusInputOnSelect === `desktop` && window_width > breakpoint)
-      ) {
+
+      const reached_max_select = selected.length === maxSelect
+
+      const dropdown_should_close =
+        closeDropdownOnSelect === true ||
+        (closeDropdownOnSelect === `desktop` && window_width < breakpoint)
+
+      if (reached_max_select || dropdown_should_close) {
+        close_dropdown(event)
+      } else if (!dropdown_should_close) {
         input?.focus()
       }
       dispatch(`add`, { option })
@@ -667,9 +672,9 @@
       {#if searchText}
         {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
         {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
-        {@const can_create = allowUserOptions && createOptionMsg && `create`}
+        {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
         {@const no_match =
-          matchingOptions?.length == 0 && noMatchingOptionsMsg && `no-match`}
+          Boolean(matchingOptions?.length == 0 && noMatchingOptionsMsg) && `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {#if msgType}
           {@const msg = {
