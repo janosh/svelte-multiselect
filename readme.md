@@ -197,7 +197,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    focusInputOnSelect: boolean | 'desktop' = `desktop`
    ```
 
-   One of `true`, `false` or `'desktop'`. Whether to set the cursor back to the input element after selecting an element. 'desktop' means only do so if current window width is larger than the current value of `breakpoint` prop (default 800).
+   One of `true`, `false` or `'desktop'`. Whether to move focus (and cursor) back to the input element after selecting a dropdown item. 'desktop' means `true` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels).
 
 1. ```ts
    form_input: HTMLInputElement | null = null
@@ -403,7 +403,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    - `textInputIsDuplicate: boolean`: Whether user has typed text that matches an already existing option.
    - `searchText: string`: The text user typed into search input.
    - `msg: string`: `duplicateOptionMsg` if user input is a duplicate else `createOptionMsg`.
-1. `slot='after-input'`: ForPlaced after the search input. For arbitrary content like icons or temporary messages. Receives props `selected`, `disabled`, `invalid`, `id`, `placeholder`, `open`, `required`.
+1. `slot='after-input'`: Placed after the search input. For arbitrary content like icons or temporary messages. Receives props `selected: Option[]`, `disabled: boolean`, `invalid: boolean`, `id: string | null`, `placeholder: string`, `open: boolean`, `required: boolean`. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
 Example using several slots:
 
