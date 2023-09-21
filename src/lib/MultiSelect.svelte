@@ -221,11 +221,14 @@
           selected = selected.sort(sortSelected)
         }
       }
-      if (selected.length === maxSelect) close_dropdown(event)
-      else if (
+
+      const focus_input =
         focusInputOnSelect === true ||
         (focusInputOnSelect === `desktop` && window_width > breakpoint)
-      ) {
+
+      if (selected.length === maxSelect || !focus_input) {
+        close_dropdown(event)
+      } else if (focus_input) {
         input?.focus()
       }
       dispatch(`add`, { option })
