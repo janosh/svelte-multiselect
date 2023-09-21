@@ -197,7 +197,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    focusInputOnSelect: boolean | 'desktop' = `desktop`
    ```
 
-   One of `true`, `false` or `'desktop'`. Whether to move focus (and cursor) back to the input element after selecting a dropdown item. 'desktop' means `true` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels).
+   One of `true`, `false` or `'desktop'`. Whether to move focus back to the input element after selecting a dropdown item. If `false`, component will loose focus and `dropdown` is closed. `'desktop'` means `true` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels).
 
 1. ```ts
    form_input: HTMLInputElement | null = null
