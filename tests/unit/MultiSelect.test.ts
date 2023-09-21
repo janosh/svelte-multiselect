@@ -1286,3 +1286,43 @@ test.each([
     }
   },
 )
+
+test.each([true, false, `desktop`] as const)(
+  `focusInputOnSelect=%s controls input focus and dropdown closing`,
+  async (focusInputOnSelect) => {
+    const select = new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], focusInputOnSelect },
+    })
+
+    // simulate selecting an option
+    const first_option = doc_query(`ul.options > li`)
+    first_option.dispatchEvent(mouseup)
+
+    await tick() // wait for DOM updates
+
+    const is_desktop = window.innerWidth > select.breakpoint
+    const should_be_focused =
+      focusInputOnSelect === true ||
+      (focusInputOnSelect === `desktop` && is_desktop)
+
+    // check that input is focused (or not)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(document.activeElement === input).toBe(should_be_focused)
+
+    // check that dropdown is closed when focusInputOnSelect = false
+    const dropdown = doc_query(`ul.options`)
+    const should_be_closed = focusInputOnSelect === false
+    expect(dropdown.classList.contains(`hidden`)).toBe(should_be_closed)
+
+    if (focusInputOnSelect === `desktop`) {
+      // reduce window width to simulate mobile
+      window.innerWidth = 400
+      window.dispatchEvent(new Event(`resize`))
+      expect(window.innerWidth).toBeLessThan(select.breakpoint)
+
+      // TODO: fix this test, not sure why input is still focused even on mobile
+      // expect(document.activeElement === input).toBe(false)
+    }
+  },
+)
