@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v10.2.0](https://github.com/janosh/svelte-multiselect/compare/v10.1.0...v10.2.0)
+
+- Breaking: rename `focusInputOnSelect` to `closeDropdownOnSelect` [`#267`](https://github.com/janosh/svelte-multiselect/pull/267)
+- Fix empty `event.detail.options` payload on `removeAll` [`#266`](https://github.com/janosh/svelte-multiselect/pull/266)
+- update deps [`58cee43`](https://github.com/janosh/svelte-multiselect/commit/58cee43adc8bb4a25befb0d804a73752e1d4ced5)
+
 #### [v10.1.0](https://github.com/janosh/svelte-multiselect/compare/v10.0.0...v10.1.0)
 
 > 18 July 2023
