@@ -624,6 +624,10 @@ This simplified version of the DOM structure of the component shows where these 
     <li class="{liOptionClass} {liActiveOptionClass}">
       Option 2 (currently active)
     </li>
+    ...
+    <li class="{liUserMsgClass} {liActiveUserMsgClass}">
+      Create this option...
+    </li>
   </ul>
 </div>
 ```
