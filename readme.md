@@ -605,6 +605,8 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `ulOptionsClass`: available options listed in the dropdown when component is in `open` state
 - `liOptionClass`: list items selectable from dropdown list
 - `liActiveOptionClass`: the currently active dropdown list item (i.e. hovered or navigated to with arrow keys)
+- `liUserMsgClass`: user message (last child of dropdown list)
+- `liActiveUserMsgClass`: user message when active (i.e. hovered or navigated to with arrow keys)
 - `maxSelectMsgClass`: small span towards the right end of the input field displaying to the user how many of the allowed number of options they've already selected
 
 This simplified version of the DOM structure of the component shows where these classes are inserted:
