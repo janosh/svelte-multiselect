@@ -621,7 +621,7 @@ test(`can't select disabled options`, async () => {
 })
 
 test.each([2, 5, 10])(
-  `cant select more than maxSelect options`,
+  `can't select more than maxSelect options`,
   async (maxSelect: number) => {
     new MultiSelect({
       target: document.body,
