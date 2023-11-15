@@ -34,7 +34,6 @@
   :global(.dropdown) {
     background: darkgreen !important;
   }
-  :global(.)
 </style>
 ```
 
