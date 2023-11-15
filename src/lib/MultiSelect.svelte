@@ -698,7 +698,7 @@
             role="option"
             aria-selected="false"
             class={`user-msg ${liUserMsgClass} ${
-              option_msg_is_active ? liActiveUserMsgClass : ''
+              option_msg_is_active ? liActiveUserMsgClass : ``
             }`}
             style:cursor={{
               dupe: `not-allowed`,
