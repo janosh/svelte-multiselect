@@ -16,9 +16,12 @@
   inputClass="search-text-input"
   liSelectedClass="selected-li"
   liActiveOptionClass="hovered-or-arrow-keyed-li"
+  liUserMsgClass="selectable-msg-li"
+  liActiveUserMsgClass="hovered-or-arrow-keyed-msg-li"
   maxSelectMsgClass="user-hint-max-selected-reached"
   placeholder="Which foods do you like?"
   selected={options.slice(0, 2)}
+  allowUserOptions
   maxSelect={2}
 />
 <!-- maxSelect={2} needed for maxSelectMsg to show up -->
@@ -31,6 +34,7 @@
   :global(.dropdown) {
     background: darkgreen !important;
   }
+  :global(.)
 </style>
 ```
 

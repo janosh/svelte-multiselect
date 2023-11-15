@@ -119,16 +119,23 @@ test.describe(`external CSS classes`, async () => {
     [`ulSelected`, `ul.selected`, `user-choices`],
     [`ulOptions`, `ul.options`, `dropdown`],
     [`liOption`, `ul.options > li`, `selectable-li`],
+    [`liUserMsgClass`, `ul.options > li.user-msg`, `selectable-msg-li`],
     [`input`, `input[autocomplete]`, `search-text-input`],
     // below classes requires component interaction before appearing in DOM
     [`liSelected`, `ul.selected > li`, `selected-li`],
     [`liActiveOption`, `ul.options > li.active`, `hovered-or-arrow-keyed-li`],
+    [
+      `liActiveUserMsgClass`,
+      `ul.options > li.active.user-msg`,
+      `hovered-or-arrow-keyed-msg-li`,
+    ],
     [`maxSelectMsg`, `span.max-select-msg`, `user-hint-max-selected-reached`],
   ]) {
     test(`${prop}Class`, async ({ page }) => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
       await page.click(`#foods input[autocomplete]`)
+      await page.keyboard.type('O') // type a word so that the user message shows up
       await page.hover(`ul.options > li`) // hover any option to give it active state
 
       const node = await page.$(`${selector}.${cls}`)
