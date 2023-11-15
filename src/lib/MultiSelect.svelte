@@ -38,10 +38,10 @@
   export let inputmode: string | null = null
   export let invalid: boolean = false
   export let liActiveOptionClass: string = ``
-  export let liOptionClass: string = ``
   export let liActiveUserMsgClass: string = ``
-  export let liUserMsgClass: string = ``
+  export let liOptionClass: string = ``
   export let liSelectedClass: string = ``
+  export let liUserMsgClass: string = ``
   export let loading: boolean = false
   export let matchingOptions: Option[] = []
   export let maxOptions: number | undefined = undefined
@@ -697,9 +697,9 @@
             on:blur={() => (option_msg_is_active = false)}
             role="option"
             aria-selected="false"
-            class={`user-msg ${liUserMsgClass} ${
-              option_msg_is_active ? liActiveUserMsgClass : ``
-            }`}
+            class="user-msg {liUserMsgClass} {option_msg_is_active
+              ? liActiveUserMsgClass
+              : ``}"
             style:cursor={{
               dupe: `not-allowed`,
               create: `pointer`,
