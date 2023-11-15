@@ -136,7 +136,12 @@ test.describe(`external CSS classes`, async () => {
 
       await page.click(`#foods input[autocomplete]`)
       await page.keyboard.type('O') // type a word so that the user message shows up
-      await page.hover(`ul.options > li`) // hover any option to give it active state
+
+      if (prop !== 'liActiveUserMsgClass') {
+        await page.hover(`ul.options > li`) // hover any option to give it active state
+      } else {
+        await page.hover(`ul.options > li:last-child`) // hover last option to give it active state
+      }
 
       const node = await page.$(`${selector}.${cls}`)
       expect(node).toBeTruthy()
