@@ -35,12 +35,15 @@
   export let id: string | null = null
   export let input: HTMLInputElement | null = null
   export let inputClass: string = ``
+  export let inputStyle: string | null = null
   export let inputmode: string | null = null
   export let invalid: boolean = false
   export let liActiveOptionClass: string = ``
   export let liActiveUserMsgClass: string = ``
   export let liOptionClass: string = ``
+  export let liOptionStyle: string | null = null
   export let liSelectedClass: string = ``
+  export let liSelectedStyle: string | null = null
   export let liUserMsgClass: string = ``
   export let loading: boolean = false
   export let matchingOptions: Option[] = []
@@ -48,7 +51,7 @@
   export let maxSelect: number | null = null // null means there is no upper limit for selected.length
   export let maxSelectMsg: ((current: number, max: number) => string) | null = (
     current: number,
-    max: number
+    max: number,
   ) => (max > 1 ? `${current}/${max}` : ``)
   export let maxSelectMsgClass: string = ``
   export let name: string | null = null
@@ -72,8 +75,11 @@
       .slice(0, maxSelect ?? undefined) ?? [] // don't allow more than maxSelect preselected options
   export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
   export let selectedOptionsDraggable: boolean = !sortSelected
+  export let style: string | null = null
   export let ulOptionsClass: string = ``
   export let ulSelectedClass: string = ``
+  export let ulSelectedStyle: string | null = null
+  export let ulOptionsStyle: string | null = null
   export let value: Option | Option[] | null = null
 
   const selected_to_value = (selected: Option[]) => {
@@ -106,34 +112,34 @@
   }
   if (maxSelect !== null && maxSelect < 1) {
     console.error(
-      `MultiSelect's maxSelect must be null or positive integer, got ${maxSelect}`
+      `MultiSelect's maxSelect must be null or positive integer, got ${maxSelect}`,
     )
   }
   if (!Array.isArray(selected)) {
     console.error(
-      `MultiSelect's selected prop should always be an array, got ${selected}`
+      `MultiSelect's selected prop should always be an array, got ${selected}`,
     )
   }
   if (maxSelect && typeof required === `number` && required > maxSelect) {
     console.error(
-      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`
+      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
     )
   }
   if (parseLabelsAsHtml && allowUserOptions) {
     console.warn(
-      `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`
+      `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
     )
   }
   if (sortSelected && selectedOptionsDraggable) {
     console.warn(
       `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any ` +
-        `user re-orderings of selected options will be undone by sortSelected on component re-renders.`
+        `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
     )
   }
   if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
     console.error(
       `MultiSelect has allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
-        `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`
+        `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
     )
   }
   if (
@@ -141,7 +147,7 @@
     (typeof maxOptions != `number` || maxOptions < 0 || maxOptions % 1 != 0)
   ) {
     console.error(
-      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`
+      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`,
     )
   }
 
@@ -154,7 +160,7 @@
     (opt) =>
       filterFunc(opt, searchText) &&
       // remove already selected options from dropdown list unless duplicate selections are allowed
-      (!selected.map(key).includes(key(opt)) || duplicates)
+      (!selected.map(key).includes(key(opt)) || duplicates),
   )
 
   // raise if matchingOptions[activeIndex] does not yield a value
@@ -261,8 +267,8 @@
     if (option === undefined) {
       return console.error(
         `Multiselect can't remove selected option ${JSON.stringify(
-          to_remove
-        )}, not found in selected list`
+          to_remove,
+        )}, not found in selected list`,
       )
     }
 
@@ -474,6 +480,7 @@
   data-id={id}
   role="searchbox"
   tabindex="-1"
+  {style}
 >
   <!-- form control input invisible to the user, only purpose is to abort form submission if this component fails data validation -->
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
@@ -502,7 +509,11 @@
   <slot name="expand-icon" {open}>
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
   </slot>
-  <ul class="selected {ulSelectedClass}" aria-label="selected options">
+  <ul
+    class="selected {ulSelectedClass}"
+    aria-label="selected options"
+    style={ulSelectedStyle}
+  >
     {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
       <li
         class={liSelectedClass}
@@ -515,7 +526,7 @@
         on:dragenter={() => (drag_idx = idx)}
         on:dragover|preventDefault
         class:active={drag_idx === idx}
-        style={get_style(option, `selected`)}
+        style="{get_style(option, `selected`)} {liSelectedStyle}"
       >
         <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
         <slot name="selected" {option} {idx}>
@@ -544,6 +555,7 @@
     {/each}
     <input
       class={inputClass}
+      style={inputStyle}
       bind:this={input}
       bind:value={searchText}
       on:mouseup|self|stopPropagation={open_dropdown}
@@ -626,6 +638,7 @@
       aria-expanded={open}
       aria-disabled={disabled ? `true` : null}
       bind:this={ul_options}
+      style={ulOptionsStyle}
     >
       {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as option, idx}
         {@const {
@@ -658,7 +671,7 @@
           on:blur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
-          style={get_style(option, `option`)}
+          style="{get_style(option, `option`)} {liOptionStyle}"
         >
           <slot name="option" {option} {idx}>
             <slot {option} {idx}>

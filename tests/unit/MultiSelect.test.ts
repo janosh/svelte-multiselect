@@ -1200,15 +1200,18 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
   },
 )
 
-const css_str = `test-style`
-
 test.each([
   // Invalid key cases
-  [css_str, `invalid`, `MultiSelect: Invalid key=invalid for get_style`],
+  [
+    `test-style`,
+    `invalid`,
+    `test-style;`,
+    `MultiSelect: Invalid key=invalid for get_style`,
+  ],
   // Valid key cases
-  [css_str, `selected`, css_str],
-  [css_str, `option`, css_str],
-  [css_str, null, css_str],
+  [`test-style`, `selected`, `test-style;`],
+  [`test-style`, `option`, `test-style;`],
+  [`test-style`, null, `test-style;`],
   // Object style cases
   [
     { selected: `selected-style`, option: `option-style` },
@@ -1224,13 +1227,14 @@ test.each([
   [
     { invalid: `invalid-style` },
     `selected`,
+    ``,
     `Invalid style object for option=${JSON.stringify({
       style: { invalid: `invalid-style` },
     })}`,
   ],
 ])(
-  `get_style returns correct style for different option and key combinations`,
-  async (style, key, expected) => {
+  `get_style returns and console.errors correctly (%s, %s, %s, %s)`,
+  async (style, key, expected, err_msg = ``) => {
     console.error = vi.fn()
 
     // @ts-expect-error test invalid option
@@ -1238,10 +1242,9 @@ test.each([
 
     if (expected.startsWith(`Invalid`) || expected.startsWith(`MultiSelect`)) {
       expect(console.error).toHaveBeenCalledTimes(1)
-      expect(console.error).toHaveBeenCalledWith(expected)
-    } else {
-      expect(result).toBe(expected)
+      expect(console.error).toHaveBeenCalledWith(err_msg)
     }
+    expect(result).toBe(expected)
   },
 )
 
@@ -1284,6 +1287,31 @@ test.each([
       const option_li = document.querySelector(`ul.options > li`)
       expect(option_li.style.cssText).toBe(expected_css)
     }
+  },
+)
+
+test.each([
+  [`style`, `div.multiselect`],
+  [`ulSelectedStyle`, `ul.selected`],
+  [`ulOptionsStyle`, `ul.options`],
+  [`liSelectedStyle`, `ul.selected > li`],
+  [`liOptionStyle`, `ul.options > li`],
+  [`inputStyle`, `input[autocomplete]`],
+])(
+  `MultiSelect applies style props to the correct element`,
+  async (prop, css_selector) => {
+    const css_str = `font-weight: bold; color: red;`
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], [prop]: css_str, selected: [1] },
+    })
+
+    await tick()
+
+    const err_msg = `${prop} (${css_selector})`
+    const elem = doc_query(css_selector)
+    await tick()
+    expect(elem?.style.cssText, err_msg).toContain(css_str)
   },
 )
 

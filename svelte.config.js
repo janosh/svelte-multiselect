@@ -52,7 +52,9 @@ export default {
 
     prerender: {
       handleMissingId: ({ id }) => {
-        if (![`🔣-props`].includes(id)) throw id
+        // list of ok-to-be-missing IDs
+        if ([`🔣-props`].includes(id)) return
+        throw `Missing ID: ${id}`
       },
     },
   },
