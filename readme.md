@@ -230,10 +230,28 @@ Full list of props/bindable variables for this component. The `Option` type you 
    The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow mobile browsers to display an appropriate virtual on-screen keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details. If you want to suppress the on-screen keyboard to leave full-screen real estate for the dropdown list of options, set `inputmode="none"`.
 
 1. ```ts
+   inputStyle: string | null = null
+   ```
+
+   One-off CSS rules applied to the `<input>` element.
+
+1. ```ts
    invalid: boolean = false
    ```
 
    If `required = true, 1, 2, ...` and user tries to submit form but `selected = []` is empty/`selected.length < required`, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed as soon as any change to `selected` is registered. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
+
+1. ```ts
+   liOptionStyle: string | null = null
+   ```
+
+   One-off CSS rules applied to the `<li>` elements that wrap the dropdown options.
+
+1. ```ts
+   liSelectedStyle: string | null = null
+   ```
+
+   One-off CSS rules applied to the `<li>` elements that wrap the selected options.
 
 1. ```ts
    loading: boolean = false
@@ -380,6 +398,24 @@ Full list of props/bindable variables for this component. The `Option` type you 
    ```
 
    Whether selected options are draggable so users can change their order.
+
+1. ```ts
+   style: string | null = null
+   ```
+
+   One-off CSS rules applied to the outer `<div class="multiselect">` that wraps the whole component for passing one-off CSS.
+
+1. ```ts
+   ulSelectedStyle: string | null = null
+   ```
+
+   One-off CSS rules applied to the `<ul class="selected">` that wraps the list of selected options.
+
+1. ```ts
+   ulOptionsStyle: string | null = null
+   ```
+
+   One-off CSS rules applied to the `<ul class="options">` that wraps the list of selected options.
 
 1. ```ts
    value: Option | Option[] | null = null
