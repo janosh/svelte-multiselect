@@ -463,13 +463,13 @@ Example using several slots:
    on:add={(event) => console.log(event.detail.option)}
    ```
 
-   Triggers when a new option is selected.
+   Triggers when a new option is selected. The newly selected option is provided as `event.detail.option`.
 
 1. ```ts
    on:remove={(event) => console.log(event.detail.option)}`
    ```
 
-   Triggers when one selected option provided as `event.detail.option` is removed.
+   Triggers when a single selected option is removed. The removed option is provided as `event.detail.option`.
 
 1. ```ts
    on:removeAll={(event) => console.log(event.detail.options)}`
@@ -481,7 +481,7 @@ Example using several slots:
    on:change={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}
    ```
 
-   Triggers when an option is either added or removed, or all options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
+   Triggers when an option is either added (selected) or removed from selected, or all selected options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
 
 1. ```ts
    on:open={(event) => console.log(`Multiselect dropdown was opened by ${event}`)}
