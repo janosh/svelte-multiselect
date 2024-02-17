@@ -8,7 +8,7 @@
 
 ```svelte example stackblitz id="languages-1"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
   import { LanguageSlot, MinusIcon } from '$site'
   import { Icon } from 'svelte-zoo'
@@ -33,7 +33,7 @@
 
 ```svelte example stackblitz id="languages-2"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
   import { LanguageSlot } from '$site'
   import { Icon } from 'svelte-zoo'
@@ -69,7 +69,7 @@
 
 ```svelte example stackblitz id="languages-2"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
   import { LanguageSlot } from '$site'
   import { Icon } from 'svelte-zoo'

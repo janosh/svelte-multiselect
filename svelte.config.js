@@ -27,7 +27,6 @@ const { default: pkg } = await import(`./package.json`, {
 })
 const defaults = {
   Wrapper: `svelte-zoo/CodeExample.svelte`,
-  pkg: pkg.name,
   repo: pkg.repository,
   hideStyle: true,
 }
@@ -48,6 +47,7 @@ export default {
     alias: {
       $root: `.`,
       $site: `./src/site`,
+      $lib: `svelte-multiselect`,
     },
 
     prerender: {
@@ -64,5 +64,11 @@ export default {
     immutable: true,
     // enable direct prop access for vitest unit tests
     accessors: process.env.TEST,
+  },
+
+  vitePlugin: {
+    experimental: {
+      inspector: true,
+    },
   },
 }
