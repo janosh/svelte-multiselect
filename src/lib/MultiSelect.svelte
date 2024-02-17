@@ -412,7 +412,7 @@
   let ul_options: HTMLUListElement
   // highlight text matching user-entered search text in available options
   function highlight_matching_options(event: InputEvent) {
-    if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // don't try if CSS highlight API not supported
+    if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // abort if CSS highlight API not supported
 
     // clear previous ranges from HighlightRegistry
     CSS.highlights.clear()

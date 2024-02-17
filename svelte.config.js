@@ -65,4 +65,10 @@ export default {
     // enable direct prop access for vitest unit tests
     accessors: process.env.TEST,
   },
+
+  vitePlugin: {
+    experimental: {
+      inspector: true,
+    },
+  },
 }
