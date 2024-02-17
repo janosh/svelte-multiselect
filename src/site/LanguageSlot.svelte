@@ -25,4 +25,7 @@
   span {
     display: flex;
   }
+  img[alt='Rust'] {
+    filter: invert(1);
+  }
 </style>
