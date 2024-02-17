@@ -5,7 +5,7 @@
 
 ```svelte example stackblitz id="foods"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { foods } from '$site/options'
 
   function random_color() {

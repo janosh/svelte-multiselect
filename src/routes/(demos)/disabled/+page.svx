@@ -5,7 +5,7 @@
 
 ```svelte example stackblitz id="disabled-input-title"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 </script>
 
 <MultiSelect

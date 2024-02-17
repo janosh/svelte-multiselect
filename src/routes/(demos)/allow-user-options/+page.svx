@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { foods, languages } from '$site/options'
   import { LanguageSlot } from '$site'
 
@@ -12,7 +12,7 @@
 
 ```svelte example stackblitz id="foods"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { foods } from '$site/options'
   import { Toggle } from 'svelte-zoo'
 
@@ -41,7 +41,7 @@
 
 ```svelte example stackblitz id="languages"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
   import { LanguageSlot } from '$site'
 
@@ -67,7 +67,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
 
 ```svelte example stackblitz id="no-default-options"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 
   let selected = []
 </script>

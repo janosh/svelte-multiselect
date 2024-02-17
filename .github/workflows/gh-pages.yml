@@ -10,5 +10,3 @@ on:
 jobs:
   build:
     uses: janosh/workflows/.github/workflows/nodejs-gh-pages.yml@main
-    with:
-      install-cmd: npm install -f

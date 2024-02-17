@@ -46,10 +46,9 @@ test.describe(`input`, async () => {
 
     await page.fill(`#foods input[autocomplete]`, `Pineapple`)
 
-    expect(
-      await page.$$(`div.multiselect.open > ul.options > li`),
-    ).toHaveLength(1)
-    const text = await page.textContent(`div.multiselect.open > ul.options`)
+    const ul_selector = `div.multiselect.open > ul.options`
+    expect(await page.$$(`${ul_selector} > li`)).toHaveLength(1)
+    const text = await page.textContent(ul_selector)
     expect(text?.trim()).toBe(`🍍 Pineapple`)
   })
 })

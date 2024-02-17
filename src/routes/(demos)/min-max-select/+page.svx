@@ -10,7 +10,7 @@
 
 ```svelte example stackblitz id="languages"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
   import { LanguageSlot } from '$site'
 </script>
@@ -41,7 +41,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 ```svelte example stackblitz
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 
   function handle_submit(event: SubmitEvent) {
     const form_data = new FormData(event.target)
@@ -61,7 +61,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
 ```svelte example stackblitz
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 
   function handle_submit(event: SubmitEvent) {
     const form_data = new FormData(event.target)
@@ -84,7 +84,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 ```svelte example stackblitz
 <script>
   // for https://github.com/janosh/svelte-multiselect/issues/249
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { onMount } from 'svelte'
 
   const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
