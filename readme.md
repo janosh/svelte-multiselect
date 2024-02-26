@@ -322,7 +322,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    options: Option[]
    ```
 
-   **The only required prop** (no default). Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. A few keys like `preselected` and `title` have special meaning though. See type `ObjectOption` in [`src/lib/index.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) for all special keys and their purpose.
+   **The only required prop** (no default). Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. A few keys like `preselected` and `title` have special meaning though. See type `ObjectOption` in [`/src/lib/types.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/types.ts) for all special keys and their purpose.
 
 1. ```ts
    outerDiv: HTMLDivElement | null = null
