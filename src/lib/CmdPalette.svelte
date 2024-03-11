@@ -34,8 +34,8 @@
     }
   }
 
-  function run_and_close(event: CustomEvent<{ option: Action }>) {
-    event.detail.option.action()
+  function trigger_action_and_close(event: CustomEvent<{ option: Action }>) {
+    event.detail.option.action(event.detail.option.label)
     open = false
   }
 </script>
@@ -48,7 +48,7 @@
       options={actions}
       bind:input
       {placeholder}
-      on:add={run_and_close}
+      on:add={trigger_action_and_close}
       on:keydown={toggle}
       {...$$restProps}
       let:option

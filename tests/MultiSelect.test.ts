@@ -5,7 +5,7 @@ import { foods } from '../src/site/options.ts'
 
 test.describe.configure({ mode: `parallel` })
 
-test.describe(`input`, async () => {
+test.describe(`input`, () => {
   test.skip(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
@@ -53,7 +53,7 @@ test.describe(`input`, async () => {
   })
 })
 
-test.describe(`remove single button`, async () => {
+test.describe(`remove single button`, () => {
   test(`should remove 1 option`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
@@ -69,7 +69,7 @@ test.describe(`remove single button`, async () => {
   })
 })
 
-test.describe(`remove all button`, async () => {
+test.describe(`remove all button`, () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
@@ -112,7 +112,7 @@ test.describe(`remove all button`, async () => {
   // })
 })
 
-test.describe(`external CSS classes`, async () => {
+test.describe(`external CSS classes`, () => {
   for (const [prop, selector, cls] of [
     [`outerDiv`, `div.multiselect`, `wrapper`],
     [`ulSelected`, `ul.selected`, `user-choices`],
@@ -148,7 +148,7 @@ test.describe(`external CSS classes`, async () => {
   }
 })
 
-test.describe(`disabled multiselect`, async () => {
+test.describe(`disabled multiselect`, () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/disabled`, { waitUntil: `networkidle` })
   })
@@ -182,7 +182,7 @@ test.describe(`disabled multiselect`, async () => {
   })
 })
 
-test.describe(`accessibility`, async () => {
+test.describe(`accessibility`, () => {
   test.beforeEach(async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
   })
@@ -249,7 +249,7 @@ test.describe(`accessibility`, async () => {
   })
 })
 
-test.describe(`multiselect`, async () => {
+test.describe(`multiselect`, () => {
   test(`can select and remove many options`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
@@ -319,7 +319,7 @@ test.describe(`multiselect`, async () => {
   })
 })
 
-test.describe(`allowUserOptions`, async () => {
+test.describe(`allowUserOptions`, () => {
   test(`entering custom option adds it to selected but not to options`, async ({
     page,
   }) => {
@@ -435,7 +435,7 @@ test.describe(`allowUserOptions`, async () => {
   })
 })
 
-test.describe(`sortSelected`, async () => {
+test.describe(`sortSelected`, () => {
   const labels = `Svelte Vue React Angular Polymer Laravel Django`.split(` `)
 
   test(`default sorting is alphabetical by label`, async ({ page }) => {
@@ -472,7 +472,7 @@ test.describe(`sortSelected`, async () => {
   })
 })
 
-test.describe(`parseLabelsAsHtml`, async () => {
+test.describe(`parseLabelsAsHtml`, () => {
   test(`renders anchor tags as links`, async ({ page }) => {
     await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
 
@@ -498,7 +498,7 @@ test.describe(`parseLabelsAsHtml`, async () => {
   })
 })
 
-test.describe(`maxSelect`, async () => {
+test.describe(`maxSelect`, () => {
   const max_select = 5
 
   test.beforeEach(async ({ page }) => {
@@ -537,7 +537,7 @@ test.describe(`maxSelect`, async () => {
   })
 })
 
-test.describe(`slots`, async () => {
+test.describe(`slots`, () => {
   test(`renders remove-icon slot for individual remove buttons and the remove-all button`, async ({
     page,
   }) => {

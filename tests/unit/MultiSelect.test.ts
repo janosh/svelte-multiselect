@@ -17,8 +17,8 @@ test(`2-way binding of activeIndex`, async () => {
     target: document.body,
     props: { options: [1, 2, 3] },
   })
-  binder.$on(`activeIndex-changed`, (e: CustomEvent) => {
-    activeIndex = e.detail
+  binder.$on(`activeIndex-changed`, (event: CustomEvent) => {
+    activeIndex = event.detail
   })
 
   // test internal changes to activeIndex bind outwards
@@ -44,8 +44,8 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
 
   // test internal change to activeOption binds outwards
   let active_option: number = 0
-  binder.$on(`activeOption-changed`, (e: CustomEvent) => {
-    active_option = e.detail
+  binder.$on(`activeOption-changed`, (event: CustomEvent) => {
+    active_option = event.detail
   })
   const cb = vi.fn()
   binder.$on(`activeOption-changed`, cb)
@@ -56,6 +56,7 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   await tick()
   expect(active_option).toBe(1)
   expect(cb).toBeCalledTimes(1)
+  expect(cb.mock.calls[0][0].detail).toBe(1)
 })
 
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
@@ -66,8 +67,8 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
 
   // test internal change to activeOption binds outwards
   let activeOption: number = 0
-  binder.$on(`activeOption-changed`, (e: CustomEvent) => {
-    activeOption = e.detail
+  binder.$on(`activeOption-changed`, (event: CustomEvent) => {
+    activeOption = event.detail
   })
   const cb = vi.fn()
   binder.$on(`activeOption-changed`, cb)
@@ -392,7 +393,7 @@ test.each([
   async (options) => {
     const form = document.createElement(`form`)
     // actual form submission not supported in nodejs, would throw without preventing default behavior
-    form.onsubmit = (e) => e.preventDefault()
+    form.onsubmit = (event) => event.preventDefault()
     document.body.appendChild(form)
 
     const field_name = `test form submission`
@@ -735,8 +736,8 @@ test(`2-way binding of selected`, async () => {
     target: document.body,
     props: { options: [1, 2, 3] },
   })
-  binder.$on(`selected-changed`, (e: CustomEvent) => {
-    selected = e.detail
+  binder.$on(`selected-changed`, (event: CustomEvent) => {
+    selected = event.detail
   })
 
   // test internal changes to selected bind outwards
