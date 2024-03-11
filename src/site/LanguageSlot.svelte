@@ -9,7 +9,7 @@
   $: src = `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`
 
   let hidden = false
-  // default back to visible every time src changes to see if the image loads successfully
+  // default back to visible every time src changes to see if image loads successfully
   $: src, (hidden = false)
 </script>
 

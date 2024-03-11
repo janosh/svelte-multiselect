@@ -34,6 +34,7 @@ test(`calls the action when an option is selected`, async () => {
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
 
   expect(spy).toHaveBeenCalledOnce()
+  expect(spy).toHaveBeenCalledWith(actions[0].label)
 })
 
 test.each([[[`Escape`]], [[`x`]], [[`Escape`, `x`]]])(
