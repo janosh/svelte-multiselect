@@ -339,6 +339,7 @@ describe.each([
       props: { options: [1, 2, 3], required, selected, maxSelect },
     })
 
+    // form should be valid if MultiSelect not required or n_selected >= n_required and <= maxSelect
     const form_valid =
       !required ||
       (selected.length >= Number(required) &&
@@ -422,6 +423,25 @@ test.each([
     expect(form_data.get(field_name)).toEqual(JSON.stringify(options))
   },
 )
+
+test(`toggling required after invalid form submission allows submitting`, async () => {
+  // https://github.com/janosh/svelte-multiselect/issues/285
+  const form = document.createElement(`form`)
+  document.body.appendChild(form)
+
+  const select = new MultiSelect({
+    target: form,
+    props: { options: [1, 2, 3], required: true },
+  })
+
+  // form should not be submittable due to missing required input
+  expect(form.checkValidity()).toBe(false)
+
+  // toggle required to false
+  select.required = false
+  // form should now be submittable
+  expect(form.checkValidity()).toBe(true)
+})
 
 test(`invalid=true gives top-level div class 'invalid' and input attribute of 'aria-invalid'`, async () => {
   new MultiSelect({

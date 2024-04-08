@@ -34,10 +34,10 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     <ColorSlot {idx} {option} />
   </MultiSelect>
   <button>Submit</button>
-  <small
-    >select some options, then click submit to see what data MultiSelect sends to a form
-    submit handler</small
-  >
+  <small>
+    select some options, then click submit to see what data MultiSelect sends to a form
+    submit handler
+  </small>
 </form>
 
 {#if form_data}
