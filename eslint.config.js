@@ -1,5 +1,4 @@
 import js from '@eslint/js'
-// import prettier from 'eslint-config-prettier'
 import svelte from 'eslint-plugin-svelte'
 import globals from 'globals'
 import tslint from 'typescript-eslint'
@@ -9,7 +8,6 @@ export default [
   js.configs.recommended,
   ...tslint.configs.recommended,
   ...svelte.configs[`flat/recommended`],
-  // prettier,
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [

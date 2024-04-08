@@ -7,7 +7,7 @@ default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v4.5.0
     hooks:
       - id: check-case-conflict
       - id: check-symlinks
@@ -37,12 +37,20 @@ repos:
         exclude: changelog\.md
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.0.0
+    rev: v9.0.0-beta.2
     hooks:
       - id: eslint
         types: [file]
         args: [--fix]
         files: \.(js|ts|svelte)$
+        additional_dependencies:
+          - '@eslint/js'
+          - 'typescript-eslint'
+          - eslint
+          - eslint-plugin-svelte
+          - globals
+          - svelte
+          - typescript
 
   - repo: local
     hooks:
