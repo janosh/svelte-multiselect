@@ -459,6 +459,10 @@
     // create Highlight object from ranges and add to registry
     CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
   }
+
+  // reset form validation when required prop changes
+  // https://github.com/janosh/svelte-multiselect/issues/285
+  $: required, form_input?.setCustomValidity(``)
 </script>
 
 <svelte:window
@@ -485,7 +489,7 @@
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
     {name}
-    required={Boolean(required)}
+    {required}
     value={selected.length >= Number(required) ? JSON.stringify(selected) : null}
     tabindex="-1"
     aria-hidden="true"
