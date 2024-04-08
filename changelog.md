@@ -2,7 +2,21 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v10.3.0](https://github.com/janosh/svelte-multiselect/compare/v10.2.0...v10.3.0)
+
+> 8 April 2024
+
+- `MultiSelect` fix form validation not resetting when `required` prop changes [`#286`](https://github.com/janosh/svelte-multiselect/pull/286)
+- Update readme.md [`#283`](https://github.com/janosh/svelte-multiselect/pull/283)
+- Housekeeping [`#282`](https://github.com/janosh/svelte-multiselect/pull/282)
+- Improve docs around Events [`#280`](https://github.com/janosh/svelte-multiselect/pull/280)
+- Add props `style`, `inputStyle`, `liOptionStyle`, `liSelectedStyle`, `ulSelectedStyle`, `ulOptionsStyle` [`#279`](https://github.com/janosh/svelte-multiselect/pull/279)
+- Add props `liUserMsgClass` and `liUserMsgActiveClass` [`#274`](https://github.com/janosh/svelte-multiselect/pull/274)
+- link check treat 403 http status as alive, update deps [`1b04c15`](https://github.com/janosh/svelte-multiselect/commit/1b04c15eb71ba608c863562cb81e66bc24d21baf)
+
 #### [v10.2.0](https://github.com/janosh/svelte-multiselect/compare/v10.1.0...v10.2.0)
+
+> 21 September 2023
 
 - Breaking: rename `focusInputOnSelect` to `closeDropdownOnSelect` [`#267`](https://github.com/janosh/svelte-multiselect/pull/267)
 - Fix empty `event.detail.options` payload on `removeAll` [`#266`](https://github.com/janosh/svelte-multiselect/pull/266)
