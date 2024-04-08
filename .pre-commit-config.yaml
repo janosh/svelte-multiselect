@@ -1,5 +1,6 @@
 ci:
   autoupdate_schedule: quarterly
+  skip: [eslint]
 
 default_stages: [commit]
 
@@ -45,7 +46,7 @@ repos:
         files: \.(js|ts|svelte)$
         additional_dependencies:
           - 'typescript-eslint'
-          - eslint@v9.0.0
+          - eslint
           - eslint-plugin-svelte
           - globals
           - svelte
