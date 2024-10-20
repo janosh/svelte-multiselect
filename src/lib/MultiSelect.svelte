@@ -573,7 +573,7 @@
       {pattern}
       placeholder={selected.length == 0 ? placeholder : null}
       aria-invalid={invalid ? `true` : null}
-      ondrop="return false"
+      on:drop={() => false}
       on:blur
       on:change
       on:click
