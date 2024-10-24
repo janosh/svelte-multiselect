@@ -12,7 +12,7 @@ export default [
         `error`,
         { argsIgnorePattern: `^_`, varsIgnorePattern: `^_` },
       ],
-      '@typescript-eslint/quotes': [`error`, `backtick`, { avoidEscape: true }],
+      '@/quotes': [`error`, `backtick`, { avoidEscape: true }],
       'svelte/no-at-html-tags': `off`,
     },
   },
