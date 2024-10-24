@@ -1,4 +1,3 @@
-
 ## User interface
 
 ### Food Picker (initially invalid)

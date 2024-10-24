@@ -4,7 +4,7 @@ import { mdsvex } from 'mdsvex'
 import mdsvexamples from 'mdsvexamples'
 import link_headings from 'rehype-autolink-headings'
 import heading_slugs from 'rehype-slug'
-import preprocess from 'svelte-preprocess'
+import { sveltePreprocess } from 'svelte-preprocess'
 
 const rehypePlugins = [
   heading_slugs,
@@ -23,7 +23,7 @@ const rehypePlugins = [
   ],
 ]
 const { default: pkg } = await import(`./package.json`, {
-  assert: { type: `json` },
+  with: { type: `json` },
 })
 const defaults = {
   Wrapper: `svelte-zoo/CodeExample.svelte`,
@@ -37,7 +37,7 @@ export default {
   extensions: [`.svelte`, `.svx`, `.md`],
 
   preprocess: [
-    preprocess(),
+    sveltePreprocess(),
     mdsvex({ rehypePlugins, remarkPlugins, extensions: [`.svx`, `.md`] }),
   ],
 
@@ -63,7 +63,7 @@ export default {
     // https://github.com/janosh/svelte-multiselect/issues/196
     immutable: true,
     // enable direct prop access for vitest unit tests
-    accessors: process.env.TEST,
+    accessors: Boolean(process.env.TEST),
   },
 
   vitePlugin: {

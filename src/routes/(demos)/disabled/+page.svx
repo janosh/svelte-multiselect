@@ -1,4 +1,3 @@
-
 ## Disabled MultiSelect
 
 <label for="disabled">Favorite frontend tool?</label>
