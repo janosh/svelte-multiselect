@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v11.0.0-rc.1](https://github.com/janosh/svelte-multiselect/compare/v10.3.0...v11.0.0-rc.1)
+
+- update `MultiSelect.svelte` for Svelte5 compatibility [`#293`](https://github.com/janosh/svelte-multiselect/pull/293)
+
 #### [v10.3.0](https://github.com/janosh/svelte-multiselect/compare/v10.2.0...v10.3.0)
 
 > 8 April 2024
