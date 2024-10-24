@@ -1,0 +1,10 @@
+name: Publish to NPM
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    uses: janosh/workflows/.github/workflows/npm-publish.yml@main
+    secrets: inherit
