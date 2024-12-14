@@ -1,9 +1,9 @@
 <script lang="ts">
-  interface Props {
-    [key: string]: any
-  }
+  import type { SVGAttributes } from 'svelte/elements'
 
-  let { ...props }: Props = $props();
+  interface Props extends SVGAttributes<EventTarget> {}
+
+  let { ...props }: Props = $props()
 </script>
 
 <svg {...props} fill="currentColor" viewBox="0 0 16 16">
