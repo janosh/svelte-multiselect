@@ -1,23 +1,20 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
+  import type { Snippet } from 'svelte'
 
-  import { spring } from 'svelte/motion'
-
-  
-  
+  import { Spring } from 'svelte/motion'
 
   interface Props {
     // bind to this state and set it to true from parent
-    wiggle?: boolean;
+    wiggle?: boolean
     // intended use case: set max value during wiggle for one of angle, scale, dx, dy through props
-    angle?: number; // try 20
-    scale?: number; // try 1.2
-    dx?: number; // try 10
-    dy?: number; // try 10
-    duration?: number;
-    stiffness?: number;
-    damping?: number;
-    children?: import('svelte').Snippet;
+    angle?: number // try 20
+    scale?: number // try 1.2
+    dx?: number // try 10
+    dy?: number // try 10
+    duration?: number
+    stiffness?: number
+    damping?: number
+    children?: Snippet
   }
 
   let {
@@ -29,18 +26,17 @@
     duration = 200,
     stiffness = 0.05,
     damping = 0.1,
-    children
-  }: Props = $props();
+    children,
+  }: Props = $props()
 
-  let rest_state = { angle: 0, scale: 1, dx: 0, dy: 0 }
-  let store = spring(rest_state, { stiffness, damping })
+  const store = Spring.of(
+    () => (wiggle ? { scale, angle, dx, dy } : { angle: 0, scale: 1, dx: 0, dy: 0 }),
+    { stiffness, damping },
+  )
 
-  run(() => {
-    store.set(wiggle ? { scale, angle, dx, dy } : rest_state)
-  });
-  run(() => {
+  $effect(() => {
     if (wiggle) setTimeout(() => (wiggle = false), duration)
-  });
+  })
 </script>
 
 <span

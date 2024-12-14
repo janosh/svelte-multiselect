@@ -23,7 +23,7 @@
     "update-coverage": "vitest tests/unit --run --coverage && npx istanbul-badges-readme"
   },
   "peerDependencies": {
-    "svelte": "^5.0.0"
+    "svelte": "^5.8.0"
   },
   "devDependencies": {
     "@iconify/svelte": "^4.1.0",
