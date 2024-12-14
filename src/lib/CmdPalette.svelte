@@ -3,17 +3,37 @@
   import { fade } from 'svelte/transition'
   import Select from './MultiSelect.svelte'
 
-  export let actions: Action[]
-  export let triggers: string[] = [`k`]
-  export let close_keys: string[] = [`Escape`]
-  export let fade_duration: number = 200 // in ms
-  export let style: string = `` // for dialog
-  // for span in option slot, has no effect when passing a slot
-  export let span_style: string = ``
-  export let open: boolean = false
-  export let dialog: HTMLDialogElement | null = null
-  export let input: HTMLInputElement | null = null
-  export let placeholder: string = `Filter actions...`
+  
+  interface Props {
+    actions: Action[];
+    triggers?: string[];
+    close_keys?: string[];
+    fade_duration?: number; // in ms
+    style?: string; // for dialog
+    // for span in option slot, has no effect when passing a slot
+    span_style?: string;
+    open?: boolean;
+    dialog?: HTMLDialogElement | null;
+    input?: HTMLInputElement | null;
+    placeholder?: string;
+    children?: import('svelte').Snippet;
+    [key: string]: any
+  }
+
+  let {
+    actions,
+    triggers = [`k`],
+    close_keys = [`Escape`],
+    fade_duration = 200,
+    style = ``,
+    span_style = ``,
+    open = $bindable(false),
+    dialog = $bindable(null),
+    input = $bindable(null),
+    placeholder = `Filter actions...`,
+    children,
+    ...rest
+  }: Props = $props();
 
   type Action = { label: string; action: () => void }
 
@@ -38,9 +58,11 @@
     event.detail.option.action(event.detail.option.label)
     open = false
   }
+
+  const children_render = $derived(children);
 </script>
 
-<svelte:window on:keydown={toggle} on:click={close_if_outside} />
+<svelte:window onkeydown={toggle} onclick={close_if_outside} />
 
 {#if open}
   <dialog open bind:this={dialog} transition:fade={{ duration: fade_duration }} {style}>
@@ -50,19 +72,21 @@
       {placeholder}
       on:add={trigger_action_and_close}
       on:keydown={toggle}
-      {...$$restProps}
-      let:option
+      {...rest}
+      
     >
-      <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
-      <slot>
-        <span style={span_style}>{option.label}</span>
-      </slot>
-    </Select>
+      {#snippet children({ option })}
+            <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
+        {#if children_render}{@render children_render()}{:else}
+          <span style={span_style}>{option.label}</span>
+        {/if}
+                {/snippet}
+        </Select>
   </dialog>
 {/if}
 
 <style>
-  :where(dialog) {
+  :where(:global(dialog)) {
     position: fixed;
     top: 30%;
     border: none;

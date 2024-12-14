@@ -1,23 +1,36 @@
 <script lang="ts">
-  export let option: string
-  export let idx: number | undefined = undefined
-  export let height = `20px`
-  export let gap = `5pt`
+  import { run } from 'svelte/legacy';
 
-  $: lang = option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`)
+  interface Props {
+    option: string;
+    idx?: number | undefined;
+    height?: any;
+    gap?: any;
+  }
 
-  $: src = `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`
+  let {
+    option,
+    idx = undefined,
+    height = `20px`,
+    gap = `5pt`
+  }: Props = $props();
 
-  let hidden = false
+  let lang = $derived(option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`))
+
+  let src = $derived(`https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`)
+
+  let hidden = $state(false)
   // default back to visible every time src changes to see if image loads successfully
-  $: src, (hidden = false)
+  run(() => {
+    src, (hidden = false)
+  });
 </script>
 
 <span style:gap>
   {#if idx !== undefined}
     <strong>{idx + 1}</strong>
   {/if}
-  <img {src} {height} alt={option} {hidden} on:error={() => (hidden = true)} />
+  <img {src} {height} alt={option} {hidden} onerror={() => (hidden = true)} />
   {option}
 </span>
 

@@ -1,13 +1,17 @@
 <script lang="ts">
-  export let option: string
-  export let idx: number | null = null
-  export let style: string | null = null
+  interface Props {
+    option: string;
+    idx?: number | null;
+    style?: string | null;
+  }
+
+  let { option, idx = null, style = null }: Props = $props();
 </script>
 
 <div {style}>
   {#if idx !== null}{idx + 1}{/if}
   {#if typeof CSS !== `undefined` && CSS.supports(`color`, option)}
-    <span style:background={option} />
+    <span style:background={option}></span>
   {/if}
   {option}
 </div>

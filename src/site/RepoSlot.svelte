@@ -1,9 +1,16 @@
 <script lang="ts">
+  import { createBubbler, stopPropagation } from 'svelte/legacy';
+
+  const bubble = createBubbler();
   import type { ObjectOption } from '$lib'
   import { Octocat } from '$lib/icons'
 
-  export let option: ObjectOption
-  export let idx: number
+  interface Props {
+    option: ObjectOption;
+    idx: number;
+  }
+
+  let { option, idx }: Props = $props();
 </script>
 
 <span>
@@ -11,7 +18,7 @@
   <strong>{option.label}</strong>
   <small>
     <a
-      on:click|stopPropagation
+      onclick={stopPropagation(bubble('click'))}
       href="https://github.com/{option.repo_handle}"
       target="_blank"
       rel="noreferrer"

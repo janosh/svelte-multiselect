@@ -7,6 +7,11 @@
   import { demos } from '$site/stores'
   import { CopyButton, GitHubCorner } from 'svelte-zoo'
   import '../app.css'
+  interface Props {
+    children?: import('svelte').Snippet;
+  }
+
+  let { children }: Props = $props();
 
   afterNavigate(() => {
     for (const node of document.querySelectorAll(`pre > code`)) {
@@ -50,7 +55,7 @@
   <a href="." aria-label="Back to index page">&laquo; home</a>
 {/if}
 
-<slot />
+{@render children?.()}
 
 <Footer />
 

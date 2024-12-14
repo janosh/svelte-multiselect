@@ -1,6 +1,6 @@
 import MultiSelect, { type MultiSelectEvents, type Option } from '$lib'
 import { get_label, get_style } from '$lib/utils'
-import { tick } from 'svelte'
+import { tick, mount } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 import { doc_query } from '.'
 import Test2WayBind from './Test2WayBind.svelte'
@@ -13,10 +13,10 @@ const enter = new KeyboardEvent(`keydown`, { key: `Enter` })
 
 test(`2-way binding of activeIndex`, async () => {
   let activeIndex: number = 0
-  const binder = new Test2WayBind({
-    target: document.body,
-    props: { options: [1, 2, 3] },
-  })
+  const binder = mount(Test2WayBind, {
+      target: document.body,
+      props: { options: [1, 2, 3] },
+    })
   binder.$on(`activeIndex-changed`, (event: CustomEvent) => {
     activeIndex = event.detail
   })
@@ -37,10 +37,10 @@ test(`2-way binding of activeIndex`, async () => {
 })
 
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
-  const binder = new Test2WayBind({
-    target: document.body,
-    props: { options: [1, 2, 3] },
-  })
+  const binder = mount(Test2WayBind, {
+      target: document.body,
+      props: { options: [1, 2, 3] },
+    })
 
   // test internal change to activeOption binds outwards
   let active_option: number = 0
@@ -60,10 +60,10 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
 })
 
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
-  const binder = new Test2WayBind({
-    target: document.body,
-    props: { options: [1, 2, 3] },
-  })
+  const binder = mount(Test2WayBind, {
+      target: document.body,
+      props: { options: [1, 2, 3] },
+    })
 
   // test internal change to activeOption binds outwards
   let activeOption: number = 0
@@ -752,10 +752,10 @@ test.each([
 
 test(`2-way binding of selected`, async () => {
   let selected: number[] = []
-  const binder = new Test2WayBind({
-    target: document.body,
-    props: { options: [1, 2, 3] },
-  })
+  const binder = mount(Test2WayBind, {
+      target: document.body,
+      props: { options: [1, 2, 3] },
+    })
   binder.$on(`selected-changed`, (event: CustomEvent) => {
     selected = event.detail
   })
@@ -783,10 +783,10 @@ test.each([
 ])(
   `1-way (outward) binding of value works when maxSelect=%s, expected value=%s`,
   async (maxSelect, expected) => {
-    const binder = new Test2WayBind({
-      target: document.body,
-      props: { options: [1, 2, 3], maxSelect },
-    })
+    const binder = mount(Test2WayBind, {
+          target: document.body,
+          props: { options: [1, 2, 3], maxSelect },
+        })
     let value: number = 0
     binder.$on(`value-changed`, (event: CustomEvent) => {
       value = event.detail
