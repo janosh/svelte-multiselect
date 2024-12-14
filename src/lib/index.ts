@@ -10,21 +10,21 @@ export * from './types'
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
 // exported for testing
 export function scroll_into_view_if_needed_polyfill(
+  this: Element,
   centerIfNeeded: boolean = true,
 ) {
-  const elem = this as Element
-  const observer = new IntersectionObserver(function ([entry]) {
+  const observer = new IntersectionObserver(([entry], obs) => {
     const ratio = entry.intersectionRatio
     if (ratio < 1) {
       const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-      elem.scrollIntoView({
+      this.scrollIntoView({
         block: place,
         inline: place,
       })
     }
-    this.disconnect()
+    obs.disconnect()
   })
-  observer.observe(elem)
+  observer.observe(this)
 
   return observer // return for testing
 }
