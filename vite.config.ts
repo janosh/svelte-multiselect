@@ -1,7 +1,7 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import mdsvexamples from 'mdsvexamples/vite'
 import type { UserConfig } from 'vite'
-import type { UserConfig as VitestConfig } from 'vitest'
+import type { UserConfig as VitestConfig } from 'vitest/node'
 
 export default {
   plugins: [sveltekit(), mdsvexamples],
