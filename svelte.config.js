@@ -6,7 +6,8 @@ import link_headings from 'rehype-autolink-headings'
 import heading_slugs from 'rehype-slug'
 import { sveltePreprocess } from 'svelte-preprocess'
 
-import pkg from './package.json' assert { type: 'json' }
+// eslint-disable-next-line @/quotes
+import pkg from './package.json' with { type: 'json' }
 
 const rehypePlugins = [
   heading_slugs,
