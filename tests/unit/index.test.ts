@@ -31,7 +31,10 @@ test.each([[true, false]])(
   `scrollIntoViewIfNeeded polyfill`,
   (centerIfNeeded) => {
     expect(typeof scroll_into_view_if_needed_polyfill).toBe(`function`)
-    const mock_observer = scroll_into_view_if_needed_polyfill(centerIfNeeded)
+    const mock_observer = scroll_into_view_if_needed_polyfill(
+      document.createElement(`ul`),
+      centerIfNeeded,
+    )
     expect(mock_observer).toBeInstanceOf(IntersectionObserver)
     expect(mock_observer.observe).toBeCalledTimes(1)
     expect(mock_observer.disconnect).toBeCalledTimes(0)

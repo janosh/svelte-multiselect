@@ -1,10 +1,11 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import mdsvexamples from 'mdsvexamples/vite'
-import type { UserConfig } from 'vite'
-import type { UserConfig as VitestConfig } from 'vitest/node'
+import { resolve } from 'path'
+import { defineConfig } from 'vitest/config'
+import { svelteTesting } from '@testing-library/svelte/vite'
 
-export default {
-  plugins: [sveltekit(), mdsvexamples],
+export default defineConfig({
+  plugins: [sveltekit(), svelteTesting(), mdsvexamples],
 
   test: {
     environment: `jsdom`,
@@ -12,6 +13,7 @@ export default {
     coverage: {
       reporter: [`text`, `json-summary`],
     },
+    setupFiles: [resolve(__dirname, `tests/setup.ts`)],
   },
 
   server: {
@@ -22,4 +24,4 @@ export default {
   preview: {
     port: 3000,
   },
-} satisfies UserConfig & { test: VitestConfig }
+})
