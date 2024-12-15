@@ -1,22 +1,21 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { tick, type Snippet } from 'svelte'
   import { fade } from 'svelte/transition'
   import Select from './MultiSelect.svelte'
 
-  
   interface Props {
-    actions: Action[];
-    triggers?: string[];
-    close_keys?: string[];
-    fade_duration?: number; // in ms
-    style?: string; // for dialog
+    actions: Action[]
+    triggers?: string[]
+    close_keys?: string[]
+    fade_duration?: number // in ms
+    style?: string // for dialog
     // for span in option slot, has no effect when passing a slot
-    span_style?: string;
-    open?: boolean;
-    dialog?: HTMLDialogElement | null;
-    input?: HTMLInputElement | null;
-    placeholder?: string;
-    children?: import('svelte').Snippet;
+    span_style?: string
+    open?: boolean
+    dialog?: HTMLDialogElement | null
+    input?: HTMLInputElement | null
+    placeholder?: string
+    children?: Snippet
     [key: string]: any
   }
 
@@ -33,9 +32,9 @@
     placeholder = `Filter actions...`,
     children,
     ...rest
-  }: Props = $props();
+  }: Props = $props()
 
-  type Action = { label: string; action: () => void }
+  type Action = { label: string; action: (label: string) => void }
 
   async function toggle(event: KeyboardEvent) {
     if (triggers.includes(event.key) && event.metaKey && !open) {
@@ -54,12 +53,12 @@
     }
   }
 
-  function trigger_action_and_close(event: CustomEvent<{ option: Action }>) {
-    event.detail.option.action(event.detail.option.label)
+  function trigger_action_and_close({ option }: { option: Action }) {
+    option.action(option.label)
     open = false
   }
 
-  const children_render = $derived(children);
+  const children_render = $derived(children)
 </script>
 
 <svelte:window onkeydown={toggle} onclick={close_if_outside} />
@@ -70,18 +69,19 @@
       options={actions}
       bind:input
       {placeholder}
-      on:add={trigger_action_and_close}
-      on:keydown={toggle}
+      onadd={trigger_action_and_close}
+      onkeydown={toggle}
       {...rest}
-      
     >
       {#snippet children({ option })}
-            <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
-        {#if children_render}{@render children_render()}{:else}
+        <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
+        {#if children_render}
+          {@render children_render()}
+        {:else}
           <span style={span_style}>{option.label}</span>
         {/if}
-                {/snippet}
-        </Select>
+      {/snippet}
+    </Select>
   </dialog>
 {/if}
 
