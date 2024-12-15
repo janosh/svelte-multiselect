@@ -91,7 +91,7 @@
     afterInput,
     spinner,
     disabledIcon,
-    optionItem,
+    option,
     userMsg,
     onblur,
     onclick,
@@ -676,19 +676,19 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as option, idx}
+      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx}
         {@const {
           label,
           disabled = null,
           title = null,
           selectedTitle = null,
           disabledTitle = defaultDisabledTitle,
-        } = option instanceof Object ? option : { label: option }}
+        } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
         <li
           onmousedown={stopPropagation(bubble('mousedown'))}
           onmouseup={stopPropagation((event) => {
-            if (!disabled) add(option, event)
+            if (!disabled) add(optionItem, event)
           })}
           title={disabled
             ? disabledTitle
@@ -707,22 +707,22 @@
           onblur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
-          style="{get_style(option, `option`)} {liOptionStyle}"
+          style="{get_style(optionItem, `option`)} {liOptionStyle}"
         >
-          {#if optionItem}
-            {@render optionItem({
-              option,
+          {#if option}
+            {@render option({
+              option: optionItem,
               idx,
             })}
           {:else if children}
             {@render children({
-              option,
+              option: optionItem,
               idx,
             })}
           {:else if parseLabelsAsHtml}
-            {@html get_label(option)}
+            {@html get_label(optionItem)}
           {:else}
-            {get_label(option)}
+            {get_label(optionItem)}
           {/if}
         </li>
       {/each}

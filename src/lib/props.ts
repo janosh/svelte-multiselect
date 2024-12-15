@@ -59,7 +59,7 @@ export interface MultiSelectSlots<T extends Option = Option> {
   >
   spinner?: Snippet
   disabledIcon?: Snippet
-  optionItem?: Snippet<[{ option: T; idx: number }]>
+  option?: Snippet<[{ option: T; idx: number }]>
   userMsg?: Snippet<
     [{ searchText: string; msgType: false | `dupe` | `create` | `no-match`; msg: null | string }]
   >
