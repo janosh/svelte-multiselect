@@ -1,25 +1,15 @@
-import type { Option, OptionStyle } from './types'
+import type { OptionStyle } from "../types";
 
-// get the label key from an option object or the option itself if it's a string or number
-export const get_label = (opt: Option) => {
-  if (opt instanceof Object) {
-    if (opt.label === undefined) {
-      console.error(
-        `MultiSelect option ${JSON.stringify(
-          opt,
-        )} is an object but has no label key`,
-      )
-    }
-    return opt.label
-  }
-  return `${opt}`
-}
-
-// this function is used extract CSS strings from a {selected, option} style object to be used in the style attribute of the option
-// if the style is a string, it will be returned as is
+/**
+ * This function is used extract CSS strings from a {selected, option} style object to be used in the style attribute of the option.
+ * If the style is a string, it will be returned as is
+ * @param option Option
+ * @param key
+ * @returns CSS string
+ */
 export function get_style(
   option: { style?: OptionStyle; [key: string]: unknown } | string | number,
-  key: 'selected' | 'option' | null = null,
+  key: `selected` | `option` | null = null,
 ) {
   let css_str = ``
   if (![`selected`, `option`, null].includes(key)) {
