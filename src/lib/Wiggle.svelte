@@ -40,8 +40,8 @@
 </script>
 
 <span
-  style:transform="rotate({$store.angle}deg) scale({$store.scale}) translate({$store.dx}px,
-  {$store.dy}px)"
+  style:transform="rotate({store.current.angle}deg) scale({store.current.scale}) translate({store.current.dx}px,
+  {store.current.dy}px)"
 >
   {@render children?.()}
 </span>
