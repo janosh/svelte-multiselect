@@ -4,24 +4,24 @@
  * @param query Search query
  * @param noMatchingOptionsMsg Text for empty node
  */
-export function highlight_matching_nodes(element: HTMLElement, query?: string, noMatchingOptionsMsg?: string) {
+export function highlight_matching_nodes(
+  element: HTMLElement,
+  query?: string,
+  noMatchingOptionsMsg?: string,
+) {
   if (typeof CSS == `undefined` || !CSS.highlights || !query) return // abort if CSS highlight API not supported
 
   // clear previous ranges from HighlightRegistry
   CSS.highlights.clear()
 
-  const tree_walker = document.createTreeWalker(
-    element,
-    NodeFilter.SHOW_TEXT,
-    {
-      acceptNode: (node) => {
-        // don't highlight text in the "no matching options" message
-        if (node?.textContent === noMatchingOptionsMsg)
-          return NodeFilter.FILTER_REJECT
-        return NodeFilter.FILTER_ACCEPT
-      },
+  const tree_walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+    acceptNode: (node) => {
+      // don't highlight text in the "no matching options" message
+      if (node?.textContent === noMatchingOptionsMsg)
+        return NodeFilter.FILTER_REJECT
+      return NodeFilter.FILTER_ACCEPT
     },
-  )
+  })
   const text_nodes: Node[] = []
   let current_node = tree_walker.nextNode()
   while (current_node) {

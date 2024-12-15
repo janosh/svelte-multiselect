@@ -454,12 +454,12 @@
     event.dataTransfer.setData(`text/plain`, `${idx}`)
   }
 
-  let ul_options: HTMLUListElement
+  let ul_options = $state<HTMLUListElement>()
   // highlight text matching user-entered search text in available options
   function highlight_matching_options(
     event: Event & { currentTarget?: HTMLInputElement },
   ) {
-    if (!highlightMatches) return
+    if (!highlightMatches || !ul_options) return
 
     // get input's search query
     const query = (event?.target as HTMLInputElement)?.value.trim().toLowerCase()

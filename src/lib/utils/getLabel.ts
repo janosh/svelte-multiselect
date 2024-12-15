@@ -1,4 +1,4 @@
-import type { Option } from "../types"
+import type { Option } from '../types'
 
 /**
  * Get the label key from an option object or the option itself if it's a string or number

@@ -1,4 +1,4 @@
-import type { OptionStyle } from "../types";
+import type { OptionStyle } from '../types'
 
 /**
  * This function is used extract CSS strings from a {selected, option} style object to be used in the style attribute of the option.
