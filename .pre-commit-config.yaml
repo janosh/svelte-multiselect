@@ -2,7 +2,7 @@ ci:
   autoupdate_schedule: quarterly
   skip: [eslint]
 
-default_stages: [commit]
+default_stages: [pre-commit]
 
 default_install_hook_types: [pre-commit, commit-msg]
 
@@ -33,12 +33,12 @@ repos:
     rev: v2.3.0
     hooks:
       - id: codespell
-        stages: [commit, commit-msg]
+        stages: [pre-commit, commit-msg]
         args: [--ignore-words-list, falsy, --check-filenames]
         exclude: changelog\.md
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.13.0
+    rev: v9.17.0
     hooks:
       - id: eslint
         types: [file]
