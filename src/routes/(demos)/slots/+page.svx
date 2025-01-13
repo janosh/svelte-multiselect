@@ -19,11 +19,16 @@
   maxSelect={5}
   placeholder="What languages do you know?"
   selected={['Python', 'TypeScript', 'Julia']}
-  let:option
 >
-  <LanguageSlot {option} />
-  <Icon slot="expand-icon" let:open icon={open ? 'Collapse' : 'Expand'} />
-  <MinusIcon slot="remove-icon" width="1em" />
+  {#snippet children({ option })}
+    <LanguageSlot {option} />
+  {/snippet}
+  {#snippet expandIcon({ open })}
+    <Icon slot="expand-icon" icon={open ? 'Collapse' : 'Expand'} />
+  {/snippet}
+  {#snippet removeIcon()}
+    <MinusIcon slot="remove-icon" width="1em" />
+  {/snippet}
 </MultiSelect>
 ```
 
@@ -39,7 +44,7 @@
   import { Icon } from 'svelte-zoo'
 
   // local variable used in CollapseIcon on:click callback to close dropdown
-  let open
+  let open = false
 </script>
 
 <MultiSelect
@@ -49,19 +54,26 @@
   selected={[`Python`, `TypeScript`, `Julia`]}
   bind:open
 >
-  <LanguageSlot let:option {option} slot="selected" />
-  <LanguageSlot let:option {option} slot="option" />
-  <button
-    slot="expand-icon"
-    let:open
-    on:click={() => (open = false)}
-    on:keyup|preventDefault={(event) => {
-      if ([`Enter`, `Space`].includes(event.code)) open = !open
-    }}
-  >
-    <Icon icon={open ? `Collapse` : `Expand`} />
-  </button>
-  <span slot="remove-icon" style="width: 2ex;">x</span>
+  {#snippet selectedItem({ option })}
+    <LanguageSlot {option} />
+  {/snippet}
+  {#snippet option({ option })}
+    <LanguageSlot {option} />
+  {/snippet}
+  {#snippet expandIcon({ open: expandOpen })}
+    <button
+      slot="expand-icon"
+      on:click={() => (open = false)}
+      on:keyup|preventDefault={(event) => {
+        if ([`Enter`, `Space`].includes(event.code)) open = !open
+      }}
+    >
+      <Icon icon={expandOpen ? `Collapse` : `Expand`} />
+    </button>
+  {/snippet}
+  {#snippet removeIcon()}
+    <span slot="remove-icon" style="width: 2ex;">x</span>
+  {/snippet}
 </MultiSelect>
 ```
 
@@ -87,6 +99,8 @@
   open
   allowUserOptions
 >
-  <span slot="user-msg" let:msg>{msg} {selected?.includes(searchText) ? '🤦' : '👷'}</span>
+  {#snippet userMsg({ msg })}
+    <span slot="user-msg">{msg} {selected?.includes(searchText) ? '🤦' : '👷'}</span>
+  {/snippet}
 </MultiSelect>
 ```

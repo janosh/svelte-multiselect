@@ -8,7 +8,7 @@
   import { languages } from '$site/options'
   import LanguageSlot from './LanguageSlot.svelte'
 
-  let selected: string[]
+  let selected: string[] = []
 </script>
 
 <pre>selected = {JSON.stringify(selected)}</pre>
@@ -18,10 +18,10 @@
   options={languages}
   placeholder="Take your pick..."
   bind:selected
-  let:idx
-  let:option
 >
-  <LanguageSlot {idx} {option} gap="1ex" />
+  {#snippet children({ idx, option })}
+    <LanguageSlot {idx} {option} gap="1ex" />
+  {/snippet}
 </MultiSelect>
 ```
 
@@ -32,7 +32,7 @@
   import MultiSelect from 'svelte-multiselect'
   import { ml_libs } from '$site/options'
 
-  let value: { label: string, disabled: boolean, preselected: boolean }
+  let value: { label: string, disabled: boolean, preselected: boolean } = null
   let searchText = ''
   let loading = false
   let options = ml_libs
@@ -94,7 +94,9 @@
     }
   }}
 >
-  <RepoSlot let:idx {idx} let:option {option} slot="option" />
+	{#snippet option({ idx, option })}
+    <RepoSlot {idx} {option} />
+  {/snippet}
 </MultiSelect>
 {#if show_confetti}
   <Confetti />
@@ -109,7 +111,7 @@
   import { colors } from '$site/options'
   import ColorSlot from './ColorSlot.svelte'
 
-  let selected: string[]
+  let selected: string[] = []
 </script>
 
 <form
@@ -124,10 +126,10 @@
     placeholder="Pick some colors..."
     allowUserOptions="append"
     required
-    let:idx
-    let:option
   >
-    <ColorSlot {idx} {option} />
+    {#snippet children({ idx, option })}
+      <ColorSlot {idx} {option} />
+    {/snippet}
   </MultiSelect>
   <button>submit</button>
   (due to passing <code>required={true}</code> here, form submission will abort if

@@ -19,9 +19,10 @@
   options={languages}
   maxSelect={5}
   placeholder="What languages do you know?"
-  let:option
 >
-  <LanguageSlot {option} />
+  {#snippet children({ option })}
+    <LanguageSlot {option} />
+  {/snippet}
 </MultiSelect>
 ```
 

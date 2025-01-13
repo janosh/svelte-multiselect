@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { demos } from './stores'
 
   interface Props {
@@ -9,7 +9,7 @@
   let { style = null }: Props = $props();
 
   let is_current = $derived((path: string) => {
-    if (`/${path}` == $page.url.pathname) return `page`
+    if (`/${path}` == page.url.pathname) return `page`
     return undefined
   })
 </script>

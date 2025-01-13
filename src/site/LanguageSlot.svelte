@@ -1,6 +1,4 @@
 <script lang="ts">
-  import { run } from 'svelte/legacy';
-
   interface Props {
     option: string;
     idx?: number | undefined;
@@ -16,13 +14,13 @@
   }: Props = $props();
 
   let lang = $derived(option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`))
-
   let src = $derived(`https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`)
-
   let hidden = $state(false)
+
   // default back to visible every time src changes to see if image loads successfully
-  run(() => {
-    src, (hidden = false)
+  $effect(() => {
+    src
+    hidden = false
   });
 </script>
 
