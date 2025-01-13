@@ -14,7 +14,7 @@ export const _actions: Actions = {
 
     try {
       colors = JSON.parse(colors)
-    } catch (err) {
+    } catch {
       return fail(400, { colors, error: `json` })
     }
 

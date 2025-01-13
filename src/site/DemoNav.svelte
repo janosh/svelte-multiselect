@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { demos } from './stores'
 
-  export let style: string | null = null
-
-  $: is_current = (path: string) => {
-    if (`/${path}` == $page.url.pathname) return `page`
-    return undefined
+  interface Props {
+    style?: string | null;
   }
+
+  let { style = null }: Props = $props();
+
+  let is_current = $derived((path: string) => {
+    if (`/${path}` == page.url.pathname) return `page`
+    return undefined
+  })
 </script>
 
 <nav {style}>

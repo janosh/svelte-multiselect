@@ -8,3 +8,5 @@ dist
 
 # test coverage reports
 coverage
+
+package-lock.json

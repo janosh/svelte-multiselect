@@ -23,7 +23,9 @@
   placeholder="What languages do you know?"
   bind:selected={$language_store}
 >
-  <LanguageSlot let:option {option} let:idx {idx} slot="selected" />
+  {#snippet children({ idx, option })}
+    <LanguageSlot {option} {idx} slot="selected" />
+  {/snippet}
 </MultiSelect>
 ```
 

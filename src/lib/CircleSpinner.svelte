@@ -1,7 +1,5 @@
 <script lang="ts">
-  export let color = `cornflowerblue`
-  export let duration = `1.5s`
-  export let size = `1em`
+  let { color = `cornflowerblue`, duration = `1.5s`, size = `1em` } = $props();
 </script>
 
 <div
@@ -10,7 +8,7 @@
   {color}"
   style:width={size}
   style:height={size}
-/>
+></div>
 
 <style>
   div {

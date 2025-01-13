@@ -28,10 +28,10 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     placeholder="Pick some colors..."
     {name}
     required={2}
-    let:idx
-    let:option
   >
-    <ColorSlot {idx} {option} />
+    {#snippet children({ idx, option })}
+      <ColorSlot {idx} {option} />
+    {/snippet}
   </MultiSelect>
   <button>Submit</button>
   <small>
