@@ -7,7 +7,7 @@ import heading_slugs from 'rehype-slug'
 import { sveltePreprocess } from 'svelte-preprocess'
 
 // eslint-disable-next-line @/quotes
-import pkg from './package.json' with { type: 'json' }
+import pkg from './package.json' assert { type: 'json' }
 
 const rehypePlugins = [
   heading_slugs,

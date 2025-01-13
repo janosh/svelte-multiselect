@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { foods } from '../src/site/options.ts'
+import { foods } from '../src/site/options'
 
 // to run tests in this file, use `npm run test:e2e`
 
