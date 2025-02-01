@@ -19,7 +19,7 @@ export const get_label = (opt: Option) => {
 // if the style is a string, it will be returned as is
 export function get_style(
   option: { style?: OptionStyle; [key: string]: unknown } | string | number,
-  key: 'selected' | 'option' | null = null,
+  key: `selected` | `option` | null = null,
 ) {
   let css_str = ``
   if (![`selected`, `option`, null].includes(key)) {

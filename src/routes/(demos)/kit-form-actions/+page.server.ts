@@ -15,7 +15,7 @@ export const _actions: Actions = {
     try {
       colors = JSON.parse(colors)
     } catch (err) {
-      return fail(400, { colors, error: `json` })
+      return fail(400, { colors, error: `json: ${err}` })
     }
 
     if (!Array.isArray(colors)) {

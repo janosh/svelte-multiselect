@@ -24,7 +24,7 @@ export type DispatchEvents<T = Option> = {
   change: {
     option?: T
     options?: T[]
-    type: 'add' | 'remove' | 'removeAll'
+    type: `add` | `remove` | `removeAll`
   }
   open: { event: Event }
   close: { event: Event }
