@@ -11,7 +11,7 @@
   export let activeIndex: number | null = null
   export let activeOption: Option | null = null
   export let createOptionMsg: string | null = `Create this option...`
-  export let allowUserOptions: boolean | 'append' = false
+  export let allowUserOptions: boolean | `append` = false
   export let allowEmpty: boolean = false // added for https://github.com/janosh/svelte-multiselect/issues/192
   export let autocomplete: string = `off`
   export let autoScroll: boolean = true
@@ -29,7 +29,7 @@
     if (!searchText) return true
     return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
   }
-  export let closeDropdownOnSelect: boolean | 'desktop' = `desktop`
+  export let closeDropdownOnSelect: boolean | `desktop` = `desktop`
   export let form_input: HTMLInputElement | null = null
   export let highlightMatches: boolean = true
   export let id: string | null = null
@@ -83,7 +83,7 @@
   export let value: Option | Option[] | null = null
 
   const selected_to_value = (selected: Option[]) => {
-    value = maxSelect === 1 ? selected[0] ?? null : selected
+    value = maxSelect === 1 ? (selected[0] ?? null) : selected
   }
   const value_to_selected = (value: Option | Option[] | null) => {
     if (maxSelect === 1) selected = value ? [value as Option] : []
@@ -309,7 +309,8 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        selected.includes(activeOption) ? remove(activeOption) : add(activeOption, event)
+        if (selected.includes(activeOption)) remove(activeOption)
+        else add(activeOption, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -462,7 +463,7 @@
 
   // reset form validation when required prop changes
   // https://github.com/janosh/svelte-multiselect/issues/285
-  $: required, form_input?.setCustomValidity(``)
+  $: if (required != null) form_input?.setCustomValidity(``)
 </script>
 
 <svelte:window

@@ -1,31 +1,24 @@
+import stylistic from '@stylistic/eslint-plugin'
 import svelte from 'eslint-plugin-svelte'
-import globals from 'globals'
 import tslint from 'typescript-eslint'
 
-/** @type { import("eslint").Linter.FlatConfig[] } */
+/** @type { import("eslint").Linter.Config[] } */
 export default [
   ...tslint.configs.recommended,
   ...svelte.configs[`flat/recommended`],
+  { plugins: { '@stylistic': stylistic } },
   {
     rules: {
       '@typescript-eslint/no-unused-vars': [
         `error`,
         { argsIgnorePattern: `^_`, varsIgnorePattern: `^_` },
       ],
-      '@/quotes': [`error`, `backtick`, { avoidEscape: true }],
+      '@stylistic/quotes': [`error`, `backtick`, { avoidEscape: true }],
       'svelte/no-at-html-tags': `off`,
     },
   },
   {
-    languageOptions: {
-      ecmaVersion: 2020,
-      globals: {
-        ...globals.browser,
-        ...globals.es2017,
-        ...globals.node,
-        $$Generic: false,
-      },
-    },
+    languageOptions: { ecmaVersion: 2020 },
   },
   {
     files: [`**/*.svelte`],
@@ -36,6 +29,6 @@ export default [
     },
   },
   {
-    ignores: [`build/`, `.svelte-kit/`, `package/`, `vite.config.ts.*`],
+    ignores: [`build/`, `.svelte-kit/`, `package/`],
   },
 ]
