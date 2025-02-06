@@ -1,17 +1,15 @@
 <script lang="ts">
-  import { stopPropagation, preventDefault, createBubbler, handlers } from 'svelte/legacy'
-
-  const bubble = createBubbler()
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
+  import { createBubbler, preventDefault, stopPropagation } from 'svelte/legacy'
 
+  import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
+  import type { MultiSelectProps } from './props'
   import type { Option as T } from './types'
   import { get_label, get_style, highlight_matching_nodes } from './utils'
-  import type { MultiSelectProps } from './props'
-  import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
 
   type Option = $$Generic<T>
 
@@ -350,7 +348,8 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        selected.includes(activeOption) ? remove(activeOption) : add(activeOption, event)
+        if (selected.includes(activeOption)) remove(activeOption)
+        else add(activeOption, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option

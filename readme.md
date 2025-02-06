@@ -123,7 +123,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Whether to `console.error` if dropdown list of options is empty. `allowEmpty={false}` will suppress errors. `allowEmpty={true}` will report a console error if component is not `disabled`, not in `loading` state and doesn't `allowUserOptions`.
 
 1. ```ts
-   allowUserOptions: boolean | 'append' = false
+   allowUserOptions: boolean | `append` = false
    ```
 
    Whether users can enter values that are not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
@@ -194,7 +194,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
 
 1. ```ts
-   closeDropdownOnSelect: boolean | 'desktop' = `desktop`
+   closeDropdownOnSelect: boolean | `desktop` = `desktop`
    ```
 
    One of `true`, `false` or `'desktop'`. Whether to close the dropdown list after selecting a dropdown item. If `true`, component will loose focus and `dropdown` is closed. `'desktop'` means `false` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels). This is to align with the default behavior of many mobile browsers like Safari which close dropdowns after selecting an option while desktop browsers facilitate multi-selection by leaving dropdowns open.
@@ -334,7 +334,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    parseLabelsAsHtml: boolean = false
    ```
 
-   Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).
+   Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/svelte/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).
 
 1. ```ts
    pattern: string | null = null
@@ -509,7 +509,7 @@ For example, here's how you might annoy your users with an alert every time one 
 
 > Note: Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
 
-The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutorial/component-events). This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
+The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutorial/svelte/component-events). This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
 
 ```svelte
 <MultiSelect
