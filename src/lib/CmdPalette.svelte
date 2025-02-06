@@ -16,7 +16,7 @@
     input?: HTMLInputElement | null
     placeholder?: string
     children?: Snippet
-    [key: string]: any
+    [key: string]: unknown
   }
 
   let {
@@ -86,6 +86,7 @@
 {/if}
 
 <style>
+  /* TODO maybe remove global */
   :where(:global(dialog)) {
     position: fixed;
     top: 30%;

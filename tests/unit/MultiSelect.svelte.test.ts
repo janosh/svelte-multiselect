@@ -6,8 +6,10 @@ import MultiSelect, {
   type OptionStyle,
 } from '$lib'
 import { get_label, get_style } from '$lib/utils'
+import { act, fireEvent, render } from '@testing-library/svelte'
 import { tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
+import Test2WayBind from './Test2WayBind.svelte'
 import {
   DataTransfer,
   fireClick,
@@ -25,8 +27,6 @@ import {
   queryAll,
   queryWithFail,
 } from './utils'
-import Test2WayBind from './Test2WayBind.svelte'
-import { act, fireEvent, render } from '@testing-library/svelte'
 
 test(`2-way binding of activeIndex`, async () => {
   let activeIndex: number = 0

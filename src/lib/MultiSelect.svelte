@@ -1,7 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
-  import { createBubbler, preventDefault, stopPropagation } from 'svelte/legacy'
 
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import CircleSpinner from './CircleSpinner.svelte'
@@ -480,9 +479,39 @@
   // reset form validation when required prop changes
   // https://github.com/janosh/svelte-multiselect/issues/285
   $effect(() => {
-    required
+    required = required // trigger effect when required changes
     form_input?.setCustomValidity(``)
   })
+
+  // Add event handling utilities
+  function stopPropagation(fn: (event: Event) => void) {
+    return (event: Event) => {
+      event.stopPropagation()
+      fn(event)
+    }
+  }
+
+  function preventDefault(fn: (event: Event) => void) {
+    return (event: Event) => {
+      event.preventDefault()
+      fn(event)
+    }
+  }
+
+  // Event bubbling helper
+  function bubble(type: string) {
+    return (event: Event) => {
+      const handler = props[`on${type}`]
+      if (handler) {
+        if (Array.isArray(handler)) {
+          handler.forEach((fn) => fn(event))
+        } else {
+          handler(event)
+        }
+      }
+      return true
+    }
+  }
 </script>
 
 <svelte:window
@@ -549,7 +578,7 @@
         ondragstart={dragstart(idx)}
         ondrop={drop(idx)}
         ondragenter={() => (drag_idx = idx)}
-        ondragover={preventDefault(bubble('dragover'))}
+        ondragover={preventDefault(bubble(`dragover`))}
         class:active={drag_idx === idx}
         style="{get_style(option, `selected`)} {liSelectedStyle}"
       >
@@ -685,7 +714,7 @@
         } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
         <li
-          onmousedown={stopPropagation(bubble('mousedown'))}
+          onmousedown={stopPropagation(bubble(`mousedown`))}
           onmouseup={stopPropagation((event) => {
             if (!disabled) add(optionItem, event)
           })}
@@ -739,7 +768,7 @@
             'no-match': noMatchingOptionsMsg,
           }[msgType]}
           <li
-            onmousedown={stopPropagation(bubble('mousedown'))}
+            onmousedown={stopPropagation(bubble(`mousedown`))}
             onmouseup={stopPropagation((event) => {
               if (allowUserOptions) add(searchText as Option, event)
             })}

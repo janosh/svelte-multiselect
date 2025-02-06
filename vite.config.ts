@@ -1,8 +1,8 @@
 import { sveltekit } from '@sveltejs/kit/vite'
+import { svelteTesting } from '@testing-library/svelte/vite'
 import mdsvexamples from 'mdsvexamples/vite'
 import { resolve } from 'path'
 import { defineConfig } from 'vitest/config'
-import { svelteTesting } from '@testing-library/svelte/vite'
 
 export default defineConfig({
   plugins: [sveltekit(), svelteTesting(), mdsvexamples],
