@@ -1,5 +1,11 @@
 <script lang="ts">
-  let { color = `cornflowerblue`, duration = `1.5s`, size = `1em` } = $props();
+  interface Props {
+    color?: string;
+    duration?: string;
+    size?: string;
+  }
+
+  let { color = `cornflowerblue`, duration = `1.5s`, size = `1em` }: Props = $props();
 </script>
 
 <div

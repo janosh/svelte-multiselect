@@ -1,9 +1,21 @@
 <script lang="ts">
   import { tick, type Snippet } from 'svelte'
   import { fade } from 'svelte/transition'
-  import Select from './MultiSelect.svelte'
 
-  interface Props {
+  import Select from './MultiSelect.svelte'
+  import type { MultiSelectProps } from './props'
+  import type { ObjectOption } from './types'
+
+  interface Action extends ObjectOption {
+    label: string
+    action: (label: string) => void
+  }
+
+  interface Props
+    extends Omit<
+      MultiSelectProps<Action>,
+      'options' | 'onadd' | 'onkeydown' | 'placeholder'
+    > {
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
@@ -16,7 +28,6 @@
     input?: HTMLInputElement | null
     placeholder?: string
     children?: Snippet
-    [key: string]: unknown
   }
 
   let {
@@ -33,8 +44,6 @@
     children,
     ...rest
   }: Props = $props()
-
-  type Action = { label: string; action: (label: string) => void }
 
   async function toggle(event: KeyboardEvent) {
     if (triggers.includes(event.key) && event.metaKey && !open) {
