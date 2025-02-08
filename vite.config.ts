@@ -1,11 +1,11 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import { svelteTesting } from '@testing-library/svelte/vite'
 import mdsvexamples from 'mdsvexamples/vite'
-import { resolve } from 'path'
+import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [sveltekit(), svelteTesting(), mdsvexamples],
+  plugins: [sveltekit(), mdsvexamples],
 
   test: {
     environment: `jsdom`,
@@ -15,6 +15,12 @@ export default defineConfig({
     },
     setupFiles: [resolve(__dirname, `tests/setup.ts`)],
   },
+
+  resolve: process.env.TEST
+    ? {
+        conditions: [`browser`],
+      }
+    : undefined,
 
   server: {
     fs: { allow: [`..`] }, // needed to import from $root

@@ -1,5 +1,8 @@
-import '@testing-library/jest-dom/vitest'
-import { beforeAll, vi } from 'vitest'
+import { beforeAll, beforeEach, vi } from 'vitest'
+
+beforeEach(() => {
+  document.body.innerHTML = ``
+})
 
 beforeAll(() => {
   const animation = {
