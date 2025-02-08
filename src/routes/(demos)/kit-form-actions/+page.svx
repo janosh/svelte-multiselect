@@ -41,10 +41,10 @@ HTML.
     required
     invalid={!!form?.error}
     selected={form?.colors ?? [`Red`]}
-    let:idx
-    let:option
   >
-    <ColorSlot {idx} {option} />
+    {#snippet children({ idx, option })}
+      <ColorSlot {idx} {option} />
+    {/snippet}
   </MultiSelect>
   <button>Submit</button>
   <small>

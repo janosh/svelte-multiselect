@@ -1,9 +1,13 @@
 <script lang="ts">
   import Icon from '@iconify/svelte'
 
-  export let option: string
-  export let pack = `octicon`
-  export let gap = `9pt`
+  interface Props {
+    option: string;
+    pack?: any;
+    gap?: any;
+  }
+
+  let { option, pack = `octicon`, gap = `9pt` }: Props = $props();
 </script>
 
 <span style:gap>

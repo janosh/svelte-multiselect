@@ -1,5 +1,5 @@
 import { CmdPalette } from '$lib'
-import { tick } from 'svelte'
+import { flushSync, mount } from 'svelte'
 import { expect, test, vi } from 'vitest'
 import { doc_query } from '.'
 
@@ -8,7 +8,7 @@ const actions = [{ label: `action 1`, action: vi.fn() }]
 test.each([[[`k`]], [[`o`]], [[`k`, `o`]]])(
   `opens the dialog on cmd+ custom trigger keys`,
   async (triggers) => {
-    new CmdPalette({ target: document.body, props: { triggers, actions } })
+    mount(CmdPalette, { target: document.body, props: { triggers, actions } })
 
     // dialog should initially be absent
     expect(document.querySelector(`dialog`)).toBe(null)
@@ -17,7 +17,8 @@ test.each([[[`k`]], [[`o`]], [[`k`, `o`]]])(
     window.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: triggers[0], metaKey: true }),
     )
-    await tick()
+    flushSync()
+
     expect(doc_query(`dialog`)).toBeTruthy()
   },
 )
@@ -25,13 +26,19 @@ test.each([[[`k`]], [[`o`]], [[`k`, `o`]]])(
 test(`calls the action when an option is selected`, async () => {
   const spy = vi.fn()
   const actions = [{ label: `action 1`, action: spy }]
-  new CmdPalette({ target: document.body, props: { open: true, actions } })
+
+  mount(CmdPalette, { target: document.body, props: { open: true, actions } })
 
   const input = doc_query(`dialog div.multiselect input[autocomplete]`)
   // press down arrow, then enter to select the first action
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
-  await tick()
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
+  input.dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+  )
+  flushSync()
+  input.dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+  )
+  flushSync()
 
   expect(spy).toHaveBeenCalledOnce()
   expect(spy).toHaveBeenCalledWith(actions[0].label)
@@ -40,25 +47,29 @@ test(`calls the action when an option is selected`, async () => {
 test.each([[[`Escape`]], [[`x`]], [[`Escape`, `x`]]])(
   `closes the dialog on close keys`,
   async (close_keys) => {
-    const component = new CmdPalette({
+    const props = $state({ open: true, close_keys, actions })
+
+    mount(CmdPalette, {
       target: document.body,
-      props: { open: true, close_keys, actions },
+      props,
     })
 
     const dialog = doc_query(`dialog`)
     expect(dialog).toBeTruthy()
 
     window.dispatchEvent(new KeyboardEvent(`keydown`, { key: close_keys[0] }))
-    expect(component.open).toBe(false)
+    expect(props.open).toBe(false)
     // TODO somehow dialog isn't removed from the DOM
     // expect(document.querySelector(`dialog`)).toBe(null)
   },
 )
 
 test(`closes the dialog on click outside`, async () => {
-  const component = new CmdPalette({
+  const props = $state({ open: true, actions })
+
+  mount(CmdPalette, {
     target: document.body,
-    props: { open: true, actions },
+    props,
   })
 
   const dialog = doc_query(`dialog`)
@@ -68,5 +79,5 @@ test(`closes the dialog on click outside`, async () => {
   const click = new MouseEvent(`click`, { bubbles: true })
   document.body.dispatchEvent(click)
 
-  expect(component.open).toBe(false)
+  expect(props.open).toBe(false)
 })

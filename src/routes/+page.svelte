@@ -6,15 +6,17 @@
 
 <main>
   <Readme>
-    <Examples slot="examples" />
-    <svelte:fragment slot="nav">
+    {#snippet examples()}
+      <Examples />
+    {/snippet}
+    {#snippet nav()}
       <h2>📝 &thinsp; More examples</h2>
       <p>
         Some more in-depth examples for specific features of
         <code>svelte-multiselect</code>:
       </p>
       <DemoNav />
-    </svelte:fragment>
+    {/snippet}
   </Readme>
 </main>
 

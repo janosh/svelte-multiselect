@@ -1,23 +1,47 @@
-<svelte:options accessors />
-
 <script lang="ts">
-  import MultiSelect, { type Option } from '$lib'
-  import { createEventDispatcher } from 'svelte'
+  import MultiSelect, { type MultiSelectProps } from '$lib'
 
-  export let activeIndex: number | null = null
-  export let activeOption: Option | null = null
-  export let maxSelect: number | null = null
-  export let options: Option[]
-  export let selected: Option[] = []
-  export let value: Option | Option[] | null = null
+  export type Test2WayBindProps = MultiSelectProps & {
+    onActiveIndexChanged?: (data: MultiSelectProps['activeIndex']) => unknown
+    onActiveOptionChanged?: (data: MultiSelectProps['activeOption']) => unknown
+    onOptionsChanged?: (data: MultiSelectProps['options']) => unknown
+    onSelectedChanged?: (data: MultiSelectProps['selected']) => unknown
+    onValueChanged?: (data: MultiSelectProps['value']) => unknown
+  }
 
-  const dispatch = createEventDispatcher()
+  let {
+    activeIndex = null,
+    activeOption = null,
+    maxSelect = null,
+    options = $bindable(),
+    selected = $bindable([]),
+    value = $bindable(null),
+    breakpoint = $bindable(800),
+    onActiveIndexChanged,
+    onActiveOptionChanged,
+    onOptionsChanged,
+    onSelectedChanged,
+    onValueChanged,
+    ...restProps
+  }: Test2WayBindProps = $props()
 
-  $: dispatch(`activeIndex-changed`, activeIndex)
-  $: dispatch(`activeOption-changed`, activeOption)
-  $: dispatch(`options-changed`, options)
-  $: dispatch(`selected-changed`, selected)
-  $: dispatch(`value-changed`, value)
+  $effect.pre(() => {
+    onActiveIndexChanged?.(activeIndex)
+  })
+  $effect.pre(() => {
+    onActiveOptionChanged?.(activeOption)
+  })
+  $effect.pre(() => {
+    onOptionsChanged?.(options)
+  })
+  $effect.pre(() => {
+    onSelectedChanged?.(selected)
+  })
+  $effect.pre(() => {
+    onValueChanged?.(value)
+  })
+
+  export { activeIndex, activeOption, breakpoint, maxSelect, options, selected, value }
 </script>
 
 <MultiSelect
@@ -27,5 +51,5 @@
   bind:options
   bind:selected
   bind:value
-  {...$$props}
+  {...restProps}
 />

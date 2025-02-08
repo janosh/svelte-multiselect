@@ -2,6 +2,7 @@ export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CmdPalette } from './CmdPalette.svelte'
 export { default as MultiSelect, default } from './MultiSelect.svelte'
 export { default as Wiggle } from './Wiggle.svelte'
+export * from './props'
 export * from './types'
 
 // Firefox lacks support for scrollIntoViewIfNeeded (https://caniuse.com/scrollintoviewifneeded).
@@ -10,21 +11,21 @@ export * from './types'
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
 // exported for testing
 export function scroll_into_view_if_needed_polyfill(
+  element: Element,
   centerIfNeeded: boolean = true,
 ) {
-  const elem = this as Element
-  const observer = new IntersectionObserver(function ([entry]) {
+  const observer = new IntersectionObserver(([entry], obs) => {
     const ratio = entry.intersectionRatio
     if (ratio < 1) {
       const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-      elem.scrollIntoView({
+      element.scrollIntoView({
         block: place,
         inline: place,
       })
     }
-    this.disconnect()
+    obs.disconnect()
   })
-  observer.observe(elem)
+  observer.observe(element)
 
   return observer // return for testing
 }
@@ -34,5 +35,7 @@ if (
   !Element.prototype?.scrollIntoViewIfNeeded &&
   typeof IntersectionObserver !== `undefined`
 ) {
-  Element.prototype.scrollIntoViewIfNeeded = scroll_into_view_if_needed_polyfill
+  Element.prototype.scrollIntoViewIfNeeded = function scrollIntoViewIfNeeded() {
+    scroll_into_view_if_needed_polyfill(this)
+  }
 }
