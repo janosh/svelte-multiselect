@@ -6,6 +6,9 @@ node_modules
 build
 dist
 
+# test results
+test-results
+
 # test coverage reports
 coverage
 
