@@ -10,12 +10,13 @@
   }
 
   let {
-    activeIndex = $bindable(null),
-    activeOption = $bindable(null),
+    activeIndex = null,
+    activeOption = null,
     maxSelect = null,
     options = $bindable(),
     selected = $bindable([]),
     value = $bindable(null),
+    breakpoint = $bindable(800),
     onActiveIndexChanged,
     onActiveOptionChanged,
     onOptionsChanged,
@@ -24,23 +25,23 @@
     ...restProps
   }: Test2WayBindProps = $props()
 
-  $effect(() => {
+  $effect.pre(() => {
     onActiveIndexChanged?.(activeIndex)
   })
-  $effect(() => {
+  $effect.pre(() => {
     onActiveOptionChanged?.(activeOption)
   })
-  $effect(() => {
+  $effect.pre(() => {
     onOptionsChanged?.(options)
   })
-  $effect(() => {
+  $effect.pre(() => {
     onSelectedChanged?.(selected)
   })
-  $effect(() => {
+  $effect.pre(() => {
     onValueChanged?.(value)
   })
 
-  export { activeIndex, activeOption, maxSelect, options, selected, value }
+  export { activeIndex, activeOption, breakpoint, maxSelect, options, selected, value }
 </script>
 
 <MultiSelect

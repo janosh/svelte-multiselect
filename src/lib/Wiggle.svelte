@@ -34,7 +34,7 @@
     { stiffness, damping },
   )
 
-  $effect(() => {
+  $effect.pre(() => {
     if (wiggle) setTimeout(() => (wiggle = false), duration)
   })
 </script>

@@ -1,68 +1,56 @@
+import { flushSync, mount } from 'svelte'
+import { describe, expect, test, vi } from 'vitest'
+
 import MultiSelect, {
   type MultiSelectComponentEvents,
   type MultiSelectProps,
-  type ObjectOption,
   type Option,
   type OptionStyle,
 } from '$lib'
 import { get_label, get_style } from '$lib/utils'
-import { act, fireEvent, render } from '@testing-library/svelte'
-import { tick } from 'svelte'
-import { describe, expect, test, vi } from 'vitest'
-import Test2WayBind from './Test2WayBind.svelte'
-import {
-  DataTransfer,
-  fireClick,
-  fireDrop,
-  fireFocus,
-  fireInput,
-  fireKeyDown,
-  fireKeyDownArrowDown,
-  fireKeyDownArrowUp,
-  fireKeyDownEnter,
-  fireKeyDownTab,
-  fireMouseOver,
-  fireMouseUp,
-  query,
-  queryAll,
-  queryWithFail,
-} from './utils'
 
-test(`2-way binding of activeIndex`, async () => {
-  let activeIndex: number = 0
+import { doc_query } from '.'
+import Test2WayBind, { type Test2WayBindProps } from './Test2WayBind.svelte'
 
-  const { component } = render(Test2WayBind, {
+const mouseup = new MouseEvent(`mouseup`, { bubbles: true })
+const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
+const input_event = new InputEvent(`input`, { bubbles: true })
+const arrow_down = new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true })
+const enter = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
+
+test(`2-way binding of activeIndex`, () => {
+  const props = $state<MultiSelectProps>({
+    options: [1, 2, 3],
+    activeIndex: 0,
+  })
+
+  mount(MultiSelect, {
     target: document.body,
-    props: {
-      options: [1, 2, 3],
-      onActiveIndexChanged: (data) => {
-        activeIndex = data!
-      },
-    },
+    props
   })
 
   // test internal changes to activeIndex bind outwards
   for (const idx of [1, 2]) {
-    const li = queryWithFail(`ul.options li:nth-child(${idx})`)
-    await fireMouseOver(li)
-    expect(activeIndex).toEqual(idx - 1)
+    const li = doc_query(`ul.options li:nth-child(${idx})`)
+    li.dispatchEvent(mouseover)
+    flushSync()
+
+    expect(props.activeIndex).toEqual(idx - 1)
   }
 
   // test external changes to activeIndex bind inwards
-  await act(() => {
-    activeIndex = 2
-    component.activeIndex = activeIndex
-  })
+  props.activeIndex = 2
+  flushSync()
 
-  expect(queryWithFail(`ul.options > li.active`).textContent?.trim()).toBe(`3`)
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`3`)
 })
 
-test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
+test(`1-way binding of activeOption and hovering an option makes it active`, () => {
   // test internal change to activeOption binds outwards
   let activeOption: Option = 0
   const cb = vi.fn()
 
-  render(Test2WayBind, {
+  mount(Test2WayBind, {
     target: document.body,
     props: {
       options: [1, 2, 3],
@@ -73,20 +61,21 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
     },
   })
 
-  const first_option = queryWithFail(`ul.options > li`)
-  await fireMouseOver(first_option)
+  const firstOption = doc_query(`ul.options > li`)
+  firstOption.dispatchEvent(mouseover)
+  flushSync()
 
   expect(activeOption).toBe(1)
-  expect(cb).toBeCalledTimes(2) // initial call & change call
-  expect(cb.mock.calls[1][0]).toBe(1)
+  expect(cb).toBeCalledTimes(1)
+  expect(cb.mock.calls[0][0].detail).toBe(1)
 })
 
-test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
+test(`1-way binding of activeOption and hovering an option makes it active`, () => {
   // test internal change to activeOption binds outwards
   let activeOption: Option = 0
   const cb = vi.fn()
 
-  render(Test2WayBind, {
+  mount(Test2WayBind, {
     target: document.body,
     props: {
       options: [1, 2, 3],
@@ -97,28 +86,30 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
     },
   })
 
-  const first_option = queryWithFail(`ul.options > li`)
-  await fireMouseOver(first_option)
+  const first_option = doc_query(`ul.options > li`)
+  first_option.dispatchEvent(mouseover)
+  flushSync()
 
   expect(activeOption).toBe(1)
-  expect(cb).toBeCalledTimes(2) // initial call & change call
+  expect(cb).toBeCalledTimes(1)
 })
 
 test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
   const defaultDisabledTitle = `Not selectable`
   const special_disabled_title = `Special disabled title`
-  const options = [1, 2, 3].map<Option>((el) => ({
+  const options = [1, 2, 3].map((el) => ({
     label: el,
     disabled: true,
     disabledTitle: el > 1 ? undefined : special_disabled_title,
   }))
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { options, defaultDisabledTitle },
   })
 
-  const lis = queryAll<HTMLLIElement>(`ul.options > li`)
+  const lis = document.querySelectorAll<HTMLLIElement>(`ul.options > li`)
+
   expect(lis.length).toBe(3)
   expect([...lis].map((li) => li.title)).toEqual([
     special_disabled_title,
@@ -136,7 +127,7 @@ test(`applies DOM attributes to input node`, () => {
   const inputmode = `tel`
   const pattern = `(reg)[ex]`
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: {
       options: [1, 2, 3],
@@ -150,9 +141,9 @@ test(`applies DOM attributes to input node`, () => {
     },
   })
 
-  const lis = queryAll(`ul.options > li`)
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-  const form_input = queryWithFail<HTMLInputElement>(`input.form-control`)
+  const lis = document.querySelectorAll(`ul.options > li`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  const form_input = doc_query<HTMLInputElement>(`input.form-control`)
 
   // make sure the search text filtered the dropdown options
   expect(lis.length).toBe(1)
@@ -166,7 +157,7 @@ test(`applies DOM attributes to input node`, () => {
   expect(input?.pattern).toBe(pattern)
 })
 
-test(`applies custom classes for styling through CSS frameworks`, async () => {
+test(`applies custom classes for styling through CSS frameworks`, () => {
   const prop_elem_map = {
     input: HTMLInputElement,
     liOption: HTMLLIElement,
@@ -181,7 +172,7 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
     Object.keys(prop_elem_map).map((cls) => [`${cls}Class`, cls]),
   )
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     // select=[1] needed for selected list to show up
     // maxSelect={2} needed for maxSelectMsg to show up
@@ -189,44 +180,52 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
   })
 
   // make an option active hovering it so it gets the active class
-  await fireMouseOver(queryWithFail(`ul.options > li`))
+  document.querySelector(`ul.options > li`)?.dispatchEvent(mouseover)
+  flushSync()
 
   for (const [class_name, elem_type] of Object.entries(prop_elem_map)) {
-    const el = queryWithFail(`.${class_name}`)
+    const el = doc_query(`.${class_name}`)
+
     expect(el).toBeInstanceOf(elem_type)
   }
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/111
-test(`arrow down makes first option active`, async () => {
-  render(MultiSelect, {
+test(`arrow down makes first option active`, () => {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], open: true },
   })
 
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-  await fireKeyDownArrowDown(input)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  const active_option = queryWithFail(`ul.options > li.active`)
+  input.dispatchEvent(arrow_down)
+
+  flushSync()
+
+  const active_option = doc_query(`ul.options > li.active`)
+
   expect(active_option.textContent?.trim()).toBe(`1`)
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/112
-test(`can select 1st and last option with arrow and enter key`, async () => {
-  render(MultiSelect, {
-    target: document.body,
-    props: { options: [1, 2, 3] },
-  })
+test(`can select 1st and last option with arrow and enter key`, () => {
+  mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
 
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-  await fireKeyDownArrowDown(input)
-  await fireKeyDownEnter(input)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  const selected = queryWithFail(`ul.selected`)
+  input.dispatchEvent(arrow_down)
+  flushSync()
+  input.dispatchEvent(enter)
+  flushSync()
+  const selected = doc_query(`ul.selected`)
+
   expect(selected.textContent?.trim()).toBe(`1`)
 
-  await fireKeyDownArrowUp(input)
-  await fireKeyDownEnter(input)
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp` }))
+  flushSync()
+  input.dispatchEvent(enter)
+  flushSync()
 
   expect(selected.textContent?.trim()).toBe(`1 3`)
 })
@@ -244,11 +243,11 @@ describe(`bubbles <input> node DOM events`, () => {
     [`touchend`, new TouchEvent(`touchend`)],
     [`touchmove`, new TouchEvent(`touchmove`)],
     [`touchstart`, new TouchEvent(`touchstart`)],
-  ])(`bubbles <input> node "%s" event`, async (name, event) => {
+  ])(`bubbles <input> node "%s" event`, (name, event) => {
     const options = [1, 2, 3]
     const spy = vi.fn()
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: {
         options,
@@ -256,9 +255,9 @@ describe(`bubbles <input> node DOM events`, () => {
       },
     })
 
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-    await fireEvent(input, event)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
+    input.dispatchEvent(event)
     expect(spy, `event type '${name}'`).toHaveBeenCalledTimes(1)
     expect(spy, `event type '${name}'`).toHaveBeenCalledWith(event)
   })
@@ -269,20 +268,20 @@ describe.each([[null], [1]])(`value is `, (maxSelect) => {
     `${
       maxSelect == 1 ? `single` : `multiple`
     } options when maxSelect=${maxSelect}`,
-    async (options) => {
-      const { component: select } = render(Test2WayBind, {
+    (options) => {
+      const select = mount(Test2WayBind, {
         target: document.body,
         props: { options, maxSelect, selected: options },
       })
 
       // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
-      expect(select.value).toEqual(maxSelect == 1 ? options[0] : options)
+      expect(select.value).toBe(maxSelect == 1 ? options[0] : options)
     },
   )
 })
 
-test(`value is null when maxSelect=1 and no option is pre-selected`, async () => {
-  const { component: select } = render(Test2WayBind, {
+test(`value is null when maxSelect=1 and no option is pre-selected`, () => {
+  const select = mount(Test2WayBind, {
     target: document.body,
     props: { options: [1, 2, 3], maxSelect: 1 },
   })
@@ -292,40 +291,35 @@ test(`value is null when maxSelect=1 and no option is pre-selected`, async () =>
 
 test.each([[null], [1]])(
   `2-way binding of value updates selected`,
-  async (maxSelect) => {
-    const { component: select } = render(Test2WayBind, {
+  (maxSelect) => {
+    const select = mount(Test2WayBind, {
       target: document.body,
       props: { options: [1, 2, 3], maxSelect },
     })
 
     expect(select.value).toEqual(maxSelect == 1 ? null : [])
 
+    flushSync()
     if (maxSelect == 1) {
-      await act(() => {
-        select.value = 2
-      })
-
+      select.value = 2
       expect(select.value).toEqual(2)
       expect(select.selected).toEqual([2])
     } else {
-      await act(() => {
-        select.value = [1, 2]
-      })
-
+      select.value = [1, 2]
       expect(select.value).toEqual([1, 2])
       expect(select.selected).toEqual([1, 2])
     }
   },
 )
 
-test(`selected is array of first two options when maxSelect=2`, async () => {
+test(`selected is array of first two options when maxSelect=2`, () => {
   // even though all options have preselected=true
-  const options = [1, 2, 3].map<Option>((itm) => ({
+  const options = [1, 2, 3].map((itm) => ({
     label: itm,
     preselected: true,
   }))
 
-  const { component: select } = render(Test2WayBind, {
+  const select = mount(Test2WayBind, {
     target: document.body,
     props: { options, maxSelect: 2 },
   })
@@ -347,8 +341,7 @@ describe.each([
 
     const form = document.createElement(`form`)
     document.body.appendChild(form)
-
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: form,
       props: { options: [1, 2, 3], required, selected, maxSelect },
     })
@@ -372,7 +365,7 @@ test.each([
 ])(`console error if required > maxSelect`, (required, maxSelect, expected) => {
   console.error = vi.fn()
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], required, maxSelect },
   })
@@ -385,11 +378,11 @@ test.each([
   }
 })
 
-test(`required and non-empty MultiSelect makes form pass validity check`, async () => {
+test(`required and non-empty MultiSelect makes form pass validity check`, () => {
   const form = document.createElement(`form`)
   document.body.appendChild(form)
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: form,
     props: { options: [1, 2, 3], required: true, selected: [1] },
   })
@@ -403,47 +396,45 @@ test.each([
     [`a`, `b`, `c`],
     [{ label: `a` }, { label: `b` }, { label: `c` }],
   ],
-])(
-  `passes selected options=%s to form submission handlers`,
-  async (options) => {
-    const form = document.createElement(`form`)
-    // actual form submission not supported in nodejs, would throw without preventing default behavior
-    form.onsubmit = (event) => event.preventDefault()
-    document.body.appendChild(form)
+])(`passes selected options=%s to form submission handlers`, (options) => {
+  const form = document.createElement(`form`)
+  // actual form submission not supported in nodejs, would throw without preventing default behavior
+  form.onsubmit = (event) => event.preventDefault()
+  document.body.appendChild(form)
 
-    const field_name = `test form submission`
-    // add multiselect to form
-    render(MultiSelect, {
-      target: form,
-      props: { options, name: field_name, required: true },
-    })
-    expect(form.checkValidity()).toBe(false)
+  const field_name = `test form submission`
+  // add multiselect to form
+  mount(MultiSelect, {
+    target: form,
+    props: { options, name: field_name, required: true },
+  })
+  expect(form.checkValidity()).toBe(false)
 
-    // add submit button to form
-    const btn = document.createElement(`button`)
-    form.appendChild(btn)
+  // add submit button to form
+  const btn = document.createElement(`button`)
+  form.appendChild(btn)
 
-    // select 3 options
-    for (const _ of Array(3)) {
-      const li = queryWithFail(`ul.options li`)
-      await fireMouseUp(li)
-    }
-    expect(form.checkValidity()).toBe(true)
+  // select 3 options
+  for (const _ of Array(3)) {
+    const li = doc_query(`ul.options li`)
+    li.dispatchEvent(mouseup)
+    flushSync()
+  }
+  expect(form.checkValidity()).toBe(true)
 
-    await fireClick(btn) // submit form
-    const form_data = new FormData(form)
-    expect(form_data.get(field_name)).toEqual(JSON.stringify(options))
-  },
-)
+  btn.dispatchEvent(new MouseEvent(`click`)) // submit form
+  flushSync()
+  const form_data = new FormData(form)
+  expect(form_data.get(field_name)).toEqual(JSON.stringify(options))
+})
 
-test(`toggling required after invalid form submission allows submitting`, async () => {
+test(`toggling required after invalid form submission allows submitting`, () => {
   // https://github.com/janosh/svelte-multiselect/issues/285
   const form = document.createElement(`form`)
   document.body.appendChild(form)
 
   const props = $state({ options: [1, 2, 3], required: true })
-
-  render(Test2WayBind, {
+  mount(MultiSelect, {
     target: form,
     props,
   })
@@ -452,29 +443,27 @@ test(`toggling required after invalid form submission allows submitting`, async 
   expect(form.checkValidity()).toBe(false)
 
   // toggle required to false
-  await act(() => {
-    props.required = false
-  })
-
+  props.required = false
   // form should now be submittable
   expect(form.checkValidity()).toBe(true)
 })
 
-test(`invalid=true gives top-level div class 'invalid' and input attribute of 'aria-invalid'`, async () => {
-  render(MultiSelect, {
+test(`invalid=true gives top-level div class 'invalid' and input attribute of 'aria-invalid'`, () => {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], invalid: true },
   })
 
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-  expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  const multiselect = queryWithFail(`div.multiselect`)
+  expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
+  const multiselect = doc_query(`div.multiselect`)
   expect(multiselect.classList.contains(`invalid`)).toBe(true)
 
   // assert aria-invalid attribute is removed on selecting a new option
-  const option = queryWithFail(`ul.options > li`)
-  await fireMouseUp(option)
+  const option = doc_query(`ul.options > li`)
+  option.dispatchEvent(mouseup)
+  flushSync()
 
   expect(input.getAttribute(`aria-invalid`)).toBe(null)
 
@@ -482,8 +471,8 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
   expect(multiselect.classList.contains(`invalid`)).toBe(false)
 })
 
-test(`parseLabelsAsHtml renders anchor tags as links`, async () => {
-  render(MultiSelect, {
+test(`parseLabelsAsHtml renders anchor tags as links`, () => {
+  mount(MultiSelect, {
     target: document.body,
     props: {
       options: [`<a href="https://example.com">example.com</a>`],
@@ -491,69 +480,74 @@ test(`parseLabelsAsHtml renders anchor tags as links`, async () => {
     },
   })
 
-  const anchor = queryWithFail(`a[href='https://example.com']`)
+  const anchor = doc_query(`a[href='https://example.com']`)
   expect(anchor).toBeInstanceOf(HTMLAnchorElement)
 })
 
-test(`filters dropdown to show only matching options when entering text`, async () => {
+test(`filters dropdown to show only matching options when entering text`, () => {
   const options = [`foo`, `bar`, `baz`]
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { options },
   })
 
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-  input.value = `ba`
-  await fireInput(input)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  const dropdown = queryWithFail(`ul.options`)
+  input.value = `ba`
+  input.dispatchEvent(input_event)
+  flushSync()
+
+  const dropdown = doc_query(`ul.options`)
   expect(dropdown.textContent?.trim()).toBe(`barbaz`)
 })
 
 // test default case and custom message
 test.each([undefined, `Custom no options message`])(
   `shows noMatchingOptionsMsg when no options match searchText`,
-  async (noMatchingOptionsMsg) => {
-    const { component: select } = render(MultiSelect, {
+  (noMatchingOptionsMsg) => {
+    const select = mount(Test2WayBind, {
       target: document.body,
       props: { options: [1, 2, 3], noMatchingOptionsMsg },
     })
 
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
     input.value = `4`
-    await fireInput(input)
+    input.dispatchEvent(input_event)
+    flushSync()
 
     if (noMatchingOptionsMsg === undefined) {
       noMatchingOptionsMsg = select.noMatchingOptionsMsg
     }
 
-    const dropdown = queryWithFail(`ul.options`)
+    const dropdown = doc_query(`ul.options`)
     expect(dropdown.textContent?.trim()).toBe(noMatchingOptionsMsg)
   },
 )
 
 // https://github.com/janosh/svelte-multiselect/issues/183
-test(`up/down arrow keys can traverse dropdown list even when user entered searchText into input`, async () => {
+test(`up/down arrow keys can traverse dropdown list even when user entered searchText into input`, () => {
   const options = [`foo`, `bar`, `baz`]
-  const { component: select } = render(MultiSelect, {
+  const select = mount(MultiSelect, {
     target: document.body,
     props: { options, allowUserOptions: true },
   })
 
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `ba`
-  await fireInput(input)
+  input.dispatchEvent(input_event)
+  flushSync()
 
-  const dropdown = queryWithFail(`ul.options`)
+  const dropdown = doc_query(`ul.options`)
   expect(dropdown.textContent?.trim()).toBe(`barbaz ${select.createOptionMsg}`)
 
   // loop through the dropdown list twice
   for (const text of [`bar`, `baz`, `bar`, `baz`]) {
     // down arrow key
-    await fireKeyDownArrowDown(input)
-
-    const li_active = queryWithFail(`ul.options li.active`)
+    input.dispatchEvent(arrow_down)
+    flushSync()
+    const li_active = doc_query(`ul.options li.active`)
     expect(li_active.textContent?.trim()).toBe(text)
   }
 })
@@ -564,49 +558,53 @@ test.each([
   [[`foo`, 2, `baz`]],
   [[{ label: `foo` }, { label: `bar` }, { label: `baz` }]],
   [[{ label: `foo`, value: 1, key: `whatever` }]],
-])(`single remove button removes 1 selected option`, async (options) => {
-  render(MultiSelect, {
+])(`single remove button removes 1 selected option`, (options) => {
+  mount(MultiSelect, {
     target: document.body,
     props: { options, selected: [...options] },
   })
 
-  await fireMouseUp(
-    queryWithFail(
+  document
+    .querySelector(
       `ul.selected button[title='Remove ${get_label(options[0])}']`,
-    ),
-  )
+    )
+    ?.dispatchEvent(mouseup)
 
-  const selected = queryWithFail(`ul.selected`)
+  const selected = doc_query(`ul.selected`)
+  flushSync()
+
   expect(selected.textContent?.trim()).toEqual(
     options.slice(1).map(get_label).join(` `),
   )
 })
 
-test(`remove all button removes all selected options and is visible only if more than 1 option is selected`, async () => {
-  render(MultiSelect, {
+test(`remove all button removes all selected options and is visible only if more than 1 option is selected`, () => {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], selected: [1, 2, 3] },
   })
-  let selected = queryWithFail(`ul.selected`)
+  let selected = doc_query(`ul.selected`)
   expect(selected.textContent?.trim()).toEqual(`1 2 3`)
 
-  await fireMouseUp(queryWithFail(`button[title='Remove all']`))
+  document.querySelector(`button[title='Remove all']`)?.dispatchEvent(mouseup)
+  flushSync()
 
-  selected = queryWithFail(`ul.selected`)
+  selected = doc_query(`ul.selected`)
   expect(selected.textContent?.trim()).toEqual(``)
 
   // select 2 options
   for (const _ of Array(2)) {
     expect(
-      query(`button[title='Remove all']`),
+      document.querySelector(`button[title='Remove all']`),
       `remove all button should only appear if more than 1 option is selected`,
     ).toBeNull()
 
-    const li = queryWithFail(`ul.options li`)
-    await fireMouseUp(li)
+    const li = doc_query(`ul.options li`)
+    li.dispatchEvent(mouseup)
+    flushSync()
   }
 
-  expect(queryWithFail(`button[title='Remove all']`)).toBeInstanceOf(
+  expect(doc_query(`button[title='Remove all']`)).toBeInstanceOf(
     HTMLButtonElement,
   )
 })
@@ -616,49 +614,52 @@ test(`removeAllTitle and removeBtnTitle are applied correctly`, () => {
   const removeBtnTitle = `Custom remove button title`
   const options = [1, 2, 3]
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { removeAllTitle, removeBtnTitle, options, selected: options },
   })
+  const remove_all_btn = doc_query<HTMLButtonElement>(`button.remove-all`)
+  const remove_btns = document.querySelectorAll<HTMLButtonElement>(
+    `ul.selected > li > button`,
+  )
 
-  const remove_all_btn = queryWithFail<HTMLButtonElement>(`button.remove-all`)
-  const remove_btns = queryAll<HTMLButtonElement>(`ul.selected > li > button`)
   expect(remove_all_btn.title).toBe(removeAllTitle)
   expect([...remove_btns].map((btn) => btn.title)).toEqual(
     options.map((op) => `${removeBtnTitle} ${op}`),
   )
 })
 
-test(`can't select disabled options`, async () => {
-  const options = [1, 2, 3].map<Option>((el) => ({
+test(`can't select disabled options`, () => {
+  const options = [1, 2, 3].map((el) => ({
     label: el,
     disabled: el === 1,
   }))
+  mount(MultiSelect, { target: document.body, props: { options } })
 
-  render(MultiSelect, {
-    target: document.body,
-    props: { options },
-  })
+  for (const li of document.querySelectorAll(`ul.options > li`)) {
+    li.dispatchEvent(mouseup)
+  }
 
-  queryAll(`ul.options > li`)?.forEach((li) => fireMouseUp(li))
-  await tick()
+  const selected = doc_query(`ul.selected`)
+  flushSync()
 
-  const selected = queryWithFail(`ul.selected`)
   expect(selected.textContent?.trim()).toEqual(`2 3`)
 })
 
 test.each([2, 5, 10])(
   `can't select more than maxSelect options`,
-  async (maxSelect: number) => {
-    render(MultiSelect, {
+  (maxSelect: number) => {
+    mount(MultiSelect, {
       target: document.body,
       props: { options: [...Array(10).keys()], maxSelect },
     })
 
-    queryAll(`ul.options > li`)?.forEach((li) => fireMouseUp(li))
+    document
+      .querySelectorAll(`ul.options > li`)
+      ?.forEach((li) => li.dispatchEvent(mouseup))
 
-    const selected = queryWithFail(`ul.selected`)
-    await tick()
+    const selected = doc_query(`ul.selected`)
+    flushSync()
 
     expect(selected.textContent?.trim()).toEqual(
       [...Array(maxSelect).keys()].join(` `),
@@ -666,21 +667,25 @@ test.each([2, 5, 10])(
   },
 )
 
-test(`closes dropdown on tab out`, async () => {
-  render(MultiSelect, {
+test(`closes dropdown on tab out`, () => {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3] },
   })
   // starts with closed dropdown
-  expect(queryWithFail(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
+  expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 
   // opens dropdown on focus
-  await fireFocus(queryWithFail<HTMLInputElement>(`input[autocomplete]`))
-  expect(query(`ul.options.hidden`)).toBeNull()
+  doc_query<HTMLInputElement>(`input[autocomplete]`).focus()
+  flushSync()
+  expect(document.querySelector(`ul.options.hidden`)).toBeNull()
 
   // closes dropdown again on tab out
-  await fireKeyDownTab(queryWithFail<HTMLInputElement>(`input[autocomplete]`))
-  expect(queryWithFail(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
+  doc_query<HTMLInputElement>(`input[autocomplete]`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Tab` }),
+  )
+  flushSync()
+  expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 })
 
 describe.each([
@@ -694,8 +699,8 @@ describe.each([
       [false, `Another custom duplicate option message`],
     ])(
       `allowUserOptions=true, duplicates=%j`,
-      async (duplicates, duplicateOptionMsg) => {
-        const { component: select } = render(MultiSelect, {
+      (duplicates, duplicateOptionMsg) => {
+        const select = mount(MultiSelect, {
           target: document.body,
           props: {
             options,
@@ -706,11 +711,15 @@ describe.each([
           },
         })
 
-        const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-        input.value = `${selected[0]}`
-        await fireInput(input)
+        const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-        const dropdown = queryWithFail(`ul.options`)
+        input.value = `${selected[0]}`
+        input.dispatchEvent(input_event)
+
+        flushSync()
+
+        const dropdown = doc_query(`ul.options`)
+
         const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
         expect(dropdown.textContent?.trim(), fail_msg).toBe(
           duplicates
@@ -727,49 +736,53 @@ test.each([
   [false, `1`],
 ])(
   `resetFilterOnAdd=%j handles input value correctly after adding an option`,
-  async (resetFilterOnAdd, expected) => {
-    render(MultiSelect, {
+  (resetFilterOnAdd, expected) => {
+    mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], resetFilterOnAdd },
     })
 
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.value = `1`
-    await fireInput(input)
+    input.dispatchEvent(input_event)
+    flushSync()
 
-    const li = queryWithFail(`ul.options li`)
-    await fireMouseUp(li)
+    const li = doc_query(`ul.options li`)
+    li.dispatchEvent(mouseup)
+    flushSync()
 
     expect(input.value).toBe(expected)
   },
 )
 
-test(`2-way binding of selected`, async () => {
+test(`2-way binding of selected`, () => {
   let selected: Option[] = []
-
-  const { component: binder } = render(Test2WayBind, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      onSelectedChanged: (data) => {
-        selected = data!
-      },
+  const props = $state<Test2WayBindProps>({
+    options: [1, 2, 3],
+    onSelectedChanged: (data) => {
+      selected = data!
     },
+  })
+
+  mount(Test2WayBind, {
+    target: document.body,
+    props,
   })
 
   // test internal changes to selected bind outwards
   for (const _ of Array(2)) {
-    const li = queryWithFail(`ul.options li`)
-    await fireMouseUp(li)
+    const li = doc_query(`ul.options li`)
+    li.dispatchEvent(mouseup)
+    flushSync()
   }
+
   expect(selected).toEqual([1, 2])
 
   // test external changes to selected bind inwards
-  await act(() => {
-    selected = [3]
-    binder.selected = selected
-  })
-  expect(queryWithFail(`ul.selected`).textContent?.trim()).toBe(`3`)
+  props.selected = [3]
+  flushSync()
+
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`3`)
 })
 
 test.each([
@@ -778,10 +791,10 @@ test.each([
   [2, [1, 2]],
 ])(
   `1-way (outward) binding of value works when maxSelect=%s, expected value=%s`,
-  async (maxSelect, expected) => {
+  (maxSelect, expected) => {
     let value: Option | Option[] | undefined
 
-    render(Test2WayBind, {
+    mount(Test2WayBind, {
       target: document.body,
       props: {
         options: [1, 2, 3],
@@ -794,8 +807,9 @@ test.each([
 
     // test internal changes bind outwards
     for (const _ of [1, 2]) {
-      const li = queryWithFail(`ul.options li`)
-      await fireMouseUp(li)
+      const li = doc_query(`ul.options li`)
+      li.dispatchEvent(mouseup)
+      flushSync()
     }
 
     expect(value).toEqual(expected)
@@ -812,7 +826,7 @@ test.each([
   (loading, disabled, expected) => {
     console.error = vi.fn()
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options: [], loading, disabled },
     })
@@ -828,111 +842,132 @@ test.each([
 
 test.each([[null], [`custom add option message`]])(
   `arrow keys on empty multiselect toggle createOptionMsg as active with createOptionMsg=%s`,
-  async (createOptionMsg) => {
+  (createOptionMsg) => {
     const props = $state<MultiSelectProps>({
       options: [],
       allowUserOptions: true,
       searchText: `foo`,
     })
 
-    const { component: select } = render(MultiSelect, {
-      target: document.body,
-      props,
-    })
+    mount(MultiSelect, { target: document.body, props })
+    if (createOptionMsg) props.createOptionMsg = createOptionMsg
 
-    if (createOptionMsg) {
-      props.createOptionMsg = createOptionMsg
-    }
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(arrow_down)
+    flushSync()
 
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-    await fireKeyDownArrowDown(input)
+    const li_active = doc_query(`ul.options li.active`)
 
-    const li_active = queryWithFail(`ul.options li.active`)
-
-    const default_msg = select.createOptionMsg
+    const default_msg = props.createOptionMsg
     expect(li_active.textContent?.trim()).toBe(createOptionMsg ?? default_msg)
   },
 )
 
 test(`disabled multiselect has disabled icon`, () => {
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], disabled: true },
   })
 
-  expect(queryWithFail(`svg[data-name='disabled-icon']`)).toBeInstanceOf(
+  expect(doc_query(`svg[data-name='disabled-icon']`)).toBeInstanceOf(
     SVGSVGElement,
   )
 })
 
-test(`can remove user-created selected option which is not in dropdown list`, async () => {
+test(`can remove user-created selected option which is not in dropdown list`, () => {
   // i.e. allowUserOptions=true, not 'append', meaning user options are only selected but
   // aren't added to dropdown list yet remove() should still be able to delete them
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [`1`, `2`, `3`], allowUserOptions: true },
   })
 
   // add a new option created from user text input
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `foo`
-  await fireInput(input)
+  input.dispatchEvent(input_event)
+  flushSync()
 
-  const li = queryWithFail(`ul.options li[title='Create this option...']`)
-  await fireMouseUp(li)
-  expect(queryWithFail(`ul.selected`).textContent?.trim()).toBe(`foo`)
+  const li = doc_query(`ul.options li[title='Create this option...']`)
+  li.dispatchEvent(mouseup)
+  flushSync()
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`foo`)
 
   // remove the new option
-  const li_selected = queryWithFail(`ul.selected li button[title*='Remove']`)
-  await fireMouseUp(li_selected)
-  expect(queryWithFail(`ul.selected`).textContent?.trim()).toBe(``)
+  const li_selected = doc_query(`ul.selected li button[title*='Remove']`)
+  li_selected.dispatchEvent(mouseup)
+  flushSync()
+
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
 })
 
 test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
   `does not render remove buttons if selected.length <= minSelect`,
-  async (selected) => {
+  (selected) => {
     const minSelect = 2
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3, 4], minSelect, selected },
     })
 
-    expect(queryAll(`ul.selected button[title*='Remove']`)).toHaveLength(
-      selected.length > minSelect ? selected.length : 0,
-    )
+    expect(
+      document.querySelectorAll(`ul.selected button[title*='Remove']`),
+    ).toHaveLength(selected.length > minSelect ? selected.length : 0)
   },
 )
 
-test(`dragging selected options across each other changes their order`, async () => {
+class DataTransfer {
+  data: Record<string, string> = {}
+  setData(type: string, val: string) {
+    this.data[type] = val
+  }
+  getData(type: string) {
+    return this.data[type]
+  }
+}
+
+class DragEvent extends MouseEvent {
+  constructor(type: string, props: Record<string, unknown>) {
+    super(type, props)
+    Object.assign(this, props)
+  }
+}
+
+test(`dragging selected options across each other changes their order`, () => {
   // https://github.com/janosh/svelte-multiselect/issues/176
   const options = [1, 2, 3]
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     props: { options, selected: options },
   })
-  expect(queryWithFail(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 
   // test swapping selected options 1 and 2
-  const li = queryWithFail(`ul.selected li`)
+  const li = doc_query(`ul.selected li`)
 
   const dataTransfer = new DataTransfer()
   dataTransfer.setData(`text/plain`, `1`)
-  await fireDrop(li, dataTransfer)
-  expect(queryWithFail(`ul.selected`).textContent?.trim()).toBe(`2 1 3`)
+
+  li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
+  flushSync()
+
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`2 1 3`)
 
   // test swapping them back
-  const li2 = queryWithFail(`ul.selected li:nth-child(2)`)
+  const li2 = doc_query(`ul.selected li:nth-child(2)`)
   dataTransfer.setData(`text/plain`, `0`)
-  await fireDrop(li2, dataTransfer)
-  expect(queryWithFail(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
+
+  li2.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
+  flushSync()
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
 
 test.each([[true], [false]])(
   `console warning when combining sortSelected=%s and selectedOptionsDraggable`,
-  async (sortSelected) => {
+  (sortSelected) => {
     console.warn = vi.fn()
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: {
         options: [1, 2, 3],
@@ -956,10 +991,10 @@ test.each([[true], [false]])(
 describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
   test.each([[`create option`], [``], [null]])(
     `console.error when allowUserOptions is truthy but createOptionMsg is falsy`,
-    async (createOptionMsg) => {
+    (createOptionMsg) => {
       console.error = vi.fn()
 
-      render(MultiSelect, {
+      mount(MultiSelect, {
         target: document.body,
         props: { options: [1, 2, 3], createOptionMsg, allowUserOptions },
       })
@@ -981,10 +1016,10 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
   describe.each([[true], [false]])(`disabled=%s`, (disabled) => {
     test.each([[true], [false]])(
       `console.error when allowEmpty=false and multiselect has no options`,
-      async (allowEmpty) => {
+      (allowEmpty) => {
         console.error = vi.fn()
 
-        render(MultiSelect, {
+        mount(MultiSelect, {
           target: document.body,
           props: { options: [], allowEmpty, disabled, allowUserOptions },
         })
@@ -1004,26 +1039,29 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
 
 test.each([[[1]], [[1, 2, 3]]])(
   `buttons to remove selected options have CSS class "remove"`,
+
   (selected) => {
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options: selected, selected },
     })
 
     // every selected should have a remove button
-    expect(queryAll(`ul.selected button.remove`)).toHaveLength(selected.length)
+    expect(document.querySelectorAll(`ul.selected button.remove`)).toHaveLength(
+      selected.length,
+    )
 
     // if more than 1 selected, there should be a remove-all button
-    expect(queryAll(`button.remove.remove-all`)).toHaveLength(
+    expect(document.querySelectorAll(`button.remove.remove-all`)).toHaveLength(
       selected.length > 1 ? 1 : 0,
     )
   },
 )
 
-test(`errors to console when option is an object but has no label key`, async () => {
+test(`errors to console when option is an object but has no label key`, () => {
   console.error = vi.fn()
 
-  render(MultiSelect, {
+  mount(MultiSelect, {
     target: document.body,
     // @ts-expect-error test invalid option
     props: { options: [{ foo: 42 }] },
@@ -1034,33 +1072,33 @@ test(`errors to console when option is an object but has no label key`, async ()
   )
 })
 
-test(`first matching option becomes active automatically on entering searchText`, async () => {
-  render(MultiSelect, {
+test(`first matching option becomes active automatically on entering searchText`, () => {
+  mount(MultiSelect, {
     target: document.body,
     props: { options: [`foo`, `bar`, `baz`] },
   })
 
-  const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.value = `ba`
   // updates input value
-  await fireInput(input)
-
+  input.dispatchEvent(input_event)
   // triggers handle_keydown callback (which sets activeIndex)
-  await fireKeyDown(input)
+  input.dispatchEvent(new KeyboardEvent(`keydown`))
+  flushSync()
 
-  expect(queryWithFail(`ul.options li.active`).textContent?.trim()).toBe(`bar`)
+  expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`bar`)
 })
 
-test.each<[keyof MultiSelectComponentEvents, string]>([
-  [`onadd`, `ul.options li`],
-  [`onchange`, `ul.options li`],
-  [`onremove`, `ul.selected button.remove`],
-  [`onchange`, `ul.selected button.remove`],
-  [`onremoveAll`, `button.remove-all`],
-  [`onchange`, `button.remove-all`],
+test.each([
+  [`add`, `ul.options li`],
+  [`change`, `ul.options li`],
+  [`remove`, `ul.selected button.remove`],
+  [`change`, `ul.selected button.remove`],
+  [`removeAll`, `button.remove-all`],
+  [`change`, `button.remove-all`],
 ])(
   `fires %s event with expected payload when clicking %s`,
-  async (event_name, selector) => {
+  (event_name, selector, trigger = mouseup) => {
     const is_event = <T extends keyof MultiSelectComponentEvents>(
       name: T,
       event: Parameters<NonNullable<MultiSelectComponentEvents[T]>>[0],
@@ -1086,7 +1124,7 @@ test.each<[keyof MultiSelectComponentEvents, string]>([
       }
     })
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: {
         options: [1, 2, 3],
@@ -1095,7 +1133,8 @@ test.each<[keyof MultiSelectComponentEvents, string]>([
       },
     })
 
-    await fireMouseUp(queryWithFail(selector))
+    doc_query(selector).dispatchEvent(trigger)
+    flushSync()
 
     expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
   },
@@ -1107,25 +1146,25 @@ describe.each([
   [true, JSON.stringify],
   [false, JSON.stringify],
 ])(`MultiSelect component`, (duplicates, key) => {
-  test(`can select the same object option multiple times if duplicates=${duplicates}`, async () => {
-    const options: ObjectOption[] = [
+  test(`can select the same object option multiple times if duplicates=${duplicates}`, () => {
+    const options = [
       { label: `foo`, id: 1 },
       { label: `foo`, id: 2 },
     ]
-
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options, selected: [{ ...options[0] }], duplicates, key },
     })
-
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-    await fireKeyDownArrowDown(input)
-    await fireKeyDownEnter(input)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(arrow_down)
+    flushSync()
+    input.dispatchEvent(enter)
+    flushSync()
 
     const options_equal = key(options[0]) === key(options[1])
     // 2 options can be selected if they're different or duplicates allowed
     const expected = duplicates || !options_equal ? `foo foo` : `foo`
-    const actual = queryWithFail(`ul.selected`).textContent?.trim()
+    const actual = doc_query(`ul.selected`).textContent?.trim()
     const fail_msg = `duplicates=${duplicates}, options_equal=${options_equal}, key=${key.name}`
     expect(actual, fail_msg).toBe(expected)
   })
@@ -1138,8 +1177,8 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
       describe.each([[`make option`], [``]])(
         `createOptionMsg='%s'`,
         (createOptionMsg) => {
-          test(`no .user-msg node is rendered if in a state where noMatchingOptionsMsg or createOptionMsg would be shown but are falsy`, async () => {
-            render(MultiSelect, {
+          test(`no .user-msg node is rendered if in a state where noMatchingOptionsMsg or createOptionMsg would be shown but are falsy`, () => {
+            mount(MultiSelect, {
               target: document.body,
               props: {
                 options: [`foo`],
@@ -1150,21 +1189,23 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
               },
             })
 
-            const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+            const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
             // create a state where no options match the search text
             input.value = `bar`
-            await fireInput(input)
+            input.dispatchEvent(input_event)
+
+            flushSync()
 
             if (allowUserOptions && createOptionMsg) {
-              expect(queryWithFail(`.user-msg`).textContent?.trim()).toBe(
+              expect(doc_query(`.user-msg`).textContent?.trim()).toBe(
                 createOptionMsg,
               )
             } else if (noMatchingOptionsMsg) {
-              expect(queryWithFail(`.user-msg`).textContent?.trim()).toBe(
+              expect(doc_query(`.user-msg`).textContent?.trim()).toBe(
                 noMatchingOptionsMsg,
               )
             } else {
-              expect(query(`.user-msg`)).toBeNull()
+              expect(document.querySelector(`.user-msg`)).toBeNull()
             }
           })
         },
@@ -1175,18 +1216,20 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
 
 test.each([[0], [1], [2], [5], [undefined]])(
   `no more than maxOptions are rendered if a positive integer, all options are rendered undefined or 0`,
-  async (maxOptions) => {
+  (maxOptions) => {
     const options = [`foo`, `bar`, `baz`]
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options, maxOptions },
     })
 
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
-    await fireInput(input)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(input_event)
 
-    expect(queryAll(`ul.options li`)).toHaveLength(
+    flushSync()
+
+    expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
       Math.min(options.length, maxOptions || options.length),
     )
   },
@@ -1194,10 +1237,10 @@ test.each([[0], [1], [2], [5], [undefined]])(
 
 test.each([[true], [-1], [3.5], [`foo`], [{}]])(
   `console.error when maxOptions=%s is not a positive integer or undefined`,
-  async (maxOptions) => {
+  (maxOptions) => {
     console.error = vi.fn()
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       // @ts-expect-error test invalid maxOptions
       props: { options: [1, 2, 3], maxOptions },
@@ -1244,7 +1287,7 @@ test.each([
   ],
 ])(
   `get_style returns and console.errors correctly (%s, %s, %s, %s)`,
-  async (style, key, expected, err_msg = ``) => {
+  (style, key, expected, err_msg = ``) => {
     console.error = vi.fn()
 
     // @ts-expect-error test invalid option
@@ -1280,19 +1323,21 @@ test.each<[OptionStyle, string | null, string]>([
   [{ invalid: `color: green;` } as unknown as OptionStyle, `selected`, ``],
 ])(
   `MultiSelect applies correct styles to <li> elements for different option and key combinations`,
-  async (style, key, expected_css) => {
+  (style, key, expected_css) => {
     const options: Option[] = [{ label: `foo`, style }]
 
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options, selected: key === `selected` ? options : [] },
     })
 
+    flushSync()
+
     if (key === `selected`) {
-      const selected_li = queryWithFail(`ul.selected > li`)
+      const selected_li = doc_query(`ul.selected > li`)
       expect(selected_li.style.cssText).toBe(expected_css)
     } else if (key === `option`) {
-      const option_li = queryWithFail(`ul.options > li`)
+      const option_li = doc_query(`ul.options > li`)
       expect(option_li.style.cssText).toBe(expected_css)
     }
   },
@@ -1307,32 +1352,35 @@ test.each([
   [`inputStyle`, `input[autocomplete]`],
 ])(
   `MultiSelect applies style props to the correct element`,
-  async (prop, css_selector) => {
+  (prop, css_selector) => {
     const css_str = `font-weight: bold; color: red;`
-
-    render(MultiSelect, {
+    mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], [prop]: css_str, selected: [1] },
     })
 
-    const err_msg = `${prop} (${css_selector})`
-    const elem = queryWithFail(css_selector)
+    flushSync()
 
+    const err_msg = `${prop} (${css_selector})`
+    const elem = doc_query(css_selector)
+    flushSync()
     expect(elem?.style.cssText, err_msg).toContain(css_str)
   },
 )
 
 test.each([true, false, `desktop`] as const)(
   `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
-  async (closeDropdownOnSelect) => {
-    const { component: select } = render(MultiSelect, {
+  (closeDropdownOnSelect) => {
+    const select = mount(Test2WayBind, {
       target: document.body,
       props: { options: [1, 2, 3], closeDropdownOnSelect },
     })
 
     // simulate selecting an option
-    const first_option = queryWithFail(`ul.options > li`)
-    await fireMouseUp(first_option)
+    const first_option = doc_query(`ul.options > li`)
+    first_option.dispatchEvent(mouseup)
+
+    flushSync() // wait for DOM updates
 
     const is_desktop = window.innerWidth > select.breakpoint
     const should_be_closed =
@@ -1340,17 +1388,17 @@ test.each([true, false, `desktop`] as const)(
       (closeDropdownOnSelect === `desktop` && !is_desktop)
 
     // check that dropdown is closed when closeDropdownOnSelect = false
-    const dropdown = queryWithFail(`ul.options`)
+    const dropdown = doc_query(`ul.options`)
     expect(dropdown.classList.contains(`hidden`)).toBe(should_be_closed)
 
     // check that input is focused (or not)
-    const input = queryWithFail<HTMLInputElement>(`input[autocomplete]`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     expect(document.activeElement === input).toBe(!should_be_closed)
 
     if (closeDropdownOnSelect === `desktop`) {
       // reduce window width to simulate mobile
       window.innerWidth = 400
-      await fireEvent.resize(window)
+      window.dispatchEvent(new Event(`resize`))
       expect(window.innerWidth).toBeLessThan(select.breakpoint)
 
       // TODO: fix this test, not sure why input is still focused even on mobile

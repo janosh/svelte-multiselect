@@ -122,10 +122,10 @@
   // if maxSelect=1, value is the single item in selected (or null if selected is empty)
   // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
   // https://github.com/janosh/svelte-multiselect/issues/136
-  $effect(() => {
+  $effect.pre(() => {
     selected_to_value(selected)
   })
-  $effect(() => {
+  $effect.pre(() => {
     value_to_selected(value)
   })
 
@@ -185,7 +185,7 @@
   let window_width = $state<number>()
 
   // options matching the current search text
-  $effect(() => {
+  $effect.pre(() => {
     matchingOptions = options.filter(
       (opt) =>
         filterFunc(opt, searchText) &&
@@ -478,7 +478,7 @@
 
   // reset form validation when required prop changes
   // https://github.com/janosh/svelte-multiselect/issues/285
-  $effect(() => {
+  $effect.pre(() => {
     required = required // trigger effect when required changes
     form_input?.setCustomValidity(``)
   })

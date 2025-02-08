@@ -1,38 +1,40 @@
 import { CmdPalette } from '$lib'
+import { flushSync, mount } from 'svelte'
 import { expect, test, vi } from 'vitest'
-import { fireKeyDownArrowDown, fireKeyDownEnter, queryWithFail } from './utils'
-import { fireEvent, render } from '@testing-library/svelte'
+import { doc_query } from '.'
 
 const actions = [{ label: `action 1`, action: vi.fn() }]
 
 test.each([[[`k`]], [[`o`]], [[`k`, `o`]]])(
   `opens the dialog on cmd+ custom trigger keys`,
   async (triggers) => {
-    render(CmdPalette, { target: document.body, props: { triggers, actions } })
+    mount(CmdPalette, { target: document.body, props: { triggers, actions } })
 
     // dialog should initially be absent
     expect(document.querySelector(`dialog`)).toBe(null)
 
     // press cmd + trigger to open the palette
-    await fireEvent(
-      window,
+    window.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: triggers[0], metaKey: true }),
     )
+    flushSync()
 
-    expect(queryWithFail(`dialog`)).toBeTruthy()
+    expect(doc_query(`dialog`)).toBeTruthy()
   },
 )
 
 test(`calls the action when an option is selected`, async () => {
   const spy = vi.fn()
   const actions = [{ label: `action 1`, action: spy }]
-  render(CmdPalette, { target: document.body, props: { open: true, actions } })
 
-  const input = queryWithFail(`dialog div.multiselect input[autocomplete]`)
+  mount(CmdPalette, { target: document.body, props: { open: true, actions } })
 
+  const input = doc_query(`dialog div.multiselect input[autocomplete]`)
   // press down arrow, then enter to select the first action
-  await fireKeyDownArrowDown(input)
-  await fireKeyDownEnter(input)
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  flushSync()
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  flushSync()
 
   expect(spy).toHaveBeenCalledOnce()
   expect(spy).toHaveBeenCalledWith(actions[0].label)
@@ -43,19 +45,15 @@ test.each([[[`Escape`]], [[`x`]], [[`Escape`, `x`]]])(
   async (close_keys) => {
     const props = $state({ open: true, close_keys, actions })
 
-    render(CmdPalette, {
+    mount(CmdPalette, {
       target: document.body,
       props,
     })
 
-    const dialog = queryWithFail(`dialog`)
+    const dialog = doc_query(`dialog`)
     expect(dialog).toBeTruthy()
 
-    await fireEvent(
-      window,
-      new KeyboardEvent(`keydown`, { key: close_keys[0] }),
-    )
-
+    window.dispatchEvent(new KeyboardEvent(`keydown`, { key: close_keys[0] }))
     expect(props.open).toBe(false)
     // TODO somehow dialog isn't removed from the DOM
     // expect(document.querySelector(`dialog`)).toBe(null)
@@ -65,16 +63,17 @@ test.each([[[`Escape`]], [[`x`]], [[`Escape`, `x`]]])(
 test(`closes the dialog on click outside`, async () => {
   const props = $state({ open: true, actions })
 
-  render(CmdPalette, {
+  mount(CmdPalette, {
     target: document.body,
     props,
   })
 
-  const dialog = queryWithFail(`dialog`)
+  const dialog = doc_query(`dialog`)
   expect(dialog).toBeTruthy()
 
   // create a click event outside the dialog
-  await fireEvent(document.body, new MouseEvent(`click`, { bubbles: true }))
+  const click = new MouseEvent(`click`, { bubbles: true })
+  document.body.dispatchEvent(click)
 
   expect(props.open).toBe(false)
 })
