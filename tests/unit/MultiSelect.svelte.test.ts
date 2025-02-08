@@ -15,7 +15,10 @@ import Test2WayBind, { type Test2WayBindProps } from './Test2WayBind.svelte'
 const mouseup = new MouseEvent(`mouseup`, { bubbles: true })
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
 const input_event = new InputEvent(`input`, { bubbles: true })
-const arrow_down = new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true })
+const arrow_down = new KeyboardEvent(`keydown`, {
+  key: `ArrowDown`,
+  bubbles: true,
+})
 const enter = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
 
 test(`2-way binding of activeIndex`, () => {
@@ -26,7 +29,7 @@ test(`2-way binding of activeIndex`, () => {
 
   mount(MultiSelect, {
     target: document.body,
-    props
+    props,
   })
 
   // test internal changes to activeIndex bind outwards

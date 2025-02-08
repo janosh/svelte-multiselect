@@ -31,9 +31,13 @@ test(`calls the action when an option is selected`, async () => {
 
   const input = doc_query(`dialog div.multiselect input[autocomplete]`)
   // press down arrow, then enter to select the first action
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  input.dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+  )
   flushSync()
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  input.dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+  )
   flushSync()
 
   expect(spy).toHaveBeenCalledOnce()
