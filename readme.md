@@ -423,6 +423,11 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: Setting `value` does not rendered state on initial mount, meaning `bind:value` will update local variable `value` whenever internal component state changes but passing a `value` when component first mounts won't be reflected in UI. This is because the source of truth for rendering is `bind:selected`. `selected` is reactive to `value` internally but only on reassignment from initial value. Suggestions for better solutions than [#249](https://github.com/janosh/svelte-multiselect/issues/249) welcome!
 
+1. ```ts
+   fixed: boolean | null = false
+   ```
+   if fixed is set, will cause the dropdown to be rendered with popper.js fixed strategy, enabling the dropdown to expand outside it's parent. This is good for modals / scrollable containers.
+
 ## 🎰 &thinsp; Slots
 
 `MultiSelect.svelte` accepts the following named slots:

@@ -84,14 +84,12 @@
   export let ulOptionsStyle: string | null = null
   export let value: Option | Option[] | null = null
 
-  export let fixed: boolean | undefined = false
+  export let fixed: boolean | null = false
 
-  export let popperOptions: Record<string, any> = {
+  let popperOptions: Record<string, any> = {
     placement: 'bottom-start',
     strategy: fixed ? 'fixed' : 'absolute',
-    modifiers: [
-      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
-    ],
+    modifiers: [{ name: 'flip', options: { fallbackPlacements: ['top-start'] } }],
   }
 
   const [popperRef, popperContent, popperInstance] = createPopperActions(popperOptions)
@@ -102,9 +100,11 @@
     if (outerDiv && fixed) {
       dropdownTransition = 'none'
       dropdownWidth = outerDiv.offsetWidth + 'px'
-      
+
       // needs to be called so that popper can set the bounds to outerDiv once it's been rendered
-      tick().then(()=>{popperInstance()?.update()})
+      tick().then(() => {
+        popperInstance()?.update()
+      })
     }
   })
 
@@ -112,6 +112,13 @@
   $: if (fixed && outerDiv) {
     dropdownWidth = outerDiv.offsetWidth + 'px'
   }
+  function popperContentOptional(node: HTMLElement) {
+    if (fixed) {
+      return popperContent(node)
+    }
+    return {}
+  }
+
   const selected_to_value = (selected: Option[]) => {
     value = maxSelect === 1 ? (selected[0] ?? null) : selected
   }
@@ -666,7 +673,7 @@
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
-      use:popperContent
+      use:popperContentOptional
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"
