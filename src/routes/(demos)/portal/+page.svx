@@ -55,7 +55,7 @@ Below is an example where fixed position is useful, a div that has a fixed heigh
 
 ## With fixed
 
-the fixed prop enables the dropdown to be positioned fixed, and 
+the fixed prop enables the dropdown to be positioned fixed, and
 
 <br />
 
