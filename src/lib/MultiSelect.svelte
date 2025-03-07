@@ -1,11 +1,13 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { createEventDispatcher, onMount, tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
   import { get_label, get_style } from './utils'
+  import { createPopperActions } from 'svelte-popperjs'
+
   type Option = $$Generic<T>
 
   export let activeIndex: number | null = null
@@ -82,6 +84,34 @@
   export let ulOptionsStyle: string | null = null
   export let value: Option | Option[] | null = null
 
+  export let fixed: boolean | undefined = false
+
+  export let popperOptions: Record<string, any> = {
+    placement: 'bottom-start',
+    strategy: fixed ? 'fixed' : 'absolute',
+    modifiers: [
+      { name: 'flip', options: { fallbackPlacements: ['top-start'] } },
+    ],
+  }
+
+  const [popperRef, popperContent, popperInstance] = createPopperActions(popperOptions)
+  // dropdownWidth needs to be dynamically set based off of whether it's rendered in a portal or not
+  let dropdownWidth = '100%'
+  let dropdownTransition = 'all 0.2s'
+  onMount(() => {
+    if (outerDiv && fixed) {
+      dropdownTransition = 'none'
+      dropdownWidth = outerDiv.offsetWidth + 'px'
+      
+      // needs to be called so that popper can set the bounds to outerDiv once it's been rendered
+      tick().then(()=>{popperInstance()?.update()})
+    }
+  })
+
+  // Optional: also update on resize
+  $: if (fixed && outerDiv) {
+    dropdownWidth = outerDiv.offsetWidth + 'px'
+  }
   const selected_to_value = (selected: Option[]) => {
     value = maxSelect === 1 ? (selected[0] ?? null) : selected
   }
@@ -474,6 +504,7 @@
 
 <div
   bind:this={outerDiv}
+  use:popperRef
   class:disabled
   class:single={maxSelect === 1}
   class:open
@@ -635,6 +666,7 @@
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
+      use:popperContent
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"
@@ -642,7 +674,7 @@
       aria-expanded={open}
       aria-disabled={disabled ? `true` : null}
       bind:this={ul_options}
-      style={ulOptionsStyle}
+      style="width: {dropdownWidth}; transition: {dropdownTransition};  {ulOptionsStyle}"
     >
       {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as option, idx}
         {@const {
@@ -849,7 +881,6 @@
     width: 100%;
     position: absolute;
     overflow: auto;
-    transition: all 0.2s;
     box-sizing: border-box;
     background: var(--sms-options-bg, white);
     max-height: var(--sms-options-max-height, 50vh);
