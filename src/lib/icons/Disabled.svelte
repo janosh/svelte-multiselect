@@ -1,9 +1,7 @@
 <script lang="ts">
   import type { SVGAttributes } from 'svelte/elements'
 
-  interface Props extends SVGAttributes<EventTarget> {}
-
-  let { ...props }: Props = $props();
+  let { ...props }: SVGAttributes<EventTarget> = $props()
 </script>
 
 <!-- https://api.iconify.design/fe:disabled.svg -->

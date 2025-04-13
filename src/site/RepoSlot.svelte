@@ -3,12 +3,11 @@
   import { Octocat } from '$lib/icons'
 
   interface Props {
-    option: ObjectOption;
-    idx: number;
-    onclick?: () => void;
+    option: ObjectOption
+    idx: number
+    onclick?: () => void
   }
-
-  let { option, idx, onclick }: Props = $props();
+  let { option, idx, onclick }: Props = $props()
 </script>
 
 <span>
@@ -16,7 +15,7 @@
   <strong>{option.label}</strong>
   <small>
     <a
-      onclick={onclick}
+      {onclick}
       href="https://github.com/{option.repo_handle}"
       target="_blank"
       rel="noreferrer"

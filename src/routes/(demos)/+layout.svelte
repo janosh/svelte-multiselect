@@ -4,11 +4,11 @@
   import { DemoNav } from '$site'
   import { demos } from '$site/stores'
   import { PrevNext } from 'svelte-zoo'
-  interface Props {
-    children?: import('svelte').Snippet;
-  }
 
-  let { children }: Props = $props();
+  interface Props {
+    children?: import('svelte').Snippet
+  }
+  let { children }: Props = $props()
 </script>
 
 <h1>

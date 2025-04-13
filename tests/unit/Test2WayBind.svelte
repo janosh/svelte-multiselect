@@ -2,11 +2,11 @@
   import MultiSelect, { type MultiSelectProps } from '$lib'
 
   export type Test2WayBindProps = MultiSelectProps & {
-    onActiveIndexChanged?: (data: MultiSelectProps['activeIndex']) => unknown
-    onActiveOptionChanged?: (data: MultiSelectProps['activeOption']) => unknown
-    onOptionsChanged?: (data: MultiSelectProps['options']) => unknown
-    onSelectedChanged?: (data: MultiSelectProps['selected']) => unknown
-    onValueChanged?: (data: MultiSelectProps['value']) => unknown
+    onActiveIndexChanged?: (data: MultiSelectProps[`activeIndex`]) => unknown
+    onActiveOptionChanged?: (data: MultiSelectProps[`activeOption`]) => unknown
+    onOptionsChanged?: (data: MultiSelectProps[`options`]) => unknown
+    onSelectedChanged?: (data: MultiSelectProps[`selected`]) => unknown
+    onValueChanged?: (data: MultiSelectProps[`value`]) => unknown
   }
 
   let {
@@ -17,6 +17,7 @@
     selected = $bindable([]),
     value = $bindable(null),
     breakpoint = $bindable(800),
+    open = $bindable(false),
     onActiveIndexChanged,
     onActiveOptionChanged,
     onOptionsChanged,
@@ -41,7 +42,16 @@
     onValueChanged?.(value)
   })
 
-  export { activeIndex, activeOption, breakpoint, maxSelect, options, selected, value }
+  export {
+    activeIndex,
+    activeOption,
+    breakpoint,
+    maxSelect,
+    options,
+    selected,
+    value,
+    open,
+  }
 </script>
 
 <MultiSelect
@@ -51,5 +61,6 @@
   bind:options
   bind:selected
   bind:value
+  bind:open
   {...restProps}
 />

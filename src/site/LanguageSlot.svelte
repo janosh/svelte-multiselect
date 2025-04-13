@@ -1,27 +1,22 @@
 <script lang="ts">
   interface Props {
-    option: string;
-    idx?: number | undefined;
-    height?: any;
-    gap?: any;
+    option: string
+    idx?: number | undefined
+    height?: string
+    gap?: string
   }
-
-  let {
-    option,
-    idx = undefined,
-    height = `20px`,
-    gap = `5pt`
-  }: Props = $props();
+  let { option, idx = undefined, height = `20px`, gap = `5pt` }: Props = $props()
 
   let lang = $derived(option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`))
-  let src = $derived(`https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`)
+  let src = $derived(
+    `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`,
+  )
   let hidden = $state(false)
 
   // default back to visible every time src changes to see if image loads successfully
   $effect(() => {
-    src
-    hidden = false
-  });
+    if (src) hidden = false
+  })
 </script>
 
 <span style:gap>

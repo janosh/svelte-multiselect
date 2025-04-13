@@ -3,10 +3,9 @@
   import { demos } from './stores'
 
   interface Props {
-    style?: string | null;
+    style?: string | null
   }
-
-  let { style = null }: Props = $props();
+  let { style = null }: Props = $props()
 
   let is_current = $derived((path: string) => {
     if (`/${path}` == page.url.pathname) return `page`
@@ -15,7 +14,7 @@
 </script>
 
 <nav {style}>
-  {#each $demos as href, idx}
+  {#each $demos as href, idx (href)}
     {#if idx > 0}<strong>&bull;</strong>{/if}
     <a {href} aria-current={is_current(href)}>{href}</a>
   {/each}

@@ -1,5 +1,4 @@
 import { sveltekit } from '@sveltejs/kit/vite'
-import { svelteTesting } from '@testing-library/svelte/vite'
 import mdsvexamples from 'mdsvexamples/vite'
 import { resolve } from 'node:path'
 import { defineConfig } from 'vitest/config'

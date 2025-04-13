@@ -1,5 +1,3 @@
-/* eslint-disable @/quotes */
-
 /// <reference types="@sveltejs/kit" />
 /// <reference types="mdsvex/globals" />
 

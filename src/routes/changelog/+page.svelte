@@ -1,7 +1,7 @@
 <script lang="ts">
   import Toc from 'svelte-toc'
 
-  let { data } = $props();
+  let { data } = $props()
 </script>
 
 <main>

@@ -1,11 +1,10 @@
 <script lang="ts">
   interface Props {
-    option: string;
-    idx?: number | null;
-    style?: string | null;
+    option: string
+    idx?: number | null
+    style?: string | null
   }
-
-  let { option, idx = null, style = null }: Props = $props();
+  let { option, idx = null, style = null }: Props = $props()
 </script>
 
 <div {style}>

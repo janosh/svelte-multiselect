@@ -12,10 +12,9 @@
   import '../app.css'
 
   interface Props {
-    children?: Snippet;
+    children?: Snippet
   }
-
-  let { children }: Props = $props();
+  let { children }: Props = $props()
 
   afterNavigate(() => {
     for (const node of document.querySelectorAll(`pre > code`)) {
@@ -37,7 +36,7 @@
     (filename) => {
       const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
       return { route: `/${parts.slice(1, -1).join(`/`)}`, filename }
-    }
+    },
   )
 
   if (routes.length < 3) {

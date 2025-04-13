@@ -14,7 +14,7 @@
   interface Props
     extends Omit<
       MultiSelectProps<Action>,
-      'options' | 'onadd' | 'onkeydown' | 'placeholder'
+      `options` | `onadd` | `onkeydown` | `placeholder`
     > {
     actions: Action[]
     triggers?: string[]
