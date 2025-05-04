@@ -1336,6 +1336,27 @@ test.each([
   },
 )
 
+test.each([
+  { prop: `liSelectedStyle`, css_selector: `ul.selected > li` },
+  { prop: `liOptionStyle`, css_selector: `ul.options > li` },
+])(
+  `MultiSelect doesn't add style attribute to element '$css_selector' if '$prop' prop not passed`,
+  async ({ prop, css_selector }) => {
+    new MultiSelect({
+      target: document.body,
+      props: { options: [1, 2, 3], selected: [1] },
+    })
+
+    await tick()
+
+    const elem = doc_query(css_selector)
+    await tick()
+
+    const err_msg = `style attr is equal to '${elem.attributes.getNamedItem('style')?.value}' expected 'null' when ${prop} no passed`
+    expect(elem.hasAttribute('style'), err_msg).toBe(false)
+  },
+)
+
 test.each([true, false, `desktop`] as const)(
   `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
   async (closeDropdownOnSelect) => {

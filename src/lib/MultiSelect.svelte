@@ -519,6 +519,9 @@
     style={ulSelectedStyle}
   >
     {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
+      {@const selectedOptionStyle = [get_style(option, `selected`), liSelectedStyle]
+        .filter(Boolean)
+        .join(' ')}
       <li
         class={liSelectedClass}
         role="option"
@@ -530,7 +533,7 @@
         on:dragenter={() => (drag_idx = idx)}
         on:dragover|preventDefault
         class:active={drag_idx === idx}
-        style="{get_style(option, `selected`)} {liSelectedStyle}"
+        style={selectedOptionStyle === '' ? null : selectedOptionStyle}
       >
         <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
         <slot name="selected" {option} {idx}>
@@ -653,6 +656,9 @@
           disabledTitle = defaultDisabledTitle,
         } = option instanceof Object ? option : { label: option }}
         {@const active = activeIndex === idx}
+        {@const optionStyle = [get_style(option, `option`), liOptionStyle]
+          .filter(Boolean)
+          .join(' ')}
         <li
           on:mousedown|stopPropagation
           on:mouseup|stopPropagation={(event) => {
@@ -675,7 +681,7 @@
           on:blur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
-          style="{get_style(option, `option`)} {liOptionStyle}"
+          style={optionStyle === '' ? null : optionStyle}
         >
           <slot name="option" {option} {idx}>
             <slot {option} {idx}>
