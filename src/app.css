@@ -21,7 +21,7 @@
   --zoo-github-corner-color: var(--night);
   --zoo-github-corner-bg: white;
   --zoo-example-margin: 1em auto;
-  --zoo-example-btn-bg: rgba(255, 255, 255, 0.1);
+  --zoo-example-btn-bg: none;
 }
 body {
   background: var(--night);
