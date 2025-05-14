@@ -182,7 +182,7 @@
   }
 
   let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
-  let window_width = $state<number>()
+  let window_width = $state(0)
 
   // options matching the current search text
   $effect.pre(() => {
@@ -206,6 +206,7 @@
 
   // add an option to selected list
   function add(option: Option, event: Event) {
+    event.stopPropagation()
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
       option = Number(option) as Option // convert to number if possible
@@ -348,7 +349,7 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        if (selected.includes(activeOption)) remove(activeOption)
+        if (selected.includes(activeOption)) remove(activeOption, event)
         else add(activeOption, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
@@ -398,7 +399,7 @@
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       event.stopPropagation()
       // Don't prevent default, allow normal backspace behavior if not removing
-      remove(selected.at(-1) as Option)
+      remove(selected.at(-1) as Option, event)
     }
     // make first matching option active on any keypress (if none of the above special cases match)
     else if (matchingOptions.length > 0 && activeIndex === null) {
@@ -580,7 +581,7 @@
         {/if}
         {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
-            onmouseup={(event) => remove(option, event)}
+            onclick={(event) => remove(option, event)}
             onkeydown={if_enter_or_space((event) => remove(option, event))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
@@ -660,7 +661,7 @@
         type="button"
         class="remove remove-all"
         title={removeAllTitle}
-        onmouseup={remove_all}
+        onclick={remove_all}
         onkeydown={if_enter_or_space(remove_all)}
       >
         {#if removeIcon}
