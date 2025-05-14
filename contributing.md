@@ -12,7 +12,6 @@ To submit a pull request, clone the repo, install dependencies and start the dev
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
 npm install
-npm run package
 npm run dev
 ```
 
