@@ -2,7 +2,7 @@
 
 ```svelte example stackblitz id="disabled-input-title"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   let duplicates = true
   const options = [

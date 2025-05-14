@@ -2,12 +2,9 @@ import userEvent from '@testing-library/user-event'
 import { flushSync, mount, tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 
-import MultiSelect, {
-  type MultiSelectComponentEvents,
-  type MultiSelectProps,
-  type Option,
-  type OptionStyle,
-} from '$lib'
+import type { Option, OptionStyle } from '$lib'
+import MultiSelect from '$lib'
+import type { MultiSelectComponentEvents, MultiSelectProps } from '$lib/props'
 import { get_label, get_style } from '$lib/utils'
 
 import { doc_query } from '.'

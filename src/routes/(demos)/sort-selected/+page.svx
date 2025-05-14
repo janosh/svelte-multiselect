@@ -8,7 +8,7 @@
 
 ```svelte example stackblitz id="default-sort"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { frontend_libs } from '$site/options'
 </script>
 
