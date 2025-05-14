@@ -10,7 +10,7 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot, MinusIcon } from '$site'
+  import { LanguageSnippet, MinusIcon } from '$site'
   import { Icon } from 'svelte-zoo'
 </script>
 
@@ -21,7 +21,7 @@
   selected={['Python', 'TypeScript', 'Julia']}
 >
   {#snippet children({ option })}
-    <LanguageSlot {option} />
+    <LanguageSnippet {option} />
   {/snippet}
   {#snippet expandIcon({ open })}
     <Icon slot="expand-icon" icon={open ? 'Collapse' : 'Expand'} />
@@ -32,7 +32,7 @@
 </MultiSelect>
 ```
 
-<FileDetails paths={[`./LanguageSlot.svelte`, `./MinusIcon.svelte`]} />
+<FileDetails paths={[`./LanguageSnippet.svelte`, `./MinusIcon.svelte`]} />
 
 ### Simple HTML tag as `slot="remove-icon"`
 
@@ -40,7 +40,7 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
   import { Icon } from 'svelte-zoo'
 
   // local variable used in CollapseIcon on:click callback to close dropdown
@@ -55,10 +55,10 @@
   bind:open
 >
   {#snippet selectedItem({ option })}
-    <LanguageSlot {option} />
+    <LanguageSnippet {option} />
   {/snippet}
   {#snippet option({ option })}
-    <LanguageSlot {option} />
+    <LanguageSnippet {option} />
   {/snippet}
   {#snippet expandIcon({ open: expandOpen })}
     <button
@@ -83,7 +83,7 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
   import { Icon } from 'svelte-zoo'
 
   let selected = [`Python`, `TypeScript`, `Julia`]

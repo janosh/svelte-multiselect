@@ -109,7 +109,8 @@
     onchange,
     onopen,
     onclose,
-  }: MultiSelectProps<Option> = $props()
+    ...rest
+  }: MultiSelectProps = $props()
 
   const selected_to_value = (selected: Option[]) => {
     value = maxSelect === 1 ? (selected[0] ?? null) : selected
@@ -623,6 +624,7 @@
       {ontouchend}
       {ontouchmove}
       {ontouchstart}
+      {...rest}
     />
     <!-- the above on:* lines forward potentially useful DOM events -->
     {@render afterInput?.({

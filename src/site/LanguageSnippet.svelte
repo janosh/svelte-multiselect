@@ -31,6 +31,9 @@
   span {
     display: flex;
   }
+  img {
+    transform: translateY(2px);
+  }
   img[alt='Rust'] {
     filter: invert(1);
   }

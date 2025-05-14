@@ -135,6 +135,7 @@ export interface MultiSelectParameters<T extends Option = Option> {
   ulSelectedStyle?: string | null
   ulOptionsStyle?: string | null
   value?: T | T[] | null
+  [key: string]: unknown
 }
 
 export interface MultiSelectProps<T extends Option = Option>

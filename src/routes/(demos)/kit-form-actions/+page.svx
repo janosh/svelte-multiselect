@@ -15,7 +15,7 @@ HTML.
 ```svelte example stackblitz
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { ColorSlot } from '$site'
+  import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
   import { repository } from '$root/package.json'
   import type { ActionData, PageServerData } from './$types'
@@ -43,7 +43,7 @@ HTML.
     selected={form?.colors ?? [`Red`]}
   >
     {#snippet children({ idx, option })}
-      <ColorSlot {idx} {option} />
+      <ColorSnippet {idx} {option} />
     {/snippet}
   </MultiSelect>
   <button>Submit</button>
@@ -58,7 +58,7 @@ HTML.
     <p class="success">
       Good answer! You entered
       {#each form.colors as color}
-        <ColorSlot
+        <ColorSnippet
           option={color}
           style="display: inline-flex; vertical-align: middle; margin: 0 0 0 1ex;"
         />

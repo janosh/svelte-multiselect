@@ -14,3 +14,4 @@ jobs:
     uses: janosh/workflows/.github/workflows/npm-test.yml@main
     with:
       test-cmd: npm run test:unit
+      e2e-test-cmd: playwright test tests/*.ts

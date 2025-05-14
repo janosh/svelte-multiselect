@@ -7,7 +7,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 ```svelte example stackblitz
 <script lang="ts">
   import MultiSelect from '$lib'
-  import { ColorSlot } from '$site'
+  import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 
   async function handle_submit(event: SubmitEvent) {
@@ -30,7 +30,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     required={2}
   >
     {#snippet children({ idx, option })}
-      <ColorSlot {idx} {option} />
+      <ColorSnippet {idx} {option} />
     {/snippet}
   </MultiSelect>
   <button>Submit</button>

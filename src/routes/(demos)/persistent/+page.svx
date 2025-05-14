@@ -14,7 +14,7 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
   import { language_store } from '$site/stores'
 </script>
 
@@ -24,7 +24,7 @@
   bind:selected={$language_store}
 >
   {#snippet children({ idx, option })}
-    <LanguageSlot {option} {idx} slot="selected" />
+    <LanguageSnippet {option} {idx} slot="selected" />
   {/snippet}
 </MultiSelect>
 ```

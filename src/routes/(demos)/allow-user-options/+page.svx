@@ -1,7 +1,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { foods, languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
 
   let selected_empty = []
 </script>
@@ -43,7 +43,7 @@
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
 
   let selected_append = ['Haskell', 'TypeScript']
 </script>
@@ -55,7 +55,7 @@
   createOptionMsg="True polyglots can enter custom languages!"
 >
   {#snippet children({ option })}
-    <LanguageSlot {option} />
+    <LanguageSnippet {option} />
   {/snippet}
 </MultiSelect>
 ```

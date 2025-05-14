@@ -6,7 +6,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import LanguageSlot from './LanguageSlot.svelte'
+  import LanguageSnippet from './LanguageSnippet.svelte'
 
   let selected: string[] = []
 </script>
@@ -20,7 +20,7 @@
   bind:selected
 >
   {#snippet children({ idx, option })}
-    <LanguageSlot {idx} {option} gap="1ex" />
+    <LanguageSnippet {idx} {option} gap="1ex" />
   {/snippet}
 </MultiSelect>
 ```
@@ -66,7 +66,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { frontend_libs } from '$site/options'
-  import RepoSlot from './RepoSlot.svelte'
+  import RepoSnippet from './RepoSnippet.svelte'
   import { Confetti } from 'svelte-zoo'
   import type { ObjectOption } from '$lib'
 
@@ -95,7 +95,7 @@
   }}
 >
  {#snippet option({ idx, option })}
-    <RepoSlot {idx} {option} />
+    <RepoSnippet {idx} {option} />
   {/snippet}
 </MultiSelect>
 {#if show_confetti}
@@ -109,7 +109,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { colors } from '$site/options'
-  import ColorSlot from './ColorSlot.svelte'
+  import ColorSnippet from './ColorSnippet.svelte'
 
   let selected: string[] = []
 </script>
@@ -128,7 +128,7 @@
     required
   >
     {#snippet children({ idx, option })}
-      <ColorSlot {idx} {option} />
+      <ColorSnippet {idx} {option} />
     {/snippet}
   </MultiSelect>
   <button>submit</button>

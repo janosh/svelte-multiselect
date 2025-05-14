@@ -1,6 +1,6 @@
 <script lang="ts">
   import { FileDetails } from 'svelte-zoo'
-  import language_slot_src from '$site/LanguageSlot.svelte?raw'
+  import language_slot_src from '$site/LanguageSnippet.svelte?raw'
   import options_src from '$site/options.ts?raw'
 </script>
 
@@ -12,7 +12,7 @@
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
 </script>
 
 <MultiSelect
@@ -21,13 +21,13 @@
   placeholder="What languages do you know?"
 >
   {#snippet children({ option })}
-    <LanguageSlot {option} />
+    <LanguageSnippet {option} />
   {/snippet}
 </MultiSelect>
 ```
 
 <FileDetails files={[
-  { title: `LanguageSlot.svelte`, content: language_slot_src },
+  { title: `LanguageSnippet.svelte`, content: language_slot_src },
   { title: `options.ts`, content: options_src },
 ]} />
 
