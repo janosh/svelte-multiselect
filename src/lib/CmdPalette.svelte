@@ -21,7 +21,7 @@
     close_keys?: string[]
     fade_duration?: number // in ms
     style?: string // for dialog
-    // for span in option slot, has no effect when passing a slot
+    // for span in option snippet, has no effect when specifying a custom option snippet
     span_style?: string
     open?: boolean
     dialog?: HTMLDialogElement | null

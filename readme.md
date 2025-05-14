@@ -40,34 +40,6 @@
 | ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
 | ![Statements](https://img.shields.io/badge/statements-97.94%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-79.39%25-red.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-97.94%25-brightgreen.svg?style=flat) |
 
-## 📜 &thinsp; Breaking changes
-
-- **8.0.0** (2022-10-22)&nbsp;
-  - Props `selectedLabels` and `selectedValues` were removed. If you were using them, they were equivalent to assigning `bind:selected` to a local variable and then running `selectedLabels = selected.map(option => option.label)` and `selectedValues = selected.map(option => option.value)` if your options were objects with `label` and `value` keys. If they were simple strings/numbers, there was no point in using `selected{Labels,Values}` anyway. [PR 138](https://github.com/janosh/svelte-multiselect/pull/138)
-  - Prop `noOptionsMsg` was renamed to `noMatchingOptionsMsg`. [PR 133](https://github.com/janosh/svelte-multiselect/pull/133).
-- **v8.3.0** (2023-01-25)&nbsp; `addOptionMsg` was renamed to `createOptionMsg` (no major since version since it's rarely used) [sha](https://github.com/janosh/svelte-multiselect/commits).
-- **v9.0.0** (2023-06-01)&nbsp; Svelte bumped from v3 to v4. Also, not breaking but noteworthy: MultiSelect received a default slot that functions as both `"option"` and `"selected"`. If you previously had two identical slots for `"option"` and `"selected"`, you can now remove the `name` from one of them and drop the other:
-
-  ```diff
-  <MultiSelect
-    {options}
-  + let:option
-  >
-  - <SlotComponent let:option {option} slot="selected" />
-  - <SlotComponent let:option {option} slot="option" />
-  + <SlotComponent {option} />
-  </MultiSelect>
-  ```
-
-- **v10.0.0** (2023-06-23)&nbsp; `duplicateFunc()` renamed to `key` in [#238](https://github.com/janosh/svelte-multiselect/pull/238). Signature changed:
-
-  ```diff
-  - duplicateFunc: (op1: T, op2: T) => boolean = (op1, op2) => `${get_label(op1)}`.toLowerCase() === `${get_label(op2)}`.toLowerCase()
-  + key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
-  ```
-
-  Rather than implementing custom equality in `duplicateFunc`, the `key` function is now expected to map options to a unique identifier. `key(op1) === key(op2)` should mean `op1` and `op2` are the same option. `key` can return any type but usually best to return primitives (`string`, `number`, ...) for Svelte keyed each blocks (see [#217](https://github.com/janosh/svelte-multiselect/pull/217)).
-
 ## 🔨 &thinsp; Installation
 
 ```sh
@@ -257,7 +229,7 @@ Full list of props/bindable variables for this component. The `Option` type you 
    loading: boolean = false
    ```
 
-   Whether the component should display a spinner to indicate it's in loading state. Use `<slot name='spinner'>` to specify a custom spinner.
+   Whether the component should display a spinner to indicate it's in loading state. Use `{#snippet spinner()} ... {/snippet}` to specify a custom spinner.
 
 1. ```ts
    matchingOptions: Option[] = []
@@ -423,35 +395,42 @@ Full list of props/bindable variables for this component. The `Option` type you 
 
    If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: Setting `value` does not rendered state on initial mount, meaning `bind:value` will update local variable `value` whenever internal component state changes but passing a `value` when component first mounts won't be reflected in UI. This is because the source of truth for rendering is `bind:selected`. `selected` is reactive to `value` internally but only on reassignment from initial value. Suggestions for better solutions than [#249](https://github.com/janosh/svelte-multiselect/issues/249) welcome!
 
-## 🎰 &thinsp; Slots
+## 🎰 &thinsp; Snippets
 
-`MultiSelect.svelte` accepts the following named slots:
+`MultiSelect.svelte` accepts the following named snippets:
 
-1. `slot="option"`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
-1. `slot="selected"`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
-1. `slot="spinner"`: Custom spinner component to display when in `loading` state. Receives no props.
-1. `slot="disabled-icon"`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `<span slot="disabled-icon" />` or `div` to remove the default disabled icon.
-1. `slot="expand-icon"`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. Receives prop `open: boolean` which is true if the Multiselect dropdown is visible and false if it's hidden.
-1. `slot="remove-icon"`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
-1. `slot="user-msg"`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
+1. `#snippet option({ option, idx })`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
+1. `#snippet selectedItem({ option, idx })`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
+1. `#snippet spinner()`: Custom spinner component to display when in `loading` state. Receives no props.
+1. `#snippet disabledIcon()`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `{#snippet disabledIcon()}{/snippet}` to remove the default disabled icon.
+1. `#snippet expandIcon()`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. Receives prop `open: boolean` which is true if the Multiselect dropdown is visible and false if it's hidden.
+1. `#snippet removeIcon()`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
+1. `#snippet userMsg({ searchText, msgType, msg })`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
    - `searchText`: The text user typed into search input.
    - `msgType: false | 'create' | 'dupe' | 'no-match'`: `'dupe'` means user input is a duplicate of an existing option. `'create'` means user is allowed to convert their input into a new option not previously in the dropdown. `'no-match'` means user input doesn't match any dropdown items and users are not allowed to create new options. `false` means none of the above.
-   - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this slot replaces the default UI for displaying these messages so the slot needs to render them instead (unless purposely not showing a message).
-1. `slot='after-input'`: Placed after the search input. For arbitrary content like icons or temporary messages. Receives props `selected: Option[]`, `disabled: boolean`, `invalid: boolean`, `id: string | null`, `placeholder: string`, `open: boolean`, `required: boolean`. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
+   - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
+1. `snippet='after-input'`: Placed after the search input. For arbitrary content like icons or temporary messages. Receives props `selected: Option[]`, `disabled: boolean`, `invalid: boolean`, `id: string | null`, `placeholder: string`, `open: boolean`, `required: boolean`. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
-Example using several slots:
+Example using several snippets:
 
 ```svelte
-<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]} let:idx let:option>
-   <!-- default slot overrides rendering of both dropdown-listed and selected options -->
-  <span>
-    {idx + 1}
-    {option.label}
-    <span style:background={option.label} style=" width: 1em; height: 1em;" />
-  </span>
-
-  <CustomSpinner slot="spinner">
-  <strong slot="remove-icon">X</strong>
+<MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]}>
+  {#snippet children({ idx, option })}
+    <span style="display: flex; align-items: center; gap: 6pt;">
+      <span
+        style:background={`${option}`}
+        style="border-radius: 50%; width: 1em; height: 1em;"
+      ></span>
+      {idx + 1}
+      {option}
+    </span>
+  {/snippet}
+  {#snippet spinner()}
+    <CustomSpinner />
+  {/snippet}
+  {#snippet removeIcon()}
+    <strong>X</strong>
+  {/snippet}
 </MultiSelect>
 ```
 
@@ -534,7 +513,7 @@ const options = [42, 69]
 // type Option = number
 ```
 
-The inferred type of `Option` is used to enforce type-safety on derived props like `selected` as well as slot components. E.g. you'll get an error when trying to use a slot component that expects a string if your options are objects (see [this comment](https://github.com/janosh/svelte-multiselect/pull/189/files#r1058853697) for example screenshots).
+The inferred type of `Option` is used to enforce type-safety on derived props like `selected` as well as snippets. E.g. you'll get an error when trying to use a snippet that expects a string if your options are objects (see [this comment](https://github.com/janosh/svelte-multiselect/pull/189/files#r1058853697) for example screenshots).
 
 You can also import [the types this component uses](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) for downstream applications:
 
