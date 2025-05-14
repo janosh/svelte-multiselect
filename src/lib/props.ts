@@ -1,5 +1,4 @@
 import type { Snippet } from 'svelte'
-import type { Option } from './types'
 import type {
   FocusEventHandler,
   HTMLInputAttributes,
@@ -7,6 +6,7 @@ import type {
   MouseEventHandler,
   TouchEventHandler,
 } from 'svelte/elements'
+import type { Option } from './types'
 
 export interface MultiSelectNativeEvents {
   onblur?: FocusEventHandler<HTMLInputElement>

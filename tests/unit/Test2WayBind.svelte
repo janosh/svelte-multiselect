@@ -14,7 +14,11 @@
     activeOption = null,
     maxSelect = null,
     options = $bindable(),
-    selected = $bindable([]),
+    selected = $bindable(
+      options
+        ?.filter((opt) => opt instanceof Object && opt?.preselected)
+        .slice(0, maxSelect ?? undefined) ?? [],
+    ),
     value = $bindable(null),
     breakpoint = $bindable(800),
     open = $bindable(false),

@@ -21,6 +21,7 @@
   --zoo-github-corner-color: var(--night);
   --zoo-github-corner-bg: white;
   --zoo-example-margin: 1em auto;
+  --zoo-example-btn-bg: rgba(255, 255, 255, 0.1);
 }
 body {
   background: var(--night);
@@ -41,14 +42,12 @@ a.btn {
   cursor: pointer;
   border: none;
   border-radius: 3pt;
-  background-color: teal;
   padding: 2pt 4pt;
   font-size: 12pt;
   line-height: initial;
   transition: background-color 0.2s;
 }
 :is(button, a.btn):hover {
-  background-color: teal;
   color: white;
 }
 a {
@@ -90,7 +89,7 @@ table {
   border-collapse: collapse;
 }
 table :is(td, th) {
-  border: 1px dashed teal;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
   padding: 5pt 9pt;
 }
 table img {

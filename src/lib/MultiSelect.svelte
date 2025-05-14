@@ -284,7 +284,8 @@
   }
 
   // remove an option from selected list
-  function remove(to_remove: Option) {
+  function remove(to_remove: Option, event: Event) {
+    event.stopPropagation()
     if (selected.length === 0) return
 
     const idx = selected.findIndex((opt) => key(opt) === key(to_remove))
@@ -335,15 +336,15 @@
 
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
-    event.stopPropagation()
-
     // on escape or tab out of input: close options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
+      event.stopPropagation()
       close_dropdown(event)
       searchText = ``
     }
     // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
+      event.stopPropagation()
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
@@ -353,18 +354,22 @@
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
+      } else {
+        // no active option and no search text means the options dropdown is closed
+        // in which case enter means open it
+        open_dropdown(event)
       }
-      // no active option and no search text means the options dropdown is closed
-      // in which case enter means open it
-      else open_dropdown(event)
     }
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
+      event.stopPropagation()
       // if no option is active yet, but there are matching options, make first one active
       if (activeIndex === null && matchingOptions.length > 0) {
+        event.preventDefault() // Prevent scroll only if we handle the key
         activeIndex = 0
         return
       } else if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
+        event.preventDefault() // Prevent scroll only if we handle the key
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
         option_msg_is_active = !option_msg_is_active
@@ -373,7 +378,7 @@
         // if no option is active and no options are matching, do nothing
         return
       }
-      event.preventDefault()
+      event.preventDefault() // Prevent scroll only if we handle the key
       // if none of the above special cases apply, we make next/prev option
       // active with wrap around at both ends
       const increment = event.key === `ArrowUp` ? -1 : 1
@@ -391,15 +396,19 @@
     }
     // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
+      event.stopPropagation()
+      // Don't prevent default, allow normal backspace behavior if not removing
       remove(selected.at(-1) as Option)
     }
     // make first matching option active on any keypress (if none of the above special cases match)
-    else if (matchingOptions.length > 0) {
+    else if (matchingOptions.length > 0 && activeIndex === null) {
+      // Don't stop propagation or prevent default here, allow normal character input
       activeIndex = 0
     }
   }
 
-  function remove_all() {
+  function remove_all(event: Event) {
+    event.stopPropagation()
     onremoveAll?.({ options: selected })
     onchange?.({ options: selected, type: `removeAll` })
     selected = []
@@ -410,12 +419,13 @@
     selected.map(get_label).includes(label),
   )
 
-  const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
-    if ([`Enter`, `Space`].includes(event.code)) {
-      event.preventDefault()
-      handler()
+  const if_enter_or_space =
+    (handler: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
+      if ([`Enter`, `Space`].includes(event.code)) {
+        event.preventDefault()
+        handler(event)
+      }
     }
-  }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
     if (outerDiv && !outerDiv.contains(event.target as Node)) {
@@ -467,12 +477,14 @@
   }
 
   const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (event) => {
-    handle_keydown(event)
+    handle_keydown(event) // Restore internal logic
+    // Call original forwarded handler
     onkeydown?.(event)
   }
 
   const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
-    open_dropdown(event)
+    open_dropdown(event) // Internal logic
+    // Call original forwarded handler
     onfocus?.(event)
   }
 
@@ -482,36 +494,6 @@
     required = required // trigger effect when required changes
     form_input?.setCustomValidity(``)
   })
-
-  // Add event handling utilities
-  function stopPropagation(fn: (event: Event) => void) {
-    return (event: Event) => {
-      event.stopPropagation()
-      fn(event)
-    }
-  }
-
-  function preventDefault(fn: (event: Event) => void) {
-    return (event: Event) => {
-      event.preventDefault()
-      fn(event)
-    }
-  }
-
-  // Event bubbling helper
-  function bubble(type: string) {
-    return (event: Event) => {
-      const handler = props[`on${type}`]
-      if (handler) {
-        if (Array.isArray(handler)) {
-          handler.forEach((fn) => fn(event))
-        } else {
-          handler(event)
-        }
-      }
-      return true
-    }
-  }
 </script>
 
 <svelte:window
@@ -578,11 +560,9 @@
         ondragstart={dragstart(idx)}
         ondrop={drop(idx)}
         ondragenter={() => (drag_idx = idx)}
-        ondragover={preventDefault(bubble(`dragover`))}
         class:active={drag_idx === idx}
         style="{get_style(option, `selected`)} {liSelectedStyle}"
       >
-        <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
         {#if selectedItem}
           {@render selectedItem({
             option,
@@ -600,8 +580,8 @@
         {/if}
         {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
-            onmouseup={stopPropagation(() => remove(option))}
-            onkeydown={if_enter_or_space(() => remove(option))}
+            onmouseup={(event) => remove(option, event)}
+            onkeydown={if_enter_or_space((event) => remove(option, event))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
             class="remove"
@@ -680,7 +660,7 @@
         type="button"
         class="remove remove-all"
         title={removeAllTitle}
-        onmouseup={stopPropagation(remove_all)}
+        onmouseup={remove_all}
         onkeydown={if_enter_or_space(remove_all)}
       >
         {#if removeIcon}
@@ -704,7 +684,7 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx}
+      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx (key(optionItem))}
         {@const {
           label,
           disabled = null,
@@ -714,10 +694,9 @@
         } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
         <li
-          onmousedown={stopPropagation(bubble(`mousedown`))}
-          onmouseup={stopPropagation((event) => {
+          onclick={(event) => {
             if (!disabled) add(optionItem, event)
-          })}
+          }}
           title={disabled
             ? disabledTitle
             : (is_selected(label) && selectedTitle) || title}
@@ -731,11 +710,15 @@
           onfocus={() => {
             if (!disabled) activeIndex = idx
           }}
-          onmouseout={() => (activeIndex = null)}
-          onblur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
           style="{get_style(optionItem, `option`)} {liOptionStyle}"
+          onkeydown={(event) => {
+            if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
+              event.preventDefault()
+              add(optionItem, event)
+            }
+          }}
         >
           {#if option}
             {@render option({
@@ -768,11 +751,26 @@
             'no-match': noMatchingOptionsMsg,
           }[msgType]}
           <li
-            onmousedown={stopPropagation(bubble(`mousedown`))}
-            onmouseup={stopPropagation((event) => {
-              if (allowUserOptions) add(searchText as Option, event)
-            })}
-            title={createOptionMsg}
+            onclick={(event) => {
+              if (msgType === `create` && allowUserOptions) {
+                add(searchText as Option, event)
+              }
+            }}
+            onkeydown={(event) => {
+              if (
+                msgType === `create` &&
+                allowUserOptions &&
+                (event.key === `Enter` || event.code === `Space`)
+              ) {
+                event.preventDefault()
+                add(searchText as Option, event)
+              }
+            }}
+            title={msgType === `create`
+              ? createOptionMsg
+              : msgType === `dupe`
+                ? duplicateOptionMsg
+                : ``}
             class:active={option_msg_is_active}
             onmouseover={() => (option_msg_is_active = true)}
             onfocus={() => (option_msg_is_active = true)}
