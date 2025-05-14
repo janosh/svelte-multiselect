@@ -15,3 +15,4 @@ jobs:
     with:
       test-cmd: npm run test:unit
       e2e-test-cmd: playwright test tests/*.ts
+      install-e2e: npx playwright install chromium

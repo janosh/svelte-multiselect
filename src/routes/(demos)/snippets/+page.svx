@@ -2,9 +2,9 @@
   import { FileDetails } from 'svelte-zoo'
 </script>
 
-## Slot Components
+## Snippets
 
-### Svelte SVG component as `slot="remove-icon"`
+### Svelte SVG component as `"remove-icon"` snippet
 
 ```svelte example stackblitz id="languages-1"
 <script>
@@ -24,17 +24,17 @@
     <LanguageSnippet {option} />
   {/snippet}
   {#snippet expandIcon({ open })}
-    <Icon slot="expand-icon" icon={open ? 'Collapse' : 'Expand'} />
+    <Icon icon={open ? 'Collapse' : 'Expand'} />
   {/snippet}
   {#snippet removeIcon()}
-    <MinusIcon slot="remove-icon" width="1em" />
+    <MinusIcon width="1em" />
   {/snippet}
 </MultiSelect>
 ```
 
 <FileDetails paths={[`./LanguageSnippet.svelte`, `./MinusIcon.svelte`]} />
 
-### Simple HTML tag as `slot="remove-icon"`
+### Simple HTML tag as `"remove-icon"` snippet
 
 ```svelte example stackblitz id="languages-2"
 <script>
@@ -62,7 +62,6 @@
   {/snippet}
   {#snippet expandIcon({ open: expandOpen })}
     <button
-      slot="expand-icon"
       on:click={() => (open = false)}
       on:keyup|preventDefault={(event) => {
         if ([`Enter`, `Space`].includes(event.code)) open = !open
@@ -72,12 +71,12 @@
     </button>
   {/snippet}
   {#snippet removeIcon()}
-    <span slot="remove-icon" style="width: 2ex;">x</span>
+    <span style="width: 2ex;">x</span>
   {/snippet}
 </MultiSelect>
 ```
 
-### `slot="user-msg"`
+### `"user-msg"` snippet
 
 ```svelte example stackblitz id="languages-2"
 <script>
@@ -100,7 +99,7 @@
   allowUserOptions
 >
   {#snippet userMsg({ msg })}
-    <span slot="user-msg">{msg} {selected?.includes(searchText) ? '🤦' : '👷'}</span>
+    <span>{msg} {selected?.includes(searchText) ? '🤦' : '👷'}</span>
   {/snippet}
 </MultiSelect>
 ```

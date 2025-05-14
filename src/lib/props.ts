@@ -38,7 +38,7 @@ export interface MultiSelectComponentEvents<T extends Option = Option> {
   onclose?: (data: { event: Event }) => unknown
 }
 
-export interface MultiSelectSlots<T extends Option = Option> {
+export interface MultiSelectSnippets<T extends Option = Option> {
   expandIcon?: Snippet<[{ open: boolean }]>
   selectedItem?: Snippet<[{ option: T; idx: number }]>
   children?: Snippet<[{ option: T; idx: number }]>
@@ -141,5 +141,5 @@ export interface MultiSelectParameters<T extends Option = Option> {
 export interface MultiSelectProps<T extends Option = Option>
   extends MultiSelectNativeEvents,
     MultiSelectComponentEvents<T>,
-    MultiSelectSlots<T>,
+    MultiSelectSnippets<T>,
     MultiSelectParameters<T> {}

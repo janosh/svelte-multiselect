@@ -23,8 +23,8 @@
   placeholder="What languages do you know?"
   bind:selected={$language_store}
 >
-  {#snippet children({ idx, option })}
-    <LanguageSnippet {option} {idx} slot="selected" />
+  {#snippet selectedItem({ idx, option })}
+    <LanguageSnippet {option} {idx} />
   {/snippet}
 </MultiSelect>
 ```
