@@ -1484,7 +1484,7 @@ test.each([
 ])(
   `MultiSelect doesn't add style attribute to element '$css_selector' if '$prop' prop not passed`,
   async ({ prop, css_selector }) => {
-    new MultiSelect({
+    mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], selected: [1] },
     })
@@ -1494,7 +1494,7 @@ test.each([
     const elem = doc_query(css_selector)
     await tick()
 
-    const err_msg = `style attr is equal to '${elem.attributes.getNamedItem(`style`)?.value}' expected 'null' when ${prop} no passed`
+    const err_msg = `style attribute should be absent when '${prop}' not passed, but hasAttribute('style') is ${elem.hasAttribute(`style`)}`
     expect(elem.hasAttribute(`style`), err_msg).toBe(false)
   },
 )

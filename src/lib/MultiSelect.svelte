@@ -546,9 +546,9 @@
     style={ulSelectedStyle}
   >
     {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
-      {@const selectedOptionStyle = [get_style(option, `selected`), liSelectedStyle]
-        .filter(Boolean)
-        .join(` `)}
+      {@const selectedOptionStyle =
+        [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(` `) ??
+        null}
       <li
         class={liSelectedClass}
         role="option"
@@ -559,7 +559,7 @@
         ondrop={drop(idx)}
         ondragenter={() => (drag_idx = idx)}
         class:active={drag_idx === idx}
-        style={selectedOptionStyle === `` ? null : selectedOptionStyle}
+        style={selectedOptionStyle}
       >
         {#if selectedItem}
           {@render selectedItem({
@@ -692,9 +692,9 @@
           disabledTitle = defaultDisabledTitle,
         } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
-        {@const optionStyle = [get_style(option, `option`), liOptionStyle]
-          .filter(Boolean)
-          .join(` `)}
+        {@const optionStyle =
+          [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(` `) ??
+          null}
         <li
           onclick={(event) => {
             if (!disabled) add(optionItem, event)
@@ -714,7 +714,7 @@
           }}
           role="option"
           aria-selected="false"
-          style="{get_style(optionItem, `option`)} {optionStyle}"
+          style={optionStyle}
           onkeydown={(event) => {
             if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
               event.preventDefault()
