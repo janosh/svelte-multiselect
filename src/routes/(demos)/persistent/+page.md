@@ -6,7 +6,7 @@
 
 ## Page-Reload Persistent MultiSelect
 
-`language_store` is a Svelte [`writable`](https://svelte.dev/tutorial/writable-stores) that's bound to the browser's `sessionStorage`. This example shows how MultiSelect retains its `selected` state on page reload.
+`language_store` is a Svelte [`writable`](https://svelte.dev/docs/svelte/svelte-store#writable) that's bound to the browser's `sessionStorage`. This example shows how MultiSelect retains its `selected` state on page reload.
 
 <br />
 

@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+### [v11.0.0](https://github.com/janosh/svelte-multiselect/compare/v11.0.0-rc.1...v11.0.0)
+
+> 15 May 2025
+
+- Prevent empty style attributes on `ul.selected &gt; li` and `ul.options &gt; li` [`#304`](https://github.com/janosh/svelte-multiselect/pull/304)
+- Breaking: Svelte 5 [`#295`](https://github.com/janosh/svelte-multiselect/pull/295)
+- update and fix linting, fix 2 dead readme links [`91f22d0`](https://github.com/janosh/svelte-multiselect/commit/91f22d0cafdf931607288d18c5268badd358d83b)
+
 #### [v11.0.0-rc.1](https://github.com/janosh/svelte-multiselect/compare/v10.3.0...v11.0.0-rc.1)
+
+> 24 October 2024
 
 - update `MultiSelect.svelte` for Svelte5 compatibility [`#293`](https://github.com/janosh/svelte-multiselect/pull/293)
 

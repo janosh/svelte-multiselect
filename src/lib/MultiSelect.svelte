@@ -683,7 +683,7 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx (key(optionItem))}
+      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx (duplicates ? [key(optionItem), idx] : key(optionItem))}
         {@const {
           label,
           disabled = null,

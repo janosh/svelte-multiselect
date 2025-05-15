@@ -1,6 +1,6 @@
 <script lang="ts">
   import { FileDetails } from 'svelte-zoo'
-  import language_slot_src from '$site/LanguageSnippet.svelte?raw'
+  import language_snippet_src from '$site/LanguageSnippet.svelte?raw'
   import options_src from '$site/options.ts?raw'
 </script>
 
@@ -27,8 +27,8 @@
 ```
 
 <FileDetails files={[
-  { title: `LanguageSnippet.svelte`, content: language_slot_src },
-  { title: `options.ts`, content: options_src },
+{ title: `LanguageSnippet.svelte`, content: language_snippet_src },
+{ title: `options.ts`, content: options_src },
 ]} />
 
 When setting an integer value for `maxSelect` Multiselect will
