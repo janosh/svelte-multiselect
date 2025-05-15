@@ -8,4 +8,5 @@ export default {
   },
   testDir: `tests`,
   testMatch: `tests/*.test.ts`,
+  timeout: 5000,
 } satisfies PlaywrightTestConfig

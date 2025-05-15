@@ -4,7 +4,7 @@
 
 ## Snippets
 
-### Svelte SVG component as `"remove-icon"` snippet
+### Svelte SVG component as `"removeIcon"` snippet
 
 ```svelte example stackblitz id="languages-1"
 <script>
@@ -34,7 +34,7 @@
 
 <FileDetails paths={[`./LanguageSnippet.svelte`, `./MinusIcon.svelte`]} />
 
-### Simple HTML tag as `"remove-icon"` snippet
+### Simple HTML tag as `"removeIcon"` snippet
 
 ```svelte example stackblitz id="languages-2"
 <script>
