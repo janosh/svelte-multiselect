@@ -43,7 +43,7 @@
   import { LanguageSnippet } from '$site'
   import { Icon } from 'svelte-zoo'
 
-  // local variable used in CollapseIcon on:click callback to close dropdown
+  // local variable used in CollapseIcon onclick callback to close dropdown
   let open = $state(false)
 </script>
 
@@ -62,8 +62,9 @@
   {/snippet}
   {#snippet expandIcon({ open: expandOpen })}
     <button
-      on:click={() => (open = false)}
-      on:keyup|preventDefault={(event) => {
+      onclick={() => (open = false)}
+      onkeyup={(event) => {
+        event.preventDefault()
         if ([`Enter`, `Space`].includes(event.code)) open = !open
       }}
     >

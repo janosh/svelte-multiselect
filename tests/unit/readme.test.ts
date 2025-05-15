@@ -23,7 +23,7 @@ test.skip(`readme documents no non-existent props`, () => {
     if (line.startsWith(`1. \`\`\`ts`)) {
       const next_line = readme.split(`\n`)[idx + 1].trim()
 
-      if (next_line.startsWith(`on:`)) continue
+      if (next_line.startsWith(`on`)) continue
 
       const msg = `readme has prop '${next_line}' on line ${
         idx + 1

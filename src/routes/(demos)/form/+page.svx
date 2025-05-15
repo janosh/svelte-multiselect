@@ -11,6 +11,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   import { colors } from '$site/options'
 
   async function handle_submit(event: SubmitEvent) {
+    event.preventDefault()
     // use bind:this={form} or event.target as arg to new FormData()
     form_data = new FormData(event.target as HTMLFormElement)
   }
@@ -19,7 +20,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   const name = 'martian-flag'
 </script>
 
-<form on:submit|preventDefault={handle_submit}>
+<form onsubmit={handle_submit}>
   <label for="colors">
     <strong>Which colors would you pick for the Martian flag?</strong>
   </label>

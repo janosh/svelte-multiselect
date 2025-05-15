@@ -439,37 +439,37 @@ Example using several snippets:
 `MultiSelect.svelte` dispatches the following events:
 
 1. ```ts
-   on:add={(event) => console.log(event.detail.option)}
+   onadd={(event) => console.log(event.detail.option)}
    ```
 
    Triggers when a new option is selected. The newly selected option is provided as `event.detail.option`.
 
 1. ```ts
-   on:remove={(event) => console.log(event.detail.option)}`
+   onremove={(event) => console.log(event.detail.option)}`
    ```
 
    Triggers when a single selected option is removed. The removed option is provided as `event.detail.option`.
 
 1. ```ts
-   on:removeAll={(event) => console.log(event.detail.options)}`
+   onremoveAll={(event) => console.log(event.detail.options)}`
    ```
 
    Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected.
 
 1. ```ts
-   on:change={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}
+   onchange={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}
    ```
 
    Triggers when an option is either added (selected) or removed from selected, or all selected options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
 
 1. ```ts
-   on:open={(event) => console.log(`Multiselect dropdown was opened by ${event}`)}
+   onopen={(event) => console.log(`Multiselect dropdown was opened by ${event}`)}
    ```
 
    Triggers when the dropdown list of options appears. Event is the DOM's `FocusEvent`,`KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
 
 1. ```ts
-   on:close={(event) => console.log(`Multiselect dropdown was closed by ${event}`)}
+   onclose={(event) => console.log(`Multiselect dropdown was closed by ${event}`)}
    ```
 
    Triggers when the dropdown list of options disappears. Event is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
@@ -478,7 +478,7 @@ For example, here's how you might annoy your users with an alert every time one 
 
 ```svelte
 <MultiSelect
-  on:change={(e) => {
+  onchange={(e) => {
     if (e.detail.type === 'add') alert(`You added ${e.detail.option}`)
     if (e.detail.type === 'remove') alert(`You removed ${e.detail.option}`)
     if (e.detail.type === 'removeAll') alert(`You removed ${e.detail.options}`)
@@ -493,7 +493,7 @@ The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutor
 ```svelte
 <MultiSelect
   options={[1, 2, 3]}
-  on:keyup={(event) => console.log('key', event.target.value)}
+  onkeyup={(event) => console.log('key', event.target.value)}
 />
 ```
 

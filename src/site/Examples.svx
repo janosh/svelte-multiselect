@@ -112,7 +112,8 @@ value = {JSON.stringify(value) || `null`}
 </script>
 
 <form
-  on:submit|preventDefault={() => {
+  onsubmit={(event) => {
+    event.preventDefault()
     alert(`You selected '${selected.join(`, `)}'`)
   }}
 >

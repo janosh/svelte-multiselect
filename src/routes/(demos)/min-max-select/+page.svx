@@ -50,7 +50,7 @@ When setting an integer value for `maxSelect` Multiselect will
   }
 </script>
 
-<form on:submit={handle_submit}>
+<form onsubmit={handle_submit}>
   <MultiSelect options={[1, 2, 3, 4, 5, 6]} required={3} name="numbers" sortSelected />
   <button>submit</button>
 </form>
@@ -70,7 +70,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   }
 </script>
 
-<form on:submit={handle_submit}>
+<form onsubmit={handle_submit}>
   <MultiSelect
     options={[1, 2, 3, 4, 5, 6]}
     required={2}
