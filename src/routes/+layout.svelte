@@ -1,12 +1,21 @@
 <script lang="ts">
+  import { mount, type Snippet } from 'svelte'
+  import { CopyButton, GitHubCorner } from 'svelte-zoo'
+
   import { afterNavigate, goto } from '$app/navigation'
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { CmdPalette } from '$lib'
   import { repository } from '$root/package.json'
   import { Footer } from '$site'
   import { demos } from '$site/stores'
-  import { CopyButton, GitHubCorner } from 'svelte-zoo'
+  import Toc from 'svelte-toc'
+
   import '../app.css'
+
+  interface Props {
+    children?: Snippet
+  }
+  let { children }: Props = $props()
 
   afterNavigate(() => {
     for (const node of document.querySelectorAll(`pre > code`)) {
@@ -14,7 +23,7 @@
       const pre = node.parentElement
       if (!pre || pre.querySelector(`button`)) continue
 
-      new CopyButton({
+      mount(CopyButton, {
         target: pre,
         props: {
           content: node.textContent ?? ``,
@@ -28,7 +37,7 @@
     (filename) => {
       const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
       return { route: `/${parts.slice(1, -1).join(`/`)}`, filename }
-    }
+    },
   )
 
   if (routes.length < 3) {
@@ -46,11 +55,24 @@
 
 <GitHubCorner href={repository} />
 
-{#if !$page.error && $page.url.pathname !== `/`}
+{#if !page.error && page.url.pathname !== `/`}
   <a href="." aria-label="Back to index page">&laquo; home</a>
 {/if}
 
-<slot />
+{@render children?.()}
+
+{#if [`/`, `/changelog`, `/contributing`].includes(page.url.pathname)}
+  <Toc
+    headingSelector="main > :where(h2, h3)"
+    breakpoint={1250}
+    --toc-mobile-bg="#1c0e3e"
+    --toc-font-size="9pt"
+    --toc-li-padding="3pt 1ex"
+    --toc-mobile-btn-color="white"
+    --toc-max-width="20em"
+    --toc-desktop-nav-margin="0 0 0 17em"
+  />
+{/if}
 
 <Footer />
 

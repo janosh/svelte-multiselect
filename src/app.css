@@ -12,15 +12,10 @@
   --sms-li-disabled-bg: black;
   --sms-placeholder-color: lightgray;
 
-  --toc-mobile-bg: #1c0e3e;
-  --toc-li-padding: 3pt 1ex;
-  --toc-mobile-btn-color: white;
-  --toc-desktop-nav-margin: 0 0 0 1em;
-  --toc-active-bg: teal;
-
   --zoo-github-corner-color: var(--night);
   --zoo-github-corner-bg: white;
   --zoo-example-margin: 1em auto;
+  --zoo-example-btn-bg: none;
 }
 body {
   background: var(--night);
@@ -41,14 +36,13 @@ a.btn {
   cursor: pointer;
   border: none;
   border-radius: 3pt;
-  background-color: teal;
   padding: 2pt 4pt;
   font-size: 12pt;
   line-height: initial;
   transition: background-color 0.2s;
+  background-color: rgba(31, 182, 205, 0.425);
 }
 :is(button, a.btn):hover {
-  background-color: teal;
   color: white;
 }
 a {
@@ -90,7 +84,7 @@ table {
   border-collapse: collapse;
 }
 table :is(td, th) {
-  border: 1px dashed teal;
+  border: 1px dashed rgba(255, 255, 255, 0.2);
   padding: 5pt 9pt;
 }
 table img {

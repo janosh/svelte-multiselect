@@ -14,20 +14,19 @@ HTML.
 
 ```svelte example stackblitz
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
-  import { ColorSlot } from '$site'
+  import MultiSelect from '$lib'
+  import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
   import { repository } from '$root/package.json'
-  import type { ActionData, PageServerData } from './$types'
+  import type { ActionData } from './$types'
 
-  export let form: ActionData
-  // export let data: PageServerData
+  let { form }: { form: ActionData } = $props();
 
-  $: err_msg = {
+  let err_msg = $derived({
     json: 'The email field is required',
     array: 'The email field is required',
     boring: 'Boring answer!',
-  }[form?.error as string]
+  }[form?.error as string])
 </script>
 
 <form method="POST" action="?/validate-form">
@@ -41,10 +40,10 @@ HTML.
     required
     invalid={!!form?.error}
     selected={form?.colors ?? [`Red`]}
-    let:idx
-    let:option
   >
-    <ColorSlot {idx} {option} />
+    {#snippet children({ idx, option })}
+      <ColorSnippet {idx} {option} />
+    {/snippet}
   </MultiSelect>
   <button>Submit</button>
   <small>
@@ -58,7 +57,7 @@ HTML.
     <p class="success">
       Good answer! You entered
       {#each form.colors as color}
-        <ColorSlot
+        <ColorSnippet
           option={color}
           style="display: inline-flex; vertical-align: middle; margin: 0 0 0 1ex;"
         />

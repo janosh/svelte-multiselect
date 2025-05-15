@@ -6,11 +6,12 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 
 ```svelte example stackblitz
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
-  import { ColorSlot } from '$site'
+  import MultiSelect from '$lib'
+  import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 
   async function handle_submit(event: SubmitEvent) {
+    event.preventDefault()
     // use bind:this={form} or event.target as arg to new FormData()
     form_data = new FormData(event.target as HTMLFormElement)
   }
@@ -19,7 +20,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   const name = 'martian-flag'
 </script>
 
-<form on:submit|preventDefault={handle_submit}>
+<form onsubmit={handle_submit}>
   <label for="colors">
     <strong>Which colors would you pick for the Martian flag?</strong>
   </label>
@@ -28,10 +29,10 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
     placeholder="Pick some colors..."
     {name}
     required={2}
-    let:idx
-    let:option
   >
-    <ColorSlot {idx} {option} />
+    {#snippet children({ idx, option })}
+      <ColorSnippet {idx} {option} />
+    {/snippet}
   </MultiSelect>
   <button>Submit</button>
   <small>

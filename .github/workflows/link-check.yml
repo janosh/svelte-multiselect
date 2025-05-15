@@ -1,14 +1,21 @@
-name: Link Check
+name: Link check
 
 on:
   push:
     branches: [main]
   pull_request:
     branches: [main]
-    paths: ['**/*.md']
-  schedule:
-    - cron: '0 0 1 * *' # monthly
 
 jobs:
-  markdown-link-check:
-    uses: janosh/workflows/.github/workflows/markdown-link-check.yml@main
+  link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repo
+        uses: actions/checkout@v4
+
+      - name: Discover broken links
+        uses: lycheeverse/lychee-action@v2
+        with:
+          args: --exclude '%7B' --accept 100..=103,200..=299,403,429 -- ./**/*.{md,svelte,ts}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
