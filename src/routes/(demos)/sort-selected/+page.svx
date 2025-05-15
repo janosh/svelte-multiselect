@@ -10,12 +10,17 @@
 <script>
   import MultiSelect from '$lib'
   import { frontend_libs } from '$site/options'
+
+  let selected = $state([])
 </script>
+
+selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) || `[]`}
 
 <MultiSelect
   options={frontend_libs}
   placeholder="Pick your favorite frontend libs"
   sortSelected
+  bind:selected
 />
 ```
 

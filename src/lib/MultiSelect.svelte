@@ -112,23 +112,16 @@
     ...rest
   }: MultiSelectProps = $props()
 
-  const selected_to_value = (selected: Option[]) => {
+  $effect.pre(() => {
+    // if maxSelect=1, value is the single item in selected (or null if selected is empty)
+    // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
+    // https://github.com/janosh/svelte-multiselect/issues/136
     value = maxSelect === 1 ? (selected[0] ?? null) : selected
-  }
-  const value_to_selected = (value: Option | Option[] | null) => {
+  }) // sync selected updates to value
+  $effect.pre(() => {
     if (maxSelect === 1) selected = value ? [value as Option] : []
     else selected = (value as Option[]) ?? []
-  }
-
-  // if maxSelect=1, value is the single item in selected (or null if selected is empty)
-  // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
-  // https://github.com/janosh/svelte-multiselect/issues/136
-  $effect.pre(() => {
-    selected_to_value(selected)
-  })
-  $effect.pre(() => {
-    value_to_selected(value)
-  })
+  }) // sync value updates to selected
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
 
@@ -256,7 +249,7 @@
       } else {
         selected = [...selected, option]
         if (sortSelected === true) {
-          selected = selected.sort((op1: Option, op2: Option) => {
+          selected = selected.sort((op1, op2) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
             // coerce to string if labels are numbers
             return `${label1}`.localeCompare(`${label2}`)
@@ -858,7 +851,7 @@
   :where(div.multiselect > ul.selected > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
-  :where(div.multiselect button) {
+  :is(div.multiselect button) {
     border-radius: 50%;
     display: flex;
     transition: 0.2s;
@@ -867,13 +860,13 @@
     border: none;
     cursor: pointer;
     outline: none;
-    padding: 0;
+    padding: 1pt;
     margin: 0 0 0 3pt; /* CSS reset */
   }
-  :where(div.multiselect button.remove-all) {
+  :is(div.multiselect button.remove-all) {
     margin: 0 3pt;
   }
-  :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
+  :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-btn-hover-color, lightskyblue);
     background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2));
   }

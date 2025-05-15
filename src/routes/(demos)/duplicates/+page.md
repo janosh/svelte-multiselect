@@ -4,14 +4,14 @@
 <script>
   import MultiSelect from '$lib'
 
-  let duplicates = true
+  let duplicates = $state(true)
   const options = [
     { label: 'Duplicate label', id: 1 },
     { label: 'Duplicate label', id: 1 },
     { label: 'Duplicate label', id: 2 },
   ]
-  let selected = [options[0]]
-  let key = "JSON.stringify"
+  let selected = $state([options[0]])
+  let key = $state(`JSON.stringify`)
 </script>
 
 Allow duplicates: <input type="checkbox" bind:checked={duplicates} />

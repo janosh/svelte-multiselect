@@ -29,7 +29,6 @@
     placeholder?: string
     children?: Snippet
   }
-
   let {
     actions,
     triggers = [`k`],

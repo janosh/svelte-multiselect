@@ -56,7 +56,7 @@ yarn add --dev svelte-multiselect
 
   const ui_libs = [`Svelte`, `React`, `Vue`, `Angular`, `...`]
 
-  let selected = []
+  let selected = $state([])
 </script>
 
 Favorite Frontend Tools?

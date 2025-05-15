@@ -12,12 +12,6 @@
   --sms-li-disabled-bg: black;
   --sms-placeholder-color: lightgray;
 
-  --toc-mobile-bg: #1c0e3e;
-  --toc-li-padding: 3pt 1ex;
-  --toc-mobile-btn-color: white;
-  --toc-desktop-nav-margin: 0 0 0 1em;
-  --toc-active-bg: teal;
-
   --zoo-github-corner-color: var(--night);
   --zoo-github-corner-bg: white;
   --zoo-example-margin: 1em auto;
@@ -46,6 +40,7 @@ a.btn {
   font-size: 12pt;
   line-height: initial;
   transition: background-color 0.2s;
+  background-color: rgba(31, 182, 205, 0.425);
 }
 :is(button, a.btn):hover {
   color: white;

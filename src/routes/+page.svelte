@@ -1,7 +1,6 @@
 <script lang="ts">
   import Readme from '$root/readme.md'
   import { DemoNav, Examples } from '$site'
-  import Toc from 'svelte-toc'
 </script>
 
 <main>
@@ -19,8 +18,6 @@
     {/snippet}
   </Readme>
 </main>
-
-<Toc headingSelector="main > :where(h2, h3)" breakpoint={1250} />
 
 <style>
   @media (max-width: 600px) {

@@ -16,7 +16,6 @@
     damping?: number
     children?: Snippet
   }
-
   let {
     wiggle = $bindable(false),
     angle = 0,
@@ -40,8 +39,8 @@
 </script>
 
 <span
-  style:transform="rotate({store.current.angle}deg) scale({store.current.scale}) translate({store.current.dx}px,
-  {store.current.dy}px)"
+  style:transform="rotate({store.current.angle}deg) scale({store.current.scale})
+  translate({store.current.dx}px, {store.current.dy}px)"
 >
   {@render children?.()}
 </span>

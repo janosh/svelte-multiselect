@@ -44,7 +44,7 @@
   import { Icon } from 'svelte-zoo'
 
   // local variable used in CollapseIcon on:click callback to close dropdown
-  let open = false
+  let open = $state(false)
 </script>
 
 <MultiSelect
@@ -85,8 +85,8 @@
   import { LanguageSnippet } from '$site'
   import { Icon } from 'svelte-zoo'
 
-  let selected = [`Python`, `TypeScript`, `Julia`]
-  let searchText = `Julia`
+  let selected = $state([`Python`, `TypeScript`, `Julia`])
+  let searchText = $state(`Julia`)
 </script>
 
 <MultiSelect

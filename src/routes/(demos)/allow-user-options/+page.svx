@@ -2,8 +2,6 @@
   import MultiSelect from '$lib'
   import { foods, languages } from '$site/options'
   import { LanguageSnippet } from '$site'
-
-  let selected_empty = []
 </script>
 
 ## Allow Custom User Input
@@ -16,8 +14,8 @@
   import { foods } from '$site/options'
   import { Toggle } from 'svelte-zoo'
 
-  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
-  let duplicates = false
+  let selected = $state('🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '))
+  let duplicates = $state(false)
 </script>
 
 <MultiSelect
@@ -45,7 +43,7 @@
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
-  let selected_append = ['Haskell', 'TypeScript']
+  let selected_append = $state(['Haskell', 'TypeScript'])
 </script>
 
 <MultiSelect
@@ -70,7 +68,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
 <script>
   import MultiSelect from '$lib'
 
-  let selected = []
+  let selected = $state([])
 </script>
 
 {#if selected?.length > 0}

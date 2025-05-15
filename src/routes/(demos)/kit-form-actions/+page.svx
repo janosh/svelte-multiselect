@@ -18,16 +18,15 @@ HTML.
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
   import { repository } from '$root/package.json'
-  import type { ActionData, PageServerData } from './$types'
+  import type { ActionData } from './$types'
 
-  export let form: ActionData
-  // export let data: PageServerData
+  let { form }: { form: ActionData } = $props();
 
-  $: err_msg = {
+  let err_msg = $derived({
     json: 'The email field is required',
     array: 'The email field is required',
     boring: 'Boring answer!',
-  }[form?.error as string]
+  }[form?.error as string])
 </script>
 
 <form method="POST" action="?/validate-form">

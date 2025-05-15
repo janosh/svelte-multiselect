@@ -8,6 +8,7 @@
   import { repository } from '$root/package.json'
   import { Footer } from '$site'
   import { demos } from '$site/stores'
+  import Toc from 'svelte-toc'
 
   import '../app.css'
 
@@ -59,6 +60,19 @@
 {/if}
 
 {@render children?.()}
+
+{#if [`/`, `/changelog`, `/contributing`].includes(page.url.pathname)}
+  <Toc
+    headingSelector="main > :where(h2, h3)"
+    breakpoint={1250}
+    --toc-mobile-bg="#1c0e3e"
+    --toc-font-size="9pt"
+    --toc-li-padding="3pt 1ex"
+    --toc-mobile-btn-color="white"
+    --toc-max-width="20em"
+    --toc-desktop-nav-margin="0 0 0 17em"
+  />
+{/if}
 
 <Footer />
 

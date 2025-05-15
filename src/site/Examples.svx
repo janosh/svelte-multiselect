@@ -8,10 +8,10 @@
   import { languages } from '$site/options'
   import LanguageSnippet from './LanguageSnippet.svelte'
 
-  let selected: string[] = []
+  let selected: string[] = $state([])
 </script>
 
-<pre>selected = {JSON.stringify(selected)}</pre>
+selected = {JSON.stringify(selected) || `[]`}
 
 <MultiSelect
   id="fav-languages"
@@ -32,31 +32,28 @@
   import MultiSelect from '$lib'
   import { ml_libs } from '$site/options'
 
-  let value: { label: string, disabled: boolean, preselected: boolean } = null
-  let searchText = ''
-  let loading = false
-  let options = ml_libs
-  $: if (searchText) {
-    loading = true
-    setTimeout(async () => {
-      // perform some fetch/database request here to get list of options matching searchText
-      // options = await fetch(`https://example.com?search=${searchText}`)
-      loading = false
-    }, 1000)
-  }
+  let value = $state(null)
+  let searchText = $state('')
+  let loading = $state(false)
+  $effect(() => {
+    loading = Boolean(searchText)
+    // perform some fetch/database request here to get list of options matching searchText
+    // options = await fetch(`https://example.com?search=${searchText}`)
+    setTimeout(async () => { loading = false }, 1000)
+  })
 </script>
 
-<pre>value = {JSON.stringify(value)}</pre>
+value = {JSON.stringify(value) || `null`}
 
 <MultiSelect
   id="fav-ml-tool"
   maxSelect={1}
   maxSelectMsg={(current, max) => `${current} of ${max} selected`}
-  bind:options
-  bind:value
+  options={ml_libs}
   bind:searchText
-  placeholder="Favorite machine learning tool?"
+  bind:value
   {loading}
+  placeholder="Favorite machine learning tool?"
 />
 ```
 
@@ -78,7 +75,7 @@
     return label.includes(searchStr) || lang.includes(searchStr)
   }
 
-  let show_confetti = false
+  let show_confetti = $state(false)
 </script>
 
 <MultiSelect
@@ -111,7 +108,7 @@
   import { colors } from '$site/options'
   import ColorSnippet from './ColorSnippet.svelte'
 
-  let selected: string[] = []
+  let selected: string[] = $state([])
 </script>
 
 <form
@@ -148,9 +145,8 @@
   import MultiSelect from '$lib'
   import { countries } from '$site/options'
 
-  let selected: string[]
   // required={1} means form validation will prevent submission if no option selected
-  let maxOptions: number = 10
+  let maxOptions: number = $state(10)
 </script>
 
 <MultiSelect
