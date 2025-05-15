@@ -1,21 +1,48 @@
 <script lang="ts">
-  import { tick } from 'svelte'
+  import { tick, type Snippet } from 'svelte'
   import { fade } from 'svelte/transition'
+
   import Select from './MultiSelect.svelte'
+  import type { MultiSelectProps } from './props'
+  import type { ObjectOption } from './types'
 
-  export let actions: Action[]
-  export let triggers: string[] = [`k`]
-  export let close_keys: string[] = [`Escape`]
-  export let fade_duration: number = 200 // in ms
-  export let style: string = `` // for dialog
-  // for span in option slot, has no effect when passing a slot
-  export let span_style: string = ``
-  export let open: boolean = false
-  export let dialog: HTMLDialogElement | null = null
-  export let input: HTMLInputElement | null = null
-  export let placeholder: string = `Filter actions...`
+  interface Action extends ObjectOption {
+    label: string
+    action: (label: string) => void
+  }
 
-  type Action = { label: string; action: () => void }
+  interface Props
+    extends Omit<
+      MultiSelectProps<Action>,
+      `options` | `onadd` | `onkeydown` | `placeholder`
+    > {
+    actions: Action[]
+    triggers?: string[]
+    close_keys?: string[]
+    fade_duration?: number // in ms
+    style?: string // for dialog
+    // for span in option snippet, has no effect when specifying a custom option snippet
+    span_style?: string
+    open?: boolean
+    dialog?: HTMLDialogElement | null
+    input?: HTMLInputElement | null
+    placeholder?: string
+    children?: Snippet
+  }
+  let {
+    actions,
+    triggers = [`k`],
+    close_keys = [`Escape`],
+    fade_duration = 200,
+    style = ``,
+    span_style = ``,
+    open = $bindable(false),
+    dialog = $bindable(null),
+    input = $bindable(null),
+    placeholder = `Filter actions...`,
+    children,
+    ...rest
+  }: Props = $props()
 
   async function toggle(event: KeyboardEvent) {
     if (triggers.includes(event.key) && event.metaKey && !open) {
@@ -34,13 +61,15 @@
     }
   }
 
-  function trigger_action_and_close(event: CustomEvent<{ option: Action }>) {
-    event.detail.option.action(event.detail.option.label)
+  function trigger_action_and_close({ option }: { option: Action }) {
+    option.action(option.label)
     open = false
   }
+
+  const children_render = $derived(children)
 </script>
 
-<svelte:window on:keydown={toggle} on:click={close_if_outside} />
+<svelte:window onkeydown={toggle} onclick={close_if_outside} />
 
 {#if open}
   <dialog open bind:this={dialog} transition:fade={{ duration: fade_duration }} {style}>
@@ -48,21 +77,25 @@
       options={actions}
       bind:input
       {placeholder}
-      on:add={trigger_action_and_close}
-      on:keydown={toggle}
-      {...$$restProps}
-      let:option
+      onadd={trigger_action_and_close}
+      onkeydown={toggle}
+      {...rest}
     >
-      <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
-      <slot>
-        <span style={span_style}>{option.label}</span>
-      </slot>
+      {#snippet children({ option })}
+        <!-- wait for https://github.com/sveltejs/svelte/pull/8304 -->
+        {#if children_render}
+          {@render children_render()}
+        {:else}
+          <span style={span_style}>{option.label}</span>
+        {/if}
+      {/snippet}
     </Select>
   </dialog>
 {/if}
 
 <style>
-  :where(dialog) {
+  /* TODO maybe remove global */
+  :where(:global(dialog)) {
     position: fixed;
     top: 30%;
     border: none;

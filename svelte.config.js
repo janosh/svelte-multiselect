@@ -6,6 +6,8 @@ import link_headings from 'rehype-autolink-headings'
 import heading_slugs from 'rehype-slug'
 import { sveltePreprocess } from 'svelte-preprocess'
 
+import pkg from './package.json' with { type: 'json' }
+
 const rehypePlugins = [
   heading_slugs,
   [
@@ -22,9 +24,6 @@ const rehypePlugins = [
     },
   ],
 ]
-const { default: pkg } = await import(`./package.json`, {
-  with: { type: `json` },
-})
 const defaults = {
   Wrapper: `svelte-zoo/CodeExample.svelte`,
   repo: pkg.repository,

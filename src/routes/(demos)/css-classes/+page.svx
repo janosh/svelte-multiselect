@@ -2,7 +2,7 @@
 
 ```svelte example stackblitz id="foods"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   const options = [...Array(7).keys()].map((idx) => `Option ${idx + 1}`)
 </script>

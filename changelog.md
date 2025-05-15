@@ -363,7 +363,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Move examples to new `src/routes/demos` dir [`#63`](https://github.com/janosh/svelte-multiselect/pull/63)
 - make ToC position fixed (closes #64) [`#64`](https://github.com/janosh/svelte-multiselect/issues/64)
 - check for undefined (not falsy) value in rawOp processing (fixes #65) [`#65`](https://github.com/janosh/svelte-multiselect/issues/65)
-- LanguageSlot change SVG icons src repo to vscode-icons for more coverage [`92390e9`](https://github.com/janosh/svelte-multiselect/commit/92390e937a063b2b0c88e0ac6f9a9d8f3cb1eadd)
+- LanguageSnippet change SVG icons src repo to vscode-icons for more coverage [`92390e9`](https://github.com/janosh/svelte-multiselect/commit/92390e937a063b2b0c88e0ac6f9a9d8f3cb1eadd)
 - more preselected slots in Examples.svelte [`cd0a01a`](https://github.com/janosh/svelte-multiselect/commit/cd0a01a7a6b319299642b3c24c5caea8dc9dc24d)
 
 #### [v4.0.3](https://github.com/janosh/svelte-multiselect/compare/v4.0.2...v4.0.3)
