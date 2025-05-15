@@ -796,7 +796,7 @@
 </div>
 
 <style>
-  :where(div.multiselect) {
+  :is(div.multiselect) {
     position: relative;
     align-items: center;
     display: flex;
@@ -813,27 +813,27 @@
     min-height: var(--sms-min-height, 22pt);
     margin: var(--sms-margin);
   }
-  :where(div.multiselect.open) {
+  :is(div.multiselect.open) {
     /* increase z-index when open to ensure the dropdown of one <MultiSelect />
     displays above that of another slightly below it on the page */
     z-index: var(--sms-open-z-index, 4);
   }
-  :where(div.multiselect:focus-within) {
+  :is(div.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
-  :where(div.multiselect.disabled) {
+  :is(div.multiselect.disabled) {
     background: var(--sms-disabled-bg, lightgray);
     cursor: not-allowed;
   }
 
-  :where(div.multiselect > ul.selected) {
+  :is(div.multiselect > ul.selected) {
     display: flex;
     flex: 1;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
   }
-  :where(div.multiselect > ul.selected > li) {
+  :is(div.multiselect > ul.selected > li) {
     align-items: center;
     border-radius: 3pt;
     display: flex;
@@ -845,10 +845,10 @@
     padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
-  :where(div.multiselect > ul.selected > li[draggable='true']) {
+  :is(div.multiselect > ul.selected > li[draggable='true']) {
     cursor: grab;
   }
-  :where(div.multiselect > ul.selected > li.active) {
+  :is(div.multiselect > ul.selected > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
   :is(div.multiselect button) {
@@ -871,11 +871,11 @@
     background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2));
   }
 
-  :where(div.multiselect input) {
+  :is(div.multiselect input) {
     margin: auto 0; /* CSS reset */
     padding: 0; /* CSS reset */
   }
-  :where(div.multiselect > ul.selected > input) {
+  :is(div.multiselect > ul.selected > input) {
     border: none;
     outline: none;
     background: none;
@@ -887,13 +887,13 @@
     cursor: inherit; /* needed for disabled state */
     border-radius: 0; /* reset ul.selected > li */
   }
-  /* don't wrap ::placeholder rules in :where() as it seems to be overpowered by browser defaults i.t.o. specificity */
+  /* don't wrap ::placeholder rules in :is() as it seems to be overpowered by browser defaults i.t.o. specificity */
   div.multiselect > ul.selected > input::placeholder {
     padding-left: 5pt;
     color: var(--sms-placeholder-color);
     opacity: var(--sms-placeholder-opacity);
   }
-  :where(div.multiselect > input.form-control) {
+  :is(div.multiselect > input.form-control) {
     width: 2em;
     position: absolute;
     background: transparent;
@@ -904,7 +904,7 @@
     pointer-events: none;
   }
 
-  :where(div.multiselect > ul.options) {
+  :is(div.multiselect > ul.options) {
     list-style: none;
     top: 100%;
     left: 0;
@@ -923,35 +923,35 @@
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, inherit);
   }
-  :where(div.multiselect > ul.options.hidden) {
+  :is(div.multiselect > ul.options.hidden) {
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
   }
-  :where(div.multiselect > ul.options > li) {
+  :is(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
-  :where(div.multiselect > ul.options .user-msg) {
+  :is(div.multiselect > ul.options .user-msg) {
     /* block needed so vertical padding applies to span */
     display: block;
     padding: 3pt 2ex;
   }
-  :where(div.multiselect > ul.options > li.selected) {
+  :is(div.multiselect > ul.options > li.selected) {
     background: var(--sms-li-selected-bg);
     color: var(--sms-li-selected-color);
   }
-  :where(div.multiselect > ul.options > li.active) {
+  :is(div.multiselect > ul.options > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
-  :where(div.multiselect > ul.options > li.disabled) {
+  :is(div.multiselect > ul.options > li.disabled) {
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
   }
 
-  :where(span.max-select-msg) {
+  :is(span.max-select-msg) {
     padding: 0 3pt;
   }
   ::highlight(sms-search-matches) {
