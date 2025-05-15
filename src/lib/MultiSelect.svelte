@@ -547,7 +547,7 @@
   >
     {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
       {@const selectedOptionStyle =
-        [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(` `) ??
+        [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(` `) ||
         null}
       <li
         class={liSelectedClass}
@@ -693,7 +693,7 @@
         } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
         {@const optionStyle =
-          [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(` `) ??
+          [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(` `) ||
           null}
         <li
           onclick={(event) => {
