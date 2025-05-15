@@ -4,24 +4,24 @@
 
 ```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7" stackblitz="src/site/Examples.svx"
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import LanguageSlot from './LanguageSlot.svelte'
+  import LanguageSnippet from './LanguageSnippet.svelte'
 
-  let selected: string[]
+  let selected: string[] = $state([])
 </script>
 
-<pre>selected = {JSON.stringify(selected)}</pre>
+selected = {JSON.stringify(selected) || `[]`}
 
 <MultiSelect
   id="fav-languages"
   options={languages}
   placeholder="Take your pick..."
   bind:selected
-  let:idx
-  let:option
 >
-  <LanguageSlot {idx} {option} gap="1ex" />
+  {#snippet children({ idx, option })}
+    <LanguageSnippet {idx} {option} gap="1ex" />
+  {/snippet}
 </MultiSelect>
 ```
 
@@ -29,34 +29,31 @@
 
 ```svelte example collapsible repl="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759" stackblitz="src/site/Examples.svx"
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { ml_libs } from '$site/options'
 
-  let value: { label: string, disabled: boolean, preselected: boolean }
-  let searchText = ''
-  let loading = false
-  let options = ml_libs
-  $: if (searchText) {
-    loading = true
-    setTimeout(async () => {
-      // perform some fetch/database request here to get list of options matching searchText
-      // options = await fetch(`https://example.com?search=${searchText}`)
-      loading = false
-    }, 1000)
-  }
+  let value = $state(null)
+  let searchText = $state('')
+  let loading = $state(false)
+  $effect(() => {
+    loading = Boolean(searchText)
+    // perform some fetch/database request here to get list of options matching searchText
+    // options = await fetch(`https://example.com?search=${searchText}`)
+    setTimeout(async () => { loading = false }, 1000)
+  })
 </script>
 
-<pre>value = {JSON.stringify(value)}</pre>
+value = {JSON.stringify(value) || `null`}
 
 <MultiSelect
   id="fav-ml-tool"
   maxSelect={1}
   maxSelectMsg={(current, max) => `${current} of ${max} selected`}
-  bind:options
-  bind:value
+  options={ml_libs}
   bind:searchText
-  placeholder="Favorite machine learning tool?"
+  bind:value
   {loading}
+  placeholder="Favorite machine learning tool?"
 />
 ```
 
@@ -64,9 +61,9 @@
 
 ```svelte example collapsible repl="https://svelte.dev/repl/516279bd62ec424986115263c2cdc169" stackblitz="src/site/Examples.svx"
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { frontend_libs } from '$site/options'
-  import RepoSlot from './RepoSlot.svelte'
+  import RepoSnippet from './RepoSnippet.svelte'
   import { Confetti } from 'svelte-zoo'
   import type { ObjectOption } from '$lib'
 
@@ -78,7 +75,7 @@
     return label.includes(searchStr) || lang.includes(searchStr)
   }
 
-  let show_confetti = false
+  let show_confetti = $state(false)
 </script>
 
 <MultiSelect
@@ -94,7 +91,9 @@
     }
   }}
 >
-  <RepoSlot let:idx {idx} let:option {option} slot="option" />
+ {#snippet option({ idx, option })}
+    <RepoSnippet {idx} {option} />
+  {/snippet}
 </MultiSelect>
 {#if show_confetti}
   <Confetti />
@@ -105,15 +104,16 @@
 
 ```svelte example collapsible repl="https://svelte.dev/repl/3a217c39932047a09f61d6425b04a7c3" stackblitz="src/site/Examples.svx"
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { colors } from '$site/options'
-  import ColorSlot from './ColorSlot.svelte'
+  import ColorSnippet from './ColorSnippet.svelte'
 
-  let selected: string[]
+  let selected: string[] = $state([])
 </script>
 
 <form
-  on:submit|preventDefault={() => {
+  onsubmit={(event) => {
+    event.preventDefault()
     alert(`You selected '${selected.join(`, `)}'`)
   }}
 >
@@ -124,10 +124,10 @@
     placeholder="Pick some colors..."
     allowUserOptions="append"
     required
-    let:idx
-    let:option
   >
-    <ColorSlot {idx} {option} />
+    {#snippet children({ idx, option })}
+      <ColorSnippet {idx} {option} />
+    {/snippet}
   </MultiSelect>
   <button>submit</button>
   (due to passing <code>required={true}</code> here, form submission will abort if
@@ -143,12 +143,11 @@
 
 ```svelte example collapsible repl="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1" stackblitz="src/site/Examples.svx"
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { countries } from '$site/options'
 
-  let selected: string[]
   // required={1} means form validation will prevent submission if no option selected
-  let maxOptions: number = 10
+  let maxOptions: number = $state(10)
 </script>
 
 <MultiSelect

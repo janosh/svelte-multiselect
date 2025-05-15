@@ -4,7 +4,7 @@ import type { Actions } from './$types'
 // remove leading underscore to activate this example
 // needs to be disabled for building static site
 // TODO is there a way to make this work on static site?
-export const _actions: Actions = {
+export const _actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
     let colors = data.get(`colors`)
@@ -27,4 +27,4 @@ export const _actions: Actions = {
 
     return { colors, success: true }
   },
-}
+} satisfies Actions

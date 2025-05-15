@@ -1,17 +1,20 @@
 <script lang="ts">
-  import { page } from '$app/stores'
+  import { page } from '$app/state'
   import { demos } from './stores'
 
-  export let style: string | null = null
-
-  $: is_current = (path: string) => {
-    if (`/${path}` == $page.url.pathname) return `page`
-    return undefined
+  interface Props {
+    style?: string | null
   }
+  let { style = null }: Props = $props()
+
+  let is_current = $derived((path: string) => {
+    if (`/${path}` == page.url.pathname) return `page`
+    return undefined
+  })
 </script>
 
 <nav {style}>
-  {#each $demos as href, idx}
+  {#each $demos as href, idx (href)}
     {#if idx > 0}<strong>&bull;</strong>{/if}
     <a {href} aria-current={is_current(href)}>{href}</a>
   {/each}

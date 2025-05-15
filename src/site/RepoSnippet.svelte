@@ -2,8 +2,12 @@
   import type { ObjectOption } from '$lib'
   import { Octocat } from '$lib/icons'
 
-  export let option: ObjectOption
-  export let idx: number
+  interface Props {
+    option: ObjectOption
+    idx: number
+    onclick?: () => void
+  }
+  let { option, idx, onclick }: Props = $props()
 </script>
 
 <span>
@@ -11,7 +15,7 @@
   <strong>{option.label}</strong>
   <small>
     <a
-      on:click|stopPropagation
+      {onclick}
       href="https://github.com/{option.repo_handle}"
       target="_blank"
       rel="noreferrer"

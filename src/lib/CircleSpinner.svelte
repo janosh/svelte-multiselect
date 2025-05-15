@@ -1,7 +1,10 @@
 <script lang="ts">
-  export let color = `cornflowerblue`
-  export let duration = `1.5s`
-  export let size = `1em`
+  interface Props {
+    color?: string
+    duration?: string
+    size?: string
+  }
+  let { color = `cornflowerblue`, duration = `1.5s`, size = `1em` }: Props = $props()
 </script>
 
 <div
@@ -10,7 +13,7 @@
   {color}"
   style:width={size}
   style:height={size}
-/>
+></div>
 
 <style>
   div {

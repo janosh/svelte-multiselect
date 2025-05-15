@@ -2,7 +2,11 @@ import type { PlaywrightTestConfig } from '@playwright/test'
 
 export default {
   webServer: {
-    command: `vite dev --port 3005`,
+    command: `npm run build && npm run preview -- --port 3005`,
     port: 3005,
+    reuseExistingServer: true,
   },
+  testDir: `tests`,
+  testMatch: `tests/*.test.ts`,
+  timeout: 5000,
 } satisfies PlaywrightTestConfig

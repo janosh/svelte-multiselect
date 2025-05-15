@@ -1,6 +1,6 @@
 <script lang="ts">
   import { FileDetails } from 'svelte-zoo'
-  import language_slot_src from '$site/LanguageSlot.svelte?raw'
+  import language_slot_src from '$site/LanguageSnippet.svelte?raw'
   import options_src from '$site/options.ts?raw'
 </script>
 
@@ -10,23 +10,24 @@
 
 ```svelte example stackblitz id="languages"
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
 </script>
 
 <MultiSelect
   options={languages}
   maxSelect={5}
   placeholder="What languages do you know?"
-  let:option
 >
-  <LanguageSlot {option} />
+  {#snippet children({ option })}
+    <LanguageSnippet {option} />
+  {/snippet}
 </MultiSelect>
 ```
 
 <FileDetails files={[
-  { title: `LanguageSlot.svelte`, content: language_slot_src },
+  { title: `LanguageSnippet.svelte`, content: language_slot_src },
   { title: `options.ts`, content: options_src },
 ]} />
 
@@ -41,7 +42,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 ```svelte example stackblitz
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   function handle_submit(event: SubmitEvent) {
     const form_data = new FormData(event.target)
@@ -49,7 +50,7 @@ When setting an integer value for `maxSelect` Multiselect will
   }
 </script>
 
-<form on:submit={handle_submit}>
+<form onsubmit={handle_submit}>
   <MultiSelect options={[1, 2, 3, 4, 5, 6]} required={3} name="numbers" sortSelected />
   <button>submit</button>
 </form>
@@ -61,7 +62,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
 ```svelte example stackblitz
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   function handle_submit(event: SubmitEvent) {
     const form_data = new FormData(event.target)
@@ -69,7 +70,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   }
 </script>
 
-<form on:submit={handle_submit}>
+<form onsubmit={handle_submit}>
   <MultiSelect
     options={[1, 2, 3, 4, 5, 6]}
     required={2}
@@ -84,15 +85,13 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 ```svelte example stackblitz
 <script>
   // for https://github.com/janosh/svelte-multiselect/issues/249
-  import MultiSelect from 'svelte-multiselect'
-  import { onMount } from 'svelte'
+  import MultiSelect from '$lib'
 
   const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
   const blue_pill = `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
-  const options = [ { label: red_pill, value: `red pill` }, { label: blue_pill, value: `blue pill` }]
+  const options = [ { label: red_pill, value: `red pill`, preselected: true }, { label: blue_pill, value: `blue pill` }]
 
-  let value
-  onMount(() => value = options[0])
+  let value = $state(null)
 </script>
 
 <MultiSelect {options} maxSelect={1} parseLabelsAsHtml bind:value />

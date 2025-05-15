@@ -12,9 +12,9 @@
 
 ```svelte example stackblitz id="languages"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
   import { language_store } from '$site/stores'
 </script>
 
@@ -23,7 +23,9 @@
   placeholder="What languages do you know?"
   bind:selected={$language_store}
 >
-  <LanguageSlot let:option {option} let:idx {idx} slot="selected" />
+  {#snippet selectedItem({ idx, option })}
+    <LanguageSnippet {option} {idx} />
+  {/snippet}
 </MultiSelect>
 ```
 

@@ -14,3 +14,5 @@ jobs:
     uses: janosh/workflows/.github/workflows/npm-test.yml@main
     with:
       test-cmd: npm run test:unit
+      install-e2e: npx playwright install chromium
+      e2e-test-cmd: npx playwright test tests/*.ts

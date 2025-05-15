@@ -1,105 +1,129 @@
 <script lang="ts">
-  import { createEventDispatcher, tick } from 'svelte'
+  import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
+
+  import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-  import type { DispatchEvents, MultiSelectEvents, Option as T } from './types'
-  import { get_label, get_style } from './utils'
+  import type { MultiSelectProps } from './props'
+  import type { Option as T } from './types'
+  import { get_label, get_style, highlight_matching_nodes } from './utils'
+
   type Option = $$Generic<T>
 
-  export let activeIndex: number | null = null
-  export let activeOption: Option | null = null
-  export let createOptionMsg: string | null = `Create this option...`
-  export let allowUserOptions: boolean | `append` = false
-  export let allowEmpty: boolean = false // added for https://github.com/janosh/svelte-multiselect/issues/192
-  export let autocomplete: string = `off`
-  export let autoScroll: boolean = true
-  export let breakpoint: number = 800 // any screen with more horizontal pixels is considered desktop, below is mobile
-  export let defaultDisabledTitle: string = `This option is disabled`
-  export let disabled: boolean = false
-  export let disabledInputTitle: string = `This input is disabled`
-  // prettier-ignore
-  export let duplicateOptionMsg: string = `This option is already selected`
-  export let duplicates: boolean = false // whether to allow duplicate options
-  // takes two options and returns true if they are equal
-  // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
-  export let key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
-  export let filterFunc = (opt: Option, searchText: string): boolean => {
-    if (!searchText) return true
-    return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
-  }
-  export let closeDropdownOnSelect: boolean | `desktop` = `desktop`
-  export let form_input: HTMLInputElement | null = null
-  export let highlightMatches: boolean = true
-  export let id: string | null = null
-  export let input: HTMLInputElement | null = null
-  export let inputClass: string = ``
-  export let inputStyle: string | null = null
-  export let inputmode: string | null = null
-  export let invalid: boolean = false
-  export let liActiveOptionClass: string = ``
-  export let liActiveUserMsgClass: string = ``
-  export let liOptionClass: string = ``
-  export let liOptionStyle: string | null = null
-  export let liSelectedClass: string = ``
-  export let liSelectedStyle: string | null = null
-  export let liUserMsgClass: string = ``
-  export let loading: boolean = false
-  export let matchingOptions: Option[] = []
-  export let maxOptions: number | undefined = undefined
-  export let maxSelect: number | null = null // null means there is no upper limit for selected.length
-  export let maxSelectMsg: ((current: number, max: number) => string) | null = (
-    current: number,
-    max: number,
-  ) => (max > 1 ? `${current}/${max}` : ``)
-  export let maxSelectMsgClass: string = ``
-  export let name: string | null = null
-  export let noMatchingOptionsMsg: string = `No matching options`
-  export let open: boolean = false
-  export let options: Option[]
-  export let outerDiv: HTMLDivElement | null = null
-  export let outerDivClass: string = ``
-  export let parseLabelsAsHtml: boolean = false // should not be combined with allowUserOptions!
-  export let pattern: string | null = null
-  export let placeholder: string | null = null
-  export let removeAllTitle: string = `Remove all`
-  export let removeBtnTitle: string = `Remove`
-  export let minSelect: number | null = null // null means there is no lower limit for selected.length
-  export let required: boolean | number = false
-  export let resetFilterOnAdd: boolean = true
-  export let searchText: string = ``
-  export let selected: Option[] =
-    options
-      ?.filter((opt) => opt instanceof Object && opt?.preselected)
-      .slice(0, maxSelect ?? undefined) ?? [] // don't allow more than maxSelect preselected options
-  export let sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
-  export let selectedOptionsDraggable: boolean = !sortSelected
-  export let style: string | null = null
-  export let ulOptionsClass: string = ``
-  export let ulSelectedClass: string = ``
-  export let ulSelectedStyle: string | null = null
-  export let ulOptionsStyle: string | null = null
-  export let value: Option | Option[] | null = null
+  let {
+    activeIndex = $bindable(null),
+    activeOption = $bindable(null),
+    createOptionMsg = `Create this option...`,
+    allowUserOptions = false,
+    allowEmpty = false,
+    autocomplete = `off`,
+    autoScroll = true,
+    breakpoint = 800,
+    defaultDisabledTitle = `This option is disabled`,
+    disabled = false,
+    disabledInputTitle = `This input is disabled`,
+    duplicateOptionMsg = `This option is already selected`,
+    duplicates = false,
+    key = (opt) => `${get_label(opt)}`.toLowerCase(),
+    filterFunc = (opt, searchText) => {
+      if (!searchText) return true
+      return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
+    },
+    closeDropdownOnSelect = `desktop`,
+    form_input = $bindable(null),
+    highlightMatches = true,
+    id = null,
+    input = $bindable(null),
+    inputClass = ``,
+    inputStyle = null,
+    inputmode = null,
+    invalid = $bindable(false),
+    liActiveOptionClass = ``,
+    liActiveUserMsgClass = ``,
+    liOptionClass = ``,
+    liOptionStyle = null,
+    liSelectedClass = ``,
+    liSelectedStyle = null,
+    liUserMsgClass = ``,
+    loading = false,
+    matchingOptions = $bindable([]),
+    maxOptions = undefined,
+    maxSelect = null,
+    maxSelectMsg = (current, max) => (max > 1 ? `${current}/${max}` : ``),
+    maxSelectMsgClass = ``,
+    name = null,
+    noMatchingOptionsMsg = `No matching options`,
+    open = $bindable(false),
+    options = $bindable(),
+    outerDiv = $bindable(null),
+    outerDivClass = ``,
+    parseLabelsAsHtml = false,
+    pattern = null,
+    placeholder = null,
+    removeAllTitle = `Remove all`,
+    removeBtnTitle = `Remove`,
+    minSelect = null,
+    required = false,
+    resetFilterOnAdd = true,
+    searchText = $bindable(``),
+    selected = $bindable(
+      options
+        ?.filter((opt) => opt instanceof Object && opt?.preselected)
+        .slice(0, maxSelect ?? undefined) ?? [],
+    ),
+    sortSelected = false,
+    selectedOptionsDraggable = !sortSelected,
+    style = null,
+    ulOptionsClass = ``,
+    ulSelectedClass = ``,
+    ulSelectedStyle = null,
+    ulOptionsStyle = null,
+    value = $bindable(null),
+    expandIcon,
+    selectedItem,
+    children,
+    removeIcon,
+    afterInput,
+    spinner,
+    disabledIcon,
+    option,
+    userMsg,
+    onblur,
+    onclick,
+    onfocus,
+    onkeydown,
+    onkeyup,
+    onmousedown,
+    onmouseenter,
+    onmouseleave,
+    ontouchcancel,
+    ontouchend,
+    ontouchmove,
+    ontouchstart,
+    onadd,
+    oncreate,
+    onremove,
+    onremoveAll,
+    onchange,
+    onopen,
+    onclose,
+    ...rest
+  }: MultiSelectProps = $props()
 
-  const selected_to_value = (selected: Option[]) => {
+  $effect.pre(() => {
+    // if maxSelect=1, value is the single item in selected (or null if selected is empty)
+    // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
+    // https://github.com/janosh/svelte-multiselect/issues/136
     value = maxSelect === 1 ? (selected[0] ?? null) : selected
-  }
-  const value_to_selected = (value: Option | Option[] | null) => {
+  }) // sync selected updates to value
+  $effect.pre(() => {
     if (maxSelect === 1) selected = value ? [value as Option] : []
     else selected = (value as Option[]) ?? []
-  }
+  }) // sync value updates to selected
 
-  // if maxSelect=1, value is the single item in selected (or null if selected is empty)
-  // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
-  // https://github.com/janosh/svelte-multiselect/issues/136
-  $: selected_to_value(selected)
-  $: value_to_selected(value)
-
-  let wiggle = false // controls wiggle animation when user tries to exceed maxSelect
-
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  type $$Events = MultiSelectEvents // for type-safe event listening on this component
+  let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
 
   if (!(options?.length > 0)) {
     if (allowUserOptions || loading || disabled || allowEmpty) {
@@ -151,33 +175,38 @@
     )
   }
 
-  const dispatch = createEventDispatcher<DispatchEvents<Option>>()
-  let option_msg_is_active: boolean = false // controls active state of <li>{createOptionMsg}</li>
-  let window_width: number
+  let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
+  let window_width = $state(0)
 
   // options matching the current search text
-  $: matchingOptions = options.filter(
-    (opt) =>
-      filterFunc(opt, searchText) &&
-      // remove already selected options from dropdown list unless duplicate selections are allowed
-      (!selected.map(key).includes(key(opt)) || duplicates),
-  )
+  $effect.pre(() => {
+    matchingOptions = options.filter(
+      (opt) =>
+        filterFunc(opt, searchText) &&
+        // remove already selected options from dropdown list unless duplicate selections are allowed
+        (!selected.map(key).includes(key(opt)) || duplicates),
+    )
+  })
 
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
     throw `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`
   }
+
   // update activeOption when activeIndex changes
-  $: activeOption = matchingOptions[activeIndex ?? -1] ?? null
+  $effect(() => {
+    activeOption = matchingOptions[activeIndex ?? -1] ?? null
+  })
 
   // add an option to selected list
-  function add(option: T, event: Event) {
+  function add(option: Option, event: Event) {
+    event.stopPropagation()
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
     if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
       option = Number(option) as Option // convert to number if possible
     }
-    const is_duplicate = selected.map(key).includes(key(option))
 
+    const is_duplicate = selected.map(key).includes(key(option))
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
@@ -204,7 +233,7 @@
           } else {
             option = searchText as Option // else create custom option as string
           }
-          dispatch(`create`, { option })
+          oncreate?.({ option })
         }
         if (allowUserOptions === `append`) options = [...options, option]
       }
@@ -220,7 +249,7 @@
       } else {
         selected = [...selected, option]
         if (sortSelected === true) {
-          selected = selected.sort((op1: Option, op2: Option) => {
+          selected = selected.sort((op1, op2) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
             // coerce to string if labels are numbers
             return `${label1}`.localeCompare(`${label2}`)
@@ -234,15 +263,15 @@
 
       const dropdown_should_close =
         closeDropdownOnSelect === true ||
-        (closeDropdownOnSelect === `desktop` && window_width < breakpoint)
+        (closeDropdownOnSelect === `desktop` && window_width && window_width < breakpoint)
 
       if (reached_max_select || dropdown_should_close) {
         close_dropdown(event)
       } else if (!dropdown_should_close) {
         input?.focus()
       }
-      dispatch(`add`, { option })
-      dispatch(`change`, { option, type: `add` })
+      onadd?.({ option })
+      onchange?.({ option, type: `add` })
 
       invalid = false // reset error status whenever new items are selected
       form_input?.setCustomValidity(``)
@@ -250,7 +279,8 @@
   }
 
   // remove an option from selected list
-  function remove(to_remove: T) {
+  function remove(to_remove: Option, event: Event) {
+    event.stopPropagation()
     if (selected.length === 0) return
 
     const idx = selected.findIndex((opt) => key(opt) === key(to_remove))
@@ -276,57 +306,65 @@
 
     invalid = false // reset error status whenever items are removed
     form_input?.setCustomValidity(``)
-    dispatch(`remove`, { option })
-    dispatch(`change`, { option, type: `remove` })
+    onremove?.({ option })
+    onchange?.({ option, type: `remove` })
   }
 
   function open_dropdown(event: Event) {
+    event.stopPropagation()
+
     if (disabled) return
     open = true
     if (!(event instanceof FocusEvent)) {
       // avoid double-focussing input when event that opened dropdown was already input FocusEvent
       input?.focus()
     }
-    dispatch(`open`, { event })
+    onopen?.({ event })
   }
 
   function close_dropdown(event: Event) {
     open = false
     input?.blur()
     activeIndex = null
-    dispatch(`close`, { event })
+    onclose?.({ event })
   }
 
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
     // on escape or tab out of input: close options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
+      event.stopPropagation()
       close_dropdown(event)
       searchText = ``
     }
     // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
+      event.stopPropagation()
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        if (selected.includes(activeOption)) remove(activeOption)
+        if (selected.includes(activeOption)) remove(activeOption, event)
         else add(activeOption, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
-        add(searchText, event)
+        add(searchText as Option, event)
+      } else {
+        // no active option and no search text means the options dropdown is closed
+        // in which case enter means open it
+        open_dropdown(event)
       }
-      // no active option and no search text means the options dropdown is closed
-      // in which case enter means open it
-      else open_dropdown(event)
     }
     // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
+      event.stopPropagation()
       // if no option is active yet, but there are matching options, make first one active
       if (activeIndex === null && matchingOptions.length > 0) {
+        event.preventDefault() // Prevent scroll only if we handle the key
         activeIndex = 0
         return
       } else if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
+        event.preventDefault() // Prevent scroll only if we handle the key
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
         option_msg_is_active = !option_msg_is_active
@@ -335,7 +373,7 @@
         // if no option is active and no options are matching, do nothing
         return
       }
-      event.preventDefault()
+      event.preventDefault() // Prevent scroll only if we handle the key
       // if none of the above special cases apply, we make next/prev option
       // active with wrap around at both ends
       const increment = event.key === `ArrowUp` ? -1 : 1
@@ -353,29 +391,36 @@
     }
     // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
-      remove(selected.at(-1) as Option)
+      event.stopPropagation()
+      // Don't prevent default, allow normal backspace behavior if not removing
+      remove(selected.at(-1) as Option, event)
     }
     // make first matching option active on any keypress (if none of the above special cases match)
-    else if (matchingOptions.length > 0) {
+    else if (matchingOptions.length > 0 && activeIndex === null) {
+      // Don't stop propagation or prevent default here, allow normal character input
       activeIndex = 0
     }
   }
 
-  function remove_all() {
-    dispatch(`removeAll`, { options: selected })
-    dispatch(`change`, { options: selected, type: `removeAll` })
+  function remove_all(event: Event) {
+    event.stopPropagation()
+    onremoveAll?.({ options: selected })
+    onchange?.({ options: selected, type: `removeAll` })
     selected = []
     searchText = ``
   }
 
-  $: is_selected = (label: string | number) => selected.map(get_label).includes(label)
+  let is_selected = $derived((label: string | number) =>
+    selected.map(get_label).includes(label),
+  )
 
-  const if_enter_or_space = (handler: () => void) => (event: KeyboardEvent) => {
-    if ([`Enter`, `Space`].includes(event.code)) {
-      event.preventDefault()
-      handler()
+  const if_enter_or_space =
+    (handler: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
+      if ([`Enter`, `Space`].includes(event.code)) {
+        event.preventDefault()
+        handler(event)
+      }
     }
-  }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
     if (outerDiv && !outerDiv.contains(event.target as Node)) {
@@ -383,9 +428,11 @@
     }
   }
 
-  let drag_idx: number | null = null
+  let drag_idx: number | null = $state(null)
   // event handlers enable dragging to reorder selected options
   const drop = (target_idx: number) => (event: DragEvent) => {
+    event.preventDefault()
+
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
     const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
@@ -410,65 +457,43 @@
     event.dataTransfer.setData(`text/plain`, `${idx}`)
   }
 
-  let ul_options: HTMLUListElement
+  let ul_options = $state<HTMLUListElement>()
   // highlight text matching user-entered search text in available options
-  function highlight_matching_options(event: InputEvent) {
-    if (!highlightMatches || typeof CSS == `undefined` || !CSS.highlights) return // abort if CSS highlight API not supported
-
-    // clear previous ranges from HighlightRegistry
-    CSS.highlights.clear()
+  function highlight_matching_options(
+    event: Event & { currentTarget?: HTMLInputElement },
+  ) {
+    if (!highlightMatches || !ul_options) return
 
     // get input's search query
     const query = (event?.target as HTMLInputElement)?.value.trim().toLowerCase()
     if (!query) return
 
-    const tree_walker = document.createTreeWalker(ul_options, NodeFilter.SHOW_TEXT, {
-      acceptNode: (node) => {
-        // don't highlight text in the "no matching options" message
-        if (node?.textContent === noMatchingOptionsMsg) return NodeFilter.FILTER_REJECT
-        return NodeFilter.FILTER_ACCEPT
-      },
-    })
-    const text_nodes: Node[] = []
-    let current_node = tree_walker.nextNode()
-    while (current_node) {
-      text_nodes.push(current_node)
-      current_node = tree_walker.nextNode()
-    }
+    highlight_matching_nodes(ul_options, query, noMatchingOptionsMsg)
+  }
 
-    // iterate over all text nodes and find matches
-    const ranges = text_nodes.map((el) => {
-      const text = el.textContent?.toLowerCase()
-      const indices = []
-      let start_pos = 0
-      while (text && start_pos < text.length) {
-        const index = text.indexOf(query, start_pos)
-        if (index === -1) break
-        indices.push(index)
-        start_pos = index + query.length
-      }
+  const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (event) => {
+    handle_keydown(event) // Restore internal logic
+    // Call original forwarded handler
+    onkeydown?.(event)
+  }
 
-      // create range object for each str found in the text node
-      return indices.map((index) => {
-        const range = new Range()
-        range.setStart(el, index)
-        range.setEnd(el, index + query.length)
-        return range
-      })
-    })
-
-    // create Highlight object from ranges and add to registry
-    CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
+  const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
+    open_dropdown(event) // Internal logic
+    // Call original forwarded handler
+    onfocus?.(event)
   }
 
   // reset form validation when required prop changes
   // https://github.com/janosh/svelte-multiselect/issues/285
-  $: if (required != null) form_input?.setCustomValidity(``)
+  $effect.pre(() => {
+    required = required // trigger effect when required changes
+    form_input?.setCustomValidity(``)
+  })
 </script>
 
 <svelte:window
-  on:click={on_click_outside}
-  on:touchstart={on_click_outside}
+  onclick={on_click_outside}
+  ontouchstart={on_click_outside}
   bind:innerWidth={window_width}
 />
 
@@ -479,7 +504,7 @@
   class:open
   class:invalid
   class="multiselect {outerDivClass}"
-  on:mouseup|stopPropagation={open_dropdown}
+  onmouseup={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
   role="searchbox"
@@ -490,14 +515,14 @@
   <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
   <input
     {name}
-    {required}
+    required={Boolean(required)}
     value={selected.length >= Number(required) ? JSON.stringify(selected) : null}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
     class="form-control"
     bind:this={form_input}
-    on:invalid={() => {
+    oninvalid={() => {
       invalid = true
       let msg
       if (maxSelect && maxSelect > 1 && Number(required) > 1) {
@@ -510,9 +535,11 @@
       form_input?.setCustomValidity(msg)
     }}
   />
-  <slot name="expand-icon" {open}>
+  {#if expandIcon}
+    {@render expandIcon({ open })}
+  {:else}
     <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
-  </slot>
+  {/if}
   <ul
     class="selected {ulSelectedClass}"
     aria-label="selected options"
@@ -525,34 +552,40 @@
         aria-selected="true"
         animate:flip={{ duration: 100 }}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
-        on:dragstart={dragstart(idx)}
-        on:drop|preventDefault={drop(idx)}
-        on:dragenter={() => (drag_idx = idx)}
-        on:dragover|preventDefault
+        ondragstart={dragstart(idx)}
+        ondrop={drop(idx)}
+        ondragenter={() => (drag_idx = idx)}
         class:active={drag_idx === idx}
         style="{get_style(option, `selected`)} {liSelectedStyle}"
       >
-        <!-- on:dragover|preventDefault needed for the drop to succeed https://stackoverflow.com/a/31085796 -->
-        <slot name="selected" {option} {idx}>
-          <slot {option} {idx}>
-            {#if parseLabelsAsHtml}
-              {@html get_label(option)}
-            {:else}
-              {get_label(option)}
-            {/if}
-          </slot>
-        </slot>
+        {#if selectedItem}
+          {@render selectedItem({
+            option,
+            idx,
+          })}
+        {:else if children}
+          {@render children({
+            option,
+            idx,
+          })}
+        {:else if parseLabelsAsHtml}
+          {@html get_label(option)}
+        {:else}
+          {get_label(option)}
+        {/if}
         {#if !disabled && (minSelect === null || selected.length > minSelect)}
           <button
-            on:mouseup|stopPropagation={() => remove(option)}
-            on:keydown={if_enter_or_space(() => remove(option))}
+            onclick={(event) => remove(option, event)}
+            onkeydown={if_enter_or_space((event) => remove(option, event))}
             type="button"
             title="{removeBtnTitle} {get_label(option)}"
             class="remove"
           >
-            <slot name="remove-icon">
+            {#if removeIcon}
+              {@render removeIcon()}
+            {:else}
               <CrossIcon width="15px" />
-            </slot>
+            {/if}
           </button>
         {/if}
       </li>
@@ -562,11 +595,6 @@
       style={inputStyle}
       bind:this={input}
       bind:value={searchText}
-      on:mouseup|self|stopPropagation={open_dropdown}
-      on:keydown|stopPropagation={handle_keydown}
-      on:focus
-      on:focus={open_dropdown}
-      on:input={highlight_matching_options}
       {id}
       {disabled}
       {autocomplete}
@@ -574,41 +602,47 @@
       {pattern}
       placeholder={selected.length == 0 ? placeholder : null}
       aria-invalid={invalid ? `true` : null}
-      on:drop={() => false}
-      on:blur
-      on:change
-      on:click
-      on:keydown
-      on:keyup
-      on:mousedown
-      on:mouseenter
-      on:mouseleave
-      on:touchcancel
-      on:touchend
-      on:touchmove
-      on:touchstart
+      ondrop={() => false}
+      onmouseup={open_dropdown}
+      onkeydown={handle_input_keydown}
+      onfocus={handle_input_focus}
+      oninput={highlight_matching_options}
+      {onblur}
+      {onclick}
+      {onkeyup}
+      {onmousedown}
+      {onmouseenter}
+      {onmouseleave}
+      {ontouchcancel}
+      {ontouchend}
+      {ontouchmove}
+      {ontouchstart}
+      {...rest}
     />
     <!-- the above on:* lines forward potentially useful DOM events -->
-    <slot
-      name="after-input"
-      {selected}
-      {disabled}
-      {invalid}
-      {id}
-      {placeholder}
-      {open}
-      {required}
-    />
+    {@render afterInput?.({
+      selected,
+      disabled,
+      invalid,
+      id,
+      placeholder,
+      open,
+      required,
+    })}
   </ul>
   {#if loading}
-    <slot name="spinner">
+    {#if spinner}
+      {@render spinner()}
+    {:else}
       <CircleSpinner />
-    </slot>
+    {/if}
   {/if}
   {#if disabled}
-    <slot name="disabled-icon">
+    {#if disabledIcon}
+      {@render disabledIcon()}
+    {:else}
       <DisabledIcon width="14pt" style="margin: 0 2pt;" data-name="disabled-icon" />
-    </slot>
+    {/if}
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
@@ -622,12 +656,14 @@
         type="button"
         class="remove remove-all"
         title={removeAllTitle}
-        on:mouseup|stopPropagation={remove_all}
-        on:keydown={if_enter_or_space(remove_all)}
+        onclick={remove_all}
+        onkeydown={if_enter_or_space(remove_all)}
       >
-        <slot name="remove-icon">
+        {#if removeIcon}
+          {@render removeIcon()}
+        {:else}
           <CrossIcon width="15px" />
-        </slot>
+        {/if}
       </button>
     {/if}
   {/if}
@@ -644,19 +680,18 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as option, idx}
+      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx (key(optionItem))}
         {@const {
           label,
           disabled = null,
           title = null,
           selectedTitle = null,
           disabledTitle = defaultDisabledTitle,
-        } = option instanceof Object ? option : { label: option }}
+        } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
         <li
-          on:mousedown|stopPropagation
-          on:mouseup|stopPropagation={(event) => {
-            if (!disabled) add(option, event)
+          onclick={(event) => {
+            if (!disabled) add(optionItem, event)
           }}
           title={disabled
             ? disabledTitle
@@ -665,27 +700,37 @@
           class:active
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
-          on:mouseover={() => {
+          onmouseover={() => {
             if (!disabled) activeIndex = idx
           }}
-          on:focus={() => {
+          onfocus={() => {
             if (!disabled) activeIndex = idx
           }}
-          on:mouseout={() => (activeIndex = null)}
-          on:blur={() => (activeIndex = null)}
           role="option"
           aria-selected="false"
-          style="{get_style(option, `option`)} {liOptionStyle}"
+          style="{get_style(optionItem, `option`)} {liOptionStyle}"
+          onkeydown={(event) => {
+            if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
+              event.preventDefault()
+              add(optionItem, event)
+            }
+          }}
         >
-          <slot name="option" {option} {idx}>
-            <slot {option} {idx}>
-              {#if parseLabelsAsHtml}
-                {@html get_label(option)}
-              {:else}
-                {get_label(option)}
-              {/if}
-            </slot>
-          </slot>
+          {#if option}
+            {@render option({
+              option: optionItem,
+              idx,
+            })}
+          {:else if children}
+            {@render children({
+              option: optionItem,
+              idx,
+            })}
+          {:else if parseLabelsAsHtml}
+            {@html get_label(optionItem)}
+          {:else}
+            {get_label(optionItem)}
+          {/if}
         </li>
       {/each}
       {#if searchText}
@@ -702,16 +747,31 @@
             'no-match': noMatchingOptionsMsg,
           }[msgType]}
           <li
-            on:mousedown|stopPropagation
-            on:mouseup|stopPropagation={(event) => {
-              if (allowUserOptions) add(searchText, event)
+            onclick={(event) => {
+              if (msgType === `create` && allowUserOptions) {
+                add(searchText as Option, event)
+              }
             }}
-            title={createOptionMsg}
+            onkeydown={(event) => {
+              if (
+                msgType === `create` &&
+                allowUserOptions &&
+                (event.key === `Enter` || event.code === `Space`)
+              ) {
+                event.preventDefault()
+                add(searchText as Option, event)
+              }
+            }}
+            title={msgType === `create`
+              ? createOptionMsg
+              : msgType === `dupe`
+                ? duplicateOptionMsg
+                : ``}
             class:active={option_msg_is_active}
-            on:mouseover={() => (option_msg_is_active = true)}
-            on:focus={() => (option_msg_is_active = true)}
-            on:mouseout={() => (option_msg_is_active = false)}
-            on:blur={() => (option_msg_is_active = false)}
+            onmouseover={() => (option_msg_is_active = true)}
+            onfocus={() => (option_msg_is_active = true)}
+            onmouseout={() => (option_msg_is_active = false)}
+            onblur={() => (option_msg_is_active = false)}
             role="option"
             aria-selected="false"
             class="user-msg {liUserMsgClass} {option_msg_is_active
@@ -723,9 +783,11 @@
               'no-match': `default`,
             }[msgType]}
           >
-            <slot name="user-msg" {searchText} {msgType} {msg}>
+            {#if userMsg}
+              {@render userMsg({ searchText, msgType, msg })}
+            {:else}
               {msg}
-            </slot>
+            {/if}
           </li>
         {/if}
       {/if}
@@ -734,7 +796,7 @@
 </div>
 
 <style>
-  :where(div.multiselect) {
+  :is(div.multiselect) {
     position: relative;
     align-items: center;
     display: flex;
@@ -751,27 +813,27 @@
     min-height: var(--sms-min-height, 22pt);
     margin: var(--sms-margin);
   }
-  :where(div.multiselect.open) {
+  :is(div.multiselect.open) {
     /* increase z-index when open to ensure the dropdown of one <MultiSelect />
     displays above that of another slightly below it on the page */
     z-index: var(--sms-open-z-index, 4);
   }
-  :where(div.multiselect:focus-within) {
+  :is(div.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
-  :where(div.multiselect.disabled) {
+  :is(div.multiselect.disabled) {
     background: var(--sms-disabled-bg, lightgray);
     cursor: not-allowed;
   }
 
-  :where(div.multiselect > ul.selected) {
+  :is(div.multiselect > ul.selected) {
     display: flex;
     flex: 1;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
   }
-  :where(div.multiselect > ul.selected > li) {
+  :is(div.multiselect > ul.selected > li) {
     align-items: center;
     border-radius: 3pt;
     display: flex;
@@ -783,13 +845,13 @@
     padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
-  :where(div.multiselect > ul.selected > li[draggable='true']) {
+  :is(div.multiselect > ul.selected > li[draggable='true']) {
     cursor: grab;
   }
-  :where(div.multiselect > ul.selected > li.active) {
+  :is(div.multiselect > ul.selected > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
-  :where(div.multiselect button) {
+  :is(div.multiselect button) {
     border-radius: 50%;
     display: flex;
     transition: 0.2s;
@@ -798,22 +860,22 @@
     border: none;
     cursor: pointer;
     outline: none;
-    padding: 0;
+    padding: 1pt;
     margin: 0 0 0 3pt; /* CSS reset */
   }
-  :where(div.multiselect button.remove-all) {
+  :is(div.multiselect button.remove-all) {
     margin: 0 3pt;
   }
-  :where(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
+  :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-btn-hover-color, lightskyblue);
     background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2));
   }
 
-  :where(div.multiselect input) {
+  :is(div.multiselect input) {
     margin: auto 0; /* CSS reset */
     padding: 0; /* CSS reset */
   }
-  :where(div.multiselect > ul.selected > input) {
+  :is(div.multiselect > ul.selected > input) {
     border: none;
     outline: none;
     background: none;
@@ -825,13 +887,13 @@
     cursor: inherit; /* needed for disabled state */
     border-radius: 0; /* reset ul.selected > li */
   }
-  /* don't wrap ::placeholder rules in :where() as it seems to be overpowered by browser defaults i.t.o. specificity */
+  /* don't wrap ::placeholder rules in :is() as it seems to be overpowered by browser defaults i.t.o. specificity */
   div.multiselect > ul.selected > input::placeholder {
     padding-left: 5pt;
     color: var(--sms-placeholder-color);
     opacity: var(--sms-placeholder-opacity);
   }
-  :where(div.multiselect > input.form-control) {
+  :is(div.multiselect > input.form-control) {
     width: 2em;
     position: absolute;
     background: transparent;
@@ -842,7 +904,7 @@
     pointer-events: none;
   }
 
-  :where(div.multiselect > ul.options) {
+  :is(div.multiselect > ul.options) {
     list-style: none;
     top: 100%;
     left: 0;
@@ -861,35 +923,35 @@
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, inherit);
   }
-  :where(div.multiselect > ul.options.hidden) {
+  :is(div.multiselect > ul.options.hidden) {
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
   }
-  :where(div.multiselect > ul.options > li) {
+  :is(div.multiselect > ul.options > li) {
     padding: 3pt 2ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
-  :where(div.multiselect > ul.options .user-msg) {
+  :is(div.multiselect > ul.options .user-msg) {
     /* block needed so vertical padding applies to span */
     display: block;
     padding: 3pt 2ex;
   }
-  :where(div.multiselect > ul.options > li.selected) {
+  :is(div.multiselect > ul.options > li.selected) {
     background: var(--sms-li-selected-bg);
     color: var(--sms-li-selected-color);
   }
-  :where(div.multiselect > ul.options > li.active) {
+  :is(div.multiselect > ul.options > li.active) {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
-  :where(div.multiselect > ul.options > li.disabled) {
+  :is(div.multiselect > ul.options > li.disabled) {
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
   }
 
-  :where(span.max-select-msg) {
+  :is(span.max-select-msg) {
     padding: 0 3pt;
   }
   ::highlight(sms-search-matches) {

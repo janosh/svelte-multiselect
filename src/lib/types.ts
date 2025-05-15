@@ -15,33 +15,3 @@ export type ObjectOption = {
   style?: OptionStyle
   [key: string]: unknown // allow any other keys users might want
 }
-
-export type DispatchEvents<T = Option> = {
-  add: { option: T }
-  create: { option: T }
-  remove: { option: T }
-  removeAll: { options: T[] }
-  change: {
-    option?: T
-    options?: T[]
-    type: `add` | `remove` | `removeAll`
-  }
-  open: { event: Event }
-  close: { event: Event }
-}
-
-export type MultiSelectEvents = {
-  [key in keyof DispatchEvents]: CustomEvent<DispatchEvents[key]>
-} & {
-  blur: FocusEvent
-  click: MouseEvent
-  focus: FocusEvent
-  keydown: KeyboardEvent
-  keyup: KeyboardEvent
-  mouseenter: MouseEvent
-  mouseleave: MouseEvent
-  touchcancel: TouchEvent
-  touchend: TouchEvent
-  touchmove: TouchEvent
-  touchstart: TouchEvent
-}

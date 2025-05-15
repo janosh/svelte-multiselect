@@ -1,9 +1,7 @@
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { foods, languages } from '$site/options'
-  import { LanguageSlot } from '$site'
-
-  let selected_empty = []
+  import { LanguageSnippet } from '$site'
 </script>
 
 ## Allow Custom User Input
@@ -12,12 +10,12 @@
 
 ```svelte example stackblitz id="foods"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { foods } from '$site/options'
   import { Toggle } from 'svelte-zoo'
 
-  let selected = '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', ')
-  let duplicates = false
+  let selected = $state('🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '))
+  let duplicates = $state(false)
 </script>
 
 <MultiSelect
@@ -41,11 +39,11 @@
 
 ```svelte example stackblitz id="languages"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
   import { languages } from '$site/options'
-  import { LanguageSlot } from '$site'
+  import { LanguageSnippet } from '$site'
 
-  let selected_append = ['Haskell', 'TypeScript']
+  let selected_append = $state(['Haskell', 'TypeScript'])
 </script>
 
 <MultiSelect
@@ -53,9 +51,10 @@
   allowUserOptions="append"
   bind:selected={selected_append}
   createOptionMsg="True polyglots can enter custom languages!"
-  let:option
 >
-  <LanguageSlot {option} />
+  {#snippet children({ option })}
+    <LanguageSnippet {option} />
+  {/snippet}
 </MultiSelect>
 ```
 
@@ -67,9 +66,9 @@ You can start with no options and let users populate MultiSelect from scratch. I
 
 ```svelte example stackblitz id="no-default-options"
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
-  let selected = []
+  let selected = $state([])
 </script>
 
 {#if selected?.length > 0}
