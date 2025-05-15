@@ -9,8 +9,8 @@
 This example shows the SvelteKit form action way of handling MultiSelect fields in form submission events. If you're not interested in [progressively enhanced forms](https://kit.svelte.dev/docs/form-actions#progressive-enhancement) (i.e. supporting no-JS browsers) take a look at the [JS form example](form) instead.
 
 > Note that this example will only work when running the dev server locally since it needs
-a server to respond to the form's POST request and this documentation site is only static
-HTML.
+> a server to respond to the form's POST request and this documentation site is only static
+> HTML.
 
 ```svelte example stackblitz
 <script lang="ts">
