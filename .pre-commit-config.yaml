@@ -38,7 +38,7 @@ repos:
         exclude: changelog\.md
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v9.24.0
+    rev: v9.26.0
     hooks:
       - id: eslint
         types: [file]
