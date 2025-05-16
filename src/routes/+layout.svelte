@@ -1,15 +1,13 @@
 <script lang="ts">
-  import { mount, type Snippet } from 'svelte'
-  import { CopyButton, GitHubCorner } from 'svelte-zoo'
-
   import { afterNavigate, goto } from '$app/navigation'
   import { page } from '$app/state'
   import { CmdPalette } from '$lib'
   import { repository } from '$root/package.json'
   import { Footer } from '$site'
   import { demos } from '$site/stores'
+  import { mount, type Snippet } from 'svelte'
   import Toc from 'svelte-toc'
-
+  import { CopyButton, GitHubCorner } from 'svelte-zoo'
   import '../app.css'
 
   interface Props {

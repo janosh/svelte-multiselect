@@ -1,7 +1,6 @@
 <script lang="ts">
   import { tick, type Snippet } from 'svelte'
   import { fade } from 'svelte/transition'
-
   import Select from './MultiSelect.svelte'
   import type { MultiSelectProps } from './props'
   import type { ObjectOption } from './types'

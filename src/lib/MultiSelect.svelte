@@ -1,7 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
-
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
@@ -431,8 +430,6 @@
   let drag_idx: number | null = $state(null)
   // event handlers enable dragging to reorder selected options
   const drop = (target_idx: number) => (event: DragEvent) => {
-    event.preventDefault()
-
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
     const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
@@ -556,6 +553,9 @@
         animate:flip={{ duration: 100 }}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
         ondragstart={dragstart(idx)}
+        ondragover={(event) => {
+          event.preventDefault() // needed for ondrop to fire
+        }}
         ondrop={drop(idx)}
         ondragenter={() => (drag_idx = idx)}
         class:active={drag_idx === idx}

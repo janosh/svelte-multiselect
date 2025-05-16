@@ -6,7 +6,7 @@ import { foods } from '../src/site/options'
 test.describe.configure({ mode: `parallel` })
 
 test.describe(`input`, () => {
-  test.skip(`opens dropdown on focus`, async ({ page }) => {
+  test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
@@ -609,7 +609,7 @@ test.describe(`snippets`, () => {
   })
 })
 
-test.skip(`dragging selected options across each other changes their order`, async ({
+test(`dragging selected options across each other changes their order`, async ({
   page,
 }) => {
   // https://github.com/janosh/svelte-multiselect/issues/176
