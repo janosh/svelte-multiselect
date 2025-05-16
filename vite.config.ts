@@ -7,6 +7,7 @@ export default defineConfig({
   plugins: [sveltekit(), mdsvexamples],
 
   test: {
+    include: [`tests/unit/**/*.test.ts`],
     environment: `jsdom`,
     css: true,
     coverage: {
@@ -15,11 +16,9 @@ export default defineConfig({
     setupFiles: [resolve(__dirname, `tests/setup.ts`)],
   },
 
-  resolve: process.env.TEST
-    ? {
-        conditions: [`browser`],
-      }
-    : undefined,
+  resolve: {
+    conditions: process.env.TEST ? [`browser`] : undefined,
+  },
 
   server: {
     fs: { allow: [`..`] }, // needed to import from $root

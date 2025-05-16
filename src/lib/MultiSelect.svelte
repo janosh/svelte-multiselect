@@ -500,7 +500,7 @@
   class:single={maxSelect === 1}
   class:open
   class:invalid
-  class="multiselect {outerDivClass}"
+  class="multiselect {outerDivClass} {rest.class ?? ``}"
   onmouseup={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
