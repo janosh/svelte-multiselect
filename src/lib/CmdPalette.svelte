@@ -73,13 +73,18 @@
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       {...rest}
+      --sms-bg="var(--sms-options-bg)"
+      --sms-width="min(20em, 90vw)"
+      --sms-max-width="none"
+      --sms-placeholder-color="lightgray"
+      --sms-options-margin="1px 0"
+      --sms-options-border-radius="0 0 1ex 1ex"
     />
   </dialog>
 {/if}
 
 <style>
-  /* TODO maybe remove global */
-  :where(:global(dialog)) {
+  :where(dialog) {
     position: fixed;
     top: 30%;
     border: none;
@@ -89,13 +94,5 @@
     color: white;
     z-index: 10;
     font-size: 2.4ex;
-  }
-  dialog :global(div.multiselect) {
-    --sms-bg: var(--sms-options-bg);
-    --sms-width: min(20em, 90vw);
-    --sms-max-width: none;
-    --sms-placeholder-color: lightgray;
-    --sms-options-margin: 1px 0;
-    --sms-options-border-radius: 0 0 1ex 1ex;
   }
 </style>
