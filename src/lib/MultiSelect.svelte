@@ -910,7 +910,7 @@
     pointer-events: none;
   }
 
-  :is(div.multiselect > ul.options) {
+  ul.options {
     list-style: none;
     top: 100%;
     left: 0;
@@ -929,29 +929,29 @@
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, inherit);
   }
-  :is(div.multiselect > ul.options.hidden) {
+  ul.options.hidden {
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
   }
-  :is(div.multiselect > ul.options > li) {
+  ul.options > li {
     padding: 3pt 2ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
-  :is(div.multiselect > ul.options .user-msg) {
+  ul.options .user-msg {
     /* block needed so vertical padding applies to span */
     display: block;
     padding: 3pt 2ex;
   }
-  :is(div.multiselect > ul.options > li.selected) {
+  ul.options > li.selected {
     background: var(--sms-li-selected-bg);
     color: var(--sms-li-selected-color);
   }
-  :is(div.multiselect > ul.options > li.active) {
+  ul.options > li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
-  :is(div.multiselect > ul.options > li.disabled) {
+  ul.options > li.disabled {
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
