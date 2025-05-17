@@ -2,6 +2,7 @@
   --night: #0b0b1b;
   --blue: cornflowerblue;
   --text-color: #ccc;
+  --main-max-width: 50em;
 
   --sms-active-color: rgba(255, 255, 255, 0.1);
   --sms-focus-border: 1pt solid cornflowerblue;
@@ -28,7 +29,7 @@ main {
   margin: auto;
   margin-bottom: 3em;
   width: 100%;
-  max-width: 50em;
+  max-width: var(--main-max-width);
 }
 button,
 a.btn {
@@ -139,7 +140,7 @@ div.multiselect.invalid {
 aside.toc.desktop {
   position: fixed;
   top: 3em;
-  left: calc(50vw + 50em / 2);
+  left: calc(50vw + var(--main-max-width) / 2);
   max-width: 16em;
 }
 

@@ -21,10 +21,12 @@
 
   {@render children?.()}
 
+  <!-- TODO pass onkeyup=null in next version of svelte-zoo -->
   <PrevNext
     items={$demos}
     current={page.url.pathname}
-    style="max-width: 55em; margin: auto;"
+    style="max-width: var(--main-max-width); margin: auto;"
+    on_keyup={() => ({})}
   />
 </main>
 
