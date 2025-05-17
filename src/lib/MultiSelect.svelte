@@ -1,7 +1,7 @@
 <script lang="ts">
+  import { browser } from '$app/environment'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
-
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
@@ -109,6 +109,7 @@
     onchange,
     onopen,
     onclose,
+    portal: portal_params = {},
     ...rest
   }: MultiSelectProps = $props()
 
@@ -199,20 +200,20 @@
   })
 
   // add an option to selected list
-  function add(option: Option, event: Event) {
+  function add(option_to_add: T, event: Event) {
     event.stopPropagation()
-    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
-    if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
-      option = Number(option) as Option // convert to number if possible
+    if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
+    if (!isNaN(Number(option_to_add)) && typeof selected.map(get_label)[0] === `number`) {
+      option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    const is_duplicate = selected.map(key).includes(key(option))
+    const is_duplicate = selected.map(key).includes(key(option_to_add))
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
     ) {
       if (
-        !options.includes(option) && // first check if we find option in the options list
+        !options.includes(option_to_add) && // first check if we find option in the options list
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
@@ -222,32 +223,32 @@
         // a new option from the user-entered text
         if (typeof options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
-          option = { label: searchText } as Option
+          option_to_add = { label: searchText } as Option
         } else {
           if (
             [`number`, `undefined`].includes(typeof options[0]) &&
             !isNaN(Number(searchText))
           ) {
             // create new option as number if it parses to a number and 1st option is also number or missing
-            option = Number(searchText) as Option
+            option_to_add = Number(searchText) as Option
           } else {
-            option = searchText as Option // else create custom option as string
+            option_to_add = searchText as Option // else create custom option as string
           }
-          oncreate?.({ option })
+          oncreate?.({ option: option_to_add })
         }
-        if (allowUserOptions === `append`) options = [...options, option]
+        if (allowUserOptions === `append`) options = [...options, option_to_add]
       }
 
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
-      if ([``, undefined, null].includes(option as string | null)) {
-        console.error(`MultiSelect: encountered falsy option ${option}`)
+      if ([``, undefined, null].includes(option_to_add as string | null)) {
+        console.error(`MultiSelect: encountered falsy option ${option_to_add}`)
         return
       }
       if (maxSelect === 1) {
         // for maxSelect = 1 we always replace current option with new one
-        selected = [option]
+        selected = [option_to_add]
       } else {
-        selected = [...selected, option]
+        selected = [...selected, option_to_add]
         if (sortSelected === true) {
           selected = selected.sort((op1, op2) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
@@ -270,8 +271,8 @@
       } else if (!dropdown_should_close) {
         input?.focus()
       }
-      onadd?.({ option })
-      onchange?.({ option, type: `add` })
+      onadd?.({ option: option_to_add })
+      onchange?.({ option: option_to_add, type: `add` })
 
       invalid = false // reset error status whenever new items are selected
       form_input?.setCustomValidity(``)
@@ -279,26 +280,26 @@
   }
 
   // remove an option from selected list
-  function remove(to_remove: Option, event: Event) {
+  function remove(option_to_drop: T, event: Event) {
     event.stopPropagation()
     if (selected.length === 0) return
 
-    const idx = selected.findIndex((opt) => key(opt) === key(to_remove))
+    const idx = selected.findIndex((opt) => key(opt) === key(option_to_drop))
 
-    let [option] = selected.splice(idx, 1) // remove option from selected list
+    let [option_removed] = selected.splice(idx, 1) // remove option from selected list
 
-    if (option === undefined && allowUserOptions) {
+    if (option_removed === undefined && allowUserOptions) {
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
       const other_ops_type = typeof options[0]
-      option = (other_ops_type ? { label: to_remove } : to_remove) as Option
+      option_removed = (
+        other_ops_type ? { label: option_to_drop } : option_to_drop
+      ) as Option
     }
-    if (option === undefined) {
+    if (option_removed === undefined) {
       return console.error(
-        `Multiselect can't remove selected option ${JSON.stringify(
-          to_remove,
-        )}, not found in selected list`,
+        `Multiselect can't remove selected option ${JSON.stringify(option_to_drop)}, not found in selected list`,
       )
     }
 
@@ -306,8 +307,8 @@
 
     invalid = false // reset error status whenever items are removed
     form_input?.setCustomValidity(``)
-    onremove?.({ option })
-    onchange?.({ option, type: `remove` })
+    onremove?.({ option: option_removed })
+    onchange?.({ option: option_removed, type: `remove` })
   }
 
   function open_dropdown(event: Event) {
@@ -431,8 +432,6 @@
   let drag_idx: number | null = $state(null)
   // event handlers enable dragging to reorder selected options
   const drop = (target_idx: number) => (event: DragEvent) => {
-    event.preventDefault()
-
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
     const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
@@ -489,6 +488,53 @@
     required = required // trigger effect when required changes
     form_input?.setCustomValidity(``)
   })
+
+  function portal(
+    node: HTMLElement,
+    params: { target_node: HTMLElement | null; active?: boolean },
+  ) {
+    let { target_node, active } = params
+    if (!active) return
+    let render_in_place = !browser || !document.body.contains(node)
+
+    if (!render_in_place) {
+      document.body.appendChild(node)
+      node.style.position = `fixed`
+
+      const update_position = () => {
+        if (!target_node || !open) return (node.hidden = true)
+        const rect = target_node.getBoundingClientRect()
+        node.style.left = `${rect.left}px`
+        node.style.top = `${rect.bottom}px`
+        node.style.width = `${rect.width}px`
+        node.hidden = false
+      }
+
+      if (open) tick().then(update_position)
+
+      window.addEventListener(`scroll`, update_position, true)
+      window.addEventListener(`resize`, update_position)
+
+      $effect.pre(() => {
+        if (open && target_node) update_position()
+        else node.hidden = true
+      })
+
+      return {
+        update(params: { target_node: HTMLElement | null }) {
+          target_node = params.target_node
+          render_in_place = !browser || !document.body.contains(node)
+          if (open && !render_in_place && target_node) tick().then(update_position)
+          else if (!open || !target_node) node.hidden = true
+        },
+        destroy() {
+          if (!render_in_place) node.remove()
+          window.removeEventListener(`scroll`, update_position, true)
+          window.removeEventListener(`resize`, update_position)
+        },
+      }
+    }
+  }
 </script>
 
 <svelte:window
@@ -503,7 +549,7 @@
   class:single={maxSelect === 1}
   class:open
   class:invalid
-  class="multiselect {outerDivClass}"
+  class="multiselect {outerDivClass} {rest.class ?? ``}"
   onmouseup={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
@@ -556,6 +602,9 @@
         animate:flip={{ duration: 100 }}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
         ondragstart={dragstart(idx)}
+        ondragover={(event) => {
+          event.preventDefault() // needed for ondrop to fire
+        }}
         ondrop={drop(idx)}
         ondragenter={() => (drag_idx = idx)}
         class:active={drag_idx === idx}
@@ -674,6 +723,7 @@
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
+      use:portal={{ target_node: outerDiv, ...portal_params }}
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"
@@ -910,14 +960,19 @@
     pointer-events: none;
   }
 
-  :is(div.multiselect > ul.options) {
+  ul.options {
     list-style: none;
+    /* top, left, width, position are managed by portal when active */
+    /* but provide defaults for non-portaled or initial state */
+    position: absolute; /* Default, overridden by portal to fixed when open */
     top: 100%;
     left: 0;
     width: 100%;
-    position: absolute;
+    /* Default z-index if not portaled/overridden by portal */
+    z-index: var(--sms-options-z-index, 3);
+
     overflow: auto;
-    transition: all 0.2s;
+    transition: all 0.2s; /* Consider if this transition is desirable with portal positioning */
     box-sizing: border-box;
     background: var(--sms-options-bg, white);
     max-height: var(--sms-options-max-height, 50vh);
@@ -929,29 +984,35 @@
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, inherit);
   }
-  :is(div.multiselect > ul.options.hidden) {
+  :is(div.multiselect.open) {
+    /* increase z-index when open to ensure the dropdown of one <MultiSelect />
+    displays above that of another slightly below it on the page */
+    /* This z-index is for the div.multiselect itself, portal has its own higher z-index */
+    z-index: var(--sms-open-z-index, 4);
+  }
+  ul.options.hidden {
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
   }
-  :is(div.multiselect > ul.options > li) {
+  ul.options > li {
     padding: 3pt 2ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
   }
-  :is(div.multiselect > ul.options .user-msg) {
+  ul.options .user-msg {
     /* block needed so vertical padding applies to span */
     display: block;
     padding: 3pt 2ex;
   }
-  :is(div.multiselect > ul.options > li.selected) {
+  ul.options > li.selected {
     background: var(--sms-li-selected-bg);
     color: var(--sms-li-selected-color);
   }
-  :is(div.multiselect > ul.options > li.active) {
+  ul.options > li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
   }
-  :is(div.multiselect > ul.options > li.disabled) {
+  ul.options > li.disabled {
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);

@@ -6,7 +6,7 @@ import { foods } from '../src/site/options'
 test.describe.configure({ mode: `parallel` })
 
 test.describe(`input`, () => {
-  test.skip(`opens dropdown on focus`, async ({ page }) => {
+  test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
     expect(await page.$(`div.multiselect.open`)).toBeNull()
@@ -74,9 +74,7 @@ test.describe(`remove all button`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const input_locator = page.locator(`#foods input[autocomplete]`)
-    // Use a more general locator for options list that doesn't depend on .open class,
-    // and rely on waitFor to ensure it's visible after click.
-    const options_list_locator = page.locator(`#foods ul.options`)
+    const options_list_locator = page.locator(`ul.options[role="listbox"]`)
 
     // Select first option
     await input_locator.click() // Ensure dropdown is open
@@ -101,9 +99,6 @@ test.describe(`remove all button`, () => {
     )
     expect(selected_items).toHaveLength(2)
 
-    // await Promise.all([
-    //   await page.waitForEvent(`removeAll`),
-    // ])
     await page.click(`button.remove-all`)
     expect(await page.$(`button.remove-all`)).toBeNull() // remove-all button is hidden when nothing selected
 
@@ -208,9 +203,7 @@ test.describe(`accessibility`, () => {
     const invalid = await page.getAttribute(
       `#foods input[autocomplete]`,
       `aria-invalid`,
-      {
-        strict: true,
-      },
+      { strict: true },
     )
     expect(invalid).toBe(`true`)
   })
@@ -562,7 +555,6 @@ test.describe(`snippets`, () => {
   }) => {
     await page.goto(`/snippets`, { waitUntil: `networkidle` })
 
-    // Use a more general descendant selector for the SVG within the button
     const expand_icon_locator = page.locator(
       `#languages-1 .multiselect > input.form-control + svg`,
     )
@@ -609,7 +601,7 @@ test.describe(`snippets`, () => {
   })
 })
 
-test.skip(`dragging selected options across each other changes their order`, async ({
+test(`dragging selected options across each other changes their order`, async ({
   page,
 }) => {
   // https://github.com/janosh/svelte-multiselect/issues/176
@@ -623,4 +615,68 @@ test.skip(`dragging selected options across each other changes their order`, asy
   await li1?.dragTo(li2)
   selected = await page.textContent(`ul.selected`)
   expect(selected?.trim()).toBe(`1  TypeScript 2  Python 3  C 4  Haskell`)
+})
+
+test.describe(`portal feature`, () => {
+  test(`dropdown renders in document.body when portal is active in modal`, async ({
+    page,
+  }) => {
+    await page.goto(`/modal`, { waitUntil: `networkidle` })
+
+    // Open the first modal
+    await page
+      .getByRole(`button`, { name: `Open Modal 1 (Vertical Selects)` })
+      .click()
+
+    // Locate the MultiSelect input for foods within the first modal
+    const foods_multiselect_input = page.locator(
+      `div.modal-content.modal-1 div.multiselect input[placeholder='Choose foods...']`,
+    )
+    // Wait for the modal to be fully visible and input to be available
+    await foods_multiselect_input.waitFor({ state: `visible` })
+
+    // Click the input to open the dropdown
+    await foods_multiselect_input.click()
+
+    // Identify the specific portalled options list for foods
+    // It should be in the body and contain the first food item
+    const foods_options_list_in_body = page.locator(
+      `body > ul.options:has(li:has-text("${foods[0]}"))`,
+    )
+    await foods_options_list_in_body.waitFor({ state: `visible` })
+    await expect(foods_options_list_in_body).toHaveAttribute(
+      `aria-expanded`,
+      `true`,
+    ) // Confirm it's open
+
+    // Assert that the options list is NOT a direct child of the multiselect wrapper within the modal
+    const multiselect_wrapper_in_modal = page.locator(
+      `div.modal-content.modal-1 div.multiselect:has(input[placeholder='Choose foods...'])`,
+    )
+    await expect(
+      multiselect_wrapper_in_modal.locator(`> ul.options`),
+    ).not.toBeAttached()
+
+    // Select an option from this specific portalled dropdown
+    await foods_options_list_in_body
+      .locator(`li:has-text("${foods[0]}")`)
+      .click()
+
+    // Assert this specific dropdown is now hidden
+    await expect(foods_options_list_in_body).toBeHidden({ timeout: 3000 })
+
+    // Explicitly wait for the selected item to appear before asserting visibility
+    await expect(
+      page.getByRole(`button`, {
+        name: `Remove 🍇 Grapes`,
+      }),
+    ).toBeVisible()
+
+    // click escape to close the dropdown
+    await page.keyboard.press(`Escape`)
+
+    // Close the modal
+    await page.getByRole(`button`, { name: `Close Modal 1` }).click()
+    await expect(page.locator(`div.modal-content.modal-1`)).toBeHidden()
+  })
 })
