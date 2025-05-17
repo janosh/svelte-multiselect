@@ -198,20 +198,20 @@
   })
 
   // add an option to selected list
-  function add(option: Option, event: Event) {
+  function add(option_to_add: T, event: Event) {
     event.stopPropagation()
     if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
-    if (!isNaN(Number(option)) && typeof selected.map(get_label)[0] === `number`) {
-      option = Number(option) as Option // convert to number if possible
+    if (!isNaN(Number(option_to_add)) && typeof selected.map(get_label)[0] === `number`) {
+      option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    const is_duplicate = selected.map(key).includes(key(option))
+    const is_duplicate = selected.map(key).includes(key(option_to_add))
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
     ) {
       if (
-        !options.includes(option) && // first check if we find option in the options list
+        !options.includes(option_to_add) && // first check if we find option in the options list
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
@@ -221,32 +221,32 @@
         // a new option from the user-entered text
         if (typeof options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
-          option = { label: searchText } as Option
+          option_to_add = { label: searchText } as Option
         } else {
           if (
             [`number`, `undefined`].includes(typeof options[0]) &&
             !isNaN(Number(searchText))
           ) {
             // create new option as number if it parses to a number and 1st option is also number or missing
-            option = Number(searchText) as Option
+            option_to_add = Number(searchText) as Option
           } else {
-            option = searchText as Option // else create custom option as string
+            option_to_add = searchText as Option // else create custom option as string
           }
-          oncreate?.({ option })
+          oncreate?.({ option: option_to_add })
         }
-        if (allowUserOptions === `append`) options = [...options, option]
+        if (allowUserOptions === `append`) options = [...options, option_to_add]
       }
 
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
-      if ([``, undefined, null].includes(option as string | null)) {
-        console.error(`MultiSelect: encountered falsy option ${option}`)
+      if ([``, undefined, null].includes(option_to_add as string | null)) {
+        console.error(`MultiSelect: encountered falsy option ${option_to_add}`)
         return
       }
       if (maxSelect === 1) {
         // for maxSelect = 1 we always replace current option with new one
-        selected = [option]
+        selected = [option_to_add]
       } else {
-        selected = [...selected, option]
+        selected = [...selected, option_to_add]
         if (sortSelected === true) {
           selected = selected.sort((op1, op2) => {
             const [label1, label2] = [get_label(op1), get_label(op2)]
@@ -269,8 +269,8 @@
       } else if (!dropdown_should_close) {
         input?.focus()
       }
-      onadd?.({ option })
-      onchange?.({ option, type: `add` })
+      onadd?.({ option: option_to_add })
+      onchange?.({ option: option_to_add, type: `add` })
 
       invalid = false // reset error status whenever new items are selected
       form_input?.setCustomValidity(``)
@@ -278,26 +278,26 @@
   }
 
   // remove an option from selected list
-  function remove(to_remove: Option, event: Event) {
+  function remove(option_to_drop: T, event: Event) {
     event.stopPropagation()
     if (selected.length === 0) return
 
-    const idx = selected.findIndex((opt) => key(opt) === key(to_remove))
+    const idx = selected.findIndex((opt) => key(opt) === key(option_to_drop))
 
-    let [option] = selected.splice(idx, 1) // remove option from selected list
+    let [option_removed] = selected.splice(idx, 1) // remove option from selected list
 
-    if (option === undefined && allowUserOptions) {
+    if (option_removed === undefined && allowUserOptions) {
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
       const other_ops_type = typeof options[0]
-      option = (other_ops_type ? { label: to_remove } : to_remove) as Option
+      option_removed = (
+        other_ops_type ? { label: option_to_drop } : option_to_drop
+      ) as Option
     }
-    if (option === undefined) {
+    if (option_removed === undefined) {
       return console.error(
-        `Multiselect can't remove selected option ${JSON.stringify(
-          to_remove,
-        )}, not found in selected list`,
+        `Multiselect can't remove selected option ${JSON.stringify(option_to_drop)}, not found in selected list`,
       )
     }
 
@@ -305,8 +305,8 @@
 
     invalid = false // reset error status whenever items are removed
     form_input?.setCustomValidity(``)
-    onremove?.({ option })
-    onchange?.({ option, type: `remove` })
+    onremove?.({ option: option_removed })
+    onchange?.({ option: option_removed, type: `remove` })
   }
 
   function open_dropdown(event: Event) {
