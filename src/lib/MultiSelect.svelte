@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from '$app/environment'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
@@ -108,6 +109,7 @@
     onchange,
     onopen,
     onclose,
+    portal: portal_params = {},
     ...rest
   }: MultiSelectProps = $props()
 
@@ -200,7 +202,7 @@
   // add an option to selected list
   function add(option_to_add: T, event: Event) {
     event.stopPropagation()
-    if (maxSelect && maxSelect > 1 && selected.length >= maxSelect) wiggle = true
+    if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (!isNaN(Number(option_to_add)) && typeof selected.map(get_label)[0] === `number`) {
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
@@ -486,6 +488,54 @@
     required = required // trigger effect when required changes
     form_input?.setCustomValidity(``)
   })
+
+  function portal(
+    node: HTMLElement,
+    params: { target_node: HTMLElement | null; active?: boolean },
+  ) {
+    let { target_node, active } = params
+    if (!active) return
+    let render_in_place = !browser || !document.body.contains(node)
+
+    if (!render_in_place) {
+      document.body.appendChild(node)
+      node.style.position = `fixed`
+      node.style.zIndex = `var(--sms-open-z-index, 5)`
+
+      const update_position = () => {
+        if (!target_node || !open) return (node.hidden = true)
+        const rect = target_node.getBoundingClientRect()
+        node.style.left = `${rect.left}px`
+        node.style.top = `${rect.bottom}px`
+        node.style.width = `${rect.width}px`
+        node.hidden = false
+      }
+
+      if (open) tick().then(update_position)
+
+      window.addEventListener(`scroll`, update_position, true)
+      window.addEventListener(`resize`, update_position)
+
+      $effect.pre(() => {
+        if (open && target_node) update_position()
+        else node.hidden = true
+      })
+
+      return {
+        update(params: { target_node: HTMLElement | null }) {
+          target_node = params.target_node
+          render_in_place = !browser || !document.body.contains(node)
+          if (open && !render_in_place && target_node) tick().then(update_position)
+          else if (!open || !target_node) node.hidden = true
+        },
+        destroy() {
+          if (!render_in_place) node.remove()
+          window.removeEventListener(`scroll`, update_position, true)
+          window.removeEventListener(`resize`, update_position)
+        },
+      }
+    }
+  }
 </script>
 
 <svelte:window
@@ -674,6 +724,7 @@
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
+      use:portal={{ target_node: outerDiv, ...portal_params }}
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"
@@ -912,12 +963,17 @@
 
   ul.options {
     list-style: none;
+    /* top, left, width, position are managed by portal when active */
+    /* but provide defaults for non-portaled or initial state */
+    position: absolute; /* Default, overridden by portal to fixed when open */
     top: 100%;
     left: 0;
     width: 100%;
-    position: absolute;
+    /* Default z-index if not portaled/overridden by portal */
+    z-index: var(--sms-options-z-index, 3);
+
     overflow: auto;
-    transition: all 0.2s;
+    transition: all 0.2s; /* Consider if this transition is desirable with portal positioning */
     box-sizing: border-box;
     background: var(--sms-options-bg, white);
     max-height: var(--sms-options-max-height, 50vh);
@@ -928,6 +984,12 @@
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, inherit);
+  }
+  :is(div.multiselect.open) {
+    /* increase z-index when open to ensure the dropdown of one <MultiSelect />
+    displays above that of another slightly below it on the page */
+    /* This z-index is for the div.multiselect itself, portal has its own higher z-index */
+    z-index: var(--sms-open-z-index, 4);
   }
   ul.options.hidden {
     visibility: hidden;

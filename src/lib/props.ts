@@ -71,6 +71,11 @@ export interface MultiSelectSnippets<T extends Option = Option> {
   >
 }
 
+export interface PortalParams {
+  target_node?: HTMLElement | null
+  active?: boolean
+}
+
 export interface MultiSelectParameters<T extends Option = Option> {
   activeIndex?: number | null
   activeOption?: T | null
@@ -135,6 +140,7 @@ export interface MultiSelectParameters<T extends Option = Option> {
   ulSelectedStyle?: string | null
   ulOptionsStyle?: string | null
   value?: T | T[] | null
+  portal?: PortalParams
   [key: string]: unknown
 }
 
