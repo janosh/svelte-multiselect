@@ -74,9 +74,7 @@ test.describe(`remove all button`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const input_locator = page.locator(`#foods input[autocomplete]`)
-    // Use a more general locator for options list that doesn't depend on .open class,
-    // and rely on waitFor to ensure it's visible after click.
-    const options_list_locator = page.locator(`#foods ul.options`)
+    const options_list_locator = page.locator(`ul.options[role="listbox"]`)
 
     // Select first option
     await input_locator.click() // Ensure dropdown is open
@@ -101,9 +99,6 @@ test.describe(`remove all button`, () => {
     )
     expect(selected_items).toHaveLength(2)
 
-    // await Promise.all([
-    //   await page.waitForEvent(`removeAll`),
-    // ])
     await page.click(`button.remove-all`)
     expect(await page.$(`button.remove-all`)).toBeNull() // remove-all button is hidden when nothing selected
 
@@ -208,9 +203,7 @@ test.describe(`accessibility`, () => {
     const invalid = await page.getAttribute(
       `#foods input[autocomplete]`,
       `aria-invalid`,
-      {
-        strict: true,
-      },
+      { strict: true },
     )
     expect(invalid).toBe(`true`)
   })
@@ -562,7 +555,6 @@ test.describe(`snippets`, () => {
   }) => {
     await page.goto(`/snippets`, { waitUntil: `networkidle` })
 
-    // Use a more general descendant selector for the SVG within the button
     const expand_icon_locator = page.locator(
       `#languages-1 .multiselect > input.form-control + svg`,
     )

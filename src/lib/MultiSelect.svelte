@@ -500,7 +500,6 @@
     if (!render_in_place) {
       document.body.appendChild(node)
       node.style.position = `fixed`
-      node.style.zIndex = `var(--sms-open-z-index, 5)`
 
       const update_position = () => {
         if (!target_node || !open) return (node.hidden = true)
