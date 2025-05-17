@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v11.1.0](https://github.com/janosh/svelte-multiselect/compare/v11.0.0...v11.1.0)
+
+> 17 May 2025
+
+- Multiselect portal [`#306`](https://github.com/janosh/svelte-multiselect/pull/306)
+- Multiselect portal (#306) [`#301`](https://github.com/janosh/svelte-multiselect/issues/301)
+
 ### [v11.0.0](https://github.com/janosh/svelte-multiselect/compare/v11.0.0-rc.1...v11.0.0)
 
 > 15 May 2025
