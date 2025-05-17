@@ -1,6 +1,5 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-
   import { Spring } from 'svelte/motion'
 
   interface Props {

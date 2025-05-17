@@ -16,7 +16,7 @@
     "package": "svelte-package",
     "serve": "vite build && vite preview",
     "check": "svelte-check src",
-    "test": "vitest --run --coverage tests/unit/*.ts && npm run test:e2e",
+    "test": "vitest run && playwright test",
     "test:unit": "vitest tests/unit/*.ts",
     "test:e2e": "playwright test tests/*.test.ts",
     "changelog": "npx auto-changelog --package --output changelog.md --hide-empty-releases --hide-credit --commit-limit false",

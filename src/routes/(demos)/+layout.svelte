@@ -3,10 +3,11 @@
   import { name } from '$root/package.json'
   import { DemoNav } from '$site'
   import { demos } from '$site/stores'
+  import type { Snippet } from 'svelte'
   import { PrevNext } from 'svelte-zoo'
 
   interface Props {
-    children?: import('svelte').Snippet
+    children?: Snippet
   }
   let { children }: Props = $props()
 </script>
@@ -20,10 +21,12 @@
 
   {@render children?.()}
 
+  <!-- TODO pass onkeyup=null in next version of svelte-zoo -->
   <PrevNext
     items={$demos}
     current={page.url.pathname}
-    style="max-width: 55em; margin: auto;"
+    style="max-width: var(--main-max-width); margin: auto;"
+    on_keyup={() => ({})}
   />
 </main>
 
