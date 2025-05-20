@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test'
-import { foods } from '../src/site/options'
+import {
+  colors as demo_colors,
+  languages as demo_languages,
+  foods,
+} from '../src/site/options'
 
 // to run tests in this file, use `npm run test:e2e`
 
@@ -618,65 +622,167 @@ test(`dragging selected options across each other changes their order`, async ({
 })
 
 test.describe(`portal feature`, () => {
-  test(`dropdown renders in document.body when portal is active in modal`, async ({
+  test(`foods dropdown in modal 1 renders in body when portal is active`, async ({
     page,
   }) => {
     await page.goto(`/modal`, { waitUntil: `networkidle` })
 
-    // Open the first modal
     await page
       .getByRole(`button`, { name: `Open Modal 1 (Vertical Selects)` })
       .click()
 
-    // Locate the MultiSelect input for foods within the first modal
-    const foods_multiselect_input = page.locator(
-      `div.modal-content.modal-1 div.multiselect input[placeholder='Choose foods...']`,
+    const modal_1_content = page.locator(`div.modal-content.modal-1`)
+    const foods_input = modal_1_content.locator(
+      `div.multiselect input[placeholder='Choose foods...']`,
     )
-    // Wait for the modal to be fully visible and input to be available
-    await foods_multiselect_input.waitFor({ state: `visible` })
+    await foods_input.click() // Open dropdown
 
-    // Click the input to open the dropdown
-    await foods_multiselect_input.click()
-
-    // Identify the specific portalled options list for foods
-    // It should be in the body and contain the first food item
-    const foods_options_list_in_body = page.locator(
-      `body > ul.options:has(li:has-text("${foods[0]}"))`,
+    // Options list should be portalled to body and visible
+    const portalled_foods_options = page.locator(
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${foods[0]}"))`,
     )
-    await foods_options_list_in_body.waitFor({ state: `visible` })
-    await expect(foods_options_list_in_body).toHaveAttribute(
-      `aria-expanded`,
-      `true`,
-    ) // Confirm it's open
+    await expect(portalled_foods_options).toBeVisible()
 
-    // Assert that the options list is NOT a direct child of the multiselect wrapper within the modal
-    const multiselect_wrapper_in_modal = page.locator(
-      `div.modal-content.modal-1 div.multiselect:has(input[placeholder='Choose foods...'])`,
+    // Options list should not be a direct child of the multiselect wrapper in the modal
+    const foods_multiselect_wrapper = modal_1_content.locator(
+      `div.multiselect:has(input[placeholder='Choose foods...'])`,
     )
     await expect(
-      multiselect_wrapper_in_modal.locator(`> ul.options`),
+      foods_multiselect_wrapper.locator(`> ul.options`),
     ).not.toBeAttached()
 
-    // Select an option from this specific portalled dropdown
-    await foods_options_list_in_body
-      .locator(`li:has-text("${foods[0]}")`)
+    // Select an option
+    await portalled_foods_options.locator(`li:has-text("${foods[0]}")`).click()
+    await expect(portalled_foods_options).toBeHidden() // Dropdown should close
+
+    await expect(
+      modal_1_content.getByRole(`button`, { name: `Remove ${foods[0]}` }),
+    ).toBeVisible()
+
+    await page.keyboard.press(`Escape`) // Close any remaining popups/dropdowns
+    await page.getByRole(`button`, { name: `Close Modal 1` }).click()
+    await expect(modal_1_content).toBeHidden()
+  })
+
+  test(`dropdown renders within component when portal is inactive (/ui page)`, async ({
+    page,
+  }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    const foods_multiselect = page.locator(`#foods`)
+    await foods_multiselect.locator(`input[autocomplete]`).click() // Open dropdown
+
+    // Options list should be a child of the multiselect wrapper and visible
+    const foods_options_in_component = foods_multiselect.locator(`ul.options`)
+    await expect(foods_options_in_component).toBeVisible()
+    await expect(foods_options_in_component).toHaveAttribute(
+      `aria-expanded`,
+      `true`,
+    )
+
+    // Options list should NOT be portalled to the body
+    const portalled_foods_options = page.locator(
+      // More specific selector to avoid accidental matches if body > ul.options exists for other reasons
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${foods[0]}"))`,
+    )
+    await expect(portalled_foods_options).not.toBeAttached()
+  })
+
+  test(`colors dropdown in modal 1 renders in body when portal is active`, async ({
+    page,
+  }) => {
+    await page.goto(`/modal`, { waitUntil: `networkidle` })
+
+    await page
+      .getByRole(`button`, { name: `Open Modal 1 (Vertical Selects)` })
       .click()
 
-    // Assert this specific dropdown is now hidden
-    await expect(foods_options_list_in_body).toBeHidden({ timeout: 3000 })
+    const modal_1_content = page.locator(`div.modal-content.modal-1`)
+    const colors_input = modal_1_content.locator(
+      `div.multiselect input[placeholder='Choose colors...']`,
+    )
+    await colors_input.click() // Open dropdown
 
-    // Explicitly wait for the selected item to appear before asserting visibility
+    // Options list should be portalled to body and visible
+    const portalled_colors_options = page.locator(
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${demo_colors[0]}"))`,
+    )
+    await expect(portalled_colors_options).toBeVisible()
+
+    // Options list should not be a direct child of the multiselect wrapper in the modal
+    const colors_multiselect_wrapper = modal_1_content.locator(
+      `div.multiselect:has(input[placeholder='Choose colors...'])`,
+    )
     await expect(
-      page.getByRole(`button`, {
-        name: `Remove 🍇 Grapes`,
+      colors_multiselect_wrapper.locator(`> ul.options`),
+    ).not.toBeAttached()
+
+    // Select an option
+    await portalled_colors_options
+      .locator(`li:has-text("${demo_colors[0]}")`)
+      .click()
+    await expect(portalled_colors_options).toBeHidden() // Dropdown should close
+
+    await expect(
+      modal_1_content.getByRole(`button`, { name: `Remove ${demo_colors[0]}` }),
+    ).toBeVisible()
+
+    await page.keyboard.press(`Escape`) // Close any remaining popups/dropdowns
+    await page.getByRole(`button`, { name: `Close Modal 1` }).click()
+    await expect(modal_1_content).toBeHidden()
+  })
+
+  test(`languages dropdown in modal 2 renders in body when portal is active`, async ({
+    page,
+  }) => {
+    await page.goto(`/modal`, { waitUntil: `networkidle` })
+
+    await page
+      .getByRole(`button`, { name: `Open Modal 2 (Horizontal Selects)` })
+      .click()
+
+    const modal_2_content = page.locator(`div.modal-content.modal-2`)
+    const languages_input = modal_2_content.locator(
+      `div.multiselect input[placeholder='Choose languages...']`,
+    )
+    await languages_input.click() // Open dropdown
+
+    // Options list should be portalled to body and visible
+    const portalled_languages_options = page.locator(
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${demo_languages[0]}"))`,
+    )
+    await expect(portalled_languages_options).toBeVisible()
+
+    // Options list should not be a direct child of the multiselect wrapper in the modal
+    const languages_multiselect_wrapper = modal_2_content.locator(
+      `div.multiselect:has(input[placeholder='Choose languages...'])`,
+    )
+    await expect(
+      languages_multiselect_wrapper.locator(`> ul.options`),
+    ).not.toBeAttached()
+
+    // Select an option, ensuring exact match
+    await portalled_languages_options
+      .getByRole(`option`, { name: demo_languages[0], exact: true })
+      .click()
+    // Dropdown should remain visible on desktop by default
+    await expect(portalled_languages_options).toBeVisible()
+    // And the selected option should no longer be in the options list (if duplicates=false)
+    await expect(
+      portalled_languages_options.getByRole(`option`, {
+        name: demo_languages[0],
+        exact: true,
+      }),
+    ).not.toBeAttached()
+
+    await expect(
+      modal_2_content.getByRole(`button`, {
+        name: `Remove ${demo_languages[0]}`,
       }),
     ).toBeVisible()
 
-    // click escape to close the dropdown
-    await page.keyboard.press(`Escape`)
-
-    // Close the modal
-    await page.getByRole(`button`, { name: `Close Modal 1` }).click()
-    await expect(page.locator(`div.modal-content.modal-1`)).toBeHidden()
+    await page.keyboard.press(`Escape`) // Close any remaining popups/dropdowns
+    await page.getByRole(`button`, { name: `Close Modal 2` }).click()
+    await expect(modal_2_content).toBeHidden()
   })
 })
