@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { browser } from '$app/environment'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
@@ -489,13 +488,11 @@
     form_input?.setCustomValidity(``)
   })
 
-  function portal(
-    node: HTMLElement,
-    params: { target_node: HTMLElement | null; active?: boolean },
-  ) {
+  type PortalParams = { target_node: HTMLElement | null; active?: boolean }
+  function portal(node: HTMLElement, params: PortalParams) {
     let { target_node, active } = params
     if (!active) return
-    let render_in_place = !browser || !document.body.contains(node)
+    let render_in_place = typeof window === `undefined` || !document.body.contains(node)
 
     if (!render_in_place) {
       document.body.appendChild(node)
@@ -521,9 +518,9 @@
       })
 
       return {
-        update(params: { target_node: HTMLElement | null }) {
+        update(params: PortalParams) {
           target_node = params.target_node
-          render_in_place = !browser || !document.body.contains(node)
+          render_in_place = typeof window === `undefined` || !document.body.contains(node)
           if (open && !render_in_place && target_node) tick().then(update_position)
           else if (!open || !target_node) node.hidden = true
         },
