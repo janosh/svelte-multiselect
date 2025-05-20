@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v11.1.1](https://github.com/janosh/svelte-multiselect/compare/v11.1.0...v11.1.1)
+
+> 20 May 2025
+
+- more playwright tests for active+inactive portal [`66ebd8d`](https://github.com/janosh/svelte-multiselect/commit/66ebd8dedc799180daba0af734f9cbebd1b7c723)
+- pnpm remove svelte-multiselect [`bc6ee6c`](https://github.com/janosh/svelte-multiselect/commit/bc6ee6c5a75d0c7c223159ee72da568e5eb6befd)
+- replace `browser` from @app/env import with `typeof window` check in portal() action to support non-sveltekit apps [`2a8f116`](https://github.com/janosh/svelte-multiselect/commit/2a8f116b89b9f42e075f57dc7ecb2b63a4065723)
+- remove unused link-check-config.json [`c4f26ef`](https://github.com/janosh/svelte-multiselect/commit/c4f26efda66e3a153cf2a5ec0fcd2de29d19f4bc)
+
 #### [v11.1.0](https://github.com/janosh/svelte-multiselect/compare/v11.0.0...v11.1.0)
 
 > 17 May 2025
