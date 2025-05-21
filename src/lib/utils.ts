@@ -1,11 +1,7 @@
-import type { Option, OptionStyle } from '../types'
+import type { Option, OptionStyle } from './types'
 
-/**
- * Get the label key from an option object or the option itself if it's a string or number
- * @param opt Option
- * @returns Label
- */
-
+// Get the label key from an option object or the option itself
+// if it's a string or number
 export const get_label = (opt: Option) => {
   if (opt instanceof Object) {
     if (opt.label === undefined) {
@@ -20,14 +16,9 @@ export const get_label = (opt: Option) => {
   return `${opt}`
 }
 
-/**
- * This function is used extract CSS strings from a {selected, option} style object to be used in the style attribute of the option.
- * If the style is a string, it will be returned as is
- * @param option Option
- * @param key
- * @returns CSS string
- */
-
+// This function is used extract CSS strings from a {selected, option} style
+// object to be used in the style attribute of the option.
+// If the style is a string, it will be returned as is
 export function get_style(
   option: { style?: OptionStyle; [key: string]: unknown } | string | number,
   key: `selected` | `option` | null = null,
@@ -54,16 +45,11 @@ export function get_style(
   return css_str
 }
 
-/**
- * Highlights text nodes that matching the string query
- * @param element Parent element
- * @param query Search query
- * @param noMatchingOptionsMsg Text for empty node
- */
+// Highlights text nodes that matching the string query
 export function highlight_matching_nodes(
-  element: HTMLElement,
-  query?: string,
-  noMatchingOptionsMsg?: string,
+  element: HTMLElement, // parent element
+  query?: string, // search query
+  noMatchingOptionsMsg?: string, // text for empty node
 ) {
   if (typeof CSS == `undefined` || !CSS.highlights || !query) return // abort if CSS highlight API not supported
 

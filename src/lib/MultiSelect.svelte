@@ -5,8 +5,7 @@
   import CircleSpinner from './CircleSpinner.svelte'
   import Wiggle from './Wiggle.svelte'
   import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
-  import type { MultiSelectProps } from './props'
-  import type { Option as T } from './types'
+  import type { MultiSelectProps, Option as T } from './types'
   import { get_label, get_style, highlight_matching_nodes } from './utils'
 
   type Option = $$Generic<T>
