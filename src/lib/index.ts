@@ -1,9 +1,8 @@
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CmdPalette } from './CmdPalette.svelte'
-export { default as MultiSelect, default } from './MultiSelect.svelte'
-export { default as Wiggle } from './Wiggle.svelte'
-export * from './props'
+export { default, default as MultiSelect } from './MultiSelect.svelte'
 export * from './types'
+export { default as Wiggle } from './Wiggle.svelte'
 
 // Firefox lacks support for scrollIntoViewIfNeeded (https://caniuse.com/scrollintoviewifneeded).
 // See https://github.com/janosh/svelte-multiselect/issues/87

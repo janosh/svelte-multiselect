@@ -1,24 +1,19 @@
 <script lang="ts">
   import { fade } from 'svelte/transition'
-  import Select from './MultiSelect.svelte'
-  import type { MultiSelectProps } from './props'
-  import type { ObjectOption } from './types'
+  import { MultiSelect } from '.'
+  import type { MultiSelectProps, ObjectOption } from './types'
 
   interface Action extends ObjectOption {
     label: string
     action: (label: string) => void
   }
 
-  interface Props
-    extends Omit<
-      MultiSelectProps<Action>,
-      `options` | `onadd` | `onkeydown` | `placeholder`
-    > {
+  interface Props extends Omit<MultiSelectProps<Action>, `options`> {
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
     fade_duration?: number // in ms
-    style?: string // for dialog
+    dialog_style?: string // for dialog
     // for span in option snippet, has no effect when specifying a custom option snippet
     open?: boolean
     dialog?: HTMLDialogElement | null
@@ -30,7 +25,7 @@
     triggers = [`k`],
     close_keys = [`Escape`],
     fade_duration = 200,
-    style = ``,
+    dialog_style = ``,
     open = $bindable(false),
     dialog = $bindable(null),
     input = $bindable(null),
@@ -65,8 +60,13 @@
 <svelte:window onkeydown={toggle} onclick={close_if_outside} />
 
 {#if open}
-  <dialog open bind:this={dialog} transition:fade={{ duration: fade_duration }} {style}>
-    <Select
+  <dialog
+    open
+    bind:this={dialog}
+    transition:fade={{ duration: fade_duration }}
+    style={dialog_style}
+  >
+    <MultiSelect
       options={actions}
       bind:input
       {placeholder}

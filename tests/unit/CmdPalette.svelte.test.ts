@@ -186,7 +186,7 @@ test(`applies custom style to the dialog element`, () => {
   const custom_style = `border: 2px solid red; padding: 20px;`
   mount(CmdPalette, {
     target: document.body,
-    props: { open: true, actions, style: custom_style },
+    props: { open: true, actions, dialog_style: custom_style },
   })
 
   const dialog = doc_query(`dialog`) as HTMLDialogElement

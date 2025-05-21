@@ -3,7 +3,7 @@ import { describe, expect, test, vi } from 'vitest'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
-import type { MultiSelectComponentEvents, MultiSelectProps } from '$lib/props'
+import type { MultiSelectEvents, MultiSelectProps } from '$lib/types'
 import { get_label, get_style } from '$lib/utils'
 
 import { doc_query } from '.'
@@ -1206,12 +1206,11 @@ test.each([
 ])(
   `fires %s event with expected payload when clicking %s`,
   async (event_name, selector) => {
-    const is_event = <T extends keyof MultiSelectComponentEvents>(
+    const is_event = <T extends keyof MultiSelectEvents>(
       name: T,
-      event_payload: Parameters<NonNullable<MultiSelectComponentEvents[T]>>[0],
-    ): event_payload is Parameters<
-      NonNullable<MultiSelectComponentEvents[T]>
-    >[0] => name === event_name
+      event_payload: Parameters<NonNullable<MultiSelectEvents[T]>>[0],
+    ): event_payload is Parameters<NonNullable<MultiSelectEvents[T]>>[0] =>
+      name === event_name
 
     const spy = vi.fn((event_payload) => {
       if (
