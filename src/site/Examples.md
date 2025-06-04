@@ -6,7 +6,7 @@ Simple examples to get you started:
 
 ```svelte example
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   const fruits = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
   let selected = $state([])
@@ -22,7 +22,7 @@ Simple examples to get you started:
 
 ```svelte example
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   const colors = ['Red', 'Green', 'Blue', 'Yellow', 'Purple']
   let value = $state(null)
@@ -38,7 +38,7 @@ Simple examples to get you started:
 
 ```svelte example
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   const countries = [
     { label: 'United States', value: 'US', continent: 'North America' },
@@ -61,7 +61,7 @@ Simple examples to get you started:
 
 ```svelte example
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from '$lib'
 
   const initial_tags = ['JavaScript', 'Svelte', 'TypeScript']
   let selected = $state([])
