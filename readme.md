@@ -209,6 +209,12 @@ These are the core props you'll use in most cases:
    Whether users can create new options by typing. `true` = add to selected only, `'append'` = add to both options and selected.
 
 1. ```ts
+   allowEmpty: boolean = false
+   ```
+
+   Whether to allow the component to exist with no options. If `false`, shows console error when no options provided (unless `loading`, `disabled`, or `allowUserOptions` is `true`).
+
+1. ```ts
    loading: boolean = false
    ```
 
@@ -275,6 +281,12 @@ These are the core props you'll use in most cases:
    ```
 
    Whether/how to sort selected options. `true` uses default sort, function enables custom sorting.
+
+1. ```ts
+   portal: { target_node?: HTMLElement; active?: boolean } = {}
+   ```
+
+   Configuration for portal rendering. When `active: true`, the dropdown is rendered at document.body level with fixed positioning. Useful for avoiding z-index and overflow issues.
 
 ### Form & Accessibility Props
 
@@ -505,6 +517,18 @@ For use with CSS frameworks like Tailwind:
    CSS class for the currently active dropdown option.
 
 1. ```ts
+   liUserMsgClass: string = ''
+   ```
+
+   CSS class for user messages (no matches, create option, etc.).
+
+1. ```ts
+   liActiveUserMsgClass: string = ''
+   ```
+
+   CSS class for active user messages.
+
+1. ```ts
    maxSelectMsgClass: string = ''
    ```
 
@@ -522,7 +546,7 @@ These reflect internal component state:
 
 ### Bindable Props
 
-`selected`, `value`, `searchText`, `open`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`
+`selected`, `value`, `searchText`, `open`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`, `form_input`, `options`, `matchingOptions`
 
 ## 🎰 &thinsp; Snippets
 
@@ -572,6 +596,12 @@ Example using several snippets:
    ```
 
    Triggers when a new option is selected. The newly selected option is provided as `event.detail.option`.
+
+1. ```ts
+   oncreate={(event) => console.log(event.detail.option)}
+   ```
+
+   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `event.detail.option`.
 
 1. ```ts
    onremove={(event) => console.log(event.detail.option)}`
@@ -713,6 +743,7 @@ Minimal example that changes the background color of the options dropdown:
   - `background: var(--sms-options-bg, white)`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
+  - `z-index: var(--sms-options-z-index, 3)`: Z-index for the dropdown options list.
   - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black)`: Box shadow of dropdown list.
   - `border: var(--sms-options-border)`
   - `border-width: var(--sms-options-border-width)`
