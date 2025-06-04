@@ -1,6 +1,88 @@
-## 👇 &thinsp; Examples
+## 🚀 &thinsp; Getting Started
 
-<label for="fav-languages">Favorite programming languages? <span>multi select</span></label>
+Simple examples to get you started:
+
+### Basic Multi-Select
+
+```svelte example
+<script>
+  import MultiSelect from '$lib'
+
+  const fruits = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
+  let selected = $state([])
+</script>
+
+<h3>Pick your favorite fruits:</h3>
+<MultiSelect bind:selected options={fruits} placeholder="Choose fruits..." />
+
+<p>You selected: {JSON.stringify(selected)}</p>
+```
+
+### Single Select
+
+```svelte example
+<script>
+  import MultiSelect from '$lib'
+
+  const colors = ['Red', 'Green', 'Blue', 'Yellow', 'Purple']
+  let value = $state(null)
+</script>
+
+<h3>Pick one color:</h3>
+<MultiSelect bind:value options={colors} maxSelect={1} placeholder="Choose a color..." />
+
+<p>You selected: {JSON.stringify(value)}</p>
+```
+
+### Object Options
+
+```svelte example
+<script>
+  import MultiSelect from '$lib'
+
+  const countries = [
+    { label: 'United States', value: 'US', continent: 'North America' },
+    { label: 'Canada', value: 'CA', continent: 'North America' },
+    { label: 'United Kingdom', value: 'UK', continent: 'Europe' },
+    { label: 'Germany', value: 'DE', continent: 'Europe' },
+    { label: 'Japan', value: 'JP', continent: 'Asia' }
+  ]
+  let selected = $state([])
+</script>
+
+<h3>Where have you lived?</h3>
+<MultiSelect bind:selected options={countries} placeholder="Select countries..." />
+
+<p>Selected countries: {selected.map(c => c.label).join(', ')}</p>
+<p>Country codes: {selected.map(c => c.value).join(', ')}</p>
+```
+
+### With User-Created Options
+
+```svelte example
+<script>
+  import MultiSelect from '$lib'
+
+  const initial_tags = ['JavaScript', 'Svelte', 'TypeScript']
+  let selected = $state([])
+</script>
+
+<h3>Add your skills (you can create new ones):</h3>
+<MultiSelect
+  bind:selected
+  options={initial_tags}
+  allowUserOptions="append"
+  placeholder="Type to add skills..."
+/>
+
+<p>Your skills: {JSON.stringify(selected)}</p>
+```
+
+---
+
+## 👇 &thinsp; Advanced Examples
+
+<label for="fav-languages">Favorite programming languages? <span>multi select with custom snippet</span></label>
 
 ```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7" stackblitz="src/site/Examples.md"
 <script lang="ts">
