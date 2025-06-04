@@ -17,5 +17,3 @@ jobs:
         uses: lycheeverse/lychee-action@v2
         with:
           args: --exclude '%7B' --exclude '/' --accept 100..=103,200..=299,403,429 -- ./**/*.{md,svelte,ts}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

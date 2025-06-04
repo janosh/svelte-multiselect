@@ -66,334 +66,463 @@ Favorite Frontend Tools?
 <MultiSelect bind:selected options={ui_libs} />
 ```
 
+## 🧠 &thinsp; Mental Model & Core Concepts
+
+### Essential Props
+
+| Prop            | Purpose                                        | Value                                                                               |
+| --------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `options`       | What users can choose from                     | Array of strings, numbers, or objects with `label` property                         |
+| `bind:selected` | What they've chosen                            | Always an array: `[]`, `['Apple']` or `['Apple', 'Banana']`                         |
+| `bind:value`    | Single-select convenience for what users chose | Single item: `'Apple'` (or `null`) if `maxSelect={1}`, otherwise same as `selected` |
+
+### Common Patterns
+
+```svelte
+<!-- Multi-select -->
+<MultiSelect bind:selected options={['A', 'B', 'C']} />
+
+<!-- Single-select -->
+<MultiSelect bind:value options={colors} maxSelect={1} />
+
+<!-- Object options (need 'label' property) -->
+<MultiSelect bind:selected options={[
+  { label: 'Red', value: '#ff0000' },
+  { label: 'Blue', value: '#0000ff' }
+]} />
+```
+
+### Troubleshooting
+
+- **Object options not working?** → Add `label` property
+- **Dropdown not showing?** → Check you have `options` and not `disabled={true}`
+- **Want single item not array?** → Use `bind:value` with `maxSelect={1}`
+- **Types confusing?** → Component auto-infers type of `selected` and `value` from your `options` array
+
 ## 🔣 &thinsp; Props
 
-Full list of props/bindable variables for this component. The `Option` type you see below is defined in [`src/lib/index.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) and can be imported as `import { type Option } from 'svelte-multiselect'`.
+Complete reference of all props. Props are organized by importance - **Essential Props** are what you'll use most often.
+
+> **💡 Tip:** The `Option` type is automatically inferred from your `options` array, or you can import it: `import { type Option } from 'svelte-multiselect'`
+
+### Essential Props
+
+These are the core props you'll use in most cases:
 
 1. ```ts
-   activeIndex: number | null = null
+   options: Option[]  // REQUIRED
    ```
 
-   Zero-based index of currently active option in the array of currently matching options, i.e. if the user typed a search string into the input and only a subset of options match, this index refers to the array position of the matching subset of options
+   **The only required prop.** Array of strings, numbers, or objects that users can select from. Objects must have a `label` property that will be displayed in the dropdown.
+
+   ```svelte
+   <!-- Simple options -->
+   <MultiSelect options={['Red', 'Green', 'Blue']} />
+
+   <!-- Object options -->
+   <MultiSelect options={[
+     { label: 'Red', value: '#ff0000', hex: true },
+     { label: 'Green', value: '#00ff00', hex: true }
+   ]} />
+   ```
 
 1. ```ts
-   activeOption: Option | null = null
+   selected: Option[] = []  // bindable
    ```
 
-   Currently active option, i.e. the one the user currently hovers or navigated to with arrow keys.
+   **Your main state variable.** Array of currently selected options. Use `bind:selected` for two-way binding.
+
+   ```svelte
+   <script>
+     let selected = $state(['Red'])  // Pre-select Red
+   </script>
+   <MultiSelect bind:selected options={colors} />
+   ```
 
 1. ```ts
-   createOptionMsg: string | null = `Create this option...`
+   value: Option | Option[] | null = null  // bindable
    ```
 
-   The message shown to users when `allowUserOptions` is truthy and they entered text that doesn't match any existing options to suggest creating a new option from the entered text. Emits `console.error` if `allowUserOptions` is `true` or `'append'` and `createOptionMsg=''` to since users might be unaware they can create new option. The error can be silenced by setting `createOptionMsg=null` indicating developer intent is to e.g. use MultiSelect as a tagging component where a user message might be unwanted.
+   **Alternative to `selected`.** When `maxSelect={1}`, `value` is the single selected item (not an array). Otherwise, `value` equals `selected`.
 
-1. ```ts
-   allowEmpty: boolean = false
+   ```svelte
+   <!-- Single-select: value = 'Red' (not ['Red']) -->
+   <MultiSelect bind:value options={colors} maxSelect={1} />
+
+   <!-- Multi-select: value = ['Red', 'Blue'] (same as selected) -->
+   <MultiSelect bind:value options={colors} />
    ```
-
-   Whether to `console.error` if dropdown list of options is empty. `allowEmpty={false}` will suppress errors. `allowEmpty={true}` will report a console error if component is not `disabled`, not in `loading` state and doesn't `allowUserOptions`.
-
-1. ```ts
-   allowUserOptions: boolean | `append` = false
-   ```
-
-   Whether users can enter values that are not in the dropdown list. `true` means add user-defined options to the selected list only, `'append'` means add to both options and selected.
-   If `allowUserOptions` is `true` or `'append'` then the type `object | number | string` of entered value is determined by `typeof options[0]` (i.e. the first option in the dropdown list) to keep type homogeneity.
-
-1. ```ts
-   autocomplete: string = `off`
-   ```
-
-   Applied to the `<input>`. Specifies if browser is permitted to auto-fill this form field. Should usually be one of `'on'` or `'off'` but see [MDN docs](https://developer.mozilla.org/docs/Web/HTML/Attributes/autocomplete) for other admissible values.
-
-1. ```ts
-   autoScroll: boolean = true
-   ```
-
-   `false` disables keeping the active dropdown items in view when going up/down the list of options with arrow keys.
-
-1. ```ts
-   breakpoint: number = 800
-   ```
-
-   Screens wider than `breakpoint` in pixels will be considered `'desktop'`, everything narrower as `'mobile'`.
-
-1. ```ts
-   defaultDisabledTitle: string = `This option is disabled`
-   ```
-
-   Title text to display when user hovers over a disabled option. Each option can override this through its `disabledTitle` attribute.
-
-1. ```ts
-   disabled: boolean = false
-   ```
-
-   Disable the component. It will still be rendered but users won't be able to interact with it.
-
-1. ```ts
-   disabledInputTitle: string = `This input is disabled`
-   ```
-
-   Tooltip text to display on hover when the component is in `disabled` state.
-
-1. ```ts
-   duplicates: boolean = false
-   ```
-
-   Whether to allow users to select duplicate options. Applies only to the selected item list, not the options dropdown. Keeping that free of duplicates is left to developer. The selected item list can have duplicates if `allowUserOptions` is truthy, `duplicates` is `true` and users create the same option multiple times. Use `duplicateOptionMsg` to customize the message shown to user if `duplicates` is `false` and users attempt this and `key` to customize when a pair of options is considered equal.
-
-1. ```ts
-   duplicateOptionMsg: string = `This option is already selected`
-   ```
-
-   Text to display to users when `allowUserOptions` is truthy and they try to create a new option that's already selected.
-
-<!-- prettier-ignore -->
-1. ```ts
-   key: (opt: T) => unknown = (opt) => `${get_label(opt)}`.toLowerCase()
-   ```
-
-   A function that maps options to a value by which equality of options is determined. Defaults to mapping options to their lower-cased label. E.g. by default ``const opt1 = { label: `foo`, id: 1 }`` and ``const opt2 = { label: `foo`, id: 2 }`` are considered equal. If you want to consider them different, you can set `key` to e.g. `key={(opt) => opt.id}` or ``key={(opt) => `${opt.label}-${opt.id}}`` or even `key={JSON.stringify}`.
-
-1. ```ts
-   filterFunc = (opt: Option, searchText: string): boolean => {
-     if (!searchText) return true
-     return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
-   }
-   ```
-
-   Customize how dropdown options are filtered when user enters search string into `<MultiSelect />`. Defaults to:
-
-1. ```ts
-   closeDropdownOnSelect: boolean | `desktop` = `desktop`
-   ```
-
-   One of `true`, `false` or `'desktop'`. Whether to close the dropdown list after selecting a dropdown item. If `true`, component will loose focus and `dropdown` is closed. `'desktop'` means `false` if current window width is larger than the current value of `breakpoint` prop (default is 800, meaning screen width in pixels). This is to align with the default behavior of many mobile browsers like Safari which close dropdowns after selecting an option while desktop browsers facilitate multi-selection by leaving dropdowns open.
-
-1. ```ts
-   form_input: HTMLInputElement | null = null
-   ```
-
-   Handle to the `<input>` DOM node that's responsible for form validity checks and passing selected options to form submission handlers. Only available after component mounts (`null` before then).
-
-1. ```ts
-   highlightMatches: boolean = true
-   ```
-
-   Whether to highlight text in the dropdown options that matches the current user-entered search query. Uses the [CSS Custom Highlight API](https://developer.mozilla.org/docs/Web/API/CSS_Custom_Highlight_API) with [limited browser support](https://caniuse.com/mdn-api_css_highlights) (70% as of May 2023) and [styling options](https://developer.mozilla.org/docs/Web/CSS/::highlight). See `::highlight(sms-search-matches)` below for available CSS variables.
-
-1. ```ts
-   id: string | null = null
-   ```
-
-   Applied to the `<input>` element for associating HTML form `<label>`s with this component for accessibility. Also, clicking a `<label>` with same `for` attribute as `id` will focus this component.
-
-1. ```ts
-   input: HTMLInputElement | null = null
-   ```
-
-   Handle to the `<input>` DOM node. Only available after component mounts (`null` before then).
-
-1. ```ts
-   inputmode: string | null = null
-   ```
-
-   The `inputmode` attribute hints at the type of data the user may enter. Values like `'numeric' | 'tel' | 'email'` allow mobile browsers to display an appropriate virtual on-screen keyboard. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Global_attributes/inputmode) for details. If you want to suppress the on-screen keyboard to leave full-screen real estate for the dropdown list of options, set `inputmode="none"`.
-
-1. ```ts
-   inputStyle: string | null = null
-   ```
-
-   One-off CSS rules applied to the `<input>` element.
-
-1. ```ts
-   invalid: boolean = false
-   ```
-
-   If `required = true, 1, 2, ...` and user tries to submit form but `selected = []` is empty/`selected.length < required`, `invalid` is automatically set to `true` and CSS class `invalid` applied to the top-level `div.multiselect`. `invalid` class is removed as soon as any change to `selected` is registered. `invalid` can also be controlled externally by binding to it `<MultiSelect bind:invalid />` and setting it to `true` based on outside events or custom validation.
-
-1. ```ts
-   liOptionStyle: string | null = null
-   ```
-
-   One-off CSS rules applied to the `<li>` elements that wrap the dropdown options.
-
-1. ```ts
-   liSelectedStyle: string | null = null
-   ```
-
-   One-off CSS rules applied to the `<li>` elements that wrap the selected options.
-
-1. ```ts
-   loading: boolean = false
-   ```
-
-   Whether the component should display a spinner to indicate it's in loading state. Use `{#snippet spinner()} ... {/snippet}` to specify a custom spinner.
-
-1. ```ts
-   matchingOptions: Option[] = []
-   ```
-
-   List of options currently displayed to the user. Same as `options` unless the user entered `searchText` in which case this array contains only those options for which `filterFunc = (op: Option, searchText: string) => boolean` returned `true`.
-
-1. ```ts
-   maxOptions: number | undefined = undefined
-   ```
-
-   Positive integer to limit the number of options displayed in the dropdown. `undefined` and 0 mean no limit.
 
 1. ```ts
    maxSelect: number | null = null
    ```
 
-   Positive integer to limit the number of options users can pick. `null` means no limit. `maxSelect={1}` will change the type of `selected` to be a single `Option` (or `null`) (not a length-1 array). Likewise, the type of `selectedLabels` changes from `(string | number)[]` to `string | number | null` and `selectedValues` from `unknown[]` to `unknown | null`. `maxSelect={1}` will also give `div.multiselect` a class of `single`. I.e. you can target the selector `div.multiselect.single` to give single selects a different appearance from multi selects.
+   **Controls selection behavior.** `null` = unlimited, `1` = single select, `2+` = limited multi-select.
 
-1. ```ts
-   maxSelectMsg: ((current: number, max: number) => string) | null = (
-     current: number,
-     max: number
-   ) => (max > 1 ? `${current}/${max}` : ``)
+   ```svelte
+   <!-- Unlimited selection -->
+   <MultiSelect options={colors} />
+
+   <!-- Single selection -->
+   <MultiSelect options={colors} maxSelect={1} />
+
+   <!-- Max 3 selections -->
+   <MultiSelect options={colors} maxSelect={3} />
    ```
-
-   Inform users how many of the maximum allowed options they have already selected. Set `maxSelectMsg={null}` to not show a message. Defaults to `null` when `maxSelect={1}` or `maxSelect={null}`. Else if `maxSelect > 1`, defaults to:
-
-   ```ts
-   maxSelectMsg = (current: number, max: number) => `${current}/${max}`
-   ```
-
-   Use CSS selector `span.max-select-msg` (or prop `maxSelectMsgClass` if you're using a CSS framework like Tailwind) to customize appearance of the message container.
-
-1. ```ts
-   minSelect: number | null = null
-   ```
-
-   Conditionally render the `x` button which removes a selected option depending on the number of selected options. Meaning all remove buttons disappear if `selected.length <= minSelect`. E.g. if 2 options are selected and `minSelect={3}`, users will not be able to remove any selections until they selected more than 3 options.
-
-   Note: Prop `required={3}` should be used instead if you only care about the component state at form submission time. `minSelect={3}` should be used if you want to place constraints on component state at all times.
-
-1. ```ts
-   name: string | null = null
-   ```
-
-   Applied to the `<input>` element. Sets the key of this field in a submitted form data object. See [form example](https://janosh.github.io/svelte-multiselect/form).
-
-1. ```ts
-   noMatchingOptionsMsg: string = `No matching options`
-   ```
-
-   What message to show if no options match the user-entered search string.
-
-1. ```ts
-   open: boolean = false
-   ```
-
-   Whether the dropdown list is currently visible. Is two-way bindable, i.e. can be used for external control of when the options are visible.
-
-1. ```ts
-   options: Option[]
-   ```
-
-   **The only required prop** (no default). Array of strings/numbers or `Option` objects to be listed in the dropdown. The only required key on objects is `label` which must also be unique. An object's `value` defaults to `label` if `undefined`. You can add arbitrary additional keys to your option objects. A few keys like `preselected` and `title` have special meaning though. See type `ObjectOption` in [`/src/lib/types.ts`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/types.ts) for all special keys and their purpose.
-
-1. ```ts
-   outerDiv: HTMLDivElement | null = null
-   ```
-
-   Handle to outer `<div class="multiselect">` that wraps the whole component. Only available after component mounts (`null` before then).
-
-1. ```ts
-   parseLabelsAsHtml: boolean = false
-   ```
-
-   Whether option labels should be passed to [Svelte's `@html` directive](https://svelte.dev/tutorial/svelte/html-tags) or inserted into the DOM as plain text. `true` will raise an error if `allowUserOptions` is also truthy as it makes your site susceptible to [cross-site scripting (XSS) attacks](https://wikipedia.org/wiki/Cross-site_scripting).
-
-1. ```ts
-   pattern: string | null = null
-   ```
-
-   The pattern attribute specifies a regular expression which the input's value must match. If a non-null value doesn't match the `pattern` regex, the read-only `patternMismatch` property will be `true`. See [MDN](https://developer.mozilla.org/docs/Web/HTML/Attributes/pattern) for details.
 
 1. ```ts
    placeholder: string | null = null
    ```
 
-   String shown in the text input when no option is selected.
+   Text shown when no options are selected.
 
 1. ```ts
-   removeAllTitle: string = `Remove all`
+   disabled: boolean = false
    ```
 
-   Title text to display when user hovers over remove-all button.
-
-1. ```ts
-   removeBtnTitle: string = `Remove`
-   ```
-
-   Title text to display when user hovers over button to remove selected option (which defaults to a cross icon).
+   Disables the component. Users can't interact with it, but it's still rendered.
 
 1. ```ts
    required: boolean | number = false
    ```
 
-   If `required = true, 1, 2, ...` forms can't be submitted without selecting given number of options. `true` means 1. `false` means even empty MultiSelect will pass form validity check. If user tries to submit a form containing MultiSelect with less than the required number of options, submission is aborted, MultiSelect scrolls into view and shows message "Please select at least `required` options".
+   For form validation. `true` means at least 1 option required, numbers specify exact minimum.
+
+### Commonly Used Props
+
+1. ```ts
+   searchText: string = `` // bindable
+   ```
+
+   The text user entered to filter options. Bindable for external control.
+
+1. ```ts
+   open: boolean = false // bindable
+   ```
+
+   Whether the dropdown is visible. Bindable for external control.
+
+1. ```ts
+   allowUserOptions: boolean | `append` = false
+   ```
+
+   Whether users can create new options by typing. `true` = add to selected only, `'append'` = add to both options and selected.
+
+1. ```ts
+   loading: boolean = false
+   ```
+
+   Shows a loading spinner. Useful when fetching options asynchronously.
+
+1. ```ts
+   invalid: boolean = false // bindable
+   ```
+
+   Marks the component as invalid (adds CSS class). Automatically set during form validation.
+
+### Advanced Props
+
+1. ```ts
+   activeIndex: number | null = null  // bindable
+   ```
+
+   Zero-based index of currently active option in the filtered list.
+
+1. ```ts
+   activeOption: Option | null = null  // bindable
+   ```
+
+   Currently active option (hovered or navigated to with arrow keys).
+
+1. ```ts
+   createOptionMsg: string | null = `Create this option...`
+   ```
+
+   Message shown when `allowUserOptions` is enabled and user can create a new option.
+
+1. ```ts
+   duplicates: boolean = false
+   ```
+
+   Whether to allow selecting the same option multiple times.
+
+1. ```ts
+   filterFunc: (opt: Option, searchText: string) => boolean
+   ```
+
+   Custom function to filter options based on search text. Default filters by label.
+
+1. ```ts
+   key: (opt: Option) => unknown
+   ```
+
+   Function to determine option equality. Default compares by lowercased label.
+
+1. ```ts
+   closeDropdownOnSelect: boolean | 'desktop' = 'desktop'
+   ```
+
+   Whether to close dropdown after selection. `'desktop'` means close on mobile only.
 
 1. ```ts
    resetFilterOnAdd: boolean = true
    ```
 
-   Whether text entered into the input to filter options in the dropdown list is reset to empty string when user selects an option.
+   Whether to clear search text when an option is selected.
 
 1. ```ts
-   searchText: string = ``
+   sortSelected: boolean | ((a: Option, b: Option) => number) = false
    ```
 
-   Text the user-entered to filter down on the list of options. Binds both ways, i.e. can also be used to set the input text.
+   Whether/how to sort selected options. `true` uses default sort, function enables custom sorting.
+
+### Form & Accessibility Props
 
 1. ```ts
-   selected: Option[] =
-    options
-      ?.filter((op) => (op as ObjectOption)?.preselected)
-      .slice(0, maxSelect ?? undefined) ?? []
+   id: string | null = null
    ```
 
-   Array of currently selected options. Supports 2-way binding `bind:selected={[1, 2, 3]}` to control component state externally. Can be passed as prop to set pre-selected options that will already be populated when component mounts before any user interaction.
+   Applied to the `<input>` for associating with `<label>` elements.
 
 1. ```ts
-   sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
+   name: string | null = null
    ```
 
-   Default behavior is to render selected items in the order they were chosen. `sortSelected={true}` uses default JS array sorting. A compare function enables custom logic for sorting selected options. See the [`/sort-selected`](https://janosh.github.io/svelte-multiselect/sort-selected) example.
+   Form field name for form submission.
+
+1. ```ts
+   autocomplete: string = 'off'
+   ```
+
+   Browser autocomplete behavior. Usually `'on'` or `'off'`.
+
+1. ```ts
+   inputmode: string | null = null
+   ```
+
+   Hint for mobile keyboard type (`'numeric'`, `'tel'`, `'email'`, etc.). Set to `'none'` to hide keyboard.
+
+1. ```ts
+   pattern: string | null = null
+   ```
+
+   Regex pattern for input validation.
+
+### UI & Behavior Props
+
+1. ```ts
+   maxOptions: number | undefined = undefined
+   ```
+
+   Limit number of options shown in dropdown. `undefined` = no limit.
+
+1. ```ts
+   minSelect: number | null = null
+   ```
+
+   Minimum selections required before remove buttons appear.
+
+1. ```ts
+   autoScroll: boolean = true
+   ```
+
+   Whether to keep active option in view when navigating with arrow keys.
+
+1. ```ts
+   breakpoint: number = 800
+   ```
+
+   Screen width (px) that separates 'mobile' from 'desktop' behavior.
+
+1. ```ts
+   highlightMatches: boolean = true
+   ```
+
+   Whether to highlight matching text in dropdown options.
+
+1. ```ts
+   parseLabelsAsHtml: boolean = false
+   ```
+
+   Whether to render option labels as HTML. **Warning:** Don't combine with `allowUserOptions` (XSS risk).
 
 1. ```ts
    selectedOptionsDraggable: boolean = !sortSelected
    ```
 
-   Whether selected options are draggable so users can change their order.
+   Whether selected options can be reordered by dragging.
+
+### Message Props
+
+1. ```ts
+   noMatchingOptionsMsg: string = 'No matching options'
+   ```
+
+   Message when search yields no results.
+
+1. ```ts
+   duplicateOptionMsg: string = 'This option is already selected'
+   ```
+
+   Message when user tries to create duplicate option.
+
+1. ```ts
+   defaultDisabledTitle: string = 'This option is disabled'
+   ```
+
+   Tooltip for disabled options.
+
+1. ```ts
+   disabledInputTitle: string = 'This input is disabled'
+   ```
+
+   Tooltip when component is disabled.
+
+1. ```ts
+   removeAllTitle: string = 'Remove all'
+   ```
+
+   Tooltip for remove-all button.
+
+1. ```ts
+   removeBtnTitle: string = 'Remove'
+   ```
+
+   Tooltip for individual remove buttons.
+
+1. ```ts
+   maxSelectMsg: ((current: number, max: number) => string) | null
+   ```
+
+   Function to generate "X of Y selected" message. `null` = no message.
+
+### DOM Element References (bindable)
+
+These give you access to DOM elements after the component mounts:
+
+1. ```ts
+   input: HTMLInputElement | null = null  // bindable
+   ```
+
+   Handle to the main `<input>` DOM element.
+
+1. ```ts
+   form_input: HTMLInputElement | null = null  // bindable
+   ```
+
+   Handle to the hidden form input used for validation.
+
+1. ```ts
+   outerDiv: HTMLDivElement | null = null  // bindable
+   ```
+
+   Handle to the outer wrapper `<div>` element.
+
+### Styling Props
+
+For custom styling with CSS frameworks or one-off styles:
 
 1. ```ts
    style: string | null = null
    ```
 
-   One-off CSS rules applied to the outer `<div class="multiselect">` that wraps the whole component for passing one-off CSS.
+   CSS rules for the outer wrapper div.
+
+1. ```ts
+   inputStyle: string | null = null
+   ```
+
+   CSS rules for the main input element.
 
 1. ```ts
    ulSelectedStyle: string | null = null
    ```
 
-   One-off CSS rules applied to the `<ul class="selected">` that wraps the list of selected options.
+   CSS rules for the selected options list.
 
 1. ```ts
    ulOptionsStyle: string | null = null
    ```
 
-   One-off CSS rules applied to the `<ul class="options">` that wraps the list of selected options.
+   CSS rules for the dropdown options list.
 
 1. ```ts
-   value: Option | Option[] | null = null
+   liSelectedStyle: string | null = null
    ```
 
-   If `maxSelect={1}`, `value` will be the single item in `selected` (or `null` if `selected` is empty). If `maxSelect != 1`, `maxSelect` and `selected` are equal. Warning: Setting `value` does not rendered state on initial mount, meaning `bind:value` will update local variable `value` whenever internal component state changes but passing a `value` when component first mounts won't be reflected in UI. This is because the source of truth for rendering is `bind:selected`. `selected` is reactive to `value` internally but only on reassignment from initial value. Suggestions for better solutions than [#249](https://github.com/janosh/svelte-multiselect/issues/249) welcome!
+   CSS rules for selected option list items.
+
+1. ```ts
+   liOptionStyle: string | null = null
+   ```
+
+   CSS rules for dropdown option list items.
+
+### CSS Class Props
+
+For use with CSS frameworks like Tailwind:
+
+1. ```ts
+   outerDivClass: string = ''
+   ```
+
+   CSS class for outer wrapper div.
+
+1. ```ts
+   inputClass: string = ''
+   ```
+
+   CSS class for main input element.
+
+1. ```ts
+   ulSelectedClass: string = ''
+   ```
+
+   CSS class for selected options list.
+
+1. ```ts
+   ulOptionsClass: string = ''
+   ```
+
+   CSS class for dropdown options list.
+
+1. ```ts
+   liSelectedClass: string = ''
+   ```
+
+   CSS class for selected option items.
+
+1. ```ts
+   liOptionClass: string = ''
+   ```
+
+   CSS class for dropdown option items.
+
+1. ```ts
+   liActiveOptionClass: string = ''
+   ```
+
+   CSS class for the currently active dropdown option.
+
+1. ```ts
+   maxSelectMsgClass: string = ''
+   ```
+
+   CSS class for the "X of Y selected" message.
+
+### Read-only Props (bindable)
+
+These reflect internal component state:
+
+1. ```ts
+   matchingOptions: Option[] = []  // bindable
+   ```
+
+   Currently filtered options based on search text.
+
+### Bindable Props
+
+`selected`, `value`, `searchText`, `open`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`
 
 ## 🎰 &thinsp; Snippets
 
