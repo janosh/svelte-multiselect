@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { demos } from './stores'
+  import { demo_pages } from '../routes/(demos)'
 
   interface Props {
     style?: string | null
@@ -14,7 +14,7 @@
 </script>
 
 <nav {style}>
-  {#each $demos as href, idx (href)}
+  {#each demo_pages as href, idx (href)}
     {#if idx > 0}<strong>&bull;</strong>{/if}
     <a {href} aria-current={is_current(href)}>{href}</a>
   {/each}

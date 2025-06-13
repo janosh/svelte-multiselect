@@ -403,10 +403,12 @@
 
   function remove_all(event: Event) {
     event.stopPropagation()
+    selected = [] // Set selected first
+    searchText = ``
+
+    // Now trigger change events
     onremoveAll?.({ options: selected })
     onchange?.({ options: selected, type: `removeAll` })
-    selected = []
-    searchText = ``
   }
 
   let is_selected = $derived((label: string | number) =>
