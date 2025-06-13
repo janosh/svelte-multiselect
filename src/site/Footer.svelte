@@ -1,15 +1,14 @@
 <script>
   import { repository } from '$root/package.json'
-  import Icon from '@iconify/svelte'
 </script>
 
 <footer>
   <a href="{repository}/discussions/200">
-    <Icon icon="material-symbols:auto-awesome" inline />
+    <svg><use href="#material-symbols-auto-awesome" /></svg>
     Multiselect Showcase
   </a>
   <a href="{repository}/blob/-/src/routes/(demos)/+layout.svelte">
-    <Icon icon="carbon:edit" inline />
+    <svg><use href="#carbon-edit" /></svg>
     Edit this page
   </a>
   <small title="For keyboad-only site navigation">

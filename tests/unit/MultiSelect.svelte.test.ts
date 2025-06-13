@@ -1218,7 +1218,8 @@ test.each([
         (is_event(`onchange`, event_payload) &&
           event_payload.type === `removeAll`)
       ) {
-        expect(event_payload.options).toEqual([1, 2])
+        // expect empty array for event_payload.options as of https://github.com/janosh/svelte-multiselect/issues/300
+        expect(event_payload.options).toEqual([])
       } else if (
         is_event(`onremove`, event_payload) ||
         (is_event(`onchange`, event_payload) && event_payload.type === `remove`)

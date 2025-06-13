@@ -2,9 +2,9 @@
   import { page } from '$app/state'
   import { name } from '$root/package.json'
   import { DemoNav } from '$site'
-  import { demos } from '$site/stores'
   import type { Snippet } from 'svelte'
   import { PrevNext } from 'svelte-zoo'
+  import { demo_pages } from '.'
 
   interface Props {
     children?: Snippet
@@ -21,12 +21,11 @@
 
   {@render children?.()}
 
-  <!-- TODO pass onkeyup=null in next version of svelte-zoo -->
   <PrevNext
-    items={$demos}
+    items={demo_pages}
     current={page.url.pathname}
     style="max-width: var(--main-max-width); margin: auto;"
-    on_keyup={() => ({})}
+    on_keyup={null}
   />
 </main>
 
