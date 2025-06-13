@@ -38,7 +38,9 @@
     --toc-li-padding="3pt 1ex"
     --toc-mobile-btn-color="white"
     --toc-desktop-nav-margin="0 0 0 14em"
-    aside_style="max-width: 24em"
+    aside_style="max-width: 24em;"
+    title_element_style="font-size: 16pt; padding: 0 0 0.5em 0.5em;"
+    ol_style="font-size: 8pt"
   />
 {/if}
 
