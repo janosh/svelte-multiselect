@@ -482,29 +482,34 @@
   }
 
   // Override input's focus method to ensure dropdown opens on programmatic focus
+  // https://github.com/janosh/svelte-multiselect/issues/289
   $effect(() => {
     if (!input) return
 
-    const originalFocus = input.focus.bind(input)
+    const orig_focus = input.focus.bind(input)
 
     input.focus = (options?: FocusOptions) => {
-      originalFocus(options)
-      if (!disabled && !open) {
-        open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
-      }
+      orig_focus(options)
+      if (!disabled && !open) open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
     }
 
     return () => {
-      if (input) input.focus = originalFocus
+      if (input) input.focus = orig_focus
     }
   })
 
   const handle_input_blur: FocusEventHandler<HTMLInputElement> = (event) => {
-    // Close dropdown when input loses focus unless focus moved to another element within the wrapper
+    // For portalled dropdowns, don't close on blur since clicks on portalled elements
+    // will cause blur but we want to allow the click to register first
+    if (portal_params?.active) {
+      onblur?.(event) // Let the click handler manage closing for portalled dropdowns
+      return
+    }
+
+    // For non-portalled dropdowns, close when focus moves outside the component
     if (!outerDiv?.contains(event.relatedTarget as Node)) close_dropdown(event)
 
-    // Call original forwarded handler
-    onblur?.(event)
+    onblur?.(event) // Call original handler (if any passed as component prop)
   }
 
   // reset form validation when required prop changes

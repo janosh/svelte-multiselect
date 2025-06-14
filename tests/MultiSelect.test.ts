@@ -704,7 +704,7 @@ test.describe(`portal feature`, () => {
     await portalled_languages_options
       .getByRole(`option`, { name: demo_languages[0], exact: true })
       .click()
-    await expect(portalled_languages_options).toBeVisible() // Reverted: expect to be visible for languages
+    await expect(portalled_languages_options).toBeVisible()
     await expect(
       portalled_languages_options.getByRole(`option`, {
         name: demo_languages[0],
