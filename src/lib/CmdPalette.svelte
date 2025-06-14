@@ -1,7 +1,7 @@
 <script lang="ts">
   import { fade } from 'svelte/transition'
   import { MultiSelect } from '.'
-  import type { MultiSelectProps, ObjectOption } from './types'
+  import type { MultiSelectProps, ObjectOption, Option } from './types'
 
   interface Action extends ObjectOption {
     label: string
@@ -51,8 +51,9 @@
     }
   }
 
-  function trigger_action_and_close({ option }: { option: Action }) {
-    option.action(option.label)
+  function trigger_action_and_close(data: { option: Option }) {
+    const { action, label } = data.option as Action
+    action(label)
     open = false
   }
 </script>
