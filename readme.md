@@ -68,8 +68,6 @@ Favorite Frontend Tools?
 
 ## 🧠 &thinsp; Mental Model & Core Concepts
 
-### Essential Props
-
 | Prop            | Purpose                                        | Value                                                                               |
 | --------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
 | `options`       | What users can choose from                     | Array of strings, numbers, or objects with `label` property                         |
