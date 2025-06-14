@@ -477,9 +477,34 @@
   }
 
   const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
-    open_dropdown(event) // Internal logic
-    // Call original forwarded handler
+    open_dropdown(event)
     onfocus?.(event)
+  }
+
+  // Override input's focus method to ensure dropdown opens on programmatic focus
+  $effect(() => {
+    if (!input) return
+
+    const originalFocus = input.focus.bind(input)
+
+    input.focus = (options?: FocusOptions) => {
+      originalFocus(options)
+      if (!disabled && !open) {
+        open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
+      }
+    }
+
+    return () => {
+      if (input) input.focus = originalFocus
+    }
+  })
+
+  const handle_input_blur: FocusEventHandler<HTMLInputElement> = (event) => {
+    // Close dropdown when input loses focus unless focus moved to another element within the wrapper
+    if (!outerDiv?.contains(event.relatedTarget as Node)) close_dropdown(event)
+
+    // Call original forwarded handler
+    onblur?.(event)
   }
 
   // reset form validation when required prop changes
@@ -657,7 +682,7 @@
       onkeydown={handle_input_keydown}
       onfocus={handle_input_focus}
       oninput={highlight_matching_options}
-      {onblur}
+      onblur={handle_input_blur}
       {onclick}
       {onkeyup}
       {onmousedown}
