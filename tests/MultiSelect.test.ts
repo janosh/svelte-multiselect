@@ -23,6 +23,34 @@ test.describe(`input`, () => {
     await expect(options).toBeVisible()
   })
 
+  // https://github.com/janosh/svelte-multiselect/issues/289
+  test(`programmatic focus opens dropdown`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    const dropdown = page.locator(`#foods div.multiselect > ul.options`)
+    // confirm initial state
+    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(dropdown).toBeHidden()
+
+    await page.evaluate(() => {
+      const input = document.querySelector(
+        `#foods input[autocomplete]`,
+      ) as HTMLInputElement
+      input?.focus()
+    })
+    await expect(dropdown).not.toHaveClass(/hidden/)
+    await expect(dropdown).toBeVisible()
+
+    // also test that input.blur() closes dropdown
+    await page.evaluate(() => {
+      const input = document.querySelector(
+        `#foods input[autocomplete]`,
+      ) as HTMLInputElement
+      input?.blur()
+    })
+    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(dropdown).toBeHidden()
+  })
+
   test(`closes dropdown on tab out`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     // note we only test for close on tab out, not on blur since blur should not close in case user
@@ -676,7 +704,7 @@ test.describe(`portal feature`, () => {
     await portalled_languages_options
       .getByRole(`option`, { name: demo_languages[0], exact: true })
       .click()
-    await expect(portalled_languages_options).toBeVisible() // Reverted: expect to be visible for languages
+    await expect(portalled_languages_options).toBeVisible()
     await expect(
       portalled_languages_options.getByRole(`option`, {
         name: demo_languages[0],
