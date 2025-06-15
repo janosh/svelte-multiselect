@@ -764,3 +764,30 @@ test.describe(`portal feature`, () => {
     await expect(modal_content).toBeHidden()
   })
 })
+
+test(`input width minimizes when options are selected`, async ({ page }) => {
+  await page.goto(`/ui`, { waitUntil: `networkidle` })
+  const input = page.locator(`#foods input[autocomplete]`)
+
+  // Normal width when no selection (placeholder shown)
+  const init_input_width = await input.evaluate(
+    (el) => getComputedStyle(el).minWidth,
+  )
+  expect(init_input_width).toBe(`32px`)
+
+  await input.click() // Select any option to hide placeholder
+  await page.click(`text=🍌 Banana`)
+
+  // Minimal width when selection exists (placeholder hidden)
+  const input_width_w_selected = await input.evaluate(
+    (el) => getComputedStyle(el).minWidth,
+  )
+  expect(input_width_w_selected).toBe(`1px`)
+
+  // Width is reset when option is removed
+  await page.click(`button[title='Remove 🍌 Banana']`)
+  const input_width_w_no_selected = await input.evaluate(
+    (el) => getComputedStyle(el).minWidth,
+  )
+  expect(input_width_w_no_selected).toBe(init_input_width)
+})
