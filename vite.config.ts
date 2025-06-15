@@ -12,6 +12,7 @@ export default defineConfig({
     css: true,
     coverage: {
       reporter: [`text`, `json-summary`],
+      include: [`src/lib/**/*.{ts,svelte}`],
     },
     setupFiles: [resolve(__dirname, `tests/setup.ts`)],
   },

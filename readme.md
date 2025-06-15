@@ -36,9 +36,9 @@
 
 ## 🧪 &thinsp; Coverage
 
-| Statements                                                                                 | Branches                                                                       | Lines                                                                            |
-| ------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ | -------------------------------------------------------------------------------- |
-| ![Statements](https://img.shields.io/badge/statements-97.94%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-79.39%25-red.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-97.94%25-brightgreen.svg?style=flat) |
+| Statements                                                                                 | Branches                                                                          | Lines                                                                            |
+| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
+| ![Statements](https://img.shields.io/badge/statements-92.81%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-81.57%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-92.81%25-brightgreen.svg?style=flat) |
 
 ## 🔨 &thinsp; Installation
 
