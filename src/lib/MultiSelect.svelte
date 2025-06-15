@@ -971,6 +971,12 @@
     cursor: inherit; /* needed for disabled state */
     border-radius: 0; /* reset ul.selected > li */
   }
+
+  /* When options are selected, placeholder is hidden in which case we minimize input width to avoid adding unnecessary width to div.multiselect */
+  :is(div.multiselect > ul.selected > input:not(:placeholder-shown)) {
+    min-width: 1px; /* Minimal width to remain interactive */
+  }
+
   /* don't wrap ::placeholder rules in :is() as it seems to be overpowered by browser defaults i.t.o. specificity */
   div.multiselect > ul.selected > input::placeholder {
     padding-left: 5pt;

@@ -1,8 +1,6 @@
 ## 🚀 &thinsp; Getting Started
 
-Simple examples to get you started:
-
-### Basic Multi-Select
+<label for="fruits">Pick your favorite fruits <span>basic multi-select</span></label>
 
 ```svelte example
 <script>
@@ -12,13 +10,12 @@ Simple examples to get you started:
   let selected = $state([])
 </script>
 
-<h3>Pick your favorite fruits:</h3>
-<MultiSelect bind:selected options={fruits} placeholder="Choose fruits..." />
+<MultiSelect id="fruits" bind:selected options={fruits} placeholder="Choose fruits..." />
 
 <p>You selected: {JSON.stringify(selected)}</p>
 ```
 
-### Single Select
+<label for="color">Pick one color <span>single-select with <code>maxSelect={1}</code></span></label>
 
 ```svelte example
 <script>
@@ -28,13 +25,12 @@ Simple examples to get you started:
   let value = $state(null)
 </script>
 
-<h3>Pick one color:</h3>
-<MultiSelect bind:value options={colors} maxSelect={1} placeholder="Choose a color..." />
+<MultiSelect id="color" bind:value options={colors} maxSelect={1} placeholder="Choose a color..." />
 
 <p>You selected: {JSON.stringify(value)}</p>
 ```
 
-### Object Options
+<label for="countries">Where have you lived? <span>options prop as array of objects</span></label>
 
 ```svelte example
 <script>
@@ -50,14 +46,13 @@ Simple examples to get you started:
   let selected = $state([])
 </script>
 
-<h3>Where have you lived?</h3>
-<MultiSelect bind:selected options={countries} placeholder="Select countries..." />
+<MultiSelect id="countries" bind:selected options={countries} placeholder="Select countries..." />
 
 <p>Selected countries: {selected.map(c => c.label).join(', ')}</p>
 <p>Country codes: {selected.map(c => c.value).join(', ')}</p>
 ```
 
-### With User-Created Options
+<label for="skills">Add your skills (you can define new ones) <span>user-created options</span></label>
 
 ```svelte example
 <script>
@@ -67,7 +62,6 @@ Simple examples to get you started:
   let selected = $state([])
 </script>
 
-<h3>Add your skills (you can create new ones):</h3>
 <MultiSelect
   bind:selected
   options={initial_tags}
@@ -78,11 +72,9 @@ Simple examples to get you started:
 <p>Your skills: {JSON.stringify(selected)}</p>
 ```
 
----
+## 🔍 &thinsp; Advanced Examples
 
-## 👇 &thinsp; Advanced Examples
-
-<label for="fav-languages">Favorite programming languages? <span>multi select with custom snippet</span></label>
+<label for="fav-languages">Favorite programming languages? <span>multi-select with custom snippet</span></label>
 
 ```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7" stackblitz="src/site/Examples.md"
 <script lang="ts">
@@ -92,8 +84,6 @@ Simple examples to get you started:
 
   let selected: string[] = $state([])
 </script>
-
-selected = {JSON.stringify(selected) || `[]`}
 
 <MultiSelect
   id="fav-languages"
@@ -105,9 +95,11 @@ selected = {JSON.stringify(selected) || `[]`}
     <LanguageSnippet {idx} {option} gap="1ex" />
   {/snippet}
 </MultiSelect>
+
+selected = {JSON.stringify(selected) || `[]`}
 ```
 
-<label for="fav-ml-tool">Favorite machine learning tool? <span>single select with loading indicator on text input</span></label>
+<label for="fav-ml-tool">Favorite machine learning framework? <span>single-select with loading indicator on text input</span></label>
 
 ```svelte example collapsible repl="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759" stackblitz="src/site/Examples.md"
 <script lang="ts">
@@ -125,8 +117,6 @@ selected = {JSON.stringify(selected) || `[]`}
   })
 </script>
 
-value = {JSON.stringify(value) || `null`}
-
 <MultiSelect
   id="fav-ml-tool"
   maxSelect={1}
@@ -137,6 +127,8 @@ value = {JSON.stringify(value) || `null`}
   {loading}
   placeholder="Favorite machine learning tool?"
 />
+
+value = {JSON.stringify(value) || `null`}
 ```
 
 <label for="confetti-select">Chance of Confetti <span>max select with custom filter function and callback on item selection</span></label>
@@ -246,21 +238,15 @@ value = {JSON.stringify(value) || `null`}
   maxOptions <input type="range" min=0 max={30} bind:value={maxOptions}>
   {maxOptions} <small>(0 means no limit)</small>
 </label>
+```
 
 <style>
   label {
     display: flex;
+    margin: 1em 0 1ex;
     align-items: center;
     gap: 5pt;
     font-weight: normal;
-  }
-</style>
-```
-
-<style>
-  label:not(:first-of-type) {
-    padding-top: 2em;
-    display: block;
   }
   label span {
     font-weight: 100;
