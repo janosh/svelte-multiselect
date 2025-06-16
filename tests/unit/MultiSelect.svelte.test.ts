@@ -1250,6 +1250,58 @@ test.each([
   },
 )
 
+test.each([
+  // String options case
+  [[`foo`, `bar`, `baz`], `new-string-option`, `new-string-option`],
+  // Number options case
+  [[1, 2, 3], `42`, 42],
+  // Object options case
+  [
+    [{ label: `foo` }, { label: `bar` }, { label: `baz` }],
+    `new-object-option`,
+    { label: `new-object-option` },
+  ],
+])(
+  `fires oncreate event with correct payload when user creates new option for different option types`,
+  async (options, search_text, expected_created_option) => {
+    const oncreate_spy = vi.fn()
+    const onadd_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options,
+        allowUserOptions: true,
+        oncreate: oncreate_spy,
+        onadd: onadd_spy,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+    // Enter text that doesn't match any existing option
+    input.value = search_text
+    input.dispatchEvent(input_event)
+    await tick()
+
+    // Click on the "Create this option..." message
+    const create_option_li = doc_query(`ul.options li.user-msg`)
+    create_option_li.click()
+
+    // Verify oncreate event was fired with correct payload
+    expect(oncreate_spy).toHaveBeenCalledTimes(1)
+    expect(oncreate_spy).toHaveBeenCalledWith({
+      option: expected_created_option,
+    })
+
+    // Verify onadd event was also fired (user-created options trigger both events)
+    expect(onadd_spy).toHaveBeenCalledTimes(1)
+    expect(onadd_spy).toHaveBeenCalledWith({
+      option: expected_created_option,
+    })
+  },
+)
+
 describe.each([
   [true, (opt: Option) => opt],
   [false, (opt: Option) => opt],
