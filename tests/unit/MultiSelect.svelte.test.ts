@@ -1616,3 +1616,74 @@ test.each([true, false, `desktop`] as const)(
     }
   },
 )
+
+test(`closeDropdownOnSelect='retain-focus' retains input focus when dropdown closes after option selection`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], closeDropdownOnSelect: `retain-focus`, open: true },
+  })
+
+  const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input_el.focus()
+  await tick()
+
+  // select an option - should close dropdown but retain focus
+  doc_query(`ul.options > li`).click()
+  await tick()
+
+  expect(document.activeElement).toBe(input_el)
+  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(1)
+})
+
+test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [1, 2, 3],
+      closeDropdownOnSelect: `retain-focus`,
+      maxSelect: 2,
+      open: true,
+    },
+  })
+
+  const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input_el.focus()
+  await tick()
+
+  // select first option
+  doc_query(`ul.options > li`).click()
+  await tick()
+  expect(document.activeElement).toBe(input_el)
+
+  // select second option (reaching maxSelect)
+  input_el.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  await tick()
+  doc_query(`ul.options > li`).click()
+  await tick()
+
+  expect(document.activeElement).toBe(input_el)
+  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(2)
+})
+
+test(`Escape and Tab still blur input even with closeDropdownOnSelect='retain-focus'`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [1, 2, 3],
+      closeDropdownOnSelect: `retain-focus`,
+      open: true,
+    },
+  })
+
+  const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input_el.focus()
+  await tick()
+
+  // Escape should blur input (retain-focus only applies to selection, not keyboard closing)
+  input_el.dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }),
+  )
+  await tick()
+
+  expect(document.activeElement).not.toBe(input_el)
+})

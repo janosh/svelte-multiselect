@@ -113,7 +113,7 @@ export interface MultiSelectParameters<T extends Option = Option> {
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
   key?: (opt: T) => unknown
   filterFunc?: (opt: T, searchText: string) => boolean
-  closeDropdownOnSelect?: boolean | `desktop`
+  closeDropdownOnSelect?: boolean | `desktop` | `retain-focus`
   form_input?: HTMLInputElement | null
   highlightMatches?: boolean
   id?: string | null
