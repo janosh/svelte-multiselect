@@ -1551,7 +1551,7 @@ test.each([
   },
 )
 
-test.each([true, false, `desktop`] as const)(
+test.each([true, false, `if-mobile`] as const)(
   `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
   async (closeDropdownOnSelect) => {
     window.innerWidth = 600 // simulate mobile
@@ -1568,7 +1568,7 @@ test.each([true, false, `desktop`] as const)(
     const is_desktop = window.innerWidth > select.breakpoint
     const should_be_closed =
       closeDropdownOnSelect === true ||
-      (closeDropdownOnSelect === `desktop` && !is_desktop)
+      (closeDropdownOnSelect === `if-mobile` && !is_desktop)
 
     // count number of selected items
     const selected_items = document.querySelectorAll(`ul.selected > li`)
@@ -1593,7 +1593,7 @@ test.each([true, false, `desktop`] as const)(
       expect(document.activeElement === input_el).toBe(!should_be_closed)
     }
 
-    if (closeDropdownOnSelect === `desktop`) {
+    if (closeDropdownOnSelect === `if-mobile`) {
       // reduce window width to simulate mobile
       window.innerWidth = 400
       window.dispatchEvent(new Event(`resize`))
@@ -1605,7 +1605,7 @@ test.each([true, false, `desktop`] as const)(
       ) as HTMLLIElement
       if (another_option) {
         another_option.click()
-        // On mobile (when closeDropdownOnSelect = 'desktop'), dropdown should close, input should lose focus
+        // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
         expect(dropdown.classList).toContain(`hidden`) // Now it should be closed
         expect(document.activeElement === input_el).toBe(false)
       } else {
@@ -1620,7 +1620,11 @@ test.each([true, false, `desktop`] as const)(
 test(`closeDropdownOnSelect='retain-focus' retains input focus when dropdown closes after option selection`, async () => {
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [1, 2, 3], closeDropdownOnSelect: `retain-focus`, open: true },
+    props: {
+      options: [1, 2, 3],
+      closeDropdownOnSelect: `retain-focus`,
+      open: true,
+    },
   })
 
   const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)

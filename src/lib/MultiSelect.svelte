@@ -29,7 +29,7 @@
       if (!searchText) return true
       return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
     },
-    closeDropdownOnSelect = `desktop`,
+    closeDropdownOnSelect = `if-mobile`,
     form_input = $bindable(null),
     highlightMatches = true,
     id = null,
@@ -264,7 +264,7 @@
       const dropdown_should_close =
         closeDropdownOnSelect === true ||
         closeDropdownOnSelect === `retain-focus` ||
-        (closeDropdownOnSelect === `desktop` && window_width && window_width < breakpoint)
+        (closeDropdownOnSelect === `if-mobile` && window_width && window_width < breakpoint)
 
       const should_retain_focus = closeDropdownOnSelect === `retain-focus`
 
