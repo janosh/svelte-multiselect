@@ -232,8 +232,9 @@
           } else {
             option_to_add = searchText as Option // else create custom option as string
           }
-          oncreate?.({ option: option_to_add })
         }
+        // Fire oncreate event for all user-created options, regardless of type
+        oncreate?.({ option: option_to_add })
         if (allowUserOptions === `append`) options = [...options, option_to_add]
       }
 
