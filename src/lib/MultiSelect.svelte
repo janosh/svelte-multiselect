@@ -29,7 +29,7 @@
       if (!searchText) return true
       return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
     },
-    closeDropdownOnSelect = `desktop`,
+    closeDropdownOnSelect = `if-mobile`,
     form_input = $bindable(null),
     highlightMatches = true,
     id = null,
@@ -263,10 +263,13 @@
 
       const dropdown_should_close =
         closeDropdownOnSelect === true ||
-        (closeDropdownOnSelect === `desktop` && window_width && window_width < breakpoint)
+        closeDropdownOnSelect === `retain-focus` ||
+        (closeDropdownOnSelect === `if-mobile` && window_width && window_width < breakpoint)
+
+      const should_retain_focus = closeDropdownOnSelect === `retain-focus`
 
       if (reached_max_select || dropdown_should_close) {
-        close_dropdown(event)
+        close_dropdown(event, should_retain_focus)
       } else if (!dropdown_should_close) {
         input?.focus()
       }
@@ -322,9 +325,9 @@
     onopen?.({ event })
   }
 
-  function close_dropdown(event: Event) {
+  function close_dropdown(event: Event, retain_focus = false) {
     open = false
-    input?.blur()
+    if (!retain_focus) input?.blur()
     activeIndex = null
     onclose?.({ event })
   }
