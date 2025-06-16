@@ -45,7 +45,7 @@ export interface MultiSelectNativeEvents {
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
   onadd?: (data: { option: T }) => unknown
-  oncreate?: (data: { option: T }) => unknown
+  oncreate?: (data: { option: T }) => unknown // fires when users entered custom text from which new option is created
   onremove?: (data: { option: T }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
   onchange?: (data: {
