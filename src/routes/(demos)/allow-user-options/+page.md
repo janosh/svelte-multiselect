@@ -14,7 +14,9 @@
   import { foods } from '$site/options'
   import { Toggle } from 'svelte-zoo'
 
-  let selected = $state('🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '))
+  let selected = $state(
+    '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '),
+  )
   let duplicates = $state(false)
 </script>
 

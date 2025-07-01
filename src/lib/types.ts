@@ -107,8 +107,7 @@ export interface MultiSelectParameters<T extends Option = Option> {
   defaultDisabledTitle?: string
   disabled?: boolean
   disabledInputTitle?: string
-  // prettier-ignore
-  duplicateOptionMsg?: string;
+  duplicateOptionMsg?: string
   duplicates?: boolean // whether to allow duplicate options
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
   key?: (opt: T) => unknown
@@ -164,7 +163,8 @@ export interface MultiSelectParameters<T extends Option = Option> {
 }
 
 export interface MultiSelectProps<T extends Option = Option>
-  extends MultiSelectNativeEvents,
+  extends
+    MultiSelectNativeEvents,
     MultiSelectEvents<T>,
     MultiSelectSnippets<T>,
     MultiSelectParameters<T> {}

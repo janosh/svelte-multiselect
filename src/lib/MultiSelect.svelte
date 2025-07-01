@@ -201,7 +201,9 @@
   function add(option_to_add: T, event: Event) {
     event.stopPropagation()
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
-    if (!isNaN(Number(option_to_add)) && typeof selected.map(get_label)[0] === `number`) {
+    if (
+      !isNaN(Number(option_to_add)) && typeof selected.map(get_label)[0] === `number`
+    ) {
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
@@ -261,10 +263,10 @@
 
       const reached_max_select = selected.length === maxSelect
 
-      const dropdown_should_close =
-        closeDropdownOnSelect === true ||
+      const dropdown_should_close = closeDropdownOnSelect === true ||
         closeDropdownOnSelect === `retain-focus` ||
-        (closeDropdownOnSelect === `if-mobile` && window_width && window_width < breakpoint)
+        (closeDropdownOnSelect === `if-mobile` && window_width &&
+          window_width < breakpoint)
 
       const should_retain_focus = closeDropdownOnSelect === `retain-focus`
 
@@ -301,7 +303,9 @@
     }
     if (option_removed === undefined) {
       return console.error(
-        `Multiselect can't remove selected option ${JSON.stringify(option_to_drop)}, not found in selected list`,
+        `Multiselect can't remove selected option ${
+          JSON.stringify(option_to_drop)
+        }, not found in selected list`,
       )
     }
 
@@ -339,8 +343,7 @@
       event.stopPropagation()
       close_dropdown(event)
       searchText = ``
-    }
-    // on enter key: toggle active option and reset search text
+    } // on enter key: toggle active option and reset search text
     else if (event.key === `Enter`) {
       event.stopPropagation()
       event.preventDefault() // prevent enter key from triggering form submission
@@ -357,8 +360,7 @@
         // in which case enter means open it
         open_dropdown(event)
       }
-    }
-    // on up/down arrow keys: update active option
+    } // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       event.stopPropagation()
       // if no option is active yet, but there are matching options, make first one active
@@ -366,7 +368,9 @@
         event.preventDefault() // Prevent scroll only if we handle the key
         activeIndex = 0
         return
-      } else if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
+      } else if (
+        allowUserOptions && !matchingOptions.length && searchText.length > 0
+      ) {
         event.preventDefault() // Prevent scroll only if we handle the key
         // if allowUserOptions is truthy and user entered text but no options match, we make
         // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
@@ -391,14 +395,12 @@
         const li = document.querySelector(`ul.options > li.active`)
         if (li) li.scrollIntoViewIfNeeded?.()
       }
-    }
-    // on backspace key: remove last selected option
+    } // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       event.stopPropagation()
       // Don't prevent default, allow normal backspace behavior if not removing
       remove(selected.at(-1) as Option, event)
-    }
-    // make first matching option active on any keypress (if none of the above special cases match)
+    } // make first matching option active on any keypress (if none of the above special cases match)
     else if (matchingOptions.length > 0 && activeIndex === null) {
       // Don't stop propagation or prevent default here, allow normal character input
       activeIndex = 0
@@ -416,7 +418,7 @@
   }
 
   let is_selected = $derived((label: string | number) =>
-    selected.map(get_label).includes(label),
+    selected.map(get_label).includes(label)
   )
 
   const if_enter_or_space =
@@ -494,7 +496,9 @@
 
     input.focus = (options?: FocusOptions) => {
       orig_focus(options)
-      if (!disabled && !open) open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
+      if (!disabled && !open) {
+        open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
+      }
     }
 
     return () => {
@@ -527,7 +531,8 @@
   function portal(node: HTMLElement, params: PortalParams) {
     let { target_node, active } = params
     if (!active) return
-    let render_in_place = typeof window === `undefined` || !document.body.contains(node)
+    let render_in_place = typeof window === `undefined` ||
+      !document.body.contains(node)
 
     if (!render_in_place) {
       document.body.appendChild(node)
@@ -555,7 +560,8 @@
       return {
         update(params: PortalParams) {
           target_node = params.target_node
-          render_in_place = typeof window === `undefined` || !document.body.contains(node)
+          render_in_place = typeof window === `undefined` ||
+            !document.body.contains(node)
           if (open && !render_in_place && target_node) tick().then(update_position)
           else if (!open || !target_node) node.hidden = true
         },
@@ -616,7 +622,7 @@
   {#if expandIcon}
     {@render expandIcon({ open })}
   {:else}
-    <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer;" />
+    <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer" />
   {/if}
   <ul
     class="selected {ulSelectedClass}"
@@ -625,7 +631,9 @@
   >
     {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
       {@const selectedOptionStyle =
-        [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(` `) ||
+        [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(
+          ` `,
+        ) ||
         null}
       <li
         class={liSelectedClass}
@@ -644,14 +652,14 @@
       >
         {#if selectedItem}
           {@render selectedItem({
-            option,
-            idx,
-          })}
+          option,
+          idx,
+        })}
         {:else if children}
           {@render children({
-            option,
-            idx,
-          })}
+          option,
+          idx,
+        })}
         {:else if parseLabelsAsHtml}
           {@html get_label(option)}
         {:else}
@@ -705,14 +713,14 @@
     />
     <!-- the above on:* lines forward potentially useful DOM events -->
     {@render afterInput?.({
-      selected,
-      disabled,
-      invalid,
-      id,
-      placeholder,
-      open,
-      required,
-    })}
+        selected,
+        disabled,
+        invalid,
+        id,
+        placeholder,
+        open,
+        required,
+      })}
   </ul>
   {#if loading}
     {#if spinner}
@@ -725,7 +733,7 @@
     {#if disabledIcon}
       {@render disabledIcon()}
     {:else}
-      <DisabledIcon width="14pt" style="margin: 0 2pt;" data-name="disabled-icon" />
+      <DisabledIcon width="14pt" style="margin: 0 2pt" data-name="disabled-icon" />
     {/if}
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
@@ -765,25 +773,29 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as optionItem, idx (duplicates ? [key(optionItem), idx] : key(optionItem))}
+      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as
+        optionItem,
+        idx
+        (duplicates ? [key(optionItem), idx] : key(optionItem))
+      }
         {@const {
-          label,
-          disabled = null,
-          title = null,
-          selectedTitle = null,
-          disabledTitle = defaultDisabledTitle,
-        } = optionItem instanceof Object ? optionItem : { label: optionItem }}
+        label,
+        disabled = null,
+        title = null,
+        selectedTitle = null,
+        disabledTitle = defaultDisabledTitle,
+      } = optionItem instanceof Object ? optionItem : { label: optionItem }}
         {@const active = activeIndex === idx}
         {@const optionStyle =
-          [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(` `) ||
-          null}
+        [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(
+          ` `,
+        ) ||
+        null}
         <li
           onclick={(event) => {
             if (!disabled) add(optionItem, event)
           }}
-          title={disabled
-            ? disabledTitle
-            : (is_selected(label) && selectedTitle) || title}
+          title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
           class:selected={is_selected(label)}
           class:active
           class:disabled
@@ -806,14 +818,14 @@
         >
           {#if option}
             {@render option({
-              option: optionItem,
-              idx,
-            })}
+          option: optionItem,
+          idx,
+        })}
           {:else if children}
             {@render children({
-              option: optionItem,
-              idx,
-            })}
+          option: optionItem,
+          idx,
+        })}
           {:else if parseLabelsAsHtml}
             {@html get_label(optionItem)}
           {:else}
@@ -825,15 +837,15 @@
         {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
         {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
         {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
-        {@const no_match =
-          Boolean(matchingOptions?.length == 0 && noMatchingOptionsMsg) && `no-match`}
+        {@const no_match = Boolean(matchingOptions?.length == 0 && noMatchingOptionsMsg) &&
+        `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {#if msgType}
           {@const msg = {
-            dupe: duplicateOptionMsg,
-            create: createOptionMsg,
-            'no-match': noMatchingOptionsMsg,
-          }[msgType]}
+        dupe: duplicateOptionMsg,
+        create: createOptionMsg,
+        'no-match': noMatchingOptionsMsg,
+      }[msgType]}
           <li
             onclick={(event) => {
               if (msgType === `create` && allowUserOptions) {
@@ -851,10 +863,10 @@
               }
             }}
             title={msgType === `create`
-              ? createOptionMsg
-              : msgType === `dupe`
-                ? duplicateOptionMsg
-                : ``}
+            ? createOptionMsg
+            : msgType === `dupe`
+            ? duplicateOptionMsg
+            : ``}
             class:active={option_msg_is_active}
             onmouseover={() => (option_msg_is_active = true)}
             onfocus={() => (option_msg_is_active = true)}
@@ -862,9 +874,11 @@
             onblur={() => (option_msg_is_active = false)}
             role="option"
             aria-selected="false"
-            class="user-msg {liUserMsgClass} {option_msg_is_active
+            class="
+              user-msg {liUserMsgClass} {option_msg_is_active
               ? liActiveUserMsgClass
-              : ``}"
+              : ``}
+            "
             style:cursor={{
               dupe: `not-allowed`,
               create: `pointer`,
@@ -1010,7 +1024,8 @@
     z-index: var(--sms-options-z-index, 3);
 
     overflow: auto;
-    transition: all 0.2s; /* Consider if this transition is desirable with portal positioning */
+    transition: all
+      0.2s; /* Consider if this transition is desirable with portal positioning */
     box-sizing: border-box;
     background: var(--sms-options-bg, white);
     max-height: var(--sms-options-max-height, 50vh);

@@ -1,13 +1,14 @@
 import { sveltekit } from '@sveltejs/kit/vite'
 import mdsvexamples from 'mdsvexamples/vite'
 import { resolve } from 'node:path'
+import process from 'node:process'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
   plugins: [sveltekit(), mdsvexamples],
 
   test: {
-    include: [`tests/unit/**/*.test.ts`],
+    include: [`tests/vitest/**/*.test.ts`],
     environment: `jsdom`,
     css: true,
     coverage: {

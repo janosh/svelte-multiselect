@@ -13,7 +13,8 @@
   {color}"
   style:width={size}
   style:height={size}
-></div>
+>
+</div>
 
 <style>
   div {

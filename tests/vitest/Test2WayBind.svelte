@@ -51,10 +51,10 @@
     activeOption,
     breakpoint,
     maxSelect,
+    open,
     options,
     selected,
     value,
-    open,
   }
 </script>
 

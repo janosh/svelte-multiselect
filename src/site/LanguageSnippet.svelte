@@ -7,7 +7,9 @@
   }
   let { option, idx = undefined, height = `20px`, gap = `5pt` }: Props = $props()
 
-  let lang = $derived(option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`))
+  let lang = $derived(
+    option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`),
+  )
   let src = $derived(
     `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`,
   )

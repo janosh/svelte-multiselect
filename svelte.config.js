@@ -7,6 +7,7 @@ import heading_slugs from 'rehype-slug'
 import { sveltePreprocess } from 'svelte-preprocess'
 
 import pkg from './package.json' with { type: 'json' }
+import process from 'node:process'
 
 const rehypePlugins = [
   heading_slugs,

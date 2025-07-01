@@ -66,13 +66,13 @@ Favorite Frontend Tools?
 <MultiSelect bind:selected options={ui_libs} />
 ```
 
-## 🧠 &thinsp; Mental Model & Core Concepts
+## 🧠 &thinsp; Mental Model
 
-| Prop            | Purpose                                        | Value                                                                               |
-| --------------- | ---------------------------------------------- | ----------------------------------------------------------------------------------- |
-| `options`       | What users can choose from                     | Array of strings, numbers, or objects with `label` property                         |
-| `bind:selected` | What they've chosen                            | Always an array: `[]`, `['Apple']` or `['Apple', 'Banana']`                         |
-| `bind:value`    | Single-select convenience for what users chose | Single item: `'Apple'` (or `null`) if `maxSelect={1}`, otherwise same as `selected` |
+| Prop            | Purpose                                                | Value                                                                               |
+| --------------- | ------------------------------------------------------ | ----------------------------------------------------------------------------------- |
+| `options`       | What users can choose from                             | Array of strings, numbers, or objects with `label` property                         |
+| `bind:selected` | Which options users have chosen                        | Always an array: `[]`, `['Apple']` or `['Apple', 'Banana']`                         |
+| `bind:value`    | Single-select convenience for the user-selected option | Single item: `'Apple'` (or `null`) if `maxSelect={1}`, otherwise same as `selected` |
 
 ### Common Patterns
 
@@ -83,11 +83,14 @@ Favorite Frontend Tools?
 <!-- Single-select -->
 <MultiSelect bind:value options={colors} maxSelect={1} />
 
-<!-- Object options (need 'label' property) -->
-<MultiSelect bind:selected options={[
-  { label: 'Red', value: '#ff0000' },
-  { label: 'Blue', value: '#0000ff' }
-]} />
+<!-- Object options (need 'label' property, can have arbitrary other keys, some like `value`, `disabled`, `preselected`, `style` have special meaning, see type ObjectOption) -->
+<MultiSelect
+  bind:selected
+  options={[
+    { label: 'Red', value: '#ff0000' },
+    { label: 'Blue', value: '#0000ff' },
+  ]}
+/>
 ```
 
 ### Troubleshooting
@@ -118,10 +121,12 @@ These are the core props you'll use in most cases:
    <MultiSelect options={['Red', 'Green', 'Blue']} />
 
    <!-- Object options -->
-   <MultiSelect options={[
-     { label: 'Red', value: '#ff0000', hex: true },
-     { label: 'Green', value: '#00ff00', hex: true }
-   ]} />
+   <MultiSelect
+     options={[
+       { label: 'Red', value: '#ff0000', hex: true },
+       { label: 'Green', value: '#00ff00', hex: true },
+     ]}
+   />
    ```
 
 1. ```ts
@@ -132,7 +137,7 @@ These are the core props you'll use in most cases:
 
    ```svelte
    <script>
-     let selected = $state(['Red'])  // Pre-select Red
+     let selected = $state(['Red']) // Pre-select Red
    </script>
    <MultiSelect bind:selected options={colors} />
    ```
@@ -250,12 +255,14 @@ These are the core props you'll use in most cases:
 
    Whether to allow selecting the same option multiple times.
 
+<!-- deno-fmt-ignore -->
 1. ```ts
    filterFunc: (opt: Option, searchText: string) => boolean
    ```
 
    Custom function to filter options based on search text. Default filters by label.
 
+<!-- deno-fmt-ignore -->
 1. ```ts
    key: (opt: Option) => unknown
    ```
@@ -400,6 +407,7 @@ These are the core props you'll use in most cases:
 
    Tooltip for individual remove buttons.
 
+<!-- deno-fmt-ignore -->
 1. ```ts
    maxSelectMsg: ((current: number, max: number) => string) | null
    ```
@@ -567,10 +575,10 @@ Example using several snippets:
 ```svelte
 <MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]}>
   {#snippet children({ idx, option })}
-    <span style="display: flex; align-items: center; gap: 6pt;">
+    <span style="display: flex; align-items: center; gap: 6pt">
       <span
         style:background={`${option}`}
-        style="border-radius: 50%; width: 1em; height: 1em;"
+        style="border-radius: 50%; width: 1em; height: 1em"
       ></span>
       {idx + 1}
       {option}
@@ -676,10 +684,10 @@ You can also import [the types this component uses](https://github.com/janosh/sv
 
 ```ts
 import {
-  Option,
-  ObjectOption,
   DispatchEvents,
   MultiSelectEvents,
+  ObjectOption,
+  Option,
 } from 'svelte-multiselect'
 ```
 

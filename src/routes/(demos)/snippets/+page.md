@@ -72,7 +72,7 @@
     </button>
   {/snippet}
   {#snippet removeIcon()}
-    <span style="width: 2ex;">x</span>
+    <span style="width: 2ex">x</span>
   {/snippet}
 </MultiSelect>
 ```

@@ -1,7 +1,7 @@
 import { CmdPalette } from '$lib'
 import { mount, tick } from 'svelte'
 import { expect, test, vi } from 'vitest'
-import { doc_query } from '.'
+import { doc_query } from './index'
 
 const actions = [{ label: `action 1`, action: vi.fn() }]
 
@@ -20,7 +20,7 @@ test.each([
     expect(props.open).toBe(false)
 
     // Press cmd + trigger to open the palette
-    window.dispatchEvent(
+    globalThis.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: key_to_press, metaKey: true }),
     )
     await tick()
@@ -33,7 +33,7 @@ test.each([
     await tick()
     expect(document.querySelector(`dialog`)).toBe(null)
 
-    window.dispatchEvent(
+    globalThis.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: key_to_press, metaKey: false }),
     )
     await tick()
@@ -42,14 +42,14 @@ test.each([
   },
 )
 
-test(`does not open dialog on trigger key press without metaKey`, async () => {
+test(`does not open dialog on trigger key press without metaKey`, () => {
   const props = $state({ open: false, triggers: [`k`], actions })
   mount(CmdPalette, { target: document.body, props })
 
   expect(document.querySelector(`dialog`)).toBe(null)
   expect(props.open).toBe(false)
 
-  window.dispatchEvent(
+  globalThis.dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `k`, metaKey: false }),
   )
 
@@ -96,7 +96,7 @@ test.each([
     expect(init_dialog_el).toBeTruthy()
     expect(props.open).toBe(true)
 
-    window.dispatchEvent(new KeyboardEvent(`keydown`, { key: key_to_press }))
+    globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: key_to_press }))
     await tick() // Wait for props.open to update and event to be handled
 
     expect(props.open).toBe(false)
@@ -154,7 +154,7 @@ test.each([
 
   if (opens_how === `keypress`) {
     // Open the dialog by simulating the trigger key press
-    window.dispatchEvent(
+    globalThis.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }),
     )
   } else props.open = true // Open programmatically

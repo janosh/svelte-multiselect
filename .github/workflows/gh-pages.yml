@@ -9,6 +9,4 @@ on:
 
 jobs:
   build:
-    uses: janosh/workflows/.github/workflows/nodejs-gh-pages.yml@main
-    with:
-      install-cmd: npm install --force
+    uses: janosh/workflows/.github/workflows/deno-gh-pages.yml@main

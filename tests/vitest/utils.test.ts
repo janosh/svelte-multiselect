@@ -50,11 +50,13 @@ describe(`get_style`, () => {
     selected: `color: blue`,
     option: `color: green`,
   }
-  test.each([
-    [{ style: option_style }, `selected`, `color: blue`],
-    [{ style: option_style }, `option`, `color: green`],
-    [{ style: { selected: `color: blue` } }, `option`, ``],
-  ] as const)(
+  test.each(
+    [
+      [{ style: option_style }, `selected`, `color: blue`],
+      [{ style: option_style }, `option`, `color: green`],
+      [{ style: { selected: `color: blue` } }, `option`, ``],
+    ] as const,
+  )(
     `handles object styles correctly for %j with key %s`,
     (option, key, expected) => {
       // @ts-expect-error missing key option in last test case
@@ -94,9 +96,7 @@ describe(`highlight_matching_nodes`, () => {
     const css_mock = {
       highlights: {
         clear: vi.fn(() => mock_css_highlights.clear()),
-        set: vi.fn((key: string, value: string) =>
-          mock_css_highlights.set(key, value),
-        ),
+        set: vi.fn((key: string, value: string) => mock_css_highlights.set(key, value)),
       },
     }
 
@@ -203,11 +203,11 @@ describe(`highlight_matching_nodes`, () => {
       )
 
       if (css_supported) {
-        expect(global.CSS.highlights.clear).toHaveBeenCalledTimes(
+        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(
           expected_clear_calls,
         )
         if (expected_set_calls > 0) {
-          expect(global.CSS.highlights.set).toHaveBeenCalledWith(
+          expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
             `sms-search-matches`,
             expect.any(Object),
           )
