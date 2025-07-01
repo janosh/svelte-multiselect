@@ -1,3 +1,4 @@
+// deno-lint-ignore-file no-await-in-loop
 import { mount, tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 
@@ -6,7 +7,7 @@ import MultiSelect from '$lib'
 import type { MultiSelectEvents, MultiSelectProps } from '$lib/types'
 import { get_label, get_style } from '$lib/utils'
 
-import { doc_query } from '.'
+import { doc_query } from './index'
 import Test2WayBind, { type Test2WayBindProps } from './Test2WayBind.svelte'
 
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
@@ -46,8 +47,8 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
     target: document.body,
     props: {
       options: [1, 2, 3],
-      onActiveOptionChanged: (data) => {
-        activeOption = data!
+      onActiveOptionChanged: (data: Option) => {
+        activeOption = data
         cb(data)
       },
     },
@@ -70,8 +71,8 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
     target: document.body,
     props: {
       options: [1, 2, 3],
-      onActiveOptionChanged: (data) => {
-        activeOption = data!
+      onActiveOptionChanged: (data: Option) => {
+        activeOption = data
         cb()
       },
     },
@@ -200,7 +201,7 @@ test(`arrow down makes first option active`, async () => {
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/112
-test(`can select 1st and last option with arrow and enter key`, async () => {
+test(`can select 1st and last option with arrow and enter key`, () => {
   mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -230,7 +231,7 @@ describe(`bubbles <input> node DOM events`, () => {
     [`touchend`, new TouchEvent(`touchend`)],
     [`touchmove`, new TouchEvent(`touchmove`)],
     [`touchstart`, new TouchEvent(`touchstart`)],
-  ])(`bubbles <input> node "%s" event`, async (name, event) => {
+  ])(`bubbles <input> node "%s" event`, (name, event) => {
     const options = [1, 2, 3]
     const spy = vi.fn()
 
@@ -267,18 +268,16 @@ describe(`bubbles <input> node DOM events`, () => {
         `Skipping assertion for event type '${name}' due to potential Svelte 5/jsdom issues.`,
       )
       // Optionally, assert they were NOT called if that's the expected Svelte 5 behavior
-      if (name === `keyup`)
+      if (name === `keyup`) {
         expect(spy, `event type '${name}'`).toHaveBeenCalled()
-      else expect(spy, `event type '${name}'`).not.toHaveBeenCalled()
+      } else expect(spy, `event type '${name}'`).not.toHaveBeenCalled()
     }
   })
 })
 
 describe.each([[null], [1]])(`value is `, (maxSelect) => {
   test.each([[[1, 2, 3]], [[`a`, `b`, `c`]]])(
-    `${
-      maxSelect == 1 ? `single` : `multiple`
-    } options when maxSelect=${maxSelect}`,
+    `${maxSelect === 1 ? `single` : `multiple`} options when maxSelect=${maxSelect}`,
     (options) => {
       const select = mount(Test2WayBind, {
         target: document.body,
@@ -287,7 +286,7 @@ describe.each([[null], [1]])(`value is `, (maxSelect) => {
 
       // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
       // Use toStrictEqual for deep equality checks with arrays/objects
-      expect(select.value).toStrictEqual(maxSelect == 1 ? options[0] : options)
+      expect(select.value).toStrictEqual(maxSelect === 1 ? options[0] : options)
     },
   )
 })
@@ -309,10 +308,10 @@ test.each([[null], [1]])(
       props: { options: [1, 2, 3], maxSelect },
     })
 
-    expect(select.value).toEqual(maxSelect == 1 ? null : [])
+    expect(select.value).toEqual(maxSelect === 1 ? null : [])
 
     await tick()
-    if (maxSelect == 1) {
+    if (maxSelect === 1) {
       select.value = 2
       await tick()
       expect(select.value).toEqual(2)
@@ -363,8 +362,7 @@ describe.each([
     })
 
     // form should be valid if MultiSelect not required or n_selected >= n_required and <= maxSelect
-    const form_valid =
-      !required ||
+    const form_valid = !required ||
       (selected.length >= Number(required) &&
         selected.length <= (maxSelect ?? Infinity))
     expect(form.checkValidity(), `form_valid=${form_valid}`).toBe(form_valid) // This test fails for required=2, selected=[1, 2], maxSelect=1
@@ -595,9 +593,10 @@ test.each([
   const option_to_remove = options_set[0]
   const initial_selected_count = options_set.length
 
-  const button_selector = `ul.selected button[title='Remove ${get_label(option_to_remove)}']`
-  const remove_button =
-    document.querySelector<HTMLButtonElement>(button_selector)
+  const button_selector = `ul.selected button[title='Remove ${
+    get_label(option_to_remove)
+  }']`
+  const remove_button = document.querySelector<HTMLButtonElement>(button_selector)
 
   if (remove_button) {
     remove_button.click()
@@ -810,7 +809,8 @@ describe.each([
 
         // Use the known default for createOptionMsg
         const default_create_option_msg = `Create this option...`
-        const fail_msg = `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
+        const fail_msg =
+          `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
         expect(dropdown.textContent?.trim(), fail_msg).toBe(
           duplicates
             ? `${selected[0]} ${default_create_option_msg}` // Use default here
@@ -848,9 +848,7 @@ test(`2-way binding of selected`, async () => {
   let selected: Option[] = []
   const props = $state<Test2WayBindProps>({
     options: [1, 2, 3],
-    onSelectedChanged: (data) => {
-      selected = data!
-    },
+    onSelectedChanged: (data: Option[]) => selected = data,
   })
 
   mount(Test2WayBind, {
@@ -888,9 +886,7 @@ test.each([
       props: {
         options: [1, 2, 3],
         maxSelect,
-        onValueChanged: (data) => {
-          value = data!
-        },
+        onValueChanged: (data: Option) => value = data,
       },
     })
 
@@ -1144,7 +1140,6 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
 
 test.each([[[1]], [[1, 2, 3]]])(
   `buttons to remove selected options have CSS class "remove"`,
-
   (selected) => {
     mount(MultiSelect, {
       target: document.body,
@@ -1205,12 +1200,11 @@ test.each([
   [`change`, `button.remove-all`],
 ])(
   `fires %s event with expected payload when clicking %s`,
-  async (event_name, selector) => {
+  (event_name, selector) => {
     const is_event = <T extends keyof MultiSelectEvents>(
       name: T,
-      event_payload: Parameters<NonNullable<MultiSelectEvents[T]>>[0],
-    ): event_payload is Parameters<NonNullable<MultiSelectEvents[T]>>[0] =>
-      name === event_name
+      _event_payload: Parameters<NonNullable<MultiSelectEvents[T]>>[0],
+    ) => name === event_name
 
     const spy = vi.fn((event_payload) => {
       if (
@@ -1327,7 +1321,8 @@ describe.each([
     // TODO: fix this test. should pass for duplicates || !options_equal, not duplicates && !options_equal
     const expected = duplicates && !options_equal ? `foo foo` : `foo`
     const actual = doc_query(`ul.selected`).textContent?.trim()
-    const fail_msg = `duplicates=${duplicates}, options_equal=${options_equal}, key=${key.name}`
+    const fail_msg =
+      `duplicates=${duplicates}, options_equal=${options_equal}, key=${key.name}`
     expect(actual, fail_msg).toBe(expected)
   })
 })
@@ -1443,9 +1438,11 @@ test.each([
     { invalid: `invalid-style` },
     `selected`,
     ``,
-    `Invalid style object for option=${JSON.stringify({
-      style: { invalid: `invalid-style` },
-    })}`,
+    `Invalid style object for option=${
+      JSON.stringify({
+        style: { invalid: `invalid-style` },
+      })
+    }`,
   ],
 ])(
   `get_style returns and console.errors correctly (%s, %s, %s, %s)`,
@@ -1546,7 +1543,10 @@ test.each([
     const elem = doc_query(css_selector)
     await tick()
 
-    const err_msg = `style attribute should be absent when '${prop}' not passed, but hasAttribute('style') is ${elem.hasAttribute(`style`)}`
+    const err_msg =
+      `style attribute should be absent when '${prop}' not passed, but hasAttribute('style') is ${
+        elem.hasAttribute(`style`)
+      }`
     expect(elem.hasAttribute(`style`), err_msg).toBe(false)
   },
 )
@@ -1554,7 +1554,7 @@ test.each([
 test.each([true, false, `if-mobile`] as const)(
   `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
   async (closeDropdownOnSelect) => {
-    window.innerWidth = 600 // simulate mobile
+    globalThis.innerWidth = 600 // simulate mobile
     const select = mount(Test2WayBind, {
       target: document.body,
       props: { options: [1, 2, 3], closeDropdownOnSelect },
@@ -1565,9 +1565,8 @@ test.each([true, false, `if-mobile`] as const)(
     first_option.click()
     await tick() // let jsdom update document.activeElement after potential input.focus() in add()
 
-    const is_desktop = window.innerWidth > select.breakpoint
-    const should_be_closed =
-      closeDropdownOnSelect === true ||
+    const is_desktop = globalThis.innerWidth > select.breakpoint
+    const should_be_closed = closeDropdownOnSelect === true ||
       (closeDropdownOnSelect === `if-mobile` && !is_desktop)
 
     // count number of selected items
@@ -1595,9 +1594,9 @@ test.each([true, false, `if-mobile`] as const)(
 
     if (closeDropdownOnSelect === `if-mobile`) {
       // reduce window width to simulate mobile
-      window.innerWidth = 400
-      window.dispatchEvent(new Event(`resize`))
-      expect(window.innerWidth).toBeLessThan(select.breakpoint)
+      globalThis.innerWidth = 400
+      globalThis.dispatchEvent(new Event(`resize`))
+      expect(globalThis.innerWidth).toBeLessThan(select.breakpoint)
 
       // Re-simulate selection on mobile
       const another_option = doc_query(

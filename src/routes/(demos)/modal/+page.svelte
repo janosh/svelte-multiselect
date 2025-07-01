@@ -16,7 +16,7 @@
 
 <h2>MultiSelect in Modal Demo</h2>
 
-<button onclick={() => (show_modal = true)} style="padding: 3pt 6pt; margin: 1em auto;">
+<button onclick={() => (show_modal = true)} style="padding: 3pt 6pt; margin: 1em auto">
   Open Modal
 </button>
 
@@ -48,7 +48,7 @@
         options={languages}
         portal={{ active: true }}
         placeholder="Choose languages..."
-        style="margin-bottom: 1em;"
+        style="margin-bottom: 1em"
       />
       <MultiSelect
         bind:selected={selected_octicons}

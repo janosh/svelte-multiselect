@@ -5,11 +5,8 @@ import type { Option, OptionStyle } from './types'
 export const get_label = (opt: Option) => {
   if (opt instanceof Object) {
     if (opt.label === undefined) {
-      console.error(
-        `MultiSelect option ${JSON.stringify(
-          opt,
-        )} is an object but has no label key`,
-      )
+      const opt_str = JSON.stringify(opt)
+      console.error(`MultiSelect option ${opt_str} is an object but has no label key`)
     }
     return opt.label
   }
@@ -27,11 +24,11 @@ export function get_style(
   if (![`selected`, `option`, null].includes(key)) {
     console.error(`MultiSelect: Invalid key=${key} for get_style`)
   }
-  if (typeof option == `object` && option.style) {
-    if (typeof option.style == `string`) {
+  if (typeof option === `object` && option.style) {
+    if (typeof option.style === `string`) {
       css_str = option.style
     }
-    if (typeof option.style == `object`) {
+    if (typeof option.style === `object`) {
       if (key && key in option.style) return option.style[key] ?? ``
       else {
         console.error(
@@ -51,7 +48,7 @@ export function highlight_matching_nodes(
   query?: string, // search query
   noMatchingOptionsMsg?: string, // text for empty node
 ) {
-  if (typeof CSS == `undefined` || !CSS.highlights || !query) return // abort if CSS highlight API not supported
+  if (typeof CSS === `undefined` || !CSS.highlights || !query) return // abort if CSS highlight API not supported
 
   // clear previous ranges from HighlightRegistry
   CSS.highlights.clear()
@@ -59,8 +56,9 @@ export function highlight_matching_nodes(
   const tree_walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
       // don't highlight text in the "no matching options" message
-      if (node?.textContent === noMatchingOptionsMsg)
+      if (node?.textContent === noMatchingOptionsMsg) {
         return NodeFilter.FILTER_REJECT
+      }
       return NodeFilter.FILTER_ACCEPT
     },
   })

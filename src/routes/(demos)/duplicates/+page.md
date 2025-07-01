@@ -28,7 +28,7 @@ Allow duplicates: <input type="checkbox" bind:checked={duplicates} />
   {options}
   bind:selected
   {duplicates}
-  key={key === "JSON.stringify" ? JSON.stringify : (option) => option}
+  key={key === 'JSON.stringify' ? JSON.stringify : (option) => option}
 />
 
 <pre>{JSON.stringify(selected)}</pre>

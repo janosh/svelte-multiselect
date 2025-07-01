@@ -20,7 +20,7 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
       const route = `/${parts.slice(1, -1).join(`/`)}`
 
       return { label: route, action: () => goto(route) }
-    }
+    },
   )
 </script>
 

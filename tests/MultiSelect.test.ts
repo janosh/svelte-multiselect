@@ -1,8 +1,10 @@
+// deno-lint-ignore-file no-await-in-loop
 import { expect, test } from '@playwright/test'
+import process from 'node:process'
 import {
+  foods,
   languages as demo_languages,
   octicons as demo_octicons,
-  foods,
 } from '../src/site/options'
 
 // to run tests in this file, use `npm run test:e2e`
@@ -71,9 +73,7 @@ test.describe(`input`, () => {
     expect(opacity).toBe(`0`)
   })
 
-  test(`filters dropdown to show only matching options when entering text`, async ({
-    page,
-  }) => {
+  test(`filters dropdown to show only matching options when entering text`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.fill(`#foods input[autocomplete]`, `Pineapple`)
@@ -123,9 +123,7 @@ test.describe(`remove all button`, () => {
     await second_option.click()
   })
 
-  test(`only appears if more than 1 option is selected and removes all selected`, async ({
-    page,
-  }) => {
+  test(`only appears if more than 1 option is selected and removes all selected`, async ({ page }) => {
     let selected_items = await page.$$(
       `div.multiselect > ul.selected > li > button`,
     )
@@ -152,23 +150,25 @@ test.describe(`remove all button`, () => {
 })
 
 test.describe(`external CSS classes`, () => {
-  for (const [prop, selector, cls] of [
-    [`outerDiv`, `div.multiselect`, `wrapper`],
-    [`ulSelected`, `ul.selected`, `user-choices`],
-    [`ulOptions`, `ul.options`, `dropdown`],
-    [`liOption`, `ul.options > li`, `selectable-li`],
-    [`liUserMsgClass`, `ul.options > li.user-msg`, `selectable-msg-li`],
-    [`input`, `input[autocomplete]`, `search-text-input`],
-    // below classes requires component interaction before appearing in DOM
-    [`liSelected`, `ul.selected > li`, `selected-li`],
-    [`liActiveOption`, `ul.options > li.active`, `hovered-or-arrow-keyed-li`],
-    [
-      `liActiveUserMsgClass`,
-      `ul.options > li.active.user-msg`,
-      `hovered-or-arrow-keyed-msg-li`,
-    ],
-    [`maxSelectMsg`, `span.max-select-msg`, `user-hint-max-selected-reached`],
-  ]) {
+  for (
+    const [prop, selector, cls] of [
+      [`outerDiv`, `div.multiselect`, `wrapper`],
+      [`ulSelected`, `ul.selected`, `user-choices`],
+      [`ulOptions`, `ul.options`, `dropdown`],
+      [`liOption`, `ul.options > li`, `selectable-li`],
+      [`liUserMsgClass`, `ul.options > li.user-msg`, `selectable-msg-li`],
+      [`input`, `input[autocomplete]`, `search-text-input`],
+      // below classes requires component interaction before appearing in DOM
+      [`liSelected`, `ul.selected > li`, `selected-li`],
+      [`liActiveOption`, `ul.options > li.active`, `hovered-or-arrow-keyed-li`],
+      [
+        `liActiveUserMsgClass`,
+        `ul.options > li.active.user-msg`,
+        `hovered-or-arrow-keyed-msg-li`,
+      ],
+      [`maxSelectMsg`, `span.max-select-msg`, `user-hint-max-selected-reached`],
+    ]
+  ) {
     test(`${prop}Class`, async ({ page }) => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
@@ -228,9 +228,7 @@ test.describe(`accessibility`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
   })
 
-  test(`input is aria-invalid when component has invalid=true`, async ({
-    page,
-  }) => {
+  test(`input is aria-invalid when component has invalid=true`, async ({ page }) => {
     // don't interact with component before this test as it will set invalid=false
     const invalid = await page.getAttribute(
       `#foods input[autocomplete]`,
@@ -259,9 +257,7 @@ test.describe(`accessibility`, () => {
     expect(after).toBe(`true`)
   })
 
-  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({
-    page,
-  }) => {
+  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({ page }) => {
     await page.click(`div.multiselect`) // open the dropdown
     await page.click(`div.multiselect > ul.options > li`) // select 1st option
     const aria_option = await page.getAttribute(
@@ -314,9 +310,7 @@ test.describe(`multiselect`, () => {
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/111
-  test(`loops through dropdown list with arrow keys making each option active in turn`, async ({
-    page,
-  }) => {
+  test(`loops through dropdown list with arrow keys making each option active in turn`, async ({ page }) => {
     // skip in CI since it's flaky
     if (process.env.CI) test.skip()
 
@@ -342,9 +336,7 @@ test.describe(`multiselect`, () => {
     expect(last_food?.trim()).toBe(foods.at(-1))
   })
 
-  test(`retains its selected state on page reload when bound to localStorage`, async ({
-    page,
-  }) => {
+  test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
 
     await page.click(`#languages input[autocomplete]`)
@@ -364,9 +356,7 @@ test.describe(`multiselect`, () => {
 })
 
 test.describe(`allowUserOptions`, () => {
-  test(`entering custom option adds it to selected but not to options`, async ({
-    page,
-  }) => {
+  test(`entering custom option adds it to selected but not to options`, async ({ page }) => {
     const selector = `#foods input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
@@ -390,27 +380,30 @@ test.describe(`allowUserOptions`, () => {
     expect(li_handle).toBeNull()
   })
 
-  test(`entering custom option in append mode adds it to selected
-      list _and_ to options in dropdown menu`, async ({ page }) => {
-    // i.e. it remains selectable from the dropdown after removing from selected
-    const selector = `#languages input[autocomplete]`
+  test(
+    `entering custom option in append mode adds it to selected
+      list _and_ to options in dropdown menu`,
+    async ({ page }) => {
+      // i.e. it remains selectable from the dropdown after removing from selected
+      const selector = `#languages input[autocomplete]`
 
-    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
+      await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
-    await page.click(selector)
+      await page.click(selector)
 
-    await page.fill(selector, `foobar`)
+      await page.fill(selector, `foobar`)
 
-    await page.press(selector, `Enter`) // create custom option
-    await page.press(selector, `Backspace`) // remove custom option from selected items
+      await page.press(selector, `Enter`) // create custom option
+      await page.press(selector, `Backspace`) // remove custom option from selected items
 
-    await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
+      await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
 
-    await page.click(`ul.options >> text=foobar`)
+      await page.click(`ul.options >> text=foobar`)
 
-    const ul_selected = await page.$(`ul.selected >> text=foobar`)
-    expect(ul_selected).toBeTruthy()
-  })
+      const ul_selected = await page.$(`ul.selected >> text=foobar`)
+      expect(ul_selected).toBeTruthy()
+    },
+  )
 
   test(`shows custom createOptionMsg if no options match`, async ({ page }) => {
     const selector = `#languages input[autocomplete]`
@@ -433,9 +426,7 @@ test.describe(`allowUserOptions`, () => {
   // entered text 'foobar' (good so far) but instead of creating a custom option from it,
   // delete the previously added option 'Python'. was due to Python still being the activeOption
   // so Enter key would toggle it.
-  test(`creates custom option correctly after selecting a provided option`, async ({
-    page,
-  }) => {
+  test(`creates custom option correctly after selecting a provided option`, async ({ page }) => {
     const selector = `#languages input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
@@ -450,9 +441,7 @@ test.describe(`allowUserOptions`, () => {
     expect(ul_selected).toBeTruthy()
   })
 
-  test(`can create custom option starting from empty options array`, async ({
-    page,
-  }) => {
+  test(`can create custom option starting from empty options array`, async ({ page }) => {
     // and doesn't error about empty options when custom options allowed
     const logs: string[] = []
     page.on(`console`, (msg) => {
@@ -473,7 +462,7 @@ test.describe(`allowUserOptions`, () => {
     expect(ul_selected).toBeTruthy()
 
     const logged_err_msg = logs.some((msg) =>
-      msg.includes(`MultiSelect received no options`),
+      msg.includes(`MultiSelect received no options`)
     )
     expect(logged_err_msg).toBe(false)
   })
@@ -535,7 +524,7 @@ test.describe(`parseLabelsAsHtml`, () => {
     const has_expected_error = logs.some((msg) =>
       msg.includes(
         `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
-      ),
+      )
     )
 
     expect(has_expected_error).toBe(true)
@@ -555,18 +544,14 @@ test.describe(`maxSelect`, () => {
     }
   })
 
-  test(`options dropdown disappears when reaching maxSelect items`, async ({
-    page,
-  }) => {
+  test(`options dropdown disappears when reaching maxSelect items`, async ({ page }) => {
     const ul_selector = `#languages ul.options`
 
     await expect(page.locator(ul_selector)).toBeHidden()
     expect(await page.getAttribute(ul_selector, `class`)).toContain(`hidden`)
   })
 
-  test(`no more options can be added after reaching maxSelect items`, async ({
-    page,
-  }) => {
+  test(`no more options can be added after reaching maxSelect items`, async ({ page }) => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
     let selected_lis = await page.$$(
       `#languages ul.selected > li[aria-selected=true]`,
@@ -582,9 +567,7 @@ test.describe(`maxSelect`, () => {
 })
 
 test.describe(`snippets`, () => {
-  test(`renders removeIcon snippet for individual remove buttons and the remove-all button`, async ({
-    page,
-  }) => {
+  test(`renders removeIcon snippet for individual remove buttons and the remove-all button`, async ({ page }) => {
     await page.goto(`/snippets`, { waitUntil: `networkidle` })
 
     const expand_icon_locator = page.locator(
@@ -633,9 +616,7 @@ test.describe(`snippets`, () => {
   })
 })
 
-test(`dragging selected options across each other changes their order`, async ({
-  page,
-}) => {
+test(`dragging selected options across each other changes their order`, async ({ page }) => {
   // https://github.com/janosh/svelte-multiselect/issues/176
   await page.goto(`/persistent`, { waitUntil: `networkidle` })
   let selected = await page.textContent(`ul.selected`)
@@ -650,9 +631,7 @@ test(`dragging selected options across each other changes their order`, async ({
 })
 
 test.describe(`portal feature`, () => {
-  test(`dropdown renders within component when portal is inactive (/ui page)`, async ({
-    page,
-  }) => {
+  test(`dropdown renders within component when portal is inactive (/ui page)`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const foods_multiselect = page.locator(`#foods`)
@@ -674,9 +653,7 @@ test.describe(`portal feature`, () => {
     await expect(portalled_foods_options).not.toBeAttached()
   })
 
-  test(`dropdowns in modal render in body when portal is active`, async ({
-    page,
-  }) => {
+  test(`dropdowns in modal render in body when portal is active`, async ({ page }) => {
     await page.goto(`/modal`, { waitUntil: `networkidle` })
 
     await page.getByRole(`button`, { name: `Open Modal` }).click()

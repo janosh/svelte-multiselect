@@ -15,7 +15,10 @@
   }
   let { children }: Props = $props()
 
-  const actions = routes.map(({ route }) => ({ label: route, action: () => goto(route) }))
+  const actions = routes.map(({ route }) => ({
+    label: route,
+    action: () => goto(route),
+  }))
 </script>
 
 <CmdPalette {actions} placeholder="Go to..." />

@@ -87,9 +87,14 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   // for https://github.com/janosh/svelte-multiselect/issues/249
   import MultiSelect from '$lib'
 
-  const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
-  const blue_pill = `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
-  const options = [ { label: red_pill, value: `red pill`, preselected: true }, { label: blue_pill, value: `blue pill` }]
+  const red_pill =
+    `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
+  const blue_pill =
+    `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
+  const options = [{ label: red_pill, value: `red pill`, preselected: true }, {
+    label: blue_pill,
+    value: `blue pill`,
+  }]
 
   let value = $state(null)
 </script>

@@ -20,13 +20,15 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
   import { repository } from '$root/package.json'
   import type { ActionData } from './$types'
 
-  let { form }: { form: ActionData } = $props();
+  let { form }: { form: ActionData } = $props()
 
-  let err_msg = $derived({
-    json: 'The email field is required',
-    array: 'The email field is required',
-    boring: 'Boring answer!',
-  }[form?.error as string])
+  let err_msg = $derived(
+    {
+      json: 'The email field is required',
+      array: 'The email field is required',
+      boring: 'Boring answer!',
+    }[form?.error as string],
+  )
 </script>
 
 <form method="POST" action="?/validate-form">
@@ -59,7 +61,7 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
       {#each form.colors as color}
         <ColorSnippet
           option={color}
-          style="display: inline-flex; vertical-align: middle; margin: 0 0 0 1ex;"
+          style="display: inline-flex; vertical-align: middle; margin: 0 0 0 1ex"
         />
       {/each}
     </p>
