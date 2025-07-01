@@ -1,6 +1,6 @@
 <script lang="ts">
+  import { MultiSelect } from '$lib'
   import { fade } from 'svelte/transition'
-  import { MultiSelect } from '.'
   import type { MultiSelectProps, ObjectOption, Option } from './types'
 
   interface Action extends ObjectOption {

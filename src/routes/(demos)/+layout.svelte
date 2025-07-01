@@ -4,7 +4,7 @@
   import { DemoNav } from '$site'
   import type { Snippet } from 'svelte'
   import { PrevNext } from 'svelte-zoo'
-  import { demo_pages } from '.'
+  import { demo_pages } from './index'
 
   interface Props {
     children?: Snippet
@@ -17,14 +17,14 @@
 </h1>
 
 <main>
-  <DemoNav style="place-content: center;" />
+  <DemoNav style="place-content: center" />
 
   {@render children?.()}
 
   <PrevNext
     items={demo_pages}
     current={page.url.pathname}
-    style="max-width: var(--main-max-width); margin: auto;"
+    style="max-width: var(--main-max-width); margin: auto"
     on_keyup={null}
   />
 </main>

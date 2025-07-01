@@ -45,7 +45,6 @@ This simplified DOM structure of the component shows where these classes are ins
 
 ```svelte
 <div class="multiselect {outerDivClass}">
-
   <ul class="selected {ulSelectedClass}">
     <li class={liSelectedClass}>Selected 1</li>
     <li class={liSelectedClass}>Selected 2</li>
@@ -65,6 +64,5 @@ This simplified DOM structure of the component shows where these classes are ins
       Create this option...
     </li>
   </ul>
-
 </div>
 ```

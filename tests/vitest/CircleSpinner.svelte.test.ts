@@ -1,9 +1,9 @@
 import { CircleSpinner } from '$lib'
 import { mount } from 'svelte'
 import { expect, test } from 'vitest'
-import { doc_query } from '.'
+import { doc_query } from './index'
 
-test(`CircleSpinner prop size`, async () => {
+test(`CircleSpinner prop size`, () => {
   const size = `100px`
 
   mount(CircleSpinner, {

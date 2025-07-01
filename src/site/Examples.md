@@ -25,7 +25,13 @@
   let value = $state(null)
 </script>
 
-<MultiSelect id="color" bind:value options={colors} maxSelect={1} placeholder="Choose a color..." />
+<MultiSelect
+  id="color"
+  bind:value
+  options={colors}
+  maxSelect={1}
+  placeholder="Choose a color..."
+/>
 
 <p>You selected: {JSON.stringify(value)}</p>
 ```
@@ -41,15 +47,20 @@
     { label: 'Canada', value: 'CA', continent: 'North America' },
     { label: 'United Kingdom', value: 'UK', continent: 'Europe' },
     { label: 'Germany', value: 'DE', continent: 'Europe' },
-    { label: 'Japan', value: 'JP', continent: 'Asia' }
+    { label: 'Japan', value: 'JP', continent: 'Asia' },
   ]
   let selected = $state([])
 </script>
 
-<MultiSelect id="countries" bind:selected options={countries} placeholder="Select countries..." />
+<MultiSelect
+  id="countries"
+  bind:selected
+  options={countries}
+  placeholder="Select countries..."
+/>
 
-<p>Selected countries: {selected.map(c => c.label).join(', ')}</p>
-<p>Country codes: {selected.map(c => c.value).join(', ')}</p>
+<p>Selected countries: {selected.map((c) => c.label).join(', ')}</p>
+<p>Country codes: {selected.map((c) => c.value).join(', ')}</p>
 ```
 
 <label for="skills">Add your skills (you can define new ones) <span>user-created options</span></label>
@@ -113,7 +124,9 @@ selected = {JSON.stringify(selected) || `[]`}
     loading = Boolean(searchText)
     // perform some fetch/database request here to get list of options matching searchText
     // options = await fetch(`https://example.com?search=${searchText}`)
-    setTimeout(async () => { loading = false }, 1000)
+    setTimeout(async () => {
+      loading = false
+    }, 1000)
   })
 </script>
 
@@ -165,7 +178,7 @@ value = {JSON.stringify(value) || `null`}
     }
   }}
 >
- {#snippet option({ idx, option })}
+  {#snippet option({ idx, option })}
     <RepoSnippet {idx} {option} />
   {/snippet}
 </MultiSelect>
@@ -235,7 +248,7 @@ value = {JSON.stringify(value) || `null`}
 />
 
 <label>
-  maxOptions <input type="range" min=0 max={30} bind:value={maxOptions}>
+  maxOptions <input type="range" min="0" max={30} bind:value={maxOptions}>
   {maxOptions} <small>(0 means no limit)</small>
 </label>
 ```
