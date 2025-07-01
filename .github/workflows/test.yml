@@ -13,6 +13,6 @@ jobs:
   tests:
     uses: janosh/workflows/.github/workflows/deno-test.yml@main
     with:
-      test-cmd: deno task test
+      test-cmd: deno task vitest --run
       e2e-install-cmd: npx playwright install chromium
-      e2e-test-cmd: npx playwright test tests/*.ts
+      e2e-test-cmd: npx playwright test

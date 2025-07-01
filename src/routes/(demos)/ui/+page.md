@@ -20,6 +20,7 @@
   placeholder="Pick your favorite foods"
   removeAllTitle="Remove all foods"
   closeDropdownOnSelect={true}
+  style="width: 500px"
   invalid
 />
 ```
