@@ -107,7 +107,6 @@ export interface MultiSelectParameters<T extends Option = Option> {
   defaultDisabledTitle?: string
   disabled?: boolean
   disabledInputTitle?: string
-  // prettier-ignore
   duplicateOptionMsg?: string
   duplicates?: boolean // whether to allow duplicate options
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default

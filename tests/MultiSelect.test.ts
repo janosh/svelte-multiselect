@@ -535,10 +535,14 @@ test.describe(`maxSelect`, () => {
   const max_select = 5
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
+    await page.goto(`/min-max-select`, { waitUntil: `domcontentloaded` })
+
+    // Wait for the multiselect component to be ready
+    await page.waitForSelector(`#languages input[autocomplete]`, { state: `visible` })
     await page.click(`#languages input[autocomplete]`)
 
-    // select maxSelect options
+    // Wait for options to appear and select maxSelect options
+    await page.waitForSelector(`ul.options > li`, { state: `visible` })
     for (const idx of Array(max_select).fill(0)) {
       await page.click(`ul.options > li >> nth=${idx}`)
     }
