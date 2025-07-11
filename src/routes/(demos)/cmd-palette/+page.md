@@ -8,7 +8,7 @@
 
 You can use `<MultiSelect />` to build a navigation palette in just 70 lines of code (50 without styles).
 
-```svelte stackblitz id="disabled-input-title"
+```svelte example id="disabled-input-title"
 <script>
   import { goto } from '$app/navigation'
   import { CmdPalette } from '$lib'

@@ -1,10 +1,9 @@
 <script lang="ts">
+  import { Icon, Wiggle } from '$lib'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import CircleSpinner from './CircleSpinner.svelte'
-  import Wiggle from './Wiggle.svelte'
-  import { CrossIcon, DisabledIcon, ExpandIcon } from './icons'
   import type { MultiSelectProps, Option as T } from './types'
   import { get_label, get_style, highlight_matching_nodes } from './utils'
 
@@ -622,7 +621,11 @@
   {#if expandIcon}
     {@render expandIcon({ open })}
   {:else}
-    <ExpandIcon width="15px" style="min-width: 1em; padding: 0 1pt; cursor: pointer" />
+    <Icon
+      icon="ChevronExpand"
+      width="15px"
+      style="min-width: 1em; padding: 0 1pt; cursor: pointer"
+    />
   {/if}
   <ul
     class="selected {ulSelectedClass}"
@@ -676,7 +679,7 @@
             {#if removeIcon}
               {@render removeIcon()}
             {:else}
-              <CrossIcon width="15px" />
+              <Icon icon="Cross" width="15px" />
             {/if}
           </button>
         {/if}
@@ -711,7 +714,6 @@
       {ontouchstart}
       {...rest}
     />
-    <!-- the above on:* lines forward potentially useful DOM events -->
     {@render afterInput?.({
         selected,
         disabled,
@@ -733,7 +735,12 @@
     {#if disabledIcon}
       {@render disabledIcon()}
     {:else}
-      <DisabledIcon width="14pt" style="margin: 0 2pt" data-name="disabled-icon" />
+      <Icon
+        icon="Disabled"
+        width="14pt"
+        style="margin: 0 2pt"
+        data-name="disabled-icon"
+      />
     {/if}
   {:else if selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
@@ -754,7 +761,7 @@
         {#if removeIcon}
           {@render removeIcon()}
         {:else}
-          <CrossIcon width="15px" />
+          <Icon icon="Cross" width="15px" />
         {/if}
       </button>
     {/if}

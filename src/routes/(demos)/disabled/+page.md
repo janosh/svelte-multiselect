@@ -2,7 +2,7 @@
 
 <label for="disabled">Favorite frontend tool?</label>
 
-```svelte example stackblitz id="disabled-input-title"
+```svelte example id="disabled-input-title"
 <script>
   import MultiSelect from '$lib'
 </script>

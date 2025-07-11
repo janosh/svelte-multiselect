@@ -40,14 +40,14 @@ test(`2-way binding of activeIndex`, async () => {
 
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
   // test internal change to activeOption binds outwards
-  let activeOption: Option = 0
+  let activeOption: Option | null | undefined = 0
   const cb = vi.fn()
 
   mount(Test2WayBind, {
     target: document.body,
     props: {
       options: [1, 2, 3],
-      onActiveOptionChanged: (data: Option) => {
+      onActiveOptionChanged: (data: Option | null | undefined) => {
         activeOption = data
         cb(data)
       },
@@ -64,14 +64,14 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
 
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
   // test internal change to activeOption binds outwards
-  let activeOption: Option = 0
+  let activeOption: Option | null | undefined = 0
   const cb = vi.fn()
 
   mount(Test2WayBind, {
     target: document.body,
     props: {
       options: [1, 2, 3],
-      onActiveOptionChanged: (data: Option) => {
+      onActiveOptionChanged: (data: Option | null | undefined) => {
         activeOption = data
         cb()
       },
@@ -848,7 +848,7 @@ test(`2-way binding of selected`, async () => {
   let selected: Option[] = []
   const props = $state<Test2WayBindProps>({
     options: [1, 2, 3],
-    onSelectedChanged: (data: Option[]) => selected = data,
+    onSelectedChanged: (data: Option[] | undefined) => selected = data ?? [],
   })
 
   mount(Test2WayBind, {
@@ -886,7 +886,8 @@ test.each([
       props: {
         options: [1, 2, 3],
         maxSelect,
-        onValueChanged: (data: Option) => value = data,
+        onValueChanged: (data: Option | Option[] | null | undefined) =>
+          value = data ?? undefined,
       },
     })
 

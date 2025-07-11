@@ -3,6 +3,8 @@
   --blue: cornflowerblue;
   --text-color: #ccc;
   --main-max-width: 50em;
+  --pre-bg: rgba(255, 255, 255, 0.05);
+  --btn-bg: rgba(255, 255, 255, 0.15);
 
   --sms-active-color: rgba(255, 255, 255, 0.1);
   --sms-focus-border: 1pt solid cornflowerblue;
@@ -13,10 +15,10 @@
   --sms-li-disabled-bg: black;
   --sms-placeholder-color: lightgray;
 
-  --zoo-github-corner-color: var(--night);
-  --zoo-github-corner-bg: white;
-  --zoo-example-margin: 1em auto;
-  --zoo-example-btn-bg: none;
+  --github-corner-color: var(--night);
+  --github-corner-bg: white;
+  --example-margin: 1em auto;
+  --example-btn-bg: none;
 }
 body {
   background: var(--night);
@@ -41,7 +43,7 @@ a.btn {
   font-size: 12pt;
   line-height: initial;
   transition: background-color 0.2s;
-  background-color: rgba(31, 182, 205, 0.425);
+  background-color: var(--btn-bg);
 }
 :is(button, a.btn):hover {
   color: white;
@@ -69,7 +71,7 @@ pre code {
 pre {
   position: relative;
   border-radius: 4pt;
-  background-color: rgba(255, 255, 255, 0.05);
+  background-color: var(--pre-bg);
   padding: 1em;
   overflow-x: auto;
 }

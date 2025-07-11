@@ -1,6 +1,6 @@
 ## Duplicates MultiSelect
 
-```svelte example stackblitz id="disabled-input-title"
+```svelte example id="disabled-input-title"
 <script>
   import MultiSelect from '$lib'
 

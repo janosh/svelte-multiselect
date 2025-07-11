@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { FileDetails } from 'svelte-zoo'
+  import { FileDetails } from '$lib'
   import language_snippet_src from '$site/LanguageSnippet.svelte?raw'
   import options_src from '$site/options.ts?raw'
 </script>
@@ -8,7 +8,7 @@
 
 `maxSelect={5}` prevents users from selecting more than 5 options.
 
-```svelte example stackblitz id="languages"
+```svelte example id="languages"
 <script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
@@ -40,7 +40,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 `required={3}` means users have to pick at least 3 options before they can submit a form.
 
-```svelte example stackblitz
+```svelte example
 <script lang="ts">
   import MultiSelect from '$lib'
 
@@ -60,7 +60,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
-```svelte example stackblitz
+```svelte example
 <script lang="ts">
   import MultiSelect from '$lib'
 
@@ -82,7 +82,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 </form>
 ```
 
-```svelte example stackblitz
+```svelte example
 <script>
   // for https://github.com/janosh/svelte-multiselect/issues/249
   import MultiSelect from '$lib'

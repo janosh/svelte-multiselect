@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { FileDetails } from 'svelte-zoo'
+  import { FileDetails } from '$lib'
 </script>
 
 ## Sorting Selected Items
 
 ### Frontend Lib Picker (default sorting)
 
-```svelte example stackblitz id="default-sort"
+```svelte example id="default-sort"
 <script>
   import MultiSelect from '$lib'
   import { frontend_libs } from '$site/options'
@@ -28,7 +28,7 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 
 ### Frontend Lib Picker (custom sorting by programming language)
 
-```svelte example stackblitz id="custom-sort"
+```svelte example id="custom-sort"
 <script lang="ts">
   import MultiSelect, { type Option } from '$lib'
   import { frontend_libs } from '$site/options'

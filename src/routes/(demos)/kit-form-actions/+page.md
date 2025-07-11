@@ -12,7 +12,7 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
 > a server to respond to the form's POST request and this documentation site is only static
 > HTML.
 
-```svelte example stackblitz
+```svelte example
 <script lang="ts">
   import MultiSelect from '$lib'
   import { ColorSnippet } from '$site'

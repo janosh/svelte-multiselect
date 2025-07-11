@@ -57,37 +57,26 @@ export interface MultiSelectEvents<T extends Option = Option> {
   onclose?: (data: { event: Event }) => unknown
 }
 
+type AfterInputProps = Pick<
+  MultiSelectParameters,
+  `selected` | `disabled` | `invalid` | `id` | `placeholder` | `open` | `required`
+>
+type UserMsgProps = {
+  searchText: string
+  msgType: false | `dupe` | `create` | `no-match`
+  msg: null | string
+}
+
 export interface MultiSelectSnippets<T extends Option = Option> {
   expandIcon?: Snippet<[{ open: boolean }]>
   selectedItem?: Snippet<[{ option: T; idx: number }]>
   children?: Snippet<[{ option: T; idx: number }]>
   removeIcon?: Snippet
-  afterInput?: Snippet<
-    [
-      Pick<
-        MultiSelectParameters,
-        | `selected`
-        | `disabled`
-        | `invalid`
-        | `id`
-        | `placeholder`
-        | `open`
-        | `required`
-      >,
-    ]
-  >
+  afterInput?: Snippet<[AfterInputProps]>
   spinner?: Snippet
   disabledIcon?: Snippet
   option?: Snippet<[{ option: T; idx: number }]>
-  userMsg?: Snippet<
-    [
-      {
-        searchText: string
-        msgType: false | `dupe` | `create` | `no-match`
-        msg: null | string
-      },
-    ]
-  >
+  userMsg?: Snippet<[UserMsgProps]>
 }
 
 export interface PortalParams {

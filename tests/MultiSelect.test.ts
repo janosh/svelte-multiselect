@@ -535,15 +535,11 @@ test.describe(`maxSelect`, () => {
   const max_select = 5
 
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/min-max-select`, { waitUntil: `domcontentloaded` })
+    await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
 
-    // Wait for the multiselect component to be ready
-    await page.waitForSelector(`#languages input[autocomplete]`, { state: `visible` })
-    await page.click(`#languages input[autocomplete]`)
-
-    // Wait for options to appear and select maxSelect options
-    await page.waitForSelector(`ul.options > li`, { state: `visible` })
-    for (const idx of Array(max_select).fill(0)) {
+    // Select maxSelect options
+    for (let idx = 0; idx < max_select; idx++) {
+      await page.click(`#languages input[autocomplete]`)
       await page.click(`ul.options > li >> nth=${idx}`)
     }
   })
@@ -561,8 +557,14 @@ test.describe(`maxSelect`, () => {
       `#languages ul.selected > li[aria-selected=true]`,
     )
     expect(selected_lis).toHaveLength(max_select)
+
+    // Try to add another option - should not work
     await page.click(`#languages input[autocomplete]`) // re-open options dropdown
+
+    // The dropdown might still be visible but clicking on options shouldn't add more
     await page.click(`ul.options > li >> nth=0`)
+
+    // Verify selected count hasn't changed (still maxSelect)
     selected_lis = await page.$$(
       `#languages ul.selected > li[aria-selected=true]`,
     )

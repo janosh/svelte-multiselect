@@ -1,17 +1,16 @@
 <script lang="ts">
-  import { FileDetails } from 'svelte-zoo'
+  import { FileDetails } from '$lib'
 </script>
 
 ## Snippets
 
 ### Svelte SVG component as `"removeIcon"` snippet
 
-```svelte example stackblitz id="languages-1"
+```svelte example id="languages-1"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet, MinusIcon } from '$site'
-  import { Icon } from 'svelte-zoo'
 </script>
 
 <MultiSelect
@@ -36,12 +35,11 @@
 
 ### Simple HTML tag as `"removeIcon"` snippet
 
-```svelte example stackblitz id="languages-2"
+```svelte example id="languages-2"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
-  import { Icon } from 'svelte-zoo'
 
   // local variable used in CollapseIcon onclick callback to close dropdown
   let open = $state(false)
@@ -79,12 +77,11 @@
 
 ### `"user-msg"` snippet
 
-```svelte example stackblitz id="languages-2"
+```svelte example id="languages-2"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
-  import { Icon } from 'svelte-zoo'
 
   let selected = $state([`Python`, `TypeScript`, `Julia`])
   let searchText = $state(`Julia`)

@@ -9,7 +9,8 @@
     "e2e": "npx playwright test",
     "test:install": "npx playwright install chromium",
     "package": "svelte-package",
-    "changelog": "deno run -A https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
+    "changelog": "deno run -A https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts",
+    "check": "svelte-check"
   },
   "lock": false,
   "imports": {
