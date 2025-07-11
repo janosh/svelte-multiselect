@@ -1,9 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state'
+  import { PrevNext } from '$lib'
   import { name } from '$root/package.json'
   import { DemoNav } from '$site'
   import type { Snippet } from 'svelte'
-  import { PrevNext } from 'svelte-zoo'
   import { demo_pages } from './index'
 
   interface Props {

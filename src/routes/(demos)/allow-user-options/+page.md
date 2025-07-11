@@ -8,11 +8,10 @@
 
 `allowUserOptions={true}` means users can enter custom options by entering text and hitting enter.
 
-```svelte example stackblitz id="foods"
+```svelte example id="foods"
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect, { Toggle } from '$lib'
   import { foods } from '$site/options'
-  import { Toggle } from 'svelte-zoo'
 
   let selected = $state(
     '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '),
@@ -27,7 +26,7 @@
   bind:selected
 />
 
-<label for="duplicates">
+<label for="duplicates" style="display: block; margin-top: 1em">
   Allow duplicates
   <Toggle bind:checked={duplicates} id="duplicates" />
 </label>
@@ -39,7 +38,7 @@
 
 `allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection if users remove their custom options from selected items.
 
-```svelte example stackblitz id="languages"
+```svelte example id="languages"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
@@ -66,7 +65,7 @@
 
 You can start with no options and let users populate MultiSelect from scratch. In this case, MultiSelect acts more like a tagging component.
 
-```svelte example stackblitz id="no-default-options"
+```svelte example id="no-default-options"
 <script>
   import MultiSelect from '$lib'
 

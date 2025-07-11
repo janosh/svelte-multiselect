@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
-  import { Octocat } from '$lib/icons'
+  import { Icon } from '$lib'
 
   interface Props {
     option: ObjectOption
@@ -20,7 +20,7 @@
       target="_blank"
       rel="noreferrer"
     >
-      <Octocat width="14pt" />{option.repo_handle}
+      <Icon icon="GitHub" width="14pt" />{option.repo_handle}
     </a>
   </small>
 </span>
