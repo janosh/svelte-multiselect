@@ -34,7 +34,9 @@
   }: Props = $props()
 
   $effect(() => {
-    if (open && input) input?.focus() // focus input when palette is opened
+    if (open && input && document.activeElement !== input) {
+      input.focus()
+    }
   })
 
   async function toggle(event: KeyboardEvent) {

@@ -24,7 +24,6 @@
     "eslint": "^9.30.1",
     "eslint-plugin-svelte": "^3.10.1",
     "hastscript": "^9.0.1",
-    "highlight.js": "^11.11.1",
     "jsdom": "^26.1.0",
     "mdsvex": "^0.12.6",
     "mdsvexamples": "^0.5.0",

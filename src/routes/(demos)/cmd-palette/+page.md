@@ -1,6 +1,6 @@
 <script>
-  import hljs from 'highlight.js/lib/common'
-  import 'highlight.js/styles/vs2015.css'
+  // import hljs from 'highlight.js/lib/common'
+  // import 'highlight.js/styles/vs2015.css'
   import cmd_palette_src from '$lib/CmdPalette.svelte?raw'
 </script>
 
@@ -12,16 +12,12 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
 <script>
   import { goto } from '$app/navigation'
   import { CmdPalette } from '$lib'
+  import { routes } from '../index'
 
-  const actions = Object.keys(import.meta.glob(`./**/+page.{svx,svelte,md}`)).map(
-    (filename) => {
-      const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
-
-      const route = `/${parts.slice(1, -1).join(`/`)}`
-
-      return { label: route, action: () => goto(route) }
-    },
-  )
+  const actions = routes.map(({ route }) => ({
+    label: route,
+    action: () => goto(route),
+  }))
 </script>
 
 <CmdPalette {actions} />
@@ -29,4 +25,5 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
 
 Here's `<CmdPalette />` component
 
-<pre><code>{@html hljs.highlight(cmd_palette_src, { language: 'typescript' }).value}</code></pre>
+<pre><code>{@html cmd_palette_src}</code></pre>
+<!-- <pre><code>{@html hljs.highlight(cmd_palette_src, { language: 'typescript' }).value}</code></pre> -->
