@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
+#### [v11.2.0](https://github.com/janosh/svelte-multiselect/compare/v11.2.0...v11.2.0)
+
+> 11 July 2025
+
+- Better getting started docs by @janosh in https://github.com/janosh/svelte-multiselect/pull/312
+- `removeAll` event timing: clear `selected` before events fire by @janosh in https://github.com/janosh/svelte-multiselect/pull/313
+- Open dropdown on programmatic focus and close it on blur by @janosh in https://github.com/janosh/svelte-multiselect/pull/314
+- Fix `<input>` adding unwanted width when options selected by @janosh in https://github.com/janosh/svelte-multiselect/pull/315
+- MultiSelect fire `oncreate` event for all user-created options by @janosh in https://github.com/janosh/svelte-multiselect/pull/316
+- Add new value `'retain-focus'` for prop `closeDropdownOnSelect` by @janosh in https://github.com/janosh/svelte-multiselect/pull/318
+- Swap `node` for `deno` by @janosh in https://github.com/janosh/svelte-multiselect/pull/319
+- migrate useful Svelte components: `CodeExample`, `CopyButton`, `FileDetails`, `GitHubCorner`, `Icon`, `PrevNext`, `RadioButtons`, `Toggle` by @janosh in https://github.com/janosh/svelte-multiselect/pull/323
+
+**Full Changelog**: https://github.com/janosh/svelte-multiselect/compare/v11.1.1...v11.2.0
+
 #### [v11.1.1](https://github.com/janosh/svelte-multiselect/compare/v11.1.0...v11.1.1)
 
 > 20 May 2025

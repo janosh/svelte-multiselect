@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { afterNavigate } from '$app/navigation'
   import { CopyButton, Icon } from '$lib'
   import type { Snippet } from 'svelte'
   import { mount } from 'svelte'
@@ -34,8 +33,8 @@
     ...rest
   }: Props = $props()
 
-  if (global || global_selector) {
-    afterNavigate(() => {
+  $effect(() => {
+    if (global || global_selector) {
       for (const node of document.querySelectorAll(global_selector ?? `pre > code`)) {
         // skip if <pre> already contains a button (presumably for copy)
         const pre = node.parentElement
@@ -49,8 +48,8 @@
           },
         })
       }
-    })
-  }
+    }
+  })
 
   async function copy() {
     try {
