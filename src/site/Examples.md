@@ -91,7 +91,7 @@
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
-  import LanguageSnippet from './LanguageSnippet.svelte'
+  import { LanguageSnippet } from '$site'
 
   let selected: string[] = $state([])
 </script>
@@ -150,7 +150,7 @@ value = {JSON.stringify(value) || `null`}
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import { frontend_libs } from '$site/options'
-  import RepoSnippet from './RepoSnippet.svelte'
+  import { RepoSnippet } from '$site'
   import { Confetti } from '$site'
   import type { ObjectOption } from '$lib'
 
@@ -193,7 +193,7 @@ value = {JSON.stringify(value) || `null`}
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import { colors } from '$site/options'
-  import ColorSnippet from './ColorSnippet.svelte'
+  import { ColorSnippet } from '$site'
 
   let selected: string[] = $state([])
 </script>

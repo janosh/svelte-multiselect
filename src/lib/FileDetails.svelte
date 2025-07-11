@@ -1,6 +1,6 @@
 <script lang="ts">
-  import hljs from 'highlight.js'
-  import 'highlight.js/styles/vs2015.css'
+  // import hljs from 'highlight.js'
+  // import 'highlight.js/styles/vs2015.css'
   import type { Snippet } from 'svelte'
 
   type File = {
@@ -33,7 +33,6 @@
       if (!file.node) continue
       file.node.open = !any_open
     }
-    files = [...files] // trigger reactivity
   }
 </script>
 
@@ -45,7 +44,7 @@
 
 <svelte:element this={as} {style}>
   {#each files as file, idx (file.title)}
-    {@const { title, content, language = default_lang } = file ?? {}}
+    {@const { title, content, _language = default_lang } = file ?? {}}
     <li>
       <!-- https://github.com/sveltejs/svelte/issues/12721#issuecomment-2269544690 -->
       <details bind:this={file.node}>
@@ -59,7 +58,8 @@
           </summary>
         {/if}
 
-        <pre><code>{@html hljs.highlight(content, { language }).value}</code></pre>
+        <pre><code>{@html content}</code></pre>
+        <!-- <pre><code>{@html hljs.highlight(content, { language }).value}</code></pre> -->
       </details>
     </li>
   {/each}
