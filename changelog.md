@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file. Dates are displayed in UTC.
 
-#### [v11.2.0](https://github.com/janosh/svelte-multiselect/compare/v11.2.0...v11.2.0)
+#### [v11.2.1](https://github.com/janosh/svelte-multiselect/compare/v11.2.0...v11.2.1)
+
+#### v11.2.1
+
+> 11 July 2025
+
+- Drop accidental `highlight.js` dependency by @janosh in https://github.com/janosh/svelte-multiselect/pull/324
+
+**Full Changelog**: https://github.com/janosh/svelte-multiselect/compare/v11.2.0...v11.2.1
+
+#### [v11.2.0](https://github.com/janosh/svelte-multiselect/compare/v11.1.1...v11.2.0)
 
 > 11 July 2025
 
