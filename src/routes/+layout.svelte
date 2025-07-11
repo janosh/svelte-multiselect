@@ -1,12 +1,11 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { CmdPalette } from '$lib'
+  import { CmdPalette, CopyButton, GitHubCorner } from '$lib'
   import { repository } from '$root/package.json'
+  // import { Toc } from 'svelte-toc'
   import { Footer } from '$site'
   import { type Snippet } from 'svelte'
-  import Toc from 'svelte-toc'
-  import { CopyButton, GitHubCorner } from 'svelte-zoo'
   import '../app.css'
   import { routes } from './(demos)'
 
@@ -33,7 +32,7 @@
 
 {@render children?.()}
 
-{#if [`/`, `/changelog`, `/contributing`].includes(page.url.pathname)}
+<!-- {#if page.url.pathname === `/`}
   <Toc
     headingSelector="main > :where(h2, h3)"
     breakpoint={1250}
@@ -45,7 +44,7 @@
     title_element_style="font-size: 16pt; padding: 0 0 0.5em 0.5em;"
     ol_style="font-size: 8pt"
   />
-{/if}
+{/if} -->
 
 <Footer />
 

@@ -7,7 +7,6 @@ import heading_slugs from 'rehype-slug'
 import { sveltePreprocess } from 'svelte-preprocess'
 
 import pkg from './package.json' with { type: 'json' }
-import process from 'node:process'
 
 const rehypePlugins = [
   heading_slugs,
@@ -26,7 +25,7 @@ const rehypePlugins = [
   ],
 ]
 const defaults = {
-  Wrapper: `svelte-zoo/CodeExample.svelte`,
+  Wrapper: `/src/lib/CodeExample.svelte`,
   repo: pkg.repository,
   hideStyle: true,
 }
@@ -47,7 +46,7 @@ export default {
     alias: {
       $root: `.`,
       $site: `./src/site`,
-      $lib: `svelte-multiselect`,
+      'svelte-multiselect': `./src/lib`,
     },
 
     prerender: {
@@ -57,13 +56,6 @@ export default {
         throw `Missing ID: ${id}`
       },
     },
-  },
-
-  compilerOptions: {
-    // https://github.com/janosh/svelte-multiselect/issues/196
-    immutable: true,
-    // enable direct prop access for vitest unit tests
-    accessors: Boolean(process.env.TEST),
   },
 
   vitePlugin: {

@@ -2,7 +2,7 @@
 
 When `parseLabelsAsHtml={true}`, MultiSelect renders HTML in option labels.
 
-```svelte example stackblitz
+```svelte example
 <script>
   import MultiSelect from '$lib'
 

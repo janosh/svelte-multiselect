@@ -4,7 +4,7 @@ This example shows how to combine MultiSelect with `sessionStorage` to persist t
 
 <br />
 
-```svelte example stackblitz id="languages"
+```svelte example id="languages"
 <script>
   import MultiSelect from '$lib'
   import { languages } from '$site/options'

@@ -4,7 +4,7 @@
 
 ```svelte example
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 
   const fruits = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
   let selected = $state([])
@@ -40,7 +40,7 @@
 
 ```svelte example
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 
   const countries = [
     { label: 'United States', value: 'US', continent: 'North America' },
@@ -67,7 +67,7 @@
 
 ```svelte example
 <script>
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
 
   const initial_tags = ['JavaScript', 'Svelte', 'TypeScript']
   let selected = $state([])
@@ -87,9 +87,9 @@
 
 <label for="fav-languages">Favorite programming languages? <span>multi-select with custom snippet</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7" stackblitz="src/site/Examples.md"
+```svelte example collapsible repl="https://svelte.dev/repl/e3b88f59f62b498d943ecf7756ab75d7"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
   import LanguageSnippet from './LanguageSnippet.svelte'
 
@@ -112,9 +112,9 @@ selected = {JSON.stringify(selected) || `[]`}
 
 <label for="fav-ml-tool">Favorite machine learning framework? <span>single-select with loading indicator on text input</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759" stackblitz="src/site/Examples.md"
+```svelte example collapsible repl="https://svelte.dev/repl/79e22e1905c94456aa21564b4d5f8759"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { ml_libs } from '$site/options'
 
   let value = $state(null)
@@ -146,12 +146,12 @@ value = {JSON.stringify(value) || `null`}
 
 <label for="confetti-select">Chance of Confetti <span>max select with custom filter function and callback on item selection</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/repl/516279bd62ec424986115263c2cdc169" stackblitz="src/site/Examples.md"
+```svelte example collapsible repl="https://svelte.dev/repl/516279bd62ec424986115263c2cdc169"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { frontend_libs } from '$site/options'
   import RepoSnippet from './RepoSnippet.svelte'
-  import { Confetti } from 'svelte-zoo'
+  import { Confetti } from '$site'
   import type { ObjectOption } from '$lib'
 
   const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {
@@ -171,8 +171,8 @@ value = {JSON.stringify(value) || `null`}
   maxSelect={4}
   placeholder="Favorite web framework?"
   filterFunc={frontend_libs_filter_func}
-  on:add={(e) => {
-    if (e.detail.option.label === `Svelte`) {
+  onadd={(event) => {
+    if (event.option.label === `Svelte`) {
       show_confetti = true
       setTimeout(() => (show_confetti = false), 3000)
     }
@@ -189,9 +189,9 @@ value = {JSON.stringify(value) || `null`}
 
 <label for="color-select">Color select <span>with form submission</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/repl/3a217c39932047a09f61d6425b04a7c3" stackblitz="src/site/Examples.md"
+```svelte example collapsible repl="https://svelte.dev/repl/3a217c39932047a09f61d6425b04a7c3"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { colors } from '$site/options'
   import ColorSnippet from './ColorSnippet.svelte'
 
@@ -228,9 +228,9 @@ value = {JSON.stringify(value) || `null`}
 
 <label for="countries">What country are you from? <span><code>minSelect=1</code> means no <code>x</code> button to remove the selected option</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1" stackblitz="src/site/Examples.md"
+```svelte example collapsible repl="https://svelte.dev/repl/4ff40862436e4bfbb2bd55d234352bb1"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import MultiSelect from 'svelte-multiselect'
   import { countries } from '$site/options'
 
   // required={1} means form validation will prevent submission if no option selected
