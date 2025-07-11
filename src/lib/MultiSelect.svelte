@@ -1,9 +1,8 @@
 <script lang="ts">
-  import { Icon, Wiggle } from '$lib'
+  import { CircleSpinner, Icon, Wiggle } from '$lib'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
-  import CircleSpinner from './CircleSpinner.svelte'
   import type { MultiSelectProps, Option as T } from './types'
   import { get_label, get_style, highlight_matching_nodes } from './utils'
 

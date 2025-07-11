@@ -33,11 +33,11 @@ const remarkPlugins = [[mdsvexamples, { defaults }]]
 
 /** @type {import('@sveltejs/kit').Config} */
 export default {
-  extensions: [`.svelte`, `.svx`, `.md`],
+  extensions: [`.svelte`, `.md`],
 
   preprocess: [
     sveltePreprocess(),
-    mdsvex({ rehypePlugins, remarkPlugins, extensions: [`.svx`, `.md`] }),
+    mdsvex({ rehypePlugins, remarkPlugins, extensions: [`.md`] }),
   ],
 
   kit: {

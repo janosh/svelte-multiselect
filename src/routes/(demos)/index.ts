@@ -1,5 +1,5 @@
 export const routes = Object.keys(
-  import.meta.glob(`./**/+page.{svx,svelte,md}`),
+  import.meta.glob(`./**/+page.{svelte,md}`),
 ).map((filename) => {
   const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
   return { route: `/${parts.slice(1, -1).join(`/`)}`, filename }
