@@ -35,14 +35,9 @@
 {#if page.url.pathname === `/`}
   <Toc
     headingSelector="main > :where(h2, h3)"
-    breakpoint={1250}
-    --toc-mobile-bg="#1c0e3e"
-    --toc-li-padding="3pt 1ex"
-    --toc-mobile-btn-color="white"
-    --toc-desktop-nav-margin="0 0 0 14em"
-    aside_style="max-width: 24em;"
-    title_element_style="font-size: 16pt; padding: 0 0 0.5em 0.5em;"
-    ol_style="font-size: 8pt"
+    breakpoint={1500}
+    open_button_style="transform: scale(1.4); display: flex; aspect-ratio: 1;"
+    --toc-mobile-bg="rgb(30, 40, 50)"
   />
 {/if}
 
@@ -61,5 +56,10 @@
   }
   a[href='.']:hover {
     background-color: rgba(255, 255, 255, 0.2);
+  }
+  :global(aside.toc.desktop) {
+    position: fixed;
+    font-size: 9pt;
+    left: calc(50vw + var(--main-max-width) / 2 + 200px);
   }
 </style>

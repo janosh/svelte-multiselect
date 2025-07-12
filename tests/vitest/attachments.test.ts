@@ -541,7 +541,6 @@ describe(`tooltip`, () => {
     it(`should handle elements without getBoundingClientRect`, () => {
       const element = create_element()
       element.title = `No getBoundingClientRect tooltip`
-      delete element.getBoundingClientRect
 
       setup_tooltip(element)
       expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()

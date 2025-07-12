@@ -3,7 +3,12 @@ import { type Attachment } from 'svelte/attachments'
 // Type definitions for CSS highlight API (experimental)
 declare global {
   interface CSS {
-    highlights: Map<string, Highlight>
+    highlights: HighlightRegistry
+  }
+  interface HighlightRegistry extends Map<string, Highlight> {
+    clear(): void
+    delete(key: string): boolean
+    set(key: string, value: Highlight): this
   }
 }
 
@@ -140,11 +145,14 @@ export const sortable = (
   let sort_col_idx: number
   let sort_dir = 1 // 1 = asc, -1 = desc
 
+  // Store event listeners for cleanup
+  const event_listeners: Array<{ header: HTMLTableCellElement; handler: () => void }> = []
+
   for (const [idx, header] of headers.entries()) {
     header.style.cursor = `pointer` // add cursor pointer to headers
 
     const init_styles = header.getAttribute(`style`) ?? ``
-    header.addEventListener(`click`, () => {
+    const click_handler = () => {
       // reset all headers to initial state
       for (const header of headers) {
         header.textContent = header.textContent?.replace(/ ↑| ↓/, ``) ?? ``
@@ -182,15 +190,24 @@ export const sortable = (
         const num_2 = Number(val_2)
 
         if (isNaN(num_1) && isNaN(num_2)) {
-          return (
-            sort_dir * val_1.localeCompare(val_2, undefined, { numeric: true })
-          )
+          return sort_dir * val_1.localeCompare(val_2, undefined, { numeric: true })
         }
         return sort_dir * (num_1 - num_2)
       })
 
       for (const row of rows) table_body.appendChild(row)
-    })
+    }
+
+    header.addEventListener(`click`, click_handler)
+    event_listeners.push({ header, handler: click_handler })
+  }
+
+  // Return cleanup function
+  return () => {
+    for (const { header, handler } of event_listeners) {
+      header.removeEventListener(`click`, handler)
+      header.style.cursor = `` // Reset cursor
+    }
   }
 }
 
@@ -248,6 +265,10 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 
   // create Highlight object from ranges and add to registry
   CSS.highlights.set(css_class, new Highlight(...ranges.flat()))
+
+  return () => { // Return cleanup function
+    CSS.highlights.delete(css_class)
+  }
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
@@ -268,10 +289,10 @@ export const tooltip = (options: {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
   delay?: number
-} = {}) =>
-(node: HTMLElement) => {
+} = {}): Attachment =>
+(node: Element) => {
   // Handle null/undefined elements
-  if (!node) return
+  if (!node || !(node instanceof HTMLElement)) return
 
   // Handle null/undefined options
   const safe_options = options || {}
@@ -382,7 +403,6 @@ export const tooltip = (options: {
     if (child_cleanup) cleanup_functions.push(child_cleanup)
   })
 
-  // Return undefined if no cleanup functions were added
   if (cleanup_functions.length === 0) return
 
   return () => {
