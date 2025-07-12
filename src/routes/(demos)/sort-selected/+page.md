@@ -1,5 +1,6 @@
 <script lang="ts">
   import { FileDetails } from '$lib'
+  import options_src from '$site/options.ts?raw'
 </script>
 
 ## Sorting Selected Items
@@ -46,7 +47,7 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 />
 ```
 
-<FileDetails paths={[`./options.ts`]} />
+<FileDetails files={[{ title: `<code>options.ts</code>`, content: options_src }]} />
 
 <br />
 
