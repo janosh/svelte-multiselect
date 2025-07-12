@@ -44,7 +44,7 @@
 
 <svelte:element this={as} {style}>
   {#each files as file, idx (file.title)}
-    {@const { title, content, _language = default_lang } = file ?? {}}
+    {@const { title, content, language = default_lang } = file ?? {}}
     <li>
       <!-- https://github.com/sveltejs/svelte/issues/12721#issuecomment-2269544690 -->
       <details bind:this={file.node}>
@@ -53,12 +53,12 @@
             {#if title_snippet}
               {@render title_snippet({ idx, ...file })}
             {:else}
-              <code>{title.split(`/`).at(-1)}</code>
+              {@html title}
             {/if}
           </summary>
         {/if}
 
-        <pre><code>{@html content}</code></pre>
+        <pre class="language-{language}"><code>{content}</code></pre>
         <!-- <pre><code>{@html hljs.highlight(content, { language }).value}</code></pre> -->
       </details>
     </li>

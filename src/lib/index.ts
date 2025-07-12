@@ -1,3 +1,4 @@
+export * from './attachments'
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CmdPalette } from './CmdPalette.svelte'
 export { default as CodeExample } from './CodeExample.svelte'

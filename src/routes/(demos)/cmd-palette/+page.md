@@ -1,7 +1,6 @@
 <script>
-  // import hljs from 'highlight.js/lib/common'
-  // import 'highlight.js/styles/vs2015.css'
   import cmd_palette_src from '$lib/CmdPalette.svelte?raw'
+  import { FileDetails } from '$lib'
 </script>
 
 ## Nav Palette
@@ -23,7 +22,4 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
 <CmdPalette {actions} />
 ```
 
-Here's `<CmdPalette />` component
-
-<pre><code>{@html cmd_palette_src}</code></pre>
-<!-- <pre><code>{@html hljs.highlight(cmd_palette_src, { language: 'typescript' }).value}</code></pre> -->
+<FileDetails files={[{ title: `<code>CmdPalette.svelte</code> source code`, content: cmd_palette_src }]} />

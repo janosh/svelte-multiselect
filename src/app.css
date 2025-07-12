@@ -138,20 +138,6 @@ div.multiselect.invalid {
   border: 1px solid red !important;
 }
 
-/* svelte-toc styles */
-aside.toc.desktop {
-  position: fixed;
-  top: 3em;
-  left: calc(50vw + var(--main-max-width) / 2);
-  max-width: 16em;
-}
-
-/* TODO remove this tmp style */
-nav:has(+ div.code-example) > a,
-section > aside > a.btn {
-  margin: 0;
-}
-
 /* target reusable icons like <svg><use href="#icon-info"></use></svg> */
 svg:has(use:only-child) {
   width: 1em;

@@ -1,4 +1,4 @@
-import { CodeExample } from '$lib'
+import { CodeExample, CopyButton } from '$lib'
 import { mount, tick } from 'svelte'
 import { expect, test } from 'vitest'
 import { doc_query } from './index'
@@ -58,4 +58,24 @@ test(`renders GitHub link when github and repo are provided`, () => {
   const github_link = document.querySelector(`nav a[href*="github.com"]`)
   expect(github_link).toBeInstanceOf(HTMLAnchorElement)
   expect(github_link?.getAttribute(`target`)).toBe(`_blank`)
+})
+
+test(`dynamically added pre > code elements get copy buttons applied`, async () => {
+  // Mount a CopyButton with global enabled to activate MutationObserver
+  mount(CopyButton, { target: document.body, props: { global: true } })
+
+  // Create a new pre > code element dynamically
+  const new_pre = document.createElement(`pre`)
+  const new_code = document.createElement(`code`)
+  new_code.textContent = `dynamically added code`
+  new_pre.appendChild(new_code)
+
+  // Add it to the DOM
+  document.body.appendChild(new_pre)
+  await tick()
+
+  // Verify that a copy button was added to the new pre element
+  const copy_button = new_pre.querySelector(`button`)
+  expect(copy_button).toBeInstanceOf(HTMLButtonElement)
+  expect(copy_button?.style.position).toBe(`absolute`)
 })
