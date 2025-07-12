@@ -1,5 +1,7 @@
 <script lang="ts">
   import { FileDetails } from '$lib'
+  import language_snippet_src from '$site/LanguageSnippet.svelte?raw'
+  import minus_icon_src from '$site/MinusIcon.svelte?raw'
 </script>
 
 ## Snippets
@@ -31,7 +33,10 @@
 </MultiSelect>
 ```
 
-<FileDetails paths={[`./LanguageSnippet.svelte`, `./MinusIcon.svelte`]} />
+<FileDetails files={[
+{ title: `<code>LanguageSnippet.svelte</code>`, content: language_snippet_src },
+{ title: `<code>MinusIcon.svelte</code>`, content: minus_icon_src },
+]} />
 
 ### Simple HTML tag as `"removeIcon"` snippet
 

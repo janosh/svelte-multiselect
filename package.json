@@ -59,6 +59,10 @@
       "types": "./dist/index.d.ts",
       "svelte": "./dist/index.js",
       "default": "./dist/index.js"
+    },
+    "./attachments": {
+      "types": "./dist/attachments.d.ts",
+      "default": "./dist/attachments.js"
     }
   },
   "types": "./dist/index.d.ts",
