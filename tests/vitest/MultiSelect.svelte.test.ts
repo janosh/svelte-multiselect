@@ -971,9 +971,9 @@ test(`disabled multiselect has disabled icon`, () => {
     props: { options: [1, 2, 3], disabled: true },
   })
 
-  expect(doc_query(`svg[data-name='disabled-icon']`)).toBeInstanceOf(
-    SVGSVGElement,
-  )
+  const disabled_icon = doc_query(`svg[data-name='disabled-icon']`)
+  expect(disabled_icon).toBeInstanceOf(SVGSVGElement)
+  expect(disabled_icon.getAttribute(`aria-disabled`)).toBe(`true`)
 })
 
 test(`can remove user-created selected option which is not in dropdown list`, async () => {
@@ -1017,6 +1017,72 @@ test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
     ).toHaveLength(selected.length > minSelect ? selected.length : 0)
   },
 )
+
+test(`backspace does not remove items when minSelect would be violated`, () => {
+  // https://github.com/janosh/svelte-multiselect/issues/327
+  const options = [`Red`, `Green`, `Yellow`]
+  const selected = [`Red`]
+  const [minSelect, maxSelect] = [1, 1]
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options, selected, minSelect, maxSelect },
+  })
+
+  // Try to remove the only selected item with backspace
+  const backspace = new KeyboardEvent(`keydown`, { key: `Backspace`, bubbles: true })
+  const input = doc_query(`input[autocomplete="off"]`)
+  input.dispatchEvent(backspace)
+
+  // The item should still be selected since minSelect=1
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red`)
+})
+
+test(`remove all button does not remove items when minSelect constraint would be violated`, async () => {
+  // Test that remove all button also respects minSelect
+  const options = [`Red`, `Green`, `Yellow`]
+  const selected = [`Red`]
+  const minSelect = 1
+  const maxSelect = 2
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options, selected, minSelect, maxSelect },
+  })
+
+  // The remove all button should not be visible when minSelect would be violated
+  const remove_all_button = document.querySelector(`button.remove-all`)
+  expect(remove_all_button).toBeNull()
+
+  const input = doc_query(`input[autocomplete="off"]`)
+  input.focus()
+
+  // Open dropdown and make first option active
+  const arrow_down = new KeyboardEvent(`keydown`, {
+    key: `ArrowDown`,
+    bubbles: true,
+  })
+  input.dispatchEvent(arrow_down)
+  await tick()
+
+  // Try to remove the selected item with Enter
+  const enter_event = new KeyboardEvent(`keydown`, {
+    key: `Enter`,
+    bubbles: true,
+  })
+  input.dispatchEvent(enter_event)
+  await tick()
+
+  // should have swapped Red for Green since maxSelect=1
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red Green`)
+
+  // The remove all button should now be visible since selected.length > minSelect
+  doc_query(`button.remove-all`).click()
+  await tick()
+
+  // The first item should still be selected since minSelect=1
+  expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red`)
+})
 
 class DataTransfer {
   data: Record<string, string> = {}

@@ -619,7 +619,7 @@ Example using several snippets:
    onremoveAll={(event) => console.log(event.detail.options)}`
    ```
 
-   Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were previously selected.
+   Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were removed (might not be all if `minSelect` is set).
 
 1. ```ts
    onchange={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}

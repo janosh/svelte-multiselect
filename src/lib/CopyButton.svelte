@@ -10,7 +10,7 @@
     content?: string
     state?: State
     global_selector?: string | null
-    global?: boolean | string
+    global?: boolean
     skip_selector?: string | null
     as?: string
     labels?: Record<State, { icon: IconName; text: string }>
@@ -37,15 +37,16 @@
     if (!global && !global_selector) return
 
     const apply_copy_buttons = () => {
-      const button_style = typeof global === `string`
-        ? global
-        : `position: absolute; top: 9pt; right: 9pt;`
+      const btn_style = `position: absolute; top: 9pt; right: 9pt; ${
+        rest.style ?? ``
+      }`
       for (const code of document.querySelectorAll(global_selector ?? `pre > code`)) {
         const pre = code.parentElement
+        const content = code.textContent ?? ``
         if (pre && !(skip_selector && pre.querySelector(skip_selector))) {
           mount(CopyButton, {
             target: pre,
-            props: { content: code.textContent ?? ``, style: button_style },
+            props: { content, as, labels, ...rest, style: btn_style },
           })
         }
       }
