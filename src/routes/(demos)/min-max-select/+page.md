@@ -19,6 +19,8 @@
   options={languages}
   maxSelect={5}
   placeholder="What languages do you know?"
+  minSelect={1}
+  selected={['JavaScript']}
 >
   {#snippet children({ option })}
     <LanguageSnippet {option} />

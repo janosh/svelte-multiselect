@@ -259,7 +259,7 @@
         }
       }
 
-      const reached_max_select = selected.length === maxSelect
+      const reached_max_select = selected.length >= (maxSelect ?? Infinity)
 
       const dropdown_should_close = closeDropdownOnSelect === true ||
         closeDropdownOnSelect === `retain-focus` ||
@@ -347,8 +347,12 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        if (selected.includes(activeOption)) remove(activeOption, event)
-        else add(activeOption, event)
+        if (selected.includes(activeOption)) {
+          // Only remove if it wouldn't violate minSelect
+          if (minSelect === null || selected.length > minSelect) {
+            remove(activeOption, event)
+          }
+        } else add(activeOption, event)
         searchText = ``
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -396,8 +400,11 @@
     } // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       event.stopPropagation()
+      // Only remove option if it wouldn't violate minSelect
+      if (minSelect === null || selected.length > minSelect) {
+        remove(selected.at(-1) as Option, event)
+      }
       // Don't prevent default, allow normal backspace behavior if not removing
-      remove(selected.at(-1) as Option, event)
     } // make first matching option active on any keypress (if none of the above special cases match)
     else if (matchingOptions.length > 0 && activeIndex === null) {
       // Don't stop propagation or prevent default here, allow normal character input
@@ -407,12 +414,23 @@
 
   function remove_all(event: Event) {
     event.stopPropagation()
-    selected = [] // Set selected first
-    searchText = ``
 
-    // Now trigger change events
-    onremoveAll?.({ options: selected })
+    // Keep the first minSelect items, remove the rest
+    let removed_options: T[] = []
+    if (minSelect === null) {
+      // If no minSelect constraint, remove all
+      removed_options = selected
+      selected = []
+      searchText = ``
+    } else if (selected.length > minSelect) {
+      // Keep the first minSelect items
+      removed_options = selected.slice(minSelect)
+      selected = selected.slice(0, minSelect)
+      searchText = ``
+    }
+    onremoveAll?.({ options: removed_options })
     onchange?.({ options: selected, type: `removeAll` })
+    // If selected.length <= minSelect, do nothing (can't remove any more)
   }
 
   let is_selected = $derived((label: string | number) =>
@@ -739,6 +757,7 @@
         width="14pt"
         style="margin: 0 2pt"
         data-name="disabled-icon"
+        aria-disabled="true"
       />
     {/if}
   {:else if selected.length > 0}
@@ -1053,6 +1072,7 @@
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
+    pointer-events: none;
   }
   ul.options > li {
     padding: 3pt 2ex;
