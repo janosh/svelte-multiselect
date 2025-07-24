@@ -1058,22 +1058,15 @@ test(`remove all button does not remove items when minSelect constraint would be
   input.focus()
 
   // Open dropdown and make first option active
-  const arrow_down = new KeyboardEvent(`keydown`, {
-    key: `ArrowDown`,
-    bubbles: true,
-  })
+  const arrow_down = new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true })
   input.dispatchEvent(arrow_down)
   await tick()
 
   // Try to remove the selected item with Enter
-  const enter_event = new KeyboardEvent(`keydown`, {
-    key: `Enter`,
-    bubbles: true,
-  })
+  const enter_event = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
   input.dispatchEvent(enter_event)
   await tick()
 
-  // should have swapped Red for Green since maxSelect=1
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red Green`)
 
   // The remove all button should now be visible since selected.length > minSelect
