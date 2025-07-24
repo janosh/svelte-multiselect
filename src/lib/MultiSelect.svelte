@@ -259,7 +259,7 @@
         }
       }
 
-      const reached_max_select = selected.length === maxSelect
+      const reached_max_select = selected.length >= (maxSelect ?? Infinity)
 
       const dropdown_should_close = closeDropdownOnSelect === true ||
         closeDropdownOnSelect === `retain-focus` ||
@@ -1072,6 +1072,7 @@
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
+    pointer-events: none;
   }
   ul.options > li {
     padding: 3pt 2ex;

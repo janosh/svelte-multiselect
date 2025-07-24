@@ -5,7 +5,7 @@ import {
   foods,
   languages as demo_languages,
   octicons as demo_octicons,
-} from '../src/site/options'
+} from '../../src/site/options'
 
 // to run tests in this file, use `npm run test:e2e`
 
@@ -538,7 +538,7 @@ test.describe(`maxSelect`, () => {
     await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
 
     // Select maxSelect options
-    for (let idx = 0; idx < max_select; idx++) {
+    for (let idx = 1; idx < max_select; idx++) {
       await page.click(`#languages input[autocomplete]`)
       await page.click(`ul.options > li >> nth=${idx}`)
     }

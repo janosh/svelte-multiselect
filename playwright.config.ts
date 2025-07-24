@@ -6,7 +6,6 @@ export default {
     port: 3005,
     reuseExistingServer: true,
   },
-  testDir: `tests`,
-  testMatch: `tests/*.test.ts`,
+  testDir: `tests/playwright`,
   timeout: 5000,
 } satisfies PlaywrightTestConfig

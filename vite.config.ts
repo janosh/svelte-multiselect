@@ -15,7 +15,7 @@ export default defineConfig({
       reporter: [`text`, `json-summary`],
       include: [`src/lib/**/*.{ts,svelte}`],
     },
-    setupFiles: [resolve(__dirname, `tests/setup.ts`)],
+    setupFiles: [resolve(__dirname, `tests/vitest/setup.ts`)],
   },
 
   resolve: {
