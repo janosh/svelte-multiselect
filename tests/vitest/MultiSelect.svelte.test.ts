@@ -527,9 +527,26 @@ test(`filters dropdown to show only matching options when entering text`, async 
 test.each([undefined, `Custom no options message`])(
   `shows noMatchingOptionsMsg when no options match searchText`,
   async (noMatchingOptionsMsg) => {
+    const change_events: unknown[] = []
+    let destructuring_error_caught = false
+
     mount(Test2WayBind, {
       target: document.body,
-      props: { options: [1, 2, 3], noMatchingOptionsMsg },
+      props: {
+        options: [1, 2, 3],
+        noMatchingOptionsMsg,
+        onchange: (event: unknown) => {
+          change_events.push(event)
+          // This simulates the user's destructuring that would fail
+          try {
+            const { option: _option, type: _type } = (event as { detail: unknown })
+              .detail as { option: unknown; type: unknown }
+            // If we get here, destructuring succeeded
+          } catch {
+            destructuring_error_caught = true
+          }
+        },
+      },
     })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -543,6 +560,19 @@ test.each([undefined, `Custom no options message`])(
 
     const dropdown = doc_query(`ul.options`)
     expect(dropdown.textContent?.trim()).toBe(expected_msg)
+
+    const no_match_li = doc_query(`ul.options li.user-msg`)
+    expect(no_match_li).toBeTruthy()
+    expect(no_match_li.textContent?.trim()).toBe(expected_msg)
+
+    // Click on no matching options message
+    no_match_li.click()
+    await tick()
+
+    // Should not trigger any change events
+    expect(change_events).toEqual([])
+    // Should not cause destructuring errors
+    expect(destructuring_error_caught).toBe(false)
   },
 )
 
