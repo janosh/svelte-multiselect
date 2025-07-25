@@ -21,7 +21,7 @@
 
 <MultiSelect
   options={foods}
-  allowUserOptions={true}
+  allowUserOptions
   {duplicates}
   bind:selected
 />

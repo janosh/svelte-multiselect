@@ -7,8 +7,8 @@ import MultiSelect from '$lib'
 import type { MultiSelectEvents, MultiSelectProps } from '$lib/types'
 import { get_label, get_style } from '$lib/utils'
 
-import { doc_query } from './index'
-import Test2WayBind, { type Test2WayBindProps } from './Test2WayBind.svelte'
+import { doc_query, type Test2WayBindProps } from './index'
+import Test2WayBind from './Test2WayBind.svelte'
 
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
 const input_event = new InputEvent(`input`, { bubbles: true })
@@ -527,9 +527,26 @@ test(`filters dropdown to show only matching options when entering text`, async 
 test.each([undefined, `Custom no options message`])(
   `shows noMatchingOptionsMsg when no options match searchText`,
   async (noMatchingOptionsMsg) => {
+    const change_events: unknown[] = []
+    let destructuring_error_caught = false
+
     mount(Test2WayBind, {
       target: document.body,
-      props: { options: [1, 2, 3], noMatchingOptionsMsg },
+      props: {
+        options: [1, 2, 3],
+        noMatchingOptionsMsg,
+        onchange: (event: unknown) => {
+          change_events.push(event)
+          // This simulates the user's destructuring that would fail
+          try {
+            const { option: _option, type: _type } = (event as { detail: unknown })
+              .detail as { option: unknown; type: unknown }
+            // If we get here, destructuring succeeded
+          } catch {
+            destructuring_error_caught = true
+          }
+        },
+      },
     })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -543,6 +560,19 @@ test.each([undefined, `Custom no options message`])(
 
     const dropdown = doc_query(`ul.options`)
     expect(dropdown.textContent?.trim()).toBe(expected_msg)
+
+    const no_match_li = doc_query(`ul.options li.user-msg`)
+    expect(no_match_li).toBeTruthy()
+    expect(no_match_li.textContent?.trim()).toBe(expected_msg)
+
+    // Click on no matching options message
+    no_match_li.click()
+    await tick()
+
+    // Should not trigger any change events
+    expect(change_events).toEqual([])
+    // Should not cause destructuring errors
+    expect(destructuring_error_caught).toBe(false)
   },
 )
 
@@ -821,10 +851,7 @@ describe.each([
   },
 )
 
-test.each([
-  [true, ``],
-  [false, `1`],
-])(
+test.each([[true, ``], [false, `1`]])(
   `resetFilterOnAdd=%j handles input value correctly after adding an option`,
   async (resetFilterOnAdd, expected) => {
     mount(MultiSelect, {
@@ -851,10 +878,7 @@ test(`2-way binding of selected`, async () => {
     onSelectedChanged: (data: Option[] | undefined) => selected = data ?? [],
   })
 
-  mount(Test2WayBind, {
-    target: document.body,
-    props,
-  })
+  mount(Test2WayBind, { target: document.body, props })
 
   // test internal changes to selected bind outwards
   for (const _ of Array(2)) {

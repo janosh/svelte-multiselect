@@ -19,7 +19,7 @@
   options={foods.map((label) => ({ label, style: `background-color: ${random_color()}` }))}
   placeholder="Pick your favorite foods"
   removeAllTitle="Remove all foods"
-  closeDropdownOnSelect={true}
+  closeDropdownOnSelect
   style="width: 500px"
   invalid
 />
