@@ -1,6 +1,6 @@
 ## MultiSelect Events
 
-This demo showcases all the events that `<MultiSelect>` emits. Each event type is demonstrated with interactive examples and real-time logging.
+This demo showcases all the events that `<MultiSelect>` emits. Each emitted event is recorded in the event log panel on the right.
 
 ```svelte example
 <script>
@@ -27,10 +27,8 @@ This demo showcases all the events that `<MultiSelect>` emits. Each event type i
 
 <div class="demo-grid">
   <section class="demo-section">
-    <p>
-      Select options, remove them, use "Remove all", create custom options, and interact
-      with the input.
-    </p>
+    Select options, remove them, use "Remove all", create custom options, and interact
+    with the input.
 
     <label style="display: block; margin-block: 1em">
       <input type="checkbox" bind:checked={allowUserOptions} />
@@ -69,32 +67,25 @@ This demo showcases all the events that `<MultiSelect>` emits. Each event type i
         <ColorSnippet {idx} {option} />
       {/snippet}
     </MultiSelect>
-
-    <div class="selected-info">
-      <strong>Selected ({selected_options.length}):</strong>
-      {selected_options.map((opt) => get_label(opt)).join(', ')}
-    </div>
   </section>
 
   <section class="event-log">
     <header class="log-header">
-      <h3>Event Log</h3>
+      <h3 style="margin: 0">Event Log</h3>
       <button onclick={() => events = []}>Clear</button>
     </header>
 
-    {#if events.length === 0}
-      <p class="no-events">No events yet. Start clicking around!</p>
+    {#each events as entry}
+      <article class="log-entry">
+        <header class="entry-header">
+          <span class="event-name">{entry.event}</span>
+          <span class="timestamp">{entry.timestamp}</span>
+        </header>
+        <pre class="log-data">{entry.data}</pre>
+      </article>
     {:else}
-      {#each events as entry}
-        <article class="log-entry">
-          <header class="entry-header">
-            <span class="event-name">{entry.event}</span>
-            <span class="timestamp">{entry.timestamp}</span>
-          </header>
-          <pre class="log-data">{entry.data}</pre>
-        </article>
-      {/each}
-    {/if}
+      <p class="no-events">No events yet. Start clicking around!</p>
+    {/each}
   </section>
 </div>
 
@@ -110,48 +101,28 @@ This demo showcases all the events that `<MultiSelect>` emits. Each event type i
     padding: 1.5em;
     border-radius: 8px;
   }
-  .selected-info {
-    margin-top: 1em;
-    padding: 0.5em;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
-    font-size: 0.9em;
-  }
   .event-log {
     background: rgba(0, 0, 0, 0.3);
     border-radius: 8px;
-    max-height: 600px;
+    max-height: 60vh;
     overflow-y: auto;
-    padding: 0 1em 1em 1em;
+    display: grid;
+    gap: 1em;
   }
   .log-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: 1em 1em 0.5em 1em;
-    background: rgba(0, 0, 0, 0.3);
     position: sticky;
+    background-color: black;
     top: 0;
-    margin: -1em -1em 1em -1em;
-  }
-  .log-header button {
-    background: #4a5568;
-    color: white;
-    border: none;
-    padding: 0.5em 1em;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.8em;
-  }
-  .log-header button:hover {
-    background: #2d3748;
+    padding: 1ex 1em;
   }
   .log-entry {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 4px;
-    padding: 0.75em;
+    padding: 1ex 1em;
     border-left: 3px solid #4299e1;
-    margin-bottom: 0.75em;
   }
   .entry-header {
     display: flex;
@@ -188,8 +159,6 @@ This demo showcases all the events that `<MultiSelect>` emits. Each event type i
 
 ### Event Reference
 
-Here's a complete reference of all MultiSelect events:
-
 #### Custom Events
 
 | Event         | Description                                    | Data Structure                                                          |
@@ -221,9 +190,9 @@ Here's a complete reference of all MultiSelect events:
 
 ### Event Handling Tips
 
-1. **Destructuring Safety**: Always check for `event.detail` before destructuring:
+1. **Destructuring Safety**: Check for `event.detail` before destructuring:
 
-   ```javascript
+   ```ts
    function handleChange(event) {
      if (!event.detail) return // Guard against undefined detail
      const { option, type } = event.detail
@@ -231,18 +200,22 @@ Here's a complete reference of all MultiSelect events:
    }
    ```
 
-2. **Type Safety**: For better type checking in TypeScript projects, use interfaces:
+1. **Type Safety**: For better type checking in TypeScript projects, use `MultiSelectEvents` and `MultiSelectNativeEvents` interfaces:
 
-   ```javascript
-   // In TypeScript files, you can define interfaces like this:
-   // interface ChangeEvent {
-   //   option?: Option;
-   //   options?: Option[];
-   //   type: 'add' | 'remove' | 'removeAll';
-   // }
+   ```ts
+   <script lang="ts">
+    import type { MultiSelectEvents, MultiSelectNativeEvents } from '$lib/types'
+
+     const onadd: MultiSelectEvents['onadd'] = (data) => {
+       console.log(`onadd`, data)
+     }
+
+     const onblur: MultiSelectNativeEvents['onblur'] = (event) => {
+       console.log(`onblur`, event)
+     }
+   </script>
+
+   <MultiSelect {onadd} {onblur} options={[{ label: `foo` }]} />
    ```
 
-3. **Event Order**: Events fire in this order:
-   - `onopen` → `onadd`/`onremove` → `onchange` → `onclose`
-
-4. **Custom Options**: The `oncreate` event only fires when `allowUserOptions` is enabled and users type text that doesn't match existing options.
+1. **Custom Options**: The `oncreate` event only fires when `allowUserOptions` is enabled and users type text that doesn't match existing options.

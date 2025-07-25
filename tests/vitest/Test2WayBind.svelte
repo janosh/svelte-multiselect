@@ -1,13 +1,6 @@
 <script lang="ts">
-  import MultiSelect, { type MultiSelectProps } from '$lib'
-
-  export type Test2WayBindProps = MultiSelectProps & {
-    onActiveIndexChanged?: (data: MultiSelectProps[`activeIndex`]) => unknown
-    onActiveOptionChanged?: (data: MultiSelectProps[`activeOption`]) => unknown
-    onOptionsChanged?: (data: MultiSelectProps[`options`]) => unknown
-    onSelectedChanged?: (data: MultiSelectProps[`selected`]) => unknown
-    onValueChanged?: (data: MultiSelectProps[`value`]) => unknown
-  }
+  import MultiSelect from '$lib'
+  import type { Test2WayBindProps } from './index'
 
   let {
     activeIndex = null,
@@ -46,16 +39,7 @@
     onValueChanged?.(value)
   })
 
-  export {
-    activeIndex,
-    activeOption,
-    breakpoint,
-    maxSelect,
-    open,
-    options,
-    selected,
-    value,
-  }
+  export { breakpoint, selected, value }
 </script>
 
 <MultiSelect

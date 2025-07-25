@@ -7,8 +7,8 @@ import MultiSelect from '$lib'
 import type { MultiSelectEvents, MultiSelectProps } from '$lib/types'
 import { get_label, get_style } from '$lib/utils'
 
-import { doc_query } from './index'
-import Test2WayBind, { type Test2WayBindProps } from './Test2WayBind.svelte'
+import { doc_query, type Test2WayBindProps } from './index'
+import Test2WayBind from './Test2WayBind.svelte'
 
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
 const input_event = new InputEvent(`input`, { bubbles: true })
@@ -851,10 +851,7 @@ describe.each([
   },
 )
 
-test.each([
-  [true, ``],
-  [false, `1`],
-])(
+test.each([[true, ``], [false, `1`]])(
   `resetFilterOnAdd=%j handles input value correctly after adding an option`,
   async (resetFilterOnAdd, expected) => {
     mount(MultiSelect, {
@@ -881,10 +878,7 @@ test(`2-way binding of selected`, async () => {
     onSelectedChanged: (data: Option[] | undefined) => selected = data ?? [],
   })
 
-  mount(Test2WayBind, {
-    target: document.body,
-    props,
-  })
+  mount(Test2WayBind, { target: document.body, props })
 
   // test internal changes to selected bind outwards
   for (const _ of Array(2)) {
