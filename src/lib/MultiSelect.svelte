@@ -182,7 +182,7 @@
       (opt) =>
         filterFunc(opt, searchText) &&
         // remove already selected options from dropdown list unless duplicate selections are allowed
-        // or keepSelectedInDropdown is enabled (for plain or checkbox-style filtering)
+        // or keepSelectedInDropdown is enabled
         (!selected.map(key).includes(key(opt)) || duplicates ||
           keepSelectedInDropdown),
     )
@@ -202,8 +202,11 @@
   function toggle_option(option_to_toggle: T, event: Event) {
     const is_currently_selected = selected.map(key).includes(key(option_to_toggle))
 
-    if (is_currently_selected) remove(option_to_toggle, event)
-    else add(option_to_toggle, event)
+    if (is_currently_selected) {
+      if (minSelect === null || selected.length > minSelect) { // Only remove if it wouldn't violate minSelect
+        remove(option_to_toggle, event)
+      }
+    } else add(option_to_toggle, event)
   }
 
   // add an option to selected list
@@ -494,7 +497,7 @@
       if (searchText) {
         highlight_matching_nodes(ul_options, searchText, noMatchingOptionsMsg)
       } else if (typeof CSS !== `undefined` && CSS.highlights) {
-        CSS.highlights.clear() // Clear highlights when search text is empty
+        CSS.highlights.delete?.(`sms-search-matches`) // Clear highlights when search text is empty
       }
     }
   })
@@ -1118,8 +1121,11 @@
     padding: 3pt 2ex;
   }
   ul.options > li.selected {
-    background: var(--sms-li-selected-bg);
-    color: var(--sms-li-selected-color);
+    background: var(--sms-li-selected-plain-bg, rgba(0, 123, 255, 0.1));
+    border-left: var(
+      --sms-li-selected-plain-border,
+      3px solid var(--sms-active-color, cornflowerblue)
+    );
   }
   ul.options > li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
@@ -1128,13 +1134,6 @@
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
-  }
-  ul.options > li.selected {
-    background: var(--sms-li-selected-plain-bg, rgba(0, 123, 255, 0.1));
-    border-left: var(
-      --sms-li-selected-plain-border,
-      3px solid var(--sms-active-color, cornflowerblue)
-    );
   }
   /* Checkbox styling for keepSelectedInDropdown='checkboxes' mode */
   ul.options > li > input.option-checkbox {

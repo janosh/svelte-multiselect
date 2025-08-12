@@ -1647,6 +1647,17 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       expect(apple_option?.classList.contains(`selected`)).toBe(false)
+
+      // Try to remove Banana as well – should be blocked by minSelect=1
+      const banana_option = Array.from(document.querySelectorAll(`ul.options > li`)).find(
+        (li) => li.textContent?.includes(`Banana`),
+      ) as HTMLElement
+      if (mode === `checkboxes`) {
+        const checkbox = banana_option?.querySelector(`.option-checkbox`) as HTMLElement
+        checkbox?.click()
+      } else banana_option?.click()
+      await tick()
+      expect(banana_option?.classList.contains(`selected`)).toBe(true)
     },
   )
 
