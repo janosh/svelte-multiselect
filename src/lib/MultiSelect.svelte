@@ -22,6 +22,7 @@
     disabledInputTitle = `This input is disabled`,
     duplicateOptionMsg = `This option is already selected`,
     duplicates = false,
+    keepSelectedInDropdown = false,
     key = (opt) => `${get_label(opt)}`.toLowerCase(),
     filterFunc = (opt, searchText) => {
       if (!searchText) return true
@@ -181,7 +182,9 @@
       (opt) =>
         filterFunc(opt, searchText) &&
         // remove already selected options from dropdown list unless duplicate selections are allowed
-        (!selected.map(key).includes(key(opt)) || duplicates),
+        // or keepSelectedInDropdown is enabled
+        (!selected.map(key).includes(key(opt)) || duplicates ||
+          keepSelectedInDropdown),
     )
   })
 
@@ -194,6 +197,17 @@
   $effect(() => {
     activeOption = matchingOptions[activeIndex ?? -1] ?? null
   })
+
+  // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
+  function toggle_option(option_to_toggle: T, event: Event) {
+    const is_currently_selected = selected.map(key).includes(key(option_to_toggle))
+
+    if (is_currently_selected) {
+      if (minSelect === null || selected.length > minSelect) { // Only remove if it wouldn't violate minSelect
+        remove(option_to_toggle, event)
+      }
+    } else add(option_to_toggle, event)
+  }
 
   // add an option to selected list
   function add(option_to_add: T, event: Event) {
@@ -243,10 +257,9 @@
         console.error(`MultiSelect: encountered falsy option ${option_to_add}`)
         return
       }
-      if (maxSelect === 1) {
-        // for maxSelect = 1 we always replace current option with new one
-        selected = [option_to_add]
-      } else {
+      // for maxSelect = 1 we always replace current option with new one
+      if (maxSelect === 1) selected = [option_to_add]
+      else {
         selected = [...selected, option_to_add]
         if (sortSelected === true) {
           selected = selected.sort((op1, op2) => {
@@ -270,9 +283,7 @@
 
       if (reached_max_select || dropdown_should_close) {
         close_dropdown(event, should_retain_focus)
-      } else if (!dropdown_should_close) {
-        input?.focus()
-      }
+      } else if (!dropdown_should_close) input?.focus()
       onadd?.({ option: option_to_add })
       onchange?.({ option: option_to_add, type: `add` })
 
@@ -479,6 +490,18 @@
   }
 
   let ul_options = $state<HTMLUListElement>()
+
+  // Update highlights whenever search text changes (after ul_options is available)
+  $effect(() => {
+    if (ul_options && highlightMatches) {
+      if (searchText) {
+        highlight_matching_nodes(ul_options, searchText, noMatchingOptionsMsg)
+      } else if (typeof CSS !== `undefined` && CSS.highlights) {
+        CSS.highlights.delete?.(`sms-search-matches`) // Clear highlights when search text is empty
+      }
+    }
+  })
+
   // highlight text matching user-entered search text in available options
   function highlight_matching_options(
     event: Event & { currentTarget?: HTMLInputElement },
@@ -818,7 +841,9 @@
         null}
         <li
           onclick={(event) => {
-            if (!disabled) add(optionItem, event)
+            if (disabled) return
+            if (keepSelectedInDropdown) toggle_option(optionItem, event)
+            else add(optionItem, event)
           }}
           title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
           class:selected={is_selected(label)}
@@ -837,10 +862,20 @@
           onkeydown={(event) => {
             if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
               event.preventDefault()
-              add(optionItem, event)
+              if (keepSelectedInDropdown) toggle_option(optionItem, event)
+              else add(optionItem, event)
             }
           }}
         >
+          {#if keepSelectedInDropdown === `checkboxes`}
+            <input
+              type="checkbox"
+              class="option-checkbox"
+              checked={is_selected(label)}
+              aria-label="Toggle {get_label(optionItem)}"
+              tabindex="-1"
+            />
+          {/if}
           {#if option}
             {@render option({
           option: optionItem,
@@ -1075,9 +1110,10 @@
     pointer-events: none;
   }
   ul.options > li {
-    padding: 3pt 2ex;
+    padding: 3pt 1ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
+    border-left: 3px solid transparent;
   }
   ul.options .user-msg {
     /* block needed so vertical padding applies to span */
@@ -1085,8 +1121,11 @@
     padding: 3pt 2ex;
   }
   ul.options > li.selected {
-    background: var(--sms-li-selected-bg);
-    color: var(--sms-li-selected-color);
+    background: var(--sms-li-selected-plain-bg, rgba(0, 123, 255, 0.1));
+    border-left: var(
+      --sms-li-selected-plain-border,
+      3px solid var(--sms-active-color, cornflowerblue)
+    );
   }
   ul.options > li.active {
     background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
@@ -1096,7 +1135,13 @@
     background: var(--sms-li-disabled-bg, #f5f5f6);
     color: var(--sms-li-disabled-text, #b8b8b8);
   }
-
+  /* Checkbox styling for keepSelectedInDropdown='checkboxes' mode */
+  ul.options > li > input.option-checkbox {
+    width: 16px;
+    height: 16px;
+    margin-right: 6px;
+    accent-color: var(--sms-active-color, cornflowerblue);
+  }
   :is(span.max-select-msg) {
     padding: 0 3pt;
   }

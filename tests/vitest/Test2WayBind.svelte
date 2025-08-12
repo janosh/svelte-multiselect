@@ -20,7 +20,7 @@
     onOptionsChanged,
     onSelectedChanged,
     onValueChanged,
-    ...restProps
+    ...rest
   }: Test2WayBindProps = $props()
 
   $effect.pre(() => {
@@ -50,5 +50,5 @@
   bind:selected
   bind:value
   bind:open
-  {...restProps}
+  {...rest}
 />

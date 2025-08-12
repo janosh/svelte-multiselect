@@ -98,6 +98,10 @@ export interface MultiSelectParameters<T extends Option = Option> {
   disabledInputTitle?: string
   duplicateOptionMsg?: string
   duplicates?: boolean // whether to allow duplicate options
+  // keepSelectedInDropdown controls whether selected options remain in dropdown: false (default),
+  // 'plain' (left border and background color to differentiate selected options),
+  // 'checkboxes' (each option is prefixed by a checkbox).
+  keepSelectedInDropdown?: false | `plain` | `checkboxes`
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
   key?: (opt: T) => unknown
   filterFunc?: (opt: T, searchText: string) => boolean
