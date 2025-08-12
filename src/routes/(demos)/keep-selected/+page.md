@@ -12,12 +12,12 @@ Configure how selected options behave in the dropdown. Try different modes:
 </script>
 
 {#each [
-    ['false', 'Default behavior, selected options disappear from dropdown'],
+    [false, 'Default behavior, selected options disappear from dropdown'],
     [
       'plain',
-      'Selected options stay visible with subtle background and border to indicate selected options in dropdown',
+      'Selected options stay visible with left border and background color to differentiate them',
     ],
-    ['checkboxes', ' Selected options stay visible and each is prefixed by a checkbox'],
+    ['checkboxes', 'Selected options stay visible and each is prefixed by a checkbox'],
   ] as
   [mode, label]
   (mode)

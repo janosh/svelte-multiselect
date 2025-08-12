@@ -487,6 +487,18 @@
   }
 
   let ul_options = $state<HTMLUListElement>()
+
+  // Update highlights whenever search text changes (after ul_options is available)
+  $effect(() => {
+    if (ul_options && highlightMatches) {
+      if (searchText) {
+        highlight_matching_nodes(ul_options, searchText, noMatchingOptionsMsg)
+      } else if (typeof CSS !== `undefined` && CSS.highlights) {
+        CSS.highlights.clear() // Clear highlights when search text is empty
+      }
+    }
+  })
+
   // highlight text matching user-entered search text in available options
   function highlight_matching_options(
     event: Event & { currentTarget?: HTMLInputElement },
@@ -857,11 +869,8 @@
               type="checkbox"
               class="option-checkbox"
               checked={is_selected(label)}
-              onchange={(event) => {
-                event.stopPropagation()
-                toggle_option(optionItem, event)
-              }}
-              onclick={(event) => event.stopPropagation()}
+              aria-label="Toggle {get_label(optionItem)}"
+              tabindex="-1"
             />
           {/if}
           {#if option}

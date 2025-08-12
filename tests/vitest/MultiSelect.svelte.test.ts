@@ -325,7 +325,7 @@ test.each([[null], [1]])(
   },
 )
 
-test(`selected is array of first two options when maxSelect=2`, async () => {
+test(`selected is array of first two options when maxSelect=2`, () => {
   // even though all options have preselected=true
   const options = [1, 2, 3].map((itm) => ({
     label: itm,
@@ -336,8 +336,6 @@ test(`selected is array of first two options when maxSelect=2`, async () => {
     target: document.body,
     props: { options, maxSelect: 2 },
   })
-
-  await tick()
 
   expect(select.selected).toEqual(options.slice(0, 2))
 })
@@ -433,7 +431,6 @@ test.each([
       li.click()
       await tick()
     }
-    await tick()
     expect(form.checkValidity()).toBe(true)
 
     btn.click() // submit form
@@ -567,7 +564,6 @@ test.each([undefined, `Custom no options message`])(
 
     // Click on no matching options message
     no_match_li.click()
-    await tick()
 
     // Should not trigger any change events
     expect(change_events).toEqual([])
@@ -1412,12 +1408,13 @@ describe.each([
 })
 
 describe(`keepSelectedInDropdown feature`, () => {
+  const options = [`Apple`, `Banana`, `Cherry`]
+  const options_with_date = [`Apple`, `Banana`, `Cherry`, `Date`]
+
   test.each([`plain`, `checkboxes`])(
     `keeps selected options visible in dropdown when mode is %s`,
     async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`]
       const selected = [`Apple`]
-
       mount(MultiSelect, {
         target: document.body,
         props: { options, selected, keepSelectedInDropdown: mode },
@@ -1458,42 +1455,30 @@ describe(`keepSelectedInDropdown feature`, () => {
   )
 
   test(`hides selected options from dropdown when disabled (default behavior)`, async () => {
-    const options = [`Apple`, `Banana`, `Cherry`]
-    const selected = [`Apple`]
-
     mount(MultiSelect, {
       target: document.body,
-      props: { options, selected, keepSelectedInDropdown: false },
+      props: { options, selected: [`Apple`], keepSelectedInDropdown: false },
     })
 
-    // Open dropdown
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.click()
     await tick()
 
-    // Only unselected options should be visible
     const dropdown_options = document.querySelectorAll(`ul.options > li`)
     expect(dropdown_options.length).toBe(2)
-
-    // Apple should not be in dropdown
-    const apple_option = Array.from(dropdown_options).find((li) =>
-      li.textContent?.includes(`Apple`)
-    )
-    expect(apple_option).toBeFalsy()
+    expect(Array.from(dropdown_options).some((li) => li.textContent?.includes(`Apple`)))
+      .toBe(false)
   })
 
   test.each([`plain`, `checkboxes`])(
     `toggles option selection when clicked in %s mode`,
     async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`]
-      const selected = [`Apple`]
       const onChange_spy = vi.fn()
-
       mount(MultiSelect, {
         target: document.body,
         props: {
           options,
-          selected,
+          selected: [`Apple`],
           keepSelectedInDropdown: mode,
           onchange: onChange_spy,
         },
@@ -1504,17 +1489,13 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       // Toggle Apple off (selected → unselected)
-      const apple_option = Array.from(document.querySelectorAll(`ul.options > li`))
-        .find((li) => li.textContent?.includes(`Apple`)) as HTMLElement
-
+      const apple_option = Array.from(document.querySelectorAll(`ul.options > li`)).find(
+        (li) => li.textContent?.includes(`Apple`),
+      ) as HTMLElement
       if (mode === `checkboxes`) {
-        // In checkbox mode, click the checkbox to toggle
-        const apple_checkbox = apple_option?.querySelector(
-          `.option-checkbox`,
-        ) as HTMLInputElement
-        apple_checkbox?.click()
+        const checkbox = apple_option?.querySelector(`.option-checkbox`) as HTMLElement
+        checkbox?.click()
       } else {
-        // In plain mode, click the option to toggle
         apple_option?.click()
       }
       await tick()
@@ -1523,17 +1504,13 @@ describe(`keepSelectedInDropdown feature`, () => {
       expect(apple_option?.classList.contains(`selected`)).toBe(false)
 
       // Toggle Banana on (unselected → selected)
-      const banana_option = Array.from(document.querySelectorAll(`ul.options > li`))
-        .find((li) => li.textContent?.includes(`Banana`)) as HTMLElement
-
+      const banana_option = Array.from(document.querySelectorAll(`ul.options > li`)).find(
+        (li) => li.textContent?.includes(`Banana`),
+      ) as HTMLElement
       if (mode === `checkboxes`) {
-        // In checkbox mode, click the checkbox to toggle
-        const banana_checkbox = banana_option?.querySelector(
-          `.option-checkbox`,
-        ) as HTMLInputElement
-        banana_checkbox?.click()
+        const checkbox = banana_option?.querySelector(`.option-checkbox`) as HTMLElement
+        checkbox?.click()
       } else {
-        // In plain mode, click the option to toggle
         banana_option?.click()
       }
       await tick()
@@ -1546,9 +1523,7 @@ describe(`keepSelectedInDropdown feature`, () => {
   test.each([`plain`, `checkboxes`])(
     `shows correct visual indicators in %s mode`,
     async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`]
       const selected = [`Apple`, `Cherry`]
-
       mount(MultiSelect, {
         target: document.body,
         props: { options, selected, keepSelectedInDropdown: mode },
@@ -1591,8 +1566,6 @@ describe(`keepSelectedInDropdown feature`, () => {
   test.each([`plain`, `checkboxes`])(
     `handles edge cases correctly in %s mode`,
     async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`]
-
       // Test empty selection
       mount(MultiSelect, {
         target: document.body,
@@ -1647,54 +1620,13 @@ describe(`keepSelectedInDropdown feature`, () => {
   test.each([`plain`, `checkboxes`])(
     `respects minSelect constraint when toggling in %s mode`,
     async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`]
-      const selected = [`Apple`, `Banana`]
-      const minSelect = 1
-
-      mount(MultiSelect, {
-        target: document.body,
-        props: { options, selected, keepSelectedInDropdown: mode, minSelect },
-      })
-
-      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-      input.click()
-      await tick()
-
-      // Remove Apple (should work as we'll still have Banana)
-      const apple_option = Array.from(document.querySelectorAll(`ul.options > li`))
-        .find((li) => li.textContent?.includes(`Apple`)) as HTMLElement
-
-      if (mode === `checkboxes`) {
-        // In checkbox mode, click the checkbox to toggle
-        const apple_checkbox = apple_option?.querySelector(
-          `.option-checkbox`,
-        ) as HTMLInputElement
-        apple_checkbox?.click()
-      } else {
-        // In plain mode, click the option to toggle
-        apple_option?.click()
-      }
-      await tick()
-
-      // Apple should be unselected
-      expect(apple_option?.classList.contains(`selected`)).toBe(false)
-    },
-  )
-
-  test.each([`plain`, `checkboxes`])(
-    `keyboard navigation works correctly in %s mode`,
-    async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`]
-      const selected = [`Apple`]
-      const onChange_spy = vi.fn()
-
       mount(MultiSelect, {
         target: document.body,
         props: {
           options,
-          selected,
+          selected: [`Apple`, `Banana`],
           keepSelectedInDropdown: mode,
-          onchange: onChange_spy,
+          minSelect: 1,
         },
       })
 
@@ -1702,45 +1634,54 @@ describe(`keepSelectedInDropdown feature`, () => {
       input.click()
       await tick()
 
-      // Ensure first option is active by clicking it or using arrow keys
-      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown` }))
-      await tick()
-
-      // Find the active option and dispatch Enter key on it
-      const active_option = document.querySelector(
-        `ul.options > li.active`,
+      // Remove Apple (should work as we'll still have Banana)
+      const apple_option = Array.from(document.querySelectorAll(`ul.options > li`)).find(
+        (li) => li.textContent?.includes(`Apple`),
       ) as HTMLElement
-      if (!active_option) {
-        // If no option is active, manually set the first option as active
-        const first_option = document.querySelector(`ul.options > li`) as HTMLElement
-        first_option?.classList.add(`active`)
-        first_option?.click()
-        await tick()
+      if (mode === `checkboxes`) {
+        const checkbox = apple_option?.querySelector(`.option-checkbox`) as HTMLElement
+        checkbox?.click()
+      } else {
+        apple_option?.click()
       }
-
-      const target_option = document.querySelector(`ul.options > li.active`) ||
-        document.querySelector(`ul.options > li`)
-      expect(target_option).toBeTruthy()
-      expect(target_option?.textContent?.includes(`Apple`)).toBe(true)
-
-      target_option?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter` }))
       await tick()
+
+      expect(apple_option?.classList.contains(`selected`)).toBe(false)
+    },
+  )
+
+  test.each([`plain`, `checkboxes`])(
+    `keyboard navigation works correctly in %s mode`,
+    async (mode) => {
+      const onChange_spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options,
+          selected: [`Apple`],
+          keepSelectedInDropdown: mode,
+          onchange: onChange_spy,
+        },
+      })
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.click()
+
+      // Navigate to Apple and toggle it off with Enter
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+      )
+      await tick()
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
 
       expect(onChange_spy).toHaveBeenCalledWith({ option: `Apple`, type: `remove` })
 
-      // Find Banana option and toggle it on
-      const all_options = document.querySelectorAll(`ul.options > li`)
-      const banana_option = Array.from(all_options)
-        .find((li) => li.textContent?.includes(`Banana`)) as HTMLElement
-      expect(banana_option).toBeTruthy()
-
-      // Make sure Banana option is active and click it to toggle
-      banana_option.classList.add(`active`)
+      // Navigate to Banana and toggle it on with Enter
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+      )
       await tick()
-
-      // Use click instead of Space key for more reliable testing
-      banana_option.click()
-      await tick()
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
 
       expect(onChange_spy).toHaveBeenCalledWith({ option: `Banana`, type: `add` })
     },
@@ -1748,30 +1689,24 @@ describe(`keepSelectedInDropdown feature`, () => {
 
   test.each([`plain`, `checkboxes`])(
     `search filtering works correctly in %s mode`,
-    async (mode) => {
-      const options = [`Apple`, `Banana`, `Cherry`, `Date`]
+    (mode) => {
       const selected = [`Apple`, `Cherry`]
-
       mount(MultiSelect, {
         target: document.body,
-        props: { options, selected, keepSelectedInDropdown: mode },
+        props: { options: options_with_date, selected, keepSelectedInDropdown: mode },
       })
 
       const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
       input.click()
-      await tick()
 
       // Filter to show only options containing 'a'
       input.value = `a`
       input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
-      await tick()
 
       const filtered_options = document.querySelectorAll(`ul.options > li`)
 
       if (mode === `checkboxes` || mode === `plain`) {
         // In keepSelectedInDropdown mode, selected options are always shown
-        // So we expect: Apple (selected), Cherry (selected), Banana (matches 'a'), Date (matches 'a')
-        // But the actual count depends on the search filtering logic
         expect(filtered_options.length).toBeGreaterThanOrEqual(2)
 
         // Check that matching options are visible
@@ -1784,7 +1719,6 @@ describe(`keepSelectedInDropdown feature`, () => {
         const selected_options = Array.from(filtered_options).filter((li) =>
           li.textContent?.includes(`Apple`) || li.textContent?.includes(`Cherry`)
         )
-        // Selected options might not be visible if they don't match the search
         expect(selected_options.length).toBeGreaterThanOrEqual(0)
       } else {
         // In default mode, only matching options are shown
@@ -1846,7 +1780,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
 
 test.each([[0], [1], [2], [5], [undefined]])(
   `no more than maxOptions are rendered if a positive integer, all options are rendered undefined or 0`,
-  async (maxOptions) => {
+  (maxOptions) => {
     const options = [`foo`, `bar`, `baz`]
 
     mount(MultiSelect, {
@@ -1856,8 +1790,6 @@ test.each([[0], [1], [2], [5], [undefined]])(
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.dispatchEvent(input_event)
-
-    await tick()
 
     expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
       Math.min(options.length, maxOptions || options.length),
@@ -1955,15 +1887,13 @@ test.each<[OptionStyle, string | null, string]>([
   [{ invalid: `color: green;` } as unknown as OptionStyle, `selected`, ``],
 ])(
   `MultiSelect applies correct styles to <li> elements for different option and key combinations`,
-  async (style, key, expected_css) => {
+  (style, key, expected_css) => {
     const options: Option[] = [{ label: `foo`, style }]
 
     mount(MultiSelect, {
       target: document.body,
       props: { options, selected: key === `selected` ? options : [] },
     })
-
-    await tick()
 
     if (key === `selected`) {
       const selected_li = doc_query(`ul.selected > li`)
@@ -1984,18 +1914,15 @@ test.each([
   [`inputStyle`, `input[autocomplete]`],
 ])(
   `MultiSelect applies style props to the correct element`,
-  async (prop, css_selector) => {
+  (prop, css_selector) => {
     const css_str = `font-weight: bold; color: red;`
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], [prop]: css_str, selected: [1] },
     })
 
-    await tick()
-
     const err_msg = `${prop} (${css_selector})`
     const elem = doc_query(css_selector)
-    await tick()
     expect(elem?.style.cssText, err_msg).toContain(css_str)
   },
 )
@@ -2005,16 +1932,13 @@ test.each([
   { prop: `liOptionStyle`, css_selector: `ul.options > li` },
 ])(
   `MultiSelect doesn't add style attribute to element '$css_selector' if '$prop' prop not passed`,
-  async ({ prop, css_selector }) => {
+  ({ prop, css_selector }) => {
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], selected: [1] },
     })
 
-    await tick()
-
     const elem = doc_query(css_selector)
-    await tick()
 
     const err_msg =
       `style attribute should be absent when '${prop}' not passed, but hasAttribute('style') is ${
@@ -2101,7 +2025,6 @@ test(`closeDropdownOnSelect='retain-focus' retains input focus when dropdown clo
 
   const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input_el.focus()
-  await tick()
 
   // select an option - should close dropdown but retain focus
   doc_query(`ul.options > li`).click()
@@ -2124,11 +2047,9 @@ test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, asyn
 
   const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input_el.focus()
-  await tick()
 
   // select first option
   doc_query(`ul.options > li`).click()
-  await tick()
   expect(document.activeElement).toBe(input_el)
 
   // select second option (reaching maxSelect)
@@ -2159,7 +2080,6 @@ test(`Escape and Tab still blur input even with closeDropdownOnSelect='retain-fo
   input_el.dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }),
   )
-  await tick()
 
   expect(document.activeElement).not.toBe(input_el)
 })
