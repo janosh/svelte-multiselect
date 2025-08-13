@@ -690,9 +690,7 @@ test.describe(`portal feature`, () => {
     ).not.toBeAttached() // If duplicates=false
 
     await expect(
-      modal_content.getByRole(`button`, {
-        name: `Remove ${languages[0]}`,
-      }),
+      modal_content.getByRole(`button`, { name: `Remove ${languages[0]}` }),
     ).toBeVisible()
 
     // Close languages dropdown by pressing Escape before testing octicons
