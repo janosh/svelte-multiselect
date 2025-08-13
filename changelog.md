@@ -1,5 +1,14 @@
 # Changelog
 
+## [v11.2.3](https://github.com/janosh/svelte-multiselect/compare/v11.2.2...v11.2.3)
+
+> 13 August 2025
+
+- Items can no longer be removed via backspace when that would violate minSelect by @janosh in https://github.com/janosh/svelte-multiselect/pull/328
+- Add `/events` demo page by @janosh in https://github.com/janosh/svelte-multiselect/pull/329
+- Add MultiSelect prop `keepSelectedInDropdown: false | 'plain' | 'checkboxes'` by @janosh in https://github.com/janosh/svelte-multiselect/pull/331
+- Add /attachments demo page + add arrow to tooltip by @janosh in https://github.com/janosh/svelte-multiselect/pull/332
+
 ## [v11.2.2](https://github.com/janosh/svelte-multiselect/compare/v11.2.1...v11.2.2)
 
 > 12 July 2025
