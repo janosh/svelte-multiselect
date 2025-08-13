@@ -1,13 +1,7 @@
 // deno-lint-ignore-file no-await-in-loop
+import { foods, languages, octicons } from '$site/options'
 import { expect, test } from '@playwright/test'
 import process from 'node:process'
-import {
-  foods,
-  languages as demo_languages,
-  octicons as demo_octicons,
-} from '../../src/site/options'
-
-// to run tests in this file, use `npm run test:e2e`
 
 test.describe.configure({ mode: `parallel` })
 
@@ -673,7 +667,7 @@ test.describe(`portal feature`, () => {
     await languages_input.click() // Open languages dropdown
 
     const portalled_languages_options = page.locator(
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${demo_languages[0]}"))`,
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${languages[0]}"))`,
     )
     await expect(portalled_languages_options).toBeVisible()
 
@@ -685,20 +679,18 @@ test.describe(`portal feature`, () => {
     ).not.toBeAttached()
 
     await portalled_languages_options
-      .getByRole(`option`, { name: demo_languages[0], exact: true })
+      .getByRole(`option`, { name: languages[0], exact: true })
       .click()
     await expect(portalled_languages_options).toBeVisible()
     await expect(
       portalled_languages_options.getByRole(`option`, {
-        name: demo_languages[0],
+        name: languages[0],
         exact: true,
       }),
     ).not.toBeAttached() // If duplicates=false
 
     await expect(
-      modal_content.getByRole(`button`, {
-        name: `Remove ${demo_languages[0]}`,
-      }),
+      modal_content.getByRole(`button`, { name: `Remove ${languages[0]}` }),
     ).toBeVisible()
 
     // Close languages dropdown by pressing Escape before testing octicons
@@ -712,7 +704,7 @@ test.describe(`portal feature`, () => {
     await octicons_input.click() // Open octicons dropdown
 
     const portalled_octicons_options = page.locator(
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${demo_octicons[0]}"))`,
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${octicons[0]}"))`,
     )
     await expect(portalled_octicons_options).toBeVisible()
 
@@ -724,7 +716,7 @@ test.describe(`portal feature`, () => {
     ).not.toBeAttached()
 
     // Select an octicon option
-    const first_octicon_option_text = demo_octicons[0]
+    const first_octicon_option_text = octicons[0]
     await portalled_octicons_options
       .getByRole(`option`, { name: first_octicon_option_text, exact: true })
       .click()

@@ -29,7 +29,7 @@ export const draggable =
     // Use simple variables for maximum performance
     let dragging = false
     let start = { x: 0, y: 0 }
-    const initial = { left: 0, top: 0, width: 0 }
+    const initial = { left: 0, top: 0 }
 
     const handle = options.handle_selector
       ? node.querySelector<HTMLElement>(options.handle_selector)
@@ -54,17 +54,14 @@ export const draggable =
         const rect = node.getBoundingClientRect()
         initial.left = rect.left
         initial.top = rect.top
-        initial.width = rect.width
       } else {
         // For other positioning, use offset values
         initial.left = node.offsetLeft
         initial.top = node.offsetTop
-        initial.width = node.offsetWidth
       }
 
       node.style.left = `${initial.left}px`
       node.style.top = `${initial.top}px`
-      node.style.width = `${initial.width}px`
       node.style.right = `auto` // Prevent conflict with left
       start = { x: event.clientX, y: event.clientY }
       document.body.style.userSelect = `none` // Prevent text selection during drag
@@ -318,21 +315,76 @@ export const tooltip = (options: {
       show_timeout = setTimeout(() => {
         const tooltip = document.createElement(`div`)
         tooltip.className = `custom-tooltip`
+        const placement = safe_options.placement || `bottom`
+        tooltip.setAttribute(`data-placement`, placement)
         tooltip.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0;
-          background: var(--tooltip-bg); color: var(--text-color); border: var(--tooltip-border);
-          padding: 6px 10px; border-radius: 6px; font-size: 13px; line-height: 1.4;
-          max-width: 280px; word-wrap: break-word; pointer-events: none;
-          filter: drop-shadow(0 2px 8px rgba(0,0,0,0.25)); transition: opacity 0.15s ease-out;
+          background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
+          padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 6px); font-size: var(--tooltip-font-size, 13px); line-height: 1.4;
+          max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; pointer-events: none;
+          filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
         `
 
         tooltip.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+
+        // Mirror CSS custom properties from the trigger node onto the tooltip element
+        const trigger_styles = getComputedStyle(element)
+        ;[
+          `--tooltip-bg`,
+          `--text-color`,
+          `--tooltip-border`,
+          `--tooltip-padding`,
+          `--tooltip-radius`,
+          `--tooltip-font-size`,
+          `--tooltip-shadow`,
+          `--tooltip-max-width`,
+          `--tooltip-opacity`,
+          `--tooltip-arrow-size`,
+        ].forEach((name) => {
+          const value = trigger_styles.getPropertyValue(name).trim()
+          if (value) tooltip.style.setProperty(name, value)
+        })
+
+        // Arrow element pointing to the trigger, oriented by placement
+        const arrow = document.createElement(`div`)
+        arrow.className = `custom-tooltip-arrow`
+        arrow.style.cssText =
+          `position: absolute; width: 0; height: 0; pointer-events: none;`
+        const arrow_size_raw = trigger_styles.getPropertyValue(`--tooltip-arrow-size`)
+          .trim()
+        const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
+        const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
+        if (placement === `top`) {
+          arrow.style.left = `calc(50% - ${arrow_px}px)`
+          arrow.style.bottom = `-${arrow_px}px`
+          arrow.style.borderLeft = `${arrow_px}px solid transparent`
+          arrow.style.borderRight = `${arrow_px}px solid transparent`
+          arrow.style.borderTop = `${arrow_px}px solid var(--tooltip-bg, #333)`
+        } else if (placement === `left`) {
+          arrow.style.top = `calc(50% - ${arrow_px}px)`
+          arrow.style.right = `-${arrow_px}px`
+          arrow.style.borderTop = `${arrow_px}px solid transparent`
+          arrow.style.borderBottom = `${arrow_px}px solid transparent`
+          arrow.style.borderLeft = `${arrow_px}px solid var(--tooltip-bg, #333)`
+        } else if (placement === `right`) {
+          arrow.style.top = `calc(50% - ${arrow_px}px)`
+          arrow.style.left = `-${arrow_px}px`
+          arrow.style.borderTop = `${arrow_px}px solid transparent`
+          arrow.style.borderBottom = `${arrow_px}px solid transparent`
+          arrow.style.borderRight = `${arrow_px}px solid var(--tooltip-bg, #333)`
+        } else { // bottom
+          arrow.style.left = `calc(50% - ${arrow_px}px)`
+          arrow.style.top = `-${arrow_px}px`
+          arrow.style.borderLeft = `${arrow_px}px solid transparent`
+          arrow.style.borderRight = `${arrow_px}px solid transparent`
+          arrow.style.borderBottom = `${arrow_px}px solid var(--tooltip-bg, #333)`
+        }
+        tooltip.appendChild(arrow)
         document.body.appendChild(tooltip)
 
         // Position tooltip
         const rect = element.getBoundingClientRect()
         const tooltip_rect = tooltip.getBoundingClientRect()
-        const placement = safe_options.placement || `bottom`
         const margin = 12
 
         let top = 0, left = 0
@@ -356,7 +408,8 @@ export const tooltip = (options: {
 
         tooltip.style.left = `${left + globalThis.scrollX}px`
         tooltip.style.top = `${top + globalThis.scrollY}px`
-        tooltip.style.opacity = `1`
+        const custom_opacity = trigger_styles.getPropertyValue(`--tooltip-opacity`).trim()
+        tooltip.style.opacity = custom_opacity || `1`
 
         current_tooltip = tooltip
       }, safe_options.delay || 100)

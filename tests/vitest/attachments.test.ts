@@ -1,5 +1,12 @@
+import {
+  click_outside,
+  draggable,
+  get_html_sort_value,
+  highlight_matches,
+  sortable,
+  tooltip,
+} from '$lib/attachments'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { click_outside, get_html_sort_value, tooltip } from '../../src/lib/attachments'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
@@ -226,7 +233,12 @@ describe(`tooltip`, () => {
     ])(`should handle %s gracefully`, (_desc, options, expected) => {
       const element = create_element()
       element.title = expected
-      const cleanup = tooltip(options)(element)
+      const normalized = options as {
+        placement?: `top` | `bottom` | `left` | `right`
+        delay?: number
+      } | null
+      const factory = normalized === null ? tooltip(undefined) : tooltip(normalized)
+      const cleanup = factory(element)
       if (cleanup) cleanup_functions.push(cleanup)
       expect(element.getAttribute(`data-original-title`)).toBe(expected)
     })
@@ -416,7 +428,9 @@ describe(`tooltip`, () => {
       const event = description.includes(`synthetic`)
         ? new CustomEvent(`mouseenter`, { bubbles: true, cancelable: true })
         : new Event(`mouseenter`)
-      if (description.includes(`custom`)) event.customProp = `custom value`
+      if (description.includes(`custom`)) {
+        ;(event as unknown as { customProp?: string }).customProp = `custom value`
+      }
 
       expect(() => element.dispatchEvent(event)).not.toThrow()
     })
@@ -535,7 +549,8 @@ describe(`tooltip`, () => {
       [`null elements`, null],
       [`undefined elements`, undefined],
     ])(`should handle %s gracefully`, (_desc, element) => {
-      expect(() => tooltip()(element)).not.toThrow()
+      const attach = tooltip()
+      expect(() => attach(element as unknown as Element)).not.toThrow()
     })
 
     it(`should handle elements without getBoundingClientRect`, () => {
@@ -623,7 +638,7 @@ describe(`click_outside`, () => {
     return cleanup
   }
 
-  const dispatch_click = (target: HTMLElement, path: Element[] = []) => {
+  const dispatch_click = (target: HTMLElement, path: EventTarget[] = []) => {
     const event = new Event(`click`, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
@@ -704,5 +719,236 @@ describe(`click_outside`, () => {
     const cleanup = setup_click_outside(element)
     expect(cleanup).toBeDefined()
     expect(() => cleanup?.()).not.toThrow()
+  })
+})
+
+describe(`draggable`, () => {
+  const create_element = () => {
+    const element = document.createElement(`div`)
+    document.body.appendChild(element)
+    return element
+  }
+
+  const mock_rect = (
+    element: HTMLElement,
+    rect: { left: number; top: number; width?: number; height?: number },
+  ) => {
+    element.getBoundingClientRect = vi.fn(() => ({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width ?? 100,
+      height: rect.height ?? 50,
+      right: rect.left + (rect.width ?? 100),
+      bottom: rect.top + (rect.height ?? 50),
+      x: rect.left,
+      y: rect.top,
+      toJSON: () => ({}),
+    }))
+  }
+
+  it(`should not set width on mousedown and should set left/top`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 40, top: 60, width: 123, height: 45 })
+
+    const attach = draggable()
+    const cleanup = attach(element)
+    expect(typeof cleanup).toBe(`function`)
+
+    const mousedown = new MouseEvent(`mousedown`, {
+      clientX: 100,
+      clientY: 100,
+      bubbles: true,
+    })
+    element.dispatchEvent(mousedown)
+
+    expect(element.style.width).toBe(``)
+    expect(element.style.left).toBe(`40px`)
+    expect(element.style.top).toBe(`60px`)
+  })
+
+  it(`should update position while dragging and reset cursor on mouseup`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 10, top: 20 })
+
+    const attach = draggable({ on_drag: vi.fn() })
+    const cleanup = attach(element)
+    const mousedown = new MouseEvent(`mousedown`, {
+      clientX: 5,
+      clientY: 5,
+      bubbles: true,
+    })
+    element.dispatchEvent(mousedown)
+
+    const mousemove = new MouseEvent(`mousemove`, {
+      clientX: 15,
+      clientY: 25,
+      bubbles: true,
+    })
+    globalThis.dispatchEvent(mousemove)
+    expect(element.style.left).toBe(`20px`)
+    expect(element.style.top).toBe(`40px`)
+
+    const mouseup = new MouseEvent(`mouseup`, { bubbles: true })
+    globalThis.dispatchEvent(mouseup)
+
+    cleanup?.()
+    expect(() => globalThis.dispatchEvent(new MouseEvent(`mousemove`))).not.toThrow()
+  })
+
+  it(`should only drag when event originates from handle_selector`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 0, top: 0 })
+
+    const handle = document.createElement(`div`)
+    handle.className = `drag-handle`
+    element.appendChild(handle)
+
+    const attach = draggable({ handle_selector: `.drag-handle` })
+    attach(element)
+
+    // mousedown on element (not handle) should not start dragging
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, { clientX: 0, clientY: 0, bubbles: true }),
+    )
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, { clientX: 50, clientY: 50, bubbles: true }),
+    )
+    expect(element.style.left).toBe(``)
+    expect(element.style.top).toBe(``)
+
+    // mousedown on handle should start dragging
+    handle.dispatchEvent(
+      new MouseEvent(`mousedown`, { clientX: 0, clientY: 0, bubbles: true }),
+    )
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, { clientX: 30, clientY: 40, bubbles: true }),
+    )
+    expect(element.style.left).toBe(`30px`)
+    expect(element.style.top).toBe(`40px`)
+  })
+})
+
+describe(`highlight_matches`, () => {
+  const create_element = () => {
+    const element = document.createElement(`div`)
+    element.innerHTML = `Hello <span>world</span>`
+    document.body.appendChild(element)
+    return element
+  }
+
+  beforeEach(() => {
+    // Minimal mock for CSS.highlights and Highlight class
+    type HighlightRegistryMock = Map<string, unknown> & {
+      clear: () => void
+      delete: (key: string) => boolean
+      set: (key: string, value: unknown) => HighlightRegistryMock
+    }
+    const registry = new Map<string, unknown>() as HighlightRegistryMock
+    registry.clear = Map.prototype.clear
+    registry.delete = Map.prototype.delete
+    registry.set = Map.prototype.set as unknown as (
+      key: string,
+      value: unknown,
+    ) => HighlightRegistryMock
+    ;(globalThis as unknown as { CSS: { highlights: HighlightRegistryMock } }).CSS = {
+      highlights: registry,
+    }
+    ;(globalThis as unknown as { Highlight: new (...args: unknown[]) => unknown })
+      .Highlight = function () {
+        return {}
+      } as unknown as new (...args: unknown[]) => unknown
+  })
+
+  it(`should set a highlight when query is non-empty and not disabled`, () => {
+    const element = create_element()
+    const cleanup = highlight_matches({ query: `world` })(element)
+    expect(typeof cleanup).toBe(`function`)
+    const css: { highlights: Map<string, unknown> } =
+      (globalThis as unknown as { CSS: { highlights: Map<string, unknown> } }).CSS
+    expect(css.highlights.size).toBe(1)
+    cleanup?.()
+    expect(css.highlights.size).toBe(0)
+  })
+
+  it.each([
+    [`empty query`, ``],
+    [`disabled`, `__disabled__`],
+  ])(`should bail out gracefully for %s`, (desc, query) => {
+    const element = create_element()
+    const disabled = desc === `disabled`
+    const cleanup = highlight_matches({
+      query: disabled ? `x` : (query as string),
+      disabled,
+    })(
+      element,
+    )
+    expect(cleanup).toBeUndefined()
+  })
+})
+
+describe(`sortable`, () => {
+  const create_table = () => {
+    const table = document.createElement(`table`)
+    const thead = document.createElement(`thead`)
+    const tr = document.createElement(`tr`)
+    ;[`Planet`, `Moons`].forEach((text) => {
+      const th = document.createElement(`th`)
+      th.textContent = text
+      tr.appendChild(th)
+    })
+    thead.appendChild(tr)
+    table.appendChild(thead)
+
+    const tbody = document.createElement(`tbody`)
+    const rows = [
+      [`Earth`, `1`],
+      [`Jupiter`, `95`],
+      [`Mars`, `2`],
+    ]
+    rows.forEach(([planet, moons]) => {
+      const row = document.createElement(`tr`)
+      const td1 = document.createElement(`td`)
+      const td2 = document.createElement(`td`)
+      td1.textContent = planet
+      td2.textContent = moons
+      row.append(td1, td2)
+      tbody.appendChild(row)
+    })
+    table.appendChild(tbody)
+    document.body.appendChild(table)
+    return table
+  }
+
+  const get_column_values = (table: HTMLTableElement, col_idx: number) =>
+    Array.from(table.querySelectorAll(`tbody tr`)).map((row) =>
+      row.children[col_idx].textContent
+    )
+
+  it(`should sort ascending then descending when clicking the same header`, () => {
+    const table = create_table()
+    const attach = sortable()
+    const cleanup = attach(table)
+    const headers = Array.from(table.querySelectorAll(`thead th`))
+    const [planet_header, moons_header] = headers as [
+      HTMLTableCellElement,
+      HTMLTableCellElement,
+    ]
+
+    // Sort by Planet asc
+    planet_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(get_column_values(table, 0)).toEqual([`Earth`, `Jupiter`, `Mars`])
+
+    // Sort by Planet desc
+    planet_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(get_column_values(table, 0)).toEqual([`Mars`, `Jupiter`, `Earth`])
+
+    // Sort by Moons asc
+    moons_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(get_column_values(table, 1)).toEqual([`1`, `2`, `95`])
+
+    cleanup?.()
   })
 })
