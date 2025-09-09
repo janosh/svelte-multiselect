@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
 
   type GenericOption = string | number | { value: unknown; label: string | number }
   type Option = $$Generic<GenericOption>
@@ -18,7 +19,7 @@
     }
     return op
   }
-  interface Props {
+  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children`> {
     options: Option[]
     selected?: string | number | null
     id?: string | null
@@ -31,7 +32,6 @@
     oninput?: (event: Event) => void
     option_snippet?: Snippet<[{ option: Option; selected: boolean; active: boolean }]>
     children?: Snippet<[{ option: Option; selected: boolean; active: boolean }]>
-    [key: string]: unknown
   }
   let {
     options,

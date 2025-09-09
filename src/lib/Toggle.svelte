@@ -1,7 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
 
-  interface Props {
+  interface Props extends HTMLAttributes<HTMLLabelElement> {
     checked?: boolean // whether the toggle is on or off
     required?: boolean
     input_style?: string
@@ -11,7 +12,6 @@
     onblur?: (event: FocusEvent) => void
     onkeydown?: (event: KeyboardEvent) => void
     children?: Snippet<[]>
-    [key: string]: unknown
   }
   let {
     checked = $bindable(false),

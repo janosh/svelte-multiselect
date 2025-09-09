@@ -1,4 +1,4 @@
-import type { Option, OptionStyle } from './types'
+import type { Option } from './types'
 
 // Get the label key from an option object or the option itself
 // if it's a string or number
@@ -16,10 +16,7 @@ export const get_label = (opt: Option) => {
 // This function is used extract CSS strings from a {selected, option} style
 // object to be used in the style attribute of the option.
 // If the style is a string, it will be returned as is
-export function get_style(
-  option: { style?: OptionStyle; [key: string]: unknown } | string | number,
-  key: `selected` | `option` | null = null,
-) {
+export function get_style(option: Option, key: `selected` | `option` | null = null) {
   let css_str = ``
   if (![`selected`, `option`, null].includes(key)) {
     console.error(`MultiSelect: Invalid key=${key} for get_style`)
@@ -56,9 +53,7 @@ export function highlight_matching_nodes(
   const tree_walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
     acceptNode: (node) => {
       // don't highlight text in the "no matching options" message
-      if (node?.textContent === noMatchingOptionsMsg) {
-        return NodeFilter.FILTER_REJECT
-      }
+      if (node?.textContent === noMatchingOptionsMsg) return NodeFilter.FILTER_REJECT
       return NodeFilter.FILTER_ACCEPT
     },
   })

@@ -1,9 +1,9 @@
 <script lang="ts">
+  import type { HTMLAttributes } from 'svelte/elements'
   import { icon_data, type IconName } from './icons'
 
-  interface Props {
+  interface Props extends HTMLAttributes<SVGSVGElement> {
     icon: IconName
-    [key: string]: unknown
   }
   let { icon, ...rest }: Props = $props()
 

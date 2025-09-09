@@ -822,9 +822,9 @@
       style={ulOptionsStyle}
     >
       {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as
-        optionItem,
+        option_item,
         idx
-        (duplicates ? [key(optionItem), idx] : key(optionItem))
+        (duplicates ? [key(option_item), idx] : key(option_item))
       }
         {@const {
         label,
@@ -832,18 +832,18 @@
         title = null,
         selectedTitle = null,
         disabledTitle = defaultDisabledTitle,
-      } = optionItem instanceof Object ? optionItem : { label: optionItem }}
+      } = option_item instanceof Object ? option_item : { label: option_item }}
         {@const active = activeIndex === idx}
         {@const optionStyle =
-        [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(
+        [get_style(option_item, `option`), liOptionStyle].filter(Boolean).join(
           ` `,
         ) ||
         null}
         <li
           onclick={(event) => {
             if (disabled) return
-            if (keepSelectedInDropdown) toggle_option(optionItem, event)
-            else add(optionItem, event)
+            if (keepSelectedInDropdown) toggle_option(option_item, event)
+            else add(option_item, event)
           }}
           title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
           class:selected={is_selected(label)}
@@ -862,8 +862,8 @@
           onkeydown={(event) => {
             if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
               event.preventDefault()
-              if (keepSelectedInDropdown) toggle_option(optionItem, event)
-              else add(optionItem, event)
+              if (keepSelectedInDropdown) toggle_option(option_item, event)
+              else add(option_item, event)
             }
           }}
         >
@@ -872,24 +872,24 @@
               type="checkbox"
               class="option-checkbox"
               checked={is_selected(label)}
-              aria-label="Toggle {get_label(optionItem)}"
+              aria-label="Toggle {get_label(option_item)}"
               tabindex="-1"
             />
           {/if}
           {#if option}
             {@render option({
-          option: optionItem,
+          option: option_item,
           idx,
         })}
           {:else if children}
             {@render children({
-          option: optionItem,
+          option: option_item,
           idx,
         })}
           {:else if parseLabelsAsHtml}
-            {@html get_label(optionItem)}
+            {@html get_label(option_item)}
           {:else}
-            {get_label(optionItem)}
+            {get_label(option_item)}
           {/if}
         </li>
       {/each}

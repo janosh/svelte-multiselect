@@ -1,10 +1,12 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
 
   export type Item = string | [string, unknown]
   type T = $$Generic<Item>
 
-  interface Props {
+  interface Props
+    extends Omit<HTMLAttributes<HTMLDivElement>, `children` | `onkeyup`> {
     items?: T[]
     node?: string
     current?: string
@@ -16,7 +18,6 @@
     children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
     between?: Snippet<[]>
     next_snippet?: Snippet<[{ item: Item }]>
-    [key: string]: unknown
   }
   let {
     items = [],

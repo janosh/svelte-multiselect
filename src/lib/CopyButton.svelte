@@ -2,11 +2,12 @@
   import { CopyButton, Icon } from '$lib'
   import type { Snippet } from 'svelte'
   import { mount } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
   import type { IconName } from './icons'
 
   type State = `ready` | `success` | `error`
 
-  interface Props {
+  interface Props extends HTMLAttributes<HTMLButtonElement> {
     content?: string
     state?: State
     global_selector?: string | null
@@ -15,7 +16,6 @@
     as?: string
     labels?: Record<State, { icon: IconName; text: string }>
     children?: Snippet<[{ state: State; icon: IconName; text: string }]>
-    [key: string]: unknown
   }
   let {
     content = ``,
