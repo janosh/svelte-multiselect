@@ -72,13 +72,44 @@ Exported from `svelte-multiselect/attachments`:
     style="--tooltip-bg: rgba(255, 50, 50, 0.9); --text-color: white; --tooltip-border: 1px solid rgba(255, 50, 50, 0.9); --tooltip-radius: 3px; --tooltip-font-size: 12px; --tooltip-arrow-size: 10; --tooltip-opacity: 0.9"
     {@attach tooltip({ content: `Warning tooltip`, placement: `bottom` })}
   >
-    Warning style
+    Warning tooltip
   </button>
   <button
     style="--tooltip-bg: white; --text-color: #111; --tooltip-border: 1px solid rgba(255, 255, 255, 0.15); --tooltip-font-size: 16px; --tooltip-arrow-size: 12; --tooltip-padding: 10px 12px"
     {@attach tooltip({ content: `Large text + big arrow`, placement: `left` })}
   >
     Large text
+  </button>
+</div>
+
+<!-- New options: disabled and custom style -->
+<div style="display: flex; gap: 1em; margin: 2em 0">
+  <button
+    style="--tooltip-bg: #2d3748; --text-color: #e2e8f0; --tooltip-border: 2px solid #4299e1; --tooltip-arrow-size: 8"
+    {@attach tooltip({
+      content: `Custom style + border arrow`,
+      placement: `top`,
+      style:
+        `box-shadow: 0 10px 25px rgba(66, 153, 225, 0.3); transform: scale(1.05);`,
+    })}
+  >
+    Custom style
+  </button>
+  <button
+    style="--tooltip-bg: #f56565; --text-color: white; --tooltip-border: 1px solid #c53030"
+    {@attach tooltip({ content: `Disabled tooltip`, disabled: true })}
+  >
+    Disabled (no tooltip)
+  </button>
+  <button
+    style="--tooltip-bg: #48bb78; --text-color: white; --tooltip-border: 3px solid #38a169; --tooltip-arrow-size: 12"
+    {@attach tooltip({
+      content: `Thick border with matching arrow`,
+      placement: `bottom`,
+      style: `font-weight: bold; letter-spacing: 0.5px;`,
+    })}
+  >
+    Thick border
   </button>
 </div>
 <!-- Attach once to a container: children with title/aria-label/data-title get their own tooltip -->

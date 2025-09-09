@@ -227,6 +227,80 @@ describe(`tooltip`, () => {
       })
     })
 
+    it(`should handle disabled option`, () => {
+      const element = create_element()
+      element.title = `Disabled tooltip`
+      const cleanup = setup_tooltip(element, { disabled: true })
+      expect(cleanup).toBeUndefined()
+      expect(element.hasAttribute(`data-original-title`)).toBe(false)
+      expect(element.getAttribute(`title`)).toBe(`Disabled tooltip`)
+    })
+
+    it(`should apply custom style to tooltip`, () => {
+      const element = create_element()
+      element.title = `Styled tooltip`
+      const custom_style = `background: red; color: white; border: 2px solid blue;`
+      setup_tooltip(element, { style: custom_style })
+      element.dispatchEvent(new Event(`mouseenter`))
+      setTimeout(() => {
+        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
+        expect(tooltip).toBeTruthy()
+        if (tooltip) {
+          expect(tooltip.style.cssText).toContain(`background: red`)
+          expect(tooltip.style.cssText).toContain(`color: white`)
+          expect(tooltip.style.cssText).toContain(`border: 2px solid blue`)
+        }
+      }, 150)
+    })
+
+    it(`should combine custom style with CSS variables`, () => {
+      const element = create_element()
+      element.title = `Combined style tooltip`
+      element.style.setProperty(`--tooltip-bg`, `#123456`)
+      const custom_style = `font-weight: bold; text-transform: uppercase;`
+      setup_tooltip(element, { style: custom_style })
+      element.dispatchEvent(new Event(`mouseenter`))
+      setTimeout(() => {
+        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
+        expect(tooltip).toBeTruthy()
+        if (tooltip) {
+          expect(tooltip.style.cssText).toContain(`font-weight: bold`)
+          expect(tooltip.style.cssText).toContain(`text-transform: uppercase`)
+          expect(tooltip.style.cssText).toContain(`--tooltip-bg: #123456`)
+        }
+      }, 150)
+    })
+
+    it(`should handle empty style string`, () => {
+      const element = create_element()
+      element.title = `Empty style tooltip`
+      setup_tooltip(element, { style: `` })
+      element.dispatchEvent(new Event(`mouseenter`))
+      setTimeout(() => {
+        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
+        expect(tooltip).toBeTruthy()
+        expect(tooltip?.className).toBe(`custom-tooltip`)
+      }, 150)
+    })
+
+    it(`should handle malformed and whitespace styles`, () => {
+      const element = create_element()
+      element.title = `Style parsing tooltip`
+      const malformed_style =
+        ` background: red ; invalid-style; color: blue ; font-size: 14px ; `
+      setup_tooltip(element, { style: malformed_style })
+      element.dispatchEvent(new Event(`mouseenter`))
+      setTimeout(() => {
+        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
+        expect(tooltip).toBeTruthy()
+        if (tooltip) {
+          expect(tooltip.style.backgroundColor).toBe(`red`)
+          expect(tooltip.style.color).toBe(`blue`)
+          expect(tooltip.style.fontSize).toBe(`14px`)
+        }
+      }, 150)
+    })
+
     it.each([
       [`invalid placement`, { placement: `invalid` }, `Invalid placement tooltip`],
       [`null options`, null, `Null options tooltip`],

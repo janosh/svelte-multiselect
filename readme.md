@@ -643,10 +643,10 @@ For example, here's how you might annoy your users with an alert every time one 
 
 ```svelte
 <MultiSelect
-  onchange={(e) => {
-    if (e.detail.type === 'add') alert(`You added ${e.detail.option}`)
-    if (e.detail.type === 'remove') alert(`You removed ${e.detail.option}`)
-    if (e.detail.type === 'removeAll') alert(`You removed ${e.detail.options}`)
+  onchange={(event) => {
+    if (event.detail.type === 'add') alert(`You added ${event.detail.option}`)
+    if (event.detail.type === 'remove') alert(`You removed ${event.detail.option}`)
+    if (event.detail.type === 'removeAll') alert(`You removed ${event.detail.options}`)
   }}
 />
 ```
