@@ -1,11 +1,5 @@
 import type { Snippet } from 'svelte'
-import type {
-  FocusEventHandler,
-  HTMLInputAttributes,
-  KeyboardEventHandler,
-  MouseEventHandler,
-  TouchEventHandler,
-} from 'svelte/elements'
+import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
 
 export type Option = string | number | ObjectOption
 
@@ -25,23 +19,6 @@ export type ObjectOption = {
   [key: string]: unknown // allow any other keys users might want
 }
 
-// browser events re-emitted by MultiSelect
-export interface MultiSelectNativeEvents {
-  onblur?: FocusEventHandler<HTMLInputElement>
-  onclick?: MouseEventHandler<HTMLInputElement>
-  // onchange?: ChangeEventHandler<HTMLInputElement> TBD
-  onfocus?: FocusEventHandler<HTMLInputElement>
-  onkeydown?: KeyboardEventHandler<HTMLInputElement>
-  onkeyup?: KeyboardEventHandler<HTMLInputElement>
-  onmousedown?: MouseEventHandler<HTMLInputElement>
-  onmouseenter?: MouseEventHandler<HTMLInputElement>
-  onmouseleave?: MouseEventHandler<HTMLInputElement>
-  ontouchcancel?: TouchEventHandler<HTMLInputElement>
-  ontouchend?: TouchEventHandler<HTMLInputElement>
-  ontouchmove?: TouchEventHandler<HTMLInputElement>
-  ontouchstart?: TouchEventHandler<HTMLInputElement>
-}
-
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
   onadd?: (data: { option: T }) => unknown
@@ -58,7 +35,7 @@ export interface MultiSelectEvents<T extends Option = Option> {
 }
 
 type AfterInputProps = Pick<
-  MultiSelectParameters,
+  MultiSelectProps,
   `selected` | `disabled` | `invalid` | `id` | `placeholder` | `open` | `required`
 >
 type UserMsgProps = {
@@ -84,7 +61,11 @@ export interface PortalParams {
   active?: boolean
 }
 
-export interface MultiSelectParameters<T extends Option = Option> {
+export interface MultiSelectProps<T extends Option = Option>
+  extends
+    MultiSelectEvents<T>,
+    MultiSelectSnippets<T>,
+    Omit<HTMLAttributes<HTMLDivElement>, `children` | `onchange` | `onclose`> {
   activeIndex?: number | null
   activeOption?: T | null
   createOptionMsg?: string | null
@@ -105,6 +86,7 @@ export interface MultiSelectParameters<T extends Option = Option> {
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
   key?: (opt: T) => unknown
   filterFunc?: (opt: T, searchText: string) => boolean
+  fuzzy?: boolean // whether to use fuzzy matching (default: true) or substring matching (false)
   closeDropdownOnSelect?: boolean | `if-mobile` | `retain-focus`
   form_input?: HTMLInputElement | null
   highlightMatches?: boolean
@@ -152,12 +134,4 @@ export interface MultiSelectParameters<T extends Option = Option> {
   ulOptionsStyle?: string | null
   value?: T | T[] | null
   portal?: PortalParams
-  [key: string]: unknown
 }
-
-export interface MultiSelectProps<T extends Option = Option>
-  extends
-    MultiSelectNativeEvents,
-    MultiSelectEvents<T>,
-    MultiSelectSnippets<T>,
-    MultiSelectParameters<T> {}

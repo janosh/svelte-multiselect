@@ -143,7 +143,7 @@ export const sortable = (
   let sort_dir = 1 // 1 = asc, -1 = desc
 
   // Store event listeners for cleanup
-  const event_listeners: Array<{ header: HTMLTableCellElement; handler: () => void }> = []
+  const event_listeners: { header: HTMLTableCellElement; handler: () => void }[] = []
 
   for (const [idx, header] of headers.entries()) {
     header.style.cursor = `pointer` // add cursor pointer to headers
@@ -208,9 +208,10 @@ export const sortable = (
   }
 }
 
-type HighlightOptions = {
+export type HighlightOptions = {
   query?: string
   disabled?: boolean
+  fuzzy?: boolean
   node_filter?: (node: Node) => number
   css_class?: string
 }
@@ -219,14 +220,17 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   const {
     query = ``,
     disabled = false,
+    fuzzy = false,
     node_filter = () => NodeFilter.FILTER_ACCEPT,
     css_class = `highlight-match`,
   } = ops
 
-  // clear previous ranges from HighlightRegistry
-  CSS.highlights.clear()
-
-  if (!query || disabled || typeof CSS === `undefined` || !CSS.highlights) return // abort if CSS highlight API not supported
+  // abort if CSS highlight API not supported
+  if (typeof CSS === `undefined` || !CSS.highlights) return
+  // always clear our own highlight first
+  CSS.highlights.delete(css_class)
+  // if disabled or empty query, stop after cleanup
+  if (!query || disabled) return
 
   const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
     acceptNode: node_filter,
@@ -242,30 +246,63 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   // iterate over all text nodes and find matches
   const ranges = text_nodes.map((el) => {
     const text = el.textContent?.toLowerCase()
-    const indices = []
-    let start_pos = 0
-    while (text && start_pos < text.length) {
-      const index = text.indexOf(query, start_pos)
-      if (index === -1) break
-      indices.push(index)
-      start_pos = index + query.length
-    }
+    if (!text) return []
 
-    // create range object for each str found in the text node
-    return indices.map((index) => {
-      const range = new Range()
-      range.setStart(el, index)
-      range.setEnd(el, index + query?.length)
-      return range
-    })
+    const search = query.toLowerCase()
+
+    if (fuzzy) {
+      // Fuzzy highlighting: highlight individual characters that match in order
+      const matching_indices: number[] = []
+
+      let search_idx = 0
+      let target_idx = 0
+
+      // Find matching character indices
+      while (search_idx < search.length && target_idx < text.length) {
+        if (search[search_idx] === text[target_idx]) {
+          matching_indices.push(target_idx)
+          search_idx++
+        }
+        target_idx++
+      }
+
+      // Only create ranges if we found all characters in order
+      if (search_idx === search.length) {
+        return matching_indices.map((index) => {
+          const range = new Range()
+          range.setStart(el, index)
+          range.setEnd(el, index + 1) // highlight single character
+          return range
+        })
+      }
+
+      return []
+    } else {
+      // Substring highlighting: highlight consecutive substrings
+      const indices = []
+      let start_pos = 0
+      while (start_pos < text.length) {
+        const index = text.indexOf(search, start_pos)
+        if (index === -1) break
+        indices.push(index)
+        start_pos = index + search.length
+      }
+
+      // create range object for each substring found in the text node
+      return indices.map((index) => {
+        const range = new Range()
+        range.setStart(el, index)
+        range.setEnd(el, index + search.length)
+        return range
+      })
+    }
   })
 
   // create Highlight object from ranges and add to registry
   CSS.highlights.set(css_class, new Highlight(...ranges.flat()))
 
-  return () => { // Return cleanup function
-    CSS.highlights.delete(css_class)
-  }
+  // Return cleanup function
+  return () => CSS.highlights.delete(css_class)
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
@@ -282,12 +319,15 @@ function clear_tooltip() {
   }
 }
 
-export const tooltip = (options: {
+export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
   delay?: number
-} = {}): Attachment =>
-(node: Element) => {
+  disabled?: boolean
+  style?: string
+}
+
+export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Element) => {
   // Handle null/undefined elements
   if (!node || !(node instanceof HTMLElement)) return
 
@@ -296,7 +336,7 @@ export const tooltip = (options: {
   const cleanup_functions: (() => void)[] = []
 
   function setup_tooltip(element: HTMLElement) {
-    if (!element) return
+    if (!element || safe_options.disabled) return
 
     const content = safe_options.content || element.title ||
       element.getAttribute(`aria-label`) || element.getAttribute(`data-title`)
@@ -317,6 +357,7 @@ export const tooltip = (options: {
         tooltip.className = `custom-tooltip`
         const placement = safe_options.placement || `bottom`
         tooltip.setAttribute(`data-placement`, placement)
+        // Apply base styles
         tooltip.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0;
           background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
@@ -324,6 +365,18 @@ export const tooltip = (options: {
           max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
         `
+
+        // Apply custom styles if provided (these will override base styles due to CSS specificity)
+        if (safe_options.style) {
+          // Parse and apply custom styles as individual properties for better control
+          const custom_styles = safe_options.style.split(`;`).filter((style) =>
+            style.trim()
+          )
+          custom_styles.forEach((style) => {
+            const [property, value] = style.split(`:`).map((s) => s.trim())
+            if (property && value) tooltip.style.setProperty(property, value)
+          })
+        }
 
         tooltip.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
 
@@ -345,7 +398,11 @@ export const tooltip = (options: {
           if (value) tooltip.style.setProperty(name, value)
         })
 
-        // Arrow element pointing to the trigger, oriented by placement
+        // Append early so we can read computed border styles for arrow border
+        document.body.appendChild(tooltip)
+
+        // Arrow elements: optional border triangle behind fill triangle
+        const tooltip_styles = getComputedStyle(tooltip)
         const arrow = document.createElement(`div`)
         arrow.className = `custom-tooltip-arrow`
         arrow.style.cssText =
@@ -354,6 +411,48 @@ export const tooltip = (options: {
           .trim()
         const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
         const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
+
+        const border_color = tooltip_styles.borderTopColor
+        const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
+        const has_border = !!border_color && border_color !== `rgba(0, 0, 0, 0)` &&
+          border_width_num > 0
+
+        const maybe_append_border_arrow = () => {
+          if (!has_border) return
+          const border_arrow = document.createElement(`div`)
+          border_arrow.className = `custom-tooltip-arrow-border`
+          border_arrow.style.cssText =
+            `position: absolute; width: 0; height: 0; pointer-events: none;`
+          const border_size = arrow_px + (border_width_num * 1.4)
+          if (placement === `top`) {
+            border_arrow.style.left = `calc(50% - ${border_size}px)`
+            border_arrow.style.bottom = `-${border_size}px`
+            border_arrow.style.borderLeft = `${border_size}px solid transparent`
+            border_arrow.style.borderRight = `${border_size}px solid transparent`
+            border_arrow.style.borderTop = `${border_size}px solid ${border_color}`
+          } else if (placement === `left`) {
+            border_arrow.style.top = `calc(50% - ${border_size}px)`
+            border_arrow.style.right = `-${border_size}px`
+            border_arrow.style.borderTop = `${border_size}px solid transparent`
+            border_arrow.style.borderBottom = `${border_size}px solid transparent`
+            border_arrow.style.borderLeft = `${border_size}px solid ${border_color}`
+          } else if (placement === `right`) {
+            border_arrow.style.top = `calc(50% - ${border_size}px)`
+            border_arrow.style.left = `-${border_size}px`
+            border_arrow.style.borderTop = `${border_size}px solid transparent`
+            border_arrow.style.borderBottom = `${border_size}px solid transparent`
+            border_arrow.style.borderRight = `${border_size}px solid ${border_color}`
+          } else { // bottom
+            border_arrow.style.left = `calc(50% - ${border_size}px)`
+            border_arrow.style.top = `-${border_size}px`
+            border_arrow.style.borderLeft = `${border_size}px solid transparent`
+            border_arrow.style.borderRight = `${border_size}px solid transparent`
+            border_arrow.style.borderBottom = `${border_size}px solid ${border_color}`
+          }
+          tooltip.appendChild(border_arrow)
+        }
+
+        // Create the fill arrow on top
         if (placement === `top`) {
           arrow.style.left = `calc(50% - ${arrow_px}px)`
           arrow.style.bottom = `-${arrow_px}px`
@@ -379,8 +478,8 @@ export const tooltip = (options: {
           arrow.style.borderRight = `${arrow_px}px solid transparent`
           arrow.style.borderBottom = `${arrow_px}px solid var(--tooltip-bg, #333)`
         }
+        maybe_append_border_arrow()
         tooltip.appendChild(arrow)
-        document.body.appendChild(tooltip)
 
         // Position tooltip
         const rect = element.getBoundingClientRect()
@@ -418,17 +517,13 @@ export const tooltip = (options: {
     function hide_tooltip() {
       clear_tooltip()
 
-      hide_timeout = setTimeout(() => {
+      if (current_tooltip) {
+        current_tooltip.style.opacity = `0`
         if (current_tooltip) {
-          current_tooltip.style.opacity = `0`
-          setTimeout(() => {
-            if (current_tooltip) {
-              current_tooltip.remove()
-              current_tooltip = null
-            }
-          }, 150)
+          current_tooltip.remove()
+          current_tooltip = null
         }
-      }, 50)
+      }
     }
 
     const events = [`mouseenter`, `mouseleave`, `focus`, `blur`]
@@ -464,7 +559,7 @@ export const tooltip = (options: {
   }
 }
 
-type ClickOutsideConfig<T extends HTMLElement> = {
+export type ClickOutsideConfig<T extends HTMLElement> = {
   enabled?: boolean
   exclude?: string[]
   callback?: (node: T, config: ClickOutsideConfig<T>) => void

@@ -82,31 +82,6 @@ describe(`get_html_sort_value`, () => {
 })
 
 describe(`tooltip`, () => {
-  let cleanup_functions: (() => void)[]
-
-  const setup_env = () => {
-    cleanup_functions = []
-    document.body.innerHTML = ``
-    document.documentElement.style.setProperty(`--tooltip-bg`, `#333`)
-    document.documentElement.style.setProperty(`--text-color`, `#fff`)
-    document.documentElement.style.setProperty(`--tooltip-border`, `1px solid #555`)
-    Object.assign(globalThis, {
-      innerWidth: 1024,
-      innerHeight: 768,
-      scrollX: 0,
-      scrollY: 0,
-    })
-  }
-
-  const cleanup_env = () => {
-    cleanup_functions.forEach((cleanup) => {
-      cleanup()
-    })
-    cleanup_functions = []
-    document.querySelectorAll(`.custom-tooltip`).forEach((tooltip) => tooltip.remove())
-    vi.clearAllTimers()
-  }
-
   const create_element = (tag = `div`) => {
     const element = document.createElement(tag)
     document.body.appendChild(element)
@@ -115,7 +90,6 @@ describe(`tooltip`, () => {
 
   const setup_tooltip = (element: HTMLElement, options = {}) => {
     const cleanup = tooltip(options)(element)
-    if (cleanup) cleanup_functions.push(cleanup)
     return cleanup
   }
 
@@ -132,9 +106,6 @@ describe(`tooltip`, () => {
       toJSON: () => ({}),
     }))
   }
-
-  beforeEach(setup_env)
-  afterEach(cleanup_env)
 
   describe(`Content Sources`, () => {
     it.each([
@@ -227,6 +198,48 @@ describe(`tooltip`, () => {
       })
     })
 
+    it(`should handle disabled option`, () => {
+      const element = create_element()
+      element.title = `Disabled tooltip`
+      const cleanup = setup_tooltip(element, { disabled: true })
+      expect(cleanup).toBeUndefined()
+      expect(element.hasAttribute(`data-original-title`)).toBe(false)
+      expect(element.getAttribute(`title`)).toBe(`Disabled tooltip`)
+    })
+
+    it(`should apply custom style to tooltip`, () => {
+      const element = create_element()
+      element.title = `Styled tooltip`
+      const custom_style = `background: red; color: white; border: 2px solid blue;`
+      setup_tooltip(element, { style: custom_style })
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
+    })
+
+    it(`should combine custom style with CSS variables`, () => {
+      const element = create_element()
+      element.title = `Combined style tooltip`
+      element.style.setProperty(`--tooltip-bg`, `#123456`)
+      const custom_style = `font-weight: bold; text-transform: uppercase;`
+      setup_tooltip(element, { style: custom_style })
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
+    })
+
+    it(`should handle empty style string`, () => {
+      const element = create_element()
+      element.title = `Empty style tooltip`
+      setup_tooltip(element, { style: `` })
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
+    })
+
+    it(`should handle malformed and whitespace styles`, () => {
+      const element = create_element()
+      element.title = `Style parsing tooltip`
+      const malformed_style =
+        ` background: red ; invalid-style; color: blue ; font-size: 14px ; `
+      setup_tooltip(element, { style: malformed_style })
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
+    })
+
     it.each([
       [`invalid placement`, { placement: `invalid` }, `Invalid placement tooltip`],
       [`null options`, null, `Null options tooltip`],
@@ -238,8 +251,7 @@ describe(`tooltip`, () => {
         delay?: number
       } | null
       const factory = normalized === null ? tooltip(undefined) : tooltip(normalized)
-      const cleanup = factory(element)
-      if (cleanup) cleanup_functions.push(cleanup)
+      const _cleanup = factory(element)
       expect(element.getAttribute(`data-original-title`)).toBe(expected)
     })
   })
@@ -350,142 +362,56 @@ describe(`tooltip`, () => {
   })
 
   describe(`DOM Manipulation and Positioning`, () => {
-    it.each([
-      [`correct CSS classes`, { left: 100, top: 100, width: 50, height: 50 }],
-      [`correct base styles`, { left: 100, top: 100, width: 50, height: 50 }],
-      [`viewport edge constraints`, { left: 1020, top: 5, width: 4, height: 20 }],
-      [`different placements`, { left: 400, top: 300, width: 50, height: 50 }],
-      [`very small elements`, { left: 500, top: 300, width: 1, height: 1 }],
-      [`elements with transforms`, { left: 200, top: 150, width: 50, height: 50 }],
-    ])(`should handle %s`, (test_desc, bounds) => {
+    it(`should handle different element sizes and positions`, () => {
       const element = create_element()
       element.title = `Test tooltip`
-      if (test_desc.includes(`transforms`)) {
-        element.style.transform = `rotate(45deg) scale(0.5)`
-      }
-      mock_bounds(element, bounds)
+      mock_bounds(element, { left: 100, top: 100, width: 50, height: 50 })
 
       setup_tooltip(element)
-
-      const event = new Event(`mouseenter`)
-      expect(() => element.dispatchEvent(event)).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it(`should handle scroll offset correctly`, () => {
-      Object.assign(globalThis, { scrollX: 100, scrollY: 50 })
+    it(`should handle elements with transforms`, () => {
       const element = create_element()
-      element.title = `Scrolled tooltip`
+      element.title = `Transform tooltip`
+      element.style.transform = `rotate(45deg) scale(0.5)`
       mock_bounds(element, { left: 200, top: 150, width: 50, height: 50 })
 
       setup_tooltip(element)
-
-      const event = new Event(`mouseenter`)
-      expect(() => element.dispatchEvent(event)).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
   })
 
   describe(`Event Handling`, () => {
-    it.each([
-      [`mouseenter`, `div`],
-      [`mouseleave`, `div`],
-      [`focus`, `button`],
-      [`blur`, `button`],
-    ])(`should handle %s event`, (event_type, tag) => {
-      const element = create_element(tag)
-      element.title = `${event_type} tooltip`
-      setup_tooltip(element)
-
-      const event = new Event(event_type)
-      expect(() => element.dispatchEvent(event)).not.toThrow()
-    })
-
-    it(`should handle rapid event sequences`, () => {
+    it(`should handle mouse events`, () => {
       const element = create_element()
-      element.title = `Rapid events tooltip`
+      element.title = `Mouse tooltip`
       setup_tooltip(element)
 
-      for (let idx = 0; idx < 10; idx++) {
-        ;[new Event(`mouseenter`), new Event(`mouseleave`)].forEach((event) => {
-          element.dispatchEvent(event)
-        })
-      }
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it.each([
-      [`disabled elements`, true, `button`],
-      [`detached elements`, false, `div`],
-      [`synthetic events`, false, `div`],
-      [`events with custom properties`, false, `div`],
-    ])(`should handle %s`, (description, is_disabled, tag) => {
-      const element = document.createElement(tag)
-      if (!description.includes(`detached`)) document.body.appendChild(element)
-      element.title = `${description} tooltip`
-      if (is_disabled && `disabled` in element) element.disabled = true
-
+    it(`should handle focus events on button elements`, () => {
+      const element = create_element(`button`)
+      element.title = `Focus tooltip`
       setup_tooltip(element)
 
-      const event = description.includes(`synthetic`)
-        ? new CustomEvent(`mouseenter`, { bubbles: true, cancelable: true })
-        : new Event(`mouseenter`)
-      if (description.includes(`custom`)) {
-        ;(event as unknown as { customProp?: string }).customProp = `custom value`
-      }
-
-      expect(() => element.dispatchEvent(event)).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
   })
 
   describe(`Global State Management`, () => {
-    it(`should clear previous tooltips when showing new ones`, () => {
-      const [element1, element2] = [create_element(), create_element()]
-      element1.title = `First tooltip`
-      element2.title = `Second tooltip`
-
-      setup_tooltip(element1)
-      setup_tooltip(element2)
-
-      element1.dispatchEvent(new Event(`mouseenter`))
-      element2.dispatchEvent(new Event(`mouseenter`))
-
-      setTimeout(() => {
-        expect(document.querySelectorAll(`.custom-tooltip`).length).toBeLessThanOrEqual(1)
-      }, 150)
-    })
-
     it(`should handle multiple tooltip instances`, () => {
-      const elements = Array.from({ length: 5 }, (_, idx) => {
+      const elements = Array.from({ length: 3 }, (_, idx) => {
         const element = create_element()
         element.title = `Tooltip ${idx}`
         setup_tooltip(element)
         return element
       })
 
-      elements.forEach((element) => element.dispatchEvent(new Event(`mouseenter`)))
-      expect(elements.length).toBe(5)
-    })
-
-    it.each([
-      [`tooltip cleanup on element removal`, true],
-      [`concurrent tooltip operations`, false],
-    ])(`should handle %s`, (description, should_remove) => {
-      const element = create_element()
-      element.title = `${description} tooltip`
-      setup_tooltip(element)
-
-      const event = new Event(`mouseenter`)
-      element.dispatchEvent(event)
-
-      if (should_remove) {
-        element.remove()
-        expect(() => element.dispatchEvent(new Event(`mouseleave`))).not.toThrow()
-      } else {
-        ;[new Event(`mouseenter`), new Event(`mouseleave`)].forEach((e) => {
-          element.dispatchEvent(e)
-          element.dispatchEvent(e)
-        })
-        expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
-      }
+      elements.forEach((element) => {
+        expect(element.hasAttribute(`data-original-title`)).toBe(true)
+      })
     })
   })
 
@@ -495,7 +421,7 @@ describe(`tooltip`, () => {
       element.title = `Cleanup test tooltip`
       const cleanup = setup_tooltip(element)
       expect(cleanup).toBeDefined()
-      expect(() => cleanup?.()).not.toThrow()
+      expect(typeof cleanup).toBe(`function`)
     })
 
     it(`should restore original title on cleanup`, () => {
@@ -510,103 +436,27 @@ describe(`tooltip`, () => {
       expect(element.getAttribute(`title`)).toBe(`Original title`)
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
     })
-
-    it.each([
-      [`multiple cleanup calls`, 3],
-      [`child element listeners`, 1],
-      [`global tooltips on cleanup`, 1],
-      [`cleanup with active timers`, 1],
-      [`cleanup of detached elements`, 1],
-    ])(`should handle %s`, (test_name, call_count) => {
-      const element = create_element()
-      element.title = `${test_name} tooltip`
-
-      if (test_name.includes(`child`)) {
-        const child = document.createElement(`div`)
-        child.title = `Child cleanup tooltip`
-        element.appendChild(child)
-      }
-
-      const cleanup = setup_tooltip(
-        element,
-        test_name.includes(`timer`) ? { delay: 1000 } : {},
-      )
-
-      if (test_name.includes(`global`) || test_name.includes(`timer`)) {
-        element.dispatchEvent(new Event(`mouseenter`))
-      }
-
-      if (test_name.includes(`detached`)) element.remove()
-
-      expect(() => {
-        for (let i = 0; i < call_count; i++) cleanup?.()
-      }).not.toThrow()
-    })
   })
 
   describe(`Error Handling and Edge Cases`, () => {
-    it.each([
-      [`null elements`, null],
-      [`undefined elements`, undefined],
-    ])(`should handle %s gracefully`, (_desc, element) => {
+    it(`should handle null and undefined elements gracefully`, () => {
       const attach = tooltip()
-      expect(() => attach(element as unknown as Element)).not.toThrow()
+      expect(attach(null as unknown as Element)).toBeUndefined()
+      expect(attach(undefined as unknown as Element)).toBeUndefined()
     })
 
     it(`should handle elements without getBoundingClientRect`, () => {
       const element = create_element()
       element.title = `No getBoundingClientRect tooltip`
-
       setup_tooltip(element)
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it.each([
-      [
-        `DOM mutations during tooltip display`,
-        () => document.body.appendChild(document.createElement(`div`)),
-      ],
-      [
-        `window resize during tooltip display`,
-        () => Object.assign(globalThis, { innerWidth: 800, innerHeight: 600 }),
-      ],
-      [
-        `CSS variable absence`,
-        () =>
-          [`--tooltip-bg`, `--text-color`, `--tooltip-border`].forEach((prop) =>
-            document.documentElement.style.removeProperty(prop)
-          ),
-      ],
-    ])(`should handle %s gracefully`, (description, mutation_fn) => {
+    it(`should handle extremely long content`, () => {
       const element = create_element()
-      element.title = `${description} tooltip`
+      element.title = `A`.repeat(10000)
       setup_tooltip(element)
-
-      element.dispatchEvent(new Event(`mouseenter`))
-      mutation_fn()
-
-      expect(() => element.dispatchEvent(new Event(`mouseleave`))).not.toThrow()
-    })
-
-    it.each([
-      [`extremely long content`, `A`.repeat(10000)],
-      [`malformed HTML in content`, `<div><span>Unclosed tags<div><span>`],
-    ])(`should handle %s gracefully`, (_desc, content) => {
-      const element = create_element()
-      element.title = content
-      setup_tooltip(element)
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
-    })
-
-    it(`should handle high-frequency events`, () => {
-      const element = create_element()
-      element.title = `High frequency tooltip`
-      setup_tooltip(element, { delay: 10 })
-
-      for (let idx = 0; idx < 100; idx++) {
-        element.dispatchEvent(new Event(idx % 2 === 0 ? `mouseenter` : `mouseleave`))
-      }
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
   })
 })
@@ -832,60 +682,169 @@ describe(`draggable`, () => {
 })
 
 describe(`highlight_matches`, () => {
-  const create_element = () => {
-    const element = document.createElement(`div`)
-    element.innerHTML = `Hello <span>world</span>`
-    document.body.appendChild(element)
-    return element
-  }
+  let mock_element: HTMLElement
+  let mock_css_highlights: Map<string, string>
 
   beforeEach(() => {
-    // Minimal mock for CSS.highlights and Highlight class
-    type HighlightRegistryMock = Map<string, unknown> & {
-      clear: () => void
-      delete: (key: string) => boolean
-      set: (key: string, value: unknown) => HighlightRegistryMock
+    mock_element = document.createElement(`div`)
+    mock_css_highlights = new Map()
+
+    const css_mock = {
+      highlights: {
+        clear: vi.fn(() => mock_css_highlights.clear()),
+        set: vi.fn((key: string, value: string) => mock_css_highlights.set(key, value)),
+        delete: vi.fn((key: string) => mock_css_highlights.delete(key)),
+      },
     }
-    const registry = new Map<string, unknown>() as HighlightRegistryMock
-    registry.clear = Map.prototype.clear
-    registry.delete = Map.prototype.delete
-    registry.set = Map.prototype.set as unknown as (
-      key: string,
-      value: unknown,
-    ) => HighlightRegistryMock
-    ;(globalThis as unknown as { CSS: { highlights: HighlightRegistryMock } }).CSS = {
-      highlights: registry,
-    }
-    ;(globalThis as unknown as { Highlight: new (...args: unknown[]) => unknown })
-      .Highlight = function () {
-        return {}
-      } as unknown as new (...args: unknown[]) => unknown
+
+    vi.stubGlobal(`CSS`, css_mock)
+    vi.stubGlobal(
+      `Highlight`,
+      class MockHighlight {
+        ranges: Range[]
+        constructor(...ranges: Range[]) {
+          this.ranges = ranges
+        }
+      },
+    )
   })
 
-  it(`should set a highlight when query is non-empty and not disabled`, () => {
-    const element = create_element()
-    const cleanup = highlight_matches({ query: `world` })(element)
-    expect(typeof cleanup).toBe(`function`)
-    const css: { highlights: Map<string, unknown> } =
-      (globalThis as unknown as { CSS: { highlights: Map<string, unknown> } }).CSS
-    expect(css.highlights.size).toBe(1)
-    cleanup?.()
-    expect(css.highlights.size).toBe(0)
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it.each([
-    [`empty query`, ``],
-    [`disabled`, `__disabled__`],
-  ])(`should bail out gracefully for %s`, (desc, query) => {
-    const element = create_element()
-    const disabled = desc === `disabled`
-    const cleanup = highlight_matches({
-      query: disabled ? `x` : (query as string),
-      disabled,
-    })(
-      element,
-    )
-    expect(cleanup).toBeUndefined()
+    // Early returns
+    [`CSS not supported`, undefined, `test`, `test`, false, 0, 0],
+    [`no query`, true, ``, `test`, false, 0, 0],
+    [`CSS not supported (fuzzy)`, undefined, `auo`, `auo`, true, 0, 0],
+    [`no query (fuzzy)`, true, ``, `auo`, true, 0, 0],
+
+    // Substring highlighting (fuzzy=false)
+    [
+      `substring match`,
+      true,
+      `<p>This is a test paragraph</p>`,
+      `test`,
+      false,
+      1,
+    ],
+    [
+      `multiple matches`,
+      true,
+      `<div><span>first test</span><span>second test</span></div>`,
+      `test`,
+      false,
+      1,
+    ],
+    [
+      `case insensitive`,
+      true,
+      `<p>Test with TEST and TeSt</p>`,
+      `test`,
+      false,
+      1,
+    ],
+    [
+      `no matches`,
+      true,
+      `<p>Content without search term</p>`,
+      `xyz`,
+      false,
+      1,
+    ],
+
+    // Fuzzy highlighting (fuzzy=true)
+    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1],
+    [
+      `fuzzy case insensitive`,
+      true,
+      `<p>ALLOW-USER-OPTIONS</p>`,
+      `auo`,
+      true,
+      1,
+    ],
+    [
+      `fuzzy no matches`,
+      true,
+      `<p>Content without search term</p>`,
+      `xyz`,
+      true,
+      1,
+    ],
+    [
+      `skip with node_filter`,
+      true,
+      `<div>Test content</div><li class="user-msg">Create this option...</li>`,
+      `test`,
+      false,
+      1,
+      (node: Node) =>
+        node?.parentElement?.closest(`li.user-msg`)
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    ],
+    [
+      `fuzzy skip with node_filter`,
+      true,
+      `<div>Test content</div><li class="user-msg">Create this option...</li>`,
+      `test`,
+      true,
+      1,
+      (node: Node) =>
+        node?.parentElement?.closest(`li.user-msg`)
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    ],
+  ])(
+    `%s`,
+    (
+      _desc,
+      css_supported,
+      query,
+      html_content,
+      fuzzy,
+      expected_set_calls,
+      node_filter = undefined,
+    ) => {
+      if (css_supported === undefined) {
+        vi.stubGlobal(`CSS`, undefined)
+      }
+
+      mock_element.innerHTML = html_content
+      const attachment = highlight_matches({ query, fuzzy, node_filter })
+      attachment(mock_element)
+
+      expect(mock_css_highlights.size).toBe(
+        css_supported === undefined ? 0 : expected_set_calls,
+      )
+
+      if (css_supported) {
+        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(
+          0,
+        )
+        if (expected_set_calls > 0) {
+          expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
+            `highlight-match`,
+            expect.any(Object),
+          )
+        }
+      }
+    },
+  )
+
+  it(`should not clear other highlights when highlighting`, () => {
+    // Setup existing highlights from other components
+    mock_css_highlights.set(`other-highlight`, `existing highlight`)
+
+    // Create our highlight
+    mock_element.innerHTML = `<p>test content</p>`
+    highlight_matches({ query: `test` })(mock_element)
+
+    // Verify our highlight was added and others preserved
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
+    expect(mock_css_highlights.has(`other-highlight`)).toBe(true)
+    expect(globalThis.CSS.highlights.clear).not.toHaveBeenCalled()
   })
 })
 

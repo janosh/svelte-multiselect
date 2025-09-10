@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { CircleSpinner, Icon, Wiggle } from '$lib'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
+  import { highlight_matches } from './attachments'
+  import CircleSpinner from './CircleSpinner.svelte'
+  import Icon from './Icon.svelte'
   import type { MultiSelectProps, Option as T } from './types'
-  import { get_label, get_style, highlight_matching_nodes } from './utils'
+  import { fuzzy_match, get_label, get_style } from './utils'
+  import Wiggle from './Wiggle.svelte'
 
   type Option = $$Generic<T>
 
@@ -26,8 +29,12 @@
     key = (opt) => `${get_label(opt)}`.toLowerCase(),
     filterFunc = (opt, searchText) => {
       if (!searchText) return true
-      return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
+      const label = `${get_label(opt)}`
+      return fuzzy
+        ? fuzzy_match(searchText, label)
+        : label.toLowerCase().includes(searchText.toLowerCase())
     },
+    fuzzy = true,
     closeDropdownOnSelect = `if-mobile`,
     form_input = $bindable(null),
     highlightMatches = true,
@@ -398,10 +405,27 @@
       // active with wrap around at both ends
       const increment = event.key === `ArrowUp` ? -1 : 1
 
-      activeIndex = (activeIndex + increment) % matchingOptions.length
+      // Include user message in total count if it exists
+      const has_user_msg = searchText && (
+        (allowUserOptions && createOptionMsg) ||
+        (!duplicates && selected.map(get_label).includes(searchText)) ||
+        (matchingOptions.length === 0 && noMatchingOptionsMsg)
+      )
+      const total_items = matchingOptions.length + (has_user_msg ? 1 : 0)
+
+      activeIndex = (activeIndex + increment) % total_items
       // in JS % behaves like remainder operator, not real modulo, so negative numbers stay negative
       // need to do manual wrap around at 0
-      if (activeIndex < 0) activeIndex = matchingOptions.length - 1
+      if (activeIndex < 0) activeIndex = total_items - 1
+
+      // Handle user message activation
+      if (has_user_msg && activeIndex === matchingOptions.length) {
+        option_msg_is_active = true
+        activeOption = null
+      } else {
+        option_msg_is_active = false
+        activeOption = matchingOptions[activeIndex] ?? null
+      }
 
       if (autoScroll) {
         await tick()
@@ -490,30 +514,6 @@
   }
 
   let ul_options = $state<HTMLUListElement>()
-
-  // Update highlights whenever search text changes (after ul_options is available)
-  $effect(() => {
-    if (ul_options && highlightMatches) {
-      if (searchText) {
-        highlight_matching_nodes(ul_options, searchText, noMatchingOptionsMsg)
-      } else if (typeof CSS !== `undefined` && CSS.highlights) {
-        CSS.highlights.delete?.(`sms-search-matches`) // Clear highlights when search text is empty
-      }
-    }
-  })
-
-  // highlight text matching user-entered search text in available options
-  function highlight_matching_options(
-    event: Event & { currentTarget?: HTMLInputElement },
-  ) {
-    if (!highlightMatches || !ul_options) return
-
-    // get input's search query
-    const query = (event?.target as HTMLInputElement)?.value.trim().toLowerCase()
-    if (!query) return
-
-    highlight_matching_nodes(ul_options, query, noMatchingOptionsMsg)
-  }
 
   const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (event) => {
     handle_keydown(event) // Restore internal logic
@@ -741,7 +741,6 @@
       onmouseup={open_dropdown}
       onkeydown={handle_input_keydown}
       onfocus={handle_input_focus}
-      oninput={highlight_matching_options}
       onblur={handle_input_blur}
       {onclick}
       {onkeyup}
@@ -812,6 +811,17 @@
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
       use:portal={{ target_node: outerDiv, ...portal_params }}
+      {@attach highlight_matches({
+        query: searchText,
+        disabled: !highlightMatches,
+        fuzzy,
+        css_class: `sms-search-matches`,
+        // don't highlight text in the "Create this option..." message
+        node_filter: (node) =>
+          node?.parentElement?.closest(`li.user-msg`)
+            ? NodeFilter.FILTER_REJECT
+            : NodeFilter.FILTER_ACCEPT,
+      })}
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"
@@ -821,10 +831,13 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as
-        optionItem,
+      {#each matchingOptions.slice(
+        0,
+        maxOptions == null ? Infinity : Math.max(0, maxOptions),
+      ) as
+        option_item,
         idx
-        (duplicates ? [key(optionItem), idx] : key(optionItem))
+        (duplicates ? [key(option_item), idx] : key(option_item))
       }
         {@const {
         label,
@@ -832,21 +845,22 @@
         title = null,
         selectedTitle = null,
         disabledTitle = defaultDisabledTitle,
-      } = optionItem instanceof Object ? optionItem : { label: optionItem }}
+      } = option_item instanceof Object ? option_item : { label: option_item }}
         {@const active = activeIndex === idx}
+        {@const selected = is_selected(label)}
         {@const optionStyle =
-        [get_style(optionItem, `option`), liOptionStyle].filter(Boolean).join(
+        [get_style(option_item, `option`), liOptionStyle].filter(Boolean).join(
           ` `,
         ) ||
         null}
         <li
           onclick={(event) => {
             if (disabled) return
-            if (keepSelectedInDropdown) toggle_option(optionItem, event)
-            else add(optionItem, event)
+            if (keepSelectedInDropdown) toggle_option(option_item, event)
+            else add(option_item, event)
           }}
-          title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
-          class:selected={is_selected(label)}
+          title={disabled ? disabledTitle : (selected && selectedTitle) || title}
+          class:selected
           class:active
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
@@ -857,13 +871,13 @@
             if (!disabled) activeIndex = idx
           }}
           role="option"
-          aria-selected="false"
+          aria-selected={selected ? `true` : `false`}
           style={optionStyle}
           onkeydown={(event) => {
             if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
               event.preventDefault()
-              if (keepSelectedInDropdown) toggle_option(optionItem, event)
-              else add(optionItem, event)
+              if (keepSelectedInDropdown) toggle_option(option_item, event)
+              else add(option_item, event)
             }
           }}
         >
@@ -871,25 +885,25 @@
             <input
               type="checkbox"
               class="option-checkbox"
-              checked={is_selected(label)}
-              aria-label="Toggle {get_label(optionItem)}"
+              checked={selected}
+              aria-label="Toggle {get_label(option_item)}"
               tabindex="-1"
             />
           {/if}
           {#if option}
             {@render option({
-          option: optionItem,
+          option: option_item,
           idx,
         })}
           {:else if children}
             {@render children({
-          option: optionItem,
+          option: option_item,
           idx,
         })}
           {:else if parseLabelsAsHtml}
-            {@html get_label(optionItem)}
+            {@html get_label(option_item)}
           {:else}
-            {get_label(optionItem)}
+            {get_label(option_item)}
           {/if}
         </li>
       {/each}
