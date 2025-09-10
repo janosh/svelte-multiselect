@@ -21,7 +21,7 @@
   }
   interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children`> {
     options: Option[]
-    selected?: string | number | null
+    selected?: string | number | Option | null
     id?: string | null
     name?: string | null
     disabled?: boolean
@@ -30,8 +30,10 @@
     onclick?: (event: MouseEvent) => void
     onchange?: (event: Event) => void
     oninput?: (event: Event) => void
-    option_snippet?: Snippet<[{ option: Option; selected: boolean; active: boolean }]>
-    children?: Snippet<[{ option: Option; selected: boolean; active: boolean }]>
+    option_snippet?: Snippet<
+      [{ option: Option; active: boolean }]
+    >
+    children?: Snippet<[{ option: Option; active: boolean }]>
   }
   let {
     options,
@@ -53,7 +55,8 @@
 <div {id} {...rest}>
   {#each options as option (JSON.stringify(option))}
     {@const label = get_label(option)}
-    {@const active = selected && get_label(option) === get_label(selected)}
+    {@const active = selected != null &&
+      get_label(option) === get_label(selected as unknown as GenericOption)}
     <label class:active aria-label={aria_label}>
       <input
         type="radio"
@@ -67,9 +70,9 @@
         {onclick}
       />
       {#if option_snippet}
-        {@render option_snippet({ option, selected, active })}
+        {@render option_snippet({ option, active })}
       {:else if children}
-        {@render children({ option, selected, active })}
+        {@render children({ option, active })}
       {:else}<span>{label}</span>{/if}
     </label>
   {/each}

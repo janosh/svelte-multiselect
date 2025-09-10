@@ -124,7 +124,7 @@ describe(`PrevNext`, () => {
 
     if (level === `warn`) {
       expect(warn).toHaveBeenCalledWith(
-        `PrevNext received 1 items - minimum of 2 expected`,
+        `PrevNext received 1 items - minimum of 3 expected`,
       )
     } else if (level === `error`) {
       expect(error).toHaveBeenCalledWith(

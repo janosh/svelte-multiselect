@@ -5,8 +5,7 @@
   export type Item = string | [string, unknown]
   type T = $$Generic<Item>
 
-  interface Props
-    extends Omit<HTMLAttributes<HTMLDivElement>, `children` | `onkeyup`> {
+  interface Props extends Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> {
     items?: T[]
     node?: string
     current?: string
@@ -54,7 +53,7 @@
     if (log !== `silent`) {
       if (items_arr.length < 2 && log === `verbose`) {
         console.warn(
-          `PrevNext received ${items_arr.length} items - minimum of 2 expected`,
+          `PrevNext received ${items_arr.length} items - minimum of 3 expected`,
         )
       }
 
@@ -69,6 +68,7 @@
 
   function handle_keyup(event: KeyboardEvent) {
     if (!onkeyup) return
+    if ((items_arr?.length ?? 0) < 2) return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]
     if (to) {

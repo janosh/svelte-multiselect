@@ -16,15 +16,16 @@ export const get_label = (opt: Option) => {
 // This function is used extract CSS strings from a {selected, option} style
 // object to be used in the style attribute of the option.
 // If the style is a string, it will be returned as is
-export function get_style(option: Option, key: `selected` | `option` | null = null) {
+export function get_style(
+  option: Option,
+  key: `selected` | `option` | null | undefined = null,
+) {
+  if (key === undefined) key = null
   let css_str = ``
-  if (![`selected`, `option`, null].includes(key)) {
-    console.error(`MultiSelect: Invalid key=${key} for get_style`)
-  }
+  const valid_key = key === null || key === `selected` || key === `option`
+  if (!valid_key) console.error(`MultiSelect: Invalid key=${key} for get_style`)
   if (typeof option === `object` && option.style) {
-    if (typeof option.style === `string`) {
-      css_str = option.style
-    }
+    if (typeof option.style === `string`) css_str = option.style
     if (typeof option.style === `object`) {
       if (key && key in option.style) return option.style[key] ?? ``
       else {

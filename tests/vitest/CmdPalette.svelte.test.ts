@@ -10,15 +10,95 @@ const mock_actions = [
 ]
 
 test.each([
-  { triggers: [`k`], key_to_press: `k`, with_meta: true, should_open: true },
-  { triggers: [`o`], key_to_press: `o`, with_meta: true, should_open: true },
-  { triggers: [`k`, `o`], key_to_press: `k`, with_meta: true, should_open: true },
-  { triggers: [`k`, `o`], key_to_press: `o`, with_meta: true, should_open: true },
-  { triggers: [`k`], key_to_press: `k`, with_meta: false, should_open: false },
-  { triggers: [`j`, `l`], key_to_press: `k`, with_meta: true, should_open: false },
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`o`],
+    key_to_press: `o`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `o`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: false,
+    should_open: false,
+  },
+  {
+    triggers: [`j`, `l`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: false,
+  },
+  // Test Ctrl key support
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`o`],
+    key_to_press: `o`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `o`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`j`, `l`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: false,
+  },
+  // Test that both Meta and Ctrl work together
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: true,
+    should_open: true,
+  },
 ])(
-  `handles trigger keys: $triggers with key $key_to_press (meta: $with_meta) -> $should_open`,
-  async ({ triggers, key_to_press, with_meta, should_open }) => {
+  `handles trigger keys: $triggers with key $key_to_press (meta: $with_meta, ctrl: $with_ctrl) -> $should_open`,
+  async ({ triggers, key_to_press, with_meta, with_ctrl, should_open }) => {
     const props = $state({
       open: false,
       triggers,
@@ -28,7 +108,11 @@ test.each([
     mount(CmdPalette, { target: document.body, props })
 
     globalThis.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: key_to_press, metaKey: with_meta }),
+      new KeyboardEvent(`keydown`, {
+        key: key_to_press,
+        metaKey: with_meta,
+        ctrlKey: with_ctrl,
+      }),
     )
     await tick()
 
@@ -127,6 +211,53 @@ test(`handles click outside to close dialog`, async () => {
 
   expect(props.open).toBe(false)
   expect(document.querySelector(`dialog`)).toBe(null)
+})
+
+test(`does not close dialog when clicking on portalled options`, async () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  // Create a mock portalled options element
+  const portalled_options = document.createElement(`ul`)
+  portalled_options.className = `options`
+  portalled_options.innerHTML = `<li>Option 1</li><li>Option 2</li>`
+  document.body.appendChild(portalled_options)
+
+  // Click on the portalled options
+  const option_li = portalled_options.querySelector(`li`)
+  option_li?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  await tick()
+
+  // Dialog should still be open
+  expect(props.open).toBe(true)
+  expect(document.querySelector(`dialog`)).not.toBe(null)
+
+  // Clean up
+  document.body.removeChild(portalled_options)
+})
+
+test(`!target.closest('ul.options') prevents premature closure`, async () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  // Create nested ul.options structure to test closest() logic
+  const container = document.createElement(`div`)
+  container.innerHTML = `
+    <ul class="options">
+      <li><span>Nested option</span></li>
+    </ul>
+  `
+  document.body.appendChild(container)
+
+  // Click on nested span inside ul.options
+  const span = container.querySelector(`span`)
+  span?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  await tick()
+
+  // Dialog should remain open due to !target.closest('ul.options') check
+  expect(props.open).toBe(true)
 })
 
 test(`applies custom styles and props correctly`, async () => {

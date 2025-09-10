@@ -42,22 +42,22 @@ test.describe(`fuzzy matching`, () => {
       const options = [`garlic`, `green apple`, `grape`, `banana`]
 
       input.addEventListener(`input`, (evt) => {
-        const searchText = (evt.target as HTMLInputElement).value.toLowerCase()
-        const filteredOptions = options.filter((opt) =>
-          opt.toLowerCase().includes(searchText)
+        const search_text = (evt.target as HTMLInputElement).value.toLowerCase()
+        const filtered_options = options.filter((opt) =>
+          opt.toLowerCase().includes(search_text)
         )
 
-        const optionsList = document.createElement(`ul`)
-        optionsList.className = `options`
-        filteredOptions.forEach((opt) => {
+        const options_list = document.createElement(`ul`)
+        options_list.className = `options`
+        filtered_options.forEach((opt) => {
           const li = document.createElement(`li`)
           li.textContent = opt
-          optionsList.appendChild(li)
+          options_list.appendChild(li)
         })
 
-        const existingOptions = container.querySelector(`.options`)
-        if (existingOptions) existingOptions.remove()
-        container.appendChild(optionsList)
+        const existing_options = container.querySelector(`.options`)
+        if (existing_options) existing_options.remove()
+        container.appendChild(options_list)
       })
     })
 
@@ -75,7 +75,7 @@ test.describe(`fuzzy matching`, () => {
     await page.click(`#foods input[autocomplete]`)
     await page.fill(`#foods input[autocomplete]`, `ga`)
 
-    const highlightedElements = await page.evaluate(() => {
+    const highlighted_elements = await page.evaluate(() => {
       try {
         const highlights = globalThis.CSS?.highlights?.get?.(`sms-search-matches`)
         // @ts-expect-error - Highlight.ranges will exist in browser
@@ -85,7 +85,7 @@ test.describe(`fuzzy matching`, () => {
       }
     })
 
-    expect(highlightedElements).toBeGreaterThanOrEqual(0)
+    expect(highlighted_elements).toBeGreaterThanOrEqual(0)
   })
 
   test(`fuzzy prop defaults to true`, async ({ page }) => {

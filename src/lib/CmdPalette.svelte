@@ -40,12 +40,17 @@
   })
 
   async function toggle(event: KeyboardEvent) {
-    if (triggers.includes(event.key) && event.metaKey && !open) open = true
+    const is_trigger = triggers.includes(event.key) &&
+      (event.metaKey || event.ctrlKey)
+    if (is_trigger && !open) open = true
     else if (close_keys.includes(event.key) && open) open = false
   }
 
   function close_if_outside(event: MouseEvent) {
-    if (open && !dialog?.contains(event.target as Node)) open = false
+    const target = event.target as HTMLElement
+    if (open && !dialog?.contains(target) && !target.closest(`ul.options`)) {
+      open = false
+    }
   }
 
   function trigger_action_and_close(data: { option: Option }) {

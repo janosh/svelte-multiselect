@@ -82,31 +82,6 @@ describe(`get_html_sort_value`, () => {
 })
 
 describe(`tooltip`, () => {
-  let cleanup_functions: (() => void)[]
-
-  const setup_env = () => {
-    cleanup_functions = []
-    document.body.innerHTML = ``
-    document.documentElement.style.setProperty(`--tooltip-bg`, `#333`)
-    document.documentElement.style.setProperty(`--text-color`, `#fff`)
-    document.documentElement.style.setProperty(`--tooltip-border`, `1px solid #555`)
-    Object.assign(globalThis, {
-      innerWidth: 1024,
-      innerHeight: 768,
-      scrollX: 0,
-      scrollY: 0,
-    })
-  }
-
-  const cleanup_env = () => {
-    cleanup_functions.forEach((cleanup) => {
-      cleanup()
-    })
-    cleanup_functions = []
-    document.querySelectorAll(`.custom-tooltip`).forEach((tooltip) => tooltip.remove())
-    vi.clearAllTimers()
-  }
-
   const create_element = (tag = `div`) => {
     const element = document.createElement(tag)
     document.body.appendChild(element)
@@ -115,7 +90,6 @@ describe(`tooltip`, () => {
 
   const setup_tooltip = (element: HTMLElement, options = {}) => {
     const cleanup = tooltip(options)(element)
-    if (cleanup) cleanup_functions.push(cleanup)
     return cleanup
   }
 
@@ -132,9 +106,6 @@ describe(`tooltip`, () => {
       toJSON: () => ({}),
     }))
   }
-
-  beforeEach(setup_env)
-  afterEach(cleanup_env)
 
   describe(`Content Sources`, () => {
     it.each([
@@ -312,8 +283,7 @@ describe(`tooltip`, () => {
         delay?: number
       } | null
       const factory = normalized === null ? tooltip(undefined) : tooltip(normalized)
-      const cleanup = factory(element)
-      if (cleanup) cleanup_functions.push(cleanup)
+      const _cleanup = factory(element)
       expect(element.getAttribute(`data-original-title`)).toBe(expected)
     })
   })
@@ -917,6 +887,7 @@ describe(`highlight_matches`, () => {
       highlights: {
         clear: vi.fn(() => mock_css_highlights.clear()),
         set: vi.fn((key: string, value: string) => mock_css_highlights.set(key, value)),
+        delete: vi.fn((key: string) => mock_css_highlights.delete(key)),
       },
     }
 
@@ -951,7 +922,6 @@ describe(`highlight_matches`, () => {
       `test`,
       false,
       1,
-      1,
     ],
     [
       `multiple matches`,
@@ -959,7 +929,6 @@ describe(`highlight_matches`, () => {
       `<div><span>first test</span><span>second test</span></div>`,
       `test`,
       false,
-      1,
       1,
     ],
     [
@@ -969,7 +938,6 @@ describe(`highlight_matches`, () => {
       `test`,
       false,
       1,
-      1,
     ],
     [
       `no matches`,
@@ -978,18 +946,16 @@ describe(`highlight_matches`, () => {
       `xyz`,
       false,
       1,
-      1,
     ],
 
     // Fuzzy highlighting (fuzzy=true)
-    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1, 1],
+    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1],
     [
       `fuzzy case insensitive`,
       true,
       `<p>ALLOW-USER-OPTIONS</p>`,
       `auo`,
       true,
-      1,
       1,
     ],
     [
@@ -999,7 +965,6 @@ describe(`highlight_matches`, () => {
       `xyz`,
       true,
       1,
-      1,
     ],
     [
       `skip with node_filter`,
@@ -1007,7 +972,6 @@ describe(`highlight_matches`, () => {
       `<div>Test content</div><li class="user-msg">Create this option...</li>`,
       `test`,
       false,
-      1,
       1,
       (node: Node) =>
         node?.parentElement?.closest(`li.user-msg`)
@@ -1020,7 +984,6 @@ describe(`highlight_matches`, () => {
       `<div>Test content</div><li class="user-msg">Create this option...</li>`,
       `test`,
       true,
-      1,
       1,
       (node: Node) =>
         node?.parentElement?.closest(`li.user-msg`)
@@ -1035,7 +998,6 @@ describe(`highlight_matches`, () => {
       query,
       html_content,
       fuzzy,
-      expected_clear_calls,
       expected_set_calls,
       node_filter = undefined,
     ) => {
@@ -1053,17 +1015,31 @@ describe(`highlight_matches`, () => {
 
       if (css_supported) {
         expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(
-          expected_clear_calls,
+          0,
         )
         if (expected_set_calls > 0) {
           expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
-            `sms-search-matches`,
+            `highlight-match`,
             expect.any(Object),
           )
         }
       }
     },
   )
+
+  it(`should not clear other highlights when highlighting`, () => {
+    // Setup existing highlights from other components
+    mock_css_highlights.set(`other-highlight`, `existing highlight`)
+
+    // Create our highlight
+    mock_element.innerHTML = `<p>test content</p>`
+    highlight_matches({ query: `test` })(mock_element)
+
+    // Verify our highlight was added and others preserved
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
+    expect(mock_css_highlights.has(`other-highlight`)).toBe(true)
+    expect(globalThis.CSS.highlights.clear).not.toHaveBeenCalled()
+  })
 })
 
 describe(`sortable`, () => {

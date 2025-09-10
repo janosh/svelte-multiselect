@@ -82,7 +82,7 @@ Exported from `svelte-multiselect/attachments`:
   </button>
 </div>
 
-<!-- New options: disabled and custom style -->
+<!-- Note: Do not pass untrusted HTML/strings to `content` or `style`. Sanitize or use plain text. -->
 <div style="display: flex; gap: 1em; margin: 2em 0">
   <button
     style="--tooltip-bg: #2d3748; --text-color: #e2e8f0; --tooltip-border: 2px solid #4299e1; --tooltip-arrow-size: 8"

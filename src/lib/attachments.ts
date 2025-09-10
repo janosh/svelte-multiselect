@@ -225,10 +225,12 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     css_class = `highlight-match`,
   } = ops
 
-  if (!query || disabled || typeof CSS === `undefined` || !CSS.highlights) return // abort if CSS highlight API not supported
-
-  // clear previous ranges from HighlightRegistry
-  CSS.highlights.clear()
+  // abort if CSS highlight API not supported
+  if (typeof CSS === `undefined` || !CSS.highlights) return
+  // always clear our own highlight first
+  CSS.highlights.delete(css_class)
+  // if disabled or empty query, stop after cleanup
+  if (!query || disabled) return
 
   const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
     acceptNode: node_filter,
