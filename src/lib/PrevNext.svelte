@@ -4,7 +4,6 @@
 
   export type Item = string | [string, unknown]
   type T = $$Generic<Item>
-  const min_items = 3
 
   interface Props extends Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> {
     items?: T[]
@@ -18,6 +17,7 @@
     children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
     between?: Snippet<[]>
     next_snippet?: Snippet<[{ item: Item }]>
+    min_items?: number
   }
   let {
     items = [],
@@ -34,6 +34,7 @@
     children,
     between,
     next_snippet,
+    min_items = 3,
     ...rest
   }: Props = $props()
 

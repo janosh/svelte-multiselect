@@ -31,7 +31,8 @@
     onkeydown?.(event)
     if (event.key === `Enter`) {
       event.preventDefault()
-      checked = !checked
+      const target = event.target as HTMLInputElement
+      target.click() // simulate real user toggle so 'change' is dispatched
     }
   }
 </script>
