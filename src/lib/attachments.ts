@@ -208,9 +208,10 @@ export const sortable = (
   }
 }
 
-type HighlightOptions = {
+export type HighlightOptions = {
   query?: string
   disabled?: boolean
+  fuzzy?: boolean
   node_filter?: (node: Node) => number
   css_class?: string
 }
@@ -219,14 +220,15 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   const {
     query = ``,
     disabled = false,
+    fuzzy = false,
     node_filter = () => NodeFilter.FILTER_ACCEPT,
     css_class = `highlight-match`,
   } = ops
 
+  if (!query || disabled || typeof CSS === `undefined` || !CSS.highlights) return // abort if CSS highlight API not supported
+
   // clear previous ranges from HighlightRegistry
   CSS.highlights.clear()
-
-  if (!query || disabled || typeof CSS === `undefined` || !CSS.highlights) return // abort if CSS highlight API not supported
 
   const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
     acceptNode: node_filter,
@@ -242,30 +244,63 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   // iterate over all text nodes and find matches
   const ranges = text_nodes.map((el) => {
     const text = el.textContent?.toLowerCase()
-    const indices = []
-    let start_pos = 0
-    while (text && start_pos < text.length) {
-      const index = text.indexOf(query, start_pos)
-      if (index === -1) break
-      indices.push(index)
-      start_pos = index + query.length
-    }
+    if (!text) return []
 
-    // create range object for each str found in the text node
-    return indices.map((index) => {
-      const range = new Range()
-      range.setStart(el, index)
-      range.setEnd(el, index + query?.length)
-      return range
-    })
+    const search = query.toLowerCase()
+
+    if (fuzzy) {
+      // Fuzzy highlighting: highlight individual characters that match in order
+      const matching_indices: number[] = []
+
+      let search_idx = 0
+      let target_idx = 0
+
+      // Find matching character indices
+      while (search_idx < search.length && target_idx < text.length) {
+        if (search[search_idx] === text[target_idx]) {
+          matching_indices.push(target_idx)
+          search_idx++
+        }
+        target_idx++
+      }
+
+      // Only create ranges if we found all characters in order
+      if (search_idx === search.length) {
+        return matching_indices.map((index) => {
+          const range = new Range()
+          range.setStart(el, index)
+          range.setEnd(el, index + 1) // highlight single character
+          return range
+        })
+      }
+
+      return []
+    } else {
+      // Substring highlighting: highlight consecutive substrings
+      const indices = []
+      let start_pos = 0
+      while (start_pos < text.length) {
+        const index = text.indexOf(search, start_pos)
+        if (index === -1) break
+        indices.push(index)
+        start_pos = index + search.length
+      }
+
+      // create range object for each substring found in the text node
+      return indices.map((index) => {
+        const range = new Range()
+        range.setStart(el, index)
+        range.setEnd(el, index + search.length)
+        return range
+      })
+    }
   })
 
   // create Highlight object from ranges and add to registry
   CSS.highlights.set(css_class, new Highlight(...ranges.flat()))
 
-  return () => { // Return cleanup function
-    CSS.highlights.delete(css_class)
-  }
+  // Return cleanup function
+  return () => CSS.highlights.delete(css_class)
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time

@@ -906,61 +906,164 @@ describe(`draggable`, () => {
 })
 
 describe(`highlight_matches`, () => {
-  const create_element = () => {
-    const element = document.createElement(`div`)
-    element.innerHTML = `Hello <span>world</span>`
-    document.body.appendChild(element)
-    return element
-  }
+  let mock_element: HTMLElement
+  let mock_css_highlights: Map<string, string>
 
   beforeEach(() => {
-    // Minimal mock for CSS.highlights and Highlight class
-    type HighlightRegistryMock = Map<string, unknown> & {
-      clear: () => void
-      delete: (key: string) => boolean
-      set: (key: string, value: unknown) => HighlightRegistryMock
+    mock_element = document.createElement(`div`)
+    mock_css_highlights = new Map()
+
+    const css_mock = {
+      highlights: {
+        clear: vi.fn(() => mock_css_highlights.clear()),
+        set: vi.fn((key: string, value: string) => mock_css_highlights.set(key, value)),
+      },
     }
-    const registry = new Map<string, unknown>() as HighlightRegistryMock
-    registry.clear = Map.prototype.clear
-    registry.delete = Map.prototype.delete
-    registry.set = Map.prototype.set as unknown as (
-      key: string,
-      value: unknown,
-    ) => HighlightRegistryMock
-    ;(globalThis as unknown as { CSS: { highlights: HighlightRegistryMock } }).CSS = {
-      highlights: registry,
-    }
-    ;(globalThis as unknown as { Highlight: new (...args: unknown[]) => unknown })
-      .Highlight = function () {
-        return {}
-      } as unknown as new (...args: unknown[]) => unknown
+
+    vi.stubGlobal(`CSS`, css_mock)
+    vi.stubGlobal(
+      `Highlight`,
+      class MockHighlight {
+        ranges: Range[]
+        constructor(...ranges: Range[]) {
+          this.ranges = ranges
+        }
+      },
+    )
   })
 
-  it(`should set a highlight when query is non-empty and not disabled`, () => {
-    const element = create_element()
-    const cleanup = highlight_matches({ query: `world` })(element)
-    expect(typeof cleanup).toBe(`function`)
-    const css: { highlights: Map<string, unknown> } =
-      (globalThis as unknown as { CSS: { highlights: Map<string, unknown> } }).CSS
-    expect(css.highlights.size).toBe(1)
-    cleanup?.()
-    expect(css.highlights.size).toBe(0)
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it.each([
-    [`empty query`, ``],
-    [`disabled`, `__disabled__`],
-  ])(`should bail out gracefully for %s`, (desc, query) => {
-    const element = create_element()
-    const disabled = desc === `disabled`
-    const cleanup = highlight_matches({
-      query: disabled ? `x` : (query as string),
-      disabled,
-    })(
-      element,
-    )
-    expect(cleanup).toBeUndefined()
-  })
+    // Early returns
+    [`CSS not supported`, undefined, `test`, `test`, false, 0, 0],
+    [`no query`, true, ``, `test`, false, 0, 0],
+    [`CSS not supported (fuzzy)`, undefined, `auo`, `auo`, true, 0, 0],
+    [`no query (fuzzy)`, true, ``, `auo`, true, 0, 0],
+
+    // Substring highlighting (fuzzy=false)
+    [
+      `substring match`,
+      true,
+      `<p>This is a test paragraph</p>`,
+      `test`,
+      false,
+      1,
+      1,
+    ],
+    [
+      `multiple matches`,
+      true,
+      `<div><span>first test</span><span>second test</span></div>`,
+      `test`,
+      false,
+      1,
+      1,
+    ],
+    [
+      `case insensitive`,
+      true,
+      `<p>Test with TEST and TeSt</p>`,
+      `test`,
+      false,
+      1,
+      1,
+    ],
+    [
+      `no matches`,
+      true,
+      `<p>Content without search term</p>`,
+      `xyz`,
+      false,
+      1,
+      1,
+    ],
+
+    // Fuzzy highlighting (fuzzy=true)
+    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1, 1],
+    [
+      `fuzzy case insensitive`,
+      true,
+      `<p>ALLOW-USER-OPTIONS</p>`,
+      `auo`,
+      true,
+      1,
+      1,
+    ],
+    [
+      `fuzzy no matches`,
+      true,
+      `<p>Content without search term</p>`,
+      `xyz`,
+      true,
+      1,
+      1,
+    ],
+    [
+      `skip with node_filter`,
+      true,
+      `<div>Test content</div><li class="user-msg">Create this option...</li>`,
+      `test`,
+      false,
+      1,
+      1,
+      (node: Node) =>
+        node?.parentElement?.closest(`li.user-msg`)
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    ],
+    [
+      `fuzzy skip with node_filter`,
+      true,
+      `<div>Test content</div><li class="user-msg">Create this option...</li>`,
+      `test`,
+      true,
+      1,
+      1,
+      (node: Node) =>
+        node?.parentElement?.closest(`li.user-msg`)
+          ? NodeFilter.FILTER_REJECT
+          : NodeFilter.FILTER_ACCEPT,
+    ],
+  ])(
+    `%s`,
+    (
+      _desc,
+      css_supported,
+      query,
+      html_content,
+      fuzzy,
+      expected_clear_calls,
+      expected_set_calls,
+      node_filter = undefined,
+    ) => {
+      if (css_supported === undefined) {
+        vi.stubGlobal(`CSS`, undefined)
+      }
+
+      mock_element.innerHTML = html_content
+      const attachment = highlight_matches({ query, fuzzy, node_filter })
+      attachment(mock_element)
+
+      expect(mock_css_highlights.size).toBe(
+        css_supported === undefined ? 0 : expected_set_calls,
+      )
+
+      if (css_supported) {
+        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(
+          expected_clear_calls,
+        )
+        if (expected_set_calls > 0) {
+          expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
+            `sms-search-matches`,
+            expect.any(Object),
+          )
+        }
+      }
+    },
+  )
 })
 
 describe(`sortable`, () => {

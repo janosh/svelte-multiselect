@@ -1,10 +1,13 @@
 <script lang="ts">
-  import { CircleSpinner, Icon, Wiggle } from '$lib'
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
+  import { highlight_matches } from './attachments'
+  import CircleSpinner from './CircleSpinner.svelte'
+  import Icon from './Icon.svelte'
   import type { MultiSelectProps, Option as T } from './types'
-  import { get_label, get_style, highlight_matching_nodes } from './utils'
+  import { fuzzy_match, get_label, get_style } from './utils'
+  import Wiggle from './Wiggle.svelte'
 
   type Option = $$Generic<T>
 
@@ -26,8 +29,12 @@
     key = (opt) => `${get_label(opt)}`.toLowerCase(),
     filterFunc = (opt, searchText) => {
       if (!searchText) return true
-      return `${get_label(opt)}`.toLowerCase().includes(searchText.toLowerCase())
+      const label = `${get_label(opt)}`
+      return fuzzy
+        ? fuzzy_match(searchText, label)
+        : label.toLowerCase().includes(searchText.toLowerCase())
     },
+    fuzzy = true,
     closeDropdownOnSelect = `if-mobile`,
     form_input = $bindable(null),
     highlightMatches = true,
@@ -491,30 +498,6 @@
 
   let ul_options = $state<HTMLUListElement>()
 
-  // Update highlights whenever search text changes (after ul_options is available)
-  $effect(() => {
-    if (ul_options && highlightMatches) {
-      if (searchText) {
-        highlight_matching_nodes(ul_options, searchText, noMatchingOptionsMsg)
-      } else if (typeof CSS !== `undefined` && CSS.highlights) {
-        CSS.highlights.delete?.(`sms-search-matches`) // Clear highlights when search text is empty
-      }
-    }
-  })
-
-  // highlight text matching user-entered search text in available options
-  function highlight_matching_options(
-    event: Event & { currentTarget?: HTMLInputElement },
-  ) {
-    if (!highlightMatches || !ul_options) return
-
-    // get input's search query
-    const query = (event?.target as HTMLInputElement)?.value.trim().toLowerCase()
-    if (!query) return
-
-    highlight_matching_nodes(ul_options, query, noMatchingOptionsMsg)
-  }
-
   const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (event) => {
     handle_keydown(event) // Restore internal logic
     // Call original forwarded handler
@@ -741,7 +724,6 @@
       onmouseup={open_dropdown}
       onkeydown={handle_input_keydown}
       onfocus={handle_input_focus}
-      oninput={highlight_matching_options}
       onblur={handle_input_blur}
       {onclick}
       {onkeyup}
@@ -812,6 +794,17 @@
   {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
     <ul
       use:portal={{ target_node: outerDiv, ...portal_params }}
+      {@attach highlight_matches({
+        query: searchText,
+        disabled: !highlightMatches,
+        fuzzy,
+        css_class: `sms-search-matches`,
+        // don't highlight text in the "Create this option..." message
+        node_filter: (node) =>
+          node?.parentElement?.closest(`li.user-msg`)
+            ? NodeFilter.FILTER_REJECT
+            : NodeFilter.FILTER_ACCEPT,
+      })}
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"

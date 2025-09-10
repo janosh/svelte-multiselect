@@ -1,14 +1,16 @@
 <script lang="ts">
-  import { MultiSelect } from '$lib'
+  import type { ComponentProps } from 'svelte'
   import { fade } from 'svelte/transition'
-  import type { MultiSelectProps, ObjectOption, Option } from './types'
+  import MultiSelect from './MultiSelect.svelte'
+  import type { ObjectOption, Option } from './types'
+  import { fuzzy_match, get_label } from './utils'
 
   interface Action extends ObjectOption {
     label: string
     action: (label: string) => void
   }
 
-  interface Props extends Omit<MultiSelectProps<Action>, `options`> {
+  interface Props extends Omit<ComponentProps<typeof MultiSelect>, `options`> {
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
@@ -34,23 +36,16 @@
   }: Props = $props()
 
   $effect(() => {
-    if (open && input && document.activeElement !== input) {
-      input.focus()
-    }
+    if (open && input && document.activeElement !== input) input.focus()
   })
 
   async function toggle(event: KeyboardEvent) {
-    if (triggers.includes(event.key) && event.metaKey && !open) {
-      open = true
-    } else if (close_keys.includes(event.key) && open) {
-      open = false
-    }
+    if (triggers.includes(event.key) && event.metaKey && !open) open = true
+    else if (close_keys.includes(event.key) && open) open = false
   }
 
   function close_if_outside(event: MouseEvent) {
-    if (open && !dialog?.contains(event.target as Node)) {
-      open = false
-    }
+    if (open && !dialog?.contains(event.target as Node)) open = false
   }
 
   function trigger_action_and_close(data: { option: Option }) {
@@ -73,6 +68,11 @@
       options={actions}
       bind:input
       {placeholder}
+      filterFunc={(option: Option, search_text: string) => {
+        if (!search_text) return true
+        const label = get_label(option as Action)
+        return fuzzy_match(search_text, `${label}`)
+      }}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       {...rest}

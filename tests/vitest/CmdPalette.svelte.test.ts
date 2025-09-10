@@ -260,3 +260,140 @@ test(`dialog remains functional when open`, () => {
   const multiselect = doc_query(`dialog div.multiselect`)
   expect(multiselect).toBeTruthy()
 })
+
+test(`fuzzy filtering works correctly`, async () => {
+  const actions = [
+    { label: `create user`, action: vi.fn() },
+    { label: `delete file`, action: vi.fn() },
+    { label: `update config`, action: vi.fn() },
+  ]
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions, fade_duration: 0 },
+  })
+
+  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  input.value = `cu`
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+
+  const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
+  expect(visible_options).toHaveLength(1)
+  expect(visible_options[0].textContent).toContain(`create user`)
+})
+
+test(`handles multiple trigger keys simultaneously`, async () => {
+  const props = $state({
+    open: false,
+    triggers: [`k`, `j`, `l`],
+    actions: mock_actions,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+
+  // Test each trigger key
+  props.open = false
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
+  await tick()
+  expect(props.open).toBe(true)
+
+  props.open = false
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `j`, metaKey: true }))
+  await tick()
+  expect(props.open).toBe(true)
+
+  props.open = false
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `l`, metaKey: true }))
+  await tick()
+  expect(props.open).toBe(true)
+})
+
+test(`handles custom fade duration`, () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 500 })
+  mount(CmdPalette, { target: document.body, props })
+  expect(doc_query(`dialog`)).toBeTruthy()
+  expect(props.fade_duration).toBe(500)
+})
+
+test(`handles empty search text`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: mock_actions, fade_duration: 0 },
+  })
+
+  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  input.value = ``
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+
+  const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
+  expect(visible_options).toHaveLength(mock_actions.length)
+})
+
+test(`handles bindable props correctly`, async () => {
+  const props = $state({
+    open: false,
+    actions: mock_actions,
+    dialog: null,
+    input: null,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+
+  expect(props.dialog).toBe(null)
+  expect(props.input).toBe(null)
+
+  props.open = true
+  await tick()
+
+  expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
+  expect(props.input).toBeInstanceOf(HTMLInputElement)
+})
+
+test(`handles action execution with different label types`, () => {
+  const actions = [
+    { label: `simple action`, action: vi.fn() },
+    { label: `action with spaces`, action: vi.fn() },
+    { label: `action-with-dashes`, action: vi.fn() },
+  ]
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions, fade_duration: 0 },
+  })
+
+  expect(doc_query(`dialog div.multiselect`)).toBeTruthy()
+  expect(doc_query(`dialog ul.options li`)?.textContent).toContain(`simple action`)
+})
+
+test(`handles custom dialog styles`, () => {
+  const custom_style = `border: 2px solid red; padding: 10px;`
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: mock_actions,
+      dialog_style: custom_style,
+      fade_duration: 0,
+    },
+  })
+
+  const dialog = doc_query(`dialog`) as HTMLDialogElement
+  expect(dialog.style.border).toBe(`2px solid red`)
+  expect(dialog.style.padding).toBe(`10px`)
+})
+
+test(`handles custom placeholder text`, () => {
+  const custom_placeholder = `Search for actions...`
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: mock_actions,
+      placeholder: custom_placeholder,
+      fade_duration: 0,
+    },
+  })
+
+  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  expect(input.placeholder).toBe(custom_placeholder)
+})

@@ -86,6 +86,7 @@ export interface MultiSelectProps<T extends Option = Option>
   // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
   key?: (opt: T) => unknown
   filterFunc?: (opt: T, searchText: string) => boolean
+  fuzzy?: boolean // whether to use fuzzy matching (default: true) or substring matching (false)
   closeDropdownOnSelect?: boolean | `if-mobile` | `retain-focus`
   form_input?: HTMLInputElement | null
   highlightMatches?: boolean

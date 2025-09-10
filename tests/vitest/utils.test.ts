@@ -1,6 +1,6 @@
 import type { Option, OptionStyle } from '$lib'
-import { get_label, get_style, highlight_matching_nodes } from '$lib/utils'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { fuzzy_match, get_label, get_style } from '$lib/utils'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 describe(`get_label`, () => {
   beforeEach(() => {
@@ -43,6 +43,7 @@ describe(`get_style`, () => {
     [{ style: `   ` }, undefined, `   `], // whitespace is preserved, not trimmed
     [{ label: `Test`, value: 42 }, undefined, ``],
   ])(`returns correct style for %j with key %s`, (option, key, expected) => {
+    // @ts-expect-error testing with mixed types for get_style
     expect(get_style(option, key)).toBe(expected)
   })
 
@@ -85,134 +86,45 @@ describe(`get_style`, () => {
   })
 })
 
-describe(`highlight_matching_nodes`, () => {
-  let mock_element: HTMLElement
-  let mock_css_highlights: Map<string, string>
-
-  beforeEach(() => {
-    mock_element = document.createElement(`div`)
-    mock_css_highlights = new Map()
-
-    const css_mock = {
-      highlights: {
-        clear: vi.fn(() => mock_css_highlights.clear()),
-        set: vi.fn((key: string, value: string) => mock_css_highlights.set(key, value)),
-      },
-    }
-
-    vi.stubGlobal(`CSS`, css_mock)
-    vi.stubGlobal(
-      `Highlight`,
-      class MockHighlight {
-        ranges: Range[]
-        constructor(...ranges: Range[]) {
-          this.ranges = ranges
-        }
-      },
-    )
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
-  })
-
+describe(`fuzzy_match`, () => {
   test.each([
-    [
-      `returns early if CSS.highlights not supported`,
-      undefined,
-      `Test content`,
-      `test`,
-      undefined,
-      0,
-      0,
-    ],
-    [
-      `returns early if no query provided`,
-      true,
-      `Test content`,
-      ``,
-      undefined,
-      0,
-      0,
-    ],
-    [
-      `highlights matching text`,
-      true,
-      `<p>This is a test paragraph with test words</p>`,
-      `test`,
-      undefined,
-      1,
-      1,
-    ],
-    [
-      `skips nodes matching noMatchingOptionsMsg`,
-      true,
-      `<p>No matching options found</p><p>test content</p>`,
-      `test`,
-      `No matching options found`,
-      1,
-      1,
-    ],
-    [
-      `handles multiple text nodes with matches`,
-      true,
-      `<div><span>first test</span><span>second test</span></div>`,
-      `test`,
-      undefined,
-      1,
-      1,
-    ],
-    [
-      `handles case-insensitive matching`,
-      true,
-      `<p>Test with TEST and TeSt</p>`,
-      `test`,
-      undefined,
-      1,
-      1,
-    ],
-    [
-      `handles no matches gracefully`,
-      true,
-      `<p>Content without the search term</p>`,
-      `xyz`,
-      undefined,
-      1,
-      1,
-    ],
-  ])(
-    `%s`,
-    (
-      _description,
-      css_supported,
-      html_content,
-      query,
-      no_matching_msg,
-      expected_clear_calls,
-      expected_set_calls,
-    ) => {
-      if (css_supported === undefined) {
-        vi.stubGlobal(`CSS`, undefined)
-      }
+    // Basic cases
+    [``, ``, true],
+    [``, `anything`, true],
+    [`test`, ``, false],
+    [`test`, `test`, true],
+    [`test`, `testing`, true],
+    [`test`, `best`, false],
+    // Case insensitive
+    [`TEST`, `test`, true],
+    [`Test`, `tEsT`, true],
+    // Fuzzy matching (non-consecutive)
+    [`tageoo`, `tasks/geo-opt`, true],
+    [`abc`, `a-b-c`, true],
+    [`abc`, `a-b-d`, false],
+    [`abc`, `a-b-c-d`, true],
+    [`hello`, `h-e-l-l-o`, true],
+    [`hello`, `h-e-l-o`, false],
+    // Repeated characters
+    [`aa`, `banana`, true],
+    [`aaa`, `banana`, true],
+    [`aaaa`, `banana`, false],
+    // Special characters
+    [`@`, `@user`, true],
+    [`#`, `#hashtag`, true],
+    [`/`, `path/to/file`, true],
+    // Numbers and unicode
+    [`123`, `abc123def`, true],
+    [`ñ`, `niño`, true],
+    [`中文`, `中文测试`, true],
+  ])(`fuzzy_match("%s", "%s") should return %s`, (search, target, expected) => {
+    expect(fuzzy_match(search, target)).toBe(expected)
+  })
 
-      mock_element.innerHTML = html_content
-      highlight_matching_nodes(mock_element, query, no_matching_msg)
-
-      expect(mock_css_highlights.size).toBe(
-        css_supported === undefined ? 0 : expected_set_calls,
-      )
-
-      if (css_supported) {
-        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(
-          expected_clear_calls,
-        )
-        if (expected_set_calls > 0) {
-          expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
-            `sms-search-matches`,
-            expect.any(Object),
-          )
-        }
-      }
-    },
-  )
+  test(`handles null/undefined inputs`, () => {
+    // @ts-expect-error testing runtime behavior
+    expect(fuzzy_match(null, `test`)).toBe(false)
+    // @ts-expect-error testing runtime behavior
+    expect(fuzzy_match(undefined, `test`)).toBe(false)
+  })
 })

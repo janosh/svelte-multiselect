@@ -39,52 +39,27 @@ export function get_style(option: Option, key: `selected` | `option` | null = nu
   return css_str
 }
 
-// Highlights text nodes that matching the string query
-export function highlight_matching_nodes(
-  element: HTMLElement, // parent element
-  query?: string, // search query
-  noMatchingOptionsMsg?: string, // text for empty node
-) {
-  if (typeof CSS === `undefined` || !CSS.highlights || !query) return // abort if CSS highlight API not supported
+// Fuzzy string matching function
+// Returns true if the search string can be found as a subsequence in the target string
+// e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
+export function fuzzy_match(search_text: string, target_text: string): boolean {
+  // Handle null/undefined inputs first
+  if (
+    search_text === null || search_text === undefined || target_text === null ||
+    target_text === undefined
+  ) return false
 
-  // clear previous ranges from HighlightRegistry
-  CSS.highlights.clear()
+  if (!search_text) return true
+  if (!target_text) return false
 
-  const tree_walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
-    acceptNode: (node) => {
-      // don't highlight text in the "no matching options" message
-      if (node?.textContent === noMatchingOptionsMsg) return NodeFilter.FILTER_REJECT
-      return NodeFilter.FILTER_ACCEPT
-    },
-  })
-  const text_nodes: Node[] = []
-  let current_node = tree_walker.nextNode()
-  while (current_node) {
-    text_nodes.push(current_node)
-    current_node = tree_walker.nextNode()
+  const [search, target] = [search_text.toLowerCase(), target_text.toLowerCase()]
+
+  let [search_idx, target_idx] = [0, 0]
+
+  while (search_idx < search.length && target_idx < target.length) {
+    if (search[search_idx] === target[target_idx]) search_idx++
+    target_idx++
   }
 
-  // iterate over all text nodes and find matches
-  const ranges = text_nodes.map((el) => {
-    const text = el.textContent?.toLowerCase()
-    const indices = []
-    let start_pos = 0
-    while (text && start_pos < text.length) {
-      const index = text.indexOf(query, start_pos)
-      if (index === -1) break
-      indices.push(index)
-      start_pos = index + query.length
-    }
-
-    // create range object for each str found in the text node
-    return indices.map((index) => {
-      const range = new Range()
-      range.setStart(el, index)
-      range.setEnd(el, index + query.length)
-      return range
-    })
-  })
-
-  // create Highlight object from ranges and add to registry
-  CSS.highlights.set(`sms-search-matches`, new Highlight(...ranges.flat()))
+  return search_idx === search.length
 }
