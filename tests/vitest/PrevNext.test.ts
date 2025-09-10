@@ -90,7 +90,7 @@ describe(`PrevNext`, () => {
 
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowRight` }))
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
-    expect(scrollToSpy).toHaveBeenCalledTimes(10)
+    expect(scrollToSpy).toHaveBeenCalledTimes(8)
   })
 
   test(`handles custom node element`, () => {
@@ -124,7 +124,7 @@ describe(`PrevNext`, () => {
 
     if (level === `warn`) {
       expect(warn).toHaveBeenCalledWith(
-        `PrevNext received 1 items - minimum of 2 expected`,
+        `PrevNext received 1 items - minimum of 3 expected`,
       )
     } else if (level === `error`) {
       expect(error).toHaveBeenCalledWith(

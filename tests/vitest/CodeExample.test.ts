@@ -79,3 +79,28 @@ test(`dynamically added pre > code elements get copy buttons applied`, async () 
   expect(copy_button).toBeInstanceOf(HTMLButtonElement)
   expect(copy_button?.style.position).toBe(`absolute`)
 })
+
+test(`prevents duplicate copy buttons when as !== button`, async () => {
+  // Mount a CopyButton with global enabled and as='a' to test duplicate prevention
+  mount(CopyButton, { target: document.body, props: { global: true, as: `a` } })
+
+  // Create a pre > code element
+  const pre = document.createElement(`pre`)
+  const code = document.createElement(`code`)
+  code.textContent = `test code`
+  pre.appendChild(code)
+  document.body.appendChild(pre)
+  await tick()
+
+  // Verify only one copy button (anchor) was created
+  const copy_buttons = pre.querySelectorAll(`a[data-sms-copy]`)
+  expect(copy_buttons).toHaveLength(1)
+
+  // Trigger MutationObserver again by modifying the pre element
+  pre.setAttribute(`data-test`, `modified`)
+  await tick()
+
+  // Verify no duplicate was created
+  const copy_buttons_after = pre.querySelectorAll(`a[data-sms-copy]`)
+  expect(copy_buttons_after).toHaveLength(1)
+})

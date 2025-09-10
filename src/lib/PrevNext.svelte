@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
 
   export type Item = string | [string, unknown]
   type T = $$Generic<Item>
 
-  interface Props {
+  interface Props extends Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> {
     items?: T[]
     node?: string
     current?: string
@@ -16,7 +17,7 @@
     children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
     between?: Snippet<[]>
     next_snippet?: Snippet<[{ item: Item }]>
-    [key: string]: unknown
+    min_items?: number
   }
   let {
     items = [],
@@ -33,6 +34,7 @@
     children,
     between,
     next_snippet,
+    min_items = 3,
     ...rest
   }: Props = $props()
 
@@ -51,9 +53,9 @@
   // Validation and logging
   $effect.pre(() => {
     if (log !== `silent`) {
-      if (items_arr.length < 2 && log === `verbose`) {
+      if (items_arr.length < min_items && log === `verbose`) {
         console.warn(
-          `PrevNext received ${items_arr.length} items - minimum of 2 expected`,
+          `PrevNext received ${items_arr.length} items - minimum of ${min_items} expected`,
         )
       }
 
@@ -68,6 +70,7 @@
 
   function handle_keyup(event: KeyboardEvent) {
     if (!onkeyup) return
+    if ((items_arr?.length ?? 0) < min_items) return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]
     if (to) {
@@ -85,7 +88,7 @@
 
 <svelte:window onkeyup={handle_keyup} />
 
-{#if items_arr.length > 2}
+{#if items_arr.length >= min_items}
   <svelte:element this={node} class="prev-next" {...rest}>
     <!-- ensures `prev` is a defined [key, value] tuple.
       Due to prior normalization of the `items` prop, any defined `prev` item

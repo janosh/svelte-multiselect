@@ -11,6 +11,7 @@ export { default as PrevNext } from './PrevNext.svelte'
 export { default as RadioButtons } from './RadioButtons.svelte'
 export { default as Toggle } from './Toggle.svelte'
 export * from './types'
+export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'
 
 // Firefox lacks support for scrollIntoViewIfNeeded (https://caniuse.com/scrollintoviewifneeded).

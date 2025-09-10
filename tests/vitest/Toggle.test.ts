@@ -49,6 +49,20 @@ describe(`Toggle`, () => {
     expect(input.checked).toBe(false)
   })
 
+  test(`fires change event when toggling on Enter key`, async () => {
+    const onchange = vi.fn()
+    mount(Toggle, { target, props: { onchange } })
+    const input = getInput()
+
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+    )
+    await tick()
+
+    expect(input.checked).toBe(true)
+    expect(onchange).toHaveBeenCalledWith(expect.any(Event))
+  })
+
   test(`doesn't toggle on other keys`, () => {
     mount(Toggle, { target })
     const input = getInput()

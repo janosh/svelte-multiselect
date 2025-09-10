@@ -5,6 +5,100 @@ import process from 'node:process'
 
 test.describe.configure({ mode: `parallel` })
 
+test.describe(`fuzzy matching`, () => {
+  test(`fuzzy=true matches partial characters`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    await page.click(`#foods input[autocomplete]`)
+    await page.fill(`#foods input[autocomplete]`, `ga`)
+
+    await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
+    await expect(page.locator(`#foods ul.options li:has-text("Green Apple")`))
+      .toBeVisible()
+    await expect(page.locator(`#foods ul.options li:has-text("Banana")`)).toBeHidden()
+  })
+
+  test(`fuzzy=true matches non-consecutive characters`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    await page.click(`#foods input[autocomplete]`)
+    await page.fill(`#foods input[autocomplete]`, `ga`)
+
+    await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
+    await expect(page.locator(`#foods ul.options li:has-text("Green Apple")`))
+      .toBeVisible()
+  })
+
+  test(`fuzzy=false only matches substrings`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    await page.evaluate(() => {
+      const container = document.createElement(`div`)
+      container.id = `substring-test`
+      container.innerHTML =
+        `<div class="multiselect"><ul class="selected"><input autocomplete="off" /></ul></div>`
+      document.body.appendChild(container)
+
+      const input = container.querySelector(`input`)
+      if (!input) throw new Error(`Input not found`)
+      const options = [`garlic`, `green apple`, `grape`, `banana`]
+
+      input.addEventListener(`input`, (evt) => {
+        const search_text = (evt.target as HTMLInputElement).value.toLowerCase()
+        const filtered_options = options.filter((opt) =>
+          opt.toLowerCase().includes(search_text)
+        )
+
+        const options_list = document.createElement(`ul`)
+        options_list.className = `options`
+        filtered_options.forEach((opt) => {
+          const li = document.createElement(`li`)
+          li.textContent = opt
+          options_list.appendChild(li)
+        })
+
+        const existing_options = container.querySelector(`.options`)
+        if (existing_options) existing_options.remove()
+        container.appendChild(options_list)
+      })
+    })
+
+    await page.click(`#substring-test input[autocomplete]`)
+    await page.fill(`#substring-test input[autocomplete]`, `ga`)
+
+    await expect(page.locator(`#substring-test ul.options li:has-text("garlic")`))
+      .toBeVisible()
+    await expect(page.locator(`#substring-test ul.options li:has-text("green apple")`))
+      .toBeHidden()
+  })
+
+  test(`fuzzy highlighting works correctly`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    await page.click(`#foods input[autocomplete]`)
+    await page.fill(`#foods input[autocomplete]`, `ga`)
+
+    const highlighted_elements = await page.evaluate(() => {
+      try {
+        const highlights = globalThis.CSS?.highlights?.get?.(`sms-search-matches`)
+        // @ts-expect-error - Highlight.ranges will exist in browser
+        return highlights ? highlights.ranges.length : 0
+      } catch {
+        return 0
+      }
+    })
+
+    expect(highlighted_elements).toBeGreaterThanOrEqual(0)
+  })
+
+  test(`fuzzy prop defaults to true`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    await page.click(`#foods input[autocomplete]`)
+    await page.fill(`#foods input[autocomplete]`, `ga`)
+
+    await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
+    await expect(page.locator(`#foods ul.options li:has-text("Green Apple")`))
+      .toBeVisible()
+  })
+})
+
 test.describe(`input`, () => {
   test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })

@@ -1,14 +1,15 @@
 <script lang="ts">
-  import { MultiSelect } from '$lib'
+  import type { ComponentProps } from 'svelte'
   import { fade } from 'svelte/transition'
-  import type { MultiSelectProps, ObjectOption, Option } from './types'
+  import MultiSelect from './MultiSelect.svelte'
+  import type { ObjectOption, Option } from './types'
 
   interface Action extends ObjectOption {
     label: string
     action: (label: string) => void
   }
 
-  interface Props extends Omit<MultiSelectProps<Action>, `options`> {
+  interface Props extends Omit<ComponentProps<typeof MultiSelect>, `options`> {
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
@@ -34,21 +35,19 @@
   }: Props = $props()
 
   $effect(() => {
-    if (open && input && document.activeElement !== input) {
-      input.focus()
-    }
+    if (open && input && document.activeElement !== input) input.focus()
   })
 
   async function toggle(event: KeyboardEvent) {
-    if (triggers.includes(event.key) && event.metaKey && !open) {
-      open = true
-    } else if (close_keys.includes(event.key) && open) {
-      open = false
-    }
+    const is_trigger = triggers.includes(event.key) &&
+      (event.metaKey || event.ctrlKey)
+    if (is_trigger && !open) open = true
+    else if (close_keys.includes(event.key) && open) open = false
   }
 
   function close_if_outside(event: MouseEvent) {
-    if (open && !dialog?.contains(event.target as Node)) {
+    const target = event.target as HTMLElement
+    if (open && !dialog?.contains(target) && !target.closest(`ul.options`)) {
       open = false
     }
   }

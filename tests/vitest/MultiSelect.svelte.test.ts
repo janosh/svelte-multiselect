@@ -1790,7 +1790,9 @@ test.each([[0], [1], [2], [5], [undefined]])(
     input.dispatchEvent(input_event)
 
     expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
-      Math.min(options.length, maxOptions || options.length),
+      maxOptions === null || maxOptions === undefined
+        ? options.length
+        : Math.min(options.length, maxOptions),
     )
   },
 )
@@ -1802,7 +1804,6 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
 
     mount(MultiSelect, {
       target: document.body,
-      // @ts-expect-error test invalid maxOptions
       props: { options: [1, 2, 3], maxOptions },
     })
 
@@ -2080,4 +2081,44 @@ test(`Escape and Tab still blur input even with closeDropdownOnSelect='retain-fo
   )
 
   expect(document.activeElement).not.toBe(input_el)
+})
+
+test(`arrow keys can navigate to create option message when there are matching options`, async () => {
+  const options = [`apple`, `banana`, `cherry`]
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options,
+      allowUserOptions: true,
+      createOptionMsg: `Create "app" option`,
+      searchText: `app`, // This will match "apple" but also allow creating "app"
+    },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+
+  // Navigate through all options using arrow down
+  // First option should be active (apple matches "app")
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`apple`)
+
+  // Second navigation should reach the create option message
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+
+  const user_msg_li = doc_query(`ul.options li.user-msg`)
+  expect(user_msg_li.classList.contains(`active`)).toBe(true)
+  expect(user_msg_li.textContent?.trim()).toBe(`Create "app" option`)
+
+  // Navigate back up should go to apple
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp`, bubbles: true }))
+  await tick()
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`apple`)
+
+  // Test wrap-around: from first option, go up should reach create message
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp`, bubbles: true }))
+  await tick()
+  expect(doc_query(`ul.options li.user-msg`).classList.contains(`active`)).toBe(true)
 })

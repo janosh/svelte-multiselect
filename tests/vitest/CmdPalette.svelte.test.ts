@@ -10,15 +10,95 @@ const mock_actions = [
 ]
 
 test.each([
-  { triggers: [`k`], key_to_press: `k`, with_meta: true, should_open: true },
-  { triggers: [`o`], key_to_press: `o`, with_meta: true, should_open: true },
-  { triggers: [`k`, `o`], key_to_press: `k`, with_meta: true, should_open: true },
-  { triggers: [`k`, `o`], key_to_press: `o`, with_meta: true, should_open: true },
-  { triggers: [`k`], key_to_press: `k`, with_meta: false, should_open: false },
-  { triggers: [`j`, `l`], key_to_press: `k`, with_meta: true, should_open: false },
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`o`],
+    key_to_press: `o`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `o`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: true,
+  },
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: false,
+    should_open: false,
+  },
+  {
+    triggers: [`j`, `l`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: false,
+    should_open: false,
+  },
+  // Test Ctrl key support
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`o`],
+    key_to_press: `o`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`k`, `o`],
+    key_to_press: `o`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: true,
+  },
+  {
+    triggers: [`j`, `l`],
+    key_to_press: `k`,
+    with_meta: false,
+    with_ctrl: true,
+    should_open: false,
+  },
+  // Test that both Meta and Ctrl work together
+  {
+    triggers: [`k`],
+    key_to_press: `k`,
+    with_meta: true,
+    with_ctrl: true,
+    should_open: true,
+  },
 ])(
-  `handles trigger keys: $triggers with key $key_to_press (meta: $with_meta) -> $should_open`,
-  async ({ triggers, key_to_press, with_meta, should_open }) => {
+  `handles trigger keys: $triggers with key $key_to_press (meta: $with_meta, ctrl: $with_ctrl) -> $should_open`,
+  async ({ triggers, key_to_press, with_meta, with_ctrl, should_open }) => {
     const props = $state({
       open: false,
       triggers,
@@ -28,7 +108,11 @@ test.each([
     mount(CmdPalette, { target: document.body, props })
 
     globalThis.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: key_to_press, metaKey: with_meta }),
+      new KeyboardEvent(`keydown`, {
+        key: key_to_press,
+        metaKey: with_meta,
+        ctrlKey: with_ctrl,
+      }),
     )
     await tick()
 
@@ -127,6 +211,53 @@ test(`handles click outside to close dialog`, async () => {
 
   expect(props.open).toBe(false)
   expect(document.querySelector(`dialog`)).toBe(null)
+})
+
+test(`does not close dialog when clicking on portalled options`, async () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  // Create a mock portalled options element
+  const portalled_options = document.createElement(`ul`)
+  portalled_options.className = `options`
+  portalled_options.innerHTML = `<li>Option 1</li><li>Option 2</li>`
+  document.body.appendChild(portalled_options)
+
+  // Click on the portalled options
+  const option_li = portalled_options.querySelector(`li`)
+  option_li?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  await tick()
+
+  // Dialog should still be open
+  expect(props.open).toBe(true)
+  expect(document.querySelector(`dialog`)).not.toBe(null)
+
+  // Clean up
+  document.body.removeChild(portalled_options)
+})
+
+test(`!target.closest('ul.options') prevents premature closure`, async () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  // Create nested ul.options structure to test closest() logic
+  const container = document.createElement(`div`)
+  container.innerHTML = `
+    <ul class="options">
+      <li><span>Nested option</span></li>
+    </ul>
+  `
+  document.body.appendChild(container)
+
+  // Click on nested span inside ul.options
+  const span = container.querySelector(`span`)
+  span?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  await tick()
+
+  // Dialog should remain open due to !target.closest('ul.options') check
+  expect(props.open).toBe(true)
 })
 
 test(`applies custom styles and props correctly`, async () => {
@@ -259,4 +390,208 @@ test(`dialog remains functional when open`, () => {
   // Verify actions are present
   const multiselect = doc_query(`dialog div.multiselect`)
   expect(multiselect).toBeTruthy()
+})
+
+test.each([
+  {
+    fuzzy: true,
+    search: `cu`,
+    expected: [`create user`],
+    description: `fuzzy match 'cu' -> 'create user'`,
+  },
+  {
+    fuzzy: true,
+    search: `del`,
+    expected: [`delete file`],
+    description: `fuzzy match 'del' -> 'delete file'`,
+  },
+  {
+    fuzzy: true,
+    search: `up`,
+    expected: [`update config`],
+    description: `fuzzy match 'up' -> 'update config'`,
+  },
+  {
+    fuzzy: true,
+    search: `user`,
+    expected: [`create user`],
+    description: `fuzzy match 'user' -> 'create user'`,
+  },
+  {
+    fuzzy: true,
+    search: `qwerty`,
+    expected: [`No matching options`],
+    description: `fuzzy match 'qwerty' -> no matches message`,
+  },
+  {
+    fuzzy: false,
+    search: `cr`,
+    expected: [`create user`],
+    description: `exact match 'cr' -> 'create user'`,
+  },
+  {
+    fuzzy: false,
+    search: `delete`,
+    expected: [`delete file`],
+    description: `exact match 'delete' -> 'delete file'`,
+  },
+  {
+    fuzzy: false,
+    search: `config`,
+    expected: [`update config`],
+    description: `exact match 'config' -> 'update config'`,
+  },
+  {
+    fuzzy: false,
+    search: `cu`,
+    expected: [`No matching options`],
+    description: `exact match 'cu' -> no matches (not a substring)`,
+  },
+  {
+    fuzzy: false,
+    search: `xyz`,
+    expected: [`No matching options`],
+    description: `exact match 'xyz' -> no matches message`,
+  },
+])(
+  `filtering with fuzzy=$fuzzy: $description`,
+  async ({ fuzzy, search, expected }) => {
+    const actions = [
+      { label: `create user`, action: vi.fn() },
+      { label: `delete file`, action: vi.fn() },
+      { label: `update config`, action: vi.fn() },
+    ]
+    mount(CmdPalette, {
+      target: document.body,
+      props: { open: true, actions, fuzzy, fade_duration: 0 },
+    })
+
+    const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+    input.value = search
+    input.dispatchEvent(new Event(`input`, { bubbles: true }))
+    await tick()
+
+    const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
+    expect(visible_options).toHaveLength(expected.length)
+
+    expected.forEach((expected_label, idx) => {
+      expect(visible_options[idx].textContent).toContain(expected_label)
+    })
+  },
+)
+
+test(`handles multiple trigger keys simultaneously`, async () => {
+  const props = $state({
+    open: false,
+    triggers: [`k`, `j`, `l`],
+    actions: mock_actions,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+
+  // Test each trigger key
+  props.open = false
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
+  await tick()
+  expect(props.open).toBe(true)
+
+  props.open = false
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `j`, metaKey: true }))
+  await tick()
+  expect(props.open).toBe(true)
+
+  props.open = false
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `l`, metaKey: true }))
+  await tick()
+  expect(props.open).toBe(true)
+})
+
+test(`handles custom fade duration`, () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 500 })
+  mount(CmdPalette, { target: document.body, props })
+  expect(doc_query(`dialog`)).toBeTruthy()
+  expect(props.fade_duration).toBe(500)
+})
+
+test(`handles empty search text`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: mock_actions, fade_duration: 0 },
+  })
+
+  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  input.value = ``
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+
+  const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
+  expect(visible_options).toHaveLength(mock_actions.length)
+})
+
+test(`handles bindable props correctly`, async () => {
+  const props = $state({
+    open: false,
+    actions: mock_actions,
+    dialog: null,
+    input: null,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+
+  expect(props.dialog).toBe(null)
+  expect(props.input).toBe(null)
+
+  props.open = true
+  await tick()
+
+  expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
+  expect(props.input).toBeInstanceOf(HTMLInputElement)
+})
+
+test(`handles action execution with different label types`, () => {
+  const actions = [
+    { label: `simple action`, action: vi.fn() },
+    { label: `action with spaces`, action: vi.fn() },
+    { label: `action-with-dashes`, action: vi.fn() },
+  ]
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions, fade_duration: 0 },
+  })
+
+  expect(doc_query(`dialog div.multiselect`)).toBeTruthy()
+  expect(doc_query(`dialog ul.options li`)?.textContent).toContain(`simple action`)
+})
+
+test(`handles custom dialog styles`, () => {
+  const custom_style = `border: 2px solid red; padding: 10px;`
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: mock_actions,
+      dialog_style: custom_style,
+      fade_duration: 0,
+    },
+  })
+
+  const dialog = doc_query(`dialog`) as HTMLDialogElement
+  expect(dialog.style.border).toBe(`2px solid red`)
+  expect(dialog.style.padding).toBe(`10px`)
+})
+
+test(`handles custom placeholder text`, () => {
+  const custom_placeholder = `Search for actions...`
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: mock_actions,
+      placeholder: custom_placeholder,
+      fade_duration: 0,
+    },
+  })
+
+  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  expect(input.placeholder).toBe(custom_placeholder)
 })

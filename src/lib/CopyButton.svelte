@@ -2,11 +2,12 @@
   import { CopyButton, Icon } from '$lib'
   import type { Snippet } from 'svelte'
   import { mount } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
   import type { IconName } from './icons'
 
   type State = `ready` | `success` | `error`
 
-  interface Props {
+  interface Props extends Omit<HTMLAttributes<HTMLButtonElement>, `children`> {
     content?: string
     state?: State
     global_selector?: string | null
@@ -15,7 +16,6 @@
     as?: string
     labels?: Record<State, { icon: IconName; text: string }>
     children?: Snippet<[{ state: State; icon: IconName; text: string }]>
-    [key: string]: unknown
   }
   let {
     content = ``,
@@ -40,13 +40,24 @@
       const btn_style = `position: absolute; top: 9pt; right: 9pt; ${
         rest.style ?? ``
       }`
+      const skip_sel = skip_selector ?? as
       for (const code of document.querySelectorAll(global_selector ?? `pre > code`)) {
         const pre = code.parentElement
         const content = code.textContent ?? ``
-        if (pre && !(skip_selector && pre.querySelector(skip_selector))) {
+        if (
+          pre && !pre.querySelector(`[data-sms-copy]`) &&
+          !(skip_sel && pre.querySelector(skip_sel))
+        ) {
           mount(CopyButton, {
             target: pre,
-            props: { content, as, labels, ...rest, style: btn_style },
+            props: {
+              content,
+              as,
+              labels,
+              ...rest,
+              style: btn_style,
+              'data-sms-copy': ``,
+            },
           })
         }
       }
@@ -72,7 +83,20 @@
 
 {#if !(global || global_selector)}
   {@const { text, icon } = labels[state]}
-  <svelte:element this={as} onclick={copy} role="button" tabindex={0} {...rest}>
+  <svelte:element
+    this={as}
+    onclick={copy}
+    onkeydown={(event) => {
+      if (event.key === `Enter` || event.key === ` `) {
+        event.preventDefault()
+        copy()
+      }
+    }}
+    role="button"
+    tabindex={0}
+    data-sms-copy=""
+    {...rest}
+  >
     {#if children}
       {@render children({ state, icon, text })}
     {:else}
