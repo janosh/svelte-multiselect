@@ -56,7 +56,7 @@
   {#each options as option (JSON.stringify(option))}
     {@const label = get_label(option)}
     {@const active = selected != null &&
-      get_label(option) === get_label(selected as unknown as GenericOption)}
+      label === get_label(selected as unknown as GenericOption)}
     <label class:active aria-label={aria_label}>
       <input
         type="radio"

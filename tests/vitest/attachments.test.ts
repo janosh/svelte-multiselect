@@ -216,12 +216,10 @@ describe(`tooltip`, () => {
       setTimeout(() => {
         const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
         expect(tooltip).toBeTruthy()
-        if (tooltip) {
-          expect(tooltip.style.cssText).toContain(`background: red`)
-          expect(tooltip.style.cssText).toContain(`color: white`)
-          expect(tooltip.style.cssText).toContain(`border: 2px solid blue`)
-        }
-      }, 150)
+        expect(tooltip.style.cssText).toContain(`background: red`)
+        expect(tooltip.style.cssText).toContain(`color: white`)
+        expect(tooltip.style.cssText).toContain(`border: 2px solid blue`)
+      }, 100)
     })
 
     it(`should combine custom style with CSS variables`, () => {
@@ -234,11 +232,9 @@ describe(`tooltip`, () => {
       setTimeout(() => {
         const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
         expect(tooltip).toBeTruthy()
-        if (tooltip) {
-          expect(tooltip.style.cssText).toContain(`font-weight: bold`)
-          expect(tooltip.style.cssText).toContain(`text-transform: uppercase`)
-          expect(tooltip.style.cssText).toContain(`--tooltip-bg: #123456`)
-        }
+        expect(tooltip.style.cssText).toContain(`font-weight: bold`)
+        expect(tooltip.style.cssText).toContain(`text-transform: uppercase`)
+        expect(tooltip.style.cssText).toContain(`--tooltip-bg: #123456`)
       }, 150)
     })
 
@@ -264,11 +260,9 @@ describe(`tooltip`, () => {
       setTimeout(() => {
         const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
         expect(tooltip).toBeTruthy()
-        if (tooltip) {
-          expect(tooltip.style.backgroundColor).toBe(`red`)
-          expect(tooltip.style.color).toBe(`blue`)
-          expect(tooltip.style.fontSize).toBe(`14px`)
-        }
+        expect(tooltip.style.backgroundColor).toBe(`red`)
+        expect(tooltip.style.color).toBe(`blue`)
+        expect(tooltip.style.fontSize).toBe(`14px`)
       }, 150)
     })
 
@@ -492,9 +486,7 @@ describe(`tooltip`, () => {
       element1.dispatchEvent(new Event(`mouseenter`))
       element2.dispatchEvent(new Event(`mouseenter`))
 
-      setTimeout(() => {
-        expect(document.querySelectorAll(`.custom-tooltip`).length).toBeLessThanOrEqual(1)
-      }, 150)
+      expect(document.querySelectorAll(`.custom-tooltip`).length).toBeLessThanOrEqual(1)
     })
 
     it(`should handle multiple tooltip instances`, () => {

@@ -90,7 +90,7 @@ describe(`PrevNext`, () => {
 
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowRight` }))
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
-    expect(scrollToSpy).toHaveBeenCalledTimes(10)
+    expect(scrollToSpy).toHaveBeenCalledTimes(8)
   })
 
   test(`handles custom node element`, () => {

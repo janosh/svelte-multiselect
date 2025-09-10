@@ -392,26 +392,93 @@ test(`dialog remains functional when open`, () => {
   expect(multiselect).toBeTruthy()
 })
 
-test(`fuzzy filtering works correctly`, async () => {
-  const actions = [
-    { label: `create user`, action: vi.fn() },
-    { label: `delete file`, action: vi.fn() },
-    { label: `update config`, action: vi.fn() },
-  ]
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions, fade_duration: 0 },
-  })
+test.each([
+  {
+    fuzzy: true,
+    search: `cu`,
+    expected: [`create user`],
+    description: `fuzzy match 'cu' -> 'create user'`,
+  },
+  {
+    fuzzy: true,
+    search: `del`,
+    expected: [`delete file`],
+    description: `fuzzy match 'del' -> 'delete file'`,
+  },
+  {
+    fuzzy: true,
+    search: `up`,
+    expected: [`update config`],
+    description: `fuzzy match 'up' -> 'update config'`,
+  },
+  {
+    fuzzy: true,
+    search: `user`,
+    expected: [`create user`],
+    description: `fuzzy match 'user' -> 'create user'`,
+  },
+  {
+    fuzzy: true,
+    search: `qwerty`,
+    expected: [`No matching options`],
+    description: `fuzzy match 'qwerty' -> no matches message`,
+  },
+  {
+    fuzzy: false,
+    search: `cr`,
+    expected: [`create user`],
+    description: `exact match 'cr' -> 'create user'`,
+  },
+  {
+    fuzzy: false,
+    search: `delete`,
+    expected: [`delete file`],
+    description: `exact match 'delete' -> 'delete file'`,
+  },
+  {
+    fuzzy: false,
+    search: `config`,
+    expected: [`update config`],
+    description: `exact match 'config' -> 'update config'`,
+  },
+  {
+    fuzzy: false,
+    search: `cu`,
+    expected: [`create user`],
+    description: `exact match 'cu' -> 'create user' (substring)`,
+  },
+  {
+    fuzzy: false,
+    search: `xyz`,
+    expected: [`No matching options`],
+    description: `exact match 'xyz' -> no matches message`,
+  },
+])(
+  `filtering with fuzzy=$fuzzy: $description`,
+  async ({ fuzzy, search, expected }) => {
+    const actions = [
+      { label: `create user`, action: vi.fn() },
+      { label: `delete file`, action: vi.fn() },
+      { label: `update config`, action: vi.fn() },
+    ]
+    mount(CmdPalette, {
+      target: document.body,
+      props: { open: true, actions, fuzzy, fade_duration: 0 },
+    })
 
-  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
-  input.value = `cu`
-  input.dispatchEvent(new Event(`input`, { bubbles: true }))
-  await tick()
+    const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+    input.value = search
+    input.dispatchEvent(new Event(`input`, { bubbles: true }))
+    await tick()
 
-  const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
-  expect(visible_options).toHaveLength(1)
-  expect(visible_options[0].textContent).toContain(`create user`)
-})
+    const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
+    expect(visible_options).toHaveLength(expected.length)
+
+    expected.forEach((expected_label, idx) => {
+      expect(visible_options[idx].textContent).toContain(expected_label)
+    })
+  },
+)
 
 test(`handles multiple trigger keys simultaneously`, async () => {
   const props = $state({

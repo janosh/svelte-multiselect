@@ -4,6 +4,7 @@
 
   export type Item = string | [string, unknown]
   type T = $$Generic<Item>
+  const min_items = 3
 
   interface Props extends Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> {
     items?: T[]
@@ -51,9 +52,9 @@
   // Validation and logging
   $effect.pre(() => {
     if (log !== `silent`) {
-      if (items_arr.length < 2 && log === `verbose`) {
+      if (items_arr.length < min_items && log === `verbose`) {
         console.warn(
-          `PrevNext received ${items_arr.length} items - minimum of 3 expected`,
+          `PrevNext received ${items_arr.length} items - minimum of ${min_items} expected`,
         )
       }
 
@@ -68,7 +69,7 @@
 
   function handle_keyup(event: KeyboardEvent) {
     if (!onkeyup) return
-    if ((items_arr?.length ?? 0) < 2) return
+    if ((items_arr?.length ?? 0) < min_items) return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]
     if (to) {
@@ -86,7 +87,7 @@
 
 <svelte:window onkeyup={handle_keyup} />
 
-{#if items_arr.length > 2}
+{#if items_arr.length >= min_items}
   <svelte:element this={node} class="prev-next" {...rest}>
     <!-- ensures `prev` is a defined [key, value] tuple.
       Due to prior normalization of the `items` prop, any defined `prev` item

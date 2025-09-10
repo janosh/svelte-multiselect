@@ -517,17 +517,13 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
     function hide_tooltip() {
       clear_tooltip()
 
-      hide_timeout = setTimeout(() => {
+      if (current_tooltip) {
+        current_tooltip.style.opacity = `0`
         if (current_tooltip) {
-          current_tooltip.style.opacity = `0`
-          setTimeout(() => {
-            if (current_tooltip) {
-              current_tooltip.remove()
-              current_tooltip = null
-            }
-          }, 150)
+          current_tooltip.remove()
+          current_tooltip = null
         }
-      }, 50)
+      }
     }
 
     const events = [`mouseenter`, `mouseleave`, `focus`, `blur`]

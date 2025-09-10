@@ -3,7 +3,6 @@
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
   import type { ObjectOption, Option } from './types'
-  import { fuzzy_match, get_label } from './utils'
 
   interface Action extends ObjectOption {
     label: string
@@ -73,11 +72,6 @@
       options={actions}
       bind:input
       {placeholder}
-      filterFunc={(option: Option, search_text: string) => {
-        if (!search_text) return true
-        const label = get_label(option as Action)
-        return fuzzy_match(search_text, `${label}`)
-      }}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       {...rest}

@@ -45,8 +45,7 @@
         const pre = code.parentElement
         const content = code.textContent ?? ``
         if (
-          pre &&
-          !pre.querySelector(`[data-sms-copy]`) &&
+          pre && !pre.querySelector(`[data-sms-copy]`) &&
           !(skip_sel && pre.querySelector(skip_sel))
         ) {
           mount(CopyButton, {
