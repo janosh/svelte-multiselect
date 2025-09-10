@@ -444,8 +444,8 @@ test.each([
   {
     fuzzy: false,
     search: `cu`,
-    expected: [`create user`],
-    description: `exact match 'cu' -> 'create user' (substring)`,
+    expected: [`No matching options`],
+    description: `exact match 'cu' -> no matches (not a substring)`,
   },
   {
     fuzzy: false,

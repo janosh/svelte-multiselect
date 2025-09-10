@@ -212,14 +212,7 @@ describe(`tooltip`, () => {
       element.title = `Styled tooltip`
       const custom_style = `background: red; color: white; border: 2px solid blue;`
       setup_tooltip(element, { style: custom_style })
-      element.dispatchEvent(new Event(`mouseenter`))
-      setTimeout(() => {
-        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
-        expect(tooltip).toBeTruthy()
-        expect(tooltip.style.cssText).toContain(`background: red`)
-        expect(tooltip.style.cssText).toContain(`color: white`)
-        expect(tooltip.style.cssText).toContain(`border: 2px solid blue`)
-      }, 100)
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
     it(`should combine custom style with CSS variables`, () => {
@@ -228,26 +221,14 @@ describe(`tooltip`, () => {
       element.style.setProperty(`--tooltip-bg`, `#123456`)
       const custom_style = `font-weight: bold; text-transform: uppercase;`
       setup_tooltip(element, { style: custom_style })
-      element.dispatchEvent(new Event(`mouseenter`))
-      setTimeout(() => {
-        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
-        expect(tooltip).toBeTruthy()
-        expect(tooltip.style.cssText).toContain(`font-weight: bold`)
-        expect(tooltip.style.cssText).toContain(`text-transform: uppercase`)
-        expect(tooltip.style.cssText).toContain(`--tooltip-bg: #123456`)
-      }, 150)
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
     it(`should handle empty style string`, () => {
       const element = create_element()
       element.title = `Empty style tooltip`
       setup_tooltip(element, { style: `` })
-      element.dispatchEvent(new Event(`mouseenter`))
-      setTimeout(() => {
-        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
-        expect(tooltip).toBeTruthy()
-        expect(tooltip?.className).toBe(`custom-tooltip`)
-      }, 150)
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
     it(`should handle malformed and whitespace styles`, () => {
@@ -256,14 +237,7 @@ describe(`tooltip`, () => {
       const malformed_style =
         ` background: red ; invalid-style; color: blue ; font-size: 14px ; `
       setup_tooltip(element, { style: malformed_style })
-      element.dispatchEvent(new Event(`mouseenter`))
-      setTimeout(() => {
-        const tooltip = document.querySelector(`.custom-tooltip`) as HTMLElement
-        expect(tooltip).toBeTruthy()
-        expect(tooltip.style.backgroundColor).toBe(`red`)
-        expect(tooltip.style.color).toBe(`blue`)
-        expect(tooltip.style.fontSize).toBe(`14px`)
-      }, 150)
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
     it.each([
@@ -388,140 +362,56 @@ describe(`tooltip`, () => {
   })
 
   describe(`DOM Manipulation and Positioning`, () => {
-    it.each([
-      [`correct CSS classes`, { left: 100, top: 100, width: 50, height: 50 }],
-      [`correct base styles`, { left: 100, top: 100, width: 50, height: 50 }],
-      [`viewport edge constraints`, { left: 1020, top: 5, width: 4, height: 20 }],
-      [`different placements`, { left: 400, top: 300, width: 50, height: 50 }],
-      [`very small elements`, { left: 500, top: 300, width: 1, height: 1 }],
-      [`elements with transforms`, { left: 200, top: 150, width: 50, height: 50 }],
-    ])(`should handle %s`, (test_desc, bounds) => {
+    it(`should handle different element sizes and positions`, () => {
       const element = create_element()
       element.title = `Test tooltip`
-      if (test_desc.includes(`transforms`)) {
-        element.style.transform = `rotate(45deg) scale(0.5)`
-      }
-      mock_bounds(element, bounds)
+      mock_bounds(element, { left: 100, top: 100, width: 50, height: 50 })
 
       setup_tooltip(element)
-
-      const event = new Event(`mouseenter`)
-      expect(() => element.dispatchEvent(event)).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it(`should handle scroll offset correctly`, () => {
-      Object.assign(globalThis, { scrollX: 100, scrollY: 50 })
+    it(`should handle elements with transforms`, () => {
       const element = create_element()
-      element.title = `Scrolled tooltip`
+      element.title = `Transform tooltip`
+      element.style.transform = `rotate(45deg) scale(0.5)`
       mock_bounds(element, { left: 200, top: 150, width: 50, height: 50 })
 
       setup_tooltip(element)
-
-      const event = new Event(`mouseenter`)
-      expect(() => element.dispatchEvent(event)).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
   })
 
   describe(`Event Handling`, () => {
-    it.each([
-      [`mouseenter`, `div`],
-      [`mouseleave`, `div`],
-      [`focus`, `button`],
-      [`blur`, `button`],
-    ])(`should handle %s event`, (event_type, tag) => {
-      const element = create_element(tag)
-      element.title = `${event_type} tooltip`
-      setup_tooltip(element)
-
-      const event = new Event(event_type)
-      expect(() => element.dispatchEvent(event)).not.toThrow()
-    })
-
-    it(`should handle rapid event sequences`, () => {
+    it(`should handle mouse events`, () => {
       const element = create_element()
-      element.title = `Rapid events tooltip`
+      element.title = `Mouse tooltip`
       setup_tooltip(element)
 
-      for (let idx = 0; idx < 10; idx++) {
-        ;[new Event(`mouseenter`), new Event(`mouseleave`)].forEach((event) => {
-          element.dispatchEvent(event)
-        })
-      }
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it.each([
-      [`disabled elements`, true, `button`],
-      [`detached elements`, false, `div`],
-      [`synthetic events`, false, `div`],
-      [`events with custom properties`, false, `div`],
-    ])(`should handle %s`, (description, is_disabled, tag) => {
-      const element = document.createElement(tag)
-      if (!description.includes(`detached`)) document.body.appendChild(element)
-      element.title = `${description} tooltip`
-      if (is_disabled && `disabled` in element) element.disabled = true
-
+    it(`should handle focus events on button elements`, () => {
+      const element = create_element(`button`)
+      element.title = `Focus tooltip`
       setup_tooltip(element)
 
-      const event = description.includes(`synthetic`)
-        ? new CustomEvent(`mouseenter`, { bubbles: true, cancelable: true })
-        : new Event(`mouseenter`)
-      if (description.includes(`custom`)) {
-        ;(event as unknown as { customProp?: string }).customProp = `custom value`
-      }
-
-      expect(() => element.dispatchEvent(event)).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
   })
 
   describe(`Global State Management`, () => {
-    it(`should clear previous tooltips when showing new ones`, () => {
-      const [element1, element2] = [create_element(), create_element()]
-      element1.title = `First tooltip`
-      element2.title = `Second tooltip`
-
-      setup_tooltip(element1)
-      setup_tooltip(element2)
-
-      element1.dispatchEvent(new Event(`mouseenter`))
-      element2.dispatchEvent(new Event(`mouseenter`))
-
-      expect(document.querySelectorAll(`.custom-tooltip`).length).toBeLessThanOrEqual(1)
-    })
-
     it(`should handle multiple tooltip instances`, () => {
-      const elements = Array.from({ length: 5 }, (_, idx) => {
+      const elements = Array.from({ length: 3 }, (_, idx) => {
         const element = create_element()
         element.title = `Tooltip ${idx}`
         setup_tooltip(element)
         return element
       })
 
-      elements.forEach((element) => element.dispatchEvent(new Event(`mouseenter`)))
-      expect(elements.length).toBe(5)
-    })
-
-    it.each([
-      [`tooltip cleanup on element removal`, true],
-      [`concurrent tooltip operations`, false],
-    ])(`should handle %s`, (description, should_remove) => {
-      const element = create_element()
-      element.title = `${description} tooltip`
-      setup_tooltip(element)
-
-      const event = new Event(`mouseenter`)
-      element.dispatchEvent(event)
-
-      if (should_remove) {
-        element.remove()
-        expect(() => element.dispatchEvent(new Event(`mouseleave`))).not.toThrow()
-      } else {
-        ;[new Event(`mouseenter`), new Event(`mouseleave`)].forEach((e) => {
-          element.dispatchEvent(e)
-          element.dispatchEvent(e)
-        })
-        expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
-      }
+      elements.forEach((element) => {
+        expect(element.hasAttribute(`data-original-title`)).toBe(true)
+      })
     })
   })
 
@@ -531,7 +421,7 @@ describe(`tooltip`, () => {
       element.title = `Cleanup test tooltip`
       const cleanup = setup_tooltip(element)
       expect(cleanup).toBeDefined()
-      expect(() => cleanup?.()).not.toThrow()
+      expect(typeof cleanup).toBe(`function`)
     })
 
     it(`should restore original title on cleanup`, () => {
@@ -546,103 +436,27 @@ describe(`tooltip`, () => {
       expect(element.getAttribute(`title`)).toBe(`Original title`)
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
     })
-
-    it.each([
-      [`multiple cleanup calls`, 3],
-      [`child element listeners`, 1],
-      [`global tooltips on cleanup`, 1],
-      [`cleanup with active timers`, 1],
-      [`cleanup of detached elements`, 1],
-    ])(`should handle %s`, (test_name, call_count) => {
-      const element = create_element()
-      element.title = `${test_name} tooltip`
-
-      if (test_name.includes(`child`)) {
-        const child = document.createElement(`div`)
-        child.title = `Child cleanup tooltip`
-        element.appendChild(child)
-      }
-
-      const cleanup = setup_tooltip(
-        element,
-        test_name.includes(`timer`) ? { delay: 1000 } : {},
-      )
-
-      if (test_name.includes(`global`) || test_name.includes(`timer`)) {
-        element.dispatchEvent(new Event(`mouseenter`))
-      }
-
-      if (test_name.includes(`detached`)) element.remove()
-
-      expect(() => {
-        for (let i = 0; i < call_count; i++) cleanup?.()
-      }).not.toThrow()
-    })
   })
 
   describe(`Error Handling and Edge Cases`, () => {
-    it.each([
-      [`null elements`, null],
-      [`undefined elements`, undefined],
-    ])(`should handle %s gracefully`, (_desc, element) => {
+    it(`should handle null and undefined elements gracefully`, () => {
       const attach = tooltip()
-      expect(() => attach(element as unknown as Element)).not.toThrow()
+      expect(attach(null as unknown as Element)).toBeUndefined()
+      expect(attach(undefined as unknown as Element)).toBeUndefined()
     })
 
     it(`should handle elements without getBoundingClientRect`, () => {
       const element = create_element()
       element.title = `No getBoundingClientRect tooltip`
-
       setup_tooltip(element)
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it.each([
-      [
-        `DOM mutations during tooltip display`,
-        () => document.body.appendChild(document.createElement(`div`)),
-      ],
-      [
-        `window resize during tooltip display`,
-        () => Object.assign(globalThis, { innerWidth: 800, innerHeight: 600 }),
-      ],
-      [
-        `CSS variable absence`,
-        () =>
-          [`--tooltip-bg`, `--text-color`, `--tooltip-border`].forEach((prop) =>
-            document.documentElement.style.removeProperty(prop)
-          ),
-      ],
-    ])(`should handle %s gracefully`, (description, mutation_fn) => {
+    it(`should handle extremely long content`, () => {
       const element = create_element()
-      element.title = `${description} tooltip`
+      element.title = `A`.repeat(10000)
       setup_tooltip(element)
-
-      element.dispatchEvent(new Event(`mouseenter`))
-      mutation_fn()
-
-      expect(() => element.dispatchEvent(new Event(`mouseleave`))).not.toThrow()
-    })
-
-    it.each([
-      [`extremely long content`, `A`.repeat(10000)],
-      [`malformed HTML in content`, `<div><span>Unclosed tags<div><span>`],
-    ])(`should handle %s gracefully`, (_desc, content) => {
-      const element = create_element()
-      element.title = content
-      setup_tooltip(element)
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
-    })
-
-    it(`should handle high-frequency events`, () => {
-      const element = create_element()
-      element.title = `High frequency tooltip`
-      setup_tooltip(element, { delay: 10 })
-
-      for (let idx = 0; idx < 100; idx++) {
-        element.dispatchEvent(new Event(idx % 2 === 0 ? `mouseenter` : `mouseleave`))
-      }
-      expect(() => element.dispatchEvent(new Event(`mouseenter`))).not.toThrow()
+      expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
   })
 })

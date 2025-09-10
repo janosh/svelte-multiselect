@@ -405,10 +405,27 @@
       // active with wrap around at both ends
       const increment = event.key === `ArrowUp` ? -1 : 1
 
-      activeIndex = (activeIndex + increment) % matchingOptions.length
+      // Include user message in total count if it exists
+      const has_user_msg = searchText && (
+        (allowUserOptions && createOptionMsg) ||
+        (!duplicates && selected.map(get_label).includes(searchText)) ||
+        (matchingOptions.length === 0 && noMatchingOptionsMsg)
+      )
+      const total_items = matchingOptions.length + (has_user_msg ? 1 : 0)
+
+      activeIndex = (activeIndex + increment) % total_items
       // in JS % behaves like remainder operator, not real modulo, so negative numbers stay negative
       // need to do manual wrap around at 0
-      if (activeIndex < 0) activeIndex = matchingOptions.length - 1
+      if (activeIndex < 0) activeIndex = total_items - 1
+
+      // Handle user message activation
+      if (has_user_msg && activeIndex === matchingOptions.length) {
+        option_msg_is_active = true
+        activeOption = null
+      } else {
+        option_msg_is_active = false
+        activeOption = matchingOptions[activeIndex] ?? null
+      }
 
       if (autoScroll) {
         await tick()
