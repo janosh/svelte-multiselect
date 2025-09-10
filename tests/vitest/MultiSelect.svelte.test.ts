@@ -1790,7 +1790,9 @@ test.each([[0], [1], [2], [5], [undefined]])(
     input.dispatchEvent(input_event)
 
     expect(document.querySelectorAll(`ul.options li`)).toHaveLength(
-      Math.min(options.length, maxOptions || options.length),
+      maxOptions === null || maxOptions === undefined
+        ? options.length
+        : Math.min(options.length, maxOptions),
     )
   },
 )
@@ -1802,7 +1804,6 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
 
     mount(MultiSelect, {
       target: document.body,
-      // @ts-expect-error test invalid maxOptions
       props: { options: [1, 2, 3], maxOptions },
     })
 

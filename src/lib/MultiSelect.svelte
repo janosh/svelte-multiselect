@@ -831,7 +831,10 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
-      {#each matchingOptions.slice(0, Math.max(0, maxOptions ?? 0) || Infinity) as
+      {#each matchingOptions.slice(
+        0,
+        maxOptions == null ? Infinity : Math.max(0, maxOptions),
+      ) as
         option_item,
         idx
         (duplicates ? [key(option_item), idx] : key(option_item))
@@ -844,6 +847,7 @@
         disabledTitle = defaultDisabledTitle,
       } = option_item instanceof Object ? option_item : { label: option_item }}
         {@const active = activeIndex === idx}
+        {@const selected = is_selected(label)}
         {@const optionStyle =
         [get_style(option_item, `option`), liOptionStyle].filter(Boolean).join(
           ` `,
@@ -855,8 +859,8 @@
             if (keepSelectedInDropdown) toggle_option(option_item, event)
             else add(option_item, event)
           }}
-          title={disabled ? disabledTitle : (is_selected(label) && selectedTitle) || title}
-          class:selected={is_selected(label)}
+          title={disabled ? disabledTitle : (selected && selectedTitle) || title}
+          class:selected
           class:active
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
@@ -867,7 +871,7 @@
             if (!disabled) activeIndex = idx
           }}
           role="option"
-          aria-selected="false"
+          aria-selected={selected ? `true` : `false`}
           style={optionStyle}
           onkeydown={(event) => {
             if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
@@ -881,7 +885,7 @@
             <input
               type="checkbox"
               class="option-checkbox"
-              checked={is_selected(label)}
+              checked={selected}
               aria-label="Toggle {get_label(option_item)}"
               tabindex="-1"
             />
