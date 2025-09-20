@@ -33,14 +33,12 @@ main {
   width: 100%;
   max-width: var(--main-max-width);
 }
-button,
-a.btn {
+button, a.btn {
   color: white;
   cursor: pointer;
   border: none;
   border-radius: 3pt;
   padding: 2pt 4pt;
-  font-size: 12pt;
   line-height: initial;
   transition: background-color 0.2s;
   background-color: var(--btn-bg);
@@ -60,19 +58,18 @@ code {
   overflow-wrap: break-word;
   padding: 0 2pt;
   border-radius: 2pt;
-  font-size: 12pt;
   background-color: rgba(255, 255, 255, 0.15);
 }
 pre code {
   background-color: transparent;
   display: inline-block;
-  font-size: 10pt;
+  font-size: clamp(6pt, 6pt + 0.5vw, 10pt);
 }
 pre {
   position: relative;
   border-radius: 4pt;
   background-color: var(--pre-bg);
-  padding: 1em;
+  padding: 4pt;
   overflow-x: auto;
 }
 ul {

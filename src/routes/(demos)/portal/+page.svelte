@@ -3,31 +3,31 @@
   import { get_label } from '$lib/utils'
   import { languages, octicons } from '$site/options'
 
-  let show_modal = $state(false)
+  let open_modal = $state(false)
   let selected_languages = $state<string[]>([])
   let selected_octicons = $state<string[]>([])
 
   function handle_escape(event: KeyboardEvent): void {
-    if (event.key === `Escape`) show_modal = false
+    if (event.key === `Escape`) open_modal = false
   }
 </script>
 
 <svelte:window onkeydown={handle_escape} />
 
-<h2>MultiSelect in Modal Demo</h2>
+<h2>Portalled MultiSelect in Modal Demo</h2>
 
-<button onclick={() => (show_modal = true)} style="padding: 3pt 6pt; margin: 1em auto">
+<button onclick={() => (open_modal = true)} style="padding: 3pt 6pt; margin: 1em auto">
   Open Modal
 </button>
 
-{#if show_modal}
+{#if open_modal}
   <div
     class="modal-backdrop"
     onclick={(event) => {
-      if (event.target === event.currentTarget) show_modal = false
+      if (event.target === event.currentTarget) open_modal = false
     }}
     onkeydown={(event) => {
-      if (event.key === `Enter` || event.key === ` `) show_modal = false
+      if (event.key === `Enter` || event.key === ` `) open_modal = false
     }}
     role="button"
     tabindex="0"
@@ -58,7 +58,7 @@
       />
       <p>Selected Languages: {selected_languages.map(get_label).join(`, `) || `None`}</p>
       <p>Selected Octicons: {selected_octicons.map(get_label).join(`, `) || `None`}</p>
-      <button onclick={() => (show_modal = false)}>Close Modal 2</button>
+      <button onclick={() => (open_modal = false)}>Close Modal 2</button>
     </div>
   </div>
 {/if}

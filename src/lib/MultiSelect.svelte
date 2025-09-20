@@ -481,9 +481,14 @@
     }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
-    if (outerDiv && !outerDiv.contains(event.target as Node)) {
-      close_dropdown(event)
-    }
+    if (!outerDiv) return
+    const target = event.target as Node
+    // Check if click is inside the main component
+    if (outerDiv.contains(target)) return
+    // If portal is active, also check if click is inside the portalled options dropdown
+    if (portal_params?.active && ul_options && ul_options.contains(target)) return
+    // Click is outside both the main component and any portalled dropdown
+    close_dropdown(event)
   }
 
   let drag_idx: number | null = $state(null)
@@ -548,6 +553,7 @@
   const handle_input_blur: FocusEventHandler<HTMLInputElement> = (event) => {
     // For portalled dropdowns, don't close on blur since clicks on portalled elements
     // will cause blur but we want to allow the click to register first
+    // (otherwise mobile touch event is unable to select options https://github.com/janosh/svelte-multiselect/issues/335)
     if (portal_params?.active) {
       onblur?.(event) // Let the click handler manage closing for portalled dropdowns
       return
