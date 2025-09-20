@@ -747,8 +747,54 @@ test.describe(`portal feature`, () => {
     await expect(portalled_foods_options).not.toBeAttached()
   })
 
+  test(`mobile touch selection works with portal enabled`, async ({ page }) => {
+    await page.setViewportSize({ width: 375, height: 812 })
+    await page.goto(`/portal`, { waitUntil: `networkidle` })
+    await page.getByRole(`button`, { name: `Open Modal` }).click()
+
+    const modal_content = page.locator(`div.modal-content.modal`)
+    const languages_input = modal_content.locator(
+      `div.multiselect input[placeholder='Choose languages...']`,
+    )
+
+    await languages_input.click()
+
+    const portalled_languages_options = page.locator(
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${languages[0]}"))`,
+    )
+    await expect(portalled_languages_options).toBeVisible()
+
+    // Simulate the race condition that causes the bug
+    const dropdown_stays_open = await page.evaluate(() => {
+      const outerDiv = document.querySelector(`div.multiselect`)
+      const portalled_option = document.querySelector(
+        `body > ul.options li[role="option"]`,
+      )
+      const dropdown = document.querySelector(`body > ul.options`)
+
+      if (!outerDiv || !portalled_option || !dropdown) return false
+
+      // Simulate click outside event on portalled element
+      const click_event = new MouseEvent(`click`, { bubbles: true })
+      Object.defineProperty(click_event, `target`, { value: portalled_option })
+      globalThis.dispatchEvent(click_event)
+
+      return dropdown.getAttribute(`aria-expanded`) === `true`
+    })
+
+    // Without fix: dropdown closes, test times out. With fix: dropdown stays open, test passes.
+    expect(dropdown_stays_open).toBe(true)
+
+    await portalled_languages_options.getByRole(`option`, {
+      name: languages[0],
+      exact: true,
+    }).click()
+    await expect(modal_content.getByRole(`button`, { name: `Remove ${languages[0]}` }))
+      .toBeVisible()
+  })
+
   test(`dropdowns in modal render in body when portal is active`, async ({ page }) => {
-    await page.goto(`/modal`, { waitUntil: `networkidle` })
+    await page.goto(`/portal`, { waitUntil: `networkidle` })
 
     await page.getByRole(`button`, { name: `Open Modal` }).click()
 
