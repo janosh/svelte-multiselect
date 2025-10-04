@@ -398,6 +398,34 @@ describe(`tooltip`, () => {
 
       expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
+
+    it(`should hide tooltip on scroll`, () => {
+      vi.useFakeTimers()
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+
+      globalThis.dispatchEvent(new Event(`scroll`, { bubbles: true }))
+      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+
+      vi.useRealTimers()
+    })
+
+    it(`should remove scroll listener on cleanup`, () => {
+      const element = create_element()
+      element.title = `test`
+      const spy = vi.spyOn(globalThis, `removeEventListener`)
+
+      setup_tooltip(element)?.()
+
+      expect(spy).toHaveBeenCalledWith(`scroll`, expect.any(Function), true)
+      spy.mockRestore()
+    })
   })
 
   describe(`Global State Management`, () => {
@@ -715,10 +743,10 @@ describe(`highlight_matches`, () => {
 
   it.each([
     // Early returns
-    [`CSS not supported`, undefined, `test`, `test`, false, 0, 0],
-    [`no query`, true, ``, `test`, false, 0, 0],
-    [`CSS not supported (fuzzy)`, undefined, `auo`, `auo`, true, 0, 0],
-    [`no query (fuzzy)`, true, ``, `auo`, true, 0, 0],
+    [`CSS not supported`, undefined, `test`, `test`, false, 0, undefined],
+    [`no query`, true, ``, `test`, false, 0, undefined],
+    [`CSS not supported (fuzzy)`, undefined, `auo`, `auo`, true, 0, undefined],
+    [`no query (fuzzy)`, true, ``, `auo`, true, 0, undefined],
 
     // Substring highlighting (fuzzy=false)
     [
@@ -728,6 +756,7 @@ describe(`highlight_matches`, () => {
       `test`,
       false,
       1,
+      undefined,
     ],
     [
       `multiple matches`,
@@ -736,6 +765,7 @@ describe(`highlight_matches`, () => {
       `test`,
       false,
       1,
+      undefined,
     ],
     [
       `case insensitive`,
@@ -744,6 +774,7 @@ describe(`highlight_matches`, () => {
       `test`,
       false,
       1,
+      undefined,
     ],
     [
       `no matches`,
@@ -752,10 +783,11 @@ describe(`highlight_matches`, () => {
       `xyz`,
       false,
       1,
+      undefined,
     ],
 
     // Fuzzy highlighting (fuzzy=true)
-    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1],
+    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1, undefined],
     [
       `fuzzy case insensitive`,
       true,
@@ -763,6 +795,7 @@ describe(`highlight_matches`, () => {
       `auo`,
       true,
       1,
+      undefined,
     ],
     [
       `fuzzy no matches`,
@@ -771,6 +804,7 @@ describe(`highlight_matches`, () => {
       `xyz`,
       true,
       1,
+      undefined,
     ],
     [
       `skip with node_filter`,
