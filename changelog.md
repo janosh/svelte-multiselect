@@ -1,5 +1,13 @@
 # Changelog
 
+## [v11.2.4](https://github.com/janosh/svelte-multiselect/compare/v11.2.3...v11.2.4)
+
+> 4 October 2025
+
+- Add prop `fuzzy: boolean = true` to `MultiSelect` and `CmdPalette` for fuzzy option filtering (#334) by @janosh
+- fix broken mobile touch selection with portal enabled (#336) by @janosh
+- immediately hide tooltip on scroll + icon fixes in MultiSelect + type fixes in CmdPalette and PrevNext by @janosh
+
 ## [v11.2.3](https://github.com/janosh/svelte-multiselect/compare/v11.2.2...v11.2.3)
 
 > 13 August 2025
