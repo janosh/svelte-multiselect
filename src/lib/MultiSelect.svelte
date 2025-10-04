@@ -437,7 +437,8 @@
       event.stopPropagation()
       // Only remove option if it wouldn't violate minSelect
       if (minSelect === null || selected.length > minSelect) {
-        remove(selected.at(-1) as Option, event)
+        const last_option = selected.at(-1)
+        if (last_option) remove(last_option, event)
       }
       // Don't prevent default, allow normal backspace behavior if not removing
     } // make first matching option active on any keypress (if none of the above special cases match)
@@ -597,7 +598,7 @@
       window.addEventListener(`scroll`, update_position, true)
       window.addEventListener(`resize`, update_position)
 
-      $effect.pre(() => {
+      $effect(() => {
         if (open && target_node) update_position()
         else node.hidden = true
       })
@@ -669,8 +670,7 @@
   {:else}
     <Icon
       icon="ChevronExpand"
-      width="15px"
-      style="min-width: 1em; padding: 0 1pt; cursor: pointer"
+      style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
     />
   {/if}
   <ul
@@ -725,7 +725,7 @@
             {#if removeIcon}
               {@render removeIcon()}
             {:else}
-              <Icon icon="Cross" width="15px" />
+              <Icon icon="Cross" style="width: 15px" />
             {/if}
           </button>
         {/if}
@@ -741,7 +741,7 @@
       {autocomplete}
       {inputmode}
       {pattern}
-      placeholder={selected.length == 0 ? placeholder : null}
+      placeholder={selected.length === 0 ? placeholder : null}
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
       onmouseup={open_dropdown}
@@ -782,8 +782,7 @@
     {:else}
       <Icon
         icon="Disabled"
-        width="14pt"
-        style="margin: 0 2pt"
+        style="width: 14pt; margin: 0 2pt"
         data-name="disabled-icon"
         aria-disabled="true"
       />
@@ -807,7 +806,7 @@
         {#if removeIcon}
           {@render removeIcon()}
         {:else}
-          <Icon icon="Cross" width="15px" />
+          <Icon icon="Cross" style="width: 15px" />
         {/if}
       </button>
     {/if}
@@ -917,7 +916,7 @@
         {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
         {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
         {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
-        {@const no_match = Boolean(matchingOptions?.length == 0 && noMatchingOptionsMsg) &&
+        {@const no_match = Boolean(matchingOptions?.length === 0 && noMatchingOptionsMsg) &&
         `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {#if msgType}

@@ -9,7 +9,8 @@
     action: (label: string) => void
   }
 
-  interface Props extends Omit<ComponentProps<typeof MultiSelect>, `options`> {
+  interface Props
+    extends Omit<ComponentProps<typeof MultiSelect<Action>>, `options`> {
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
@@ -46,14 +47,16 @@
   }
 
   function close_if_outside(event: MouseEvent) {
-    const target = event.target as HTMLElement
+    const target = event.target
+    if (!target || !(target instanceof HTMLElement)) return
     if (open && !dialog?.contains(target) && !target.closest(`ul.options`)) {
       open = false
     }
   }
 
-  function trigger_action_and_close(data: { option: Option }) {
-    const { action, label } = data.option as Action
+  function trigger_action_and_close({ option }: { option: Option }) {
+    const { action, label } = (option ?? {}) as Action
+    if (!action) return
     action(label)
     open = false
   }

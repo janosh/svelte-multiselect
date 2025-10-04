@@ -2,17 +2,18 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
 
-  export type Item = string | [string, unknown]
-  type T = $$Generic<Item>
+  export type Item = [string, unknown]
 
   interface Props extends Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> {
-    items?: T[]
+    items?: (string | Item)[]
     node?: string
     current?: string
     log?: `verbose` | `errors` | `silent`
     nav_options?: { replace_state: boolean; no_scroll: boolean }
     titles?: { prev: string; next: string }
-    onkeyup?: ((obj: { prev: Item; next: Item }) => Record<string, string>) | null
+    onkeyup?:
+      | ((obj: { prev: Item; next: Item }) => Record<string, string | undefined>)
+      | null
     prev_snippet?: Snippet<[{ item: Item }]>
     children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
     between?: Snippet<[]>
@@ -26,10 +27,7 @@
     log = `errors`,
     nav_options = { replace_state: true, no_scroll: true },
     titles = { prev: `&larr; Previous`, next: `Next &rarr;` },
-    onkeyup = ({ prev, next }) => ({
-      ArrowLeft: prev[0],
-      ArrowRight: next[0],
-    }),
+    onkeyup = ({ prev, next }) => ({ ArrowLeft: prev[0], ArrowRight: next[0] }),
     prev_snippet,
     children,
     between,
@@ -40,9 +38,9 @@
 
   // Convert items to consistent [key, value] format
   let items_arr = $derived(
-    (items ?? []).map((
-      itm,
-    ) => (typeof itm === `string` ? [itm, itm] : itm)) as Item[],
+    (items ?? []).map(
+      (itm) => (typeof itm === `string` ? [itm, itm] : itm),
+    ) as Item[],
   )
 
   // Calculate prev/next items with wraparound
@@ -71,9 +69,10 @@
   function handle_keyup(event: KeyboardEvent) {
     if (!onkeyup) return
     if ((items_arr?.length ?? 0) < min_items) return
+    if (!prev || !next) return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]
-    if (to) {
+    if (to !== undefined) {
       const { replace_state, no_scroll } = nav_options
       const [scroll_x, scroll_y] = no_scroll
         ? [window.scrollX, window.scrollY]

@@ -531,8 +531,12 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
 
     events.forEach((event, idx) => element.addEventListener(event, handlers[idx]))
 
+    // Hide tooltip when user scrolls
+    globalThis.addEventListener(`scroll`, hide_tooltip, true)
+
     return () => {
       events.forEach((event, idx) => element.removeEventListener(event, handlers[idx]))
+      globalThis.removeEventListener(`scroll`, hide_tooltip, true)
 
       const original_title = element.getAttribute(`data-original-title`)
       if (original_title) {
