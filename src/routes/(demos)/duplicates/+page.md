@@ -15,13 +15,11 @@
 </script>
 
 Allow duplicates: <input type="checkbox" bind:checked={duplicates} />
-<br />
 
 <label for="key">Key
   <input bind:group={key} type="radio" name="key" value="JSON.stringify" /> JSON.stringify
   <input bind:group={key} type="radio" name="key" value="==="> ===
 </label>
-<br /><br />
 
 <MultiSelect
   id="duplicates"

@@ -37,7 +37,7 @@
     if (!global && !global_selector) return
 
     const apply_copy_buttons = () => {
-      const btn_style = `position: absolute; top: 9pt; right: 9pt; ${
+      const btn_style = `position: absolute; top: 6pt; right: 6pt; ${
         rest.style ?? ``
       }`
       const skip_sel = skip_selector ?? as

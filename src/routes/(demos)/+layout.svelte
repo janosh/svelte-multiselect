@@ -36,4 +36,7 @@
     place-content: center;
     place-items: center;
   }
+  main :global(h2) {
+    margin-top: 2em;
+  }
 </style>

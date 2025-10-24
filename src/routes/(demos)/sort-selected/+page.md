@@ -25,8 +25,6 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 />
 ```
 
-<br />
-
 ### Frontend Lib Picker (custom sorting by programming language)
 
 ```svelte example id="custom-sort"
@@ -48,8 +46,6 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 ```
 
 <FileDetails files={[{ title: `<code>options.ts</code>`, content: options_src }]} />
-
-<br />
 
 MultiSelect by default simply renders selected items in the order they were chosen. Unless `draggable=false`, users can drag and drop to reorder selected options. The prop
 

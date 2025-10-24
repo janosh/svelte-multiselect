@@ -4,7 +4,7 @@
   --text-color: #ccc;
   --main-max-width: 50em;
   --pre-bg: rgba(255, 255, 255, 0.05);
-  --btn-bg: rgba(255, 255, 255, 0.15);
+  --btn-bg: rgba(255, 255, 255, 0.1);
 
   --sms-active-color: rgba(255, 255, 255, 0.1);
   --sms-focus-border: 1pt solid cornflowerblue;
@@ -19,6 +19,11 @@
   --github-corner-bg: white;
   --example-margin: 1em auto;
   --example-btn-bg: none;
+}
+
+/* Set the site's color scheme to dark */
+html {
+  color-scheme: dark;
 }
 body {
   background: var(--night);
@@ -44,7 +49,7 @@ button, a.btn {
   background-color: var(--btn-bg);
 }
 :is(button, a.btn):hover {
-  color: white;
+  background-color: color-mix(in srgb, var(--btn-bg) 100%, white 10%);
 }
 a {
   color: var(--blue);
@@ -64,6 +69,7 @@ pre code {
   background-color: transparent;
   display: inline-block;
   font-size: clamp(6pt, 6pt + 0.5vw, 10pt);
+  width: 100%;
 }
 pre {
   position: relative;

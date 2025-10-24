@@ -25,8 +25,6 @@
 />
 ```
 
-<br />
-
 This page is used for Playwright testing to ensure
 
 - the remove-all button

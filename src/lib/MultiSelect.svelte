@@ -72,10 +72,13 @@
     required = false,
     resetFilterOnAdd = true,
     searchText = $bindable(``),
+    value = $bindable(null),
     selected = $bindable(
-      options
-        ?.filter((opt) => opt instanceof Object && opt?.preselected)
-        .slice(0, maxSelect ?? undefined) ?? [],
+      value !== null && value !== undefined
+        ? (Array.isArray(value) ? value : [value])
+        : (options
+          ?.filter((opt) => opt instanceof Object && opt?.preselected)
+          .slice(0, maxSelect ?? undefined) ?? []),
     ),
     sortSelected = false,
     selectedOptionsDraggable = !sortSelected,
@@ -84,7 +87,6 @@
     ulSelectedClass = ``,
     ulSelectedStyle = null,
     ulOptionsStyle = null,
-    value = $bindable(null),
     expandIcon,
     selectedItem,
     children,
