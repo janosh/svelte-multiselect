@@ -38,8 +38,6 @@ When setting an integer value for `maxSelect` Multiselect will
 - close options dropdown when reaching `maxSelect` items
 - prevent users from selecting more options after reaching `maxSelect` items
 
-<br />
-
 `required={3}` means users have to pick at least 3 options before they can submit a form.
 
 ```svelte example
@@ -57,8 +55,6 @@ When setting an integer value for `maxSelect` Multiselect will
   <button>submit</button>
 </form>
 ```
-
-<br />
 
 Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
@@ -82,6 +78,29 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   />
   <button>submit</button>
 </form>
+```
+
+## Initialize with `value` prop
+
+For single select (`maxSelect={1}`), you can use `bind:value` to initialize the selected option. Simpler than `selected={[option]}`. Works with any option type (strings, numbers, objects).
+
+```svelte example
+<script lang="ts">
+  import MultiSelect from '$lib'
+
+  const options = [
+    { label: `Red`, value: `#ffb3ba` },
+    { label: `Green`, value: `#baffc9` },
+    { label: `Blue`, value: `#bae1ff` },
+  ]
+  let selected_color = $state(options[2]) // Pre-select Blue
+</script>
+
+<MultiSelect {options} bind:value={selected_color} maxSelect={1} />
+
+<p style="color: {selected_color?.value}">
+  Selected: <strong>{selected_color?.label ?? `none`}</strong>
+</p>
 ```
 
 ```svelte example
