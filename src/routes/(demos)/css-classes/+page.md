@@ -37,8 +37,6 @@
 </style>
 ```
 
-<br />
-
 When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through these classes.
 
 This simplified DOM structure of the component shows where these classes are inserted:
@@ -52,7 +50,7 @@ This simplified DOM structure of the component shows where these classes are ins
 
   <input class={inputClass} />
 
-  <span class="max-select-msg {maxSelectMsgClass}" />
+  <span class="max-select-msg {maxSelectMsgClass}"></span>
 
   <ul class="options {ulOptionsClass}">
     <li class={liOptionClass}>Option 1</li>

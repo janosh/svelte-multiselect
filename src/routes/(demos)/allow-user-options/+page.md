@@ -32,8 +32,6 @@
 </label>
 ```
 
-<br />
-
 ## Append User Input
 
 `allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection if users remove their custom options from selected items.
@@ -58,8 +56,6 @@
   {/snippet}
 </MultiSelect>
 ```
-
-<br />
 
 ## Start empty
 

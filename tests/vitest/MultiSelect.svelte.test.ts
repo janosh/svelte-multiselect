@@ -2122,3 +2122,42 @@ test(`arrow keys can navigate to create option message when there are matching o
   await tick()
   expect(doc_query(`ul.options li.user-msg`).classList.contains(`active`)).toBe(true)
 })
+
+// Test that value prop can initialize selected options for both single (maxSelect=1) and multi-select (maxSelect=null)
+// Covers string, number, and object options, with single values for maxSelect=1 and arrays for maxSelect=null
+describe.each([[1], [2], [null]])(
+  `initial value prop with maxSelect=%s`,
+  (max_select) => {
+    test.each([
+      [`Red`, [`Red`, `Green`, `Blue`], `Red`],
+      [1, [1, 2, 3], `1`],
+      [{ label: `Red` }, [{ label: `Red` }, { label: `Green` }], `Red`],
+      [[`Red`, `Green`], [`Red`, `Green`, `Blue`], `Red Green`],
+      [[1, 2], [1, 2, 3], `1 2`],
+      [
+        [{ label: `Red` }, { label: `Green` }],
+        [{ label: `Red` }, { label: `Green` }, { label: `Blue` }],
+        `Red Green`,
+      ],
+    ])(
+      `works when value=%s`,
+      async (value, options, expected_text) => {
+        const is_single_value = !Array.isArray(value)
+        const is_single_select = max_select === 1
+
+        // Skip invalid combinations: single value with multi-select, array value with single select
+        if (is_single_value !== is_single_select) return
+
+        mount(MultiSelect, {
+          target: document.body,
+          props: { options, value, maxSelect: max_select },
+        })
+
+        await tick()
+
+        const selected_ul = doc_query(`ul.selected`)
+        expect(selected_ul.textContent?.trim()).toBe(expected_text)
+      },
+    )
+  },
+)

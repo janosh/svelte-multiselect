@@ -2,8 +2,6 @@
 
 This example shows how to combine MultiSelect with `sessionStorage` to persist the `selected` state across page reloads.
 
-<br />
-
 ```svelte example id="languages"
 <script>
   import MultiSelect from '$lib'
