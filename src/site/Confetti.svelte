@@ -1,14 +1,14 @@
 <script lang="ts">
   // let emojis rain across the screen to playfully show some event was triggered
   import { onMount } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
 
-  interface Props {
+  let { speed = 0.5, n_items = 50, freeze = false, ...rest }: {
     speed?: number
     n_items?: number
     freeze?: boolean
-  }
-  let { speed = 0.5, n_items = 50, freeze = false }: Props = $props()
+  } & HTMLAttributes<HTMLDivElement> = $props()
 
   const emojis = [`🥳`, `🎉`, `✨`]
 
@@ -63,7 +63,7 @@
   })
 </script>
 
-<div transition:fade>
+<div transition:fade {...rest}>
   {#each confetti as con (JSON.stringify(con))}
     <span style:left="{con.x}%" style:top="{con.y}%" style:transform="scale({con.r})">
       {con.emoji}

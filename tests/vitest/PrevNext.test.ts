@@ -3,12 +3,12 @@ import { mount } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
-const items_with_labels = [
+const items_with_labels: [string, string][] = [
   [`page1`, `First Page`],
   [`page2`, `Second Page`],
   [`page3`, `Third Page`],
   [`page4`, `Fourth Page`],
-] as const
+]
 
 describe(`PrevNext`, () => {
   let target: HTMLElement

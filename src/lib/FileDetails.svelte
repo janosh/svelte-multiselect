@@ -10,14 +10,6 @@
     node?: HTMLDetailsElement | null
   }
 
-  interface Props {
-    files?: File[]
-    toggle_all_btn_title?: string
-    default_lang?: string
-    as?: string
-    style?: string | null
-    title_snippet?: Snippet<[{ idx: number } & File]>
-  }
   let {
     files = $bindable([]),
     toggle_all_btn_title = `Toggle all`,
@@ -25,7 +17,14 @@
     as = `ol`,
     style = null,
     title_snippet,
-  }: Props = $props()
+  }: {
+    files?: File[]
+    toggle_all_btn_title?: string
+    default_lang?: string
+    as?: string
+    style?: string | null
+    title_snippet?: Snippet<[{ idx: number } & File]>
+  } = $props()
 
   function toggle_all() {
     const any_open = files.some((file) => file.node?.open)

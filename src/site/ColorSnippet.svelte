@@ -1,13 +1,13 @@
 <script lang="ts">
-  interface Props {
+  import type { HTMLAttributes } from 'svelte/elements'
+
+  let { option, idx = null, ...rest }: {
     option: string
     idx?: number | null
-    style?: string | null
-  }
-  let { option, idx = null, style = null }: Props = $props()
+  } & HTMLAttributes<HTMLDivElement> = $props()
 </script>
 
-<div {style}>
+<div {...rest}>
   {#if idx !== null}{idx + 1}{/if}
   {#if typeof CSS !== `undefined` && CSS.supports(`color`, option)}
     <span style:background={option}></span>
