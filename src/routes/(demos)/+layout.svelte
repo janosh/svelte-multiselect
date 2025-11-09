@@ -6,10 +6,7 @@
   import type { Snippet } from 'svelte'
   import { demo_pages } from './index'
 
-  interface Props {
-    children?: Snippet
-  }
-  let { children }: Props = $props()
+  let { children }: { children?: Snippet<[]> } = $props()
 </script>
 
 <h1>
@@ -25,7 +22,7 @@
     items={demo_pages}
     current={page.url.pathname}
     style="max-width: var(--main-max-width); margin: auto"
-    on_keyup={null}
+    onkeyup={null}
   />
 </main>
 

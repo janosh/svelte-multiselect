@@ -1,16 +1,16 @@
 <script lang="ts">
   import type { ObjectOption } from '$lib'
   import { Icon } from '$lib'
+  import type { HTMLAttributes } from 'svelte/elements'
 
-  interface Props {
+  let { option, idx, onclick, ...rest }: {
     option: ObjectOption
     idx: number
     onclick?: () => void
-  }
-  let { option, idx, onclick }: Props = $props()
+  } & HTMLAttributes<HTMLSpanElement> = $props()
 </script>
 
-<span>
+<span {...rest}>
   {idx + 1}
   <strong>{option.label}</strong>
   <small>
@@ -20,7 +20,7 @@
       target="_blank"
       rel="noreferrer"
     >
-      <Icon icon="GitHub" width="14pt" />{option.repo_handle}
+      <Icon icon="GitHub" style="width: 14pt" />{option.repo_handle}
     </a>
   </small>
 </span>

@@ -33,6 +33,12 @@ repos:
         types_or: [file]
         language: system
         args: [--config, deno.jsonc, --permit-no-files, --fix]
+      - id: svelte-check
+        name: Svelte type check
+        entry: deno run -A npm:svelte-check --fail-on-warnings --threshold error
+        language: system
+        types_or: [ts, svelte]
+        pass_filenames: false
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1

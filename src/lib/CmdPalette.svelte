@@ -9,19 +9,6 @@
     action: (label: string) => void
   }
 
-  interface Props
-    extends Omit<ComponentProps<typeof MultiSelect<Action>>, `options`> {
-    actions: Action[]
-    triggers?: string[]
-    close_keys?: string[]
-    fade_duration?: number // in ms
-    dialog_style?: string // for dialog
-    // for span in option snippet, has no effect when specifying a custom option snippet
-    open?: boolean
-    dialog?: HTMLDialogElement | null
-    input?: HTMLInputElement | null
-    placeholder?: string
-  }
   let {
     actions,
     triggers = [`k`],
@@ -33,7 +20,18 @@
     input = $bindable(null),
     placeholder = `Filter actions...`,
     ...rest
-  }: Props = $props()
+  }: Omit<ComponentProps<typeof MultiSelect<Action>>, `options`> & {
+    actions: Action[]
+    triggers?: string[]
+    close_keys?: string[]
+    fade_duration?: number // in ms
+    dialog_style?: string // for dialog
+    // for span in option snippet, has no effect when specifying a custom option snippet
+    open?: boolean
+    dialog?: HTMLDialogElement | null
+    input?: HTMLInputElement | null
+    placeholder?: string
+  } = $props()
 
   $effect(() => {
     if (open && input && document.activeElement !== input) input.focus()
