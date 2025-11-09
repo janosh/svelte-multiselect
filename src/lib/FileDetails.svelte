@@ -2,6 +2,7 @@
   // import hljs from 'highlight.js'
   // import 'highlight.js/styles/vs2015.css'
   import type { Snippet } from 'svelte'
+  import type { HTMLAttributes, HTMLDetailsAttributes } from 'svelte/elements'
 
   type File = {
     title: string
@@ -17,6 +18,8 @@
     as = `ol`,
     style = null,
     title_snippet,
+    button_props,
+    details_props,
   }: {
     files?: File[]
     toggle_all_btn_title?: string
@@ -24,6 +27,8 @@
     as?: string
     style?: string | null
     title_snippet?: Snippet<[{ idx: number } & File]>
+    button_props?: HTMLAttributes<HTMLButtonElement>
+    details_props?: HTMLDetailsAttributes
   } = $props()
 
   function toggle_all() {
@@ -36,7 +41,7 @@
 </script>
 
 {#if files?.length > 1}
-  <button onclick={toggle_all} title={toggle_all_btn_title}>
+  <button onclick={toggle_all} title={toggle_all_btn_title} {...button_props}>
     {files.some((file) => file.node?.open) ? `Close` : `Open`} all
   </button>
 {/if}
@@ -46,7 +51,7 @@
     {@const { title, content, language = default_lang } = file ?? {}}
     <li>
       <!-- https://github.com/sveltejs/svelte/issues/12721#issuecomment-2269544690 -->
-      <details bind:this={file.node}>
+      <details bind:this={file.node} {...details_props}>
         {#if title || title_snippet}
           <summary>
             {#if title_snippet}

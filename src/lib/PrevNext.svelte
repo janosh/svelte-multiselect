@@ -1,8 +1,6 @@
-<script lang="ts">
+<script lang="ts" generics="Item extends [string, unknown] = [string, unknown]">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-
-  export type Item = [string, unknown]
 
   let {
     items = [],
@@ -17,6 +15,7 @@
     between,
     next_snippet,
     min_items = 3,
+    link_props,
     ...rest
   }: Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> & {
     items?: (string | Item)[]
@@ -33,6 +32,7 @@
     between?: Snippet<[]>
     next_snippet?: Snippet<[{ item: Item }]>
     min_items?: number
+    link_props?: HTMLAttributes<HTMLAnchorElement>
   } = $props()
 
   // Convert items to consistent [key, value] format
@@ -100,7 +100,7 @@
       {:else}
         <div>
           {#if titles.prev}<span>{@html titles.prev}</span>{/if}
-          <a href={prev[0]}>{prev[0]}</a>
+          <a {...link_props} href={prev[0]}>{prev[0]}</a>
         </div>
       {/if}
     {/if}
@@ -113,7 +113,7 @@
       {:else}
         <div>
           {#if titles.next}<span>{@html titles.next}</span>{/if}
-          <a href={next[0]}>{next[0]}</a>
+          <a {...link_props} href={next[0]}>{next[0]}</a>
         </div>
       {/if}
     {/if}

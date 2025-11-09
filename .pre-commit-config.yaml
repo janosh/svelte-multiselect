@@ -1,9 +1,3 @@
-ci:
-  autoupdate_schedule: quarterly
-  skip: [eslint, deno-lint, deno-fmt]
-
-default_stages: [pre-commit]
-
 default_install_hook_types: [pre-commit, commit-msg]
 
 repos:
@@ -26,7 +20,7 @@ repos:
         entry: deno fmt
         types_or: [file]
         language: system
-        args: [--config, deno.jsonc]
+        args: [--config, deno.jsonc, --permit-no-files]
       - id: deno-lint
         name: Deno lint
         entry: deno lint
@@ -39,6 +33,11 @@ repos:
         language: system
         types_or: [ts, svelte]
         pass_filenames: false
+      - id: no-test-only
+        name: Don't commit test selection modifiers
+        entry: '(test|describe).only\('
+        language: pygrep
+        types: [ts]
 
   - repo: https://github.com/codespell-project/codespell
     rev: v2.4.1
@@ -62,11 +61,3 @@ repos:
           - svelte
           - typescript
           - '@stylistic/eslint-plugin'
-
-  - repo: local
-    hooks:
-      - id: no-test-only
-        name: Don't commit test selection modifiers
-        entry: '(test|describe).only\('
-        language: pygrep
-        types: [ts]
