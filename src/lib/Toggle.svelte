@@ -2,17 +2,6 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
 
-  interface Props extends HTMLAttributes<HTMLLabelElement> {
-    checked?: boolean // whether the toggle is on or off
-    required?: boolean
-    input_style?: string
-    id?: string | null
-    onclick?: (event: MouseEvent) => void
-    onchange?: (event: Event) => void
-    onblur?: (event: FocusEvent) => void
-    onkeydown?: (event: KeyboardEvent) => void
-    children?: Snippet<[]>
-  }
   let {
     checked = $bindable(false),
     required = false,
@@ -24,7 +13,17 @@
     onkeydown,
     children,
     ...rest
-  }: Props = $props()
+  }: HTMLAttributes<HTMLLabelElement> & {
+    checked?: boolean // whether the toggle is on or off
+    required?: boolean
+    input_style?: string
+    id?: string | null
+    onclick?: (event: MouseEvent) => void
+    onchange?: (event: Event) => void
+    onblur?: (event: FocusEvent) => void
+    onkeydown?: (event: KeyboardEvent) => void
+    children?: Snippet<[]>
+  } = $props()
 
   // normally input type=checkbox toggles on space bar, this handler also responds to enter
   function handle_keydown(event: KeyboardEvent) {

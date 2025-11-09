@@ -1,15 +1,13 @@
-<script lang="ts">
+<script lang="ts" generics="Option extends import('./types').Option">
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import { highlight_matches } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
-  import type { MultiSelectProps, Option as T } from './types'
+  import type { MultiSelectProps } from './types'
   import { fuzzy_match, get_label, get_style } from './utils'
   import Wiggle from './Wiggle.svelte'
-
-  type Option = $$Generic<T>
 
   let {
     activeIndex = $bindable(null),
@@ -117,7 +115,7 @@
     onclose,
     portal: portal_params = {},
     ...rest
-  }: MultiSelectProps = $props()
+  }: MultiSelectProps<Option> = $props()
 
   $effect.pre(() => {
     // if maxSelect=1, value is the single item in selected (or null if selected is empty)
@@ -208,7 +206,7 @@
   })
 
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
-  function toggle_option(option_to_toggle: T, event: Event) {
+  function toggle_option(option_to_toggle: Option, event: Event) {
     const is_currently_selected = selected.map(key).includes(key(option_to_toggle))
 
     if (is_currently_selected) {
@@ -219,7 +217,7 @@
   }
 
   // add an option to selected list
-  function add(option_to_add: T, event: Event) {
+  function add(option_to_add: Option, event: Event) {
     event.stopPropagation()
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
@@ -302,7 +300,7 @@
   }
 
   // remove an option from selected list
-  function remove(option_to_drop: T, event: Event) {
+  function remove(option_to_drop: Option, event: Event) {
     event.stopPropagation()
     if (selected.length === 0) return
 
@@ -454,7 +452,7 @@
     event.stopPropagation()
 
     // Keep the first minSelect items, remove the rest
-    let removed_options: T[] = []
+    let removed_options: Option[] = []
     if (minSelect === null) {
       // If no minSelect constraint, remove all
       removed_options = selected

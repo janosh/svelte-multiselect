@@ -1,7 +1,15 @@
 <script lang="ts">
   // Display an animated Octocat in a corner of the screen to link to the GitHub repo.
-
-  interface Props {
+  let {
+    href,
+    title = `View code on GitHub`,
+    aria_label = title,
+    target = `_self`,
+    color = null,
+    fill = null,
+    corner = `top-right`,
+    style = ``,
+  }: {
     // adapted from https://github.com/tholman/github-corners
     href: string
     title?: string
@@ -12,17 +20,7 @@
     // bottomLeft/Right look bad, shouldn't normally be used
     corner?: `top-left` | `top-right` | `bottom-left` | `bottom-right`
     style?: string
-  }
-  let {
-    href,
-    title = `View code on GitHub`,
-    aria_label = title,
-    target = `_self`,
-    color = null,
-    fill = null,
-    corner = `top-right`,
-    style = ``,
-  }: Props = $props()
+  } = $props()
 </script>
 
 <a

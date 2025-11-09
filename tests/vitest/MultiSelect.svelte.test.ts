@@ -1398,7 +1398,7 @@ describe(`keepSelectedInDropdown feature`, () => {
   const options = [`Apple`, `Banana`, `Cherry`]
   const options_with_date = [`Apple`, `Banana`, `Cherry`, `Date`]
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `keeps selected options visible in dropdown when mode is %s`,
     async (mode) => {
       const selected = [`Apple`]
@@ -1457,7 +1457,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       .toBe(false)
   })
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `toggles option selection when clicked in %s mode`,
     async (mode) => {
       const onChange_spy = vi.fn()
@@ -1507,7 +1507,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     },
   )
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `shows correct visual indicators in %s mode`,
     async (mode) => {
       const selected = [`Apple`, `Cherry`]
@@ -1550,7 +1550,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     },
   )
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `handles edge cases correctly in %s mode`,
     async (mode) => {
       // Test empty selection
@@ -1604,7 +1604,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     },
   )
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `respects minSelect constraint when toggling in %s mode`,
     async (mode) => {
       mount(MultiSelect, {
@@ -1648,7 +1648,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     },
   )
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `keyboard navigation works correctly in %s mode`,
     async (mode) => {
       const onChange_spy = vi.fn()
@@ -1685,7 +1685,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     },
   )
 
-  test.each([`plain`, `checkboxes`])(
+  test.each([`plain`, `checkboxes`] as const)(
     `search filtering works correctly in %s mode`,
     (mode) => {
       const selected = [`Apple`, `Cherry`]
@@ -1804,7 +1804,7 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
 
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [1, 2, 3], maxOptions },
+      props: { options: [1, 2, 3], maxOptions: maxOptions as number },
     })
 
     expect(console.error).toHaveBeenCalledTimes(1)

@@ -4,22 +4,6 @@
 
   export type Item = [string, unknown]
 
-  interface Props extends Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> {
-    items?: (string | Item)[]
-    node?: string
-    current?: string
-    log?: `verbose` | `errors` | `silent`
-    nav_options?: { replace_state: boolean; no_scroll: boolean }
-    titles?: { prev: string; next: string }
-    onkeyup?:
-      | ((obj: { prev: Item; next: Item }) => Record<string, string | undefined>)
-      | null
-    prev_snippet?: Snippet<[{ item: Item }]>
-    children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
-    between?: Snippet<[]>
-    next_snippet?: Snippet<[{ item: Item }]>
-    min_items?: number
-  }
   let {
     items = [],
     node = `nav`,
@@ -34,7 +18,22 @@
     next_snippet,
     min_items = 3,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLAttributes<HTMLElement>, `children` | `onkeyup`> & {
+    items?: (string | Item)[]
+    node?: string
+    current?: string
+    log?: `verbose` | `errors` | `silent`
+    nav_options?: { replace_state: boolean; no_scroll: boolean }
+    titles?: { prev: string; next: string }
+    onkeyup?:
+      | ((obj: { prev: Item; next: Item }) => Record<string, string | undefined>)
+      | null
+    prev_snippet?: Snippet<[{ item: Item }]>
+    children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
+    between?: Snippet<[]>
+    next_snippet?: Snippet<[{ item: Item }]>
+    min_items?: number
+  } = $props()
 
   // Convert items to consistent [key, value] format
   let items_arr = $derived(

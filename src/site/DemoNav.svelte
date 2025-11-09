@@ -1,11 +1,9 @@
 <script lang="ts">
   import { page } from '$app/state'
+  import type { HTMLAttributes } from 'svelte/elements'
   import { demo_pages } from '../routes/(demos)'
 
-  interface Props {
-    style?: string | null
-  }
-  let { style = null }: Props = $props()
+  let { ...props }: HTMLAttributes<HTMLElementTagNameMap[`nav`]> = $props()
 
   let is_current = $derived((path: string) => {
     if (`/${path}` == page.url.pathname) return `page`
@@ -13,7 +11,7 @@
   })
 </script>
 
-<nav {style}>
+<nav {...props}>
   {#each demo_pages as href, idx (href)}
     {#if idx > 0}<strong>&bull;</strong>{/if}
     <a {href} aria-current={is_current(href)}>{href}</a>

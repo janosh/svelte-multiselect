@@ -1,11 +1,12 @@
 <script lang="ts">
-  interface Props {
+  import type { HTMLAttributes } from 'svelte/elements'
+
+  let { option, idx = undefined, height = `20px`, gap = `5pt`, ...rest }: {
     option: string
     idx?: number | undefined
     height?: string
     gap?: string
-  }
-  let { option, idx = undefined, height = `20px`, gap = `5pt` }: Props = $props()
+  } & HTMLAttributes<HTMLSpanElement> = $props()
 
   let lang = $derived(
     option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`),
@@ -21,7 +22,7 @@
   })
 </script>
 
-<span style:gap>
+<span style:gap {...rest}>
   {#if idx !== undefined}
     <strong>{idx + 1}</strong>
   {/if}

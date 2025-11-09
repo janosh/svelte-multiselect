@@ -3,7 +3,14 @@
   import { Icon } from '$lib'
   import type { Snippet } from 'svelte'
 
-  interface Props {
+  let {
+    src = ``,
+    meta = {},
+    open = $bindable(!meta.collapsible),
+    title,
+    example,
+    code,
+  }: {
     // src+meta are passed in by mdsvexamples
     src?: string // code fence content, sadly without indentation so we prefer node?.innerText below
     meta?: { // code fence metadata
@@ -21,15 +28,7 @@
     title?: Snippet<[]>
     example?: Snippet<[]>
     code?: Snippet<[]>
-  }
-  let {
-    src = ``,
-    meta = {},
-    open = $bindable(!meta.collapsible),
-    title,
-    example,
-    code,
-  }: Props = $props()
+  } = $props()
 
   let { id, collapsible, code_above, repl, github, repo, file } = $derived(meta)
   const links = { target: `_blank`, rel: `noreferrer` }

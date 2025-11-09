@@ -7,16 +7,6 @@
 
   type State = `ready` | `success` | `error`
 
-  interface Props extends Omit<HTMLAttributes<HTMLButtonElement>, `children`> {
-    content?: string
-    state?: State
-    global_selector?: string | null
-    global?: boolean
-    skip_selector?: string | null
-    as?: string
-    labels?: Record<State, { icon: IconName; text: string }>
-    children?: Snippet<[{ state: State; icon: IconName; text: string }]>
-  }
   let {
     content = ``,
     state = $bindable(`ready`),
@@ -31,7 +21,16 @@
     },
     children,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLAttributes<HTMLButtonElement>, `children`> & {
+    content?: string
+    state?: State
+    global_selector?: string | null
+    global?: boolean
+    skip_selector?: string | null
+    as?: string
+    labels?: Record<State, { icon: IconName; text: string }>
+    children?: Snippet<[{ state: State; icon: IconName; text: string }]>
+  } = $props()
 
   $effect(() => {
     if (!global && !global_selector) return

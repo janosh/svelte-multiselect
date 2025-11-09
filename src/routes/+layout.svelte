@@ -9,10 +9,7 @@
   import '../app.css'
   import { routes } from './(demos)'
 
-  interface Props {
-    children?: Snippet
-  }
-  let { children }: Props = $props()
+  let { children }: { children?: Snippet<[]> } = $props()
 
   const actions = routes.map(({ route }) => ({
     label: route,

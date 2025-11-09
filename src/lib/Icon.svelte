@@ -2,10 +2,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { icon_data, type IconName } from './icons'
 
-  interface Props extends HTMLAttributes<SVGSVGElement> {
-    icon: IconName
-  }
-  let { icon, ...rest }: Props = $props()
+  let { icon, ...rest }: HTMLAttributes<SVGSVGElement> & { icon: IconName } = $props()
 
   const data = $derived.by(() => {
     if (!(icon in icon_data)) {
