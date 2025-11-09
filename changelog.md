@@ -1,5 +1,13 @@
 # Changelog
 
+## [v11.3.0](https://github.com/janosh/svelte-multiselect/compare/v11.2.4...v11.3.0)
+
+> 9 November 2025
+
+- Allow initializing `selected` from `value` prop by @janosh in https://github.com/janosh/svelte-multiselect/pull/338
+- Fix generic type inference in `MultiSelect` by @janosh in https://github.com/janosh/svelte-multiselect/pull/340
+- Better `Nav.svelte` with dropdown menus and a burger button for mobile views by @janosh in https://github.com/janosh/svelte-multiselect/pull/341
+
 ## [v11.2.4](https://github.com/janosh/svelte-multiselect/compare/v11.2.3...v11.2.4)
 
 > 4 October 2025
