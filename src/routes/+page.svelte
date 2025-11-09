@@ -1,20 +1,12 @@
 <script lang="ts">
   import Readme from '$root/readme.md'
-  import { DemoNav, Examples } from '$site'
+  import { Examples } from '$site'
 </script>
 
 <main>
   <Readme>
     {#snippet examples()}
       <Examples />
-    {/snippet}
-    {#snippet nav()}
-      <h2>📝 &thinsp; More examples</h2>
-      <p>
-        Some more in-depth examples for specific features of
-        <code>svelte-multiselect</code>:
-      </p>
-      <DemoNav />
     {/snippet}
   </Readme>
 </main>
