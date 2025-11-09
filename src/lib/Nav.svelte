@@ -297,7 +297,7 @@
   }
   .menu {
     display: flex;
-    gap: 1ex 1em;
+    gap: 1em;
     place-content: center;
     flex-wrap: wrap;
     padding: 0.5em;
