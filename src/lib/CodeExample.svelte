@@ -11,7 +11,7 @@
     title,
     example,
     code,
-    link_props,
+    link_props, // Applied after computed attributes (href, title, etc.), allowing override
     button_props,
   }: {
     // src+meta are passed in by mdsvexamples

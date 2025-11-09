@@ -107,13 +107,11 @@
     if (event.key === `Escape`) {
       event.preventDefault()
       close_menus()
-      // Return focus to dropdown trigger
-      const dropdown = document.querySelector(
-        `.dropdown-wrapper[data-href="${href}"]`,
-      )
-      if (dropdown instanceof HTMLElement) {
-        dropdown.focus()
-      }
+      // Return focus to dropdown toggle button
+      document
+        .querySelector(`.dropdown-wrapper[data-href="${href}"]`)
+        ?.querySelector<HTMLButtonElement>(`.dropdown-toggle`)
+        ?.focus()
     }
   }
 
@@ -152,7 +150,7 @@
 
 <nav
   {...rest}
-  {@attach click_outside({ callback: () => is_open = false })}
+  {@attach click_outside({ callback: close_menus })}
   class="bleed-1400 {rest.class ?? ``}"
 >
   <button

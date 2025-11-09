@@ -55,9 +55,9 @@ export default {
         if ([`🔣-props`].includes(id)) return
         throw `Missing ID: ${id}`
       },
-      handleHttpError: ({ path: _path, referrer, message }) => {
+      handleHttpError: ({ status, referrer, message }) => {
         // Ignore 404s from the /nav demo page which contains links to non-existent routes
-        if (referrer === `/nav`) return
+        if (status === 404 && referrer === `/nav`) return
         throw new Error(message)
       },
     },

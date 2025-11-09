@@ -10,7 +10,7 @@ describe(`Nav`, () => {
   const default_routes = [`/`, `/about`, `/contact`]
   const click = async (el: Element) => {
     el.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
-    await new Promise((resolve) => setTimeout(resolve, 0))
+    await tick()
   }
 
   test(`renders simple routes as links`, () => {
@@ -159,6 +159,31 @@ describe(`Nav`, () => {
     outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
     await tick()
     expect(button.getAttribute(`aria-expanded`)).toBe(`false`)
+    outside.remove()
+  })
+
+  test(`click outside closes burger menu and dropdowns`, async () => {
+    mount(Nav, {
+      target: document.body,
+      props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+    })
+    const burger_button = doc_query(`.burger-button`)
+    const toggle_button = doc_query(`.dropdown-toggle`)
+    const dropdown = doc_query(`.dropdown`)
+
+    // Open burger menu and dropdown
+    await click(burger_button)
+    await click(toggle_button)
+    expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
+    expect(dropdown.classList.contains(`visible`)).toBe(true)
+
+    // Click outside should close both
+    const outside = document.createElement(`div`)
+    document.body.appendChild(outside)
+    outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
+    await tick()
+    expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
+    expect(dropdown.classList.contains(`visible`)).toBe(false)
     outside.remove()
   })
 
@@ -341,20 +366,21 @@ describe(`Nav`, () => {
       target: document.body,
       props: { routes: [[`/p`, [`/p`, `/p/1`, `/p/2`]]] },
     })
-    const wrapper = doc_query(`.dropdown-wrapper`)
     const toggle_button = doc_query(`.dropdown-toggle`)
     const menu = doc_query(`.dropdown`)
     const key = (k: string, target = toggle_button) =>
       target.dispatchEvent(new KeyboardEvent(`keydown`, { key: k, bubbles: true }))
-    const wait = async () => {
-      await new Promise((resolve) => setTimeout(resolve, 0))
+    // Helper for async focus operations that need DOM event loop
+    const wait_for_focus = async () => {
+      await tick() // Wait for Svelte updates
+      await new Promise((resolve) => setTimeout(resolve, 0)) // Wait for DOM focus
     }
 
     // Enter/Space/ArrowDown all open and focus first item
     for (const open_key of [`Enter`, ` `, `ArrowDown`]) {
       key(open_key)
       // deno-lint-ignore no-await-in-loop
-      await wait()
+      await wait_for_focus()
       expect(menu.classList.contains(`visible`)).toBe(true)
       expect(document.activeElement).toBe(menu.querySelector(`a`))
       globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
@@ -363,7 +389,7 @@ describe(`Nav`, () => {
     // Arrow navigation
     const [item1, item2] = Array.from(menu.querySelectorAll(`a`))
     key(`Enter`)
-    await wait()
+    await wait_for_focus()
     expect(document.activeElement).toBe(item1)
     key(`ArrowDown`)
     expect(document.activeElement).toBe(item2)
@@ -372,11 +398,11 @@ describe(`Nav`, () => {
     key(`ArrowUp`)
     expect(document.activeElement).toBe(item1)
 
-    // Escape from item returns focus to wrapper
+    // Escape from item returns focus to toggle button
     key(`Escape`, item1 as HTMLElement)
-    await wait()
+    await wait_for_focus()
     expect(menu.classList.contains(`visible`)).toBe(false)
-    expect(document.activeElement).toBe(wrapper)
+    expect(document.activeElement).toBe(toggle_button)
   })
 
   test(`dropdown focus behavior`, async () => {
@@ -434,7 +460,7 @@ describe(`Nav`, () => {
     expect(dropdown_menu.getAttribute(`role`)).toBe(`menu`)
 
     // Check dropdown links have role="menuitem"
-    const dropdown_links = document.querySelectorAll(`.dropdown a`)
+    const dropdown_links = Array.from(document.querySelectorAll(`.dropdown a`))
     for (const link of dropdown_links) {
       expect(link.getAttribute(`role`)).toBe(`menuitem`)
     }

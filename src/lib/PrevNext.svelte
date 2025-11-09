@@ -100,7 +100,7 @@
       {:else}
         <div>
           {#if titles.prev}<span>{@html titles.prev}</span>{/if}
-          <a href={prev[0]} {...link_props}>{prev[0]}</a>
+          <a {...link_props} href={prev[0]}>{prev[0]}</a>
         </div>
       {/if}
     {/if}
@@ -113,7 +113,7 @@
       {:else}
         <div>
           {#if titles.next}<span>{@html titles.next}</span>{/if}
-          <a href={next[0]} {...link_props}>{next[0]}</a>
+          <a {...link_props} href={next[0]}>{next[0]}</a>
         </div>
       {/if}
     {/if}

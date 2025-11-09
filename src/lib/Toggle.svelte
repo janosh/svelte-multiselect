@@ -31,8 +31,8 @@
   <input
     type="checkbox"
     bind:checked
-    onkeydown={handle_keydown}
     {...input_props}
+    onkeydown={handle_keydown}
   />
   <span></span>
 </label>
