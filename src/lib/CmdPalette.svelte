@@ -1,13 +1,11 @@
-<script lang="ts">
+<script
+  lang="ts"
+  generics="Action extends { label: string; action: (label: string) => void } & Record<string, unknown> = { label: string; action: (label: string) => void }"
+>
   import type { ComponentProps } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
-  import type { ObjectOption, Option } from './types'
-
-  interface Action extends ObjectOption {
-    label: string
-    action: (label: string) => void
-  }
 
   let {
     actions,
@@ -19,6 +17,7 @@
     dialog = $bindable(null),
     input = $bindable(null),
     placeholder = `Filter actions...`,
+    dialog_props,
     ...rest
   }: Omit<ComponentProps<typeof MultiSelect<Action>>, `options`> & {
     actions: Action[]
@@ -31,6 +30,7 @@
     dialog?: HTMLDialogElement | null
     input?: HTMLInputElement | null
     placeholder?: string
+    dialog_props?: HTMLAttributes<HTMLDialogElement>
   } = $props()
 
   $effect(() => {
@@ -52,10 +52,9 @@
     }
   }
 
-  function trigger_action_and_close({ option }: { option: Option }) {
-    const { action, label } = (option ?? {}) as Action
-    if (!action) return
-    action(label)
+  function trigger_action_and_close({ option }: { option: Action }) {
+    if (!option?.action) return
+    option.action(option.label)
     open = false
   }
 </script>
@@ -68,6 +67,7 @@
     bind:this={dialog}
     transition:fade={{ duration: fade_duration }}
     style={dialog_style}
+    {...dialog_props}
   >
     <MultiSelect
       options={actions}

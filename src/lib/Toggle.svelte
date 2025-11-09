@@ -4,25 +4,15 @@
 
   let {
     checked = $bindable(false),
-    required = false,
-    input_style = ``,
-    id = null,
-    onclick,
-    onchange,
-    onblur,
     onkeydown,
     children,
+    input_props,
     ...rest
   }: HTMLAttributes<HTMLLabelElement> & {
     checked?: boolean // whether the toggle is on or off
-    required?: boolean
-    input_style?: string
-    id?: string | null
-    onclick?: (event: MouseEvent) => void
-    onchange?: (event: Event) => void
-    onblur?: (event: FocusEvent) => void
     onkeydown?: (event: KeyboardEvent) => void
     children?: Snippet<[]>
+    input_props?: HTMLAttributes<HTMLInputElement>
   } = $props()
 
   // normally input type=checkbox toggles on space bar, this handler also responds to enter
@@ -41,13 +31,8 @@
   <input
     type="checkbox"
     bind:checked
-    {id}
-    {required}
+    {...input_props}
     onkeydown={handle_keydown}
-    {onchange}
-    {onblur}
-    {onclick}
-    style={input_style}
   />
   <span></span>
 </label>

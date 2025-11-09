@@ -1,13 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { CmdPalette, CopyButton, GitHubCorner } from '$lib'
-  import { repository } from '$root/package.json'
+  import { CmdPalette, CopyButton, GitHubCorner, Nav } from '$lib'
+  import { name, repository } from '$root/package.json'
   import { Footer } from '$site'
-  import { type Snippet } from 'svelte'
+  import type { Snippet } from 'svelte'
   import { Toc } from 'svelte-toc'
   import '../app.css'
-  import { routes } from './(demos)'
+  import { demo_pages, routes } from './(demos)'
 
   let { children }: { children?: Snippet<[]> } = $props()
 
@@ -17,6 +17,24 @@
   }))
 </script>
 
+{#if page.url.pathname !== `/`}
+  <h1>
+    <img src="favicon.svg" alt={name} height="50" width="50" />&ensp;Svelte MultiSelect
+  </h1>
+{/if}
+
+<Nav
+  routes={demo_pages}
+  {page}
+  style="max-width: var(--main-max-width)"
+  labels={{
+    '/ui': `UI`,
+    '/css-classes': `CSS Classes`,
+    '/kit-form-actions': `SvelteKit Form Actions`,
+    '/cmd-palette': `CmdPalette`,
+  }}
+  link_props={{ style: `background-color: var(--btn-bg)` }}
+/>
 <CmdPalette {actions} placeholder="Go to..." />
 
 <GitHubCorner href={repository} />

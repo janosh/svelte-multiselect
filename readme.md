@@ -32,8 +32,6 @@
 - **Single / multiple select:** pass `maxSelect={1, 2, 3, ...}` prop to restrict the number of selectable options
 - **Configurable:** see props
 
-<slot name="nav" />
-
 ## 🧪 &thinsp; Coverage
 
 | Statements                                                                                 | Branches                                                                          | Lines                                                                            |

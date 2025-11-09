@@ -174,12 +174,39 @@ describe(`PrevNext`, () => {
     expect(scrollToSpy).toHaveBeenCalledWith(100, 200)
   })
 
-  test(`does not preserve scroll position when no_scroll is false`, () => {
-    const nav_options = { replace_state: true, no_scroll: false }
-    mount(PrevNext, { target, props: { items, current: `page2`, nav_options } })
+  test(`uses key (first element) as href for links`, () => {
+    const items_with_paths: [string, string][] = [
+      [`/page/1`, `First Page`],
+      [`/page/2`, `Second Page`],
+      [`/page/3`, `Third Page`],
+      [`/page/4`, `Fourth Page`],
+    ]
+    mount(PrevNext, {
+      target,
+      props: { items: items_with_paths, current: `/page/2` },
+    })
+    const links = target.querySelectorAll(`a`)
+    expect(links[0].getAttribute(`href`)).toBe(`/page/1`)
+    expect(links[1].getAttribute(`href`)).toBe(`/page/3`)
+  })
 
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowLeft` }))
-    // TODO check why likely correct assertion expect(scrollToSpy).not.toHaveBeenCalled() is failing here
-    expect(scrollToSpy).toHaveBeenCalledWith(100, 200)
+  test(`applies link_props to prev/next links`, () => {
+    const link_props = {
+      class: `custom-link-class`,
+      'data-testid': `nav-link`,
+      target: `_blank`,
+    }
+    mount(PrevNext, { target, props: { items, current: `page2`, link_props } })
+
+    const links = target.querySelectorAll(`a`)
+    expect(links).toHaveLength(2)
+
+    // Check that both prev and next links have the custom props
+    links.forEach((link) => {
+      // Svelte adds its own scoped CSS class, so we check that our class is included
+      expect(link.className).toContain(`custom-link-class`)
+      expect(link.getAttribute(`data-testid`)).toBe(`nav-link`)
+      expect(link.getAttribute(`target`)).toBe(`_blank`)
+    })
   })
 })

@@ -94,7 +94,7 @@ describe(`Toggle`, () => {
   test(`applies custom styles`, () => {
     mount(Toggle, {
       target,
-      props: { style: `margin: 10px;`, input_style: `width: 20px;` },
+      props: { style: `margin: 10px;`, input_props: { style: `width: 20px;` } },
     })
     expect(target.querySelector(`label`)?.getAttribute(`style`)).toBe(
       `margin: 10px;`,
@@ -105,16 +105,16 @@ describe(`Toggle`, () => {
   })
 
   test(`sets required attribute`, () => {
-    mount(Toggle, { target, props: { required: true } })
+    mount(Toggle, { target, props: { input_props: { required: true } } })
     expect(target.querySelector(`input`)?.hasAttribute(`required`)).toBe(true)
   })
 
   test(`handles custom id`, () => {
-    mount(Toggle, { target, props: { id: `custom-id` } })
+    mount(Toggle, { target, props: { input_props: { id: `custom-id` } } })
     expect(target.querySelector(`input`)?.getAttribute(`id`)).toBe(`custom-id`)
 
     target.innerHTML = ``
-    mount(Toggle, { target, props: { id: null } })
+    mount(Toggle, { target, props: { input_props: { id: null } } })
     expect(target.querySelector(`input`)?.hasAttribute(`id`)).toBe(false)
   })
 
@@ -124,7 +124,7 @@ describe(`Toggle`, () => {
     [`click`, `onclick`],
   ])(`emits %s event`, (eventType, handlerProp) => {
     const handler = vi.fn()
-    mount(Toggle, { target, props: { [handlerProp]: handler } })
+    mount(Toggle, { target, props: { input_props: { [handlerProp]: handler } } })
 
     const input = target.querySelector(`input`)
     if (eventType === `blur`) {
@@ -151,8 +151,10 @@ describe(`Toggle`, () => {
       target,
       props: {
         checked,
-        onchange: (event: Event) => {
-          checked = (event.target as HTMLInputElement).checked
+        input_props: {
+          onchange: (event: Event) => {
+            checked = (event.target as HTMLInputElement).checked
+          },
         },
       },
     })
