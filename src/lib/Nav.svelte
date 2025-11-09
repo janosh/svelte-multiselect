@@ -1,17 +1,18 @@
-<script lang="ts">
+<script
+  lang="ts"
+  generics="Route extends string | [string, string] | [string, string[]] = string | [string, string] | [string, string[]]"
+>
   import { Icon } from '$lib'
   import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
   import { click_outside } from 'svelte-multiselect'
   import type { HTMLAttributes } from 'svelte/elements'
 
-  type RouteEntry = string | [string, string] | [string, string[]]
-
   let { routes = [], children, link, menu_props, link_props, page, labels, ...rest }:
     & {
-      routes: RouteEntry[]
+      routes: Route[]
       children?: Snippet<
-        [{ is_open: boolean; panel_id: string; routes: RouteEntry[] }]
+        [{ is_open: boolean; panel_id: string; routes: Route[] }]
       >
       link?: Snippet<[{ href: string; label: string }]>
       menu_props?: HTMLAttributes<HTMLDivElement>
@@ -138,7 +139,7 @@
     return { label, style: `text-transform: capitalize` }
   }
 
-  function parse_route(route: RouteEntry) {
+  function parse_route(route: Route) {
     if (typeof route === `string`) return { href: route, label: route }
     const [first, second] = route
     return Array.isArray(second)
@@ -289,6 +290,12 @@
     position: relative;
     margin: -0.75em auto 1.25em;
     --nav-border-radius: 6pt;
+    --nav-surface-bg: light-dark(#fff, #1a1a1a);
+    --nav-surface-border: light-dark(rgba(128, 128, 128, 0.25), rgba(200, 200, 200, 0.2));
+    --nav-surface-shadow: light-dark(
+      0 2px 8px rgba(0, 0, 0, 0.15),
+      0 4px 12px rgba(0, 0, 0, 0.5)
+    );
   }
   .menu {
     display: flex;
@@ -364,11 +371,10 @@
     left: 0;
     margin: var(--nav-dropdown-margin, 3pt 0 0 0);
     min-width: max-content;
-    background-color: var(--nav-dropdown-bg, var(--surface-bg, var(--bg-color, #ffffff)));
-    border: 1px solid
-      var(--nav-dropdown-border-color, var(--border-color, rgba(128, 128, 128, 0.25)));
+    background-color: var(--nav-dropdown-bg, var(--nav-surface-bg));
+    border: 1px solid var(--nav-dropdown-border-color, var(--nav-surface-border));
     border-radius: var(--nav-border-radius, 6pt);
-    box-shadow: var(--nav-dropdown-shadow, 0 2px 8px rgba(0, 0, 0, 0.15));
+    box-shadow: var(--nav-dropdown-shadow, var(--nav-surface-shadow));
     padding: var(--nav-dropdown-padding, 2pt 3pt);
     display: none;
     flex-direction: column;
@@ -431,7 +437,9 @@
       position: fixed;
       top: 3rem;
       left: 1rem;
-      background-color: var(--surface-bg, var(--bg-color, #ffffff));
+      background-color: var(--nav-surface-bg);
+      border: 1px solid var(--nav-surface-border);
+      box-shadow: var(--nav-surface-shadow);
       opacity: 0;
       visibility: hidden;
       transition: all 0.3s ease;
@@ -441,9 +449,7 @@
       justify-content: flex-start;
       gap: 0.2em;
       max-width: 90vw;
-      border: 1px solid var(--border-color, rgba(128, 128, 128, 0.25));
       border-radius: 6px;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
     }
     .menu.open {
       opacity: 1;

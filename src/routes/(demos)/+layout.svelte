@@ -15,6 +15,9 @@
     current={page.url.pathname}
     style="max-width: var(--main-max-width); margin: auto"
     onkeyup={null}
+    link_props={{
+      style: `background-color: var(--btn-bg); padding: 2pt 5pt; border-radius: 3pt;`,
+    }}
   />
 </main>
 
