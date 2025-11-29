@@ -408,7 +408,9 @@ describe(`tooltip`, () => {
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       vi.runAllTimers()
-      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+      const tooltip_element = document.querySelector(`.custom-tooltip`) as HTMLElement
+      expect(tooltip_element).toBeTruthy()
+      expect(tooltip_element.style.cssText).toContain(`text-wrap: balance`)
 
       globalThis.dispatchEvent(new Event(`scroll`, { bubbles: true }))
       expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()

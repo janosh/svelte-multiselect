@@ -38,17 +38,17 @@ describe(`Nav`, () => {
 
   test(`burger button structure and ARIA`, () => {
     mount(Nav, { target: document.body, props: { routes: default_routes } })
-    const burger_button = doc_query(`.burger-button`)
+    const burger_button = doc_query(`.burger`)
     expect(burger_button.tagName).toBe(`BUTTON`)
     expect(burger_button.getAttribute(`aria-label`)).toBe(`Toggle navigation menu`)
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
     expect(burger_button.getAttribute(`aria-controls`)).toBeTruthy()
-    expect(document.querySelectorAll(`.burger-line`)).toHaveLength(3)
+    expect(burger_button.querySelectorAll(`span`)).toHaveLength(3)
   })
 
   test(`burger menu toggles with click and Escape`, async () => {
     mount(Nav, { target: document.body, props: { routes: default_routes } })
-    const button = doc_query(`.burger-button`)
+    const button = doc_query(`.burger`)
     const menu = doc_query(`.menu`)
 
     expect(button.getAttribute(`aria-expanded`)).toBe(`false`)
@@ -69,7 +69,7 @@ describe(`Nav`, () => {
 
   test(`menu ID matches aria-controls and closes on link click`, async () => {
     mount(Nav, { target: document.body, props: { routes: default_routes } })
-    const button = doc_query(`.burger-button`)
+    const button = doc_query(`.burger`)
     const menu = doc_query(`.menu`)
     const panel_id = button.getAttribute(`aria-controls`)
 
@@ -147,7 +147,7 @@ describe(`Nav`, () => {
 
   test(`click outside closes menu, inside does not`, async () => {
     mount(Nav, { target: document.body, props: { routes: default_routes } })
-    const button = doc_query(`.burger-button`)
+    const button = doc_query(`.burger`)
     const menu = doc_query(`.menu`)
 
     await click(button)
@@ -167,7 +167,7 @@ describe(`Nav`, () => {
       target: document.body,
       props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
     })
-    const burger_button = doc_query(`.burger-button`)
+    const burger_button = doc_query(`.burger`)
     const toggle_button = doc_query(`.dropdown-toggle`)
     const dropdown = doc_query(`.dropdown`)
 
@@ -193,19 +193,19 @@ describe(`Nav`, () => {
       props: { routes: [[`/parent`, [`/parent`, `/parent/child1`, `/parent/child2`]]] },
     })
 
-    const dropdown = doc_query(`.dropdown-wrapper`)
+    const dropdown = doc_query(`.dropdown`)
     expect(dropdown.getAttribute(`data-href`)).toBe(`/parent`)
 
-    const parent_link = doc_query(`.dropdown-trigger`)
-    expect(parent_link.tagName).toBe(`A`)
-    expect(parent_link.getAttribute(`href`)).toBe(`/parent`)
+    const parent_link = dropdown.querySelector(`div:first-child > a`)
+    expect(parent_link?.tagName).toBe(`A`)
+    expect(parent_link?.getAttribute(`href`)).toBe(`/parent`)
 
-    const toggle = doc_query(`.dropdown-toggle`)
-    expect(toggle.tagName).toBe(`BUTTON`)
-    expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
-    expect(toggle.getAttribute(`aria-haspopup`)).toBe(`true`)
+    const toggle = dropdown.querySelector(`div:first-child > button`)
+    expect(toggle?.tagName).toBe(`BUTTON`)
+    expect(toggle?.getAttribute(`aria-expanded`)).toBe(`false`)
+    expect(toggle?.getAttribute(`aria-haspopup`)).toBe(`true`)
 
-    const hrefs = Array.from(document.querySelectorAll(`.dropdown a`)).map((l) =>
+    const hrefs = Array.from(dropdown.querySelectorAll(`div:last-child a`)).map((l) =>
       l.getAttribute(`href`)
     )
     expect(hrefs).toEqual([`/parent/child1`, `/parent/child2`])
