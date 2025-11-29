@@ -1,3 +1,4 @@
+<!-- eslint-disable-next-line @stylistic/quotes -- TS generics require string literals -->
 <script lang="ts" generics="Option extends import('./types').Option">
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
@@ -283,23 +284,10 @@
         }
       }
 
-      const reached_max_select = selected.length >= (maxSelect ?? Infinity)
-
-      const dropdown_should_close = closeDropdownOnSelect === true ||
-        closeDropdownOnSelect === `retain-focus` ||
-        (closeDropdownOnSelect === `if-mobile` && window_width &&
-          window_width < breakpoint)
-
-      const should_retain_focus = closeDropdownOnSelect === `retain-focus`
-
-      if (reached_max_select || dropdown_should_close) {
-        close_dropdown(event, should_retain_focus)
-      } else if (!dropdown_should_close) input?.focus()
+      clear_validity()
+      handle_dropdown_after_select(event)
       onadd?.({ option: option_to_add })
       onchange?.({ option: option_to_add, type: `add` })
-
-      invalid = false // reset error status whenever new items are selected
-      form_input?.setCustomValidity(``)
     }
   }
 
@@ -330,9 +318,7 @@
     }
 
     selected = [...selected] // trigger Svelte rerender
-
-    invalid = false // reset error status whenever items are removed
-    form_input?.setCustomValidity(``)
+    clear_validity()
     onremove?.({ option: option_removed })
     onchange?.({ option: option_removed, type: `remove` })
   }
@@ -354,6 +340,22 @@
     if (!retain_focus) input?.blur()
     activeIndex = null
     onclose?.({ event })
+  }
+
+  function clear_validity() {
+    invalid = false
+    form_input?.setCustomValidity(``)
+  }
+
+  function handle_dropdown_after_select(event: Event) {
+    const reached_max = selected.length >= (maxSelect ?? Infinity)
+    const should_close = closeDropdownOnSelect === true ||
+      closeDropdownOnSelect === `retain-focus` ||
+      (closeDropdownOnSelect === `if-mobile` && window_width &&
+        window_width < breakpoint)
+    if (reached_max || should_close) {
+      close_dropdown(event, closeDropdownOnSelect === `retain-focus`)
+    } else input?.focus()
   }
 
   // handle all keyboard events this component receives
@@ -476,10 +478,11 @@
   function select_all(event: Event) {
     event.stopPropagation()
     const limit = maxSelect ?? Infinity
-    const options_to_add = options.filter((opt) => {
+    // Use matchingOptions for "select all visible" semantics
+    const options_to_add = matchingOptions.filter((opt) => {
       const is_disabled = opt instanceof Object && opt.disabled
       const is_already_selected = selected.map(key).includes(key(opt))
-      return !is_disabled && (!is_already_selected || duplicates)
+      return !is_disabled && !is_already_selected
     }).slice(0, limit - selected.length)
 
     if (options_to_add.length > 0) {
@@ -492,6 +495,8 @@
         selected = selected.sort(sortSelected)
       }
       searchText = ``
+      clear_validity()
+      handle_dropdown_after_select(event)
       onselectAll?.({ options: options_to_add })
       onchange?.({ options: selected, type: `selectAll` })
     }
