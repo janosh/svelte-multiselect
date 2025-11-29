@@ -93,7 +93,7 @@ Connect to a real API:
 
 ### Configuration Options
 
-Customize the loading behavior:
+For advanced control, pass an object with `fetch` function and config:
 
 ```svelte example id="load-config"
 <script lang="ts">
@@ -116,9 +116,7 @@ Customize the loading behavior:
 </script>
 
 <MultiSelect
-  loadOptions={load_options}
-  loadOptionsDebounceMs={500}
-  loadOptionsBatchSize={20}
+  loadOptions={{ fetch: load_options, debounceMs: 500, batchSize: 20 }}
   placeholder="Custom config (500ms debounce, 20 items per batch)"
 />
 ```
@@ -169,7 +167,7 @@ Use object options with custom snippets:
 
 ### Lazy Loading on Open
 
-By default, options load when the dropdown opens. Set `loadOptionsOnOpen={false}` to disable:
+By default, options load when the dropdown opens. Set `onOpen: false` to disable:
 
 ```svelte example id="load-lazy"
 <script lang="ts">
@@ -192,8 +190,7 @@ By default, options load when the dropdown opens. Set `loadOptionsOnOpen={false}
 </script>
 
 <MultiSelect
-  loadOptions={load_options}
-  loadOptionsOnOpen={false}
+  loadOptions={{ fetch: load_options, onOpen: false }}
   bind:selected
   placeholder="Type to search (won't load on open)..."
 />
@@ -203,12 +200,22 @@ By default, options load when the dropdown opens. Set `loadOptionsOnOpen={false}
 
 ## Props Reference
 
-| Prop                    | Type                          | Default     | Description                                                                                          |
-| ----------------------- | ----------------------------- | ----------- | ---------------------------------------------------------------------------------------------------- |
-| `loadOptions`           | `(params) => Promise<Result>` | `undefined` | Async function to load options. Receives `{ search, offset, limit }`, returns `{ options, hasMore }` |
-| `loadOptionsDebounceMs` | `number`                      | `300`       | Debounce delay for search queries in milliseconds                                                    |
-| `loadOptionsBatchSize`  | `number`                      | `50`        | Number of options to load per batch                                                                  |
-| `loadOptionsOnOpen`     | `boolean`                     | `true`      | Whether to load options when dropdown opens                                                          |
+The `loadOptions` prop accepts either a function (simple) or an object (with config):
+
+```typescript
+// Simple: just a function
+loadOptions={myFetchFn}
+
+// With config: object with fetch + options
+loadOptions={{ fetch: myFetchFn, debounceMs: 500, batchSize: 20, onOpen: false }}
+```
+
+| Config Key   | Type      | Default | Description                                 |
+| ------------ | --------- | ------- | ------------------------------------------- |
+| `fetch`      | `fn`      | —       | Async function to load options (required)   |
+| `debounceMs` | `number`  | `300`   | Debounce delay for search queries           |
+| `batchSize`  | `number`  | `50`    | Number of options to load per batch         |
+| `onOpen`     | `boolean` | `true`  | Whether to load options when dropdown opens |
 
 ### LoadOptions Parameters
 

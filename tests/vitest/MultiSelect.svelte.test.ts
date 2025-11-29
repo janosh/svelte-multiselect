@@ -2307,13 +2307,16 @@ describe(`loadOptions feature`, () => {
     })
   })
 
-  test(`loadOptions respects loadOptionsBatchSize`, async () => {
+  test(`loadOptions respects batchSize config`, async () => {
     const load_options = vi.fn(() =>
       Promise.resolve({ options: mock_data.slice(0, 25), hasMore: true })
     )
     mount(MultiSelect, {
       target: document.body,
-      props: { loadOptions: load_options, loadOptionsBatchSize: 25, open: true },
+      props: {
+        loadOptions: { fetch: load_options, batchSize: 25 },
+        open: true,
+      },
     })
     await wait_for_load()
 
@@ -2324,13 +2327,16 @@ describe(`loadOptions feature`, () => {
     })
   })
 
-  test(`loadOptionsOnOpen=false prevents loading on dropdown open`, async () => {
+  test(`loadOptions onOpen=false prevents loading on dropdown open`, async () => {
     const load_options = vi.fn(() =>
       Promise.resolve({ options: [`Test`], hasMore: false })
     )
     mount(MultiSelect, {
       target: document.body,
-      props: { loadOptions: load_options, loadOptionsOnOpen: false, open: true },
+      props: {
+        loadOptions: { fetch: load_options, onOpen: false },
+        open: true,
+      },
     })
     await wait_for_load()
 

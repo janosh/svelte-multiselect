@@ -121,11 +121,30 @@
     liSelectAllClass = ``,
     // Dynamic options loading
     loadOptions,
-    loadOptionsDebounceMs = 300,
-    loadOptionsBatchSize = 50,
-    loadOptionsOnOpen = true,
     ...rest
   }: MultiSelectProps<Option> = $props()
+
+  // Extract loadOptions function and config (supports both simple function and config object)
+  const load_options_fn = $derived(
+    loadOptions
+      ? (typeof loadOptions === `function` ? loadOptions : loadOptions.fetch)
+      : null,
+  )
+  const load_options_debounce_ms = $derived(
+    loadOptions && typeof loadOptions === `object`
+      ? (loadOptions.debounceMs ?? 300)
+      : 300,
+  )
+  const load_options_batch_size = $derived(
+    loadOptions && typeof loadOptions === `object`
+      ? (loadOptions.batchSize ?? 50)
+      : 50,
+  )
+  const load_options_on_open = $derived(
+    loadOptions && typeof loadOptions === `object`
+      ? (loadOptions.onOpen ?? true)
+      : true,
+  )
 
   $effect.pre(() => {
     // if maxSelect=1, value is the single item in selected (or null if selected is empty)
@@ -677,15 +696,17 @@
 
   // Dynamic options loading
   async function load_dynamic_options(reset: boolean) {
-    if (!loadOptions || load_options_loading || (!reset && !load_options_has_more)) {
+    if (
+      !load_options_fn || load_options_loading || (!reset && !load_options_has_more)
+    ) {
       return
     }
     load_options_loading = true
     try {
-      const result = await loadOptions({
+      const result = await load_options_fn({
         search: searchText,
         offset: reset ? 0 : loaded_options.length,
-        limit: loadOptionsBatchSize,
+        limit: load_options_batch_size,
       })
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
@@ -699,7 +720,7 @@
 
   // Single effect handles initial load + search changes
   $effect(() => {
-    if (!loadOptions) return
+    if (!load_options_fn) return
 
     // Reset state when dropdown closes so next open triggers fresh load
     if (!open) {
@@ -713,13 +734,13 @@
     const is_first_load = load_options_last_search === null
 
     if (is_first_load) {
-      // First load: immediate if loadOptionsOnOpen, otherwise wait for user to type
-      if (loadOptionsOnOpen) load_dynamic_options(true)
+      // First load: immediate if load_options_on_open, otherwise wait for user to type
+      if (load_options_on_open) load_dynamic_options(true)
     } else if (search !== load_options_last_search) {
       // Subsequent loads: debounce search changes
       debounce_timer = setTimeout(
         () => load_dynamic_options(true),
-        loadOptionsDebounceMs,
+        load_options_debounce_ms,
       )
     }
     return () => {
@@ -728,7 +749,7 @@
   })
 
   function handle_options_scroll(event: Event) {
-    if (!loadOptions || load_options_loading || !load_options_has_more) return
+    if (!load_options_fn || load_options_loading || !load_options_has_more) return
     const { scrollTop, scrollHeight, clientHeight } = event.target as HTMLElement
     if (scrollHeight - scrollTop - clientHeight <= 100) load_dynamic_options(false)
   }

@@ -47,6 +47,21 @@ export interface LoadOptionsResult<T extends Option = Option> {
   hasMore: boolean
 }
 
+export type LoadOptionsFn<T extends Option = Option> = (
+  params: LoadOptionsParams,
+) => Promise<LoadOptionsResult<T>>
+
+export interface LoadOptionsConfig<T extends Option = Option> {
+  fetch: LoadOptionsFn<T>
+  debounceMs?: number // default: 300
+  batchSize?: number // default: 50
+  onOpen?: boolean // default: true
+}
+
+export type LoadOptions<T extends Option = Option> =
+  | LoadOptionsFn<T>
+  | LoadOptionsConfig<T>
+
 type AfterInputProps = Pick<
   MultiSelectProps,
   `selected` | `disabled` | `invalid` | `id` | `placeholder` | `open` | `required`
@@ -151,9 +166,6 @@ export interface MultiSelectProps<T extends Option = Option>
   selectAllOption?: boolean | string // enable select all; if string, use as label
   liSelectAllClass?: string // CSS class for the select all <li>
   // Dynamic options loading for large datasets (https://github.com/janosh/svelte-multiselect/discussions/342)
-  // When provided, component handles all state management, debouncing, and pagination automatically
-  loadOptions?: (params: LoadOptionsParams) => Promise<LoadOptionsResult<T>>
-  loadOptionsDebounceMs?: number // debounce delay for search queries (default: 300)
-  loadOptionsBatchSize?: number // number of options to load per batch (default: 50)
-  loadOptionsOnOpen?: boolean // whether to load options when dropdown opens (default: true)
+  // Pass a function for simple usage, or an object with config for advanced usage
+  loadOptions?: LoadOptions<T>
 }
