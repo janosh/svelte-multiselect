@@ -54,10 +54,8 @@
     if (is_opening && focus_first) {
       setTimeout(() => {
         const dropdown = document.querySelector(`.dropdown[data-href="${href}"]`)
-        const first_link = dropdown?.querySelector(`div:last-child a`)
-        if (first_link instanceof HTMLElement) {
-          first_link.focus()
-        }
+        const first_link = dropdown?.querySelector<HTMLElement>(`[role="menuitem"]`)
+        first_link?.focus()
       }, 0)
     }
   }
@@ -90,10 +88,8 @@
       focused_item_index = new_index
 
       const dropdown = document.querySelector(`.dropdown[data-href="${href}"]`)
-      const links = dropdown?.querySelectorAll(`div:last-child a`)
-      if (links?.[new_index] instanceof HTMLElement) {
-        links[new_index].focus()
-      }
+      const links = dropdown?.querySelectorAll<HTMLElement>(`[role="menuitem"]`)
+      links?.[new_index]?.focus()
     }
 
     // Open dropdown with ArrowDown when closed
@@ -110,7 +106,7 @@
       // Return focus to dropdown toggle button
       document
         .querySelector(`.dropdown[data-href="${href}"]`)
-        ?.querySelector<HTMLButtonElement>(`div:first-child > button`)
+        ?.querySelector<HTMLButtonElement>(`[data-dropdown-toggle]`)
         ?.focus()
     }
   }
@@ -154,14 +150,15 @@
 >
   <button
     class="burger"
+    type="button"
     onclick={() => is_open = !is_open}
     aria-label="Toggle navigation menu"
     aria-expanded={is_open}
     aria-controls={panel_id}
   >
-    <span></span>
-    <span></span>
-    <span></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
+    <span aria-hidden="true"></span>
   </button>
 
   <div
@@ -199,17 +196,17 @@
           }}
         >
           <div>
-            <svelte:element
-              this={parent_page_exists ? `a` : `span`}
-              href={parent_page_exists ? href : undefined}
-              aria-current={is_current(href)}
-              onclick={close_menus}
-              role={parent_page_exists ? undefined : `button`}
-              style={parent.style}
-            >
-              {@html parent.label}
-            </svelte:element>
+            {#if parent_page_exists}
+              {@const { label, style } = parent}
+              <a {href} aria-current={is_current(href)} onclick={close_menus} {style}>
+                {@html label}
+              </a>
+            {:else}
+              <span style={parent.style}>{@html parent.label}</span>
+            {/if}
             <button
+              type="button"
+              data-dropdown-toggle
               aria-label="Toggle {parent.label} submenu"
               aria-expanded={hovered_dropdown === href}
               aria-haspopup="true"
@@ -348,8 +345,7 @@
     color: inherit;
     border-radius: var(--nav-border-radius) 0 0 var(--nav-border-radius);
   }
-  .dropdown > div:first-child > a[aria-current='page'],
-  .dropdown > div:first-child > span[aria-current='page'] {
+  .dropdown > div:first-child > a[aria-current='page'] {
     color: var(--nav-link-active-color);
   }
   .dropdown > div:first-child > button {
