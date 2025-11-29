@@ -734,8 +734,17 @@
     const is_first_load = load_options_last_search === null
 
     if (is_first_load) {
-      // First load: immediate if load_options_on_open, otherwise wait for user to type
-      if (load_options_on_open) load_dynamic_options(true)
+      if (load_options_on_open) {
+        // Load immediately on dropdown open
+        load_dynamic_options(true)
+      } else if (search) {
+        // onOpen=false but user typed - debounce and load
+        debounce_timer = setTimeout(
+          () => load_dynamic_options(true),
+          load_options_debounce_ms,
+        )
+      }
+      // If onOpen=false and no search text, do nothing (wait for user to type)
     } else if (search !== load_options_last_search) {
       // Subsequent loads: debounce search changes
       debounce_timer = setTimeout(
