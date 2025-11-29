@@ -2276,3 +2276,136 @@ describe.each([[1], [2], [null]])(
     )
   },
 )
+
+// Dynamic options loading tests (https://github.com/janosh/svelte-multiselect/discussions/342)
+describe(`loadOptions feature`, () => {
+  const mock_data = Array.from({ length: 100 }, (_, idx) => `Option ${idx + 1}`)
+
+  // Helper to wait for async operations to complete
+  async function wait_for_load() {
+    await tick()
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    await tick()
+  }
+
+  test(`loadOptions is called when dropdown opens`, async () => {
+    const load_options = vi.fn(() =>
+      Promise.resolve({ options: mock_data.slice(0, 50), hasMore: true })
+    )
+    // Use open prop directly for reliable testing
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await wait_for_load()
+
+    expect(load_options).toHaveBeenCalledTimes(1)
+    expect(load_options).toHaveBeenCalledWith({
+      search: ``,
+      offset: 0,
+      limit: 50, // default batch size
+    })
+  })
+
+  test(`loadOptions respects loadOptionsBatchSize`, async () => {
+    const load_options = vi.fn(() =>
+      Promise.resolve({ options: mock_data.slice(0, 25), hasMore: true })
+    )
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, loadOptionsBatchSize: 25, open: true },
+    })
+    await wait_for_load()
+
+    expect(load_options).toHaveBeenCalledWith({
+      search: ``,
+      offset: 0,
+      limit: 25,
+    })
+  })
+
+  test(`loadOptionsOnOpen=false prevents loading on dropdown open`, async () => {
+    const load_options = vi.fn(() =>
+      Promise.resolve({ options: [`Test`], hasMore: false })
+    )
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, loadOptionsOnOpen: false, open: true },
+    })
+    await wait_for_load()
+
+    expect(load_options).not.toHaveBeenCalled()
+  })
+
+  test(`loadOptions renders loaded options in dropdown`, async () => {
+    const load_options = vi.fn(() =>
+      Promise.resolve({ options: [`Apple`, `Banana`, `Cherry`], hasMore: false })
+    )
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await wait_for_load()
+
+    const options_ul = doc_query(`ul.options`)
+    expect(options_ul.textContent).toContain(`Apple`)
+    expect(options_ul.textContent).toContain(`Banana`)
+    expect(options_ul.textContent).toContain(`Cherry`)
+  })
+
+  test(`loadOptions shows loading indicator while loading`, async () => {
+    let resolve_load: (() => void) | undefined
+    const load_options = vi.fn(
+      () =>
+        new Promise<{ options: string[]; hasMore: boolean }>((resolve) => {
+          resolve_load = () => resolve({ options: [`Test`], hasMore: false })
+        }),
+    )
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+    await tick() // Extra tick for effect to run
+
+    // Loading indicator should be visible while loading
+    const loading_li = document.querySelector(`ul.options > li.loading-more`)
+    expect(loading_li).toBeInstanceOf(HTMLLIElement)
+
+    // Resolve the load
+    if (resolve_load) resolve_load()
+    await wait_for_load()
+
+    // Loading indicator should be gone
+    expect(document.querySelector(`ul.options > li.loading-more`)).toBeNull()
+  })
+
+  test(`static options work without loadOptions`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`A`, `B`, `C`], open: true },
+    })
+    await tick()
+
+    const options_ul = doc_query(`ul.options`)
+    expect(options_ul.textContent).toContain(`A`)
+    expect(options_ul.textContent).toContain(`B`)
+    expect(options_ul.textContent).toContain(`C`)
+  })
+
+  test(`dropdown renders when loadOptions is provided but not yet loaded`, async () => {
+    const load_options = vi.fn(() =>
+      Promise.resolve({ options: [`Test`], hasMore: false })
+    )
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+
+    // Dropdown should exist even before options are loaded
+    const options_ul = document.querySelector(`ul.options`)
+    expect(options_ul).not.toBeNull()
+  })
+})
