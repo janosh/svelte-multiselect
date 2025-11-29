@@ -1,7 +1,11 @@
 <script
   lang="ts"
-  generics="Route extends string | [string, string] | [string, string[]] = string | [string, string] | [string, string[]]"
+  generics="Route extends string | [string, string] | [string, string[]]"
 >
+  // Route can be:
+  // - string: just a path ("/about")
+  // - [string, string]: [path, custom_label] ("/about", "About Us")
+  // - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs", "/docs/intro"])
   import { Icon } from '$lib'
   import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
@@ -49,10 +53,8 @@
     // Focus management for keyboard users
     if (is_opening && focus_first) {
       setTimeout(() => {
-        const dropdown = document.querySelector(
-          `.dropdown-wrapper[data-href="${href}"]`,
-        )
-        const first_link = dropdown?.querySelector(`.dropdown a`)
+        const dropdown = document.querySelector(`.dropdown[data-href="${href}"]`)
+        const first_link = dropdown?.querySelector(`div:last-child a`)
         if (first_link instanceof HTMLElement) {
           first_link.focus()
         }
@@ -87,10 +89,8 @@
       )
       focused_item_index = new_index
 
-      const dropdown = document.querySelector(
-        `.dropdown-wrapper[data-href="${href}"]`,
-      )
-      const links = dropdown?.querySelectorAll(`.dropdown a`)
+      const dropdown = document.querySelector(`.dropdown[data-href="${href}"]`)
+      const links = dropdown?.querySelectorAll(`div:last-child a`)
       if (links?.[new_index] instanceof HTMLElement) {
         links[new_index].focus()
       }
@@ -109,8 +109,8 @@
       close_menus()
       // Return focus to dropdown toggle button
       document
-        .querySelector(`.dropdown-wrapper[data-href="${href}"]`)
-        ?.querySelector<HTMLButtonElement>(`.dropdown-toggle`)
+        .querySelector(`.dropdown[data-href="${href}"]`)
+        ?.querySelector<HTMLButtonElement>(`div:first-child > button`)
         ?.focus()
     }
   }
@@ -151,18 +151,17 @@
 <nav
   {...rest}
   {@attach click_outside({ callback: close_menus })}
-  class="bleed-1400 {rest.class ?? ``}"
 >
   <button
-    class="burger-button"
+    class="burger"
     onclick={() => is_open = !is_open}
     aria-label="Toggle navigation menu"
     aria-expanded={is_open}
     aria-controls={panel_id}
   >
-    <span class="burger-line"></span>
-    <span class="burger-line"></span>
-    <span class="burger-line"></span>
+    <span></span>
+    <span></span>
+    <span></span>
   </button>
 
   <div
@@ -184,7 +183,7 @@
         {@const parent_page_exists = sub_routes.includes(href)}
         {@const filtered_sub_routes = sub_routes.filter((route) => route !== href)}
         <div
-          class="dropdown-wrapper"
+          class="dropdown"
           class:active={child_is_active}
           data-href={href}
           role="group"
@@ -199,11 +198,10 @@
             }
           }}
         >
-          <div class="dropdown-trigger-wrapper">
+          <div>
             <svelte:element
               this={parent_page_exists ? `a` : `span`}
               href={parent_page_exists ? href : undefined}
-              class="dropdown-trigger"
               aria-current={is_current(href)}
               onclick={close_menus}
               role={parent_page_exists ? undefined : `button`}
@@ -212,7 +210,6 @@
               {@html parent.label}
             </svelte:element>
             <button
-              class="dropdown-toggle"
               aria-label="Toggle {parent.label} submenu"
               aria-expanded={hovered_dropdown === href}
               aria-haspopup="true"
@@ -226,7 +223,6 @@
             </button>
           </div>
           <div
-            class="dropdown"
             class:visible={hovered_dropdown === href}
             role="menu"
             tabindex="-1"
@@ -299,6 +295,7 @@
     display: flex;
     gap: 1em;
     place-content: center;
+    place-items: center;
     flex-wrap: wrap;
     padding: 0.5em;
   }
@@ -318,13 +315,14 @@
   }
 
   /* Dropdown styles */
-  .dropdown-wrapper {
+  .dropdown {
     position: relative;
   }
-  .dropdown-wrapper.active .dropdown-trigger {
+  .dropdown.active > div:first-child a,
+  .dropdown.active > div:first-child span {
     color: var(--nav-link-active-color);
   }
-  .dropdown-wrapper::after {
+  .dropdown::after {
     content: '';
     position: absolute;
     top: 100%;
@@ -332,27 +330,29 @@
     right: 0;
     height: var(--nav-dropdown-margin, 3pt);
   }
-  .dropdown-trigger-wrapper {
+  .dropdown > div:first-child {
     display: flex;
     align-items: center;
     gap: 0;
     border-radius: var(--nav-border-radius);
     transition: background-color 0.2s;
   }
-  .dropdown-trigger-wrapper:hover {
+  .dropdown > div:first-child:hover {
     background-color: var(--nav-link-bg-hover);
   }
-  .dropdown-trigger {
+  .dropdown > div:first-child > a,
+  .dropdown > div:first-child > span {
     line-height: 1.3;
     padding: 1pt 5pt;
     text-decoration: none;
     color: inherit;
     border-radius: var(--nav-border-radius) 0 0 var(--nav-border-radius);
   }
-  .dropdown-trigger[aria-current='page'] {
+  .dropdown > div:first-child > a[aria-current='page'],
+  .dropdown > div:first-child > span[aria-current='page'] {
     color: var(--nav-link-active-color);
   }
-  .dropdown-toggle {
+  .dropdown > div:first-child > button {
     padding: 1pt 3pt;
     border: none;
     background: transparent;
@@ -363,7 +363,7 @@
     justify-content: center;
     border-radius: 0 var(--nav-border-radius) var(--nav-border-radius) 0;
   }
-  .dropdown {
+  .dropdown > div:last-child {
     position: absolute;
     top: 100%;
     left: 0;
@@ -379,10 +379,10 @@
     gap: var(--nav-dropdown-gap, 5pt);
     z-index: var(--nav-dropdown-z-index, 100);
   }
-  .dropdown.visible {
+  .dropdown > div:last-child.visible {
     display: flex;
   }
-  .dropdown a {
+  .dropdown > div:last-child a {
     padding: var(--nav-dropdown-link-padding, 1pt 4pt);
     border-radius: var(--nav-border-radius);
     text-decoration: none;
@@ -390,14 +390,14 @@
     white-space: nowrap;
     transition: background-color 0.2s;
   }
-  .dropdown a:hover {
+  .dropdown > div:last-child a:hover {
     background-color: var(--nav-link-bg-hover);
   }
-  .dropdown a[aria-current='page'] {
+  .dropdown > div:last-child a[aria-current='page'] {
     color: var(--nav-link-active-color);
   }
   /* Mobile burger button */
-  .burger-button {
+  .burger {
     display: none;
     position: fixed;
     top: 1rem;
@@ -410,25 +410,25 @@
     padding: 0;
     z-index: var(--nav-toggle-btn-z-index, 10);
   }
-  .burger-line {
+  .burger span {
     height: 0.18rem;
     background-color: var(--text-color);
     border-radius: 8px;
     transition: all 0.2s linear;
     transform-origin: 1px;
   }
-  .burger-button[aria-expanded='true'] .burger-line:first-child {
+  .burger[aria-expanded='true'] span:first-child {
     transform: rotate(45deg);
   }
-  .burger-button[aria-expanded='true'] .burger-line:nth-child(2) {
+  .burger[aria-expanded='true'] span:nth-child(2) {
     opacity: 0;
   }
-  .burger-button[aria-expanded='true'] .burger-line:nth-child(3) {
+  .burger[aria-expanded='true'] span:nth-child(3) {
     transform: rotate(-45deg);
   }
   /* Mobile styles */
   @media (max-width: 767px) {
-    .burger-button {
+    .burger {
       display: flex;
     }
     .menu {
@@ -454,29 +454,30 @@
       visibility: visible;
     }
     .menu > a,
-    .dropdown-wrapper {
+    .dropdown {
       padding: 2pt 8pt;
     }
 
     /* Mobile dropdown styles - show as expandable section */
-    .dropdown-wrapper {
+    .dropdown {
       flex-direction: column;
       align-items: stretch;
     }
-    .dropdown-trigger-wrapper {
+    .dropdown > div:first-child {
       display: flex;
       align-items: center;
       justify-content: space-between;
     }
-    .dropdown-trigger {
+    .dropdown > div:first-child > a,
+    .dropdown > div:first-child > span {
       flex: 1;
       border-radius: var(--nav-border-radius);
     }
-    .dropdown-toggle {
+    .dropdown > div:first-child > button {
       padding: 4pt 8pt;
       border-radius: var(--nav-border-radius);
     }
-    .dropdown {
+    .dropdown > div:last-child {
       position: static;
       border: none;
       box-shadow: none;

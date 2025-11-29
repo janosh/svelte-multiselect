@@ -80,6 +80,57 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 </form>
 ```
 
+## Select All Option
+
+Use `selectAllOption` to add a "Select all" button at the top of the dropdown. It respects `maxSelect` (only selects up to the limit) and skips disabled options.
+
+```svelte example
+<script lang="ts">
+  import MultiSelect from '$lib'
+
+  const fruits = [`Apple`, `Banana`, `Cherry`, `Date`, `Elderberry`, `Fig`, `Grape`]
+  let selected = $state([])
+</script>
+
+<MultiSelect
+  options={fruits}
+  bind:selected
+  selectAllOption
+  maxSelect={5}
+  placeholder="Pick your favorite fruits"
+/>
+
+<p>Selected ({selected.length}/5): {selected.join(`, `) || `none`}</p>
+```
+
+Pass a string to customize the label:
+
+```svelte example
+<script lang="ts">
+  import MultiSelect from '$lib'
+
+  const colors = [
+    { label: `Red`, value: `#ff6b6b` },
+    { label: `Orange`, value: `#ffa94d` },
+    { label: `Yellow`, value: `#ffd43b` },
+    { label: `Green`, value: `#69db7c` },
+    { label: `Blue`, value: `#4dabf7` },
+    { label: `Purple`, value: `#9775fa` },
+  ]
+  let selected = $state([])
+</script>
+
+<MultiSelect options={colors} bind:selected selectAllOption="Add all colors" />
+
+<div style="display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;">
+  {#each selected as color}
+    <span style="background: {color.value}; padding: 4px 8px; border-radius: 4px;">
+      {color.label}
+    </span>
+  {/each}
+</div>
+```
+
 ## Initialize with `value` prop
 
 For single select (`maxSelect={1}`), you can use `bind:value` to initialize the selected option. Simpler than `selected={[option]}`. Works with any option type (strings, numbers, objects).

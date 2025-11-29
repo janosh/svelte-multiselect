@@ -25,10 +25,11 @@ export interface MultiSelectEvents<T extends Option = Option> {
   oncreate?: (data: { option: T }) => unknown // fires when users entered custom text from which new option is created
   onremove?: (data: { option: T }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
+  onselectAll?: (data: { options: T[] }) => unknown // fires when select all/deselect all is triggered
   onchange?: (data: {
     option?: T
     options?: T[]
-    type: `add` | `remove` | `removeAll`
+    type: `add` | `remove` | `removeAll` | `selectAll`
   }) => unknown
   onopen?: (data: { event: Event }) => unknown
   onclose?: (data: { event: Event }) => unknown
@@ -134,4 +135,7 @@ export interface MultiSelectProps<T extends Option = Option>
   ulOptionsStyle?: string | null
   value?: T | T[] | null
   portal?: PortalParams
+  // Select all feature
+  selectAllOption?: boolean | string // enable select all; if string, use as label
+  liSelectAllClass?: string // CSS class for the select all <li>
 }

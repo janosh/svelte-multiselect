@@ -2123,6 +2123,121 @@ test(`arrow keys can navigate to create option message when there are matching o
   expect(doc_query(`ul.options li.user-msg`).classList.contains(`active`)).toBe(true)
 })
 
+describe(`selectAllOption feature`, () => {
+  const options = [`Apple`, `Banana`, `Cherry`, `Date`]
+
+  // Helper to open dropdown and click select all
+  async function click_select_all() {
+    doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+    await tick()
+    doc_query(`ul.options > li.select-all`).click()
+    await tick()
+  }
+
+  test.each([[true, `Select all`], [`Custom label`, `Custom label`]])(
+    `shows correct label when selectAllOption=%s`,
+    async (selectAllOption, expected_label) => {
+      mount(MultiSelect, { target: document.body, props: { options, selectAllOption } })
+      doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+      await tick()
+      expect(doc_query(`ul.options > li.select-all`).textContent?.trim()).toBe(
+        expected_label,
+      )
+    },
+  )
+
+  test.each([[{ selectAllOption: false }], [{ selectAllOption: true, maxSelect: 1 }]])(
+    `hidden when props=%j`,
+    async (props) => {
+      mount(MultiSelect, { target: document.body, props: { options, ...props } })
+      doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+      await tick()
+      expect(document.querySelector(`ul.options > li.select-all`)).toBeNull()
+    },
+  )
+
+  test(`selects all, fires onselectAll and onchange events`, async () => {
+    const onselectAll_spy = vi.fn()
+    const onchange_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options,
+        selectAllOption: true,
+        onselectAll: onselectAll_spy,
+        onchange: onchange_spy,
+      },
+    })
+    await click_select_all()
+    expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
+    expect(onselectAll_spy).toHaveBeenCalledWith({ options })
+    expect(onchange_spy).toHaveBeenCalledWith({ options, type: `selectAll` })
+  })
+
+  test(`respects maxSelect, skips disabled, resets searchText`, async () => {
+    const options_mixed = [
+      { label: `A` },
+      { label: `B`, disabled: true },
+      { label: `C` },
+      { label: `D` },
+    ]
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: options_mixed, selectAllOption: true, maxSelect: 2 },
+    })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.click()
+    await tick()
+    input.value = `test`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await tick()
+    doc_query(`ul.options > li.select-all`).click()
+    await tick()
+    expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`A C`) // skipped B (disabled), limited to 2
+    expect(input.value).toBe(``) // searchText reset
+  })
+
+  test(`no-op when all already selected`, async () => {
+    const spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options, selected: [...options], selectAllOption: true, onselectAll: spy },
+    })
+    await click_select_all()
+    expect(spy).not.toHaveBeenCalled()
+  })
+
+  test(`applies liSelectAllClass`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options, selectAllOption: true, liSelectAllClass: `custom` },
+    })
+    doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+    await tick()
+    expect(doc_query(`ul.options > li.select-all`).classList.contains(`custom`)).toBe(
+      true,
+    )
+  })
+
+  test.each([[`Enter`, { key: `Enter` }], [`Space`, { code: `Space` }]])(
+    `keyboard %s activates`,
+    async (_name, key_props) => {
+      const spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options, selectAllOption: true, onselectAll: spy },
+      })
+      doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+      await tick()
+      doc_query(`ul.options > li.select-all`).dispatchEvent(
+        new KeyboardEvent(`keydown`, { ...key_props, bubbles: true }),
+      )
+      await tick()
+      expect(spy).toHaveBeenCalledTimes(1)
+    },
+  )
+})
+
 // Test that value prop can initialize selected options for both single (maxSelect=1) and multi-select (maxSelect=null)
 // Covers string, number, and object options, with single values for maxSelect=1 and arrays for maxSelect=null
 describe.each([[1], [2], [null]])(

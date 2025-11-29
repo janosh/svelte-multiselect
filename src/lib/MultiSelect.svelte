@@ -113,7 +113,11 @@
     onchange,
     onopen,
     onclose,
+    onselectAll,
     portal: portal_params = {},
+    // Select all feature
+    selectAllOption = false,
+    liSelectAllClass = ``,
     ...rest
   }: MultiSelectProps<Option> = $props()
 
@@ -467,6 +471,30 @@
     onremoveAll?.({ options: removed_options })
     onchange?.({ options: selected, type: `removeAll` })
     // If selected.length <= minSelect, do nothing (can't remove any more)
+  }
+
+  function select_all(event: Event) {
+    event.stopPropagation()
+    const limit = maxSelect ?? Infinity
+    const options_to_add = options.filter((opt) => {
+      const is_disabled = opt instanceof Object && opt.disabled
+      const is_already_selected = selected.map(key).includes(key(opt))
+      return !is_disabled && (!is_already_selected || duplicates)
+    }).slice(0, limit - selected.length)
+
+    if (options_to_add.length > 0) {
+      selected = [...selected, ...options_to_add]
+      if (sortSelected === true) {
+        selected = selected.sort((op1, op2) =>
+          `${get_label(op1)}`.localeCompare(`${get_label(op2)}`)
+        )
+      } else if (typeof sortSelected === `function`) {
+        selected = selected.sort(sortSelected)
+      }
+      searchText = ``
+      onselectAll?.({ options: options_to_add })
+      onchange?.({ options: selected, type: `selectAll` })
+    }
   }
 
   let is_selected = $derived((label: string | number) =>
@@ -836,6 +864,25 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
+      {#if selectAllOption && options.length > 0 &&
+        (maxSelect === null || maxSelect > 1)}
+        {@const label = typeof selectAllOption === `string` ? selectAllOption : `Select all`}
+        <li
+          class="select-all {liSelectAllClass}"
+          onclick={select_all}
+          onkeydown={(event) => {
+            if (event.key === `Enter` || event.code === `Space`) {
+              event.preventDefault()
+              select_all(event)
+            }
+          }}
+          role="option"
+          aria-selected="false"
+          tabindex="0"
+        >
+          {label}
+        </li>
+      {/if}
       {#each matchingOptions.slice(
         0,
         maxOptions == null ? Infinity : Math.max(0, maxOptions),
@@ -1160,6 +1207,20 @@
     height: 16px;
     margin-right: 6px;
     accent-color: var(--sms-active-color, cornflowerblue);
+  }
+  /* Select all option styling */
+  ul.options > li.select-all {
+    border-bottom: var(--sms-select-all-border-bottom, 1px solid lightgray);
+    font-weight: var(--sms-select-all-font-weight, 500);
+    color: var(--sms-select-all-color, inherit);
+    background: var(--sms-select-all-bg, transparent);
+    margin-bottom: var(--sms-select-all-margin-bottom, 2pt);
+  }
+  ul.options > li.select-all:hover {
+    background: var(
+      --sms-select-all-hover-bg,
+      var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))
+    );
   }
   :is(span.max-select-msg) {
     padding: 0 3pt;
