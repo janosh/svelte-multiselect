@@ -75,8 +75,7 @@
     {@render example?.()}
   {/if}
 
-  <pre class:open>
-  <code>{#if code}{@render code()}{:else}{src}{/if}</code></pre>
+  <pre class:open><code>{#if code}{@render code()}{:else}{src}{/if}</code></pre>
 
   {#if code_above}
     {@render example?.()}

@@ -362,7 +362,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           position: absolute; z-index: 9999; opacity: 0;
           background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
           padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 6px); font-size: var(--tooltip-font-size, 13px); line-height: 1.4;
-          max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; pointer-events: none;
+          max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; text-wrap: balance; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
         `
 

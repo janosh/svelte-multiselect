@@ -1,3 +1,4 @@
+<!-- eslint-disable-next-line @stylistic/quotes -- TS generics require string literals -->
 <script lang="ts" generics="Option extends import('./types').Option">
   import { tick } from 'svelte'
   import { flip } from 'svelte/animate'
@@ -113,7 +114,11 @@
     onchange,
     onopen,
     onclose,
+    onselectAll,
     portal: portal_params = {},
+    // Select all feature
+    selectAllOption = false,
+    liSelectAllClass = ``,
     ...rest
   }: MultiSelectProps<Option> = $props()
 
@@ -279,23 +284,10 @@
         }
       }
 
-      const reached_max_select = selected.length >= (maxSelect ?? Infinity)
-
-      const dropdown_should_close = closeDropdownOnSelect === true ||
-        closeDropdownOnSelect === `retain-focus` ||
-        (closeDropdownOnSelect === `if-mobile` && window_width &&
-          window_width < breakpoint)
-
-      const should_retain_focus = closeDropdownOnSelect === `retain-focus`
-
-      if (reached_max_select || dropdown_should_close) {
-        close_dropdown(event, should_retain_focus)
-      } else if (!dropdown_should_close) input?.focus()
+      clear_validity()
+      handle_dropdown_after_select(event)
       onadd?.({ option: option_to_add })
       onchange?.({ option: option_to_add, type: `add` })
-
-      invalid = false // reset error status whenever new items are selected
-      form_input?.setCustomValidity(``)
     }
   }
 
@@ -326,9 +318,7 @@
     }
 
     selected = [...selected] // trigger Svelte rerender
-
-    invalid = false // reset error status whenever items are removed
-    form_input?.setCustomValidity(``)
+    clear_validity()
     onremove?.({ option: option_removed })
     onchange?.({ option: option_removed, type: `remove` })
   }
@@ -350,6 +340,22 @@
     if (!retain_focus) input?.blur()
     activeIndex = null
     onclose?.({ event })
+  }
+
+  function clear_validity() {
+    invalid = false
+    form_input?.setCustomValidity(``)
+  }
+
+  function handle_dropdown_after_select(event: Event) {
+    const reached_max = selected.length >= (maxSelect ?? Infinity)
+    const should_close = closeDropdownOnSelect === true ||
+      closeDropdownOnSelect === `retain-focus` ||
+      (closeDropdownOnSelect === `if-mobile` && window_width &&
+        window_width < breakpoint)
+    if (reached_max || should_close) {
+      close_dropdown(event, closeDropdownOnSelect === `retain-focus`)
+    } else input?.focus()
   }
 
   // handle all keyboard events this component receives
@@ -469,13 +475,40 @@
     // If selected.length <= minSelect, do nothing (can't remove any more)
   }
 
+  function select_all(event: Event) {
+    event.stopPropagation()
+    const limit = maxSelect ?? Infinity
+    // Use matchingOptions for "select all visible" semantics
+    const options_to_add = matchingOptions.filter((opt) => {
+      const is_disabled = opt instanceof Object && opt.disabled
+      const is_already_selected = selected.map(key).includes(key(opt))
+      return !is_disabled && !is_already_selected
+    }).slice(0, limit - selected.length)
+
+    if (options_to_add.length > 0) {
+      selected = [...selected, ...options_to_add]
+      if (sortSelected === true) {
+        selected = selected.sort((op1, op2) =>
+          `${get_label(op1)}`.localeCompare(`${get_label(op2)}`)
+        )
+      } else if (typeof sortSelected === `function`) {
+        selected = selected.sort(sortSelected)
+      }
+      searchText = ``
+      clear_validity()
+      handle_dropdown_after_select(event)
+      onselectAll?.({ options: options_to_add })
+      onchange?.({ options: selected, type: `selectAll` })
+    }
+  }
+
   let is_selected = $derived((label: string | number) =>
     selected.map(get_label).includes(label)
   )
 
   const if_enter_or_space =
     (handler: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
-      if ([`Enter`, `Space`].includes(event.code)) {
+      if (event.key === `Enter` || event.code === `Space`) {
         event.preventDefault()
         handler(event)
       }
@@ -836,6 +869,20 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
     >
+      {#if selectAllOption && options.length > 0 &&
+        (maxSelect === null || maxSelect > 1)}
+        {@const label = typeof selectAllOption === `string` ? selectAllOption : `Select all`}
+        <li
+          class="select-all {liSelectAllClass}"
+          onclick={select_all}
+          onkeydown={if_enter_or_space(select_all)}
+          role="option"
+          aria-selected="false"
+          tabindex="0"
+        >
+          {label}
+        </li>
+      {/if}
       {#each matchingOptions.slice(
         0,
         maxOptions == null ? Infinity : Math.max(0, maxOptions),
@@ -1160,6 +1207,20 @@
     height: 16px;
     margin-right: 6px;
     accent-color: var(--sms-active-color, cornflowerblue);
+  }
+  /* Select all option styling */
+  ul.options > li.select-all {
+    border-bottom: var(--sms-select-all-border-bottom, 1px solid lightgray);
+    font-weight: var(--sms-select-all-font-weight, 500);
+    color: var(--sms-select-all-color, inherit);
+    background: var(--sms-select-all-bg, transparent);
+    margin-bottom: var(--sms-select-all-margin-bottom, 2pt);
+  }
+  ul.options > li.select-all:hover {
+    background: var(
+      --sms-select-all-hover-bg,
+      var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))
+    );
   }
   :is(span.max-select-msg) {
     padding: 0 3pt;
