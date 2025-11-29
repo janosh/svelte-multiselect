@@ -503,7 +503,7 @@
 
   const if_enter_or_space =
     (handler: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
-      if ([`Enter`, `Space`].includes(event.code)) {
+      if (event.key === `Enter` || event.code === `Space`) {
         event.preventDefault()
         handler(event)
       }
@@ -870,12 +870,7 @@
         <li
           class="select-all {liSelectAllClass}"
           onclick={select_all}
-          onkeydown={(event) => {
-            if (event.key === `Enter` || event.code === `Space`) {
-              event.preventDefault()
-              select_all(event)
-            }
-          }}
+          onkeydown={if_enter_or_space(select_all)}
           role="option"
           aria-selected="false"
           tabindex="0"
