@@ -35,6 +35,18 @@ export interface MultiSelectEvents<T extends Option = Option> {
   onclose?: (data: { event: Event }) => unknown
 }
 
+// Dynamic options loading (https://github.com/janosh/svelte-multiselect/discussions/342)
+export interface LoadOptionsParams {
+  search: string
+  offset: number
+  limit: number
+}
+
+export interface LoadOptionsResult<T extends Option = Option> {
+  options: T[]
+  hasMore: boolean
+}
+
 type AfterInputProps = Pick<
   MultiSelectProps,
   `selected` | `disabled` | `invalid` | `id` | `placeholder` | `open` | `required`
@@ -113,7 +125,7 @@ export interface MultiSelectProps<T extends Option = Option>
   name?: string | null
   noMatchingOptionsMsg?: string
   open?: boolean
-  options: T[]
+  options?: T[] // static options, or omit when using loadOptions
   outerDiv?: HTMLDivElement | null
   outerDivClass?: string
   parseLabelsAsHtml?: boolean // should not be combined with allowUserOptions!
@@ -138,4 +150,10 @@ export interface MultiSelectProps<T extends Option = Option>
   // Select all feature
   selectAllOption?: boolean | string // enable select all; if string, use as label
   liSelectAllClass?: string // CSS class for the select all <li>
+  // Dynamic options loading for large datasets (https://github.com/janosh/svelte-multiselect/discussions/342)
+  // When provided, component handles all state management, debouncing, and pagination automatically
+  loadOptions?: (params: LoadOptionsParams) => Promise<LoadOptionsResult<T>>
+  loadOptionsDebounceMs?: number // debounce delay for search queries (default: 300)
+  loadOptionsBatchSize?: number // number of options to load per batch (default: 50)
+  loadOptionsOnOpen?: boolean // whether to load options when dropdown opens (default: true)
 }
