@@ -34,7 +34,7 @@
         : label.toLowerCase().includes(searchText.toLowerCase())
     },
     fuzzy = true,
-    closeDropdownOnSelect = `if-mobile`,
+    closeDropdownOnSelect = false,
     form_input = $bindable(null),
     highlightMatches = true,
     id = null,
