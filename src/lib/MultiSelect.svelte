@@ -345,9 +345,9 @@
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
-      const other_ops_type = typeof effective_options[0]
+      const is_object_option = typeof effective_options[0] === `object`
       option_removed = (
-        other_ops_type ? { label: option_to_drop } : option_to_drop
+        is_object_option ? { label: option_to_drop } : option_to_drop
       ) as Option
     }
     if (option_removed === undefined) {
@@ -694,23 +694,23 @@
     }
   }
 
-  // Dynamic options loading
+  // Dynamic options loading - captures search at call time to avoid race conditions
   async function load_dynamic_options(reset: boolean) {
     if (
       !load_options_fn || load_options_loading || (!reset && !load_options_has_more)
     ) {
       return
     }
+    // Capture search term at call time to avoid race with user typing during fetch
+    const search = searchText
+    const offset = reset ? 0 : loaded_options.length
     load_options_loading = true
     try {
-      const result = await load_options_fn({
-        search: searchText,
-        offset: reset ? 0 : loaded_options.length,
-        limit: load_options_batch_size,
-      })
+      const limit = load_options_batch_size
+      const result = await load_options_fn({ search, offset, limit })
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
-      load_options_last_search = searchText
+      load_options_last_search = search
     } catch (err) {
       console.error(`MultiSelect loadOptions error:`, err)
     } finally {
@@ -749,6 +749,9 @@
       // If onOpen=false and no search text, do nothing (wait for user to type)
     } else if (search !== load_options_last_search) {
       // Subsequent loads: debounce search changes
+      // Clear stale results immediately so UI doesn't show wrong results while loading
+      loaded_options = []
+      load_options_has_more = true
       debounce_timer = setTimeout(
         () => load_dynamic_options(true),
         load_options_debounce_ms,

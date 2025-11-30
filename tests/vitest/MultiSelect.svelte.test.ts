@@ -2493,4 +2493,38 @@ describe(`loadOptions feature`, () => {
     // Should NOT have loaded again since hasMore=false
     expect(load_options).toHaveBeenCalledTimes(1)
   })
+
+  test(`typing during pending request clears stale results and triggers new load`, async () => {
+    vi.useFakeTimers()
+    type LoadResult = { options: string[]; hasMore: boolean }
+    const resolvers: Array<(val: LoadResult) => void> = []
+    const load_options = vi.fn(() =>
+      new Promise<LoadResult>((res) => resolvers.push(res))
+    )
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+    })
+    await vi.runAllTimersAsync()
+    expect(load_options).toHaveBeenCalledWith({ search: ``, offset: 0, limit: 50 })
+
+    // Type while first request pending
+    const input = doc_query<HTMLInputElement>(`input:not(.form-control)`)
+    input.value = `foo`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+
+    // Resolve stale request, verify new request is made for current search
+    resolvers[0]({ options: [`Stale A`, `Stale B`], hasMore: false })
+    await vi.runAllTimersAsync()
+    expect(load_options).toHaveBeenCalledTimes(2)
+    expect(load_options).toHaveBeenLastCalledWith({ search: `foo`, offset: 0, limit: 50 })
+
+    // Stale results should be cleared, new results shown after resolve
+    const options_ul = doc_query(`ul.options`)
+    expect(options_ul.textContent).not.toContain(`Stale`)
+    resolvers[1]({ options: [`Foo Result`], hasMore: false })
+    await vi.runAllTimersAsync()
+    expect(options_ul.textContent).toContain(`Foo Result`)
+  })
 })

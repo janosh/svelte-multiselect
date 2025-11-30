@@ -11,6 +11,11 @@ describe(`Nav`, () => {
   const click = (el: Element) => {
     el.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
   }
+  const get_dropdown_elements = () => {
+    const dropdown = doc_query(`.dropdown`)
+    const dropdown_menu = dropdown.querySelector(`div:last-child`) as HTMLElement
+    return { dropdown, dropdown_menu }
+  }
 
   test(`renders simple routes as links`, () => {
     mount(Nav, { target: document.body, props: { routes: default_routes } })
@@ -167,8 +172,7 @@ describe(`Nav`, () => {
     })
     const burger_button = doc_query(`.burger`)
     const toggle_button = doc_query(`[data-dropdown-toggle]`)
-    const dropdown = doc_query(`.dropdown`)
-    const dropdown_menu = dropdown.querySelector(`div:last-child`) as HTMLElement
+    const { dropdown_menu } = get_dropdown_elements()
 
     // Open burger menu and dropdown
     await click(burger_button)
@@ -242,17 +246,14 @@ describe(`Nav`, () => {
       target: document.body,
       props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
     })
-    const dropdown = doc_query(`.dropdown`)
-    const dropdown_menu = dropdown.querySelector(`div:last-child`) as HTMLElement
-
+    const { dropdown, dropdown_menu } = get_dropdown_elements()
     expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
     await interaction(dropdown, dropdown_menu)
   })
 
   test(`parent link and toggle button work independently`, async () => {
     mount(Nav, { target: document.body, props: { routes: [[`/p`, [`/p`, `/p/c`]]] } })
-    const dropdown = doc_query(`.dropdown`)
-    const dropdown_menu = dropdown.querySelector(`div:last-child`) as HTMLElement
+    const { dropdown, dropdown_menu } = get_dropdown_elements()
     const parent_link = dropdown.querySelector(`div:first-child > a`) as HTMLElement
     const toggle = doc_query(`[data-dropdown-toggle]`)
 
@@ -377,8 +378,7 @@ describe(`Nav`, () => {
       props: { routes: [[`/p`, [`/p`, `/p/1`, `/p/2`]]] },
     })
     const toggle_button = doc_query(`[data-dropdown-toggle]`)
-    const dropdown = doc_query(`.dropdown`)
-    const menu = dropdown.querySelector(`div:last-child`) as HTMLElement
+    const { dropdown_menu: menu } = get_dropdown_elements()
     const key = (k: string, target = toggle_button) =>
       target.dispatchEvent(new KeyboardEvent(`keydown`, { key: k, bubbles: true }))
     // Helper for async focus operations that need DOM event loop
@@ -417,8 +417,7 @@ describe(`Nav`, () => {
 
   test(`dropdown focus behavior`, async () => {
     mount(Nav, { target: document.body, props: { routes: [[`/p`, [`/p`, `/p/1`]]] } })
-    const dropdown = doc_query(`.dropdown`)
-    const menu = dropdown.querySelector(`div:last-child`) as HTMLElement
+    const { dropdown, dropdown_menu: menu } = get_dropdown_elements()
 
     dropdown.dispatchEvent(
       new FocusEvent(`focusin`, { bubbles: true, relatedTarget: null }),
