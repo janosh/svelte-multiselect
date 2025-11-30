@@ -230,6 +230,41 @@ These are the core props you'll use in most cases:
 ### Advanced Props
 
 1. ```ts
+   loadOptions: LoadOptionsFn | LoadOptionsConfig = undefined
+   ```
+
+   **Dynamic loading for large datasets.** Enables lazy loading / infinite scroll instead of passing static `options`. Pass either a function or an object with config:
+
+   ```svelte
+   <!-- Simple: just a function -->
+   <MultiSelect loadOptions={myFetchFn} />
+
+   <!-- With config -->
+   <MultiSelect loadOptions={{ fetch: myFetchFn, debounceMs: 500, batchSize: 20 }} />
+   ```
+
+   The function receives `{ search, offset, limit }` and must return `{ options, hasMore }`:
+
+   ```ts
+   async function load_options({ search, offset, limit }) {
+     const response = await fetch(`/api/items?q=${search}&skip=${offset}&take=${limit}`)
+     const { items, total } = await response.json()
+     return { options: items, hasMore: offset + limit < total }
+   }
+   ```
+
+   Config options (when passing an object):
+
+   | Key          | Type      | Default | Description                                 |
+   | ------------ | --------- | ------- | ------------------------------------------- |
+   | `fetch`      | `fn`      | —       | Async function to load options (required)   |
+   | `debounceMs` | `number`  | `300`   | Debounce delay for search queries           |
+   | `batchSize`  | `number`  | `50`    | Number of options to load per batch         |
+   | `onOpen`     | `boolean` | `true`  | Whether to load options when dropdown opens |
+
+   Features automatic state management, debounced search, infinite scroll pagination, and loading indicators. See the [infinite-scroll demo](https://janosh.github.io/svelte-multiselect/infinite-scroll) for live examples.
+
+1. ```ts
    activeIndex: number | null = null  // bindable
    ```
 
@@ -682,7 +717,12 @@ You can also import [the types this component uses](https://github.com/janosh/sv
 
 ```ts
 import {
-  DispatchEvents,
+  LoadOptions, // Dynamic option loading callback
+  LoadOptionsConfig,
+  LoadOptionsFn,
+  LoadOptionsParams,
+  LoadOptionsResult,
+  MultiSelectEvents,
   MultiSelectEvents,
   ObjectOption,
   Option,

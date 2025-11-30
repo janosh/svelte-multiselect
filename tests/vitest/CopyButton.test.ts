@@ -26,7 +26,7 @@ describe(`CopyButton`, () => {
   })
 
   describe(`Keyboard Accessibility`, () => {
-    test(`responds to Enter and Space keys on non-button elements`, async () => {
+    test(`responds to Enter and Space keys on non-button elements`, () => {
       mock_write_text.mockResolvedValue(undefined)
 
       mount(CopyButton, {
@@ -45,7 +45,6 @@ describe(`CopyButton`, () => {
       const enter_event = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
       element.dispatchEvent(enter_event)
 
-      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(mock_write_text).toHaveBeenCalledWith(`test content`)
 
       // Reset mock and test Space key
@@ -53,7 +52,6 @@ describe(`CopyButton`, () => {
       const space_event = new KeyboardEvent(`keydown`, { key: ` `, bubbles: true })
       element.dispatchEvent(space_event)
 
-      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(mock_write_text).toHaveBeenCalledWith(`test content`)
     })
 
