@@ -168,6 +168,22 @@
 
   let effective_options = $derived(loadOptions ? loaded_options : (options ?? []))
 
+  // Cache selected keys and labels to avoid repeated .map() calls
+  let selected_keys = $derived(selected.map(key))
+  let selected_labels = $derived(selected.map(get_label))
+
+  // Helper to sort selected options (used by add() and select_all())
+  function sort_selected(items: Option[]): Option[] {
+    if (sortSelected === true) {
+      return items.toSorted((op1, op2) =>
+        `${get_label(op1)}`.localeCompare(`${get_label(op2)}`)
+      )
+    } else if (typeof sortSelected === `function`) {
+      return items.toSorted(sortSelected)
+    }
+    return items
+  }
+
   if (!loadOptions && !((options?.length ?? 0) > 0)) {
     if (allowUserOptions || loading || disabled || allowEmpty) {
       options = [] // initializing as array avoids errors when component mounts
@@ -230,14 +246,15 @@
         (loadOptions || filterFunc(opt, searchText)) &&
         // remove already selected options from dropdown list unless duplicate selections are allowed
         // or keepSelectedInDropdown is enabled
-        (!selected.map(key).includes(key(opt)) || duplicates ||
-          keepSelectedInDropdown),
+        (!selected_keys.includes(key(opt)) || duplicates || keepSelectedInDropdown),
     )
   })
 
   // raise if matchingOptions[activeIndex] does not yield a value
   if (activeIndex !== null && !matchingOptions[activeIndex]) {
-    throw `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`
+    throw new Error(
+      `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`,
+    )
   }
 
   // update activeOption when activeIndex changes
@@ -247,7 +264,7 @@
 
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
   function toggle_option(option_to_toggle: Option, event: Event) {
-    const is_currently_selected = selected.map(key).includes(key(option_to_toggle))
+    const is_currently_selected = selected_keys.includes(key(option_to_toggle))
 
     if (is_currently_selected) {
       if (minSelect === null || selected.length > minSelect) { // Only remove if it wouldn't violate minSelect
@@ -261,12 +278,12 @@
     event.stopPropagation()
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
-      !isNaN(Number(option_to_add)) && typeof selected.map(get_label)[0] === `number`
+      !isNaN(Number(option_to_add)) && typeof selected_labels[0] === `number`
     ) {
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    const is_duplicate = selected.map(key).includes(key(option_to_add))
+    const is_duplicate = selected_keys.includes(key(option_to_add))
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
@@ -313,16 +330,7 @@
       // for maxSelect = 1 we always replace current option with new one
       if (maxSelect === 1) selected = [option_to_add]
       else {
-        selected = [...selected, option_to_add]
-        if (sortSelected === true) {
-          selected = selected.sort((op1, op2) => {
-            const [label1, label2] = [get_label(op1), get_label(op2)]
-            // coerce to string if labels are numbers
-            return `${label1}`.localeCompare(`${label2}`)
-          })
-        } else if (typeof sortSelected === `function`) {
-          selected = selected.sort(sortSelected)
-        }
+        selected = sort_selected([...selected, option_to_add])
       }
 
       clear_validity()
@@ -412,7 +420,7 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        if (selected.includes(activeOption)) {
+        if (selected_keys.includes(key(activeOption))) {
           // Only remove if it wouldn't violate minSelect
           if (minSelect === null || selected.length > minSelect) {
             remove(activeOption, event)
@@ -455,7 +463,7 @@
       // Include user message in total count if it exists
       const has_user_msg = searchText && (
         (allowUserOptions && createOptionMsg) ||
-        (!duplicates && selected.map(get_label).includes(searchText)) ||
+        (!duplicates && selected_labels.includes(searchText)) ||
         (matchingOptions.length === 0 && noMatchingOptionsMsg)
       )
       const total_items = matchingOptions.length + (has_user_msg ? 1 : 0)
@@ -522,19 +530,11 @@
     // Use matchingOptions for "select all visible" semantics
     const options_to_add = matchingOptions.filter((opt) => {
       const is_disabled = opt instanceof Object && opt.disabled
-      const is_already_selected = selected.map(key).includes(key(opt))
-      return !is_disabled && !is_already_selected
+      return !is_disabled && !selected_keys.includes(key(opt))
     }).slice(0, limit - selected.length)
 
     if (options_to_add.length > 0) {
-      selected = [...selected, ...options_to_add]
-      if (sortSelected === true) {
-        selected = selected.sort((op1, op2) =>
-          `${get_label(op1)}`.localeCompare(`${get_label(op2)}`)
-        )
-      } else if (typeof sortSelected === `function`) {
-        selected = selected.sort(sortSelected)
-      }
+      selected = sort_selected([...selected, ...options_to_add])
       searchText = ``
       clear_validity()
       handle_dropdown_after_select(event)
@@ -544,7 +544,7 @@
   }
 
   let is_selected = $derived((label: string | number) =>
-    selected.map(get_label).includes(label)
+    selected_labels.includes(label)
   )
 
   const if_enter_or_space =
@@ -1077,7 +1077,7 @@
         </li>
       {/each}
       {#if searchText}
-        {@const text_input_is_duplicate = selected.map(get_label).includes(searchText)}
+        {@const text_input_is_duplicate = selected_labels.includes(searchText)}
         {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
         {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
         {@const no_match = Boolean(matchingOptions?.length === 0 && noMatchingOptionsMsg) &&
@@ -1284,12 +1284,6 @@
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, inherit);
-  }
-  :is(div.multiselect.open) {
-    /* increase z-index when open to ensure the dropdown of one <MultiSelect />
-    displays above that of another slightly below it on the page */
-    /* This z-index is for the div.multiselect itself, portal has its own higher z-index */
-    z-index: var(--sms-open-z-index, 4);
   }
   ul.options.hidden {
     visibility: hidden;
