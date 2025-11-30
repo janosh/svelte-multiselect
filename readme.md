@@ -303,10 +303,10 @@ These are the core props you'll use in most cases:
    Function to determine option equality. Default compares by lowercased label.
 
 1. ```ts
-   closeDropdownOnSelect: boolean | 'if-mobile' | 'retain-focus' = 'if-mobile'
+   closeDropdownOnSelect: boolean | 'if-mobile' | 'retain-focus' = false
    ```
 
-   Whether to close dropdown after selection. `'if-mobile'` closes dropdown on mobile devices only (responsive). `'retain-focus'` closes dropdown but keeps input focused for rapid typing to create custom options from text input (see `allowUserOptions`).
+   Whether to close dropdown after selection. `false` (default) keeps dropdown open for rapid multi-selection. `true` closes after each selection. `'if-mobile'` closes on mobile devices only (screen width below `breakpoint`). `'retain-focus'` closes dropdown but keeps input focused for rapid typing to create custom options from text input (see `allowUserOptions`).
 
 1. ```ts
    resetFilterOnAdd: boolean = true
