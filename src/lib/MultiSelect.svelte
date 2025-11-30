@@ -345,7 +345,7 @@
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
-      const other_ops_type = typeof options?.[0]
+      const other_ops_type = typeof effective_options[0]
       option_removed = (
         other_ops_type ? { label: option_to_drop } : option_to_drop
       ) as Option
@@ -725,6 +725,8 @@
     // Reset state when dropdown closes so next open triggers fresh load
     if (!open) {
       load_options_last_search = null
+      loaded_options = []
+      load_options_has_more = true
       return
     }
 
@@ -821,7 +823,7 @@
     aria-label="selected options"
     style={ulSelectedStyle}
   >
-    {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
+    {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
       {@const selectedOptionStyle =
         [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(
           ` `,
@@ -1001,7 +1003,7 @@
       ) as
         option_item,
         idx
-        (duplicates ? [key(option_item), idx] : key(option_item))
+        (duplicates ? `${key(option_item)}-${idx}` : key(option_item))
       }
         {@const {
         label,

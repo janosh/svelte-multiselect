@@ -231,3 +231,7 @@ interface LoadOptionsResult<T> {
   hasMore: boolean // Whether more options are available
 }
 ```
+
+### Error Handling
+
+If `loadOptions` throws or rejects, the error is logged to console and the component continues to function normally. The loading indicator will be hidden and users can retry by typing or scrolling.

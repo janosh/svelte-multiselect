@@ -807,14 +807,17 @@ describe.each([
   [[`1`, `2`, `3`], [`1`]], // test string options
   [[1, 2, 3], [1]], // test number options
 ])(
-  `shows duplicateOptionMsg when searchText is already selected for options=%j`,
+  `shows correct message when searchText is already selected for options=%j`,
   (options, selected) => {
+    const duplicateOptionMsg = `This is already selected`
+    const createOptionMsg = `Create this option...`
+
     test.each([
-      [true, `Option not found. Create it?`],
-      [false, `Another custom duplicate option message`],
+      [false, duplicateOptionMsg], // duplicates=false shows duplicate warning
+      [true, `${selected[0]} ${createOptionMsg}`], // duplicates=true shows option + create msg
     ])(
-      `allowUserOptions=true, duplicates=%j`,
-      async (duplicates, duplicateOptionMsg) => {
+      `allowUserOptions=true, duplicates=%s`,
+      async (duplicates, expected_text) => {
         mount(MultiSelect, {
           target: document.body,
           props: {
@@ -822,28 +825,20 @@ describe.each([
             allowUserOptions: true,
             duplicates,
             duplicateOptionMsg,
+            createOptionMsg,
             selected,
           },
         })
 
         const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
+        // Type the selected value to trigger duplicate/create check
         input.value = `${selected[0]}`
         input.dispatchEvent(input_event)
-
         await tick()
 
         const dropdown = doc_query(`ul.options`)
-
-        // Use the known default for createOptionMsg
-        const default_create_option_msg = `Create this option...`
-        const fail_msg =
-          `options=${options}, selected=${selected}, duplicates=${duplicates}, duplicateOptionMsg=${duplicateOptionMsg}`
-        expect(dropdown.textContent?.trim(), fail_msg).toBe(
-          duplicates
-            ? `${selected[0]} ${default_create_option_msg}` // Use default here
-            : duplicateOptionMsg,
-        )
+        expect(dropdown.textContent?.trim()).toBe(expected_text)
       },
     )
   },
@@ -2174,7 +2169,7 @@ describe(`selectAllOption feature`, () => {
     expect(onchange_spy).toHaveBeenCalledWith({ options, type: `selectAll` })
   })
 
-  test(`respects maxSelect, skips disabled, resets searchText`, async () => {
+  test(`respects maxSelect and skips disabled options`, async () => {
     const options_mixed = [
       { label: `A` },
       { label: `B`, disabled: true },
@@ -2187,14 +2182,23 @@ describe(`selectAllOption feature`, () => {
     })
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.click()
-    await tick()
-    input.value = `test`
-    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
-    await tick()
     doc_query(`ul.options > li.select-all`).click()
     await tick()
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`A C`) // skipped B (disabled), limited to 2
-    expect(input.value).toBe(``) // searchText reset
+  })
+
+  test(`resets searchText after select all`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options, selectAllOption: true },
+    })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.click()
+    input.value = `a`
+    input.dispatchEvent(input_event)
+    doc_query(`ul.options > li.select-all`).click()
+    await tick()
+    expect(input.value).toBe(``)
   })
 
   test(`no-op when all already selected`, async () => {
@@ -2228,7 +2232,6 @@ describe(`selectAllOption feature`, () => {
         props: { options, selectAllOption: true, onselectAll: spy },
       })
       doc_query<HTMLInputElement>(`input[autocomplete]`).click()
-      await tick()
       doc_query(`ul.options > li.select-all`).dispatchEvent(
         new KeyboardEvent(`keydown`, { ...key_props, bubbles: true }),
       )
@@ -2256,7 +2259,7 @@ describe.each([[1], [2], [null]])(
       ],
     ])(
       `works when value=%s`,
-      async (value, options, expected_text) => {
+      (value, options, expected_text) => {
         const is_single_value = !Array.isArray(value)
         const is_single_select = max_select === 1
 
@@ -2267,8 +2270,6 @@ describe.each([[1], [2], [null]])(
           target: document.body,
           props: { options, value, maxSelect: max_select },
         })
-
-        await tick()
 
         const selected_ul = doc_query(`ul.selected`)
         expect(selected_ul.textContent?.trim()).toBe(expected_text)
@@ -2281,13 +2282,6 @@ describe.each([[1], [2], [null]])(
 describe(`loadOptions feature`, () => {
   const mock_data = Array.from({ length: 100 }, (_, idx) => `Option ${idx + 1}`)
 
-  // Helper to wait for async operations to complete
-  async function wait_for_load() {
-    await tick()
-    await new Promise((resolve) => setTimeout(resolve, 10))
-    await tick()
-  }
-
   test(`loadOptions is called when dropdown opens`, async () => {
     const load_options = vi.fn(() =>
       Promise.resolve({ options: mock_data.slice(0, 50), hasMore: true })
@@ -2297,7 +2291,7 @@ describe(`loadOptions feature`, () => {
       target: document.body,
       props: { loadOptions: load_options, open: true },
     })
-    await wait_for_load()
+    await tick()
 
     expect(load_options).toHaveBeenCalledTimes(1)
     expect(load_options).toHaveBeenCalledWith({
@@ -2318,7 +2312,7 @@ describe(`loadOptions feature`, () => {
         open: true,
       },
     })
-    await wait_for_load()
+    await tick()
 
     expect(load_options).toHaveBeenCalledWith({
       search: ``,
@@ -2338,7 +2332,7 @@ describe(`loadOptions feature`, () => {
         open: true,
       },
     })
-    await wait_for_load()
+    await tick()
 
     expect(load_options).not.toHaveBeenCalled()
   })
@@ -2351,7 +2345,8 @@ describe(`loadOptions feature`, () => {
       target: document.body,
       props: { loadOptions: load_options, open: true },
     })
-    await wait_for_load()
+    await tick()
+    await tick()
 
     const options_ul = doc_query(`ul.options`)
     expect(options_ul.textContent).toContain(`Apple`)
@@ -2372,8 +2367,7 @@ describe(`loadOptions feature`, () => {
       target: document.body,
       props: { loadOptions: load_options, open: true },
     })
-    await tick()
-    await tick() // Extra tick for effect to run
+    await tick() // Wait for effect to start loading
 
     // Loading indicator should be visible while loading
     const loading_li = document.querySelector(`ul.options > li.loading-more`)
@@ -2381,7 +2375,7 @@ describe(`loadOptions feature`, () => {
 
     // Resolve the load
     if (resolve_load) resolve_load()
-    await wait_for_load()
+    await tick()
 
     // Loading indicator should be gone
     expect(document.querySelector(`ul.options > li.loading-more`)).toBeNull()
@@ -2413,5 +2407,91 @@ describe(`loadOptions feature`, () => {
     // Dropdown should exist even before options are loaded
     const options_ul = document.querySelector(`ul.options`)
     expect(options_ul).not.toBeNull()
+  })
+
+  test(`loadOptions handles errors gracefully`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    let reject_fn: ((reason: Error) => void) | undefined
+    const load_options = vi.fn(
+      () =>
+        new Promise<{ options: string[]; hasMore: boolean }>((_, reject) => {
+          reject_fn = reject
+        }),
+    )
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+
+    // Reject the promise
+    if (reject_fn) reject_fn(new Error(`Network error`))
+    await tick()
+
+    // Error should be logged
+    expect(console_error).toHaveBeenCalledWith(
+      `MultiSelect loadOptions error:`,
+      expect.any(Error),
+    )
+    // Component should still function (dropdown visible)
+    expect(document.querySelector(`ul.options`)).not.toBeNull()
+    console_error.mockRestore()
+  })
+
+  test(`scroll triggers pagination when hasMore=true`, async () => {
+    const load_options = vi.fn()
+      .mockResolvedValueOnce({ options: mock_data.slice(0, 50), hasMore: true })
+      .mockResolvedValueOnce({ options: mock_data.slice(50, 100), hasMore: false })
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    // Simulate scroll event - the handler checks scroll position
+    const ul = doc_query(`ul.options`)
+    // Mock the scroll position properties for the scroll handler
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(200)
+    vi.spyOn(ul, `scrollTop`, `get`).mockReturnValue(250) // 500-250-200=50 < 100 threshold
+    ul.dispatchEvent(new Event(`scroll`))
+    await tick()
+
+    // Should have loaded second batch
+    expect(load_options).toHaveBeenCalledTimes(2)
+    expect(load_options).toHaveBeenLastCalledWith({
+      search: ``,
+      offset: 50,
+      limit: 50,
+    })
+  })
+
+  test(`scroll does not trigger when hasMore=false`, async () => {
+    const load_options = vi.fn(() =>
+      Promise.resolve({ options: [`A`, `B`], hasMore: false })
+    )
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    // Simulate scroll event
+    const ul = doc_query(`ul.options`)
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(200)
+    vi.spyOn(ul, `scrollTop`, `get`).mockReturnValue(250)
+    ul.dispatchEvent(new Event(`scroll`))
+    await tick()
+
+    // Should NOT have loaded again since hasMore=false
+    expect(load_options).toHaveBeenCalledTimes(1)
   })
 })
