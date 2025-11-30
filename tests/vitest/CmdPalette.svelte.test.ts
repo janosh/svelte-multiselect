@@ -163,9 +163,7 @@ test.each([
       globalThis.dispatchEvent(
         new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }),
       )
-    } else {
-      props.open = true
-    }
+    } else props.open = true
     await tick()
 
     expect(props.open).toBe(true)
@@ -173,7 +171,7 @@ test.each([
   },
 )
 
-test(`handles action selection and execution`, async () => {
+test(`handles action selection and execution`, () => {
   const actions_with_spies = mock_actions.map(({ label }) => ({
     label,
     action: vi.fn(),
@@ -187,13 +185,10 @@ test(`handles action selection and execution`, async () => {
   input_el.dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
   )
-  await tick()
   input_el.dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
   )
-  await tick()
   input_el.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-  await tick()
 
   expect(actions_with_spies[1].action).toHaveBeenCalledOnce()
   expect(actions_with_spies[1].action).toHaveBeenCalledWith(`action 2`)

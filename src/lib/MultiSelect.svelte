@@ -119,8 +119,32 @@
     // Select all feature
     selectAllOption = false,
     liSelectAllClass = ``,
+    // Dynamic options loading
+    loadOptions,
     ...rest
   }: MultiSelectProps<Option> = $props()
+
+  // Extract loadOptions function and config (supports both simple function and config object)
+  const load_options_fn = $derived(
+    loadOptions
+      ? (typeof loadOptions === `function` ? loadOptions : loadOptions.fetch)
+      : null,
+  )
+  const load_options_debounce_ms = $derived(
+    loadOptions && typeof loadOptions === `object`
+      ? (loadOptions.debounceMs ?? 300)
+      : 300,
+  )
+  const load_options_batch_size = $derived(
+    loadOptions && typeof loadOptions === `object`
+      ? (loadOptions.batchSize ?? 50)
+      : 50,
+  )
+  const load_options_on_open = $derived(
+    loadOptions && typeof loadOptions === `object`
+      ? (loadOptions.onOpen ?? true)
+      : true,
+  )
 
   $effect.pre(() => {
     // if maxSelect=1, value is the single item in selected (or null if selected is empty)
@@ -135,7 +159,16 @@
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
 
-  if (!(options?.length > 0)) {
+  // Internal state for loadOptions feature (null = never loaded)
+  let loaded_options = $state<Option[]>([])
+  let load_options_has_more = $state(true)
+  let load_options_loading = $state(false)
+  let load_options_last_search: string | null = $state(null)
+  let debounce_timer: ReturnType<typeof setTimeout> | null = null
+
+  let effective_options = $derived(loadOptions ? loaded_options : (options ?? []))
+
+  if (!loadOptions && !((options?.length ?? 0) > 0)) {
     if (allowUserOptions || loading || disabled || allowEmpty) {
       options = [] // initializing as array avoids errors when component mounts
     } else {
@@ -190,9 +223,11 @@
 
   // options matching the current search text
   $effect.pre(() => {
-    matchingOptions = options.filter(
+    // When using loadOptions, server handles filtering, so skip client-side filterFunc
+    const opts_to_filter = effective_options
+    matchingOptions = opts_to_filter.filter(
       (opt) =>
-        filterFunc(opt, searchText) &&
+        (loadOptions || filterFunc(opt, searchText)) &&
         // remove already selected options from dropdown list unless duplicate selections are allowed
         // or keepSelectedInDropdown is enabled
         (!selected.map(key).includes(key(opt)) || duplicates ||
@@ -237,7 +272,7 @@
       (duplicates || !is_duplicate)
     ) {
       if (
-        !options.includes(option_to_add) && // first check if we find option in the options list
+        !effective_options.includes(option_to_add) && // first check if we find option in the options list
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
@@ -245,12 +280,12 @@
       ) {
         // user entered text but no options match, so if allowUserOptions = true | 'append', we create
         // a new option from the user-entered text
-        if (typeof options[0] === `object`) {
+        if (typeof effective_options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
           option_to_add = { label: searchText } as Option
         } else {
           if (
-            [`number`, `undefined`].includes(typeof options[0]) &&
+            [`number`, `undefined`].includes(typeof effective_options[0]) &&
             !isNaN(Number(searchText))
           ) {
             // create new option as number if it parses to a number and 1st option is also number or missing
@@ -261,7 +296,13 @@
         }
         // Fire oncreate event for all user-created options, regardless of type
         oncreate?.({ option: option_to_add })
-        if (allowUserOptions === `append`) options = [...options, option_to_add]
+        if (allowUserOptions === `append`) {
+          if (loadOptions) {
+            loaded_options = [...loaded_options, option_to_add]
+          } else {
+            options = [...(options ?? []), option_to_add]
+          }
+        }
       }
 
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
@@ -304,9 +345,9 @@
       // if option with label could not be found but allowUserOptions is truthy,
       // assume it was created by user and create corresponding option object
       // on the fly for use as event payload
-      const other_ops_type = typeof options[0]
+      const is_object_option = typeof effective_options[0] === `object`
       option_removed = (
-        other_ops_type ? { label: option_to_drop } : option_to_drop
+        is_object_option ? { label: option_to_drop } : option_to_drop
       ) as Option
     }
     if (option_removed === undefined) {
@@ -652,6 +693,80 @@
       }
     }
   }
+
+  // Dynamic options loading - captures search at call time to avoid race conditions
+  async function load_dynamic_options(reset: boolean) {
+    if (
+      !load_options_fn || load_options_loading || (!reset && !load_options_has_more)
+    ) {
+      return
+    }
+    // Capture search term at call time to avoid race with user typing during fetch
+    const search = searchText
+    const offset = reset ? 0 : loaded_options.length
+    load_options_loading = true
+    try {
+      const limit = load_options_batch_size
+      const result = await load_options_fn({ search, offset, limit })
+      loaded_options = reset ? result.options : [...loaded_options, ...result.options]
+      load_options_has_more = result.hasMore
+      load_options_last_search = search
+    } catch (err) {
+      console.error(`MultiSelect loadOptions error:`, err)
+    } finally {
+      load_options_loading = false
+    }
+  }
+
+  // Single effect handles initial load + search changes
+  $effect(() => {
+    if (!load_options_fn) return
+
+    // Reset state when dropdown closes so next open triggers fresh load
+    if (!open) {
+      load_options_last_search = null
+      loaded_options = []
+      load_options_has_more = true
+      return
+    }
+
+    if (debounce_timer) clearTimeout(debounce_timer)
+
+    const search = searchText
+    const is_first_load = load_options_last_search === null
+
+    if (is_first_load) {
+      if (load_options_on_open) {
+        // Load immediately on dropdown open
+        load_dynamic_options(true)
+      } else if (search) {
+        // onOpen=false but user typed - debounce and load
+        debounce_timer = setTimeout(
+          () => load_dynamic_options(true),
+          load_options_debounce_ms,
+        )
+      }
+      // If onOpen=false and no search text, do nothing (wait for user to type)
+    } else if (search !== load_options_last_search) {
+      // Subsequent loads: debounce search changes
+      // Clear stale results immediately so UI doesn't show wrong results while loading
+      loaded_options = []
+      load_options_has_more = true
+      debounce_timer = setTimeout(
+        () => load_dynamic_options(true),
+        load_options_debounce_ms,
+      )
+    }
+    return () => {
+      if (debounce_timer) clearTimeout(debounce_timer)
+    }
+  })
+
+  function handle_options_scroll(event: Event) {
+    if (!load_options_fn || load_options_loading || !load_options_has_more) return
+    const { scrollTop, scrollHeight, clientHeight } = event.target as HTMLElement
+    if (scrollHeight - scrollTop - clientHeight <= 100) load_dynamic_options(false)
+  }
 </script>
 
 <svelte:window
@@ -711,7 +826,7 @@
     aria-label="selected options"
     style={ulSelectedStyle}
   >
-    {#each selected as option, idx (duplicates ? [key(option), idx] : key(option))}
+    {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
       {@const selectedOptionStyle =
         [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(
           ` `,
@@ -846,7 +961,8 @@
   {/if}
 
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
-  {#if (searchText && noMatchingOptionsMsg) || options?.length > 0}
+  {#if (searchText && noMatchingOptionsMsg) || effective_options.length > 0 ||
+      loadOptions}
     <ul
       use:portal={{ target_node: outerDiv, ...portal_params }}
       {@attach highlight_matches({
@@ -868,8 +984,9 @@
       aria-disabled={disabled ? `true` : null}
       bind:this={ul_options}
       style={ulOptionsStyle}
+      onscroll={handle_options_scroll}
     >
-      {#if selectAllOption && options.length > 0 &&
+      {#if selectAllOption && effective_options.length > 0 &&
         (maxSelect === null || maxSelect > 1)}
         {@const label = typeof selectAllOption === `string` ? selectAllOption : `Select all`}
         <li
@@ -889,7 +1006,7 @@
       ) as
         option_item,
         idx
-        (duplicates ? [key(option_item), idx] : key(option_item))
+        (duplicates ? `${key(option_item)}-${idx}` : key(option_item))
       }
         {@const {
         label,
@@ -1018,6 +1135,11 @@
             {/if}
           </li>
         {/if}
+      {/if}
+      {#if loadOptions && load_options_loading}
+        <li class="loading-more" role="status" aria-label="Loading more options">
+          <CircleSpinner />
+        </li>
       {/if}
     </ul>
   {/if}
@@ -1227,5 +1349,13 @@
   }
   ::highlight(sms-search-matches) {
     color: mediumaquamarine;
+  }
+  /* Loading more indicator for infinite scrolling */
+  ul.options > li.loading-more {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 8pt;
+    cursor: default;
   }
 </style>
