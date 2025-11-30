@@ -1,5 +1,5 @@
 import { Toggle } from '$lib'
-import { mount, tick } from 'svelte'
+import { mount } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 describe(`Toggle`, () => {
@@ -32,24 +32,22 @@ describe(`Toggle`, () => {
     expect(input.checked).toBe(false)
   })
 
-  test(`toggles on Enter key`, async () => {
+  test(`toggles on Enter key`, () => {
     mount(Toggle, { target })
     const input = getInput()
 
     input.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
     )
-    await tick()
     expect(input.checked).toBe(true)
 
     input.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
     )
-    await tick()
     expect(input.checked).toBe(false)
   })
 
-  test(`fires change event when toggling on Enter key`, async () => {
+  test(`fires change event when toggling on Enter key`, () => {
     const onchange = vi.fn()
     mount(Toggle, { target, props: { onchange } })
     const input = getInput()
@@ -57,7 +55,6 @@ describe(`Toggle`, () => {
     input.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
     )
-    await tick()
 
     expect(input.checked).toBe(true)
     expect(onchange).toHaveBeenCalledWith(expect.any(Event))
@@ -71,14 +68,13 @@ describe(`Toggle`, () => {
     expect(input.checked).toBe(false)
   })
 
-  test(`calls custom keydown handler`, async () => {
+  test(`calls custom keydown handler`, () => {
     const onkeydown = vi.fn()
     mount(Toggle, { target, props: { onkeydown } })
 
     getInput().dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
     )
-    await tick()
 
     expect(onkeydown).toHaveBeenCalledWith(expect.any(KeyboardEvent))
     expect(getInput().checked).toBe(true)

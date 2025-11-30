@@ -8,9 +8,8 @@ vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/` } } }))
 
 describe(`Nav`, () => {
   const default_routes = [`/`, `/about`, `/contact`]
-  const click = async (el: Element) => {
+  const click = (el: Element) => {
     el.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
-    await tick()
   }
 
   test(`renders simple routes as links`, () => {

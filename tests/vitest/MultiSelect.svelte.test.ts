@@ -2122,11 +2122,9 @@ describe(`selectAllOption feature`, () => {
   const options = [`Apple`, `Banana`, `Cherry`, `Date`]
 
   // Helper to open dropdown and click select all
-  async function click_select_all() {
+  function click_select_all() {
     doc_query<HTMLInputElement>(`input[autocomplete]`).click()
-    await tick()
     doc_query(`ul.options > li.select-all`).click()
-    await tick()
   }
 
   test.each([[true, `Select all`], [`Custom label`, `Custom label`]])(
@@ -2163,7 +2161,8 @@ describe(`selectAllOption feature`, () => {
         onchange: onchange_spy,
       },
     })
-    await click_select_all()
+    click_select_all()
+    await tick()
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
     expect(onselectAll_spy).toHaveBeenCalledWith({ options })
     expect(onchange_spy).toHaveBeenCalledWith({ options, type: `selectAll` })
@@ -2201,13 +2200,13 @@ describe(`selectAllOption feature`, () => {
     expect(input.value).toBe(``)
   })
 
-  test(`no-op when all already selected`, async () => {
+  test(`no-op when all already selected`, () => {
     const spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: { options, selected: [...options], selectAllOption: true, onselectAll: spy },
     })
-    await click_select_all()
+    click_select_all()
     expect(spy).not.toHaveBeenCalled()
   })
 
