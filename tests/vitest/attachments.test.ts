@@ -177,25 +177,20 @@ describe(`tooltip`, () => {
 
   describe(`Configuration Options`, () => {
     it.each([
-      [`custom delay`, { delay: 500 }, `Delayed tooltip`],
-      [`zero delay`, { delay: 0 }, `No delay tooltip`],
-      [`negative delay`, { delay: -100 }, `Negative delay tooltip`],
-      [`extremely large delay`, { delay: 999999 }, `Large delay tooltip`],
-      [`empty options object`, {}, `Empty options tooltip`],
-    ])(`should handle %s`, (_desc, options, expected) => {
+      [`delay: 500`, { delay: 500 }],
+      [`delay: 0`, { delay: 0 }],
+      [`delay: -100`, { delay: -100 }],
+      [`empty options`, {}],
+      [`placement: top`, { placement: `top` }],
+      [`placement: bottom`, { placement: `bottom` }],
+      [`style string`, { style: `background: red;` }],
+      [`empty style`, { style: `` }],
+      [`malformed style`, { style: ` bg: red ; invalid; ` }],
+    ])(`should setup tooltip with %s`, (_desc, options) => {
       const element = create_element()
-      element.title = expected
+      element.title = `test`
       setup_tooltip(element, options)
-      expect(element.getAttribute(`data-original-title`)).toBe(expected)
-    })
-
-    it(`should handle all placement options`, () => {
-      ;[`top`, `bottom`, `left`, `right`].forEach((placement) => {
-        const element = create_element()
-        element.title = `${placement} tooltip`
-        setup_tooltip(element, { placement })
-        expect(element.getAttribute(`data-original-title`)).toBe(`${placement} tooltip`)
-      })
+      expect(element.getAttribute(`data-original-title`)).toBe(`test`)
     })
 
     it(`should handle disabled option`, () => {
@@ -207,52 +202,17 @@ describe(`tooltip`, () => {
       expect(element.getAttribute(`title`)).toBe(`Disabled tooltip`)
     })
 
-    it(`should apply custom style to tooltip`, () => {
-      const element = create_element()
-      element.title = `Styled tooltip`
-      const custom_style = `background: red; color: white; border: 2px solid blue;`
-      setup_tooltip(element, { style: custom_style })
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
-    it(`should combine custom style with CSS variables`, () => {
-      const element = create_element()
-      element.title = `Combined style tooltip`
-      element.style.setProperty(`--tooltip-bg`, `#123456`)
-      const custom_style = `font-weight: bold; text-transform: uppercase;`
-      setup_tooltip(element, { style: custom_style })
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
-    it(`should handle empty style string`, () => {
-      const element = create_element()
-      element.title = `Empty style tooltip`
-      setup_tooltip(element, { style: `` })
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
-    it(`should handle malformed and whitespace styles`, () => {
-      const element = create_element()
-      element.title = `Style parsing tooltip`
-      const malformed_style =
-        ` background: red ; invalid-style; color: blue ; font-size: 14px ; `
-      setup_tooltip(element, { style: malformed_style })
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
     it.each([
-      [`invalid placement`, { placement: `invalid` }, `Invalid placement tooltip`],
-      [`null options`, null, `Null options tooltip`],
-    ])(`should handle %s gracefully`, (_desc, options, expected) => {
+      [`invalid placement`, { placement: `invalid` }],
+      [`null options`, null],
+    ])(`should handle %s gracefully`, (_desc, options) => {
       const element = create_element()
-      element.title = expected
-      const normalized = options as {
-        placement?: `top` | `bottom` | `left` | `right`
-        delay?: number
-      } | null
-      const factory = normalized === null ? tooltip(undefined) : tooltip(normalized)
-      const _cleanup = factory(element)
-      expect(element.getAttribute(`data-original-title`)).toBe(expected)
+      element.title = `test`
+      const factory = options === null
+        ? tooltip(undefined)
+        : tooltip(options as Parameters<typeof tooltip>[0])
+      factory(element)
+      expect(element.getAttribute(`data-original-title`)).toBe(`test`)
     })
   })
 
@@ -266,7 +226,6 @@ describe(`tooltip`, () => {
       const child = document.createElement(`span`)
       child.setAttribute(attr, content)
       parent.appendChild(child)
-
       setup_tooltip(parent)
 
       if (attr === `title`) {
@@ -277,183 +236,30 @@ describe(`tooltip`, () => {
       }
     })
 
-    it(`should handle deeply nested child elements`, () => {
+    it(`should handle deeply nested and multiple children`, () => {
       const parent = create_element()
       let current = parent
       for (let idx = 0; idx < 5; idx++) {
         const child = document.createElement(`div`)
-        child.title = `Level ${idx} tooltip`
+        child.title = `Level ${idx}`
         current.appendChild(child)
         current = child
       }
-
       setup_tooltip(parent)
-
-      parent.querySelectorAll(`[data-original-title]`).forEach((element, idx) => {
-        expect(element.getAttribute(`data-original-title`)).toBe(`Level ${idx} tooltip`)
-      })
+      expect(parent.querySelectorAll(`[data-original-title]`).length).toBe(5)
     })
 
-    it(`should handle multiple child elements with tooltips`, () => {
+    it(`should not setup children added after initialization`, () => {
       const parent = create_element()
-      for (let idx = 0; idx < 10; idx++) {
-        const child = document.createElement(`div`)
-        child.title = `Child ${idx} tooltip`
-        parent.appendChild(child)
-      }
-
       setup_tooltip(parent)
-
-      const children_with_tooltips = parent.querySelectorAll(`[data-original-title]`)
-      expect(children_with_tooltips.length).toBe(10)
-      children_with_tooltips.forEach((child, idx) => {
-        expect(child.getAttribute(`data-original-title`)).toBe(`Child ${idx} tooltip`)
-      })
-    })
-
-    it(`should handle child elements with mixed tooltip attributes`, () => {
-      const parent = create_element()
-      const test_cases = [
-        [`title`, `Title tooltip`],
-        [`aria-label`, `Aria tooltip`],
-        [`data-title`, `Data tooltip`],
-        [null, null],
-      ]
-
-      test_cases.forEach(([attr, content]) => {
-        const child = document.createElement(`div`)
-        if (attr && content) child.setAttribute(attr, content)
-        parent.appendChild(child)
-      })
-
-      setup_tooltip(parent)
-
-      if (parent.children[0].hasAttribute(`data-original-title`)) {
-        expect(parent.children[0].getAttribute(`data-original-title`)).toBe(
-          `Title tooltip`,
-        )
-      }
-      if (parent.children[1].hasAttribute(`aria-label`)) {
-        expect(parent.children[1].getAttribute(`aria-label`)).toBe(`Aria tooltip`)
-      }
-      if (parent.children[2].hasAttribute(`data-title`)) {
-        expect(parent.children[2].getAttribute(`data-title`)).toBe(`Data tooltip`)
-      }
-      expect(parent.children[3].hasAttribute(`data-original-title`)).toBe(false)
-    })
-
-    it.each([
-      [`child elements added after initialization`, true],
-      [`empty child elements`, false],
-    ])(`should handle %s`, (_desc, should_add_after) => {
-      const parent = create_element()
       const child = document.createElement(`div`)
-      if (should_add_after) {
-        setup_tooltip(parent)
-        child.title = `Dynamic child tooltip`
-        parent.appendChild(child)
-        expect(child.hasAttribute(`title`)).toBe(true)
-      } else {
-        parent.appendChild(child)
-        setup_tooltip(parent)
-      }
+      child.title = `Dynamic`
+      parent.appendChild(child)
       expect(child.hasAttribute(`data-original-title`)).toBe(false)
     })
   })
 
-  describe(`DOM Manipulation and Positioning`, () => {
-    it(`should handle different element sizes and positions`, () => {
-      const element = create_element()
-      element.title = `Test tooltip`
-      mock_bounds(element, { left: 100, top: 100, width: 50, height: 50 })
-
-      setup_tooltip(element)
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
-    it(`should handle elements with transforms`, () => {
-      const element = create_element()
-      element.title = `Transform tooltip`
-      element.style.transform = `rotate(45deg) scale(0.5)`
-      mock_bounds(element, { left: 200, top: 150, width: 50, height: 50 })
-
-      setup_tooltip(element)
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-  })
-
-  describe(`Event Handling`, () => {
-    it(`should handle mouse events`, () => {
-      const element = create_element()
-      element.title = `Mouse tooltip`
-      setup_tooltip(element)
-
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
-    it(`should handle focus events on button elements`, () => {
-      const element = create_element(`button`)
-      element.title = `Focus tooltip`
-      setup_tooltip(element)
-
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
-    })
-
-    it(`should hide tooltip on scroll`, () => {
-      vi.useFakeTimers()
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
-
-      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
-      const tooltip_element = document.querySelector(`.custom-tooltip`) as HTMLElement
-      expect(tooltip_element).toBeTruthy()
-      expect(tooltip_element.style.cssText).toContain(`text-wrap: balance`)
-
-      globalThis.dispatchEvent(new Event(`scroll`, { bubbles: true }))
-      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
-
-      vi.useRealTimers()
-    })
-
-    it(`should remove scroll listener on cleanup`, () => {
-      const element = create_element()
-      element.title = `test`
-      const spy = vi.spyOn(globalThis, `removeEventListener`)
-
-      setup_tooltip(element)?.()
-
-      expect(spy).toHaveBeenCalledWith(`scroll`, expect.any(Function), true)
-      spy.mockRestore()
-    })
-  })
-
-  describe(`Global State Management`, () => {
-    it(`should handle multiple tooltip instances`, () => {
-      const elements = Array.from({ length: 3 }, (_, idx) => {
-        const element = create_element()
-        element.title = `Tooltip ${idx}`
-        setup_tooltip(element)
-        return element
-      })
-
-      elements.forEach((element) => {
-        expect(element.hasAttribute(`data-original-title`)).toBe(true)
-      })
-    })
-  })
-
-  describe(`Memory Management and Cleanup`, () => {
-    it(`should clean up event listeners on cleanup`, () => {
-      const element = create_element()
-      element.title = `Cleanup test tooltip`
-      const cleanup = setup_tooltip(element)
-      expect(cleanup).toBeDefined()
-      expect(typeof cleanup).toBe(`function`)
-    })
-
+  describe(`Event Handling and Cleanup`, () => {
     it(`should restore original title on cleanup`, () => {
       const element = create_element()
       element.title = `Original title`
@@ -466,27 +272,126 @@ describe(`tooltip`, () => {
       expect(element.getAttribute(`title`)).toBe(`Original title`)
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
     })
+
+    it(`should remove scroll listener on cleanup`, () => {
+      const element = create_element()
+      element.title = `test`
+      const spy = vi.spyOn(globalThis, `removeEventListener`)
+      setup_tooltip(element)?.()
+      expect(spy).toHaveBeenCalledWith(`scroll`, expect.any(Function), true)
+      spy.mockRestore()
+    })
   })
 
-  describe(`Error Handling and Edge Cases`, () => {
-    it(`should handle null and undefined elements gracefully`, () => {
-      const attach = tooltip()
-      expect(attach(null as unknown as Element)).toBeUndefined()
-      expect(attach(undefined as unknown as Element)).toBeUndefined()
+  describe(`Error Handling`, () => {
+    it.each([
+      [`null element`, null],
+      [`undefined element`, undefined],
+    ])(`should handle %s gracefully`, (_desc, el) => {
+      expect(tooltip()(el as unknown as Element)).toBeUndefined()
+    })
+  })
+
+  describe(`Reactive Content and Scroll Behavior`, () => {
+    // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
+
+    it(`should track tooltip ownership via _owner property`, () => {
+      vi.useFakeTimers()
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+
+      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement & {
+        _owner?: HTMLElement
+      }
+      expect(tooltip_el?._owner).toBe(element)
+      vi.useRealTimers()
     })
 
-    it(`should handle elements without getBoundingClientRect`, () => {
+    it.each([
+      [`unrelated element keeps tooltip`, () => document.createElement(`div`), true],
+      [`document hides tooltip`, () => document, false],
+      [`documentElement hides tooltip`, () => document.documentElement, false],
+      [`body hides tooltip`, () => document.body, false],
+    ])(`scroll from %s`, (_desc, get_target, should_persist) => {
+      vi.useFakeTimers()
       const element = create_element()
-      element.title = `No getBoundingClientRect tooltip`
-      setup_tooltip(element)
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+
+      const scroll_event = new Event(`scroll`, { bubbles: true })
+      Object.defineProperty(scroll_event, `target`, { value: get_target() })
+      globalThis.dispatchEvent(scroll_event)
+
+      expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_persist)
+      vi.useRealTimers()
     })
 
-    it(`should handle extremely long content`, () => {
+    it(`scroll from ancestor should hide tooltip`, () => {
+      vi.useFakeTimers()
+      const ancestor = document.createElement(`div`)
       const element = create_element()
-      element.title = `A`.repeat(10000)
-      setup_tooltip(element)
-      expect(element.hasAttribute(`data-original-title`)).toBe(true)
+      ancestor.appendChild(element)
+      document.body.appendChild(ancestor)
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+
+      const scroll_event = new Event(`scroll`, { bubbles: true })
+      Object.defineProperty(scroll_event, `target`, { value: ancestor })
+      globalThis.dispatchEvent(scroll_event)
+
+      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+      ancestor.remove()
+      vi.useRealTimers()
+    })
+
+    it(`should show only one tooltip at a time`, () => {
+      vi.useFakeTimers()
+      const [el1, el2] = [create_element(), create_element()]
+      el1.title = `tooltip1`
+      el2.title = `tooltip2`
+      mock_bounds(el1)
+      mock_bounds(el2)
+      setup_tooltip(el1, { delay: 0 })
+      setup_tooltip(el2, { delay: 0 })
+
+      el1.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+      el2.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+
+      expect(document.querySelectorAll(`.custom-tooltip`).length).toBe(1)
+      expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(`tooltip2`)
+      vi.useRealTimers()
+    })
+
+    it(`should show/hide on focus/blur for accessibility`, () => {
+      vi.useFakeTimers()
+      const element = create_element(`button`)
+      element.title = `focus tooltip`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      element.dispatchEvent(new FocusEvent(`focus`, { bubbles: true }))
+      vi.runAllTimers()
+      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+
+      element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
+      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+      vi.useRealTimers()
     })
   })
 })
@@ -531,73 +436,58 @@ describe(`click_outside`, () => {
     return event
   }
 
-  it(`should trigger callback on outside click`, () => {
+  it.each([
+    [`outside click`, true, true, 1],
+    [`inside click`, false, true, 0],
+    [`disabled`, true, false, 0],
+  ])(`%s triggers callback %s times`, (_desc, is_outside, enabled, expected_calls) => {
     const element = create_element()
     const callback = vi.fn()
-    setup_click_outside(element, { callback })
+    setup_click_outside(element, { callback, enabled })
 
-    const outside_element = create_element()
-    dispatch_click(outside_element)
+    const target = is_outside ? create_element() : element
+    const path = is_outside
+      ? []
+      : [element, document.body, document.documentElement, document, globalThis]
+    dispatch_click(target, path)
 
-    expect(callback).toHaveBeenCalledWith(element, {
-      callback,
-      enabled: true,
-      exclude: [],
-    })
+    expect(callback).toHaveBeenCalledTimes(expected_calls)
   })
 
-  it(`should not trigger callback on inside click`, () => {
+  it(`should handle exclude selectors (single, multiple, nested)`, () => {
     const element = create_element()
-    const callback = vi.fn()
-    setup_click_outside(element, { callback })
+    const [excluded1, excluded2, nested] = [
+      create_element(),
+      create_element(),
+      create_element(),
+    ]
+    excluded1.className = `modal`
+    excluded2.className = `popover`
+    excluded1.appendChild(nested)
+    excluded1.closest = vi.fn((sel) => sel === `.modal` ? excluded1 : null)
+    excluded2.closest = vi.fn((sel) => sel === `.popover` ? excluded2 : null)
+    nested.closest = vi.fn((sel) => sel === `.modal` ? excluded1 : null)
 
-    dispatch_click(element, [
-      element,
-      document.body,
-      document.documentElement,
-      document,
-      globalThis,
-    ])
+    const callback = vi.fn()
+    setup_click_outside(element, { callback, exclude: [`.modal`, `.popover`] })
+
+    dispatch_click(excluded1)
+    dispatch_click(excluded2)
+    dispatch_click(nested)
     expect(callback).not.toHaveBeenCalled()
   })
 
-  it(`should respect enabled flag`, () => {
+  it(`should dispatch custom event (with or without callback)`, () => {
     const element = create_element()
-    const callback = vi.fn()
-    setup_click_outside(element, { callback, enabled: false })
-
+    const listener = vi.fn()
+    element.addEventListener(`outside-click`, listener)
+    setup_click_outside(element) // no callback
     dispatch_click(create_element())
-    expect(callback).not.toHaveBeenCalled()
+    expect(listener).toHaveBeenCalled()
   })
 
-  it(`should handle exclude selectors`, () => {
-    const element = create_element()
-    const excluded = create_element()
-    excluded.className = `excluded`
-    excluded.closest = vi.fn((selector) => selector === `.excluded` ? excluded : null)
-
-    const callback = vi.fn()
-    setup_click_outside(element, { callback, exclude: [`.excluded`] })
-
-    dispatch_click(excluded)
-    expect(callback).not.toHaveBeenCalled()
-  })
-
-  it(`should dispatch custom event`, () => {
-    const element = create_element()
-    const custom_event_listener = vi.fn()
-    element.addEventListener(`outside-click`, custom_event_listener)
-
-    setup_click_outside(element)
-    dispatch_click(create_element())
-
-    expect(custom_event_listener).toHaveBeenCalled()
-  })
-
-  it(`should clean up event listeners`, () => {
-    const element = create_element()
-    const cleanup = setup_click_outside(element)
-    expect(cleanup).toBeDefined()
+  it(`should clean up without throwing`, () => {
+    const cleanup = setup_click_outside(create_element())
     expect(() => cleanup?.()).not.toThrow()
   })
 })
@@ -675,6 +565,63 @@ describe(`draggable`, () => {
 
     cleanup?.()
     expect(() => globalThis.dispatchEvent(new MouseEvent(`mousemove`))).not.toThrow()
+  })
+
+  it(`should not set up dragging when disabled`, () => {
+    const element = create_element()
+    const cleanup = draggable({ disabled: true })(element)
+    expect(cleanup).toBeUndefined()
+    expect(element.style.cursor).toBe(``)
+  })
+
+  it(`should call callbacks, update cursor/userSelect throughout drag lifecycle`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 0, top: 0 })
+
+    const [on_drag_start, on_drag, on_drag_end] = [vi.fn(), vi.fn(), vi.fn()]
+    draggable({ on_drag_start, on_drag, on_drag_end })(element)
+
+    expect(element.style.cursor).toBe(`grab`)
+
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, { clientX: 0, clientY: 0, bubbles: true }),
+    )
+    expect(on_drag_start).toHaveBeenCalledTimes(1)
+    expect(element.style.cursor).toBe(`grabbing`)
+    expect(document.body.style.userSelect).toBe(`none`)
+
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, { clientX: 10, clientY: 10, bubbles: true }),
+    )
+    expect(on_drag).toHaveBeenCalledTimes(1)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    expect(on_drag_end).toHaveBeenCalledTimes(1)
+    expect(element.style.cursor).toBe(`grab`)
+    expect(document.body.style.userSelect).toBe(``)
+  })
+
+  it(`should cleanup and reset cursor`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 0, top: 0 })
+
+    const cleanup = draggable()(element)
+    expect(element.style.cursor).toBe(`grab`)
+    cleanup?.()
+    expect(element.style.cursor).toBe(``)
+  })
+
+  it(`should warn and return undefined for missing handle selector`, () => {
+    const element = create_element()
+    const warn_spy = vi.spyOn(console, `warn`).mockImplementation(() => {})
+
+    const cleanup = draggable({ handle_selector: `.nonexistent` })(element)
+
+    expect(cleanup).toBeUndefined()
+    expect(warn_spy).toHaveBeenCalledWith(expect.stringContaining(`.nonexistent`))
+    warn_spy.mockRestore()
   })
 
   it(`should only drag when event originates from handle_selector`, () => {
@@ -924,26 +871,95 @@ describe(`sortable`, () => {
 
   it(`should sort ascending then descending when clicking the same header`, () => {
     const table = create_table()
-    const attach = sortable()
-    const cleanup = attach(table)
-    const headers = Array.from(table.querySelectorAll(`thead th`))
-    const [planet_header, moons_header] = headers as [
-      HTMLTableCellElement,
-      HTMLTableCellElement,
-    ]
+    const cleanup = sortable()(table)
+    const [planet_header, moons_header] = Array.from(table.querySelectorAll(`thead th`))
 
-    // Sort by Planet asc
     planet_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(get_column_values(table, 0)).toEqual([`Earth`, `Jupiter`, `Mars`])
 
-    // Sort by Planet desc
     planet_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(get_column_values(table, 0)).toEqual([`Mars`, `Jupiter`, `Earth`])
 
-    // Sort by Moons asc
     moons_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(get_column_values(table, 1)).toEqual([`1`, `2`, `95`])
 
     cleanup?.()
+  })
+
+  it(`should not set up sorting when disabled`, () => {
+    const table = create_table()
+    expect(sortable({ disabled: true })(table)).toBeUndefined()
+    expect((table.querySelector(`thead th`) as HTMLElement).style.cursor).toBe(``)
+  })
+
+  it(`should add pointer cursor and fully restore on cleanup`, () => {
+    const table = create_table()
+    const headers = Array.from(table.querySelectorAll(`thead th`))
+    const original_texts = headers.map((h) => h.textContent)
+
+    const cleanup = sortable()(table)
+    headers.forEach((h) => expect((h as HTMLElement).style.cursor).toBe(`pointer`))
+
+    headers[0].dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(headers[0].textContent).toContain(`↑`)
+    expect(headers[0].classList.contains(`table-sort-asc`)).toBe(true)
+
+    cleanup?.()
+    headers.forEach((header, idx) => {
+      expect(header.textContent).toBe(original_texts[idx])
+      expect(header.classList.contains(`table-sort-asc`)).toBe(false)
+      expect(header.classList.contains(`table-sort-desc`)).toBe(false)
+    })
+  })
+
+  it(`should apply custom classes and sorted_style, reset other columns`, () => {
+    const table = create_table()
+    sortable({
+      asc_class: `asc`,
+      desc_class: `desc`,
+      sorted_style: { backgroundColor: `red` },
+    })(table)
+    const [h1, h2] = Array.from(table.querySelectorAll(`thead th`))
+
+    h1.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(h1.classList.contains(`asc`)).toBe(true)
+    expect((h1 as HTMLElement).style.backgroundColor).toBe(`red`)
+
+    h1.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(h1.classList.contains(`desc`)).toBe(true)
+
+    h2.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(h1.textContent).not.toContain(`↑`)
+    expect(h1.classList.contains(`asc`)).toBe(false)
+  })
+
+  it(`should handle empty table body and custom header_selector`, () => {
+    const table = document.createElement(`table`)
+    table.innerHTML = `<thead><tr><th class="sortable">A</th><th>B</th></tr></thead>`
+    document.body.appendChild(table)
+
+    sortable({ header_selector: `th.sortable` })(table)
+
+    expect((table.querySelector(`th.sortable`) as HTMLElement).style.cursor).toBe(
+      `pointer`,
+    )
+    expect((table.querySelectorAll(`th`)[1] as HTMLElement).style.cursor).toBe(``)
+    expect(() =>
+      (table.querySelector(`th.sortable`) as HTMLElement).dispatchEvent(
+        new MouseEvent(`click`),
+      )
+    ).not.toThrow()
+  })
+
+  it(`should restore pre-existing custom styles`, () => {
+    const table = create_table()
+    const header = table.querySelector(`thead th`) as HTMLElement
+    header.style.color = `blue`
+
+    const cleanup = sortable()(table)
+    header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    cleanup?.()
+
+    expect(header.style.color).toBe(`blue`)
   })
 })

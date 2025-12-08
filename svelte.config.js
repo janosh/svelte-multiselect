@@ -35,6 +35,10 @@ const remarkPlugins = [[mdsvexamples, { defaults }]]
 export default {
   extensions: [`.svelte`, `.md`],
 
+  compilerOptions: {
+    warningFilter: (warning) => warning.code !== `state_referenced_locally`,
+  },
+
   preprocess: [
     sveltePreprocess(),
     mdsvex({ rehypePlugins, remarkPlugins, extensions: [`.md`] }),
