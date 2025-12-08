@@ -306,7 +306,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
-let current_tooltip: HTMLElement | null = null
+let current_tooltip: (HTMLElement & { _owner?: HTMLElement }) | null = null
 let show_timeout: ReturnType<typeof setTimeout> | undefined
 let hide_timeout: ReturnType<typeof setTimeout> | undefined
 
@@ -338,7 +338,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
   function setup_tooltip(element: HTMLElement) {
     if (!element || safe_options.disabled) return
 
-    const content = safe_options.content || element.title ||
+    // Use let so content can be updated reactively
+    let content = safe_options.content || element.title ||
       element.getAttribute(`aria-label`) || element.getAttribute(`data-title`)
     if (!content) return
 
@@ -348,6 +349,28 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       element.setAttribute(`data-original-title`, element.title)
       element.removeAttribute(`title`)
     }
+
+    // Reactively update content when tooltip attributes change
+    const tooltip_attrs = [`title`, `aria-label`, `data-title`] as const
+    const observer = new MutationObserver((mutations) => {
+      if (safe_options.content) return // custom content takes precedence
+      for (const { type, attributeName } of mutations) {
+        if (type !== `attributes` || !attributeName) continue
+        const new_content = element.getAttribute(attributeName)
+        // null = attribute removed (by us), skip entirely
+        if (new_content === null) continue
+        // Always remove title to prevent browser's native tooltip (even if empty)
+        if (attributeName === `title`) element.removeAttribute(`title`)
+        // Only update content if non-empty
+        if (!new_content) continue
+        content = new_content
+        // Only update tooltip if this element owns it
+        if (current_tooltip?._owner === element) {
+          current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
+        }
+      }
+    })
+    observer.observe(element, { attributes: true, attributeFilter: [...tooltip_attrs] })
 
     function show_tooltip() {
       clear_tooltip()
@@ -510,7 +533,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         const custom_opacity = trigger_styles.getPropertyValue(`--tooltip-opacity`).trim()
         tooltip.style.opacity = custom_opacity || `1`
 
-        current_tooltip = tooltip
+        current_tooltip = Object.assign(tooltip, { _owner: element })
       }, safe_options.delay || 100)
     }
 
@@ -526,17 +549,29 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       }
     }
 
+    function handle_scroll(event: Event) {
+      // Only hide on page-level scrolls, not element-level scrolls (e.g., input field internal scroll)
+      const target = event.target
+      if (
+        target === document || target === document.documentElement ||
+        target === document.body
+      ) {
+        hide_tooltip()
+      }
+    }
+
     const events = [`mouseenter`, `mouseleave`, `focus`, `blur`]
     const handlers = [show_tooltip, hide_tooltip, show_tooltip, hide_tooltip]
 
     events.forEach((event, idx) => element.addEventListener(event, handlers[idx]))
 
-    // Hide tooltip when user scrolls
-    globalThis.addEventListener(`scroll`, hide_tooltip, true)
+    // Hide tooltip when user scrolls the page (not element-level scrolls like input fields)
+    globalThis.addEventListener(`scroll`, handle_scroll, true)
 
     return () => {
+      observer.disconnect()
       events.forEach((event, idx) => element.removeEventListener(event, handlers[idx]))
-      globalThis.removeEventListener(`scroll`, hide_tooltip, true)
+      globalThis.removeEventListener(`scroll`, handle_scroll, true)
 
       const original_title = element.getAttribute(`data-original-title`)
       if (original_title) {

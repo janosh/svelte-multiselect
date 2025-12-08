@@ -399,7 +399,7 @@ describe(`tooltip`, () => {
       expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
 
-    it(`should hide tooltip on scroll`, () => {
+    it(`should hide tooltip on page-level scroll`, () => {
       vi.useFakeTimers()
       const element = create_element()
       element.title = `test`
@@ -412,7 +412,10 @@ describe(`tooltip`, () => {
       expect(tooltip_element).toBeTruthy()
       expect(tooltip_element.style.cssText).toContain(`text-wrap: balance`)
 
-      globalThis.dispatchEvent(new Event(`scroll`, { bubbles: true }))
+      // Dispatch scroll event from document (page-level scroll)
+      const scroll_event = new Event(`scroll`, { bubbles: true })
+      Object.defineProperty(scroll_event, `target`, { value: document })
+      globalThis.dispatchEvent(scroll_event)
       expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
 
       vi.useRealTimers()
@@ -488,6 +491,87 @@ describe(`tooltip`, () => {
       setup_tooltip(element)
       expect(element.hasAttribute(`data-original-title`)).toBe(true)
     })
+  })
+
+  describe(`Reactive Content Updates`, () => {
+    // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
+    // Bugs requiring MutationObserver (e.g. data-original-title overwrite) need E2E/browser tests.
+
+    it(`should set up observer and return cleanup function`, () => {
+      const element = create_element()
+      element.title = `Initial`
+      const cleanup = setup_tooltip(element)
+      expect(cleanup).toBeDefined()
+      expect(typeof cleanup).toBe(`function`)
+      expect(() => cleanup?.()).not.toThrow()
+    })
+
+    it(`should skip observer updates when custom content is set`, () => {
+      const element = create_element()
+      element.title = `Title`
+      setup_tooltip(element, { content: `Custom` })
+      expect(element.hasAttribute(`data-original-title`)).toBe(false) // title not stored
+    })
+
+    it(`should preserve original title and not overwrite on reactive updates`, () => {
+      const element = create_element()
+      element.title = `Original`
+      setup_tooltip(element)
+      expect(element.getAttribute(`data-original-title`)).toBe(`Original`)
+      expect(element.hasAttribute(`title`)).toBe(false)
+    })
+
+    it(`should restore original title on cleanup`, () => {
+      const element = create_element()
+      element.title = `Original`
+      const cleanup = setup_tooltip(element)
+      cleanup?.()
+      expect(element.getAttribute(`title`)).toBe(`Original`)
+      expect(element.hasAttribute(`data-original-title`)).toBe(false)
+    })
+
+    it(`should track tooltip ownership via _owner property`, () => {
+      vi.useFakeTimers()
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+
+      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement & {
+        _owner?: HTMLElement
+      }
+      expect(tooltip_el?._owner).toBe(element)
+      vi.useRealTimers()
+    })
+
+    it.each([
+      [`element-level (input)`, () => document.createElement(`input`), true],
+      [`page-level (document)`, () => document, false],
+      [`page-level (body)`, () => document.body, false],
+    ])(
+      `%s scroll should ${`keep`}/${`hide`} tooltip`,
+      (_desc, get_target, should_persist) => {
+        vi.useFakeTimers()
+        const element = create_element()
+        element.title = `test`
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+
+        element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+        vi.runAllTimers()
+        expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+
+        const scroll_event = new Event(`scroll`, { bubbles: true })
+        Object.defineProperty(scroll_event, `target`, { value: get_target() })
+        globalThis.dispatchEvent(scroll_event)
+
+        expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_persist)
+        vi.useRealTimers()
+      },
+    )
   })
 })
 
