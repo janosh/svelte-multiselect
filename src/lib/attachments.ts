@@ -170,11 +170,15 @@ export const sortable = (options: SortableOptions = {}) => (node: HTMLElement) =
 
     const click_handler = () => {
       // reset all headers to unsorted state
-      for (const { header, original_style } of header_state) {
-        header.textContent = header.textContent?.replace(/ ↑| ↓/, ``) ?? ``
-        header.classList.remove(asc_class, desc_class)
-        header.setAttribute(`style`, original_style)
-        header.style.cursor = `pointer`
+      for (const { header: hdr, original_text, original_style } of header_state) {
+        hdr.textContent = original_text
+        hdr.classList.remove(asc_class, desc_class)
+        if (original_style) {
+          hdr.setAttribute(`style`, original_style)
+        } else {
+          hdr.removeAttribute(`style`)
+        }
+        hdr.style.cursor = `pointer`
       }
       if (idx === sort_col_idx) {
         sort_dir *= -1 // reverse sort direction
@@ -384,7 +388,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
     }
 
     // Reactively update content when tooltip attributes change
-    const tooltip_attrs = [`title`, `aria-label`, `data-title`] as const
+    const tooltip_attrs = [`title`, `aria-label`, `data-title`]
     const observer = new MutationObserver((mutations) => {
       if (safe_options.content) return // custom content takes precedence
       for (const { type, attributeName } of mutations) {
@@ -397,10 +401,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         if (attributeName === `title`) {
           observer.disconnect()
           element.removeAttribute(`title`)
-          observer.observe(element, {
-            attributes: true,
-            attributeFilter: [...tooltip_attrs],
-          })
+          observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
         }
         // Only update content if non-empty
         if (!new_content) continue
@@ -411,7 +412,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         }
       }
     })
-    observer.observe(element, { attributes: true, attributeFilter: [...tooltip_attrs] })
+    observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
 
     function show_tooltip() {
       clear_tooltip()
@@ -592,10 +593,11 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
 
     function handle_scroll(event: Event) {
       // Only hide on page-level scrolls, not element-level scrolls (e.g., input field internal scroll)
+      // Page scroll targets vary by browser: document (most common), documentElement, body, or window
       const target = event.target
       if (
         target === document || target === document.documentElement ||
-        target === document.body
+        target === document.body || target === globalThis
       ) {
         hide_tooltip()
       }
@@ -649,9 +651,9 @@ export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) => (node: T) => {
     const { callback, enabled = true, exclude = [] } = config
 
-    function handle_click(event: MouseEvent) {
-      if (!enabled) return
+    if (!enabled) return // Early return avoids registering unused listener
 
+    function handle_click(event: MouseEvent) {
       const target = event.target as HTMLElement
       const path = event.composedPath()
 

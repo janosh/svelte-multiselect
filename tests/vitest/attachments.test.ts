@@ -313,13 +313,26 @@ describe(`tooltip`, () => {
     })
 
     it.each([
-      [`input (element-level)`, () => document.createElement(`input`), true],
-      [`div (element-level)`, () => document.createElement(`div`), true],
-      [`document (page-level)`, () => document, false],
-      [`documentElement (page-level)`, () => document.documentElement, false],
-      [`body (page-level)`, () => document.body, false],
+      [
+        `scroll from input (element-level) should keep tooltip`,
+        () => document.createElement(`input`),
+        true,
+      ],
+      [
+        `scroll from div (element-level) should keep tooltip`,
+        () => document.createElement(`div`),
+        true,
+      ],
+      [`scroll from document (page-level) should hide tooltip`, () => document, false],
+      [
+        `scroll from documentElement (page-level) should hide tooltip`,
+        () => document.documentElement,
+        false,
+      ],
+      [`scroll from body (page-level) should hide tooltip`, () => document.body, false],
+      [`scroll from window (page-level) should hide tooltip`, () => globalThis, false],
     ])(
-      `scroll from %s should ${`keep`}/${`hide`} tooltip`,
+      `%s`,
       (_desc, get_target, should_persist) => {
         vi.useFakeTimers()
         const element = create_element()
