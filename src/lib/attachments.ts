@@ -14,6 +14,7 @@ declare global {
 
 export interface DraggableOptions {
   handle_selector?: string
+  disabled?: boolean
   on_drag_start?: (event: MouseEvent) => void
   on_drag?: (event: MouseEvent) => void
   on_drag_end?: (event: MouseEvent) => void
@@ -24,6 +25,8 @@ export interface DraggableOptions {
 // @returns Attachment function that sets up dragging on an element
 export const draggable =
   (options: DraggableOptions = {}): Attachment => (element: Element) => {
+    if (options.disabled) return
+
     const node = element as HTMLElement
 
     // Use simple variables for maximum performance
@@ -127,34 +130,55 @@ export function get_html_sort_value(element: HTMLElement): string {
   return element.textContent ?? ``
 }
 
-export const sortable = (
-  {
+export interface SortableOptions {
+  header_selector?: string
+  asc_class?: string
+  desc_class?: string
+  sorted_style?: Partial<CSSStyleDeclaration>
+  disabled?: boolean
+}
+
+export const sortable = (options: SortableOptions = {}) => (node: HTMLElement) => {
+  const {
     header_selector = `thead th`,
     asc_class = `table-sort-asc`,
     desc_class = `table-sort-desc`,
     sorted_style = { backgroundColor: `rgba(255, 255, 255, 0.1)` },
-  } = {},
-) =>
-(node: HTMLElement) => {
-  // this action can be applied to bob-standard HTML tables to make them sortable by
+    disabled = false,
+  } = options
+
+  if (disabled) return
+
+  // This action can be applied to standard HTML tables to make them sortable by
   // clicking on column headers (and clicking again to toggle sorting direction)
   const headers = Array.from(node.querySelectorAll<HTMLTableCellElement>(header_selector))
   let sort_col_idx: number
   let sort_dir = 1 // 1 = asc, -1 = desc
 
-  // Store event listeners for cleanup
-  const event_listeners: { header: HTMLTableCellElement; handler: () => void }[] = []
+  // Store original state for cleanup
+  const header_state: {
+    header: HTMLTableCellElement
+    handler: () => void
+    original_text: string
+    original_style: string
+  }[] = []
 
   for (const [idx, header] of headers.entries()) {
+    const original_text = header.textContent ?? ``
+    const original_style = header.getAttribute(`style`) ?? ``
     header.style.cursor = `pointer` // add cursor pointer to headers
 
-    const init_styles = header.getAttribute(`style`) ?? ``
     const click_handler = () => {
-      // reset all headers to initial state
-      for (const header of headers) {
-        header.textContent = header.textContent?.replace(/ ↑| ↓/, ``) ?? ``
-        header.classList.remove(asc_class, desc_class)
-        header.setAttribute(`style`, init_styles)
+      // reset all headers to unsorted state
+      for (const { header: hdr, original_text, original_style } of header_state) {
+        hdr.textContent = original_text
+        hdr.classList.remove(asc_class, desc_class)
+        if (original_style) {
+          hdr.setAttribute(`style`, original_style)
+        } else {
+          hdr.removeAttribute(`style`)
+        }
+        hdr.style.cursor = `pointer`
       }
       if (idx === sort_col_idx) {
         sort_dir *= -1 // reverse sort direction
@@ -196,14 +220,20 @@ export const sortable = (
     }
 
     header.addEventListener(`click`, click_handler)
-    event_listeners.push({ header, handler: click_handler })
+    header_state.push({ header, handler: click_handler, original_text, original_style })
   }
 
-  // Return cleanup function
+  // Return cleanup function that fully restores original state
   return () => {
-    for (const { header, handler } of event_listeners) {
+    for (const { header, handler, original_text, original_style } of header_state) {
       header.removeEventListener(`click`, handler)
-      header.style.cursor = `` // Reset cursor
+      header.textContent = original_text
+      header.classList.remove(asc_class, desc_class)
+      if (original_style) {
+        header.setAttribute(`style`, original_style)
+      } else {
+        header.removeAttribute(`style`)
+      }
     }
   }
 }
@@ -306,7 +336,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
-let current_tooltip: HTMLElement | null = null
+let current_tooltip: (HTMLElement & { _owner?: HTMLElement }) | null = null
 let show_timeout: ReturnType<typeof setTimeout> | undefined
 let hide_timeout: ReturnType<typeof setTimeout> | undefined
 
@@ -319,6 +349,13 @@ function clear_tooltip() {
   }
 }
 
+/**
+ * Options for the tooltip attachment.
+ *
+ * @security Tooltip content is rendered as HTML. If you allow user-provided content
+ * to be set via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize
+ * it first to prevent XSS attacks. This attachment does not perform any sanitization.
+ */
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
@@ -338,7 +375,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
   function setup_tooltip(element: HTMLElement) {
     if (!element || safe_options.disabled) return
 
-    const content = safe_options.content || element.title ||
+    // Use let so content can be updated reactively
+    let content = safe_options.content || element.title ||
       element.getAttribute(`aria-label`) || element.getAttribute(`data-title`)
     if (!content) return
 
@@ -348,6 +386,33 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       element.setAttribute(`data-original-title`, element.title)
       element.removeAttribute(`title`)
     }
+
+    // Reactively update content when tooltip attributes change
+    const tooltip_attrs = [`title`, `aria-label`, `data-title`]
+    const observer = new MutationObserver((mutations) => {
+      if (safe_options.content) return // custom content takes precedence
+      for (const { type, attributeName } of mutations) {
+        if (type !== `attributes` || !attributeName) continue
+        const new_content = element.getAttribute(attributeName)
+        // null = attribute removed (by us), skip entirely
+        if (new_content === null) continue
+        // Always remove title to prevent browser's native tooltip (even if empty)
+        // Disconnect observer temporarily to avoid re-entrancy from our own removal
+        if (attributeName === `title`) {
+          observer.disconnect()
+          element.removeAttribute(`title`)
+          observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
+        }
+        // Only update content if non-empty
+        if (!new_content) continue
+        content = new_content
+        // Only update tooltip if this element owns it
+        if (current_tooltip?._owner === element) {
+          current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
+        }
+      }
+    })
+    observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
 
     function show_tooltip() {
       clear_tooltip()
@@ -510,7 +575,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         const custom_opacity = trigger_styles.getPropertyValue(`--tooltip-opacity`).trim()
         tooltip.style.opacity = custom_opacity || `1`
 
-        current_tooltip = tooltip
+        current_tooltip = Object.assign(tooltip, { _owner: element })
       }, safe_options.delay || 100)
     }
 
@@ -526,17 +591,26 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       }
     }
 
+    function handle_scroll(event: Event) {
+      // Hide if document or any ancestor scrolls (would move element). Skip internal element scrolls.
+      const target = event.target
+      if (target instanceof Node && target !== element && target.contains(element)) {
+        hide_tooltip()
+      }
+    }
+
     const events = [`mouseenter`, `mouseleave`, `focus`, `blur`]
     const handlers = [show_tooltip, hide_tooltip, show_tooltip, hide_tooltip]
 
     events.forEach((event, idx) => element.addEventListener(event, handlers[idx]))
 
-    // Hide tooltip when user scrolls
-    globalThis.addEventListener(`scroll`, hide_tooltip, true)
+    // Hide tooltip when user scrolls the page (not element-level scrolls like input fields)
+    globalThis.addEventListener(`scroll`, handle_scroll, true)
 
     return () => {
+      observer.disconnect()
       events.forEach((event, idx) => element.removeEventListener(event, handlers[idx]))
-      globalThis.removeEventListener(`scroll`, hide_tooltip, true)
+      globalThis.removeEventListener(`scroll`, handle_scroll, true)
 
       const original_title = element.getAttribute(`data-original-title`)
       if (original_title) {
@@ -573,9 +647,9 @@ export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) => (node: T) => {
     const { callback, enabled = true, exclude = [] } = config
 
-    function handle_click(event: MouseEvent) {
-      if (!enabled) return
+    if (!enabled) return // Early return avoids registering unused listener
 
+    function handle_click(event: MouseEvent) {
       const target = event.target as HTMLElement
       const path = event.composedPath()
 

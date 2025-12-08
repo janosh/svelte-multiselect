@@ -149,6 +149,20 @@ Exported from `svelte-multiselect/attachments`:
 </style>
 ```
 
+#### Reactive Tooltip Content
+
+Tooltip content updates reactively via `MutationObserver` when `title`, `aria-label`, or `data-title` changes:
+
+```svelte example id="attachments-tooltip-reactive"
+<script>
+  import { tooltip } from '$lib'
+  let text = $state(`Edit me!`)
+</script>
+
+<input bind:value={text} style="width: 16ch" />
+<button title={text} {@attach tooltip({ placement: `right` })}>Hover me</button>
+```
+
 ### `draggable`
 
 ```svelte example id="attachments-draggable"

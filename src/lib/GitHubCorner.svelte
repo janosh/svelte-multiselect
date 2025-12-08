@@ -3,7 +3,7 @@
   let {
     href,
     title = `View code on GitHub`,
-    aria_label = title,
+    aria_label,
     target = `_self`,
     color = null,
     fill = null,
@@ -27,7 +27,7 @@
   {href}
   {target}
   {title}
-  aria-label={aria_label}
+  aria-label={aria_label ?? title}
   {style}
   class={corner}
   style:color
