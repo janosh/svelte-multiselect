@@ -14,6 +14,7 @@ declare global {
 
 export interface DraggableOptions {
   handle_selector?: string
+  disabled?: boolean
   on_drag_start?: (event: MouseEvent) => void
   on_drag?: (event: MouseEvent) => void
   on_drag_end?: (event: MouseEvent) => void
@@ -24,6 +25,8 @@ export interface DraggableOptions {
 // @returns Attachment function that sets up dragging on an element
 export const draggable =
   (options: DraggableOptions = {}): Attachment => (element: Element) => {
+    if (options.disabled) return
+
     const node = element as HTMLElement
 
     // Use simple variables for maximum performance
@@ -127,34 +130,51 @@ export function get_html_sort_value(element: HTMLElement): string {
   return element.textContent ?? ``
 }
 
-export const sortable = (
-  {
+export interface SortableOptions {
+  header_selector?: string
+  asc_class?: string
+  desc_class?: string
+  sorted_style?: Partial<CSSStyleDeclaration>
+  disabled?: boolean
+}
+
+export const sortable = (options: SortableOptions = {}) => (node: HTMLElement) => {
+  const {
     header_selector = `thead th`,
     asc_class = `table-sort-asc`,
     desc_class = `table-sort-desc`,
     sorted_style = { backgroundColor: `rgba(255, 255, 255, 0.1)` },
-  } = {},
-) =>
-(node: HTMLElement) => {
-  // this action can be applied to bob-standard HTML tables to make them sortable by
+    disabled = false,
+  } = options
+
+  if (disabled) return
+
+  // This action can be applied to standard HTML tables to make them sortable by
   // clicking on column headers (and clicking again to toggle sorting direction)
   const headers = Array.from(node.querySelectorAll<HTMLTableCellElement>(header_selector))
   let sort_col_idx: number
   let sort_dir = 1 // 1 = asc, -1 = desc
 
-  // Store event listeners for cleanup
-  const event_listeners: { header: HTMLTableCellElement; handler: () => void }[] = []
+  // Store original state for cleanup
+  const header_state: {
+    header: HTMLTableCellElement
+    handler: () => void
+    original_text: string
+    original_style: string
+  }[] = []
 
   for (const [idx, header] of headers.entries()) {
+    const original_text = header.textContent ?? ``
+    const original_style = header.getAttribute(`style`) ?? ``
     header.style.cursor = `pointer` // add cursor pointer to headers
 
-    const init_styles = header.getAttribute(`style`) ?? ``
     const click_handler = () => {
-      // reset all headers to initial state
-      for (const header of headers) {
+      // reset all headers to unsorted state
+      for (const { header, original_style } of header_state) {
         header.textContent = header.textContent?.replace(/ ↑| ↓/, ``) ?? ``
         header.classList.remove(asc_class, desc_class)
-        header.setAttribute(`style`, init_styles)
+        header.setAttribute(`style`, original_style)
+        header.style.cursor = `pointer`
       }
       if (idx === sort_col_idx) {
         sort_dir *= -1 // reverse sort direction
@@ -196,14 +216,20 @@ export const sortable = (
     }
 
     header.addEventListener(`click`, click_handler)
-    event_listeners.push({ header, handler: click_handler })
+    header_state.push({ header, handler: click_handler, original_text, original_style })
   }
 
-  // Return cleanup function
+  // Return cleanup function that fully restores original state
   return () => {
-    for (const { header, handler } of event_listeners) {
+    for (const { header, handler, original_text, original_style } of header_state) {
       header.removeEventListener(`click`, handler)
-      header.style.cursor = `` // Reset cursor
+      header.textContent = original_text
+      header.classList.remove(asc_class, desc_class)
+      if (original_style) {
+        header.setAttribute(`style`, original_style)
+      } else {
+        header.removeAttribute(`style`)
+      }
     }
   }
 }
@@ -319,6 +345,13 @@ function clear_tooltip() {
   }
 }
 
+/**
+ * Options for the tooltip attachment.
+ *
+ * @security Tooltip content is rendered as HTML. If you allow user-provided content
+ * to be set via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize
+ * it first to prevent XSS attacks. This attachment does not perform any sanitization.
+ */
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
@@ -360,7 +393,15 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         // null = attribute removed (by us), skip entirely
         if (new_content === null) continue
         // Always remove title to prevent browser's native tooltip (even if empty)
-        if (attributeName === `title`) element.removeAttribute(`title`)
+        // Disconnect observer temporarily to avoid re-entrancy from our own removal
+        if (attributeName === `title`) {
+          observer.disconnect()
+          element.removeAttribute(`title`)
+          observer.observe(element, {
+            attributes: true,
+            attributeFilter: [...tooltip_attrs],
+          })
+        }
         // Only update content if non-empty
         if (!new_content) continue
         content = new_content
