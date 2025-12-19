@@ -76,7 +76,9 @@
       value !== null && value !== undefined
         ? (Array.isArray(value) ? value : [value])
         : (options
-          ?.filter((opt) => opt instanceof Object && opt?.preselected)
+          ?.filter((opt) =>
+            typeof opt === `object` && opt !== null && opt?.preselected
+          )
           .slice(0, maxSelect ?? undefined) ?? []),
     ),
     sortSelected = false,
@@ -261,26 +263,31 @@
     )
   })
 
-  // raise if matchingOptions[activeIndex] does not yield a value
-  if (activeIndex !== null && !matchingOptions[activeIndex]) {
-    throw new Error(
-      `Run time error, activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}`,
-    )
-  }
+  // reset activeIndex if out of bounds (can happen when options change while dropdown is open)
+  $effect(() => {
+    if (activeIndex !== null && !matchingOptions[activeIndex]) {
+      activeIndex = null
+    }
+  })
 
   // update activeOption when activeIndex changes
   $effect(() => {
     activeOption = matchingOptions[activeIndex ?? -1] ?? null
   })
 
+  // Helper to check if removing an option would violate minSelect constraint
+  const can_remove = $derived(minSelect === null || selected.length > minSelect)
+
+  // Helper to check if an option is an object (not a primitive)
+  const is_object = (opt: unknown): opt is Record<string, unknown> =>
+    typeof opt === `object` && opt !== null
+
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
   function toggle_option(option_to_toggle: Option, event: Event) {
     const is_currently_selected = selected_keys.includes(key(option_to_toggle))
 
     if (is_currently_selected) {
-      if (minSelect === null || selected.length > minSelect) { // Only remove if it wouldn't violate minSelect
-        remove(option_to_toggle, event)
-      }
+      if (can_remove) remove(option_to_toggle, event)
     } else add(option_to_toggle, event)
   }
 
@@ -432,12 +439,11 @@
 
       if (activeOption) {
         if (selected_keys.includes(key(activeOption))) {
-          // Only remove if it wouldn't violate minSelect
-          if (minSelect === null || selected.length > minSelect) {
+          if (can_remove) {
             remove(activeOption, event)
+            searchText = `` // always clear on remove (resetFilterOnAdd only applies to add operations)
           }
-        } else add(activeOption, event)
-        searchText = ``
+        } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
@@ -502,8 +508,7 @@
     } // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       event.stopPropagation()
-      // Only remove option if it wouldn't violate minSelect
-      if (minSelect === null || selected.length > minSelect) {
+      if (can_remove) {
         const last_option = selected.at(-1)
         if (last_option) remove(last_option, event)
       }
@@ -524,16 +529,18 @@
       // If no minSelect constraint, remove all
       removed_options = selected
       selected = []
-      searchText = ``
+      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     } else if (selected.length > minSelect) {
       // Keep the first minSelect items
       removed_options = selected.slice(minSelect)
       selected = selected.slice(0, minSelect)
-      searchText = ``
+      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     }
-    onremoveAll?.({ options: removed_options })
-    onchange?.({ options: selected, type: `removeAll` })
-    // If selected.length <= minSelect, do nothing (can't remove any more)
+    // Only fire events if something was actually removed
+    if (removed_options.length > 0) {
+      onremoveAll?.({ options: removed_options })
+      onchange?.({ options: selected, type: `removeAll` })
+    }
   }
 
   function select_all(event: Event) {
@@ -541,13 +548,13 @@
     const limit = maxSelect ?? Infinity
     // Use matchingOptions for "select all visible" semantics
     const options_to_add = matchingOptions.filter((opt) => {
-      const is_disabled = opt instanceof Object && opt.disabled
+      const is_disabled = is_object(opt) && opt.disabled
       return !is_disabled && !selected_keys.includes(key(opt))
     }).slice(0, limit - selected.length)
 
     if (options_to_add.length > 0) {
       selected = sort_selected([...selected, ...options_to_add])
-      searchText = ``
+      if (resetFilterOnAdd) searchText = ``
       clear_validity()
       handle_dropdown_after_select(event)
       onselectAll?.({ options: options_to_add })
@@ -875,7 +882,7 @@
         {:else}
           {get_label(option)}
         {/if}
-        {#if !disabled && (minSelect === null || selected.length > minSelect)}
+        {#if !disabled && can_remove}
           <button
             onclick={(event) => remove(option, event)}
             onkeydown={if_enter_or_space((event) => remove(option, event))}
@@ -1028,7 +1035,7 @@
         title = null,
         selectedTitle = null,
         disabledTitle = defaultDisabledTitle,
-      } = option_item instanceof Object ? option_item : { label: option_item }}
+      } = is_object(option_item) ? option_item : { label: option_item }}
         {@const active = activeIndex === idx}
         {@const selected = is_selected(label)}
         {@const optionStyle =
