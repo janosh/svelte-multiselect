@@ -266,9 +266,6 @@
   // reset activeIndex if out of bounds (can happen when options change while dropdown is open)
   $effect(() => {
     if (activeIndex !== null && !matchingOptions[activeIndex]) {
-      console.error(
-        `MultiSelect: activeIndex=${activeIndex} is out of bounds, matchingOptions.length=${matchingOptions.length}. Resetting to null.`,
-      )
       activeIndex = null
     }
   })
@@ -539,9 +536,11 @@
       selected = selected.slice(0, minSelect)
       searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     }
-    onremoveAll?.({ options: removed_options })
-    onchange?.({ options: selected, type: `removeAll` })
-    // If selected.length <= minSelect, do nothing (can't remove any more)
+    // Only fire events if something was actually removed
+    if (removed_options.length > 0) {
+      onremoveAll?.({ options: removed_options })
+      onchange?.({ options: selected, type: `removeAll` })
+    }
   }
 
   function select_all(event: Event) {
