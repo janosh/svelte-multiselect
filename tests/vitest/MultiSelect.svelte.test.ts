@@ -946,6 +946,98 @@ test.each([[true, ``], [false, `1`]])(
   },
 )
 
+test.each([[true, ``], [false, `1`]])(
+  `resetFilterOnAdd=%j handles input value correctly when selecting with Enter key`,
+  async (resetFilterOnAdd, expected) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], resetFilterOnAdd, closeDropdownOnSelect: false },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `1`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    // Navigate to the first matching option with ArrowDown
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+    await tick()
+
+    // Select with Enter key
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+
+    expect(input.value).toBe(expected)
+  },
+)
+
+test(`resetFilterOnAdd=true does NOT reset searchText when maxSelect constraint prevents add`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [1, 2, 3],
+      selected: [1, 2],
+      maxSelect: 2,
+      resetFilterOnAdd: true,
+      closeDropdownOnSelect: false,
+    },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `3`
+  input.dispatchEvent(input_event)
+  await tick()
+
+  // Navigate to the matching option with ArrowDown
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+
+  // Try to select with Enter key (should fail due to maxSelect)
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+
+  // searchText should NOT be reset since the add operation failed
+  expect(input.value).toBe(`3`)
+
+  // Verify the option was not added
+  const selected_items = document.querySelectorAll(`ul.selected li`)
+  expect(selected_items.length).toBe(2)
+})
+
+test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint prevents remove`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [1, 2, 3],
+      selected: [1],
+      minSelect: 1,
+      resetFilterOnAdd: true,
+      closeDropdownOnSelect: false,
+      keepSelectedInDropdown: `plain`, // Allow clicking on selected options to toggle them
+    },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `1`
+  input.dispatchEvent(input_event)
+  await tick()
+
+  // Navigate to the selected option with ArrowDown
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+
+  // Try to deselect with Enter key (should fail due to minSelect)
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+
+  // searchText should NOT be reset since the remove operation failed
+  expect(input.value).toBe(`1`)
+
+  // Verify the option was not removed
+  const selected_items = document.querySelectorAll(`ul.selected li`)
+  expect(selected_items.length).toBe(1)
+})
+
 test(`2-way binding of selected`, async () => {
   let selected: Option[] = []
   const props = $state<Test2WayBindProps>({
@@ -2268,19 +2360,22 @@ describe(`selectAllOption feature`, () => {
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`A C`) // skipped B (disabled), limited to 2
   })
 
-  test(`resets searchText after select all`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options, selectAllOption: true },
-    })
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.click()
-    input.value = `a`
-    input.dispatchEvent(input_event)
-    doc_query(`ul.options > li.select-all`).click()
-    await tick()
-    expect(input.value).toBe(``)
-  })
+  test.each([[true, ``], [false, `a`]])(
+    `resetFilterOnAdd=%j controls searchText after select all`,
+    async (resetFilterOnAdd, expected) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options, selectAllOption: true, resetFilterOnAdd },
+      })
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.click()
+      input.value = `a`
+      input.dispatchEvent(input_event)
+      doc_query(`ul.options > li.select-all`).click()
+      await tick()
+      expect(input.value).toBe(expected)
+    },
+  )
 
   test(`no-op when all already selected`, () => {
     const spy = vi.fn()

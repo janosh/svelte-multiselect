@@ -435,9 +435,9 @@
           // Only remove if it wouldn't violate minSelect
           if (minSelect === null || selected.length > minSelect) {
             remove(activeOption, event)
+            if (resetFilterOnAdd) searchText = ``
           }
-        } else add(activeOption, event)
-        searchText = ``
+        } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
@@ -524,12 +524,12 @@
       // If no minSelect constraint, remove all
       removed_options = selected
       selected = []
-      searchText = ``
+      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     } else if (selected.length > minSelect) {
       // Keep the first minSelect items
       removed_options = selected.slice(minSelect)
       selected = selected.slice(0, minSelect)
-      searchText = ``
+      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     }
     onremoveAll?.({ options: removed_options })
     onchange?.({ options: selected, type: `removeAll` })
@@ -547,7 +547,7 @@
 
     if (options_to_add.length > 0) {
       selected = sort_selected([...selected, ...options_to_add])
-      searchText = ``
+      if (resetFilterOnAdd) searchText = ``
       clear_validity()
       handle_dropdown_after_select(event)
       onselectAll?.({ options: options_to_add })
