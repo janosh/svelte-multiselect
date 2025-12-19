@@ -785,6 +785,25 @@ test.each([2, 5, 10])(
   },
 )
 
+// https://github.com/janosh/svelte-multiselect/issues/353
+test(`clicking on selected options does not open dropdown`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], selected: [1, 2] },
+  })
+
+  // starts with closed dropdown
+  expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
+
+  // click on a selected option (not the remove button)
+  const selected_li = doc_query(`ul.selected > li`)
+  selected_li.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  await tick()
+
+  // dropdown should still be closed
+  expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
+})
+
 test(`closes dropdown on tab out`, async () => {
   mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
   // starts with closed dropdown
