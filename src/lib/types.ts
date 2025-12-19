@@ -20,6 +20,12 @@ export type ObjectOption = {
   [key: string]: unknown // allow any other keys users might want
 }
 
+// placeholder can be a simple string or object with extended options
+export type PlaceholderConfig = {
+  text: string
+  persistent?: boolean // keep placeholder visible even when options are selected
+}
+
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
   onadd?: (data: { option: T }) => unknown
@@ -94,7 +100,10 @@ export interface MultiSelectProps<T extends Option = Option>
   extends
     MultiSelectEvents<T>,
     MultiSelectSnippets<T>,
-    Omit<HTMLAttributes<HTMLDivElement>, `children` | `onchange` | `onclose`> {
+    Omit<
+      HTMLAttributes<HTMLDivElement>,
+      `children` | `onchange` | `onclose` | `placeholder`
+    > {
   activeIndex?: number | null
   activeOption?: T | null
   createOptionMsg?: string | null
@@ -146,7 +155,7 @@ export interface MultiSelectProps<T extends Option = Option>
   outerDivClass?: string
   parseLabelsAsHtml?: boolean // should not be combined with allowUserOptions!
   pattern?: string | null
-  placeholder?: string | null
+  placeholder?: string | PlaceholderConfig | null
   removeAllTitle?: string
   removeBtnTitle?: string
   minSelect?: number | null // null means there is no lower limit for selected.length

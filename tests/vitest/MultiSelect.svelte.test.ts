@@ -149,6 +149,69 @@ test(`applies DOM attributes to input node`, () => {
   expect(input?.pattern).toBe(pattern)
 })
 
+// https://github.com/janosh/svelte-multiselect/issues/354
+describe(`placeholder`, () => {
+  test(`string placeholder hidden by default when options selected`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], placeholder: `Pick a number` },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.placeholder).toBe(`Pick a number`)
+
+    // Select an option by clicking
+    const li = doc_query(`ul.options li`)
+    li.click()
+    await tick()
+
+    // Placeholder should be hidden (empty string in DOM)
+    expect(input.placeholder).toBe(``)
+  })
+
+  test(`object placeholder with persistent=true remains visible`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        placeholder: { text: `Pick a number`, persistent: true },
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.placeholder).toBe(`Pick a number`)
+
+    // Select an option by clicking
+    const li = doc_query(`ul.options li`)
+    li.click()
+    await tick()
+
+    // Placeholder should still be visible
+    expect(input.placeholder).toBe(`Pick a number`)
+  })
+
+  test(`object placeholder without persistent behaves like string`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        placeholder: { text: `Pick a number` },
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.placeholder).toBe(`Pick a number`)
+
+    // Select an option by clicking
+    const li = doc_query(`ul.options li`)
+    li.click()
+    await tick()
+
+    // Placeholder should be hidden
+    expect(input.placeholder).toBe(``)
+  })
+})
+
 test(`applies custom classes for styling through CSS frameworks`, async () => {
   const prop_elem_map = {
     input: HTMLInputElement,
