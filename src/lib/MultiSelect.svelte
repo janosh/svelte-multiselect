@@ -846,6 +846,7 @@
         ondragenter={() => (drag_idx = idx)}
         class:active={drag_idx === idx}
         style={selectedOptionStyle}
+        onmouseup={(event) => event.stopPropagation()}
       >
         {#if selectedItem}
           {@render selectedItem({
