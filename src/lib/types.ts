@@ -1,3 +1,4 @@
+import type { FlipParams } from 'svelte/animate'
 import type { Snippet } from 'svelte'
 import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
 
@@ -168,4 +169,7 @@ export interface MultiSelectProps<T extends Option = Option>
   // Dynamic options loading for large datasets (https://github.com/janosh/svelte-multiselect/discussions/342)
   // Pass a function for simple usage, or an object with config for advanced usage
   loadOptions?: LoadOptions<T>
+  // Animation parameters for selected options flip animation (https://github.com/janosh/svelte-multiselect/issues/356)
+  // Set { duration: 0 } to disable animation
+  selectedFlipParams?: FlipParams
 }

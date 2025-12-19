@@ -1120,8 +1120,8 @@ class DragEvent extends MouseEvent {
   }
 }
 
+// https://github.com/janosh/svelte-multiselect/issues/176
 test(`dragging selected options across each other changes their order`, async () => {
-  // https://github.com/janosh/svelte-multiselect/issues/176
   const options = [1, 2, 3]
   mount(MultiSelect, {
     target: document.body,
