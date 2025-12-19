@@ -62,30 +62,6 @@ test(`1-way binding of activeOption and hovering an option makes it active`, asy
   expect(cb).toHaveBeenCalled()
 })
 
-test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
-  // test internal change to activeOption binds outwards
-  let activeOption: Option | null | undefined = 0
-  const cb = vi.fn()
-
-  mount(Test2WayBind, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      onActiveOptionChanged: (data: Option | null | undefined) => {
-        activeOption = data
-        cb()
-      },
-    },
-  })
-
-  const first_option = doc_query(`ul.options > li`)
-  first_option.dispatchEvent(mouseover)
-  await tick()
-
-  expect(activeOption).toBe(1)
-  expect(cb).toHaveBeenCalled()
-})
-
 test(`defaultDisabledTitle and custom per-option disabled titles are applied correctly`, () => {
   const defaultDisabledTitle = `Not selectable`
   const special_disabled_title = `Special disabled title`
