@@ -393,10 +393,34 @@ These are the core props you'll use in most cases:
    Screen width (px) that separates 'mobile' from 'desktop' behavior.
 
 1. ```ts
+   fuzzy: boolean = true
+   ```
+
+   Whether to use fuzzy matching for filtering options. When `true` (default), matches non-consecutive characters (e.g., "ga" matches "Grapes" and "Green Apple"). When `false`, uses substring matching only.
+
+1. ```ts
    highlightMatches: boolean = true
    ```
 
    Whether to highlight matching text in dropdown options.
+
+1. ```ts
+   keepSelectedInDropdown: false | 'plain' | 'checkboxes' = false
+   ```
+
+   Controls whether selected options remain visible in dropdown. `false` (default) hides selected options. `'plain'` shows them with visual distinction. `'checkboxes'` prefixes each option with a checkbox.
+
+1. ```ts
+   selectAllOption: boolean | string = false
+   ```
+
+   Adds a "Select All" option at the top of the dropdown. `true` shows default label, or pass a custom string label.
+
+1. ```ts
+   liSelectAllClass: string = ''
+   ```
+
+   CSS class applied to the "Select All" `<li>` element.
 
 1. ```ts
    parseLabelsAsHtml: boolean = false
