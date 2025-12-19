@@ -121,6 +121,8 @@
     liSelectAllClass = ``,
     // Dynamic options loading
     loadOptions,
+    // Animation parameters for selected options flip animation
+    selectedFlipParams = { duration: 100 },
     ...rest
   }: MultiSelectProps<Option> = $props()
 
@@ -836,7 +838,7 @@
         class={liSelectedClass}
         role="option"
         aria-selected="true"
-        animate:flip={{ duration: 100 }}
+        animate:flip={selectedFlipParams}
         draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
         ondragstart={dragstart(idx)}
         ondragover={(event) => {
