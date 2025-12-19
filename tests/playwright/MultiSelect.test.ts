@@ -425,35 +425,44 @@ test.describe(`multiselect`, () => {
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/357
-  test(`keyboard navigation is not affected by mouse position after scroll`, async ({ page }) => {
+  test(`keyboard nav ignores scroll-triggered mouseover but re-enables on mouse movement`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     await page.click(`#foods input[autocomplete]`)
 
-    // Navigate down to the 5th option (index 4 = Lemon)
-    for (let idx = 0; idx < 5; idx++) {
+    // Navigate down to the 3rd option (index 2 = Watermelon)
+    for (let idx = 0; idx < 3; idx++) {
       await page.keyboard.press(`ArrowDown`)
     }
+    const active_after_keys = await page.textContent(`#foods ul.options > li.active`)
+    expect(active_after_keys?.trim()).toBe(foods[2]) // Watermelon
 
-    // Verify we're at the expected option after keyboard navigation
-    const active_before = await page.textContent(`#foods ul.options > li.active`)
-    expect(active_before?.trim()).toBe(foods[4]) // Should be at Lemon (index 4)
-
-    // Simulate what happens when scroll triggers mouseover on a different element
-    // by directly dispatching a mouseover event WITHOUT moving the mouse
+    // Simulate scroll-triggered mouseover (no actual mouse movement)
     await page.evaluate(() => {
       const first_option = document.querySelector(`#foods ul.options > li`)
-      if (first_option) {
-        // Dispatch mouseover without mousemove - simulates scroll under static cursor
-        first_option.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
-      }
+      first_option?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
     })
 
-    // Check if mouseover changed the active option (it shouldn't with the fix)
-    const active_after_hover = await page.textContent(`#foods ul.options > li.active`)
+    // Active should NOT change from synthetic mouseover
+    const active_after_synthetic_hover = await page.textContent(
+      `#foods ul.options > li.active`,
+    )
+    expect(active_after_synthetic_hover?.trim()).toBe(foods[2]) // Still Watermelon
 
-    // With the fix: active option should NOT change after scroll-triggered mouseover
-    expect(active_after_hover?.trim()).toBe(foods[4]) // Still at Lemon
-    expect(active_after_hover?.trim()).not.toBe(foods[0]) // Not jumped to hovered option (Grapes)
+    // Now move mouse for real - this should re-enable hover via mousemove on ul.options
+    await page.evaluate(() => {
+      const ul = document.querySelector(`#foods ul.options`)
+      const fifth_li = document.querySelectorAll(`#foods ul.options > li`)[4]
+      // Dispatch mousemove on ul (resets ignore_hover)
+      ul?.dispatchEvent(new MouseEvent(`mousemove`, { bubbles: true }))
+      // Then dispatch mouseover on the target li
+      fifth_li?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
+    })
+
+    // Active should now follow the mouse position
+    const active_after_real_hover = await page.textContent(
+      `#foods ul.options > li.active`,
+    )
+    expect(active_after_real_hover?.trim()).toBe(foods[4]) // Lemon
   })
 
   test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
