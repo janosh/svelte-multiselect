@@ -1038,6 +1038,42 @@ test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint 
   expect(selected_items.length).toBe(1)
 })
 
+test(`resetFilterOnAdd=false still clears searchText when removing via Enter key`, async () => {
+  // This test verifies that resetFilterOnAdd only applies to add operations,
+  // not remove operations (matching remove_all() behavior)
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [1, 2, 3],
+      selected: [1, 2],
+      resetFilterOnAdd: false,
+      closeDropdownOnSelect: false,
+      keepSelectedInDropdown: `plain`, // Allow clicking on selected options to toggle them
+    },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `1`
+  input.dispatchEvent(input_event)
+  await tick()
+
+  // Navigate to the selected option with ArrowDown
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+
+  // Remove the option with Enter key
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+
+  // searchText should be cleared even though resetFilterOnAdd=false
+  // because resetFilterOnAdd only applies to add operations
+  expect(input.value).toBe(``)
+
+  // Verify the option was removed
+  const selected_items = document.querySelectorAll(`ul.selected li`)
+  expect(selected_items.length).toBe(1)
+})
+
 test(`2-way binding of selected`, async () => {
   let selected: Option[] = []
   const props = $state<Test2WayBindProps>({
