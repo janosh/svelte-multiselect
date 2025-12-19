@@ -710,8 +710,8 @@ test.describe(`snippets`, () => {
   })
 })
 
+// https://github.com/janosh/svelte-multiselect/issues/176
 test(`dragging selected options across each other changes their order`, async ({ page }) => {
-  // https://github.com/janosh/svelte-multiselect/issues/176
   await page.goto(`/persistent`, { waitUntil: `networkidle` })
   let selected = await page.textContent(`ul.selected`)
   expect(selected?.trim()).toBe(`1  Python 2  TypeScript 3  C 4  Haskell`)
