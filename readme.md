@@ -172,10 +172,18 @@ These are the core props you'll use in most cases:
    ```
 
 1. ```ts
-   placeholder: string | null = null
+   placeholder: string | { text: string; persistent?: boolean } | null = null
    ```
 
-   Text shown when no options are selected.
+   Text shown when no options are selected. Can be a simple string or an object with extended options:
+
+   ```svelte
+   <!-- Simple string -->
+   <MultiSelect placeholder="Choose..." />
+
+   <!-- Object with persistent option (stays visible even when options selected) -->
+   <MultiSelect placeholder={{ text: 'Add items...', persistent: true }} />
+   ```
 
 1. ```ts
    disabled: boolean = false
@@ -385,10 +393,34 @@ These are the core props you'll use in most cases:
    Screen width (px) that separates 'mobile' from 'desktop' behavior.
 
 1. ```ts
+   fuzzy: boolean = true
+   ```
+
+   Whether to use fuzzy matching for filtering options. When `true` (default), matches non-consecutive characters (e.g., "ga" matches "Grapes" and "Green Apple"). When `false`, uses substring matching only.
+
+1. ```ts
    highlightMatches: boolean = true
    ```
 
    Whether to highlight matching text in dropdown options.
+
+1. ```ts
+   keepSelectedInDropdown: false | 'plain' | 'checkboxes' = false
+   ```
+
+   Controls whether selected options remain visible in dropdown. `false` (default) hides selected options. `'plain'` shows them with visual distinction. `'checkboxes'` prefixes each option with a checkbox.
+
+1. ```ts
+   selectAllOption: boolean | string = false
+   ```
+
+   Adds a "Select All" option at the top of the dropdown. `true` shows default label, or pass a custom string label.
+
+1. ```ts
+   liSelectAllClass: string = ''
+   ```
+
+   CSS class applied to the "Select All" `<li>` element.
 
 1. ```ts
    parseLabelsAsHtml: boolean = false
@@ -401,6 +433,12 @@ These are the core props you'll use in most cases:
    ```
 
    Whether selected options can be reordered by dragging.
+
+1. ```ts
+   selectedFlipParams: FlipParams = { duration: 100 }
+   ```
+
+   Animation parameters for the [Svelte flip animation](https://svelte.dev/docs/svelte/svelte-animate) when reordering selected options via drag-and-drop. Set `{ duration: 0 }` to disable animation. Accepts `duration`, `delay`, and `easing` properties.
 
 ### Message Props
 
