@@ -424,6 +424,39 @@ test.describe(`multiselect`, () => {
     expect(last_food?.trim()).toBe(foods.at(-1))
   })
 
+  // https://github.com/janosh/svelte-multiselect/issues/357
+  test(`keyboard navigation is not affected by mouse position after scroll`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    await page.click(`#foods input[autocomplete]`)
+
+    // Navigate down to the 5th option (index 4)
+    for (let idx = 0; idx < 5; idx++) {
+      await page.keyboard.press(`ArrowDown`)
+    }
+
+    // Check current active option before mouseover
+    const active_before = await page.textContent(`#foods ul.options > li.active`)
+
+    // Simulate what happens when scroll triggers mouseover on a different element
+    // by directly dispatching a mouseover event WITHOUT moving the mouse
+    await page.evaluate(() => {
+      const first_option = document.querySelector(`#foods ul.options > li`)
+      if (first_option) {
+        // Dispatch mouseover without mousemove - simulates scroll under static cursor
+        first_option.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
+      }
+    })
+
+    // Check if mouseover changed the active option (it shouldn't with the fix)
+    const active_after_hover = await page.textContent(`#foods ul.options > li.active`)
+
+    // With the fix: active option should NOT change after mouseover
+    expect(
+      active_after_hover?.trim(),
+      `mouseover should not change active option during keyboard navigation`,
+    ).toBe(active_before?.trim())
+  })
+
   test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
 

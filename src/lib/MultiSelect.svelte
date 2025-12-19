@@ -160,6 +160,7 @@
   }) // sync value updates to selected
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
+  let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
 
   // Internal state for loadOptions feature (null = never loaded)
   let loaded_options = $state<Option[]>([])
@@ -440,6 +441,7 @@
     } // on up/down arrow keys: update active option
     else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
       event.stopPropagation()
+      ignore_hover = true // prevent scroll-triggered mouseover from changing activeIndex
       // if no option is active yet, but there are matching options, make first one active
       if (activeIndex === null && matchingOptions.length > 0) {
         event.preventDefault() // Prevent scroll only if we handle the key
@@ -988,6 +990,7 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
       onscroll={handle_options_scroll}
+      onmousemove={() => (ignore_hover = false)}
     >
       {#if selectAllOption && effective_options.length > 0 &&
         (maxSelect === null || maxSelect > 1)}
@@ -1037,7 +1040,7 @@
           class:disabled
           class="{liOptionClass} {active ? liActiveOptionClass : ``}"
           onmouseover={() => {
-            if (!disabled) activeIndex = idx
+            if (!disabled && !ignore_hover) activeIndex = idx
           }}
           onfocus={() => {
             if (!disabled) activeIndex = idx
@@ -1114,7 +1117,7 @@
             ? duplicateOptionMsg
             : ``}
             class:active={option_msg_is_active}
-            onmouseover={() => (option_msg_is_active = true)}
+            onmouseover={() => !ignore_hover && (option_msg_is_active = true)}
             onfocus={() => (option_msg_is_active = true)}
             onmouseout={() => (option_msg_is_active = false)}
             onblur={() => (option_msg_is_active = false)}
