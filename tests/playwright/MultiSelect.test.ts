@@ -429,13 +429,14 @@ test.describe(`multiselect`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     await page.click(`#foods input[autocomplete]`)
 
-    // Navigate down to the 5th option (index 4)
+    // Navigate down to the 5th option (index 4 = Lemon)
     for (let idx = 0; idx < 5; idx++) {
       await page.keyboard.press(`ArrowDown`)
     }
 
-    // Check current active option before mouseover
+    // Verify we're at the expected option after keyboard navigation
     const active_before = await page.textContent(`#foods ul.options > li.active`)
+    expect(active_before?.trim()).toBe(foods[4]) // Should be at Lemon (index 4)
 
     // Simulate what happens when scroll triggers mouseover on a different element
     // by directly dispatching a mouseover event WITHOUT moving the mouse
@@ -450,11 +451,9 @@ test.describe(`multiselect`, () => {
     // Check if mouseover changed the active option (it shouldn't with the fix)
     const active_after_hover = await page.textContent(`#foods ul.options > li.active`)
 
-    // With the fix: active option should NOT change after mouseover
-    expect(
-      active_after_hover?.trim(),
-      `mouseover should not change active option during keyboard navigation`,
-    ).toBe(active_before?.trim())
+    // With the fix: active option should NOT change after scroll-triggered mouseover
+    expect(active_after_hover?.trim()).toBe(foods[4]) // Still at Lemon
+    expect(active_after_hover?.trim()).not.toBe(foods[0]) // Not jumped to hovered option (Grapes)
   })
 
   test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
