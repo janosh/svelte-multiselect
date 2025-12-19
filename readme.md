@@ -172,10 +172,18 @@ These are the core props you'll use in most cases:
    ```
 
 1. ```ts
-   placeholder: string | null = null
+   placeholder: string | { text: string; persistent?: boolean } | null = null
    ```
 
-   Text shown when no options are selected.
+   Text shown when no options are selected. Can be a simple string or an object with extended options:
+
+   ```svelte
+   <!-- Simple string -->
+   <MultiSelect placeholder="Choose..." />
+
+   <!-- Object with persistent option (stays visible even when options selected) -->
+   <MultiSelect placeholder={{ text: 'Add items...', persistent: true }} />
+   ```
 
 1. ```ts
    disabled: boolean = false
@@ -401,6 +409,12 @@ These are the core props you'll use in most cases:
    ```
 
    Whether selected options can be reordered by dragging.
+
+1. ```ts
+   selectedFlipParams: FlipParams = { duration: 100 }
+   ```
+
+   Animation parameters for the [Svelte flip animation](https://svelte.dev/docs/svelte/svelte-animate) when reordering selected options via drag-and-drop. Set `{ duration: 0 }` to disable animation. Accepts `duration`, `delay`, and `easing` properties.
 
 ### Message Props
 

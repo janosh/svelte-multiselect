@@ -175,6 +175,14 @@
   let selected_keys = $derived(selected.map(key))
   let selected_labels = $derived(selected.map(get_label))
 
+  // Normalize placeholder prop (supports string or { text, persistent } object)
+  const placeholder_text = $derived(
+    typeof placeholder === `string` ? placeholder : placeholder?.text ?? null,
+  )
+  const placeholder_persistent = $derived(
+    typeof placeholder === `object` && placeholder?.persistent === true,
+  )
+
   // Helper to sort selected options (used by add() and select_all())
   function sort_selected(items: Option[]): Option[] {
     if (sortSelected === true) {
@@ -894,7 +902,7 @@
       {autocomplete}
       {inputmode}
       {pattern}
-      placeholder={selected.length === 0 ? placeholder : null}
+      placeholder={selected.length === 0 || placeholder_persistent ? placeholder_text : null}
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
       onmouseup={open_dropdown}
@@ -917,7 +925,7 @@
         disabled,
         invalid,
         id,
-        placeholder,
+        placeholder: placeholder_text,
         open,
         required,
       })}
