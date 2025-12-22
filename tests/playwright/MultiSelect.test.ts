@@ -449,29 +449,27 @@ test.describe(`multiselect`, () => {
   })
 
   test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
+    // Clear sessionStorage before navigating to start fresh
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
+    await page.evaluate(() => sessionStorage.clear())
+    await page.reload({ waitUntil: `networkidle` })
 
-    // Clear any pre-selected items first
-    const remove_buttons = page.locator(`#languages button[title^="Remove"]`)
-    const count = await remove_buttons.count()
-    for (let idx = 0; idx < count; idx++) {
-      await remove_buttons.first().click()
-    }
+    // Wait for default items to load (onMount populates from sessionStorage or defaults)
+    const selected = page.locator(`#languages ul.selected`)
+    await expect(selected).toContainText(`Python`) // default item
 
-    // Open dropdown and wait for it to be visible
+    // Open dropdown and select additional items
     await page.click(`#languages input[autocomplete]`)
-    await page.locator(`#languages ul.options`).waitFor({ state: `visible` })
+    await expect(page.locator(`#languages ul.options`)).toBeVisible()
 
-    await page.locator(`#languages ul.options li:has-text("Haskell")`).first().click()
-
-    await page.fill(`#languages input[autocomplete]`, `java`)
-    await page.locator(`#languages ul.options li:has-text("JavaScript")`).first().click()
+    // Select Ruby (not in defaults)
+    await page.locator(`#languages ul.options li:has-text("Ruby")`).first().click()
 
     await page.reload()
 
-    const selected = page.locator(`#languages ul.selected`)
-    await expect(selected).toContainText(`Haskell`)
-    await expect(selected).toContainText(`JavaScript`)
+    // Verify Ruby persisted along with defaults
+    await expect(selected).toContainText(`Ruby`)
+    await expect(selected).toContainText(`Python`)
   })
 })
 
