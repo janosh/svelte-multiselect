@@ -102,15 +102,14 @@ test.describe(`fuzzy matching`, () => {
 test.describe(`input`, () => {
   test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
-    expect(await page.$(`div.multiselect > ul.options.hidden`)).toBeTruthy()
-    expect(await page.$(`div.multiselect.open`)).toBeNull()
+    const dropdown = page.locator(`div.multiselect > ul.options`)
+    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(page.locator(`div.multiselect.open`)).toHaveCount(0)
 
     await page.click(`#foods input[autocomplete]`)
 
-    expect(await page.$(`div.multiselect.open > ul.options.hidden`)).toBeNull()
-
-    const options = page.locator(`div.multiselect.open > ul.options`)
-    await expect(options).toBeVisible()
+    await expect(dropdown).not.toHaveClass(/hidden/)
+    await expect(dropdown).toBeVisible()
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/289
@@ -166,10 +165,9 @@ test.describe(`input`, () => {
 
     await page.fill(`#foods input[autocomplete]`, `Pineapple`)
 
-    const ul_selector = `div.multiselect.open > ul.options`
-    expect(await page.$$(`${ul_selector} > li`)).toHaveLength(1)
-    const text = await page.textContent(ul_selector)
-    expect(text?.trim()).toBe(`🍍 Pineapple`)
+    const options = page.locator(`div.multiselect.open > ul.options`)
+    await expect(options.locator(`li`)).toHaveCount(1)
+    await expect(options).toHaveText(`🍍 Pineapple`)
   })
 })
 
@@ -182,10 +180,9 @@ test.describe(`remove single button`, () => {
 
     await page.click(`button[title='Remove 🍌 Banana']`)
 
-    const selected = await page.$$(
-      `div.multiselect > ul.selected > li > button`,
-    )
-    expect(selected.length).toBe(0)
+    await expect(
+      page.locator(`div.multiselect > ul.selected > li > button`),
+    ).toHaveCount(0)
   })
 })
 
@@ -212,18 +209,13 @@ test.describe(`remove all button`, () => {
   })
 
   test(`only appears if more than 1 option is selected and removes all selected`, async ({ page }) => {
-    let selected_items = await page.$$(
-      `div.multiselect > ul.selected > li > button`,
-    )
-    expect(selected_items).toHaveLength(2)
+    const selected_buttons = page.locator(`div.multiselect > ul.selected > li > button`)
+    await expect(selected_buttons).toHaveCount(2)
 
     await page.click(`button.remove-all`)
-    expect(await page.$(`button.remove-all`)).toBeNull() // remove-all button is hidden when nothing selected
+    await expect(page.locator(`button.remove-all`)).toBeHidden() // remove-all button is hidden when nothing selected
 
-    selected_items = await page.$$(
-      `div.multiselect > ul.selected > li > button`,
-    )
-    expect(selected_items).toHaveLength(0)
+    await expect(selected_buttons).toHaveCount(0)
   })
 
   test(`has custom title`, async ({ page }) => {
@@ -269,8 +261,7 @@ test.describe(`external CSS classes`, () => {
         await page.hover(`ul.options > li:last-child`) // hover last option to give it active state
       }
 
-      const node = await page.$(`${selector}.${cls}`)
-      expect(node).toBeTruthy()
+      await expect(page.locator(`${selector}.${cls}`)).toBeVisible()
     })
   }
 })
@@ -281,33 +272,33 @@ test.describe(`disabled multiselect`, () => {
   })
 
   test(`has attribute aria-disabled`, async ({ page }) => {
-    const div = await page.$(`div.multiselect.disabled ul.options`)
-    expect(await div?.getAttribute(`aria-disabled`)).toBe(`true`)
+    await expect(page.locator(`div.multiselect.disabled ul.options`)).toHaveAttribute(
+      `aria-disabled`,
+      `true`,
+    )
   })
 
   test(`has disabled title`, async ({ page }) => {
-    const div = await page.$(`div.multiselect.disabled`)
-    expect(await div?.getAttribute(`title`)).toBe(
+    await expect(page.locator(`div.multiselect.disabled`)).toHaveAttribute(
+      `title`,
       `Super special disabled message (shows on hover)`,
     )
   })
 
   test(`has input attribute disabled`, async ({ page }) => {
-    const input = await page.$(`.disabled input[autocomplete]`)
-    expect(await input?.isDisabled()).toBe(true)
+    await expect(page.locator(`.disabled input[autocomplete]`)).toBeDisabled()
   })
 
   test(`renders no buttons`, async ({ page }) => {
-    expect(
-      await page.$$(`#disabled-input-title div.multiselect button`),
-    ).toHaveLength(0)
+    await expect(
+      page.locator(`#disabled-input-title div.multiselect button`),
+    ).toHaveCount(0)
   })
 
   test(`renders disabled snippet`, async ({ page }) => {
-    const span = await page.locator(
-      `span:has-text('This component is disabled. It won't even open.')`,
-    )
-    expect(span).toBeTruthy()
+    await expect(
+      page.locator(`span:has-text('This component is disabled. It won't even open.')`),
+    ).toBeVisible()
   })
 })
 
@@ -380,14 +371,13 @@ test.describe(`multiselect`, () => {
       await page.click(`#foods input[autocomplete]`)
       await page.click(`ul.options > li >> nth=${idx}`)
     }
-    let selected_text = await page.textContent(`div.multiselect > ul.selected`)
+    const selected = page.locator(`div.multiselect > ul.selected`)
     for (const food of `Pear Pineapple Watermelon`.split(` `)) {
-      expect(selected_text).toContain(food)
+      await expect(selected).toContainText(food)
     }
 
     await page.click(`.remove-all`)
-    selected_text = await page.textContent(`div.multiselect > ul.selected`)
-    expect(selected_text?.trim()).toBe(``)
+    await expect(selected).toHaveText(``)
 
     // repeatedly select 1st option
     // TODO fix this, passes when run in isolation but not in suite
@@ -407,21 +397,19 @@ test.describe(`multiselect`, () => {
 
     await page.click(`#foods input[autocomplete]`)
 
+    const active_option = page.locator(`ul.options > li.active`)
     for (const expected_fruit of foods) {
       await page.keyboard.press(`ArrowDown`)
-      const actual_food = await page.textContent(`ul.options > li.active`)
-      expect(actual_food?.trim()).toBe(expected_fruit)
+      await expect(active_option).toHaveText(expected_fruit)
     }
 
     // test loop back to first option
     await page.keyboard.press(`ArrowDown`)
-    const first_food = await page.textContent(`ul.options > li.active`)
-    expect(first_food?.trim()).toBe(foods[0])
+    await expect(active_option).toHaveText(foods[0])
 
     // test loop back to last option
     await page.keyboard.press(`ArrowUp`)
-    const last_food = await page.textContent(`ul.options > li.active`)
-    expect(last_food?.trim()).toBe(foods.at(-1))
+    await expect(active_option).toHaveText(foods.at(-1) as string)
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/357
@@ -433,8 +421,8 @@ test.describe(`multiselect`, () => {
     for (let idx = 0; idx < 3; idx++) {
       await page.keyboard.press(`ArrowDown`)
     }
-    const active_after_keys = await page.textContent(`#foods ul.options > li.active`)
-    expect(active_after_keys?.trim()).toBe(foods[2]) // Watermelon
+    const active_option = page.locator(`#foods ul.options > li.active`)
+    await expect(active_option).toHaveText(foods[2]) // Watermelon
 
     // Simulate scroll-triggered mouseover (no actual mouse movement)
     await page.evaluate(() => {
@@ -443,9 +431,7 @@ test.describe(`multiselect`, () => {
     })
 
     // Active should NOT change from synthetic mouseover
-    const active_after_synthetic_hover = await page.textContent(
-      `#foods ul.options > li.active`,
-    )
+    const active_after_synthetic_hover = await active_option.textContent()
     expect(active_after_synthetic_hover?.trim()).toBe(foods[2]) // Still Watermelon
 
     // Now move mouse for real - this should re-enable hover via mousemove on ul.options
@@ -459,10 +445,7 @@ test.describe(`multiselect`, () => {
     })
 
     // Active should now follow the mouse position
-    const active_after_real_hover = await page.textContent(
-      `#foods ul.options > li.active`,
-    )
-    expect(active_after_real_hover?.trim()).toBe(foods[4]) // Lemon
+    await expect(active_option).toHaveText(foods[4]) // Lemon
   })
 
   test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
@@ -500,21 +483,21 @@ test.describe(`allowUserOptions`, () => {
     await page.click(selector)
 
     // ensure custom option initially not present
-    let li_handle = await page.$(`div.multiselect > ul.selected >> text=Durian`)
-    expect(li_handle).toBeNull()
+    const durian_selected = page.locator(`div.multiselect > ul.selected >> text=Durian`)
+    await expect(durian_selected).toHaveCount(0)
 
     // create custom option
     await page.fill(selector, `Durian`)
     await page.press(selector, `Enter`)
 
     // ensure custom option now present
-    li_handle = await page.$(`div.multiselect > ul.selected >> text=Durian`)
-    expect(li_handle).toBeTruthy()
+    await expect(durian_selected).toBeVisible()
 
     // ensure custom option was not added to options
     await page.fill(selector, `Durian`)
-    li_handle = await page.$(`div.multiselect > ul.option >> text=Durian`)
-    expect(li_handle).toBeNull()
+    await expect(page.locator(`div.multiselect > ul.option >> text=Durian`)).toHaveCount(
+      0,
+    )
   })
 
   test(
@@ -537,8 +520,7 @@ test.describe(`allowUserOptions`, () => {
 
       await page.click(`ul.options >> text=foobar`)
 
-      const ul_selected = await page.$(`ul.selected >> text=foobar`)
-      expect(ul_selected).toBeTruthy()
+      await expect(page.locator(`ul.selected >> text=foobar`)).toBeVisible()
     },
   )
 
@@ -552,10 +534,9 @@ test.describe(`allowUserOptions`, () => {
     // enter some search text so no options match, should cause createOptionMsg to be shown
     await page.fill(selector, `foobar`)
 
-    const custom_msg_li = await page.$(
-      `text=True polyglots can enter custom languages!`,
-    )
-    expect(custom_msg_li).toBeTruthy()
+    await expect(
+      page.locator(`text=True polyglots can enter custom languages!`),
+    ).toBeVisible()
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/89
@@ -574,8 +555,7 @@ test.describe(`allowUserOptions`, () => {
     await page.fill(selector, `foobar`)
     await page.press(selector, `Enter`) // create custom option
 
-    const ul_selected = await page.$(`ul.selected >> text=foobar`)
-    expect(ul_selected).toBeTruthy()
+    await expect(page.locator(`ul.selected >> text=foobar`)).toBeVisible()
   })
 
   test(`can create custom option starting from empty options array`, async ({ page }) => {
@@ -595,8 +575,7 @@ test.describe(`allowUserOptions`, () => {
     await page.fill(selector, `42`)
     await page.press(selector, `Enter`) // 2nd create custom option
 
-    const ul_selected = await page.$(`ul.selected >> text=42`)
-    expect(ul_selected).toBeTruthy()
+    await expect(page.locator(`ul.selected >> text=42`)).toBeVisible()
 
     const logged_err_msg = logs.some((msg) =>
       msg.includes(`MultiSelect received no options`)
@@ -617,10 +596,7 @@ test.describe(`sortSelected`, () => {
       await page.click(`ul.options >> text=${label}`)
     }
 
-    const selected = await page.textContent(
-      `div.multiselect.open > ul.selected`,
-    )
-    expect(selected?.trim()).toBe(
+    await expect(page.locator(`div.multiselect.open > ul.selected`)).toHaveText(
       `Angular Django Laravel Polymer React Svelte Vue`,
     )
   })
@@ -633,10 +609,7 @@ test.describe(`sortSelected`, () => {
       await page.click(`ul.options:visible >> text=${label}`)
     }
 
-    const selected = await page.textContent(
-      `div.multiselect.open > ul.selected`,
-    )
-    expect(selected?.trim()).toBe(
+    await expect(page.locator(`div.multiselect.open > ul.selected`)).toHaveText(
       `Angular Polymer React Svelte Vue Laravel Django`,
     )
   })
@@ -646,10 +619,9 @@ test.describe(`parseLabelsAsHtml`, () => {
   test(`renders anchor tags as links`, async ({ page }) => {
     await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
 
-    const anchor = await page.$(
-      `a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`,
-    )
-    expect(anchor).toBeTruthy()
+    await expect(
+      page.locator(`a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`),
+    ).toBeVisible()
   })
 
   test(`to raise error if combined with allowUserOptions`, async ({ page }) => {
@@ -682,18 +654,16 @@ test.describe(`maxSelect`, () => {
   })
 
   test(`options dropdown disappears when reaching maxSelect items`, async ({ page }) => {
-    const ul_selector = `#languages ul.options`
+    const dropdown = page.locator(`#languages ul.options`)
 
-    await expect(page.locator(ul_selector)).toBeHidden()
-    expect(await page.getAttribute(ul_selector, `class`)).toContain(`hidden`)
+    await expect(dropdown).toBeHidden()
+    await expect(dropdown).toHaveClass(/hidden/)
   })
 
   test(`no more options can be added after reaching maxSelect items`, async ({ page }) => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
-    let selected_lis = await page.$$(
-      `#languages ul.selected > li[aria-selected=true]`,
-    )
-    expect(selected_lis).toHaveLength(max_select)
+    const selected_items = page.locator(`#languages ul.selected > li[aria-selected=true]`)
+    await expect(selected_items).toHaveCount(max_select)
 
     // Try to add another option - should not work
     await page.click(`#languages input[autocomplete]`) // re-open options dropdown
@@ -702,10 +672,7 @@ test.describe(`maxSelect`, () => {
     await page.click(`ul.options > li >> nth=0`)
 
     // Verify selected count hasn't changed (still maxSelect)
-    selected_lis = await page.$$(
-      `#languages ul.selected > li[aria-selected=true]`,
-    )
-    expect(selected_lis).toHaveLength(max_select)
+    await expect(selected_items).toHaveCount(max_select)
   })
 })
 
@@ -762,15 +729,14 @@ test.describe(`snippets`, () => {
 // https://github.com/janosh/svelte-multiselect/issues/176
 test(`dragging selected options across each other changes their order`, async ({ page }) => {
   await page.goto(`/persistent`, { waitUntil: `networkidle` })
-  let selected = await page.textContent(`ul.selected`)
-  expect(selected?.trim()).toBe(`1  Python 2  TypeScript 3  C 4  Haskell`)
+  const selected = page.locator(`ul.selected`)
+  await expect(selected).toHaveText(`1  Python 2  TypeScript 3  C 4  Haskell`)
 
   // swap selected options 1 and 2
-  const li1 = await page.locator(`ul.selected li:nth-child(1)`)
-  const li2 = await page.locator(`ul.selected li:nth-child(2)`)
-  await li1?.dragTo(li2)
-  selected = await page.textContent(`ul.selected`)
-  expect(selected?.trim()).toBe(`1  TypeScript 2  Python 3  C 4  Haskell`)
+  const li1 = page.locator(`ul.selected li:nth-child(1)`)
+  const li2 = page.locator(`ul.selected li:nth-child(2)`)
+  await li1.dragTo(li2)
+  await expect(selected).toHaveText(`1  TypeScript 2  Python 3  C 4  Haskell`)
 })
 
 test.describe(`portal feature`, () => {
