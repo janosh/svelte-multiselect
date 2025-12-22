@@ -474,7 +474,8 @@ test.describe(`multiselect`, () => {
 
     await page.fill(`#languages input[autocomplete]`, `java`)
 
-    await page.click(`text=JavaScript`)
+    // Wait for the filtered option to be stable before clicking
+    await page.locator(`ul.options li:has-text("JavaScript")`).first().click()
 
     await page.reload()
 
