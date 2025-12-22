@@ -470,12 +470,14 @@ test.describe(`multiselect`, () => {
 
     await page.click(`#languages input[autocomplete]`)
 
-    await page.click(`text=Haskell >> nth=0`)
+    await page.locator(`ul.options li:has-text("Haskell")`).first().click()
 
     await page.fill(`#languages input[autocomplete]`, `java`)
 
-    // Wait for the filtered option to be stable before clicking
-    await page.locator(`ul.options li:has-text("JavaScript")`).first().click()
+    // Wait for the dropdown to filter and stabilize before clicking
+    const js_option = page.locator(`ul.options li:has-text("JavaScript")`).first()
+    await js_option.waitFor({ state: `visible` })
+    await js_option.click()
 
     await page.reload()
 
