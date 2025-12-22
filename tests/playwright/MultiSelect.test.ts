@@ -468,24 +468,27 @@ test.describe(`multiselect`, () => {
   test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
 
-    await page.click(`#languages input[autocomplete]`)
+    // Clear any pre-selected items first
+    const remove_buttons = page.locator(`#languages button[title^="Remove"]`)
+    const count = await remove_buttons.count()
+    for (let idx = 0; idx < count; idx++) {
+      await remove_buttons.first().click()
+    }
 
-    // Wait for dropdown to be visible before selecting options
-    const haskell_option = page.locator(`ul.options li:has-text("Haskell")`).first()
-    await haskell_option.waitFor({ state: `visible` })
-    await haskell_option.click()
+    // Open dropdown and wait for it to be visible
+    await page.click(`#languages input[autocomplete]`)
+    await page.locator(`#languages ul.options`).waitFor({ state: `visible` })
+
+    await page.locator(`#languages ul.options li:has-text("Haskell")`).first().click()
 
     await page.fill(`#languages input[autocomplete]`, `java`)
-
-    const js_option = page.locator(`ul.options li:has-text("JavaScript")`).first()
-    await js_option.waitFor({ state: `visible` })
-    await js_option.click()
+    await page.locator(`#languages ul.options li:has-text("JavaScript")`).first().click()
 
     await page.reload()
 
-    const selected_text = await page.textContent(`text=4 Haskell 5 JavaScript`)
-    expect(selected_text).toContain(`JavaScript`)
-    expect(selected_text).toContain(`Haskell`)
+    const selected = page.locator(`#languages ul.selected`)
+    await expect(selected).toContainText(`Haskell`)
+    await expect(selected).toContainText(`JavaScript`)
   })
 })
 
