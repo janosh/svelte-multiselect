@@ -432,17 +432,14 @@
       event.stopPropagation()
       close_dropdown(event)
       searchText = ``
-    } // on enter key: toggle active option and reset search text
+    } // on enter key: toggle active option
     else if (event.key === `Enter`) {
       event.stopPropagation()
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
         if (selected_keys.includes(key(activeOption))) {
-          if (can_remove) {
-            remove(activeOption, event)
-            searchText = `` // always clear on remove (resetFilterOnAdd only applies to add operations)
-          }
+          if (can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
