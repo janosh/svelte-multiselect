@@ -261,7 +261,7 @@ test.describe(`external CSS classes`, () => {
         await page.hover(`ul.options > li:last-child`) // hover last option to give it active state
       }
 
-      await expect(page.locator(`${selector}.${cls}`)).toBeVisible()
+      await expect(page.locator(`${selector}.${cls}`).first()).toBeVisible()
     })
   }
 })
@@ -297,7 +297,7 @@ test.describe(`disabled multiselect`, () => {
 
   test(`renders disabled snippet`, async ({ page }) => {
     await expect(
-      page.locator(`span:has-text('This component is disabled. It won't even open.')`),
+      page.locator(`span`).filter({ hasText: `This component is disabled` }),
     ).toBeVisible()
   })
 })
@@ -533,8 +533,8 @@ test.describe(`allowUserOptions`, () => {
     await page.fill(selector, `foobar`)
 
     await expect(
-      page.locator(`text=True polyglots can enter custom languages!`),
-    ).toBeVisible()
+      page.locator(`#languages ul.options li.user-msg`),
+    ).toContainText(`True polyglots can enter custom languages!`)
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/89
@@ -616,6 +616,10 @@ test.describe(`sortSelected`, () => {
 test.describe(`parseLabelsAsHtml`, () => {
   test(`renders anchor tags as links`, async ({ page }) => {
     await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
+
+    // Open the dropdown to see the anchor in options
+    await page.click(`input[autocomplete]`)
+    await expect(page.locator(`ul.options`)).toBeVisible()
 
     await expect(
       page.locator(`a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`),
