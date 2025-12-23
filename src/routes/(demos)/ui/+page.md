@@ -44,8 +44,8 @@ This page is used for Playwright testing to ensure
   - invisible `input.form-control` is `aria-hidden`
 - `closeDropdownOnSelect`: when `true`, the input is not focused when an option is selected and the dropdown is closed
 
-<!-- TODO figure out why Playwright test 'loops through the dropdown list with arrow keys making...'
-depends on `html { scroll-behavior: smooth; }` -->
+<!-- Smooth scroll is required for arrow key navigation tests to work correctly.
+The Playwright test 'loops through the dropdown list with arrow keys' depends on this. -->
 <style>
   :global(html) {
     scroll-behavior: smooth;

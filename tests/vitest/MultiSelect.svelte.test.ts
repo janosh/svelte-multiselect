@@ -1014,9 +1014,9 @@ test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint 
   expect(selected_items.length).toBe(1)
 })
 
-test(`resetFilterOnAdd=false still clears searchText when removing via Enter key`, async () => {
-  // This test verifies that resetFilterOnAdd only applies to add operations,
-  // not remove operations (matching remove_all() behavior)
+test(`Enter key deselection preserves searchText (matching mouse behavior)`, async () => {
+  // This test verifies that deselecting with Enter key preserves searchText,
+  // consistent with mouse click deselection behavior (fixes #362)
   mount(MultiSelect, {
     target: document.body,
     props: {
@@ -1041,9 +1041,8 @@ test(`resetFilterOnAdd=false still clears searchText when removing via Enter key
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
   await tick()
 
-  // searchText should be cleared even though resetFilterOnAdd=false
-  // because resetFilterOnAdd only applies to add operations
-  expect(input.value).toBe(``)
+  // searchText should be preserved (matching mouse click deselection behavior)
+  expect(input.value).toBe(`1`)
 
   // Verify the option was removed
   const selected_items = document.querySelectorAll(`ul.selected li`)

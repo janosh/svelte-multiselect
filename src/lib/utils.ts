@@ -1,12 +1,16 @@
 import type { Option } from './types'
 
+// Type guard for checking if a value is a non-null object
+export const is_object = (val: unknown): val is Record<string, unknown> =>
+  typeof val === `object` && val !== null
+
 // Get the label key from an option object or the option itself
 // if it's a string or number
 export const get_label = (opt: Option) => {
-  if (opt instanceof Object) {
+  if (is_object(opt)) {
     if (opt.label === undefined) {
       const opt_str = JSON.stringify(opt)
-      console.error(`MultiSelect option ${opt_str} is an object but has no label key`)
+      console.error(`MultiSelect: option is an object but has no label key`, opt_str)
     }
     return opt.label
   }
@@ -29,9 +33,7 @@ export function get_style(
     if (typeof option.style === `object`) {
       if (key && key in option.style) return option.style[key] ?? ``
       else {
-        console.error(
-          `Invalid style object for option=${JSON.stringify(option)}`,
-        )
+        console.error(`MultiSelect: invalid style object for option`, option)
       }
     }
   }

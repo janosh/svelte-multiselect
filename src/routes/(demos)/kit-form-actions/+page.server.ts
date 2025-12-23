@@ -1,9 +1,9 @@
 import { fail } from '@sveltejs/kit'
 import type { Actions } from './$types'
 
-// remove leading underscore to activate this example
-// needs to be disabled for building static site
-// TODO is there a way to make this work on static site?
+// Form actions require a server and cannot work on static sites.
+// The underscore prefix disables this export during static build.
+// To test locally with `pnpm dev`, rename `_actions` to `actions`.
 export const _actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
