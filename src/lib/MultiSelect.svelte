@@ -7,7 +7,7 @@
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
   import type { MultiSelectProps } from './types'
-  import { fuzzy_match, get_label, get_style } from './utils'
+  import { fuzzy_match, get_label, get_style, is_object } from './utils'
   import Wiggle from './Wiggle.svelte'
 
   let {
@@ -203,38 +203,38 @@
     } else {
       // error on empty options if user is not allowed to create custom options and loading is false
       // and component is not disabled and allowEmpty is false
-      console.error(`MultiSelect received no options`)
+      console.error(`MultiSelect: received no options`)
     }
   }
   if (maxSelect !== null && maxSelect < 1) {
     console.error(
-      `MultiSelect's maxSelect must be null or positive integer, got ${maxSelect}`,
+      `MultiSelect: maxSelect must be null or positive integer, got ${maxSelect}`,
     )
   }
   if (!Array.isArray(selected)) {
     console.error(
-      `MultiSelect's selected prop should always be an array, got ${selected}`,
+      `MultiSelect: selected prop should always be an array, got ${selected}`,
     )
   }
   if (maxSelect && typeof required === `number` && required > maxSelect) {
     console.error(
-      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
+      `MultiSelect: maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
     )
   }
   if (parseLabelsAsHtml && allowUserOptions) {
     console.warn(
-      `Don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
+      `MultiSelect: don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
     )
   }
   if (sortSelected && selectedOptionsDraggable) {
     console.warn(
-      `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any ` +
+      `MultiSelect: sortSelected and selectedOptionsDraggable should not be combined as any ` +
         `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
     )
   }
   if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
     console.error(
-      `MultiSelect has allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+      `MultiSelect: allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
         `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
     )
   }
@@ -243,7 +243,7 @@
     (typeof maxOptions != `number` || maxOptions < 0 || maxOptions % 1 != 0)
   ) {
     console.error(
-      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`,
+      `MultiSelect: maxOptions must be undefined or a positive integer, got ${maxOptions}`,
     )
   }
 
@@ -277,10 +277,6 @@
 
   // Helper to check if removing an option would violate minSelect constraint
   const can_remove = $derived(minSelect === null || selected.length > minSelect)
-
-  // Helper to check if an option is an object (not a primitive)
-  const is_object = (opt: unknown): opt is Record<string, unknown> =>
-    typeof opt === `object` && opt !== null
 
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
   function toggle_option(option_to_toggle: Option, event: Event) {
@@ -342,7 +338,7 @@
 
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
       if ([``, undefined, null].includes(option_to_add as string | null)) {
-        console.error(`MultiSelect: encountered falsy option ${option_to_add}`)
+        console.error(`MultiSelect: encountered falsy option`, option_to_add)
         return
       }
       // for maxSelect = 1 we always replace current option with new one
@@ -377,11 +373,12 @@
       ) as Option
     }
     if (option_removed === undefined) {
-      return console.error(
-        `Multiselect can't remove selected option ${
+      console.error(
+        `MultiSelect: can't remove option ${
           JSON.stringify(option_to_drop)
         }, not found in selected list`,
       )
+      return
     }
 
     selected = [...selected] // trigger Svelte rerender
@@ -425,6 +422,44 @@
     } else input?.focus()
   }
 
+  // Check if a user message (create option, duplicate warning, no match) is visible
+  const has_user_msg = $derived(
+    searchText.length > 0 && Boolean(
+      (allowUserOptions && createOptionMsg) ||
+        (!duplicates && selected_labels.includes(searchText)) ||
+        (matchingOptions.length === 0 && noMatchingOptionsMsg),
+    ),
+  )
+
+  // Handle arrow key navigation through options (uses module-scope `has_user_msg`)
+  async function handle_arrow_navigation(direction: 1 | -1) {
+    ignore_hover = true
+
+    // toggle user message when no options match but user can create
+    if (allowUserOptions && !matchingOptions.length && searchText.length > 0) {
+      option_msg_is_active = !option_msg_is_active
+      return
+    }
+    if (activeIndex === null && !matchingOptions.length) return // nothing to navigate
+
+    // activate first option or navigate with wrap-around
+    if (activeIndex === null) {
+      activeIndex = 0
+    } else {
+      const total = matchingOptions.length + (has_user_msg ? 1 : 0)
+      activeIndex = (activeIndex + direction + total) % total // +total handles negative mod
+    }
+
+    // update active state based on new index
+    option_msg_is_active = has_user_msg && activeIndex === matchingOptions.length
+    activeOption = option_msg_is_active ? null : matchingOptions[activeIndex] ?? null
+
+    if (autoScroll) {
+      await tick()
+      document.querySelector(`ul.options > li.active`)?.scrollIntoViewIfNeeded?.()
+    }
+  }
+
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
     // on escape or tab out of input: close options dropdown and reset search text
@@ -432,17 +467,14 @@
       event.stopPropagation()
       close_dropdown(event)
       searchText = ``
-    } // on enter key: toggle active option and reset search text
+    } // on enter key: toggle active option
     else if (event.key === `Enter`) {
       event.stopPropagation()
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
         if (selected_keys.includes(key(activeOption))) {
-          if (can_remove) {
-            remove(activeOption, event)
-            searchText = `` // always clear on remove (resetFilterOnAdd only applies to add operations)
-          }
+          if (can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
       } else if (allowUserOptions && searchText.length > 0) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -453,58 +485,10 @@
         open_dropdown(event)
       }
     } // on up/down arrow keys: update active option
-    else if ([`ArrowDown`, `ArrowUp`].includes(event.key)) {
+    else if (event.key === `ArrowDown` || event.key === `ArrowUp`) {
       event.stopPropagation()
-      ignore_hover = true // prevent scroll-triggered mouseover from changing activeIndex
-      // if no option is active yet, but there are matching options, make first one active
-      if (activeIndex === null && matchingOptions.length > 0) {
-        event.preventDefault() // Prevent scroll only if we handle the key
-        activeIndex = 0
-        return
-      } else if (
-        allowUserOptions && !matchingOptions.length && searchText.length > 0
-      ) {
-        event.preventDefault() // Prevent scroll only if we handle the key
-        // if allowUserOptions is truthy and user entered text but no options match, we make
-        // <li>{addUserMsg}</li> active on keydown (or toggle it if already active)
-        option_msg_is_active = !option_msg_is_active
-        return
-      } else if (activeIndex === null) {
-        // if no option is active and no options are matching, do nothing
-        return
-      }
-      event.preventDefault() // Prevent scroll only if we handle the key
-      // if none of the above special cases apply, we make next/prev option
-      // active with wrap around at both ends
-      const increment = event.key === `ArrowUp` ? -1 : 1
-
-      // Include user message in total count if it exists
-      const has_user_msg = searchText && (
-        (allowUserOptions && createOptionMsg) ||
-        (!duplicates && selected_labels.includes(searchText)) ||
-        (matchingOptions.length === 0 && noMatchingOptionsMsg)
-      )
-      const total_items = matchingOptions.length + (has_user_msg ? 1 : 0)
-
-      activeIndex = (activeIndex + increment) % total_items
-      // in JS % behaves like remainder operator, not real modulo, so negative numbers stay negative
-      // need to do manual wrap around at 0
-      if (activeIndex < 0) activeIndex = total_items - 1
-
-      // Handle user message activation
-      if (has_user_msg && activeIndex === matchingOptions.length) {
-        option_msg_is_active = true
-        activeOption = null
-      } else {
-        option_msg_is_active = false
-        activeOption = matchingOptions[activeIndex] ?? null
-      }
-
-      if (autoScroll) {
-        await tick()
-        const li = document.querySelector(`ul.options > li.active`)
-        if (li) li.scrollIntoViewIfNeeded?.()
-      }
+      event.preventDefault()
+      await handle_arrow_navigation(event.key === `ArrowUp` ? -1 : 1)
     } // on backspace key: remove last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       event.stopPropagation()
@@ -731,7 +715,7 @@
       load_options_has_more = result.hasMore
       load_options_last_search = search
     } catch (err) {
-      console.error(`MultiSelect loadOptions error:`, err)
+      console.error(`MultiSelect: loadOptions error:`, err)
     } finally {
       load_options_loading = false
     }
