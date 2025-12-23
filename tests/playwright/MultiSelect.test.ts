@@ -493,9 +493,9 @@ test.describe(`allowUserOptions`, () => {
 
     // ensure custom option was not added to options
     await page.fill(selector, `Durian`)
-    await expect(page.locator(`div.multiselect > ul.option >> text=Durian`)).toHaveCount(
-      0,
-    )
+    await expect(
+      page.locator(`div.multiselect > ul.options >> text=Durian`),
+    ).toHaveCount(0)
   })
 
   test(
