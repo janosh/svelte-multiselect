@@ -1103,12 +1103,12 @@
         {@const no_match = Boolean(matchingOptions?.length === 0 && noMatchingOptionsMsg) &&
         `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
-        {#if msgType}
-          {@const msg = {
+        {@const msg = msgType && {
         dupe: duplicateOptionMsg,
         create: createOptionMsg,
         'no-match': noMatchingOptionsMsg,
       }[msgType]}
+        {#if msg}
           <li
             onclick={(event) => {
               if (msgType === `create` && allowUserOptions) {
