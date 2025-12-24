@@ -1146,7 +1146,7 @@ test.each([
     expect(console.error).toHaveBeenCalledTimes(expected)
     if (expected > 0) {
       expect(console.error).toHaveBeenCalledWith(
-        `MultiSelect received no options`,
+        `MultiSelect: received no options`,
       )
     }
   },
@@ -1356,8 +1356,8 @@ test.each([[true], [false]])(
     if (sortSelected) {
       expect(console.warn).toHaveBeenCalledTimes(1)
       expect(console.warn).toHaveBeenCalledWith(
-        `MultiSelect's sortSelected and selectedOptionsDraggable should not be combined as any user` +
-          ` re-orderings of selected options will be undone by sortSelected on component re-renders.`,
+        `MultiSelect: sortSelected and selectedOptionsDraggable should not be combined as any ` +
+          `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
       )
     } else {
       expect(console.warn).toHaveBeenCalledTimes(0)
@@ -1379,7 +1379,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
       if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
         expect(console.error).toHaveBeenCalledTimes(1)
         expect(console.error).toHaveBeenCalledWith(
-          `MultiSelect has allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+          `MultiSelect: allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
             `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
         )
       } else {
@@ -1404,7 +1404,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
         if (!allowEmpty && !disabled && !allowUserOptions) {
           expect(console.error).toHaveBeenCalledTimes(1)
           expect(console.error).toHaveBeenCalledWith(
-            `MultiSelect received no options`,
+            `MultiSelect: received no options`,
           )
         } else {
           expect(console.error).toHaveBeenCalledTimes(0)
@@ -1444,7 +1444,8 @@ test(`errors to console when option is an object but has no label key`, () => {
   })
 
   expect(console.error).toHaveBeenCalledWith(
-    `MultiSelect option {"foo":42} is an object but has no label key`,
+    `MultiSelect: option is an object but has no label key`,
+    `{"foo":42}`,
   )
 })
 
@@ -2013,7 +2014,7 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
 
     expect(console.error).toHaveBeenCalledTimes(1)
     expect(console.error).toHaveBeenCalledWith(
-      `MultiSelect's maxOptions must be undefined or a positive integer, got ${maxOptions}`,
+      `MultiSelect: maxOptions must be undefined or a positive integer, got ${maxOptions}`,
     )
   },
 )
@@ -2642,7 +2643,7 @@ describe(`loadOptions feature`, () => {
 
     // Error should be logged
     expect(console_error).toHaveBeenCalledWith(
-      `MultiSelect loadOptions error:`,
+      `MultiSelect: loadOptions error:`,
       expect.any(Error),
     )
     // Component should still function (dropdown visible)
