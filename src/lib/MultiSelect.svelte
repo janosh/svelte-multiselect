@@ -1,6 +1,6 @@
 <!-- eslint-disable-next-line @stylistic/quotes -- TS generics require string literals -->
 <script lang="ts" generics="Option extends import('./types').Option">
-  import { tick } from 'svelte'
+  import { tick, untrack } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import { highlight_matches } from './attachments'
@@ -53,7 +53,7 @@
     loading = false,
     matchingOptions = $bindable([]),
     maxOptions = undefined,
-    maxSelect = null,
+    maxSelect = $bindable(null),
     maxSelectMsg = (current, max) => (max > 1 ? `${current}/${max}` : ``),
     maxSelectMsgClass = ``,
     name = null,
@@ -150,16 +150,31 @@
       : true,
   )
 
+  // Helper to compare arrays/values for equality to avoid unnecessary updates
+  // Prevents infinite loops when value/selected are bound to reactive wrappers
+  // that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
+  function values_equal(val1: unknown, val2: unknown): boolean {
+    if (val1 === val2) return true
+    if (Array.isArray(val1) && Array.isArray(val2)) {
+      return val1.length === val2.length &&
+        val1.every((item, idx) => item === val2[idx])
+    }
+    return false
+  }
+
+  // Sync selected ↔ value bidirectionally. Use untrack to prevent each effect from
+  // reacting to changes in the "destination" value, and values_equal to prevent
+  // infinite loops with reactive wrappers that clone arrays. See issue #309.
   $effect.pre(() => {
-    // if maxSelect=1, value is the single item in selected (or null if selected is empty)
-    // this solves both https://github.com/janosh/svelte-multiselect/issues/86 and
-    // https://github.com/janosh/svelte-multiselect/issues/136
-    value = maxSelect === 1 ? (selected[0] ?? null) : selected
-  }) // sync selected updates to value
+    const new_value = maxSelect === 1 ? (selected[0] ?? null) : selected
+    if (!values_equal(untrack(() => value), new_value)) value = new_value
+  })
   $effect.pre(() => {
-    if (maxSelect === 1) selected = value ? [value as Option] : []
-    else selected = (value as Option[]) ?? []
-  }) // sync value updates to selected
+    const new_selected = maxSelect === 1
+      ? (value ? [value as Option] : [])
+      : (Array.isArray(value) ? value : [])
+    if (!values_equal(untrack(() => selected), new_selected)) selected = new_selected
+  })
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
