@@ -364,6 +364,30 @@ test.each([[null], [1]])(
   },
 )
 
+// Bug: value/selected should update when maxSelect changes at runtime
+test.each([
+  {
+    initial: null,
+    changed: 1,
+    selected: [1, 2, 3],
+    expectedValue: 1,
+    expectedSelected: [1],
+  },
+  { initial: 1, changed: null, selected: [1], expectedValue: [1], expectedSelected: [1] },
+])(`value updates when maxSelect changes from $initial to $changed`, async (params) => {
+  const select = mount(Test2WayBind, {
+    target: document.body,
+    props: { options: [1, 2, 3], selected: params.selected, maxSelect: params.initial },
+  })
+  await tick()
+
+  select.maxSelect = params.changed
+  await tick()
+
+  expect(select.value).toEqual(params.expectedValue)
+  expect(select.selected).toEqual(params.expectedSelected)
+})
+
 test(`selected is array of first two options when maxSelect=2`, () => {
   // even though all options have preselected=true
   const options = [1, 2, 3].map((itm) => ({
@@ -422,7 +446,7 @@ test.each([
   expect(console.error).toHaveBeenCalledTimes(expected)
   if (expected > 0) {
     expect(console.error).toHaveBeenCalledWith(
-      `MultiSelect maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
+      `MultiSelect: maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
     )
   }
 })
