@@ -1981,6 +1981,35 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
   )
 })
 
+// Issue #364: empty message props should not render <li> element
+test.each([
+  [`duplicateOptionMsg`, ``],
+  [`duplicateOptionMsg`, null],
+  [`noMatchingOptionsMsg`, ``],
+  [`noMatchingOptionsMsg`, null],
+])(
+  `no .user-msg node is rendered when %s=%j`,
+  async (prop_name, prop_value) => {
+    const is_dupe_test = prop_name === `duplicateOptionMsg`
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`foo`, `bar`],
+        selected: is_dupe_test ? [`foo`] : [],
+        [prop_name]: prop_value,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    // Type text that triggers the message condition
+    input.value = is_dupe_test ? `foo` : `nonexistent`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(document.querySelector(`.user-msg`)).toBeNull()
+  },
+)
+
 test.each([[0], [1], [2], [5], [undefined]])(
   `no more than maxOptions are rendered if a positive integer, all options are rendered undefined or 0`,
   (maxOptions) => {
