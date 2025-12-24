@@ -23,7 +23,8 @@ describe(`get_label`, () => {
 
     if (should_log_error) {
       expect(console.error).toHaveBeenCalledWith(
-        `MultiSelect option ${JSON.stringify(input)} is an object but has no label key`,
+        `MultiSelect: option is an object but has no label key`,
+        JSON.stringify(input),
       )
     }
   })
@@ -71,7 +72,8 @@ describe(`get_style`, () => {
     get_style(option_obj, `selected`)
 
     expect(console.error).toHaveBeenCalledWith(
-      `Invalid style object for option=${JSON.stringify(option_obj)}`,
+      `MultiSelect: invalid style object for option`,
+      option_obj,
     )
   })
 

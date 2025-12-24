@@ -5,6 +5,26 @@ import process from 'node:process'
 
 test.describe.configure({ mode: `parallel` })
 
+// Issue #309: Array cloning by reactive wrappers (stores, Superforms) caused infinite loops
+// https://github.com/janosh/svelte-multiselect/issues/309
+test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => {
+  await page.goto(`/persistent`, { waitUntil: `networkidle` })
+
+  // Selecting an option triggers the store subscription
+  await page.click(`#store-binding input[placeholder='Select colors...']`)
+  await page.click(`#store-binding ul.options >> text=Red`)
+
+  // Verify increment stays low (would be 1000+ without fix)
+  const status = page.locator(`#store-binding-status`)
+  await expect(status.locator(`text=✅ Fixed`)).toBeVisible()
+  await expect(status.locator(`text=⚠️ Regression`)).not.toBeVisible()
+
+  // Also verify count directly for robustness
+  const count_text = await status.textContent()
+  const count = parseInt(count_text?.match(/\d+/)?.[0] ?? `0`)
+  expect(count).toBeLessThan(10)
+})
+
 test.describe(`fuzzy matching`, () => {
   test(`fuzzy=true matches partial characters`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
@@ -102,9 +122,9 @@ test.describe(`fuzzy matching`, () => {
 test.describe(`input`, () => {
   test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
-    const dropdown = page.locator(`div.multiselect > ul.options`)
+    const dropdown = page.locator(`#foods ul.options`)
     await expect(dropdown).toHaveClass(/hidden/)
-    await expect(page.locator(`div.multiselect.open`)).toHaveCount(0)
+    await expect(page.locator(`#foods.open`)).toHaveCount(0)
 
     await page.click(`#foods input[autocomplete]`)
 
@@ -148,7 +168,7 @@ test.describe(`input`, () => {
 
     await page.keyboard.press(`Tab`)
 
-    const dropdown = await page.locator(`div.multiselect > ul.options`)
+    const dropdown = await page.locator(`#foods ul.options`)
     await dropdown.waitFor({ state: `hidden` })
     const visibility = await dropdown.evaluate(
       (el) => getComputedStyle(el).visibility,
@@ -165,7 +185,7 @@ test.describe(`input`, () => {
 
     await page.fill(`#foods input[autocomplete]`, `Pineapple`)
 
-    const options = page.locator(`div.multiselect.open > ul.options`)
+    const options = page.locator(`#foods ul.options`)
     await expect(options.locator(`li`)).toHaveCount(1)
     await expect(options).toHaveText(`🍍 Pineapple`)
   })
@@ -176,13 +196,11 @@ test.describe(`remove single button`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.click(`#foods input[autocomplete]`)
-    await page.click(`text=🍌 Banana`)
+    await page.click(`#foods ul.options >> text=🍌 Banana`)
 
-    await page.click(`button[title='Remove 🍌 Banana']`)
+    await page.click(`#foods button[title='Remove 🍌 Banana']`)
 
-    await expect(
-      page.locator(`div.multiselect > ul.selected > li > button`),
-    ).toHaveCount(0)
+    await expect(page.locator(`#foods ul.selected > li > button`)).toHaveCount(0)
   })
 })
 
@@ -191,35 +209,35 @@ test.describe(`remove all button`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const input_locator = page.locator(`#foods input[autocomplete]`)
-    const options_list_locator = page.locator(`ul.options[role="listbox"]`)
+    const options_list_locator = page.locator(`#foods ul.options`)
 
     // Select first option
-    await input_locator.click() // Ensure dropdown is open
+    await input_locator.click()
     await options_list_locator.waitFor({ state: `visible` })
     const first_option = options_list_locator.locator(`li >> nth=0`)
     await first_option.waitFor({ state: `visible` })
     await first_option.click()
 
     // Select second option
-    await input_locator.click() // Ensure dropdown is open again
+    await input_locator.click()
     await options_list_locator.waitFor({ state: `visible` })
-    const second_option = options_list_locator.locator(`li >> nth=0`) // targets the new first item
+    const second_option = options_list_locator.locator(`li >> nth=0`)
     await second_option.waitFor({ state: `visible` })
     await second_option.click()
   })
 
   test(`only appears if more than 1 option is selected and removes all selected`, async ({ page }) => {
-    const selected_buttons = page.locator(`div.multiselect > ul.selected > li > button`)
+    const selected_buttons = page.locator(`#foods ul.selected > li > button`)
     await expect(selected_buttons).toHaveCount(2)
 
-    await page.click(`button.remove-all`)
-    await expect(page.locator(`button.remove-all`)).toBeHidden() // remove-all button is hidden when nothing selected
+    await page.click(`#foods button.remove-all`)
+    await expect(page.locator(`#foods button.remove-all`)).toBeHidden()
 
     await expect(selected_buttons).toHaveCount(0)
   })
 
   test(`has custom title`, async ({ page }) => {
-    const button_title = await page.getAttribute(`button.remove-all`, `title`)
+    const button_title = await page.getAttribute(`#foods button.remove-all`, `title`)
     expect(await button_title).toBe(`Remove all foods`)
   })
 
@@ -272,21 +290,21 @@ test.describe(`disabled multiselect`, () => {
   })
 
   test(`has attribute aria-disabled`, async ({ page }) => {
-    await expect(page.locator(`div.multiselect.disabled ul.options`)).toHaveAttribute(
+    await expect(page.locator(`#disabled-input-title ul.options`)).toHaveAttribute(
       `aria-disabled`,
       `true`,
     )
   })
 
   test(`has disabled title`, async ({ page }) => {
-    await expect(page.locator(`div.multiselect.disabled`)).toHaveAttribute(
+    await expect(page.locator(`#disabled-input-title div.multiselect`)).toHaveAttribute(
       `title`,
       `Super special disabled message (shows on hover)`,
     )
   })
 
   test(`has input attribute disabled`, async ({ page }) => {
-    await expect(page.locator(`.disabled input[autocomplete]`)).toBeDisabled()
+    await expect(page.locator(`#disabled-input-title input[autocomplete]`)).toBeDisabled()
   })
 
   test(`renders no buttons`, async ({ page }) => {
@@ -319,7 +337,7 @@ test.describe(`accessibility`, () => {
 
   test(`has aria-expanded='false' when closed`, async ({ page }) => {
     const before = await page.getAttribute(
-      `div.multiselect ul.options`,
+      `#foods ul.options`,
       `aria-expanded`,
       { strict: true },
     )
@@ -327,9 +345,9 @@ test.describe(`accessibility`, () => {
   })
 
   test(`has aria-expanded='true' when open`, async ({ page }) => {
-    await page.click(`div.multiselect`) // open the dropdown
+    await page.click(`#foods input[autocomplete]`)
     const after = await page.getAttribute(
-      `div.multiselect ul.options`,
+      `#foods ul.options`,
       `aria-expanded`,
       { strict: true },
     )
@@ -337,15 +355,15 @@ test.describe(`accessibility`, () => {
   })
 
   test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({ page }) => {
-    await page.click(`div.multiselect`) // open the dropdown
-    await page.click(`div.multiselect > ul.options > li`) // select 1st option
+    await page.click(`#foods input[autocomplete]`)
+    await page.click(`#foods ul.options > li`)
     const aria_option = await page.getAttribute(
-      `div.multiselect > ul.options > li`,
+      `#foods ul.options > li`,
       `aria-selected`,
     )
     expect(aria_option).toBe(`false`)
     const aria_selected = await page.getAttribute(
-      `div.multiselect > ul.selected > li`,
+      `#foods ul.selected > li`,
       `aria-selected`,
     )
     expect(aria_selected).toBe(`true`)
@@ -353,9 +371,8 @@ test.describe(`accessibility`, () => {
 
   test(`invisible input.form-control is aria-hidden`, async ({ page }) => {
     // https://github.com/janosh/svelte-multiselect/issues/58
-
     const hidden = await page.getAttribute(
-      `input.form-control`,
+      `#foods input.form-control`,
       `aria-hidden`,
       { strict: true },
     )
@@ -369,14 +386,14 @@ test.describe(`multiselect`, () => {
 
     for (const idx of [2, 5, 8]) {
       await page.click(`#foods input[autocomplete]`)
-      await page.click(`ul.options > li >> nth=${idx}`)
+      await page.click(`#foods ul.options > li >> nth=${idx}`)
     }
-    const selected = page.locator(`div.multiselect > ul.selected`)
+    const selected = page.locator(`#foods ul.selected`)
     for (const food of `Pear Pineapple Watermelon`.split(` `)) {
       await expect(selected).toContainText(food)
     }
 
-    await page.click(`.remove-all`)
+    await page.click(`#foods .remove-all`)
     await expect(selected).toHaveText(``)
 
     // repeatedly select 1st option
@@ -397,7 +414,7 @@ test.describe(`multiselect`, () => {
 
     await page.click(`#foods input[autocomplete]`)
 
-    const active_option = page.locator(`ul.options > li.active`)
+    const active_option = page.locator(`#foods ul.options > li.active`)
     for (const expected_fruit of foods) {
       await page.keyboard.press(`ArrowDown`)
       await expect(active_option).toHaveText(expected_fruit)
@@ -481,7 +498,7 @@ test.describe(`allowUserOptions`, () => {
     await page.click(selector)
 
     // ensure custom option initially not present
-    const durian_selected = page.locator(`div.multiselect > ul.selected >> text=Durian`)
+    const durian_selected = page.locator(`#foods ul.selected >> text=Durian`)
     await expect(durian_selected).toHaveCount(0)
 
     // create custom option
@@ -493,9 +510,7 @@ test.describe(`allowUserOptions`, () => {
 
     // ensure custom option was not added to options
     await page.fill(selector, `Durian`)
-    await expect(
-      page.locator(`div.multiselect > ul.options >> text=Durian`),
-    ).toHaveCount(0)
+    await expect(page.locator(`#foods ul.options >> text=Durian`)).toHaveCount(0)
   })
 
   test(
@@ -516,9 +531,9 @@ test.describe(`allowUserOptions`, () => {
 
       await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
 
-      await page.click(`ul.options >> text=foobar`)
+      await page.click(`#languages ul.options >> text=foobar`)
 
-      await expect(page.locator(`ul.selected >> text=foobar`)).toBeVisible()
+      await expect(page.locator(`#languages ul.selected >> text=foobar`)).toBeVisible()
     },
   )
 
@@ -548,16 +563,15 @@ test.describe(`allowUserOptions`, () => {
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
-    await page.click(`text=Python`)
+    await page.click(`#languages ul.options >> text=Python`)
 
     await page.fill(selector, `foobar`)
-    await page.press(selector, `Enter`) // create custom option
+    await page.press(selector, `Enter`)
 
-    await expect(page.locator(`ul.selected >> text=foobar`)).toBeVisible()
+    await expect(page.locator(`#languages ul.selected >> text=foobar`)).toBeVisible()
   })
 
   test(`can create custom option starting from empty options array`, async ({ page }) => {
-    // and doesn't error about empty options when custom options allowed
     const logs: string[] = []
     page.on(`console`, (msg) => {
       if (msg.type() === `error`) logs.push(msg.text())
@@ -569,11 +583,11 @@ test.describe(`allowUserOptions`, () => {
     await page.click(selector)
 
     await page.fill(selector, `foo`)
-    await page.press(selector, `Enter`) // create custom option
+    await page.press(selector, `Enter`)
     await page.fill(selector, `42`)
-    await page.press(selector, `Enter`) // 2nd create custom option
+    await page.press(selector, `Enter`)
 
-    await expect(page.locator(`ul.selected >> text=42`)).toBeVisible()
+    await expect(page.locator(`#no-default-options ul.selected >> text=42`)).toBeVisible()
 
     const logged_err_msg = logs.some((msg) =>
       msg.includes(`MultiSelect received no options`)
@@ -588,13 +602,12 @@ test.describe(`sortSelected`, () => {
   test(`default sorting is alphabetical by label`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`#default-sort input[autocomplete]`) // open dropdown
-
+    await page.click(`#default-sort input[autocomplete]`)
     for (const label of labels) {
-      await page.click(`ul.options >> text=${label}`)
+      await page.click(`#default-sort ul.options >> text=${label}`)
     }
 
-    await expect(page.locator(`div.multiselect.open > ul.selected`)).toHaveText(
+    await expect(page.locator(`#default-sort ul.selected`)).toHaveText(
       `Angular Django Laravel Polymer React Svelte Vue`,
     )
   })
@@ -602,12 +615,12 @@ test.describe(`sortSelected`, () => {
   test(`custom sorting`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`#custom-sort input[autocomplete]`) // open dropdown
+    await page.click(`#custom-sort input[autocomplete]`)
     for (const label of labels) {
-      await page.click(`ul.options:visible >> text=${label}`)
+      await page.click(`#custom-sort ul.options >> text=${label}`)
     }
 
-    await expect(page.locator(`div.multiselect.open > ul.selected`)).toHaveText(
+    await expect(page.locator(`#custom-sort ul.selected`)).toHaveText(
       `Angular Polymer React Svelte Vue Laravel Django`,
     )
   })
@@ -651,7 +664,7 @@ test.describe(`maxSelect`, () => {
     // Select maxSelect options
     for (let idx = 1; idx < max_select; idx++) {
       await page.click(`#languages input[autocomplete]`)
-      await page.click(`ul.options > li >> nth=${idx}`)
+      await page.click(`#languages ul.options > li >> nth=${idx}`)
     }
   })
 
@@ -668,10 +681,8 @@ test.describe(`maxSelect`, () => {
     await expect(selected_items).toHaveCount(max_select)
 
     // Try to add another option - should not work
-    await page.click(`#languages input[autocomplete]`) // re-open options dropdown
-
-    // The dropdown might still be visible but clicking on options shouldn't add more
-    await page.click(`ul.options > li >> nth=0`)
+    await page.click(`#languages input[autocomplete]`)
+    await page.click(`#languages ul.options > li >> nth=0`)
 
     // Verify selected count hasn't changed (still maxSelect)
     await expect(selected_items).toHaveCount(max_select)
@@ -731,12 +742,12 @@ test.describe(`snippets`, () => {
 // https://github.com/janosh/svelte-multiselect/issues/176
 test(`dragging selected options across each other changes their order`, async ({ page }) => {
   await page.goto(`/persistent`, { waitUntil: `networkidle` })
-  const selected = page.locator(`ul.selected`)
+  const selected = page.locator(`#languages ul.selected`)
   await expect(selected).toHaveText(`1  Python 2  TypeScript 3  C 4  Haskell`)
 
   // swap selected options 1 and 2
-  const li1 = page.locator(`ul.selected li:nth-child(1)`)
-  const li2 = page.locator(`ul.selected li:nth-child(2)`)
+  const li1 = page.locator(`#languages ul.selected li:nth-child(1)`)
+  const li2 = page.locator(`#languages ul.selected li:nth-child(2)`)
   await li1.dragTo(li2)
   await expect(selected).toHaveText(`1  TypeScript 2  Python 3  C 4  Haskell`)
 })

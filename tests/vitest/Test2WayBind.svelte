@@ -5,7 +5,7 @@
   let {
     activeIndex = null,
     activeOption = null,
-    maxSelect = null,
+    maxSelect = $bindable(null),
     options = $bindable(),
     selected = $bindable(
       options
@@ -39,11 +39,11 @@
     onValueChanged?.(value)
   })
 
-  export { breakpoint, selected, value }
+  export { breakpoint, maxSelect, selected, value }
 </script>
 
 <MultiSelect
-  {maxSelect}
+  bind:maxSelect
   bind:activeIndex
   bind:activeOption
   bind:options
