@@ -37,9 +37,7 @@
     if (!global && !global_selector) return
 
     const apply_copy_buttons = () => {
-      const btn_style = `position: absolute; top: 6pt; right: 6pt; ${
-        rest.style ?? ``
-      }`
+      const style = `position: absolute; top: 6pt; right: 6pt; ${rest.style ?? ``}`
       const skip_sel = skip_selector ?? as
       for (const code of document.querySelectorAll(global_selector ?? `pre > code`)) {
         const pre = code.parentElement
@@ -50,14 +48,7 @@
         ) {
           mount(CopyButton, {
             target: pre,
-            props: {
-              content,
-              as,
-              labels,
-              ...rest,
-              style: btn_style,
-              'data-sms-copy': ``,
-            },
+            props: { content, as, labels, ...rest, style, 'data-sms-copy': `` },
           })
         }
       }
