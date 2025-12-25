@@ -38,7 +38,7 @@ test(`renders nav with button when collapsible is true`, () => {
 })
 
 test(`renders links in nav when repl is provided`, () => {
-  const meta = { collapsible: true, repl: `https://svelte.dev/repl` }
+  const meta = { collapsible: true, repl: `https://svelte.dev/playground` }
   mount(CodeExample, { target: document.body, props: { src, meta } })
 
   const repl_link = document.querySelector(`nav a[href="${meta.repl}"]`)
