@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { CopyButton, Icon } from '$lib'
   import type { Snippet } from 'svelte'
   import { mount } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import CopyButton from './CopyButton.svelte'
+  import Icon from './Icon.svelte'
   import type { IconName } from './icons'
 
   type State = `ready` | `success` | `error`
@@ -36,9 +37,7 @@
     if (!global && !global_selector) return
 
     const apply_copy_buttons = () => {
-      const btn_style = `position: absolute; top: 6pt; right: 6pt; ${
-        rest.style ?? ``
-      }`
+      const style = `position: absolute; top: 6pt; right: 6pt; ${rest.style ?? ``}`
       const skip_sel = skip_selector ?? as
       for (const code of document.querySelectorAll(global_selector ?? `pre > code`)) {
         const pre = code.parentElement
@@ -49,14 +48,7 @@
         ) {
           mount(CopyButton, {
             target: pre,
-            props: {
-              content,
-              as,
-              labels,
-              ...rest,
-              style: btn_style,
-              'data-sms-copy': ``,
-            },
+            props: { content, as, labels, ...rest, style, 'data-sms-copy': `` },
           })
         }
       }

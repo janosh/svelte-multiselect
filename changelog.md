@@ -1,5 +1,21 @@
 # Changelog
 
+## [v11.4.0](https://github.com/janosh/svelte-multiselect/compare/v11.3.0...v11.4.0)
+
+> 25 December 2025
+
+- Add prop `selectAllOption: boolean = false` to `MultiSelect` by @janosh in https://github.com/janosh/svelte-multiselect/pull/345
+- Change `closeDropdownOnSelect` default from `'if-mobile'` to `false` by @janosh in https://github.com/janosh/svelte-multiselect/pull/349
+- Don't open dropdown when clicking on selected options by @janosh in https://github.com/janosh/svelte-multiselect/pull/355
+- Add `MultiSelect` prop `selectedFlipParams` for customizable flip animation by @janosh in https://github.com/janosh/svelte-multiselect/pull/358
+- Prevent mouse hover during scroll from overriding `MultiSelect` arrow key navigation by @janosh in https://github.com/janosh/svelte-multiselect/pull/359
+- Overload `placeholder` prop to support `object | string` with `persistent` option by @janosh in https://github.com/janosh/svelte-multiselect/pull/360
+- fix: `resetFilterOnAdd` for Enter/selectAll, add `can_remove`/`is_object` helpers, prevent spurious `removeAll` events by @janosh in https://github.com/janosh/svelte-multiselect/pull/361
+- Fix enter key deselection now preserves `searchText` (matching mouse behavior) by @janosh in https://github.com/janosh/svelte-multiselect/pull/363
+- fix: prevent infinite loops with array-cloning reactive wrappers (stores, Superforms) by @janosh in https://github.com/janosh/svelte-multiselect/pull/365
+- fix: don't render message `<li>` when duplicateOptionMsg/noMatchingOptionsMsg/createOptionMsg is empty by @janosh in https://github.com/janosh/svelte-multiselect/pull/366
+- v11.4.0 + fix Svelte Playground links and npm package compatibility by @janosh in https://github.com/janosh/svelte-multiselect/pull/368
+
 ## [v11.3.0](https://github.com/janosh/svelte-multiselect/compare/v11.2.4...v11.3.0)
 
 > 9 November 2025
