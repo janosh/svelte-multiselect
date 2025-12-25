@@ -1,11 +1,13 @@
 <script lang="ts">
   import Readme from '$root/readme.md'
-  import { Examples } from '$site'
+  import { DemoNav, Examples } from '$site'
 </script>
 
 <main>
   <Readme>
     {#snippet examples()}
+      <h2>📚 &thinsp; Demos</h2>
+      <DemoNav menu_props={{ style: `justify-content: start !important` }} />
       <Examples />
     {/snippet}
   </Readme>

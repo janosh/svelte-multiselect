@@ -13,10 +13,10 @@
   <PrevNext
     items={demo_pages}
     current={page.url.pathname}
-    style="max-width: var(--main-max-width); margin: auto"
+    style="max-width: var(--main-max-width); margin: 2em auto"
     onkeyup={null}
     link_props={{
-      style: `background-color: var(--btn-bg); padding: 2pt 5pt; border-radius: 3pt;`,
+      style: `background: var(--surface); padding: 2pt 6pt; border-radius: 3px;`,
     }}
   />
 </main>

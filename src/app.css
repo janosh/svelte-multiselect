@@ -1,147 +1,146 @@
 :root {
-  --night: #0b0b1b;
-  --blue: cornflowerblue;
-  --text-color: #ccc;
+  /* Core theme colors */
+  --accent: cornflowerblue;
+  --accent-hover: orange;
   --main-max-width: 50em;
-  --pre-bg: rgba(255, 255, 255, 0.05);
-  --btn-bg: rgba(255, 255, 255, 0.1);
 
-  --sms-active-color: rgba(255, 255, 255, 0.1);
-  --sms-focus-border: 1pt solid cornflowerblue;
-  --sms-options-bg: rgb(33, 31, 47);
-  --sms-selected-bg: rgba(255, 255, 255, 0.2);
-  --sms-text-color: white;
-  --sms-disabled-bg: rgba(7, 1, 34, 0.87);
-  --sms-li-disabled-bg: black;
-  --sms-placeholder-color: lightgray;
+  /* Derived colors using light-dark for theme awareness */
+  --bg: light-dark(#fafafa, #0b0b1b);
+  --text: light-dark(#222, #ccc);
+  --text-muted: light-dark(#666, #999);
+  --surface: light-dark(#fff, rgba(255, 255, 255, 0.05));
+  --border: light-dark(#ddd, rgba(255, 255, 255, 0.15));
+  --pre-bg: light-dark(#f4f4f4, rgba(0, 0, 0, 0.3));
 
-  --github-corner-color: var(--night);
-  --github-corner-bg: white;
-  --example-margin: 1em auto;
-  --example-btn-bg: none;
+  --github-corner-bg: light-dark(#222, #eee);
+  --github-corner-color: light-dark(#fafafa, #1a1a1a);
 }
 
-/* Set the site's color scheme to dark */
+/* Default to dark theme for docs site, respects user preference */
 html {
-  color-scheme: dark;
+  color-scheme: dark light;
 }
+
 body {
-  background: var(--night);
-  padding: calc(1ex + 2vw);
-  font-family: -apple-system, BlinkMacSystemFont, Roboto, sans-serif;
-  color: var(--text-color);
-  line-height: 1.5;
+  margin: 0;
+  padding: clamp(1rem, 3vw, 2rem);
+  font-family: system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
 }
+
 main {
-  margin: auto;
-  margin-bottom: 3em;
-  width: 100%;
   max-width: var(--main-max-width);
+  margin: 0 auto 3em;
 }
-button, a.btn {
-  color: white;
-  cursor: pointer;
-  border: none;
-  border-radius: 3pt;
-  padding: 2pt 4pt;
-  line-height: initial;
-  transition: background-color 0.2s;
-  background-color: var(--btn-bg);
-}
-:is(button, a.btn):hover {
-  background-color: color-mix(in srgb, var(--btn-bg) 100%, white 10%);
-}
+
+/* Links */
 a {
-  color: var(--blue);
+  color: var(--accent);
   text-decoration: none;
-  transition: 0.2s;
 }
 a:hover {
-  color: orange;
+  color: var(--accent-hover);
 }
-code {
-  overflow-wrap: break-word;
-  padding: 0 2pt;
-  border-radius: 2pt;
-  background-color: rgba(255, 255, 255, 0.15);
-}
-pre code {
-  background-color: transparent;
-  display: inline-block;
-  font-size: clamp(6pt, 6pt + 0.5vw, 10pt);
-  width: 100%;
-}
-pre {
-  position: relative;
-  border-radius: 4pt;
-  background-color: var(--pre-bg);
-  padding: 4pt;
-  overflow-x: auto;
-}
-ul {
-  padding-left: 1em;
-}
-label {
-  font-weight: bold;
+
+/* Buttons */
+button,
+a.btn {
+  color: inherit;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 0.25em 0.5em;
   cursor: pointer;
 }
-
-table {
-  border-collapse: collapse;
-}
-table :is(td, th) {
-  border: 1px dashed rgba(255, 255, 255, 0.2);
-  padding: 5pt 9pt;
-}
-table img {
-  vertical-align: middle;
-}
-tbody tr:nth-child(odd) {
-  background: black;
+button:hover,
+a.btn:hover {
+  background: light-dark(#eee, rgba(255, 255, 255, 0.15));
 }
 
+/* Code */
+code {
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  background: var(--surface);
+  font-size: 0.9em;
+}
+pre {
+  padding: 1em;
+  border-radius: 6px;
+  background: var(--surface);
+  overflow-x: auto;
+}
+pre code {
+  background: transparent;
+  padding: 0;
+  font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
+}
+
+/* Typography */
 h1 {
   display: flex;
-  font-size: clamp(2rem, 2rem + 2vw, 3rem);
-  place-items: center;
-  place-content: center;
-  margin: 1.2em 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5em;
+  font-size: clamp(1.5rem, 1.5rem + 2vw, 2.5rem);
+  margin: 1em 0;
 }
 
-:where(h2, h3, h4, h5, h6) {
-  scroll-margin-top: 50px;
-  transition: 0.3s;
+h2, h3, h4, h5, h6 {
+  scroll-margin-top: 60px;
 }
-:where(h2, h3, h4, h5, h6).toc-clicked {
-  color: orange;
-}
-/* style heading anchors added by rehype-autolink-headings, see svelte.config.js */
-:where(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
-  transition: 0.3s;
-  margin-left: 4pt;
+/* Heading anchor links (rehype-autolink-headings) */
+:is(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
+  margin-left: 0.5em;
   opacity: 0;
+  transition: opacity 0.2s;
 }
-:where(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
+:is(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
   opacity: 1;
 }
 
-blockquote {
-  border-left: 3pt solid var(--blue);
-  padding: 4pt 2pt 4pt 9pt;
-  margin: 1em auto;
-  background-color: rgba(255, 255, 255, 0.1);
-}
-blockquote p:last-child {
-  margin-bottom: 0;
-}
-blockquote p:first-child {
-  margin-top: 0;
-}
-div.multiselect.invalid {
-  border: 1px solid red !important;
+/* Labels */
+label {
+  font-weight: 600;
+  cursor: pointer;
 }
 
-/* target reusable icons like <svg><use href="#icon-info"></use></svg> */
+/* Tables */
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+td, th {
+  border: 1px solid var(--border);
+  padding: 0.5em 0.75em;
+  text-align: left;
+}
+tbody tr:nth-child(odd) {
+  background: var(--surface);
+}
+
+/* Blockquotes */
+blockquote {
+  margin: 1em 0;
+  padding: 0.5em 1em;
+  border-left: 3px solid var(--accent);
+  background: var(--surface);
+}
+blockquote > :first-child {
+  margin-top: 0;
+}
+blockquote > :last-child {
+  margin-bottom: 0;
+}
+
+/* Form validation */
+div.multiselect.invalid {
+  border-color: red !important;
+}
+
+/* Icon sizing for <svg><use href="#icon"></use></svg> */
 svg:has(use:only-child) {
   width: 1em;
   height: 1em;

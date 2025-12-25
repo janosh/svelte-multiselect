@@ -49,12 +49,12 @@
     height: var(--toggle-knob-height, 1.5em);
     width: var(--toggle-knob-width, 3em);
     padding: var(--toggle-knob-padding, 0.1em);
-    border: var(--toggle-knob-border, 1px solid lightgray);
+    border: var(--toggle-knob-border, 1px solid light-dark(lightgray, #555));
     border-radius: var(--toggle-knob-border-radius, 0.75em);
     transition: var(--toggle-knob-transition, 0.3s);
   }
   input:checked + span {
-    background: var(--toggle-background, black);
+    background: var(--toggle-background, light-dark(#222, #555));
   }
   input {
     position: absolute;
@@ -67,11 +67,11 @@
     height: var(--toggle-knob-after-height, 1.2em);
     width: var(--toggle-knob-after-width, 1.2em);
     border-radius: var(--toggle-knob-after-border-radius, 50%);
-    background: var(--toggle-knob-after-background, gray);
+    background: var(--toggle-knob-after-background, light-dark(gray, #888));
     transition: var(--toggle-knob-after-transition, 0.3s);
   }
   input:checked + span::after {
-    background: var(--toggle-knob-after-background, green);
+    background: var(--toggle-knob-after-background, light-dark(green, #4ade80));
     transform: var(
       --toggle-knob-after-transform,
       translate(
@@ -84,6 +84,9 @@
     );
   }
   input:focus + span {
-    border: var(--toggle-knob-focus-border, 1px solid cornflowerblue);
+    border: var(
+      --toggle-knob-focus-border,
+      1px solid light-dark(cornflowerblue, #6495ed)
+    );
   }
 </style>

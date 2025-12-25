@@ -281,7 +281,7 @@
     position: relative;
     margin: -0.75em auto 1.25em;
     --nav-border-radius: 6pt;
-    --nav-surface-bg: light-dark(#fff, #1a1a1a);
+    --nav-surface-bg: light-dark(#fafafa, #1a1a1a);
     --nav-surface-border: light-dark(rgba(128, 128, 128, 0.25), rgba(200, 200, 200, 0.2));
     --nav-surface-shadow: light-dark(
       0 2px 8px rgba(0, 0, 0, 0.15),
@@ -440,7 +440,7 @@
       z-index: var(--nav-mobile-z-index, 2);
       flex-direction: column;
       align-items: stretch;
-      justify-content: flex-start;
+      justify-content: start;
       gap: 0.2em;
       max-width: 90vw;
       border-radius: 6px;
