@@ -6,11 +6,11 @@
   // - string: just a path ("/about")
   // - [string, string]: [path, custom_label] ("/about", "About Us")
   // - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs", "/docs/intro"])
-  import { Icon } from '$lib'
   import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
-  import { click_outside } from 'svelte-multiselect'
   import type { HTMLAttributes } from 'svelte/elements'
+  import { click_outside } from './attachments'
+  import Icon from './Icon.svelte'
 
   let { routes = [], children, link, menu_props, link_props, page, labels, ...rest }:
     & {

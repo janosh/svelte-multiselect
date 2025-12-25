@@ -5,8 +5,15 @@
   "homepage": "https://janosh.github.io/svelte-multiselect",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
-  "version": "11.3.0",
+  "version": "11.4.0",
   "type": "module",
+  "scripts": {
+    "dev": "vite dev",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest --run && playwright test",
+    "check": "svelte-check"
+  },
   "svelte": "./dist/index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
   "peerDependencies": {
