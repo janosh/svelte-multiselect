@@ -1172,9 +1172,9 @@
     display: flex;
     cursor: text;
     box-sizing: border-box;
-    border: var(--sms-border, 1pt solid lightgray);
+    border: var(--sms-border, 1pt solid light-dark(lightgray, #555));
     border-radius: var(--sms-border-radius, 3pt);
-    background: var(--sms-bg);
+    background: var(--sms-bg, light-dark(white, #1a1a1a));
     width: var(--sms-width);
     max-width: var(--sms-max-width);
     padding: var(--sms-padding, 0 3pt);
@@ -1192,7 +1192,7 @@
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
   :is(div.multiselect.disabled) {
-    background: var(--sms-disabled-bg, lightgray);
+    background: var(--sms-disabled-bg, light-dark(lightgray, #444));
     cursor: not-allowed;
   }
 
@@ -1211,7 +1211,10 @@
     line-height: normal;
     transition: 0.3s;
     white-space: nowrap;
-    background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15));
+    background: var(
+      --sms-selected-bg,
+      light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+    );
     padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
@@ -1219,7 +1222,10 @@
     cursor: grab;
   }
   :is(div.multiselect > ul.selected > li.active) {
-    background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
+    background: var(
+      --sms-li-active-bg,
+      var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))
+    );
   }
   :is(div.multiselect button) {
     border-radius: 50%;
@@ -1237,8 +1243,11 @@
     margin: 0 3pt;
   }
   :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
-    color: var(--sms-remove-btn-hover-color, lightskyblue);
-    background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2));
+    color: var(--sms-remove-btn-hover-color, light-dark(#0088cc, lightskyblue));
+    background: var(
+      --sms-remove-btn-hover-bg,
+      light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2))
+    );
   }
 
   :is(div.multiselect input) {
@@ -1295,15 +1304,18 @@
     transition: all
       0.2s; /* Consider if this transition is desirable with portal positioning */
     box-sizing: border-box;
-    background: var(--sms-options-bg, white);
+    background: var(--sms-options-bg, light-dark(#fafafa, #1a1a1a));
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
-    box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black);
+    box-shadow: var(
+      --sms-options-shadow,
+      light-dark(0 0 14pt -8pt black, 0 0 14pt -4pt rgba(0, 0, 0, 0.8))
+    );
     border: var(--sms-options-border);
     border-width: var(--sms-options-border-width);
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding);
-    margin: var(--sms-options-margin, inherit);
+    margin: var(--sms-options-margin, 6pt 0 0 0);
   }
   ul.options.hidden {
     visibility: hidden;
@@ -1323,19 +1335,25 @@
     padding: 3pt 2ex;
   }
   ul.options > li.selected {
-    background: var(--sms-li-selected-plain-bg, rgba(0, 123, 255, 0.1));
+    background: var(
+      --sms-li-selected-plain-bg,
+      light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2))
+    );
     border-left: var(
       --sms-li-selected-plain-border,
       3px solid var(--sms-active-color, cornflowerblue)
     );
   }
   ul.options > li.active {
-    background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)));
+    background: var(
+      --sms-li-active-bg,
+      var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))
+    );
   }
   ul.options > li.disabled {
     cursor: not-allowed;
-    background: var(--sms-li-disabled-bg, #f5f5f6);
-    color: var(--sms-li-disabled-text, #b8b8b8);
+    background: var(--sms-li-disabled-bg, light-dark(#f5f5f6, #2a2a2a));
+    color: var(--sms-li-disabled-text, light-dark(#b8b8b8, #666));
   }
   /* Checkbox styling for keepSelectedInDropdown='checkboxes' mode */
   ul.options > li > input.option-checkbox {
@@ -1346,7 +1364,10 @@
   }
   /* Select all option styling */
   ul.options > li.select-all {
-    border-bottom: var(--sms-select-all-border-bottom, 1px solid lightgray);
+    border-bottom: var(
+      --sms-select-all-border-bottom,
+      1px solid light-dark(lightgray, #555)
+    );
     font-weight: var(--sms-select-all-font-weight, 500);
     color: var(--sms-select-all-color, inherit);
     background: var(--sms-select-all-bg, transparent);
@@ -1355,14 +1376,20 @@
   ul.options > li.select-all:hover {
     background: var(
       --sms-select-all-hover-bg,
-      var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))
+      var(
+        --sms-li-active-bg,
+        var(
+          --sms-active-color,
+          light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+        )
+      )
     );
   }
   :is(span.max-select-msg) {
     padding: 0 3pt;
   }
   ::highlight(sms-search-matches) {
-    color: mediumaquamarine;
+    color: light-dark(#1a8870, mediumaquamarine);
   }
   /* Loading more indicator for infinite scrolling */
   ul.options > li.loading-more {

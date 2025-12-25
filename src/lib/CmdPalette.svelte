@@ -94,7 +94,7 @@
     padding: 0;
     background-color: transparent;
     display: flex;
-    color: white;
+    color: light-dark(#222, #eee);
     z-index: 10;
     font-size: 2.4ex;
   }

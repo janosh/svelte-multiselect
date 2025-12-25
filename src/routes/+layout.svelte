@@ -1,13 +1,13 @@
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
-  import { CmdPalette, CopyButton, GitHubCorner, Nav } from '$lib'
+  import { CmdPalette, CopyButton, GitHubCorner } from '$lib'
   import { name, repository } from '$root/package.json'
-  import { Footer } from '$site'
+  import { DemoNav, Footer } from '$site'
   import type { Snippet } from 'svelte'
   import { Toc } from 'svelte-toc'
   import '../app.css'
-  import { demo_pages, routes } from './(demos)'
+  import { routes } from './(demos)'
 
   let { children }: { children?: Snippet<[]> } = $props()
 
@@ -23,18 +23,10 @@
   </h1>
 {/if}
 
-<Nav
-  routes={demo_pages}
-  {page}
-  style="max-width: var(--main-max-width)"
-  labels={{
-    '/ui': `UI`,
-    '/css-classes': `CSS Classes`,
-    '/kit-form-actions': `SvelteKit Form Actions`,
-    '/cmd-palette': `CmdPalette`,
-  }}
-  link_props={{ style: `background-color: var(--btn-bg)` }}
-/>
+{#if page.url.pathname !== `/`}
+  <DemoNav />
+{/if}
+
 <CmdPalette {actions} placeholder="Go to..." />
 
 <GitHubCorner href={repository} />
@@ -51,8 +43,9 @@
   <Toc
     headingSelector="main > :where(h2, h3)"
     breakpoint={1500}
-    open_button_style="transform: scale(1.4); display: flex; aspect-ratio: 1;"
-    --toc-mobile-bg="rgb(30, 40, 50)"
+    open_button_style="display: flex; padding: 3px;"
+    --toc-mobile-bg="light-dark(#fff, #1a1a1a)"
+    --toc-padding="1em 0 1em 1em"
   />
 {/if}
 
@@ -60,21 +53,16 @@
 
 <style>
   a[href='.'] {
-    font-size: 15pt;
     position: absolute;
-    top: 2em;
-    left: 2em;
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 1pt 5pt;
-    border-radius: 3pt;
-    transition: 0.2s;
-  }
-  a[href='.']:hover {
-    background-color: rgba(255, 255, 255, 0.2);
+    top: 1.5em;
+    left: 1.5em;
+    padding: 2pt 6pt;
+    background: var(--surface);
+    border-radius: 3px;
   }
   :global(aside.toc.desktop) {
     position: fixed;
-    font-size: 9pt;
-    left: calc(50vw + var(--main-max-width) / 2 + 200px);
+    font-size: 0.75rem;
+    left: calc(50vw + var(--main-max-width) / 2 + 7rem);
   }
 </style>

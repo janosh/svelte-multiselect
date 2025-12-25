@@ -53,8 +53,8 @@
   a {
     position: fixed;
     z-index: 1;
-    fill: var(--github-corner-bg, black);
-    color: var(--github-corner-color, white);
+    fill: var(--github-corner-bg, light-dark(#222, #eee));
+    color: var(--github-corner-color, light-dark(#fafafa, #1a1a1a));
     width: var(--github-corner-size, 70px);
   }
   a.top-right {

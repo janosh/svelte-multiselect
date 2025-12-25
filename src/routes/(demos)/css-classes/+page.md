@@ -23,18 +23,10 @@
   selected={options.slice(0, 2)}
   allowUserOptions
   maxSelect={2}
+  --sms-bg="color-mix(in srgb, cornflowerblue 15%, light-dark(white, #1a1a2e))"
+  --sms-options-bg="color-mix(in srgb, mediumseagreen 20%, light-dark(white, #1a1a2e))"
 />
 <!-- maxSelect={2} needed for maxSelectMsg to show up -->
-
-<!-- !important needed until https://github.com/sveltejs/svelte/issues/4374 is solved -->
-<style>
-  :global(.wrapper) {
-    background: darkblue !important;
-  }
-  :global(.dropdown) {
-    background: darkgreen !important;
-  }
-</style>
 ```
 
 When using CSS frameworks like Tailwind, you can customize the appearance of `<MultiSelect />` through these classes.

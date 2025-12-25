@@ -18,21 +18,26 @@
 
 <style>
   footer {
-    padding: 3vh 3vw;
-    background: #00061a;
+    padding: 2em;
+    margin: 3em calc(-1 * clamp(1rem, 3vw, 2rem)) calc(-1 * clamp(1rem, 3vw, 2rem));
+    width: calc(100% + 2 * clamp(1rem, 3vw, 2rem));
+    box-sizing: border-box;
+    background: var(--surface);
     text-align: center;
   }
   footer > a {
-    margin: 0 0 0 4pt;
+    margin: 0 0.5em;
   }
   small {
-    margin: 1em;
+    margin-top: 1em;
     display: block;
+    color: var(--text-muted);
   }
-  small kbd {
-    background-color: rgba(255, 255, 255, 0.1);
-    padding: 1pt 3pt;
-    font-size: larger;
-    border-radius: 2pt;
+  kbd {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    padding: 0.1em 0.4em;
+    border-radius: 3px;
+    font-size: 0.9em;
   }
 </style>

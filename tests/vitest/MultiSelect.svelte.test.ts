@@ -1,4 +1,5 @@
 // deno-lint-ignore-file no-await-in-loop
+import { readFileSync } from 'fs'
 import { mount, tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 
@@ -2768,5 +2769,41 @@ describe(`loadOptions feature`, () => {
     resolvers[1]({ options: [`Foo Result`], hasMore: false })
     await vi.runAllTimersAsync()
     expect(options_ul.textContent).toContain(`Foo Result`)
+  })
+})
+
+describe(`CSS light-dark theme awareness`, () => {
+  const css = readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`).match(
+    /<style>([\s\S]*?)<\/style>/,
+  )?.[1] ??
+    ``
+
+  const props = [
+    `--sms-border`,
+    `--sms-bg`,
+    `--sms-disabled-bg`,
+    `--sms-selected-bg`,
+    `--sms-li-active-bg`,
+    `--sms-remove-btn-hover-color`,
+    `--sms-remove-btn-hover-bg`,
+    `--sms-options-bg`,
+    `--sms-options-shadow`,
+    `--sms-li-selected-plain-bg`,
+    `--sms-li-disabled-bg`,
+    `--sms-li-disabled-text`,
+    `--sms-select-all-border-bottom`,
+  ]
+
+  test.each(props)(`%s uses light-dark()`, (prop) => {
+    expect(css).toMatch(new RegExp(`${prop.replace(/-/g, `[-]`)}[^;]*light-dark\\(`))
+  })
+
+  test(`::highlight uses light-dark()`, () => {
+    expect(css).toMatch(/::highlight\(sms-search-matches\)[\s\S]*?light-dark\(/)
+  })
+
+  test(`--sms-active-color fallbacks use light-dark()`, () => {
+    expect(css.match(/--sms-active-color,\s*light-dark\(/g)?.length)
+      .toBeGreaterThanOrEqual(2)
   })
 })

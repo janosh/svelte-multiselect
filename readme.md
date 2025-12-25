@@ -795,10 +795,10 @@ Minimal example that changes the background color of the options dropdown:
 ```
 
 - `div.multiselect`
-  - `border: var(--sms-border, 1pt solid lightgray)`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
+  - `border: var(--sms-border, 1pt solid light-dark(lightgray, #555))`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
   - `border-radius: var(--sms-border-radius, 3pt)`
   - `padding: var(--sms-padding, 0 3pt)`
-  - `background: var(--sms-bg)`
+  - `background: var(--sms-bg, light-dark(white, #1a1a1a))`
   - `color: var(--sms-text-color)`
   - `min-height: var(--sms-min-height, 22pt)`
   - `width: var(--sms-width)`
@@ -810,23 +810,23 @@ Minimal example that changes the background color of the options dropdown:
 - `div.multiselect:focus-within`
   - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` which in turn defaults to `cornflowerblue`.
 - `div.multiselect.disabled`
-  - `background: var(--sms-disabled-bg, lightgray)`: Background when in disabled state.
+  - `background: var(--sms-disabled-bg, light-dark(lightgray, #444))`: Background when in disabled state.
 - `div.multiselect input::placeholder`
   - `color: var(--sms-placeholder-color)`
   - `opacity: var(--sms-placeholder-opacity)`
 - `div.multiselect > ul.selected > li`
-  - `background: var(--sms-selected-bg, rgba(0, 0, 0, 0.15))`: Background of selected options.
+  - `background: var(--sms-selected-bg, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))`: Background of selected options.
   - `padding: var(--sms-selected-li-padding, 1pt 5pt)`: Height of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
-  - `color: var(--sms-remove-btn-hover-color, lightskyblue)`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
-  - `background: var(--sms-remove-btn-hover-bg, rgba(0, 0, 0, 0.2))`: Background for hovered remove buttons.
+  - `color: var(--sms-remove-btn-hover-color, light-dark(#0088cc, lightskyblue))`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `background: var(--sms-remove-btn-hover-bg, light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2)))`: Background for hovered remove buttons.
 - `div.multiselect > ul.options`
-  - `background: var(--sms-options-bg, white)`: Background of dropdown list.
+  - `background: var(--sms-options-bg, light-dark(#fafafa, #1a1a1a))`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
   - `z-index: var(--sms-options-z-index, 3)`: Z-index for the dropdown options list.
-  - `box-shadow: var(--sms-options-shadow, 0 0 14pt -8pt black)`: Box shadow of dropdown list.
+  - `box-shadow: var(--sms-options-shadow, light-dark(0 0 14pt -8pt black, 0 0 14pt -4pt rgba(0, 0, 0, 0.8)))`: Box shadow of dropdown list.
   - `border: var(--sms-options-border)`
   - `border-width: var(--sms-options-border-width)`
   - `border-radius: var(--sms-options-border-radius, 1ex)`
@@ -835,13 +835,13 @@ Minimal example that changes the background color of the options dropdown:
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
-  - `background: var(--sms-li-selected-bg)`: Background of selected list items in options pane.
-  - `color: var(--sms-li-selected-color)`: Text color of selected list items in options pane.
+  - `background: var(--sms-li-selected-plain-bg, light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2)))`: Background of selected list items in options pane.
+  - `border-left: var(--sms-li-selected-plain-border, 3px solid var(--sms-active-color, cornflowerblue))`: Left border of selected list items in options pane.
 - `div.multiselect > ul.options > li.active`
-  - `background: var(--sms-li-active-bg, var(--sms-active-color, rgba(0, 0, 0, 0.15)))`: Background of active options. Options in the dropdown list become active either by mouseover or by navigating to them with arrow keys. Selected options become active when `selectedOptionsDraggable=true` and an option is being dragged to a new position. Note the active option in that case is not the dragged option but the option under it whose place it will take on drag end.
+  - `background: var(--sms-li-active-bg, var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))))`: Background of active options. Options in the dropdown list become active either by mouseover or by navigating to them with arrow keys. Selected options become active when `selectedOptionsDraggable=true` and an option is being dragged to a new position. Note the active option in that case is not the dragged option but the option under it whose place it will take on drag end.
 - `div.multiselect > ul.options > li.disabled`
-  - `background: var(--sms-li-disabled-bg, #f5f5f6)`: Background of disabled options in the dropdown list.
-  - `color: var(--sms-li-disabled-text, #b8b8b8)`: Text color of disabled option in the dropdown list.
+  - `background: var(--sms-li-disabled-bg, light-dark(#f5f5f6, #2a2a2a))`: Background of disabled options in the dropdown list.
+  - `color: var(--sms-li-disabled-text, light-dark(#b8b8b8, #666))`: Text color of disabled option in the dropdown list.
 - `::highlight(sms-search-matches)`: applies to search results in dropdown list that match the current search query if `highlightMatches=true`. These styles [cannot be set via CSS variables](https://stackoverflow.com/a/56799215). Instead, use a new rule set. For example:
 
   ```css
