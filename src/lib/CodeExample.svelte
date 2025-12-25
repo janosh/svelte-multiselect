@@ -1,8 +1,8 @@
 <script lang="ts">
   // see svelte.config.js where this component is passed to mdsvexamples
-  import { Icon } from '$lib'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import Icon from './Icon.svelte'
 
   let {
     src = ``,

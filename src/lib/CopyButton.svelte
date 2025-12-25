@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { CopyButton, Icon } from '$lib'
   import type { Snippet } from 'svelte'
   import { mount } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import CopyButton from './CopyButton.svelte'
+  import Icon from './Icon.svelte'
   import type { IconName } from './icons'
 
   type State = `ready` | `success` | `error`
