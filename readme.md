@@ -693,6 +693,12 @@ Example using several snippets:
    Triggers when all selected options are removed. The `options` payload gives the options that were removed (might not be all if `minSelect` is set).
 
 1. ```ts
+   onselectAll={({ options }) => console.log(options)}
+   ```
+
+   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added.
+
+1. ```ts
    onreorder={({ options }) => console.log(options)}
    ```
 
@@ -724,6 +730,7 @@ For example, here's how you might annoy your users with an alert every time one 
     if (type === 'add') alert(`You added ${option}`)
     if (type === 'remove') alert(`You removed ${option}`)
     if (type === 'removeAll') alert(`You removed ${options}`)
+    if (type === 'selectAll') alert(`You selected all: ${options}`)
     if (type === 'reorder') alert(`New order: ${options}`)
   }}
 />
@@ -869,6 +876,7 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `ulOptionsClass`: available options listed in the dropdown when component is in `open` state
 - `liOptionClass`: list items selectable from dropdown list
 - `liActiveOptionClass`: the currently active dropdown list item (i.e. hovered or navigated to with arrow keys)
+- `liSelectAllClass`: the "Select All" option at the top of the dropdown (when `selectAllOption` is enabled)
 - `liUserMsgClass`: user message (last child of dropdown list when no options match user input)
 - `liActiveUserMsgClass`: user message when active (i.e. hovered or navigated to with arrow keys)
 - `maxSelectMsgClass`: small span towards the right end of the input field displaying to the user how many of the allowed number of options they've already selected
@@ -884,6 +892,7 @@ This simplified version of the DOM structure of the component shows where these 
   </ul>
   <span class="maxSelectMsgClass">2/5 selected</span>
   <ul class="options {ulOptionsClass}">
+    <li class="select-all {liSelectAllClass}">Select all</li>
     <li class={liOptionClass}>Option 1</li>
     <li class="{liOptionClass} {liActiveOptionClass}">
       Option 2 (currently active)
@@ -943,6 +952,9 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 }
 :global(div.multiselect > ul.options > li.disabled) {
   /* options with disabled key set to true (see props above) */
+}
+:global(div.multiselect > ul.options > li.select-all) {
+  /* the "Select All" option at the top of the dropdown */
 }
 ```
 
