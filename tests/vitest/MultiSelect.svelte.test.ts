@@ -312,7 +312,8 @@ test.each([[null], [1]])(
       props: { options: [1, 2, 3], maxSelect },
     })
 
-    expect(select.value).toEqual(maxSelect === 1 ? null : [])
+    // On init, value stays null (no unnecessary sync from [] to null). See issue #369.
+    expect(select.value).toEqual(null)
 
     await tick()
     if (maxSelect === 1) {
@@ -2780,6 +2781,47 @@ describe(`loadOptions feature`, () => {
     await vi.runAllTimersAsync()
     expect(options_ul.textContent).toContain(`Foo Result`)
   })
+})
+
+// https://github.com/janosh/svelte-multiselect/issues/369
+describe(`binding update event count`, () => {
+  test(`onchange fires 0 times on init and exactly once per selection`, async () => {
+    const onchange_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], onchange: onchange_spy },
+    })
+    await tick()
+    expect(onchange_spy).toHaveBeenCalledTimes(0)
+
+    // select first option
+    doc_query(`ul.options li`).click()
+    await tick()
+    expect(onchange_spy).toHaveBeenCalledTimes(1)
+    expect(onchange_spy).toHaveBeenCalledWith({ option: 1, type: `add` })
+  })
+
+  test.each([null, 1])(
+    `selected binding with maxSelect=%s: ≤1 update on init, exactly 1 per selection`,
+    async (maxSelect) => {
+      const spy = vi.fn()
+
+      mount(Test2WayBind, {
+        target: document.body,
+        props: { options: [1, 2, 3], maxSelect, onSelectedChanged: spy },
+      })
+      await tick()
+      await tick()
+      expect(spy.mock.calls.length).toBeLessThanOrEqual(1) // init: at most 1 call
+
+      spy.mockClear()
+      doc_query(`ul.options li`).click()
+      await tick()
+      await tick()
+      expect(spy).toHaveBeenCalledTimes(1) // selection: exactly 1 call
+    },
+  )
 })
 
 describe(`CSS light-dark theme awareness`, () => {
