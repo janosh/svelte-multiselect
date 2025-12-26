@@ -1933,7 +1933,7 @@ describe(`keepSelectedInDropdown feature`, () => {
         )
         expect(matching_options).toHaveLength(2)
 
-        // Note: selected options Apple/Cherry don't match filter 'a' so they may not be visible
+        // Note: selected options Apple/Cherry match filter 'a' with fuzzy search and should be visible
       } else {
         // In default mode, only matching options are shown
         expect(filtered_options).toHaveLength(2) // Banana, Date
