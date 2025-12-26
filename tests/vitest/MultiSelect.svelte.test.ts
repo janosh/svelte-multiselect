@@ -79,7 +79,7 @@ test(`defaultDisabledTitle and custom per-option disabled titles are applied cor
 
   const lis = document.querySelectorAll<HTMLLIElement>(`ul.options > li`)
 
-  expect(lis.length).toBe(3)
+  expect(lis).toHaveLength(3)
   expect([...lis].map((li) => li.title)).toEqual([
     special_disabled_title,
     defaultDisabledTitle,
@@ -115,7 +115,7 @@ test(`applies DOM attributes to input node`, () => {
   const form_input = doc_query<HTMLInputElement>(`input.form-control`)
 
   // make sure the search text filtered the dropdown options
-  expect(lis.length).toBe(1)
+  expect(lis).toHaveLength(1)
 
   expect(input?.value).toBe(searchText)
   expect(input?.id).toBe(id)
@@ -128,65 +128,29 @@ test(`applies DOM attributes to input node`, () => {
 
 // https://github.com/janosh/svelte-multiselect/issues/354
 describe(`placeholder`, () => {
-  test(`string placeholder hidden by default when options selected`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], placeholder: `Pick a number` },
-    })
+  test.each(
+    [
+      [`Pick a number`, ``],
+      [{ text: `Pick a number`, persistent: true }, `Pick a number`],
+      [{ text: `Pick a number` }, ``],
+    ] as const,
+  )(
+    `placeholder=%j shows %j after selection`,
+    async (placeholder, expected_after) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: [1, 2, 3], placeholder },
+      })
 
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.placeholder).toBe(`Pick a number`)
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      expect(input.placeholder).toBe(`Pick a number`)
 
-    // Select an option by clicking
-    const li = doc_query(`ul.options li`)
-    li.click()
-    await tick()
+      doc_query(`ul.options li`).click()
+      await tick()
 
-    // Placeholder should be hidden (empty string in DOM)
-    expect(input.placeholder).toBe(``)
-  })
-
-  test(`object placeholder with persistent=true remains visible`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3],
-        placeholder: { text: `Pick a number`, persistent: true },
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.placeholder).toBe(`Pick a number`)
-
-    // Select an option by clicking
-    const li = doc_query(`ul.options li`)
-    li.click()
-    await tick()
-
-    // Placeholder should still be visible
-    expect(input.placeholder).toBe(`Pick a number`)
-  })
-
-  test(`object placeholder without persistent behaves like string`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3],
-        placeholder: { text: `Pick a number` },
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.placeholder).toBe(`Pick a number`)
-
-    // Select an option by clicking
-    const li = doc_query(`ul.options li`)
-    li.click()
-    await tick()
-
-    // Placeholder should be hidden
-    expect(input.placeholder).toBe(``)
-  })
+      expect(input.placeholder).toBe(expected_after)
+    },
+  )
 })
 
 test(`applies custom classes for styling through CSS frameworks`, async () => {
@@ -705,7 +669,7 @@ test.each([
   const selected_ul = doc_query(`ul.selected`)
   const remaining_labels = options_set.slice(1).map(get_label).join(` `).trim()
   expect(selected_ul.textContent?.trim()).toBe(remaining_labels)
-  expect(document.querySelectorAll(`ul.selected > li`).length).toBe(
+  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(
     initial_selected_count - 1,
   )
 })
@@ -927,29 +891,16 @@ describe.each([
   },
 )
 
-test.each([[true, ``], [false, `1`]])(
-  `resetFilterOnAdd=%j handles input value correctly after adding an option`,
-  async (resetFilterOnAdd, expected) => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], resetFilterOnAdd },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.value = `1`
-    input.dispatchEvent(input_event)
-
-    const li = doc_query<HTMLLIElement>(`ul.options li`)
-    li.click()
-    await tick()
-
-    expect(input.value).toBe(expected)
-  },
-)
-
-test.each([[true, ``], [false, `1`]])(
-  `resetFilterOnAdd=%j handles input value correctly when selecting with Enter key`,
-  async (resetFilterOnAdd, expected) => {
+test.each(
+  [
+    [true, ``, `click`],
+    [false, `1`, `click`],
+    [true, ``, `enter`],
+    [false, `1`, `enter`],
+  ] as const,
+)(
+  `resetFilterOnAdd=%j clears input (expected=%j) on %s`,
+  async (resetFilterOnAdd, expected, method) => {
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], resetFilterOnAdd, closeDropdownOnSelect: false },
@@ -960,12 +911,15 @@ test.each([[true, ``], [false, `1`]])(
     input.dispatchEvent(input_event)
     await tick()
 
-    // Navigate to the first matching option with ArrowDown
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-    await tick()
-
-    // Select with Enter key
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    if (method === `click`) {
+      doc_query<HTMLLIElement>(`ul.options li`).click()
+    } else {
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+      )
+      await tick()
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    }
     await tick()
 
     expect(input.value).toBe(expected)
@@ -1002,7 +956,7 @@ test(`resetFilterOnAdd=true does NOT reset searchText when maxSelect constraint 
 
   // Verify the option was not added
   const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items.length).toBe(2)
+  expect(selected_items).toHaveLength(2)
 })
 
 test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint prevents remove`, async () => {
@@ -1036,7 +990,7 @@ test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint 
 
   // Verify the option was not removed
   const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items.length).toBe(1)
+  expect(selected_items).toHaveLength(1)
 })
 
 test(`Enter key deselection preserves searchText (matching mouse behavior)`, async () => {
@@ -1071,7 +1025,7 @@ test(`Enter key deselection preserves searchText (matching mouse behavior)`, asy
 
   // Verify the option was removed
   const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items.length).toBe(1)
+  expect(selected_items).toHaveLength(1)
 })
 
 test(`2-way binding of selected`, async () => {
@@ -1340,6 +1294,39 @@ test(`dragging selected options across each other changes their order`, async ()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
 
+// https://github.com/janosh/svelte-multiselect/issues/371
+test(`drag-drop reordering fires onreorder and onchange events`, async () => {
+  const options = [1, 2, 3]
+  const onreorder_spy = vi.fn()
+  const onchange_spy = vi.fn()
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options,
+      selected: [...options],
+      onreorder: onreorder_spy,
+      onchange: onchange_spy,
+    },
+  })
+
+  // drag option at index 1 to index 0
+  const first_li = doc_query(`ul.selected li`)
+  const dataTransfer = new DataTransfer()
+  dataTransfer.setData(`text/plain`, `1`)
+
+  first_li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
+  await tick()
+
+  // verify onreorder was called with the new order
+  expect(onreorder_spy).toHaveBeenCalledTimes(1)
+  expect(onreorder_spy).toHaveBeenCalledWith({ options: [2, 1, 3] })
+
+  // verify onchange was called with type 'reorder'
+  expect(onchange_spy).toHaveBeenCalledTimes(1)
+  expect(onchange_spy).toHaveBeenCalledWith({ options: [2, 1, 3], type: `reorder` })
+})
+
 test.each([[true], [false]])(
   `console warning when combining sortSelected=%s and selectedOptionsDraggable`,
   (sortSelected) => {
@@ -1361,7 +1348,7 @@ test.each([[true], [false]])(
           `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
       )
     } else {
-      expect(console.warn).toHaveBeenCalledTimes(0)
+      expect(console.warn).not.toHaveBeenCalled()
     }
   },
 )
@@ -1384,7 +1371,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
             `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
         )
       } else {
-        expect(console.error).toHaveBeenCalledTimes(0)
+        expect(console.error).not.toHaveBeenCalled()
       }
     },
   )
@@ -1408,7 +1395,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
             `MultiSelect: received no options`,
           )
         } else {
-          expect(console.error).toHaveBeenCalledTimes(0)
+          expect(console.error).not.toHaveBeenCalled()
         }
       },
     )
@@ -1574,6 +1561,33 @@ test.each([
   },
 )
 
+test.each(
+  [
+    [`onopen`, `open`, FocusEvent],
+    [`onclose`, `close`, KeyboardEvent],
+  ] as const,
+)(`fires %s event when dropdown %ss`, async (event_name, _action, event_type) => {
+  const spy = vi.fn()
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], [event_name]: spy },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+  await tick()
+
+  if (event_name === `onclose`) {
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+  }
+
+  expect(spy).toHaveBeenCalled()
+  const events = spy.mock.calls.map((call) => call[0].event)
+  expect(events.some((event) => event instanceof event_type)).toBe(true)
+})
+
 describe.each([
   [true, (opt: Option) => opt],
   [false, (opt: Option) => opt],
@@ -1618,7 +1632,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       const dropdown_options = document.querySelectorAll(`ul.options > li`)
-      expect(dropdown_options.length).toBe(3)
+      expect(dropdown_options).toHaveLength(3)
 
       // Apple should be selected with appropriate styling
       const apple_option = Array.from(dropdown_options).find((li) =>
@@ -1658,7 +1672,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     await tick()
 
     const dropdown_options = document.querySelectorAll(`ul.options > li`)
-    expect(dropdown_options.length).toBe(2)
+    expect(dropdown_options).toHaveLength(2)
     expect(Array.from(dropdown_options).some((li) => li.textContent?.includes(`Apple`)))
       .toBe(false)
   })
@@ -1770,7 +1784,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       const dropdown_options = document.querySelectorAll(`ul.options > li`)
-      expect(dropdown_options.length).toBe(3)
+      expect(dropdown_options).toHaveLength(3)
 
       // No options should have selected styling
       Array.from(dropdown_options).forEach((option) => {
@@ -1797,7 +1811,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       const all_selected_options = second_target.querySelectorAll(`ul.options > li`)
-      expect(all_selected_options.length).toBe(3)
+      expect(all_selected_options).toHaveLength(3)
 
       // All options should have selected styling
       Array.from(all_selected_options).forEach((option) => {
@@ -1917,23 +1931,19 @@ describe(`keepSelectedInDropdown feature`, () => {
         const matching_options = Array.from(filtered_options).filter((li) =>
           li.textContent?.includes(`Banana`) || li.textContent?.includes(`Date`)
         )
-        expect(matching_options.length).toBe(2)
+        expect(matching_options).toHaveLength(2)
 
-        // Check that selected options are still visible (if they match the search)
-        const selected_options = Array.from(filtered_options).filter((li) =>
-          li.textContent?.includes(`Apple`) || li.textContent?.includes(`Cherry`)
-        )
-        expect(selected_options.length).toBeGreaterThanOrEqual(0)
+        // Note: selected options Apple/Cherry match filter 'a' with fuzzy search and should be visible
       } else {
         // In default mode, only matching options are shown
-        expect(filtered_options.length).toBe(2) // Banana, Date
+        expect(filtered_options).toHaveLength(2) // Banana, Date
       }
 
       // Check that non-matching non-selected options are not visible
       const non_matching_options = Array.from(filtered_options).filter((li) =>
         li.textContent?.includes(`foo`) || li.textContent?.includes(`qux`)
       )
-      expect(non_matching_options.length).toBe(0)
+      expect(non_matching_options).toHaveLength(0)
     },
   )
 })
@@ -2202,7 +2212,7 @@ test.each([true, false, `if-mobile`] as const)(
 
     // count number of selected items
     const selected_items = document.querySelectorAll(`ul.selected > li`)
-    expect(selected_items.length).toBe(1)
+    expect(selected_items).toHaveLength(1)
 
     // check that dropdown is closed when closeDropdownOnSelect = true
     const dropdown = doc_query(`ul.options`)

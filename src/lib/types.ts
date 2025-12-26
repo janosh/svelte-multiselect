@@ -1,5 +1,5 @@
-import type { FlipParams } from 'svelte/animate'
 import type { Snippet } from 'svelte'
+import type { FlipParams } from 'svelte/animate'
 import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
 
 export type Option = string | number | ObjectOption
@@ -33,10 +33,11 @@ export interface MultiSelectEvents<T extends Option = Option> {
   onremove?: (data: { option: T }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
   onselectAll?: (data: { options: T[] }) => unknown // fires when select all is triggered
+  onreorder?: (data: { options: T[] }) => unknown // fires when selected options are reordered via drag-and-drop
   onchange?: (data: {
     option?: T
     options?: T[]
-    type: `add` | `remove` | `removeAll` | `selectAll`
+    type: `add` | `remove` | `removeAll` | `selectAll` | `reorder`
   }) => unknown
   onopen?: (data: { event: Event }) => unknown
   onclose?: (data: { event: Event }) => unknown
