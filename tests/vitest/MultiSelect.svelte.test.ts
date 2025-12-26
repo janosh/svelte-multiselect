@@ -2822,6 +2822,30 @@ describe(`binding update event count`, () => {
       expect(spy).toHaveBeenCalledTimes(1) // selection: exactly 1 call
     },
   )
+
+  // This test catches the regression where value gets synced from null to []
+  // The bug: values_equal(null, []) returned false, causing value = [] assignment
+  test.each([null, 1])(
+    `value binding with maxSelect=%s: no extra sync from null to [] on init`,
+    async (maxSelect) => {
+      const spy = vi.fn()
+
+      mount(Test2WayBind, {
+        target: document.body,
+        props: { options: [1, 2, 3], maxSelect, onValueChanged: spy },
+      })
+      await tick()
+      await tick()
+
+      // The fix ensures value stays null (no sync to [])
+      // Without fix: spy would be called with [] for maxSelect=null
+      if (maxSelect === null) {
+        // For multi-select, value should stay null, not get synced to []
+        const last_call = spy.mock.calls[spy.mock.calls.length - 1]?.[0]
+        expect(last_call).toBeNull()
+      }
+    },
+  )
 })
 
 describe(`CSS light-dark theme awareness`, () => {
