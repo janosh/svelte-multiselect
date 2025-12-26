@@ -631,15 +631,16 @@ These reflect internal component state:
 
 1. `#snippet option({ option, idx })`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
 1. `#snippet selectedItem({ option, idx })`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
+1. `#snippet children({ option, idx })`: Convenience snippet that applies to both dropdown options AND selected items. Use this when you want the same custom rendering for both. Takes precedence if `option` or `selectedItem` are not provided.
 1. `#snippet spinner()`: Custom spinner component to display when in `loading` state. Receives no props.
 1. `#snippet disabledIcon()`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `{#snippet disabledIcon()}{/snippet}` to remove the default disabled icon.
-1. `#snippet expandIcon()`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. Receives prop `open: boolean` which is true if the Multiselect dropdown is visible and false if it's hidden.
+1. `#snippet expandIcon({ open })`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. `open` is `true` if the dropdown is visible and `false` if hidden.
 1. `#snippet removeIcon()`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
 1. `#snippet userMsg({ searchText, msgType, msg })`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
    - `searchText`: The text user typed into search input.
    - `msgType: false | 'create' | 'dupe' | 'no-match'`: `'dupe'` means user input is a duplicate of an existing option. `'create'` means user is allowed to convert their input into a new option not previously in the dropdown. `'no-match'` means user input doesn't match any dropdown items and users are not allowed to create new options. `false` means none of the above.
    - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
-1. `snippet='after-input'`: Placed after the search input. For arbitrary content like icons or temporary messages. Receives props `selected: Option[]`, `disabled: boolean`, `invalid: boolean`, `id: string | null`, `placeholder: string`, `open: boolean`, `required: boolean`. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
+1. `#snippet afterInput({ selected, disabled, invalid, id, placeholder, open, required })`: Placed after the search input. For arbitrary content like icons or temporary messages. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
 Example using several snippets:
 
