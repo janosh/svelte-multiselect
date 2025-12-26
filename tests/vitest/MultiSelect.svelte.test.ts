@@ -79,7 +79,7 @@ test(`defaultDisabledTitle and custom per-option disabled titles are applied cor
 
   const lis = document.querySelectorAll<HTMLLIElement>(`ul.options > li`)
 
-  expect(lis.length).toBe(3)
+  expect(lis).toHaveLength(3)
   expect([...lis].map((li) => li.title)).toEqual([
     special_disabled_title,
     defaultDisabledTitle,
@@ -115,7 +115,7 @@ test(`applies DOM attributes to input node`, () => {
   const form_input = doc_query<HTMLInputElement>(`input.form-control`)
 
   // make sure the search text filtered the dropdown options
-  expect(lis.length).toBe(1)
+  expect(lis).toHaveLength(1)
 
   expect(input?.value).toBe(searchText)
   expect(input?.id).toBe(id)
@@ -669,7 +669,7 @@ test.each([
   const selected_ul = doc_query(`ul.selected`)
   const remaining_labels = options_set.slice(1).map(get_label).join(` `).trim()
   expect(selected_ul.textContent?.trim()).toBe(remaining_labels)
-  expect(document.querySelectorAll(`ul.selected > li`).length).toBe(
+  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(
     initial_selected_count - 1,
   )
 })
@@ -956,7 +956,7 @@ test(`resetFilterOnAdd=true does NOT reset searchText when maxSelect constraint 
 
   // Verify the option was not added
   const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items.length).toBe(2)
+  expect(selected_items).toHaveLength(2)
 })
 
 test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint prevents remove`, async () => {
@@ -990,7 +990,7 @@ test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint 
 
   // Verify the option was not removed
   const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items.length).toBe(1)
+  expect(selected_items).toHaveLength(1)
 })
 
 test(`Enter key deselection preserves searchText (matching mouse behavior)`, async () => {
@@ -1025,7 +1025,7 @@ test(`Enter key deselection preserves searchText (matching mouse behavior)`, asy
 
   // Verify the option was removed
   const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items.length).toBe(1)
+  expect(selected_items).toHaveLength(1)
 })
 
 test(`2-way binding of selected`, async () => {
@@ -1348,7 +1348,7 @@ test.each([[true], [false]])(
           `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
       )
     } else {
-      expect(console.warn).toHaveBeenCalledTimes(0)
+      expect(console.warn).not.toHaveBeenCalled()
     }
   },
 )
@@ -1371,7 +1371,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
             `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
         )
       } else {
-        expect(console.error).toHaveBeenCalledTimes(0)
+        expect(console.error).not.toHaveBeenCalled()
       }
     },
   )
@@ -1395,7 +1395,7 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
             `MultiSelect: received no options`,
           )
         } else {
-          expect(console.error).toHaveBeenCalledTimes(0)
+          expect(console.error).not.toHaveBeenCalled()
         }
       },
     )
@@ -1583,7 +1583,7 @@ test.each(
     await tick()
   }
 
-  expect(spy.mock.calls.length).toBeGreaterThanOrEqual(1)
+  expect(spy).toHaveBeenCalled()
   const events = spy.mock.calls.map((call) => call[0].event)
   expect(events.some((event) => event instanceof event_type)).toBe(true)
 })
@@ -1632,7 +1632,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       const dropdown_options = document.querySelectorAll(`ul.options > li`)
-      expect(dropdown_options.length).toBe(3)
+      expect(dropdown_options).toHaveLength(3)
 
       // Apple should be selected with appropriate styling
       const apple_option = Array.from(dropdown_options).find((li) =>
@@ -1672,7 +1672,7 @@ describe(`keepSelectedInDropdown feature`, () => {
     await tick()
 
     const dropdown_options = document.querySelectorAll(`ul.options > li`)
-    expect(dropdown_options.length).toBe(2)
+    expect(dropdown_options).toHaveLength(2)
     expect(Array.from(dropdown_options).some((li) => li.textContent?.includes(`Apple`)))
       .toBe(false)
   })
@@ -1784,7 +1784,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       const dropdown_options = document.querySelectorAll(`ul.options > li`)
-      expect(dropdown_options.length).toBe(3)
+      expect(dropdown_options).toHaveLength(3)
 
       // No options should have selected styling
       Array.from(dropdown_options).forEach((option) => {
@@ -1811,7 +1811,7 @@ describe(`keepSelectedInDropdown feature`, () => {
       await tick()
 
       const all_selected_options = second_target.querySelectorAll(`ul.options > li`)
-      expect(all_selected_options.length).toBe(3)
+      expect(all_selected_options).toHaveLength(3)
 
       // All options should have selected styling
       Array.from(all_selected_options).forEach((option) => {
@@ -1931,23 +1931,19 @@ describe(`keepSelectedInDropdown feature`, () => {
         const matching_options = Array.from(filtered_options).filter((li) =>
           li.textContent?.includes(`Banana`) || li.textContent?.includes(`Date`)
         )
-        expect(matching_options.length).toBe(2)
+        expect(matching_options).toHaveLength(2)
 
-        // Check that selected options are still visible (if they match the search)
-        const selected_options = Array.from(filtered_options).filter((li) =>
-          li.textContent?.includes(`Apple`) || li.textContent?.includes(`Cherry`)
-        )
-        expect(selected_options.length).toBeGreaterThanOrEqual(0)
+        // Note: selected options Apple/Cherry don't match filter 'a' so they may not be visible
       } else {
         // In default mode, only matching options are shown
-        expect(filtered_options.length).toBe(2) // Banana, Date
+        expect(filtered_options).toHaveLength(2) // Banana, Date
       }
 
       // Check that non-matching non-selected options are not visible
       const non_matching_options = Array.from(filtered_options).filter((li) =>
         li.textContent?.includes(`foo`) || li.textContent?.includes(`qux`)
       )
-      expect(non_matching_options.length).toBe(0)
+      expect(non_matching_options).toHaveLength(0)
     },
   )
 })
@@ -2216,7 +2212,7 @@ test.each([true, false, `if-mobile`] as const)(
 
     // count number of selected items
     const selected_items = document.querySelectorAll(`ul.selected > li`)
-    expect(selected_items.length).toBe(1)
+    expect(selected_items).toHaveLength(1)
 
     // check that dropdown is closed when closeDropdownOnSelect = true
     const dropdown = doc_query(`ul.options`)
