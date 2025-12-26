@@ -666,65 +666,72 @@ Example using several snippets:
 
 ## 🎬 &thinsp; Events
 
-`MultiSelect.svelte` dispatches the following events:
+`MultiSelect.svelte` provides the following event callback props:
 
 1. ```ts
-   onadd={(event) => console.log(event.detail.option)}
+   onadd={({ option }) => console.log(option)}
    ```
 
-   Triggers when a new option is selected. The newly selected option is provided as `event.detail.option`.
+   Triggers when a new option is selected. The newly selected option is provided as `option`.
 
 1. ```ts
-   oncreate={(event) => console.log(event.detail.option)}
+   oncreate={({ option }) => console.log(option)}
    ```
 
-   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `event.detail.option`.
+   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `option`.
 
 1. ```ts
-   onremove={(event) => console.log(event.detail.option)}`
+   onremove={({ option }) => console.log(option)}
    ```
 
-   Triggers when a single selected option is removed. The removed option is provided as `event.detail.option`.
+   Triggers when a single selected option is removed. The removed option is provided as `option`.
 
 1. ```ts
-   onremoveAll={(event) => console.log(event.detail.options)}`
+   onremoveAll={({ options }) => console.log(options)}
    ```
 
-   Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were removed (might not be all if `minSelect` is set).
+   Triggers when all selected options are removed. The `options` payload gives the options that were removed (might not be all if `minSelect` is set).
 
 1. ```ts
-   onchange={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}
+   onreorder={({ options }) => console.log(options)}
    ```
 
-   Triggers when an option is either added (selected) or removed from selected, or all selected options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
+   Triggers when selected options are reordered via drag-and-drop (enabled by default when `sortSelected` is false). The `options` payload is the newly ordered array of selected options.
 
 1. ```ts
-   onopen={(event) => console.log(`Multiselect dropdown was opened by ${event}`)}
+   onchange={({ type, option, options }) => console.log(type, option ?? options)}
    ```
 
-   Triggers when the dropdown list of options appears. Event is the DOM's `FocusEvent`,`KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
+   Triggers when an option is either added (selected) or removed from selected, all selected options are removed at once, or selected options are reordered via drag-and-drop. `type` is one of `'add' | 'remove' | 'removeAll' | 'selectAll' | 'reorder'` and payload will be `option: Option` or `options: Option[]`, respectively.
 
 1. ```ts
-   onclose={(event) => console.log(`Multiselect dropdown was closed by ${event}`)}
+   onopen={({ event }) => console.log(`Dropdown opened by`, event)}
    ```
 
-   Triggers when the dropdown list of options disappears. Event is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
+   Triggers when the dropdown list of options appears. `event` is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that triggered the open.
+
+1. ```ts
+   onclose={({ event }) => console.log(`Dropdown closed by`, event)}
+   ```
+
+   Triggers when the dropdown list of options disappears. `event` is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that triggered the close.
 
 For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
 
 ```svelte
 <MultiSelect
-  onchange={(event) => {
-    if (event.detail.type === 'add') alert(`You added ${event.detail.option}`)
-    if (event.detail.type === 'remove') alert(`You removed ${event.detail.option}`)
-    if (event.detail.type === 'removeAll') alert(`You removed ${event.detail.options}`)
+  onchange={({ type, option, options }) => {
+    if (type === 'add') alert(`You added ${option}`)
+    if (type === 'remove') alert(`You removed ${option}`)
+    if (type === 'removeAll') alert(`You removed ${options}`)
+    if (type === 'reorder') alert(`New order: ${options}`)
   }}
 />
 ```
 
-> Note: Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
+> Note: Depending on the data passed to the component the `option(s)` payload will either be objects or simple strings/numbers.
 
-The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutorial/svelte/component-events). This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
+This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
 
 ```svelte
 <MultiSelect

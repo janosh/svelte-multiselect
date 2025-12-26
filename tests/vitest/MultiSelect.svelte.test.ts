@@ -128,65 +128,29 @@ test(`applies DOM attributes to input node`, () => {
 
 // https://github.com/janosh/svelte-multiselect/issues/354
 describe(`placeholder`, () => {
-  test(`string placeholder hidden by default when options selected`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], placeholder: `Pick a number` },
-    })
+  test.each(
+    [
+      [`Pick a number`, ``],
+      [{ text: `Pick a number`, persistent: true }, `Pick a number`],
+      [{ text: `Pick a number` }, ``],
+    ] as const,
+  )(
+    `placeholder=%j shows %j after selection`,
+    async (placeholder, expected_after) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: [1, 2, 3], placeholder },
+      })
 
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.placeholder).toBe(`Pick a number`)
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      expect(input.placeholder).toBe(`Pick a number`)
 
-    // Select an option by clicking
-    const li = doc_query(`ul.options li`)
-    li.click()
-    await tick()
+      doc_query(`ul.options li`).click()
+      await tick()
 
-    // Placeholder should be hidden (empty string in DOM)
-    expect(input.placeholder).toBe(``)
-  })
-
-  test(`object placeholder with persistent=true remains visible`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3],
-        placeholder: { text: `Pick a number`, persistent: true },
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.placeholder).toBe(`Pick a number`)
-
-    // Select an option by clicking
-    const li = doc_query(`ul.options li`)
-    li.click()
-    await tick()
-
-    // Placeholder should still be visible
-    expect(input.placeholder).toBe(`Pick a number`)
-  })
-
-  test(`object placeholder without persistent behaves like string`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3],
-        placeholder: { text: `Pick a number` },
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.placeholder).toBe(`Pick a number`)
-
-    // Select an option by clicking
-    const li = doc_query(`ul.options li`)
-    li.click()
-    await tick()
-
-    // Placeholder should be hidden
-    expect(input.placeholder).toBe(``)
-  })
+      expect(input.placeholder).toBe(expected_after)
+    },
+  )
 })
 
 test(`applies custom classes for styling through CSS frameworks`, async () => {
@@ -927,29 +891,16 @@ describe.each([
   },
 )
 
-test.each([[true, ``], [false, `1`]])(
-  `resetFilterOnAdd=%j handles input value correctly after adding an option`,
-  async (resetFilterOnAdd, expected) => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], resetFilterOnAdd },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.value = `1`
-    input.dispatchEvent(input_event)
-
-    const li = doc_query<HTMLLIElement>(`ul.options li`)
-    li.click()
-    await tick()
-
-    expect(input.value).toBe(expected)
-  },
-)
-
-test.each([[true, ``], [false, `1`]])(
-  `resetFilterOnAdd=%j handles input value correctly when selecting with Enter key`,
-  async (resetFilterOnAdd, expected) => {
+test.each(
+  [
+    [true, ``, `click`],
+    [false, `1`, `click`],
+    [true, ``, `enter`],
+    [false, `1`, `enter`],
+  ] as const,
+)(
+  `resetFilterOnAdd=%j clears input (expected=%j) on %s`,
+  async (resetFilterOnAdd, expected, method) => {
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], resetFilterOnAdd, closeDropdownOnSelect: false },
@@ -960,12 +911,15 @@ test.each([[true, ``], [false, `1`]])(
     input.dispatchEvent(input_event)
     await tick()
 
-    // Navigate to the first matching option with ArrowDown
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-    await tick()
-
-    // Select with Enter key
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    if (method === `click`) {
+      doc_query<HTMLLIElement>(`ul.options li`).click()
+    } else {
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+      )
+      await tick()
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    }
     await tick()
 
     expect(input.value).toBe(expected)
@@ -1340,6 +1294,39 @@ test(`dragging selected options across each other changes their order`, async ()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
 
+// https://github.com/janosh/svelte-multiselect/issues/371
+test(`drag-drop reordering fires onreorder and onchange events`, async () => {
+  const options = [1, 2, 3]
+  const onreorder_spy = vi.fn()
+  const onchange_spy = vi.fn()
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options,
+      selected: [...options],
+      onreorder: onreorder_spy,
+      onchange: onchange_spy,
+    },
+  })
+
+  // drag option at index 1 to index 0
+  const first_li = doc_query(`ul.selected li`)
+  const dataTransfer = new DataTransfer()
+  dataTransfer.setData(`text/plain`, `1`)
+
+  first_li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
+  await tick()
+
+  // verify onreorder was called with the new order
+  expect(onreorder_spy).toHaveBeenCalledTimes(1)
+  expect(onreorder_spy).toHaveBeenCalledWith({ options: [2, 1, 3] })
+
+  // verify onchange was called with type 'reorder'
+  expect(onchange_spy).toHaveBeenCalledTimes(1)
+  expect(onchange_spy).toHaveBeenCalledWith({ options: [2, 1, 3], type: `reorder` })
+})
+
 test.each([[true], [false]])(
   `console warning when combining sortSelected=%s and selectedOptionsDraggable`,
   (sortSelected) => {
@@ -1573,6 +1560,33 @@ test.each([
     })
   },
 )
+
+test.each(
+  [
+    [`onopen`, `open`, FocusEvent],
+    [`onclose`, `close`, KeyboardEvent],
+  ] as const,
+)(`fires %s event when dropdown %ss`, async (event_name, _action, event_type) => {
+  const spy = vi.fn()
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], [event_name]: spy },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+  await tick()
+
+  if (event_name === `onclose`) {
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+  }
+
+  expect(spy.mock.calls.length).toBeGreaterThanOrEqual(1)
+  const events = spy.mock.calls.map((call) => call[0].event)
+  expect(events.some((event) => event instanceof event_type)).toBe(true)
+})
 
 describe.each([
   [true, (opt: Option) => opt],

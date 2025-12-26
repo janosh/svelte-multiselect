@@ -117,6 +117,7 @@
     onopen,
     onclose,
     onselectAll,
+    onreorder,
     portal: portal_params = {},
     // Select all feature
     selectAllOption = false,
@@ -601,6 +602,8 @@
     }
     selected = new_selected
     drag_idx = null
+    onreorder?.({ options: new_selected })
+    onchange?.({ options: new_selected, type: `reorder` })
   }
 
   const dragstart = (idx: number) => (event: DragEvent) => {
