@@ -631,15 +631,16 @@ These reflect internal component state:
 
 1. `#snippet option({ option, idx })`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
 1. `#snippet selectedItem({ option, idx })`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
+1. `#snippet children({ option, idx })`: Convenience snippet that applies to both dropdown options AND selected items. Use this when you want the same custom rendering for both. Takes precedence if `option` or `selectedItem` are not provided.
 1. `#snippet spinner()`: Custom spinner component to display when in `loading` state. Receives no props.
 1. `#snippet disabledIcon()`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `{#snippet disabledIcon()}{/snippet}` to remove the default disabled icon.
-1. `#snippet expandIcon()`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. Receives prop `open: boolean` which is true if the Multiselect dropdown is visible and false if it's hidden.
+1. `#snippet expandIcon({ open })`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. `open` is `true` if the dropdown is visible and `false` if hidden.
 1. `#snippet removeIcon()`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
 1. `#snippet userMsg({ searchText, msgType, msg })`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
    - `searchText`: The text user typed into search input.
    - `msgType: false | 'create' | 'dupe' | 'no-match'`: `'dupe'` means user input is a duplicate of an existing option. `'create'` means user is allowed to convert their input into a new option not previously in the dropdown. `'no-match'` means user input doesn't match any dropdown items and users are not allowed to create new options. `false` means none of the above.
    - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
-1. `snippet='after-input'`: Placed after the search input. For arbitrary content like icons or temporary messages. Receives props `selected: Option[]`, `disabled: boolean`, `invalid: boolean`, `id: string | null`, `placeholder: string`, `open: boolean`, `required: boolean`. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
+1. `#snippet afterInput({ selected, disabled, invalid, id, placeholder, open, required })`: Placed after the search input. For arbitrary content like icons or temporary messages. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
 Example using several snippets:
 
@@ -666,65 +667,79 @@ Example using several snippets:
 
 ## 🎬 &thinsp; Events
 
-`MultiSelect.svelte` dispatches the following events:
+`MultiSelect.svelte` provides the following event callback props:
 
 1. ```ts
-   onadd={(event) => console.log(event.detail.option)}
+   onadd={({ option }) => console.log(option)}
    ```
 
-   Triggers when a new option is selected. The newly selected option is provided as `event.detail.option`.
+   Triggers when a new option is selected. The newly selected option is provided as `option`.
 
 1. ```ts
-   oncreate={(event) => console.log(event.detail.option)}
+   oncreate={({ option }) => console.log(option)}
    ```
 
-   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `event.detail.option`.
+   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `option`.
 
 1. ```ts
-   onremove={(event) => console.log(event.detail.option)}`
+   onremove={({ option }) => console.log(option)}
    ```
 
-   Triggers when a single selected option is removed. The removed option is provided as `event.detail.option`.
+   Triggers when a single selected option is removed. The removed option is provided as `option`.
 
 1. ```ts
-   onremoveAll={(event) => console.log(event.detail.options)}`
+   onremoveAll={({ options }) => console.log(options)}
    ```
 
-   Triggers when all selected options are removed. The payload `event.detail.options` gives the options that were removed (might not be all if `minSelect` is set).
+   Triggers when all selected options are removed. The `options` payload gives the options that were removed (might not be all if `minSelect` is set).
 
 1. ```ts
-   onchange={(event) => console.log(`${event.detail.type}: '${event.detail.option}'`)}
+   onselectAll={({ options }) => console.log(options)}
    ```
 
-   Triggers when an option is either added (selected) or removed from selected, or all selected options are removed at once. `type` is one of `'add' | 'remove' | 'removeAll'` and payload will be `option: Option` or `options: Option[]`, respectively.
+   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added.
 
 1. ```ts
-   onopen={(event) => console.log(`Multiselect dropdown was opened by ${event}`)}
+   onreorder={({ options }) => console.log(options)}
    ```
 
-   Triggers when the dropdown list of options appears. Event is the DOM's `FocusEvent`,`KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
+   Triggers when selected options are reordered via drag-and-drop (enabled by default when `sortSelected` is false). The `options` payload is the newly ordered array of selected options.
 
 1. ```ts
-   onclose={(event) => console.log(`Multiselect dropdown was closed by ${event}`)}
+   onchange={({ type, option, options }) => console.log(type, option ?? options)}
    ```
 
-   Triggers when the dropdown list of options disappears. Event is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that initiated this Svelte `dispatch` event.
+   Triggers when an option is either added (selected) or removed from selected, all selected options are removed at once, or selected options are reordered via drag-and-drop. `type` is one of `'add' | 'remove' | 'removeAll' | 'selectAll' | 'reorder'` and payload will be `option: Option` or `options: Option[]`, respectively.
+
+1. ```ts
+   onopen={({ event }) => console.log(`Dropdown opened by`, event)}
+   ```
+
+   Triggers when the dropdown list of options appears. `event` is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that triggered the open.
+
+1. ```ts
+   onclose={({ event }) => console.log(`Dropdown closed by`, event)}
+   ```
+
+   Triggers when the dropdown list of options disappears. `event` is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that triggered the close.
 
 For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
 
 ```svelte
 <MultiSelect
-  onchange={(event) => {
-    if (event.detail.type === 'add') alert(`You added ${event.detail.option}`)
-    if (event.detail.type === 'remove') alert(`You removed ${event.detail.option}`)
-    if (event.detail.type === 'removeAll') alert(`You removed ${event.detail.options}`)
+  onchange={({ type, option, options }) => {
+    if (type === 'add') alert(`You added ${option}`)
+    if (type === 'remove') alert(`You removed ${option}`)
+    if (type === 'removeAll') alert(`You removed ${options}`)
+    if (type === 'selectAll') alert(`You selected all: ${options}`)
+    if (type === 'reorder') alert(`New order: ${options}`)
   }}
 />
 ```
 
-> Note: Depending on the data passed to the component the `options(s)` payload will either be objects or simple strings/numbers.
+> Note: Depending on the data passed to the component the `option(s)` payload will either be objects or simple strings/numbers.
 
-The above list of events are [Svelte `dispatch` events](https://svelte.dev/tutorial/svelte/component-events). This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
+This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
 
 ```svelte
 <MultiSelect
@@ -862,6 +877,7 @@ The second method allows you to pass in custom classes to the important DOM elem
 - `ulOptionsClass`: available options listed in the dropdown when component is in `open` state
 - `liOptionClass`: list items selectable from dropdown list
 - `liActiveOptionClass`: the currently active dropdown list item (i.e. hovered or navigated to with arrow keys)
+- `liSelectAllClass`: the "Select All" option at the top of the dropdown (when `selectAllOption` is enabled)
 - `liUserMsgClass`: user message (last child of dropdown list when no options match user input)
 - `liActiveUserMsgClass`: user message when active (i.e. hovered or navigated to with arrow keys)
 - `maxSelectMsgClass`: small span towards the right end of the input field displaying to the user how many of the allowed number of options they've already selected
@@ -877,6 +893,7 @@ This simplified version of the DOM structure of the component shows where these 
   </ul>
   <span class="maxSelectMsgClass">2/5 selected</span>
   <ul class="options {ulOptionsClass}">
+    <li class="select-all {liSelectAllClass}">Select all</li>
     <li class={liOptionClass}>Option 1</li>
     <li class="{liOptionClass} {liActiveOptionClass}">
       Option 2 (currently active)
@@ -936,6 +953,9 @@ Odd as it may seem, you get the most fine-grained control over the styling of ev
 }
 :global(div.multiselect > ul.options > li.disabled) {
   /* options with disabled key set to true (see props above) */
+}
+:global(div.multiselect > ul.options > li.select-all) {
+  /* the "Select All" option at the top of the dropdown */
 }
 ```
 
