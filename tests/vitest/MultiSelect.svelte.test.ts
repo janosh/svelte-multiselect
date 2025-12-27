@@ -312,7 +312,7 @@ test.each([[null], [1]])(
       props: { options: [1, 2, 3], maxSelect },
     })
 
-    // On init, value stays null (no unnecessary sync from [] to null). See issue #369.
+    // On init, value stays null (no unnecessary sync from null to []). See issue #369.
     expect(select.value).toEqual(null)
 
     await tick()
@@ -2837,13 +2837,12 @@ describe(`binding update event count`, () => {
       await tick()
       await tick()
 
+      // The effect in Test2WayBind fires at least once on mount with initial value
+      expect(spy.mock.calls.length).toBeGreaterThanOrEqual(1)
       // The fix ensures value stays null (no sync to [])
       // Without fix: spy would be called with [] for maxSelect=null
-      if (maxSelect === null) {
-        // For multi-select, value should stay null, not get synced to []
-        const last_call = spy.mock.calls[spy.mock.calls.length - 1]?.[0]
-        expect(last_call).toBeNull()
-      }
+      const last_value = spy.mock.calls[spy.mock.calls.length - 1][0]
+      expect(last_value, `value should be null, not []`).toBeNull()
     },
   )
 })
