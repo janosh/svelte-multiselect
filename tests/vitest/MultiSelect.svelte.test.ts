@@ -312,7 +312,8 @@ test.each([[null], [1]])(
       props: { options: [1, 2, 3], maxSelect },
     })
 
-    expect(select.value).toEqual(maxSelect === 1 ? null : [])
+    // On init, value stays null (no unnecessary sync from null to []). See issue #369.
+    expect(select.value).toEqual(null)
 
     await tick()
     if (maxSelect === 1) {
@@ -2780,6 +2781,70 @@ describe(`loadOptions feature`, () => {
     await vi.runAllTimersAsync()
     expect(options_ul.textContent).toContain(`Foo Result`)
   })
+})
+
+// https://github.com/janosh/svelte-multiselect/issues/369
+describe(`binding update event count`, () => {
+  test(`onchange fires 0 times on init and exactly once per selection`, async () => {
+    const onchange_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], onchange: onchange_spy },
+    })
+    await tick()
+    expect(onchange_spy).toHaveBeenCalledTimes(0)
+
+    // select first option
+    doc_query(`ul.options li`).click()
+    await tick()
+    expect(onchange_spy).toHaveBeenCalledTimes(1)
+    expect(onchange_spy).toHaveBeenCalledWith({ option: 1, type: `add` })
+  })
+
+  test.each([null, 1])(
+    `selected binding with maxSelect=%s: ≤1 update on init, exactly 1 per selection`,
+    async (maxSelect) => {
+      const spy = vi.fn()
+
+      mount(Test2WayBind, {
+        target: document.body,
+        props: { options: [1, 2, 3], maxSelect, onSelectedChanged: spy },
+      })
+      await tick()
+      await tick()
+      expect(spy.mock.calls.length).toBeLessThanOrEqual(1) // init: at most 1 call
+
+      spy.mockClear()
+      doc_query(`ul.options li`).click()
+      await tick()
+      await tick()
+      expect(spy).toHaveBeenCalledTimes(1) // selection: exactly 1 call
+    },
+  )
+
+  // This test catches the regression where value gets synced from null to []
+  // The bug: values_equal(null, []) returned false, causing value = [] assignment
+  test.each([null, 1])(
+    `value binding with maxSelect=%s: no extra sync from null to [] on init`,
+    async (maxSelect) => {
+      const spy = vi.fn()
+
+      mount(Test2WayBind, {
+        target: document.body,
+        props: { options: [1, 2, 3], maxSelect, onValueChanged: spy },
+      })
+      await tick()
+      await tick()
+
+      // The effect in Test2WayBind fires at least once on mount with initial value
+      expect(spy.mock.calls.length).toBeGreaterThanOrEqual(1)
+      // The fix ensures value stays null (no sync to [])
+      // Without fix: spy would be called with [] for maxSelect=null
+      const last_value = spy.mock.calls[spy.mock.calls.length - 1][0]
+      expect(last_value, `value should be null, not []`).toBeNull()
+    },
+  )
 })
 
 describe(`CSS light-dark theme awareness`, () => {
