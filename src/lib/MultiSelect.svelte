@@ -151,11 +151,15 @@
       : true,
   )
 
-  // Helper to compare arrays/values for equality to avoid unnecessary updates
+  // Helper to compare arrays/values for equality to avoid unnecessary updates.
   // Prevents infinite loops when value/selected are bound to reactive wrappers
   // that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
+  // Treats null/undefined/[] as equivalent empty states to prevent extra updates on init (#369).
   function values_equal(val1: unknown, val2: unknown): boolean {
     if (val1 === val2) return true
+    const empty1 = val1 == null || (Array.isArray(val1) && val1.length === 0)
+    const empty2 = val2 == null || (Array.isArray(val2) && val2.length === 0)
+    if (empty1 && empty2) return true
     if (Array.isArray(val1) && Array.isArray(val2)) {
       return val1.length === val2.length &&
         val1.every((item, idx) => item === val2[idx])
