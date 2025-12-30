@@ -1155,17 +1155,18 @@ test.describe(`option grouping`, () => {
       .toBeVisible()
   })
 
-  test(`group header displays selected count when options are selected`, async ({ page }) => {
+  test(`group header shows total count and select all toggles correctly`, async ({ page }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#group-select-all input[autocomplete]`)
+
     const options_list = page.locator(`#group-select-all ul.options`)
     const primary_header = options_list.locator(`li.group-header:has-text("Primary")`)
 
-    await expect(primary_header).toContainText(`0/3`)
-    await options_list.locator(`li[role="option"]:has-text("Red")`).click()
-    await expect(primary_header).toContainText(`1/3`)
-    await options_list.locator(`li[role="option"]:has-text("Blue")`).click()
-    await expect(primary_header).toContainText(`2/3`)
+    await expect(primary_header).toContainText(`(3)`)
+    await expect(primary_header.locator(`button`)).toContainText(`Select all`)
+
+    await primary_header.locator(`button`).click()
+    await expect(primary_header.locator(`button`)).toContainText(`Deselect`)
   })
 
   test(`searchExpandsCollapsedGroups auto-expands matching collapsed groups`, async ({ page }) => {
