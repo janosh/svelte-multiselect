@@ -36,7 +36,7 @@
 
 | Statements                                                                            | Branches                                                                          | Lines                                                                       |
 | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| ![Statements](https://img.shields.io/badge/statements-83.56%25-yellow.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-79.37%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-83.33%25-yellow.svg?style=flat) |
+| ![Statements](https://img.shields.io/badge/statements-85.65%25-yellow.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-82.47%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-85.51%25-yellow.svg?style=flat) |
 
 ## 🔨 &thinsp; Installation
 
