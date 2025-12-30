@@ -548,8 +548,7 @@
     if (selected.length === 0) return
 
     const idx = selected.findIndex((opt) => key(opt) === key(option_to_drop))
-
-    let [option_removed] = selected.splice(idx, 1) // remove option from selected list
+    let option_removed = selected[idx]
 
     if (option_removed === undefined && allowUserOptions) {
       // if option with label could not be found but allowUserOptions is truthy,
@@ -569,7 +568,7 @@
       return
     }
 
-    selected = [...selected] // trigger Svelte rerender
+    selected = selected.filter((_, remove_idx) => remove_idx !== idx)
     clear_validity()
     onremove?.({ option: option_removed })
     onchange?.({ option: option_removed, type: `remove` })
@@ -766,12 +765,11 @@
   function toggle_group_selection(
     group_opts: Option[],
     group_collapsed: boolean,
+    all_selected: boolean,
     event: Event,
   ) {
     event.stopPropagation()
     const selectable = get_selectable_opts(group_opts, group_collapsed)
-    const all_selected = selectable.length > 0 &&
-      selectable.every((opt) => selected_keys_set.has(key(opt)))
     if (all_selected) {
       // Deselect all options in this group
       const keys_to_remove = new Set(selectable.map(key))
@@ -1270,7 +1268,7 @@
           {@const handle_toggle = () =>
         collapsibleGroups && toggle_group_collapsed(group_name)}
           {@const handle_group_select = (event: Event) =>
-        toggle_group_selection(group_opts, collapsed, event)}
+        toggle_group_selection(group_opts, collapsed, all_selected, event)}
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <li
             class="group-header {liGroupHeaderClass}"

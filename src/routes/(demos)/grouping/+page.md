@@ -10,16 +10,14 @@ This addresses [GitHub issue #135](https://github.com/janosh/svelte-multiselect/
 <script>
   import MultiSelect from '$lib'
 
-  const options = [
-    { label: `JavaScript`, group: `Frontend` },
-    { label: `TypeScript`, group: `Frontend` },
-    { label: `React`, group: `Frontend` },
-    { label: `Python`, group: `Backend` },
-    { label: `Go`, group: `Backend` },
-    { label: `Rust`, group: `Backend` },
-    { label: `PostgreSQL`, group: `Database` },
-    { label: `MongoDB`, group: `Database` },
-  ]
+  const options = Object.entries({
+    Frontend: [`JavaScript`, `TypeScript`, `React`, `Vue`, `Svelte`, `Angular`],
+    Backend: [`Python`, `Go`, `Rust`, `Java`, `Node.js`, `Ruby`],
+    Database: [`PostgreSQL`, `MongoDB`, `Redis`, `MySQL`, `SQLite`],
+    DevOps: [`Docker`, `Kubernetes`, `Terraform`, `AWS`],
+  }).flatMap(([group, options]) =>
+    options.map((option) => ({ label: option, group }))
+  )
 
   let selected = $state([])
   let searchMatchesGroups = $state(false)
@@ -50,16 +48,17 @@ Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpan
 <script>
   import MultiSelect from '$lib'
 
-  const options = [
-    { label: `🍎 Apple`, group: `Fruits` },
-    { label: `🍊 Orange`, group: `Fruits` },
-    { label: `🍌 Banana`, group: `Fruits` },
-    { label: `🥕 Carrot`, group: `Vegetables` },
-    { label: `🥦 Broccoli`, group: `Vegetables` },
-    { label: `🌽 Corn`, group: `Vegetables` },
-    { label: `🥛 Milk`, group: `Dairy` },
-    { label: `🧀 Cheese`, group: `Dairy` },
-  ]
+  const options = Object.entries({
+    Fruits: `🍎 Apple,🍊 Orange,🍌 Banana,🍇 Grapes,🍓 Strawberry,🫐 Blueberry`.split(
+      `,`,
+    ),
+    Vegetables: `🥕 Carrot,🥦 Broccoli,🌽 Corn,🥬 Lettuce,🍅 Tomato,🥒 Cucumber`
+      .split(`,`),
+    Dairy: `🥛 Milk,🧀 Cheese,🧈 Butter,🍦 Ice Cream,🥚 Eggs`.split(`,`),
+    Meat: `🥩 Steak,🍗 Chicken,🥓 Bacon,🌭 Hot Dog,🍖 Ribs`.split(`,`),
+  }).flatMap(([group, options]) =>
+    options.map((option) => ({ label: option, group }))
+  )
 
   let selected = $state([])
   let collapsedGroups = $state(new Set([`Dairy`])) // Dairy starts collapsed
@@ -108,14 +107,14 @@ Enable `groupSelectAll` to add a toggle button to each group header:
 <script>
   import MultiSelect from '$lib'
 
-  const options = [
-    { label: `Red`, group: `Primary` },
-    { label: `Blue`, group: `Primary` },
-    { label: `Yellow`, group: `Primary` },
-    { label: `Orange`, group: `Secondary` },
-    { label: `Green`, group: `Secondary` },
-    { label: `Purple`, group: `Secondary` },
-  ]
+  const options = Object.entries({
+    Primary: [`Red`, `Blue`, `Yellow`],
+    Secondary: [`Orange`, `Green`, `Purple`],
+    Tertiary: [`Vermilion`, `Amber`, `Chartreuse`, `Teal`, `Violet`, `Magenta`],
+    Neutrals: [`White`, `Black`, `Gray`, `Silver`, `Beige`],
+  }).flatMap(([group, options]) =>
+    options.map((option) => ({ label: option, group }))
+  )
 
   let selected = $state([])
 </script>
@@ -139,13 +138,17 @@ Use `ungroupedPosition` for options without a `group` key, and `groupSortOrder` 
 <script>
   import MultiSelect from '$lib'
 
-  const options = [
-    { label: `Featured Item` }, // No group
-    { label: `Popular Choice` }, // No group
-    { label: `Zebra`, group: `Z Animals` },
-    { label: `Apple`, group: `A Fruits` },
-    { label: `Lion`, group: `L Animals` },
-  ]
+  // Ungrouped options (no group key) mixed with grouped options
+  const ungrouped = [`⭐ Featured Item`, `🔥 Popular Choice`, `✨ Editor's Pick`].map(
+    (label) => ({ label }),
+  )
+  const grouped = Object.entries({
+    'Z Animals': [`Zebra`, `Zorse`, `Zebu`],
+    'A Fruits': [`Apple`, `Apricot`, `Avocado`],
+    'L Animals': [`Lion`, `Leopard`, `Lemur`],
+    'M Fruits': [`Mango`, `Melon`, `Mulberry`],
+  }).flatMap(([group, opts]) => opts.map((label) => ({ label, group })))
+  const options = [...ungrouped, ...grouped]
 
   let selected = $state([])
   let ungroupedPosition = $state(`first`)
@@ -181,11 +184,12 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
 <script>
   import MultiSelect from '$lib'
 
-  const departments = [`Engineering`, `Design`, `Marketing`, `Sales`, `HR`]
+  const departments = `Engineering,Design,Marketing,Sales,HR,Finance,Legal,Operations`
+    .split(`,`)
   const server_data = departments.flatMap((dept) =>
-    Array.from({ length: 6 }, (_, idx) => ({
-      label: `${dept.slice(0, 3)}-${idx + 1}`,
-      name: `Team Member ${idx + 1}`,
+    Array.from({ length: 8 }, (_, idx) => ({
+      label: `${dept.slice(0, 3)}-${String(idx + 1).padStart(3, `0`)}`,
+      name: `${dept} Team Member ${idx + 1}`,
       group: dept,
     }))
   )
@@ -231,15 +235,17 @@ Use the `groupHeader` snippet for complete control over header rendering:
 <script>
   import MultiSelect from '$lib'
 
-  const options = [
-    { label: `New York`, group: `USA` },
-    { label: `Los Angeles`, group: `USA` },
-    { label: `London`, group: `UK` },
-    { label: `Tokyo`, group: `Japan` },
-    { label: `Paris`, group: `France` },
-  ]
+  const options = Object.entries({
+    USA: [`New York`, `Los Angeles`, `Chicago`, `Houston`, `Phoenix`],
+    UK: [`London`, `Manchester`, `Birmingham`, `Leeds`],
+    Japan: [`Tokyo`, `Osaka`, `Kyoto`, `Yokohama`],
+    France: [`Paris`, `Lyon`, `Marseille`, `Toulouse`],
+    Germany: [`Berlin`, `Munich`, `Hamburg`, `Frankfurt`],
+  }).flatMap(([group, options]) =>
+    options.map((option) => ({ label: option, group }))
+  )
 
-  const emojis = { USA: `🇺🇸`, UK: `🇬🇧`, Japan: `🇯🇵`, France: `🇫🇷` }
+  const emojis = { USA: `🇺🇸`, UK: `🇬🇧`, Japan: `🇯🇵`, France: `🇫🇷`, Germany: `🇩🇪` }
   let selected = $state([])
 </script>
 
