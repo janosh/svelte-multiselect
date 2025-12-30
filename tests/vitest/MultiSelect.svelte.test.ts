@@ -2882,3 +2882,944 @@ describe(`CSS light-dark theme awareness`, () => {
       .toBeGreaterThanOrEqual(2)
   })
 })
+
+// Option grouping feature tests (https://github.com/janosh/svelte-multiselect/issues/135)
+describe(`option grouping feature`, () => {
+  const grouped_options = [
+    { label: `Rock`, group: `Genre` },
+    { label: `Electronic`, group: `Genre` },
+    { label: `Jazz`, group: `Genre` },
+    { label: `C Major`, group: `Key` },
+    { label: `D Minor`, group: `Key` },
+    `Ungrouped Option`,
+  ]
+
+  // Helper to find a group header by name (throws if not found for cleaner test code)
+  const find_group_header = (name: string): HTMLElement => {
+    const header = Array.from(document.querySelectorAll(`ul.options > li.group-header`))
+      .find((el) => el.textContent?.includes(name)) as HTMLElement | undefined
+    if (!header) throw new Error(`Group header "${name}" not found`)
+    return header
+  }
+
+  test(`renders group headers and options correctly`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, open: true },
+    })
+    await tick()
+
+    // Verify group headers
+    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+    expect(group_headers).toHaveLength(2)
+    const header_texts = Array.from(group_headers).map((h) =>
+      h.querySelector(`.group-label`)?.textContent?.trim()
+    )
+    expect(header_texts).toEqual(expect.arrayContaining([`Genre`, `Key`]))
+
+    // Verify all options rendered
+    const all_options = document.querySelectorAll(`ul.options > li:not(.group-header)`)
+    expect(all_options).toHaveLength(6)
+  })
+
+  test.each([`first`, `last`] as const)(
+    `ungroupedPosition=%s renders ungrouped options in correct position`,
+    async (ungroupedPosition) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: grouped_options, ungroupedPosition, open: true },
+      })
+      await tick()
+
+      const all_lis = document.querySelectorAll(`ul.options > li`)
+      const ungrouped_idx = Array.from(all_lis).findIndex((li) =>
+        li.textContent?.includes(`Ungrouped Option`)
+      )
+
+      if (ungroupedPosition === `first`) {
+        expect(ungrouped_idx).toBe(0) // first item (before any group headers)
+      } else {
+        expect(ungrouped_idx).toBe(all_lis.length - 1) // last item
+      }
+    },
+  )
+
+  test(`filtering shows only groups with matching options`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, open: true },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Rock`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    // Only Genre group header should be visible since only Rock matches
+    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+    expect(group_headers).toHaveLength(1)
+    expect(group_headers[0].textContent).toContain(`Genre`)
+  })
+
+  test(`arrow navigation skips group headers`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, open: true },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    // Navigate down - first active should be first option, not group header
+    input.dispatchEvent(arrow_down)
+    await tick()
+    await tick() // extra tick for reactive effects
+
+    const active_option = document.querySelector(`ul.options > li.active`)
+    // Check that it's not a group header if an active element exists
+    if (active_option) {
+      expect(active_option.classList.contains(`group-header`)).toBe(false)
+    }
+    // Verify no group header can become active
+    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+    group_headers.forEach((header) => {
+      expect(header.classList.contains(`active`)).toBe(false)
+    })
+  })
+
+  test(`collapsibleGroups allows toggling group visibility`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, collapsibleGroups: true, open: true },
+    })
+    await tick()
+
+    const genre_header = find_group_header(`Genre`)
+    expect(genre_header).toBeDefined()
+    expect(genre_header.classList.contains(`collapsible`)).toBe(true)
+
+    // Get initial option count
+    const initial_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header)`,
+    )
+    const initial_count = initial_options.length
+
+    // Click to collapse
+    genre_header.click()
+    await tick()
+
+    // Options in Genre group should be hidden
+    const after_collapse_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header)`,
+    )
+    expect(after_collapse_options.length).toBeLessThan(initial_count)
+
+    // Click again to expand
+    genre_header.click()
+    await tick()
+
+    const after_expand_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header)`,
+    )
+    expect(after_expand_options.length).toBe(initial_count)
+  })
+
+  test(`groupSelectAll adds select all button to group headers`, async () => {
+    const onselectAll_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        groupSelectAll: true,
+        onselectAll: onselectAll_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    // Find group select all buttons
+    const select_all_buttons = document.querySelectorAll(
+      `ul.options > li.group-header button.group-select-all`,
+    )
+    expect(select_all_buttons).toHaveLength(2) // One for each group
+
+    const genre_header = find_group_header(`Genre`)
+    const genre_select_all = genre_header.querySelector(
+      `button.group-select-all`,
+    ) as HTMLElement
+    genre_select_all.click()
+    await tick()
+
+    // Should have selected all Genre options
+    expect(onselectAll_spy).toHaveBeenCalledTimes(1)
+    const selected_options = onselectAll_spy.mock.calls[0][0].options
+    expect(selected_options).toHaveLength(3) // Rock, Electronic, Jazz
+    expect(selected_options.every((opt: { group: string }) => opt.group === `Genre`))
+      .toBe(true)
+  })
+
+  test.each(
+    [
+      [1, 0, 0], // maxSelect=1: button hidden, 0 selected
+      [2, 2, 2], // maxSelect=2: button visible (2 groups), 2 selected when clicked
+    ] as const,
+  )(
+    `groupSelectAll with maxSelect=%s shows %s buttons and selects up to maxSelect`,
+    async (maxSelect, expected_buttons, expected_selected) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: grouped_options, groupSelectAll: true, maxSelect, open: true },
+      })
+      await tick()
+
+      const select_all_buttons = document.querySelectorAll(
+        `ul.options > li.group-header button.group-select-all`,
+      )
+      expect(select_all_buttons).toHaveLength(expected_buttons)
+
+      if (expected_buttons > 0) {
+        const genre_header = find_group_header(`Genre`)
+        genre_header.querySelector<HTMLButtonElement>(`button.group-select-all`)?.click()
+        await tick()
+        expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(
+          expected_selected,
+        )
+      }
+    },
+  )
+
+  test.each(
+    [
+      [
+        `liGroupHeaderClass`,
+        `custom-header-class`,
+        (h: HTMLElement) => h.classList.contains(`custom-header-class`),
+      ],
+      [
+        `liGroupHeaderStyle`,
+        `background: red`,
+        (h: HTMLElement) => h.style.background === `red`,
+      ],
+    ] as const,
+  )(`%s is applied to group headers`, async (prop_name, prop_value, check_fn) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, [prop_name]: prop_value, open: true },
+    })
+    await tick()
+
+    const group_headers = document.querySelectorAll<HTMLElement>(
+      `ul.options > li.group-header`,
+    )
+    expect(group_headers.length).toBeGreaterThan(0)
+    group_headers.forEach((header) => expect(check_fn(header)).toBe(true))
+  })
+
+  test(`options without group key work alongside grouped options`, async () => {
+    const mixed_options = [
+      `Plain Option 1`,
+      { label: `Grouped A`, group: `Group` },
+      `Plain Option 2`,
+      { label: `Grouped B`, group: `Group` },
+    ]
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: mixed_options, open: true },
+    })
+    await tick()
+
+    // Should have 1 group header
+    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+    expect(group_headers).toHaveLength(1)
+
+    // Should have all 4 selectable options
+    const selectable_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header)`,
+    )
+    expect(selectable_options).toHaveLength(4)
+  })
+
+  test(`selecting options from groups works correctly`, async () => {
+    const onchange_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, onchange: onchange_spy, open: true },
+    })
+    await tick()
+
+    // Find and click a grouped option
+    const rock_option = Array.from(
+      document.querySelectorAll(`ul.options > li:not(.group-header)`),
+    ).find((li) => li.textContent?.trim() === `Rock`) as HTMLElement
+
+    rock_option.click()
+    await tick()
+
+    expect(onchange_spy).toHaveBeenCalledWith({
+      option: { label: `Rock`, group: `Genre` },
+      type: `add`,
+    })
+  })
+
+  test(`keyboard navigation through collapsed groups skips hidden options`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        ungroupedPosition: `last`,
+        open: true,
+      },
+    })
+    await tick()
+
+    find_group_header(`Genre`).click()
+    await tick()
+
+    // Count visible options after collapse
+    const visible_options_after_collapse = document.querySelectorAll(
+      `ul.options > li:not(.group-header)`,
+    )
+
+    // Genre group has 3 options (Rock, Electronic, Jazz), so after collapse we should have fewer
+    // Total: 6 options, minus 3 Genre = 3 visible
+    expect(visible_options_after_collapse.length).toBeLessThan(6)
+
+    // Verify Genre options are hidden
+    const rock_option = Array.from(visible_options_after_collapse).find((li) =>
+      li.textContent?.trim() === `Rock`
+    )
+    expect(rock_option).toBeUndefined()
+
+    // Verify Key options are still visible
+    const c_major_option = Array.from(visible_options_after_collapse).find((li) =>
+      li.textContent?.trim() === `C Major`
+    )
+    expect(c_major_option).toBeDefined()
+  })
+
+  test.each(
+    [
+      [
+        `Genre`,
+        undefined,
+        (opts: Array<{ group?: string }>) => opts.every((o) => o.group !== `Genre`),
+      ],
+      [
+        `Key`,
+        2,
+        (opts: Array<{ group?: string }>) =>
+          opts.length === 2 && opts.every((o) => o.group !== `Key`),
+      ],
+    ] as const,
+  )(
+    `selectAllOption skips collapsed %s group (maxSelect=%s)`,
+    async (collapsed_group, maxSelect, validate_fn) => {
+      const onselectAll_spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: grouped_options,
+          collapsibleGroups: true,
+          selectAllOption: true,
+          maxSelect,
+          onselectAll: onselectAll_spy,
+          open: true,
+        },
+      })
+      await tick()
+
+      find_group_header(collapsed_group).click()
+      await tick()
+
+      const select_all_li = document.querySelector(
+        `ul.options > li.select-all`,
+      ) as HTMLElement
+      select_all_li.click()
+      await tick()
+
+      expect(onselectAll_spy).toHaveBeenCalledTimes(1)
+      expect(validate_fn(onselectAll_spy.mock.calls[0][0].options)).toBe(true)
+    },
+  )
+
+  test(`keyboard Enter/Space toggles group collapse`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, collapsibleGroups: true, open: true },
+    })
+    await tick()
+
+    const genre_header = find_group_header(`Genre`)
+    expect(genre_header).toBeDefined()
+
+    const initial_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header)`,
+    )
+    const initial_count = initial_options.length
+
+    // Test Enter key
+    genre_header.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+    )
+    await tick()
+
+    const after_enter = document.querySelectorAll(`ul.options > li:not(.group-header)`)
+    expect(after_enter.length).toBeLessThan(initial_count)
+
+    // Test Space key to expand
+    genre_header.dispatchEvent(
+      new KeyboardEvent(`keydown`, { code: `Space`, bubbles: true }),
+    )
+    await tick()
+
+    const after_space = document.querySelectorAll(`ul.options > li:not(.group-header)`)
+    expect(after_space.length).toBe(initial_count)
+  })
+
+  test(`groupSelectAll skips disabled options`, async () => {
+    const options_with_disabled = [
+      { label: `Enabled 1`, group: `Test` },
+      { label: `Disabled 1`, group: `Test`, disabled: true },
+      { label: `Enabled 2`, group: `Test` },
+      { label: `Disabled 2`, group: `Test`, disabled: true },
+    ]
+
+    const onselectAll_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: options_with_disabled,
+        groupSelectAll: true,
+        onselectAll: onselectAll_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    const test_header = find_group_header(`Test`)
+    const select_all_btn = test_header.querySelector(
+      `button.group-select-all`,
+    ) as HTMLElement
+    select_all_btn.click()
+    await tick()
+
+    // Should only select non-disabled options
+    expect(onselectAll_spy).toHaveBeenCalledTimes(1)
+    const selected_options = onselectAll_spy.mock.calls[0][0].options
+    expect(selected_options).toHaveLength(2)
+    expect(selected_options.every((opt: { disabled?: boolean }) => !opt.disabled)).toBe(
+      true,
+    )
+  })
+
+  test(`groupSelectAll works on collapsed groups`, async () => {
+    const onselectAll_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        groupSelectAll: true,
+        onselectAll: onselectAll_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    // Collapse the Genre group
+    const genre_header = find_group_header(`Genre`)
+    genre_header.click()
+    await tick()
+
+    // Verify group is collapsed (no Genre options visible)
+    const visible_options = Array.from(document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all)`,
+    ))
+    expect(
+      [...visible_options].every(
+        (li) =>
+          !li.textContent?.includes(`Rock`) &&
+          !li.textContent?.includes(`Electronic`) &&
+          !li.textContent?.includes(`Jazz`),
+      ),
+    ).toBe(true)
+
+    // Click the group's select all button (still visible even when collapsed)
+    const select_all_btn = genre_header.querySelector(
+      `button.group-select-all`,
+    ) as HTMLElement
+    expect(select_all_btn).toBeTruthy()
+    select_all_btn.click()
+    await tick()
+
+    // Should select ALL options in the collapsed group
+    expect(onselectAll_spy).toHaveBeenCalledTimes(1)
+    const selected_options = onselectAll_spy.mock.calls[0][0].options
+    expect(selected_options).toHaveLength(3) // Rock, Electronic, Jazz
+    expect(selected_options.every((opt: { group: string }) => opt.group === `Genre`))
+      .toBe(
+        true,
+      )
+  })
+
+  test(`group order matches first occurrence in options array`, async () => {
+    const ordered_options = [
+      { label: `Z Item`, group: `Zebra` },
+      { label: `A Item`, group: `Alpha` },
+      { label: `Z Item 2`, group: `Zebra` },
+      { label: `M Item`, group: `Middle` },
+    ]
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: ordered_options, open: true },
+    })
+    await tick()
+
+    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+    const header_names = Array.from(group_headers).map((header) =>
+      header.querySelector(`.group-label`)?.textContent?.trim()
+    )
+
+    // Groups should appear in order of first occurrence: Zebra, Alpha, Middle
+    expect(header_names).toEqual([`Zebra`, `Alpha`, `Middle`])
+  })
+
+  test.each(
+    [
+      [true, `button`, `0`, true],
+      [false, `presentation`, `-1`, false],
+    ] as const,
+  )(
+    `group headers have correct a11y attrs when collapsibleGroups=%s`,
+    async (collapsibleGroups, expected_role, expected_tabindex, has_aria_expanded) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: grouped_options, collapsibleGroups, open: true },
+      })
+      await tick()
+
+      const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+      group_headers.forEach((header) => {
+        expect(header.getAttribute(`role`)).toBe(expected_role)
+        expect(header.getAttribute(`tabindex`)).toBe(expected_tabindex)
+        expect(header.hasAttribute(`aria-expanded`)).toBe(has_aria_expanded)
+        expect(header.getAttribute(`aria-label`)).toMatch(/^Group: /)
+      })
+
+      // For collapsible, also verify aria-expanded toggles on click
+      if (collapsibleGroups) {
+        expect(group_headers[0].getAttribute(`aria-expanded`)).toBe(`true`)
+        ;(group_headers[0] as HTMLElement).click()
+        await tick()
+        expect(group_headers[0].getAttribute(`aria-expanded`)).toBe(`false`)
+      }
+    },
+  )
+
+  test(`ongroupToggle fires when group is collapsed/expanded`, async () => {
+    const ongroupToggle_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        ongroupToggle: ongroupToggle_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    const genre_header = find_group_header(`Genre`)
+    genre_header.click()
+    await tick()
+
+    expect(ongroupToggle_spy).toHaveBeenCalledWith({ group: `Genre`, collapsed: true })
+
+    // Click again to expand
+    genre_header.click()
+    await tick()
+
+    expect(ongroupToggle_spy).toHaveBeenCalledWith({ group: `Genre`, collapsed: false })
+    expect(ongroupToggle_spy).toHaveBeenCalledTimes(2)
+  })
+
+  test(`collapsedGroups prop controls initial collapsed state`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        collapsedGroups: new Set([`Genre`]),
+        open: true,
+      },
+    })
+    await tick()
+
+    // Genre group should be collapsed initially
+    const genre_header = find_group_header(`Genre`)
+    expect(genre_header.getAttribute(`aria-expanded`)).toBe(`false`)
+
+    // Genre options should be hidden
+    const rock_option = Array.from(
+      document.querySelectorAll(`ul.options > li:not(.group-header)`),
+    ).find((li) => li.textContent?.includes(`Rock`))
+    expect(rock_option).toBeUndefined()
+
+    // Key group should be expanded
+    const key_header = find_group_header(`Key`)
+    expect(key_header.getAttribute(`aria-expanded`)).toBe(`true`)
+  })
+
+  test.each(
+    [
+      [`asc`, [`Alpha`, `Middle`, `Zebra`]],
+      [`desc`, [`Zebra`, `Middle`, `Alpha`]],
+      [
+        (group_a: string, group_b: string) => group_a.length - group_b.length,
+        [`C`, `BB`, `AAA`],
+      ],
+    ] as const,
+  )(
+    `groupSortOrder=%s sorts groups correctly`,
+    async (groupSortOrder, expected_order) => {
+      // Use different options for custom function test (needs varying lengths)
+      const options_for_sort = typeof groupSortOrder === `function`
+        ? [
+          { label: `Item 1`, group: `BB` },
+          { label: `Item 2`, group: `AAA` },
+          { label: `Item 3`, group: `C` },
+        ]
+        : [
+          { label: `Z Item`, group: `Zebra` },
+          { label: `A Item`, group: `Alpha` },
+          { label: `M Item`, group: `Middle` },
+        ]
+
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: options_for_sort, groupSortOrder, open: true },
+      })
+      await tick()
+
+      const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+      const header_names = Array.from(group_headers).map((header) =>
+        header.querySelector(`.group-label`)?.textContent?.trim()
+      )
+      expect(header_names).toEqual(expected_order)
+    },
+  )
+
+  test.each([
+    [`basic count`, {}, `(3)`],
+    [
+      `selected count with keepSelectedInDropdown`,
+      {
+        keepSelectedInDropdown: `checkboxes` as const,
+        selected: [{ label: `Rock`, group: `Genre` }],
+      },
+      `(1/3)`,
+    ],
+  ])(
+    `group count in header: %s`,
+    async (_desc, extra_props, expected_count) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: grouped_options, open: true, ...extra_props },
+      })
+      await tick()
+
+      const genre_header = find_group_header(`Genre`)
+      const count_span = genre_header.querySelector(`.group-count`)
+      expect(count_span).toBeDefined()
+      expect(count_span?.textContent?.trim()).toBe(expected_count)
+    },
+  )
+
+  test(`searchExpandsCollapsedGroups expands matching groups`, async () => {
+    const ongroupToggle_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        collapsedGroups: new Set([`Genre`, `Key`]), // Both collapsed initially
+        searchExpandsCollapsedGroups: true,
+        ongroupToggle: ongroupToggle_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    // Both groups collapsed, so no options visible
+    const visible_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all):not(.user-msg)`,
+    )
+    // Only ungrouped option visible
+    expect(visible_options).toHaveLength(1)
+
+    // Type search that matches Genre option
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Rock`
+    input.dispatchEvent(input_event)
+    await tick()
+    await tick() // extra tick for effect
+
+    // Genre group should now be expanded because "Rock" matches
+    // ongroupToggle should have been called
+    expect(ongroupToggle_spy).toHaveBeenCalledWith({ group: `Genre`, collapsed: false })
+  })
+
+  test.each(
+    [
+      [
+        `groupSelectAll`,
+        { groupSelectAll: true },
+        `button.group-select-all`,
+        [`Option 1`, `Option 2`, `Option 3`],
+      ],
+      [
+        `selectAllOption`,
+        { selectAllOption: true },
+        `li.select-all`,
+        [`Option 1`, `Option 2`, `Option 3`],
+      ],
+    ] as const,
+  )(
+    `%s respects maxOptions limit`,
+    async (_name, props, selector, expected_labels) => {
+      const many_options = [
+        { label: `Option 1`, group: `TestGroup` },
+        { label: `Option 2`, group: `TestGroup` },
+        { label: `Option 3`, group: `TestGroup` },
+        { label: `Option 4`, group: `TestGroup` },
+        { label: `Option 5`, group: `TestGroup` },
+      ]
+
+      const onselectAll_spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: many_options,
+          maxOptions: 3,
+          onselectAll: onselectAll_spy,
+          open: true,
+          ...props,
+        },
+      })
+      await tick()
+
+      // Verify only 3 options are rendered
+      expect(
+        document.querySelectorAll(`ul.options > li:not(.group-header):not(.select-all)`),
+      ).toHaveLength(3)
+
+      // Click select all (group or global)
+      const select_btn = selector.includes(`group`)
+        ? find_group_header(`TestGroup`).querySelector(selector)
+        : document.querySelector(selector)
+      ;(select_btn as HTMLElement).click()
+      await tick()
+
+      expect(onselectAll_spy).toHaveBeenCalledTimes(1)
+      const selected = onselectAll_spy.mock.calls[0][0].options
+      expect(selected.map((opt: { label: string }) => opt.label)).toEqual(expected_labels)
+    },
+  )
+
+  test(`searchMatchesGroups shows options when group name matches search`, async () => {
+    const options_with_groups = [
+      { label: `React`, group: `JavaScript` },
+      { label: `Vue`, group: `JavaScript` },
+      { label: `Django`, group: `Python` },
+      { label: `Flask`, group: `Python` },
+    ]
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: options_with_groups, searchMatchesGroups: true, open: true },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Python`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    // Should show both Python options even though "Python" is in group name, not label
+    const visible_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all)`,
+    )
+    expect(visible_options).toHaveLength(2)
+    const labels = Array.from(visible_options).map((li) => li.textContent?.trim())
+    expect(labels).toContain(`Django`)
+    expect(labels).toContain(`Flask`)
+  })
+
+  test(`keyboardExpandsCollapsedGroups expands groups on arrow navigation`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        keyboardExpandsCollapsedGroups: true,
+        open: true,
+      },
+    })
+    await tick()
+
+    // First, collapse the Genre group manually
+    const genre_header = find_group_header(`Genre`)
+    genre_header.click()
+    await tick()
+    await tick()
+
+    // Genre is collapsed, so its options should be hidden
+    const visible_options = document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all)`,
+    )
+    const rock_visible = Array.from(visible_options).some((li) =>
+      li.textContent?.includes(`Rock`)
+    )
+    expect(rock_visible).toBe(false)
+
+    // Press arrow down to trigger keyboard navigation
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+    )
+    await tick()
+    await tick()
+    await tick()
+
+    // Genre group should now be expanded (Rock should be visible)
+    const options_after = document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all)`,
+    )
+    const rock_visible_after = Array.from(options_after).some((li) =>
+      li.textContent?.includes(`Rock`)
+    )
+    expect(rock_visible_after).toBe(true)
+  })
+
+  test(`stickyGroupHeaders adds sticky class to group headers`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, stickyGroupHeaders: true, open: true },
+    })
+    await tick()
+
+    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
+    group_headers.forEach((header) => {
+      expect(header.classList.contains(`sticky`)).toBe(true)
+    })
+  })
+
+  test(`collapseAllGroups and expandAllGroups functions are bindable`, async () => {
+    let collapse_fn: (() => void) | undefined
+    let expand_fn: (() => void) | undefined
+    const oncollapseAll_spy = vi.fn()
+    const onexpandAll_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        oncollapseAll: oncollapseAll_spy,
+        onexpandAll: onexpandAll_spy,
+        open: true,
+        get collapseAllGroups() {
+          return collapse_fn
+        },
+        set collapseAllGroups(fn) {
+          collapse_fn = fn
+        },
+        get expandAllGroups() {
+          return expand_fn
+        },
+        set expandAllGroups(fn) {
+          expand_fn = fn
+        },
+      },
+    })
+    await tick()
+
+    // Functions should be assigned
+    expect(collapse_fn).toBeInstanceOf(Function)
+    expect(expand_fn).toBeInstanceOf(Function)
+
+    // Collapse all groups
+    if (collapse_fn) collapse_fn()
+    await tick()
+
+    expect(oncollapseAll_spy).toHaveBeenCalledTimes(1)
+    expect(oncollapseAll_spy.mock.calls[0][0].groups).toContain(`Genre`)
+    expect(oncollapseAll_spy.mock.calls[0][0].groups).toContain(`Key`)
+
+    // All group options should be hidden
+    const visible_after_collapse = document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all)`,
+    )
+    // Only ungrouped option should be visible
+    expect(visible_after_collapse).toHaveLength(1)
+
+    // Expand all groups
+    if (expand_fn) expand_fn()
+    await tick()
+
+    expect(onexpandAll_spy).toHaveBeenCalledTimes(1)
+
+    // All options should be visible again
+    const visible_after_expand = document.querySelectorAll(
+      `ul.options > li:not(.group-header):not(.select-all)`,
+    )
+    expect(visible_after_expand).toHaveLength(6)
+  })
+
+  test(`groupSelectAll toggles to deselect when all group options are selected`, async () => {
+    const onremoveAll_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        groupSelectAll: true,
+        keepSelectedInDropdown: `checkboxes`,
+        onremoveAll: onremoveAll_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    const genre_header = find_group_header(`Genre`)
+    const select_btn = genre_header.querySelector(
+      `button.group-select-all`,
+    ) as HTMLButtonElement
+
+    // Initially should say "Select all"
+    expect(select_btn.textContent?.trim()).toBe(`Select all`)
+
+    // Click to select all Genre options
+    select_btn.click()
+    await tick()
+
+    // Now should say "Deselect all" and have deselect class
+    expect(select_btn.textContent?.trim()).toBe(`Deselect all`)
+    expect(select_btn.classList.contains(`deselect`)).toBe(true)
+
+    // Click again to deselect all
+    select_btn.click()
+    await tick()
+
+    // Should have removed the options
+    expect(onremoveAll_spy).toHaveBeenCalledTimes(1)
+    const removed = onremoveAll_spy.mock.calls[0][0].options
+    expect(removed).toHaveLength(3) // Rock, Electronic, Jazz
+
+    // Button should now say "Select all" again
+    expect(select_btn.textContent?.trim()).toBe(`Select all`)
+  })
+})
