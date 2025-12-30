@@ -6,7 +6,7 @@ import {
   sortable,
   tooltip,
 } from '$lib/attachments'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
@@ -397,30 +397,10 @@ describe(`tooltip`, () => {
 })
 
 describe(`click_outside`, () => {
-  let cleanup_functions: (() => void)[]
-
-  beforeEach(() => {
-    cleanup_functions = []
-    document.body.innerHTML = ``
-  })
-
-  afterEach(() => {
-    cleanup_functions.forEach((cleanup) => {
-      cleanup()
-    })
-    cleanup_functions = []
-  })
-
   const create_element = () => {
     const element = document.createElement(`div`)
     document.body.appendChild(element)
     return element
-  }
-
-  const setup_click_outside = (element: HTMLElement, config = {}) => {
-    const cleanup = click_outside(config)(element)
-    if (cleanup) cleanup_functions.push(cleanup)
-    return cleanup
   }
 
   const dispatch_click = (target: HTMLElement, path: EventTarget[] = []) => {
@@ -443,7 +423,7 @@ describe(`click_outside`, () => {
   ])(`%s triggers callback %s times`, (_desc, is_outside, enabled, expected_calls) => {
     const element = create_element()
     const callback = vi.fn()
-    setup_click_outside(element, { callback, enabled })
+    click_outside({ callback, enabled })(element)
 
     const target = is_outside ? create_element() : element
     const path = is_outside
@@ -469,7 +449,7 @@ describe(`click_outside`, () => {
     nested.closest = vi.fn((sel) => sel === `.modal` ? excluded1 : null)
 
     const callback = vi.fn()
-    setup_click_outside(element, { callback, exclude: [`.modal`, `.popover`] })
+    click_outside({ callback, exclude: [`.modal`, `.popover`] })(element)
 
     dispatch_click(excluded1)
     dispatch_click(excluded2)
@@ -481,13 +461,13 @@ describe(`click_outside`, () => {
     const element = create_element()
     const listener = vi.fn()
     element.addEventListener(`outside-click`, listener)
-    setup_click_outside(element) // no callback
+    click_outside({})(element) // no callback
     dispatch_click(create_element())
     expect(listener).toHaveBeenCalled()
   })
 
   it(`should clean up without throwing`, () => {
-    const cleanup = setup_click_outside(create_element())
+    const cleanup = click_outside({})(create_element())
     expect(() => cleanup?.()).not.toThrow()
   })
 })
@@ -684,10 +664,6 @@ describe(`highlight_matches`, () => {
         }
       },
     )
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
   })
 
   it.each([

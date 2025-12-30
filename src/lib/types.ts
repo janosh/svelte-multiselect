@@ -17,6 +17,7 @@ export type ObjectOption = {
   disabledTitle?: string // override the default disabledTitle = 'This option is disabled'
   selectedTitle?: string // tooltip to display when this option is selected and hovered
   style?: OptionStyle
+  group?: string // optional group name for grouping options in dropdown
   [key: string]: unknown // allow any other keys users might want
 }
 
@@ -41,6 +42,9 @@ export interface MultiSelectEvents<T extends Option = Option> {
   }) => unknown
   onopen?: (data: { event: Event }) => unknown
   onclose?: (data: { event: Event }) => unknown
+  ongroupToggle?: (data: { group: string; collapsed: boolean }) => unknown // fires when group is collapsed/expanded
+  oncollapseAll?: (data: { groups: string[] }) => unknown // fires when all groups are collapsed
+  onexpandAll?: (data: { groups: string[] }) => unknown // fires when all groups are expanded
 }
 
 // Dynamic options loading (https://github.com/janosh/svelte-multiselect/discussions/342)
@@ -79,6 +83,18 @@ type UserMsgProps = {
   msgType: false | `dupe` | `create` | `no-match`
   msg: null | string
 }
+export type GroupHeaderProps<T extends Option = Option> = {
+  group: string
+  options: T[]
+  collapsed: boolean
+}
+
+// Type for grouped options structure (used internally by MultiSelect)
+export type GroupedOptions<T extends Option = Option> = {
+  group: string | null
+  options: T[]
+  collapsed: boolean
+}
 
 export interface MultiSelectSnippets<T extends Option = Option> {
   expandIcon?: Snippet<[{ open: boolean }]>
@@ -90,6 +106,7 @@ export interface MultiSelectSnippets<T extends Option = Option> {
   disabledIcon?: Snippet
   option?: Snippet<[{ option: T; idx: number }]>
   userMsg?: Snippet<[UserMsgProps]>
+  groupHeader?: Snippet<[GroupHeaderProps<T>]> // custom group header rendering
 }
 
 export interface PortalParams {
@@ -182,4 +199,19 @@ export interface MultiSelectProps<T extends Option = Option>
   // Animation parameters for selected options flip animation (https://github.com/janosh/svelte-multiselect/issues/356)
   // Set { duration: 0 } to disable animation
   selectedFlipParams?: FlipParams
+  // Option grouping feature (https://github.com/janosh/svelte-multiselect/issues/135)
+  collapsibleGroups?: boolean // enable click-to-collapse groups
+  collapsedGroups?: Set<string> // externally controlled collapsed state (bindable)
+  groupSelectAll?: boolean // add "select all" action per group header (toggles between select/deselect)
+  ungroupedPosition?: `first` | `last` // where to render options without a group
+  groupSortOrder?: `none` | `asc` | `desc` | ((a: string, b: string) => number) // sort groups alphabetically
+  searchExpandsCollapsedGroups?: boolean // auto-expand collapsed groups when search matches their options
+  searchMatchesGroups?: boolean // include group name in search matching
+  keyboardExpandsCollapsedGroups?: boolean // auto-expand collapsed groups when navigating with arrow keys
+  stickyGroupHeaders?: boolean // keep group headers visible at top when scrolling
+  liGroupHeaderClass?: string // CSS class for group header <li>
+  liGroupHeaderStyle?: string | null // inline style for group headers
+  // Programmatic group control (exposed via bindable)
+  collapseAllGroups?: () => void
+  expandAllGroups?: () => void
 }

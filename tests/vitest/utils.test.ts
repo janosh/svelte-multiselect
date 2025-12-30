@@ -1,12 +1,8 @@
 import type { Option, OptionStyle } from '$lib'
-import { fuzzy_match, get_label, get_style } from '$lib/utils'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { fuzzy_match, get_label, get_style, has_group, is_object } from '$lib/utils'
+import { describe, expect, test, vi } from 'vitest'
 
 describe(`get_label`, () => {
-  beforeEach(() => {
-    console.error = vi.fn()
-  })
-
   test.each([
     [{ label: `Test Label`, value: 42 }, `Test Label`, false],
     [`Simple String`, `Simple String`, false],
@@ -18,6 +14,7 @@ describe(`get_label`, () => {
     [0, `0`, false],
     [{ value: 42, name: `Test` }, undefined, true],
   ])(`handles option %j correctly`, (input, expected, should_log_error) => {
+    console.error = vi.fn()
     const result = get_label(input as Option)
     expect(result).toBe(expected)
 
@@ -31,10 +28,6 @@ describe(`get_label`, () => {
 })
 
 describe(`get_style`, () => {
-  beforeEach(() => {
-    console.error = vi.fn()
-  })
-
   test.each([
     [`plain string`, undefined, ``],
     [123, undefined, ``],
@@ -128,5 +121,40 @@ describe(`fuzzy_match`, () => {
     expect(fuzzy_match(null, `test`)).toBe(false)
     // @ts-expect-error testing runtime behavior
     expect(fuzzy_match(undefined, `test`)).toBe(false)
+  })
+})
+
+describe(`is_object`, () => {
+  test.each([
+    [{ key: `value` }, true],
+    [{ label: `Test` }, true],
+    [{}, true],
+    [[], true], // arrays are objects in JS
+    [null, false],
+    [undefined, false],
+    [`string`, false],
+    [123, false],
+    [true, false],
+    [() => {}, false],
+  ])(`is_object(%j) returns %s`, (input, expected) => {
+    expect(is_object(input)).toBe(expected)
+  })
+})
+
+describe(`has_group`, () => {
+  test.each([
+    [{ label: `Test`, group: `Group1` }, true],
+    [{ label: `Test`, group: `Frontend` }, true],
+    [{ label: `Test`, group: `` }, true], // empty string is still a string
+    [{ label: `Test` }, false],
+    [{ label: `Test`, group: undefined }, false],
+    [{ label: `Test`, group: null }, false],
+    [{ label: `Test`, group: 123 }, false], // group must be string
+    [{ label: `Test`, group: true }, false],
+    [{ label: `Test`, group: {} }, false],
+    [`plain string`, false],
+    [42, false],
+  ])(`has_group(%j) returns %s`, (input, expected) => {
+    expect(has_group(input as Option)).toBe(expected)
   })
 })
