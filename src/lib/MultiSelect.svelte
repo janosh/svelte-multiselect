@@ -284,14 +284,25 @@
     new Map(navigable_options.map((opt, idx) => [opt, idx])),
   )
 
-  // Count selected options per group (only computed when keepSelectedInDropdown is enabled)
-  let selected_count_by_group = $derived.by(() => {
-    if (!keepSelectedInDropdown) return new SvelteMap<string, number>()
-    const counts = new SvelteMap<string, number>()
-    for (const opt of selected) {
-      if (has_group(opt)) counts.set(opt.group, (counts.get(opt.group) ?? 0) + 1)
+  // Pre-computed group header state (avoids repeated calculations in template)
+  type GroupHeaderState = { all_selected: boolean; selected_count: number }
+  let group_header_state = $derived.by(() => {
+    const state = new SvelteMap<string, GroupHeaderState>()
+    for (const { group, options: opts, collapsed } of grouped_options) {
+      if (group === null) continue
+      const selectable = get_selectable_opts(opts, collapsed)
+      const all_selected = selectable.length > 0 &&
+        selectable.every((opt) => selected_keys.includes(key(opt)))
+      // Count selected options (only needed when keepSelectedInDropdown is enabled)
+      let selected_count = 0
+      if (keepSelectedInDropdown) {
+        for (const opt of opts) {
+          if (selected_keys.includes(key(opt))) selected_count++
+        }
+      }
+      state.set(group, { all_selected, selected_count })
     }
-    return counts
+    return state
   })
 
   // Update collapsedGroups state: 'add' adds groups, 'delete' removes groups, 'set' replaces all
@@ -300,9 +311,8 @@
     groups: string | Iterable<string>,
   ) {
     const items = typeof groups === `string` ? [groups] : [...groups]
-    if (action === `set`) {
-      collapsedGroups = new SvelteSet(items)
-    } else {
+    if (action === `set`) collapsedGroups = new SvelteSet(items)
+    else {
       const updated = new SvelteSet(collapsedGroups)
       for (const group of items) updated[action](group)
       collapsedGroups = updated
@@ -426,31 +436,28 @@
   let window_width = $state(0)
 
   // options matching the current search text
+  // Check if option matches search text (label or optionally group name)
+  const matches_search = (opt: Option, search: string): boolean => {
+    if (filterFunc(opt, search)) return true
+    if (searchMatchesGroups && search && has_group(opt)) {
+      return fuzzy
+        ? fuzzy_match(search, opt.group)
+        : opt.group.toLowerCase().includes(search.toLowerCase())
+    }
+    return false
+  }
+
   $effect.pre(() => {
     // When using loadOptions, server handles filtering, so skip client-side filterFunc
-    const opts_to_filter = effective_options
-    matchingOptions = opts_to_filter.filter((opt) => {
+    matchingOptions = effective_options.filter((opt) => {
       // Check if option is already selected and should be excluded
       const keep_in_list = !selected_keys.includes(key(opt)) ||
         duplicates ||
         keepSelectedInDropdown
       if (!keep_in_list) return false
 
-      // When using loadOptions, server handles filtering
-      if (loadOptions) return true
-
-      // Check if option label matches search
-      if (filterFunc(opt, searchText)) return true
-
-      // Optionally check if group name matches search
-      if (searchMatchesGroups && searchText && has_group(opt)) {
-        const group_matches = fuzzy
-          ? fuzzy_match(searchText, opt.group)
-          : opt.group.toLowerCase().includes(searchText.toLowerCase())
-        if (group_matches) return true
-      }
-
-      return false
+      // When using loadOptions, server handles filtering; otherwise check search match
+      return loadOptions || matches_search(opt, searchText)
     })
   })
 
@@ -765,13 +772,6 @@
     batch_add_options(get_selectable_opts(navigable_options), event)
   }
 
-  // Check if all selectable options in a group are selected
-  const is_group_all_selected = (group_opts: Option[], group_collapsed: boolean) => {
-    const selectable = get_selectable_opts(group_opts, group_collapsed)
-    return selectable.length > 0 &&
-      selectable.every((opt) => selected_keys.includes(key(opt)))
-  }
-
   // Toggle group selection: works even when group is collapsed
   // If all selectable options are selected, deselect them; otherwise select all
   function toggle_group_selection(
@@ -781,7 +781,9 @@
   ) {
     event.stopPropagation()
     const selectable = get_selectable_opts(group_opts, group_collapsed)
-    if (is_group_all_selected(group_opts, group_collapsed)) {
+    const all_selected = selectable.length > 0 &&
+      selectable.every((opt) => selected_keys.includes(key(opt)))
+    if (all_selected) {
       // Deselect all options in this group
       const keys_to_remove = new Set(selectable.map(key))
       const removed = selected.filter((opt) => keys_to_remove.has(key(opt)))
@@ -1262,12 +1264,12 @@
         (group_name ?? `ungrouped-${group_idx}`)
       }
         {#if group_name !== null}
+          {@const { all_selected, selected_count } = group_header_state.get(group_name) ??
+        { all_selected: false, selected_count: 0 }}
           {@const handle_toggle = () =>
         collapsibleGroups && toggle_group_collapsed(group_name)}
           {@const handle_group_select = (event: Event) =>
         toggle_group_selection(group_opts, collapsed, event)}
-          {@const group_all_selected = is_group_all_selected(group_opts, collapsed)}
-          {@const group_selected_count = selected_count_by_group.get(group_name) ?? 0}
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <li
             class="group-header {liGroupHeaderClass}"
@@ -1286,8 +1288,8 @@
             {:else}
               <span class="group-label">{group_name}</span>
               <span class="group-count">
-                {#if keepSelectedInDropdown && group_selected_count > 0}
-                  ({group_selected_count}/{group_opts.length})
+                {#if keepSelectedInDropdown && selected_count > 0}
+                  ({selected_count}/{group_opts.length})
                 {:else}
                   ({group_opts.length})
                 {/if}
@@ -1296,11 +1298,11 @@
                 <button
                   type="button"
                   class="group-select-all"
-                  class:deselect={group_all_selected}
+                  class:deselect={all_selected}
                   onclick={handle_group_select}
                   onkeydown={if_enter_or_space(handle_group_select)}
                 >
-                  {group_all_selected ? `Deselect all` : `Select all`}
+                  {all_selected ? `Deselect all` : `Select all`}
                 </button>
               {/if}
               {#if collapsibleGroups}
@@ -1335,7 +1337,7 @@
           ` `,
         ) ||
         null}
-            {#if flat_idx >= 0 && (maxOptions == null || flat_idx < maxOptions)}
+            {#if is_option_visible(flat_idx)}
               <li
                 onclick={(event) => {
                   if (disabled) return
