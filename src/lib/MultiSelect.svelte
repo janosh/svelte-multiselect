@@ -148,27 +148,17 @@
     ...rest
   }: MultiSelectProps<Option> = $props()
 
-  // Extract loadOptions function and config (supports both simple function and config object)
-  const load_options_fn = $derived(
-    loadOptions
-      ? (typeof loadOptions === `function` ? loadOptions : loadOptions.fetch)
-      : null,
-  )
-  const load_options_debounce_ms = $derived(
-    loadOptions && typeof loadOptions === `object`
-      ? (loadOptions.debounceMs ?? 300)
-      : 300,
-  )
-  const load_options_batch_size = $derived(
-    loadOptions && typeof loadOptions === `object`
-      ? (loadOptions.batchSize ?? 50)
-      : 50,
-  )
-  const load_options_on_open = $derived(
-    loadOptions && typeof loadOptions === `object`
-      ? (loadOptions.onOpen ?? true)
-      : true,
-  )
+  // Extract loadOptions config into single derived object (supports both simple function and config object)
+  const load_options_config = $derived.by(() => {
+    if (!loadOptions) return null
+    const is_fn = typeof loadOptions === `function`
+    return {
+      fetch: is_fn ? loadOptions : loadOptions.fetch,
+      debounce_ms: is_fn ? 300 : (loadOptions.debounceMs ?? 300),
+      batch_size: is_fn ? 50 : (loadOptions.batchSize ?? 50),
+      on_open: is_fn ? true : (loadOptions.onOpen ?? true),
+    }
+  })
 
   // Helper to compare arrays/values for equality to avoid unnecessary updates.
   // Prevents infinite loops when value/selected are bound to reactive wrappers
@@ -215,7 +205,8 @@
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))
   let selected_labels = $derived(selected.map(get_label))
-  // Set for O(1) lookups when checking if a label is selected (used in template and has_user_msg)
+  // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
+  let selected_keys_set = $derived(new Set(selected_keys))
   let selected_labels_set = $derived(new Set(selected_labels))
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
@@ -292,12 +283,12 @@
       if (group === null) continue
       const selectable = get_selectable_opts(opts, collapsed)
       const all_selected = selectable.length > 0 &&
-        selectable.every((opt) => selected_keys.includes(key(opt)))
+        selectable.every((opt) => selected_keys_set.has(key(opt)))
       // Count selected options (only needed when keepSelectedInDropdown is enabled)
       let selected_count = 0
       if (keepSelectedInDropdown) {
         for (const opt of opts) {
-          if (selected_keys.includes(key(opt))) selected_count++
+          if (selected_keys_set.has(key(opt))) selected_count++
         }
       }
       state.set(group, { all_selected, selected_count })
@@ -435,7 +426,6 @@
   let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
   let window_width = $state(0)
 
-  // options matching the current search text
   // Check if option matches search text (label or optionally group name)
   const matches_search = (opt: Option, search: string): boolean => {
     if (filterFunc(opt, search)) return true
@@ -451,7 +441,7 @@
     // When using loadOptions, server handles filtering, so skip client-side filterFunc
     matchingOptions = effective_options.filter((opt) => {
       // Check if option is already selected and should be excluded
-      const keep_in_list = !selected_keys.includes(key(opt)) ||
+      const keep_in_list = !selected_keys_set.has(key(opt)) ||
         duplicates ||
         keepSelectedInDropdown
       if (!keep_in_list) return false
@@ -478,7 +468,7 @@
 
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
   function toggle_option(option_to_toggle: Option, event: Event) {
-    const is_currently_selected = selected_keys.includes(key(option_to_toggle))
+    const is_currently_selected = selected_keys_set.has(key(option_to_toggle))
 
     if (is_currently_selected) {
       if (can_remove) remove(option_to_toggle, event)
@@ -495,7 +485,7 @@
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    const is_duplicate = selected_keys.includes(key(option_to_add))
+    const is_duplicate = selected_keys_set.has(key(option_to_add))
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
@@ -681,7 +671,7 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
-        if (selected_keys.includes(key(activeOption))) {
+        if (selected_keys_set.has(key(activeOption))) {
           if (can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
       } else if (allowUserOptions && searchText.length > 0) {
@@ -721,15 +711,14 @@
       // If no minSelect constraint, remove all
       removed_options = selected
       selected = []
-      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     } else if (selected.length > minSelect) {
       // Keep the first minSelect items
       removed_options = selected.slice(minSelect)
       selected = selected.slice(0, minSelect)
-      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
     }
     // Only fire events if something was actually removed
     if (removed_options.length > 0) {
+      searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
       onremoveAll?.({ options: removed_options })
       onchange?.({ options: selected, type: `removeAll` })
     }
@@ -753,7 +742,7 @@
   function batch_add_options(options_to_add: Option[], event: Event) {
     const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
     const to_add = options_to_add
-      .filter((opt) => !selected_keys.includes(key(opt)))
+      .filter((opt) => !selected_keys_set.has(key(opt)))
       .slice(0, remaining)
 
     if (to_add.length === 0) return
@@ -782,7 +771,7 @@
     event.stopPropagation()
     const selectable = get_selectable_opts(group_opts, group_collapsed)
     const all_selected = selectable.length > 0 &&
-      selectable.every((opt) => selected_keys.includes(key(opt)))
+      selectable.every((opt) => selected_keys_set.has(key(opt)))
     if (all_selected) {
       // Deselect all options in this group
       const keys_to_remove = new Set(selectable.map(key))
@@ -808,6 +797,17 @@
         handler(event)
       }
     }
+
+  // Handle option interaction (click or keyboard) - DRY helper for template
+  const handle_option_interact = (
+    opt: Option,
+    opt_disabled: boolean | null,
+    event: Event,
+  ) => {
+    if (opt_disabled) return
+    if (keepSelectedInDropdown) toggle_option(opt, event)
+    else add(opt, event)
+  }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
     if (!outerDiv) return
@@ -953,7 +953,8 @@
   // Dynamic options loading - captures search at call time to avoid race conditions
   async function load_dynamic_options(reset: boolean) {
     if (
-      !load_options_fn || load_options_loading || (!reset && !load_options_has_more)
+      !load_options_config || load_options_loading ||
+      (!reset && !load_options_has_more)
     ) {
       return
     }
@@ -962,8 +963,8 @@
     const offset = reset ? 0 : loaded_options.length
     load_options_loading = true
     try {
-      const limit = load_options_batch_size
-      const result = await load_options_fn({ search, offset, limit })
+      const limit = load_options_config.batch_size
+      const result = await load_options_config.fetch({ search, offset, limit })
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
       load_options_last_search = search
@@ -976,7 +977,7 @@
 
   // Single effect handles initial load + search changes
   $effect(() => {
-    if (!load_options_fn) return
+    if (!load_options_config) return
 
     // Reset state when dropdown closes so next open triggers fresh load
     if (!open) {
@@ -992,14 +993,14 @@
     const is_first_load = load_options_last_search === null
 
     if (is_first_load) {
-      if (load_options_on_open) {
+      if (load_options_config.on_open) {
         // Load immediately on dropdown open
         load_dynamic_options(true)
       } else if (search) {
         // onOpen=false but user typed - debounce and load
         debounce_timer = setTimeout(
           () => load_dynamic_options(true),
-          load_options_debounce_ms,
+          load_options_config.debounce_ms,
         )
       }
       // If onOpen=false and no search text, do nothing (wait for user to type)
@@ -1010,7 +1011,7 @@
       load_options_has_more = true
       debounce_timer = setTimeout(
         () => load_dynamic_options(true),
-        load_options_debounce_ms,
+        load_options_config.debounce_ms,
       )
     }
     return () => {
@@ -1019,7 +1020,7 @@
   })
 
   function handle_options_scroll(event: Event) {
-    if (!load_options_fn || load_options_loading || !load_options_has_more) return
+    if (!load_options_config || load_options_loading || !load_options_has_more) return
     const { scrollTop, scrollHeight, clientHeight } = event.target as HTMLElement
     if (scrollHeight - scrollTop - clientHeight <= 100) load_dynamic_options(false)
   }
@@ -1339,11 +1340,7 @@
         null}
             {#if is_option_visible(flat_idx)}
               <li
-                onclick={(event) => {
-                  if (disabled) return
-                  if (keepSelectedInDropdown) toggle_option(option_item, event)
-                  else add(option_item, event)
-                }}
+                onclick={(event) => handle_option_interact(option_item, disabled, event)}
                 title={disabled ? disabledTitle : (selected && selectedTitle) || title}
                 class:selected
                 class:active
@@ -1358,13 +1355,9 @@
                 role="option"
                 aria-selected={selected ? `true` : `false`}
                 style={optionStyle}
-                onkeydown={(event) => {
-                  if (!disabled && (event.key === `Enter` || event.code === `Space`)) {
-                    event.preventDefault()
-                    if (keepSelectedInDropdown) toggle_option(option_item, event)
-                    else add(option_item, event)
-                  }
-                }}
+                onkeydown={if_enter_or_space((event) =>
+                  handle_option_interact(option_item, disabled, event)
+                )}
               >
                 {#if keepSelectedInDropdown === `checkboxes`}
                   <input
@@ -1408,23 +1401,13 @@
         create: createOptionMsg,
         'no-match': noMatchingOptionsMsg,
       }[msgType]}
+        {@const can_add_user_option = msgType === `create` && allowUserOptions}
+        {@const handle_create = (event: Event) =>
+        can_add_user_option && add(searchText as Option, event)}
         {#if msg}
           <li
-            onclick={(event) => {
-              if (msgType === `create` && allowUserOptions) {
-                add(searchText as Option, event)
-              }
-            }}
-            onkeydown={(event) => {
-              if (
-                msgType === `create` &&
-                allowUserOptions &&
-                (event.key === `Enter` || event.code === `Space`)
-              ) {
-                event.preventDefault()
-                add(searchText as Option, event)
-              }
-            }}
+            onclick={handle_create}
+            onkeydown={can_add_user_option ? if_enter_or_space(handle_create) : undefined}
             title={msgType === `create`
             ? createOptionMsg
             : msgType === `dupe`

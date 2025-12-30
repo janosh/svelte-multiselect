@@ -934,3 +934,308 @@ test(`input width minimizes when options are selected`, async ({ page }) => {
   )
   expect(input_width_w_no_selected).toBe(init_input_width)
 })
+
+test.describe(`option grouping`, () => {
+  test(`renders group headers with options organized by group`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#basic-grouping input[autocomplete]`)
+
+    const options_list = page.locator(`#basic-grouping ul.options`)
+    await expect(options_list).toBeVisible()
+
+    // Check group headers are rendered
+    await expect(options_list.locator(`li.group-header`)).toHaveCount(3) // Frontend, Backend, Database
+    await expect(options_list.locator(`li.group-header`).first()).toContainText(
+      `Frontend`,
+    )
+
+    // Check options under each group
+    await expect(options_list.locator(`li[role="option"]:has-text("JavaScript")`))
+      .toBeVisible()
+    await expect(options_list.locator(`li[role="option"]:has-text("Python")`))
+      .toBeVisible()
+    await expect(options_list.locator(`li[role="option"]:has-text("PostgreSQL")`))
+      .toBeVisible()
+  })
+
+  test(`search filtering shows only matching options and hides empty groups`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    const input = page.locator(`#basic-grouping input[autocomplete]`)
+    await input.click()
+    await input.fill(`Python`)
+
+    const options_list = page.locator(`#basic-grouping ul.options`)
+    // Only Backend group should be visible since Python is in Backend
+    await expect(options_list.locator(`li.group-header:has-text("Backend")`))
+      .toBeVisible()
+    await expect(options_list.locator(`li.group-header:has-text("Frontend")`))
+      .toBeHidden()
+    await expect(options_list.locator(`li.group-header:has-text("Database")`))
+      .toBeHidden()
+    await expect(options_list.locator(`li[role="option"]:has-text("Python")`))
+      .toBeVisible()
+  })
+
+  test(`searchMatchesGroups includes group name in search matching`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+
+    // Enable searchMatchesGroups
+    await page.click(`#basic-grouping label:has-text("searchMatchesGroups")`)
+
+    const input = page.locator(`#basic-grouping input[autocomplete]`)
+    await input.click()
+    await input.fill(`Backend`)
+
+    const options_list = page.locator(`#basic-grouping ul.options`)
+    // All Backend options should be visible when searching for "Backend"
+    await expect(options_list.locator(`li[role="option"]:has-text("Python")`))
+      .toBeVisible()
+    await expect(options_list.locator(`li[role="option"]:has-text("Go")`)).toBeVisible()
+    await expect(options_list.locator(`li[role="option"]:has-text("Rust")`)).toBeVisible()
+  })
+
+  test(`collapsible groups toggle visibility on click`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#collapsible-groups input[autocomplete]`)
+
+    const options_list = page.locator(`#collapsible-groups ul.options`)
+
+    // Fruits group should be expanded by default
+    await expect(options_list.locator(`li[role="option"]:has-text("🍎 Apple")`))
+      .toBeVisible()
+
+    // Click to collapse Fruits group
+    await options_list.locator(`li.group-header:has-text("Fruits")`).click()
+    await expect(options_list.locator(`li[role="option"]:has-text("🍎 Apple")`))
+      .toBeHidden()
+
+    // Click again to expand
+    await options_list.locator(`li.group-header:has-text("Fruits")`).click()
+    await expect(options_list.locator(`li[role="option"]:has-text("🍎 Apple")`))
+      .toBeVisible()
+  })
+
+  test(`collapsed groups start collapsed when set in collapsedGroups`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#collapsible-groups input[autocomplete]`)
+
+    const options_list = page.locator(`#collapsible-groups ul.options`)
+
+    // Dairy starts collapsed per the demo config
+    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
+      .toBeHidden()
+    await expect(options_list.locator(`li[role="option"]:has-text("🧀 Cheese")`))
+      .toBeHidden()
+
+    // Expand Dairy
+    await options_list.locator(`li.group-header:has-text("Dairy")`).click()
+    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
+      .toBeVisible()
+  })
+
+  test(`collapse all and expand all buttons work`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#collapsible-groups input[autocomplete]`)
+
+    const options_list = page.locator(`#collapsible-groups ul.options`)
+    const apple_option = options_list.locator(`li[role="option"]:has-text("🍎 Apple")`)
+    const carrot_option = options_list.locator(`li[role="option"]:has-text("🥕 Carrot")`)
+    const milk_option = options_list.locator(`li[role="option"]:has-text("🥛 Milk")`)
+
+    // Verify initial state - Fruits and Vegetables visible, Dairy collapsed
+    await expect(apple_option).toBeVisible()
+    await expect(milk_option).toBeHidden()
+
+    // Click Collapse All
+    await page.click(`#collapsible-groups button:has-text("Collapse All")`)
+
+    // All options should be hidden
+    await expect(apple_option).toBeHidden()
+    await expect(carrot_option).toBeHidden()
+
+    // Re-open dropdown (might have closed) and click Expand All
+    await page.click(`#collapsible-groups input[autocomplete]`)
+    await page.click(`#collapsible-groups button:has-text("Expand All")`)
+
+    // All options should be visible
+    await expect(apple_option).toBeVisible()
+    await expect(carrot_option).toBeVisible()
+    await expect(milk_option).toBeVisible()
+  })
+
+  test(`arrow key navigation skips collapsed groups`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+
+    // Disable keyboardExpandsCollapsedGroups to prevent auto-expanding
+    await page.click(
+      `#collapsible-groups label:has-text("keyboardExpandsCollapsedGroups")`,
+    )
+
+    const input = page.locator(`#collapsible-groups input[autocomplete]`)
+    await input.click()
+
+    const options_list = page.locator(`#collapsible-groups ul.options`)
+    const active_option = options_list.locator(`li.active[role="option"]`)
+
+    // Navigate to the last option in Vegetables (before collapsed Dairy)
+    // First go through Fruits (3 options) + Vegetables (3 options)
+    for (let idx = 0; idx < 6; idx++) {
+      await page.keyboard.press(`ArrowDown`)
+    }
+
+    await expect(active_option).toContainText(`Corn`)
+
+    // Next ArrowDown should wrap to first option (Fruits), skipping collapsed Dairy
+    await page.keyboard.press(`ArrowDown`)
+    await expect(active_option).toContainText(`Apple`)
+  })
+
+  test(`groupSelectAll selects all options in a group`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#group-select-all input[autocomplete]`)
+
+    const options_list = page.locator(`#group-select-all ul.options`)
+
+    // Click select all for Primary group
+    await options_list.locator(`li.group-header:has-text("Primary") button`).click()
+
+    // Verify all Primary colors are selected
+    const selected = page.locator(`#group-select-all ul.selected`)
+    await expect(selected).toContainText(`Red`)
+    await expect(selected).toContainText(`Blue`)
+    await expect(selected).toContainText(`Yellow`)
+
+    // Secondary colors should not be selected
+    await expect(selected).not.toContainText(`Orange`)
+    await expect(selected).not.toContainText(`Green`)
+  })
+
+  test(`groupSelectAll toggles to deselect when all are selected`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#group-select-all input[autocomplete]`)
+
+    const options_list = page.locator(`#group-select-all ul.options`)
+
+    // Select all Primary
+    await options_list.locator(`li.group-header:has-text("Primary") button`).click()
+
+    // Click again to deselect all
+    await options_list.locator(`li.group-header:has-text("Primary") button`).click()
+
+    // Verify Primary colors are no longer selected
+    const selected = page.locator(`#group-select-all ul.selected`)
+    await expect(selected).not.toContainText(`Red`)
+    await expect(selected).not.toContainText(`Blue`)
+    await expect(selected).not.toContainText(`Yellow`)
+  })
+
+  test(`ungroupedPosition controls where ungrouped options appear`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#ungrouped-sorting input[autocomplete]`)
+
+    const options_list = page.locator(`#ungrouped-sorting ul.options`)
+    const all_lis = options_list.locator(`li`)
+
+    // With ungroupedPosition='first', ungrouped options appear first
+    const first_option = all_lis.first()
+    await expect(first_option).toContainText(`Featured Item`)
+
+    // Change to 'last'
+    await page.selectOption(`#ungrouped-sorting select:has(option[value="last"])`, `last`)
+    await page.click(`#ungrouped-sorting input[autocomplete]`)
+
+    // Now ungrouped options should be at the end
+    const last_option = options_list.locator(`li[role="option"]`).last()
+    await expect(last_option).toContainText(`Popular Choice`)
+  })
+
+  test(`groupSortOrder sorts groups alphabetically`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+
+    // Set groupSortOrder to 'asc'
+    await page.selectOption(`#ungrouped-sorting select:has(option[value="asc"])`, `asc`)
+    await page.click(`#ungrouped-sorting input[autocomplete]`)
+
+    const options_list = page.locator(`#ungrouped-sorting ul.options`)
+    const group_headers = options_list.locator(`li.group-header`)
+
+    // With asc sort: A Fruits, L Animals, Z Animals
+    await expect(group_headers.first()).toContainText(`A Fruits`)
+    await expect(group_headers.nth(1)).toContainText(`L Animals`)
+    await expect(group_headers.last()).toContainText(`Z Animals`)
+
+    // Change to desc
+    await page.selectOption(`#ungrouped-sorting select:has(option[value="desc"])`, `desc`)
+    await page.click(`#ungrouped-sorting input[autocomplete]`)
+
+    // With desc sort: Z Animals, L Animals, A Fruits
+    await expect(group_headers.first()).toContainText(`Z Animals`)
+    await expect(group_headers.last()).toContainText(`A Fruits`)
+  })
+
+  test(`custom group header snippet renders correctly`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#custom-group-header input[autocomplete]`)
+
+    const options_list = page.locator(`#custom-group-header ul.options`)
+
+    // Check custom emoji flags are rendered
+    await expect(options_list.locator(`li.group-header:has-text("🇺🇸")`)).toBeVisible()
+    await expect(options_list.locator(`li.group-header:has-text("🇬🇧")`)).toBeVisible()
+    await expect(options_list.locator(`li.group-header:has-text("🇯🇵")`)).toBeVisible()
+    await expect(options_list.locator(`li.group-header:has-text("🇫🇷")`)).toBeVisible()
+
+    // Check option count is displayed
+    await expect(options_list.locator(`li.group-header:has-text("USA"):has-text("(2)")`))
+      .toBeVisible()
+  })
+
+  test(`selecting options updates group header selected count`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#group-select-all input[autocomplete]`)
+
+    const options_list = page.locator(`#group-select-all ul.options`)
+
+    // Select one Primary option
+    await options_list.locator(`li[role="option"]:has-text("Red")`).click()
+
+    // Group header should show count (1/3)
+    const primary_header = options_list.locator(`li.group-header:has-text("Primary")`)
+    await expect(primary_header).toContainText(`1/3`)
+  })
+
+  test(`collapsible group header has aria-expanded attribute`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#collapsible-groups input[autocomplete]`)
+
+    const options_list = page.locator(`#collapsible-groups ul.options`)
+    const fruits_header = options_list.locator(`li.group-header:has-text("Fruits")`)
+
+    // Expanded state
+    await expect(fruits_header).toHaveAttribute(`aria-expanded`, `true`)
+
+    // Click to collapse
+    await fruits_header.click()
+    await expect(fruits_header).toHaveAttribute(`aria-expanded`, `false`)
+  })
+
+  test(`searchExpandsCollapsedGroups auto-expands matching collapsed groups`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+
+    const input = page.locator(`#collapsible-groups input[autocomplete]`)
+    await input.click()
+
+    const options_list = page.locator(`#collapsible-groups ul.options`)
+
+    // Dairy is collapsed initially
+    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
+      .toBeHidden()
+
+    // Type search matching Dairy option (searchExpandsCollapsedGroups is enabled by default in demo)
+    await input.fill(`Milk`)
+
+    // Dairy group should auto-expand
+    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
+      .toBeVisible()
+  })
+})
