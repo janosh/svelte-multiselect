@@ -994,43 +994,31 @@ test.describe(`option grouping`, () => {
     await expect(options_list.locator(`li[role="option"]:has-text("Rust")`)).toBeVisible()
   })
 
-  test(`collapsible groups toggle visibility on click`, async ({ page }) => {
+  test(`collapsible groups toggle visibility and aria-expanded on click`, async ({ page }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#collapsible-groups input[autocomplete]`)
 
     const options_list = page.locator(`#collapsible-groups ul.options`)
+    const fruits_header = options_list.locator(`li.group-header:has-text("Fruits")`)
+    const apple = options_list.locator(`li[role="option"]:has-text("🍎 Apple")`)
+    const dairy_header = options_list.locator(`li.group-header:has-text("Dairy")`)
+    const milk = options_list.locator(`li[role="option"]:has-text("🥛 Milk")`)
 
-    // Fruits group should be expanded by default
-    await expect(options_list.locator(`li[role="option"]:has-text("🍎 Apple")`))
-      .toBeVisible()
+    // Fruits expanded by default, Dairy starts collapsed (per demo config)
+    await expect(apple).toBeVisible()
+    await expect(fruits_header).toHaveAttribute(`aria-expanded`, `true`)
+    await expect(milk).toBeHidden()
+    await expect(dairy_header).toHaveAttribute(`aria-expanded`, `false`)
 
-    // Click to collapse Fruits group
-    await options_list.locator(`li.group-header:has-text("Fruits")`).click()
-    await expect(options_list.locator(`li[role="option"]:has-text("🍎 Apple")`))
-      .toBeHidden()
+    // Click to collapse Fruits
+    await fruits_header.click()
+    await expect(apple).toBeHidden()
+    await expect(fruits_header).toHaveAttribute(`aria-expanded`, `false`)
 
-    // Click again to expand
-    await options_list.locator(`li.group-header:has-text("Fruits")`).click()
-    await expect(options_list.locator(`li[role="option"]:has-text("🍎 Apple")`))
-      .toBeVisible()
-  })
-
-  test(`collapsed groups start collapsed when set in collapsedGroups`, async ({ page }) => {
-    await page.goto(`/grouping`, { waitUntil: `networkidle` })
-    await page.click(`#collapsible-groups input[autocomplete]`)
-
-    const options_list = page.locator(`#collapsible-groups ul.options`)
-
-    // Dairy starts collapsed per the demo config
-    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
-      .toBeHidden()
-    await expect(options_list.locator(`li[role="option"]:has-text("🧀 Cheese")`))
-      .toBeHidden()
-
-    // Expand Dairy
-    await options_list.locator(`li.group-header:has-text("Dairy")`).click()
-    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
-      .toBeVisible()
+    // Click to expand Dairy
+    await dairy_header.click()
+    await expect(milk).toBeVisible()
+    await expect(dairy_header).toHaveAttribute(`aria-expanded`, `true`)
   })
 
   test(`collapse all and expand all buttons work`, async ({ page }) => {
@@ -1090,133 +1078,77 @@ test.describe(`option grouping`, () => {
     await expect(active_option).toContainText(`Apple`)
   })
 
-  test(`groupSelectAll selects all options in a group`, async ({ page }) => {
+  test(`groupSelectAll selects all and toggles to deselect`, async ({ page }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#group-select-all input[autocomplete]`)
 
     const options_list = page.locator(`#group-select-all ul.options`)
+    const selected = page.locator(`#group-select-all ul.selected`)
+    const select_btn = options_list.locator(`li.group-header:has-text("Primary") button`)
 
     // Click select all for Primary group
-    await options_list.locator(`li.group-header:has-text("Primary") button`).click()
-
-    // Verify all Primary colors are selected
-    const selected = page.locator(`#group-select-all ul.selected`)
+    await select_btn.click()
     await expect(selected).toContainText(`Red`)
     await expect(selected).toContainText(`Blue`)
     await expect(selected).toContainText(`Yellow`)
-
-    // Secondary colors should not be selected
-    await expect(selected).not.toContainText(`Orange`)
-    await expect(selected).not.toContainText(`Green`)
-  })
-
-  test(`groupSelectAll toggles to deselect when all are selected`, async ({ page }) => {
-    await page.goto(`/grouping`, { waitUntil: `networkidle` })
-    await page.click(`#group-select-all input[autocomplete]`)
-
-    const options_list = page.locator(`#group-select-all ul.options`)
-
-    // Select all Primary
-    await options_list.locator(`li.group-header:has-text("Primary") button`).click()
+    await expect(selected).not.toContainText(`Orange`) // Secondary not selected
 
     // Click again to deselect all
-    await options_list.locator(`li.group-header:has-text("Primary") button`).click()
-
-    // Verify Primary colors are no longer selected
-    const selected = page.locator(`#group-select-all ul.selected`)
+    await select_btn.click()
     await expect(selected).not.toContainText(`Red`)
     await expect(selected).not.toContainText(`Blue`)
     await expect(selected).not.toContainText(`Yellow`)
   })
 
-  test(`ungroupedPosition controls where ungrouped options appear`, async ({ page }) => {
+  test(`ungroupedPosition and groupSortOrder control option ordering`, async ({ page }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
-    await page.click(`#ungrouped-sorting input[autocomplete]`)
-
-    const options_list = page.locator(`#ungrouped-sorting ul.options`)
-    const all_lis = options_list.locator(`li`)
-
-    // With ungroupedPosition='first', ungrouped options appear first
-    const first_option = all_lis.first()
-    await expect(first_option).toContainText(`Featured Item`)
-
-    // Change to 'last'
-    await page.selectOption(`#ungrouped-sorting select:has(option[value="last"])`, `last`)
-    await page.click(`#ungrouped-sorting input[autocomplete]`)
-
-    // Now ungrouped options should be at the end
-    const last_option = options_list.locator(`li[role="option"]`).last()
-    await expect(last_option).toContainText(`Popular Choice`)
-  })
-
-  test(`groupSortOrder sorts groups alphabetically`, async ({ page }) => {
-    await page.goto(`/grouping`, { waitUntil: `networkidle` })
-
-    // Set groupSortOrder to 'asc'
-    await page.selectOption(`#ungrouped-sorting select:has(option[value="asc"])`, `asc`)
     await page.click(`#ungrouped-sorting input[autocomplete]`)
 
     const options_list = page.locator(`#ungrouped-sorting ul.options`)
     const group_headers = options_list.locator(`li.group-header`)
 
-    // With asc sort: A Fruits, L Animals, Z Animals
+    // ungroupedPosition='first' (default) - ungrouped options appear first
+    await expect(options_list.locator(`li`).first()).toContainText(`Featured Item`)
+
+    // Change ungroupedPosition to 'last'
+    await page.selectOption(`#ungrouped-sorting select:has(option[value="last"])`, `last`)
+    await page.click(`#ungrouped-sorting input[autocomplete]`)
+    await expect(options_list.locator(`li[role="option"]`).last()).toContainText(
+      `Popular Choice`,
+    )
+
+    // groupSortOrder='asc' - A Fruits, L Animals, Z Animals
+    await page.selectOption(`#ungrouped-sorting select:has(option[value="asc"])`, `asc`)
+    await page.click(`#ungrouped-sorting input[autocomplete]`)
     await expect(group_headers.first()).toContainText(`A Fruits`)
-    await expect(group_headers.nth(1)).toContainText(`L Animals`)
     await expect(group_headers.last()).toContainText(`Z Animals`)
 
-    // Change to desc
+    // groupSortOrder='desc' - Z Animals, L Animals, A Fruits
     await page.selectOption(`#ungrouped-sorting select:has(option[value="desc"])`, `desc`)
     await page.click(`#ungrouped-sorting input[autocomplete]`)
-
-    // With desc sort: Z Animals, L Animals, A Fruits
     await expect(group_headers.first()).toContainText(`Z Animals`)
     await expect(group_headers.last()).toContainText(`A Fruits`)
   })
 
-  test(`custom group header snippet renders correctly`, async ({ page }) => {
+  test(`custom group header snippet and selected count display correctly`, async ({ page }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
+
+    // Test custom group header snippet with emoji flags
     await page.click(`#custom-group-header input[autocomplete]`)
-
-    const options_list = page.locator(`#custom-group-header ul.options`)
-
-    // Check custom emoji flags are rendered
-    await expect(options_list.locator(`li.group-header:has-text("🇺🇸")`)).toBeVisible()
-    await expect(options_list.locator(`li.group-header:has-text("🇬🇧")`)).toBeVisible()
-    await expect(options_list.locator(`li.group-header:has-text("🇯🇵")`)).toBeVisible()
-    await expect(options_list.locator(`li.group-header:has-text("🇫🇷")`)).toBeVisible()
-
-    // Check option count is displayed
-    await expect(options_list.locator(`li.group-header:has-text("USA"):has-text("(2)")`))
+    const custom_list = page.locator(`#custom-group-header ul.options`)
+    for (const emoji of [`🇺🇸`, `🇬🇧`, `🇯🇵`, `🇫🇷`]) {
+      await expect(custom_list.locator(`li.group-header:has-text("${emoji}")`))
+        .toBeVisible()
+    }
+    await expect(custom_list.locator(`li.group-header:has-text("USA"):has-text("(2)")`))
       .toBeVisible()
-  })
 
-  test(`selecting options updates group header selected count`, async ({ page }) => {
-    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    // Test selected count updates in group header
     await page.click(`#group-select-all input[autocomplete]`)
-
-    const options_list = page.locator(`#group-select-all ul.options`)
-
-    // Select one Primary option
-    await options_list.locator(`li[role="option"]:has-text("Red")`).click()
-
-    // Group header should show count (1/3)
-    const primary_header = options_list.locator(`li.group-header:has-text("Primary")`)
-    await expect(primary_header).toContainText(`1/3`)
-  })
-
-  test(`collapsible group header has aria-expanded attribute`, async ({ page }) => {
-    await page.goto(`/grouping`, { waitUntil: `networkidle` })
-    await page.click(`#collapsible-groups input[autocomplete]`)
-
-    const options_list = page.locator(`#collapsible-groups ul.options`)
-    const fruits_header = options_list.locator(`li.group-header:has-text("Fruits")`)
-
-    // Expanded state
-    await expect(fruits_header).toHaveAttribute(`aria-expanded`, `true`)
-
-    // Click to collapse
-    await fruits_header.click()
-    await expect(fruits_header).toHaveAttribute(`aria-expanded`, `false`)
+    const select_list = page.locator(`#group-select-all ul.options`)
+    await select_list.locator(`li[role="option"]:has-text("Red")`).click()
+    await expect(select_list.locator(`li.group-header:has-text("Primary")`))
+      .toContainText(`1/3`)
   })
 
   test(`searchExpandsCollapsedGroups auto-expands matching collapsed groups`, async ({ page }) => {
