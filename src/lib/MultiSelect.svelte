@@ -294,13 +294,25 @@
     return counts
   })
 
+  // Update collapsedGroups state: 'add' adds groups, 'delete' removes groups, 'set' replaces all
+  function update_collapsed_groups(
+    action: `add` | `delete` | `set`,
+    groups: string | Iterable<string>,
+  ) {
+    const items = typeof groups === `string` ? [groups] : [...groups]
+    if (action === `set`) {
+      collapsedGroups = new SvelteSet(items)
+    } else {
+      const updated = new SvelteSet(collapsedGroups)
+      for (const group of items) updated[action](group)
+      collapsedGroups = updated
+    }
+  }
+
   // Toggle group collapsed state
   function toggle_group_collapsed(group_name: string) {
     const was_collapsed = collapsedGroups.has(group_name)
-    const updated = new SvelteSet(collapsedGroups)
-    if (was_collapsed) updated.delete(group_name)
-    else updated.add(group_name)
-    collapsedGroups = updated
+    update_collapsed_groups(was_collapsed ? `delete` : `add`, group_name)
     ongroupToggle?.({ group: group_name, collapsed: !was_collapsed })
   }
 
@@ -310,22 +322,20 @@
       .map((entry) => entry.group)
       .filter((group_name): group_name is string => group_name !== null)
     if (groups.length === 0) return
-    collapsedGroups = new SvelteSet(groups)
+    update_collapsed_groups(`set`, groups)
     oncollapseAll?.({ groups })
   }
   expandAllGroups = () => {
     const groups = [...collapsedGroups]
     if (groups.length === 0) return
-    collapsedGroups = new SvelteSet()
+    update_collapsed_groups(`set`, [])
     onexpandAll?.({ groups })
   }
 
   // Expand specified groups and fire ongroupToggle for each
   function expand_groups(groups_to_expand: string[]) {
     if (groups_to_expand.length === 0) return
-    const updated = new SvelteSet(collapsedGroups)
-    for (const group of groups_to_expand) updated.delete(group)
-    collapsedGroups = updated
+    update_collapsed_groups(`delete`, groups_to_expand)
     for (const group of groups_to_expand) ongroupToggle?.({ group, collapsed: false })
   }
 
@@ -718,49 +728,46 @@
     }
   }
 
+  // Check if option index is within maxOptions visibility limit
+  const is_option_visible = (idx: number) =>
+    idx >= 0 && (maxOptions == null || idx < maxOptions)
+
+  // Get non-disabled, selectable options from a list
+  // For collapsed groups: returns all non-disabled options (user explicitly wants this group)
+  // For expanded groups/top-level: respects maxOptions rendering limit
+  const get_selectable_opts = (opts: Option[], skip_visibility_check = false) =>
+    opts.filter((opt) => {
+      if (is_disabled(opt)) return false
+      if (skip_visibility_check) return true
+      return is_option_visible(navigable_index_map.get(opt) ?? -1)
+    })
+
+  // Batch-add options to selection with all side effects (used by select_all and group select)
+  function batch_add_options(options_to_add: Option[], event: Event) {
+    const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
+    const to_add = options_to_add
+      .filter((opt) => !selected_keys.includes(key(opt)))
+      .slice(0, remaining)
+
+    if (to_add.length === 0) return
+
+    selected = sort_selected([...selected, ...to_add])
+    if (resetFilterOnAdd) searchText = ``
+    clear_validity()
+    handle_dropdown_after_select(event)
+    onselectAll?.({ options: to_add })
+    onchange?.({ options: selected, type: `selectAll` })
+  }
+
   // Batch-add options for top-level "Select all" (only visible/navigable options)
   function select_all(event: Event) {
     event.stopPropagation()
-    const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
-    // Filter to only options visible in the UI (respects maxOptions limit and collapsed groups)
-    const visible = navigable_options.filter((opt) => {
-      const idx = navigable_index_map.get(opt) ?? -1
-      return idx >= 0 && (maxOptions == null || idx < maxOptions)
-    })
-    const to_add = visible
-      .filter((opt) => !is_disabled(opt) && !selected_keys.includes(key(opt)))
-      .slice(0, remaining)
-
-    if (to_add.length > 0) {
-      selected = sort_selected([...selected, ...to_add])
-      if (resetFilterOnAdd) searchText = ``
-      clear_validity()
-      handle_dropdown_after_select(event)
-      onselectAll?.({ options: to_add })
-      onchange?.({ options: selected, type: `selectAll` })
-    }
-  }
-
-  // Get non-disabled, selectable options from a group
-  // For collapsed groups: returns all non-disabled options (user explicitly wants this group)
-  // For expanded groups: respects maxOptions rendering limit
-  const get_group_selectable_opts = (
-    group_opts: Option[],
-    group_collapsed: boolean,
-  ) => {
-    return group_opts.filter((opt) => {
-      if (is_disabled(opt)) return false
-      // For collapsed groups, select all options (user explicitly clicked this group)
-      if (group_collapsed) return true
-      // For expanded groups, respect maxOptions rendering limit
-      const idx = navigable_index_map.get(opt) ?? -1
-      return idx >= 0 && (maxOptions == null || idx < maxOptions)
-    })
+    batch_add_options(get_selectable_opts(navigable_options), event)
   }
 
   // Check if all selectable options in a group are selected
   const is_group_all_selected = (group_opts: Option[], group_collapsed: boolean) => {
-    const selectable = get_group_selectable_opts(group_opts, group_collapsed)
+    const selectable = get_selectable_opts(group_opts, group_collapsed)
     return selectable.length > 0 &&
       selectable.every((opt) => selected_keys.includes(key(opt)))
   }
@@ -773,7 +780,7 @@
     event: Event,
   ) {
     event.stopPropagation()
-    const selectable = get_group_selectable_opts(group_opts, group_collapsed)
+    const selectable = get_selectable_opts(group_opts, group_collapsed)
     if (is_group_all_selected(group_opts, group_collapsed)) {
       // Deselect all options in this group
       const keys_to_remove = new Set(selectable.map(key))
@@ -785,18 +792,7 @@
       }
     } else {
       // Select all non-disabled, non-selected options in this group
-      const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
-      const to_add = selectable
-        .filter((opt) => !selected_keys.includes(key(opt)))
-        .slice(0, remaining)
-      if (to_add.length > 0) {
-        selected = sort_selected([...selected, ...to_add])
-        if (resetFilterOnAdd) searchText = ``
-        clear_validity()
-        handle_dropdown_after_select(event)
-        onselectAll?.({ options: to_add })
-        onchange?.({ options: selected, type: `selectAll` })
-      }
+      batch_add_options(selectable, event)
     }
   }
 

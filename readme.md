@@ -34,9 +34,9 @@
 
 ## 🧪 &thinsp; Coverage
 
-| Statements                                                                                 | Branches                                                                          | Lines                                                                            |
-| ------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------- |
-| ![Statements](https://img.shields.io/badge/statements-92.81%25-brightgreen.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-81.57%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-92.81%25-brightgreen.svg?style=flat) |
+| Statements                                                                            | Branches                                                                          | Lines                                                                       |
+| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
+| ![Statements](https://img.shields.io/badge/statements-83.56%25-yellow.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-79.37%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-83.33%25-yellow.svg?style=flat) |
 
 ## 🔨 &thinsp; Installation
 
@@ -333,6 +333,85 @@ These are the core props you'll use in most cases:
    ```
 
    Configuration for portal rendering. When `active: true`, the dropdown is rendered at document.body level with fixed positioning. Useful for avoiding z-index and overflow issues.
+
+### Grouping Props
+
+Group related options together with visual headers. Add a `group` key to your option objects:
+
+```svelte
+<script>
+  const options = [
+    { label: `JavaScript`, group: `Frontend` },
+    { label: `TypeScript`, group: `Frontend` },
+    { label: `Python`, group: `Backend` },
+    { label: `Go`, group: `Backend` },
+  ]
+</script>
+
+<MultiSelect {options} collapsibleGroups groupSelectAll />
+```
+
+See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) for live examples.
+
+1. ```ts
+   collapsibleGroups: boolean = false
+   ```
+
+   Enable click-to-collapse groups. When `true`, users can click group headers to hide/show options in that group.
+
+1. ```ts
+   collapsedGroups: Set<string> = new Set()
+   ```
+
+   Bindable set of collapsed group names. Use `bind:collapsedGroups` to control which groups are collapsed externally or to persist collapse state.
+
+1. ```ts
+   groupSelectAll: boolean = false
+   ```
+
+   Add a "Select all" button to each group header, allowing users to select all options in a specific group at once.
+
+1. ```ts
+   ungroupedPosition: 'first' | 'last' = 'first'
+   ```
+
+   Where to render options that don't have a `group` key. `'first'` places them at the top, `'last'` at the bottom.
+
+1. ```ts
+   groupSortOrder: 'none' | 'asc' | 'desc' | ((a: string, b: string) => number) = 'none'
+   ```
+
+   Sort groups alphabetically (`'asc'` or `'desc'`) or with a custom comparator function. Default `'none'` preserves order of first occurrence.
+
+1. ```ts
+   searchExpandsCollapsedGroups: boolean = false
+   ```
+
+   When `true`, collapsed groups automatically expand when the search query matches options within them.
+
+1. ```ts
+   liGroupHeaderClass: string = ''
+   ```
+
+   CSS class applied to group header `<li>` elements.
+
+1. ```ts
+   liGroupHeaderStyle: string | null = null
+   ```
+
+   Inline style for group header elements.
+
+1. ```ts
+   groupHeader: Snippet<[{ group: string; options: T[]; collapsed: boolean }]>
+   ```
+
+   Custom snippet for rendering group headers. Receives the group name, array of options in that group, and whether the group is collapsed.
+
+1. ```ts
+   ongroupToggle: (data: { group: string; collapsed: boolean }) => void
+   ```
+
+   Callback fired when a group is collapsed or expanded. Receives the group name and its new collapsed state.
 
 ### Form & Accessibility Props
 
