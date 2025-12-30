@@ -1,6 +1,6 @@
 import { PrevNext } from '$lib'
 import { mount } from 'svelte'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
 const items_with_labels: [string, string][] = [
@@ -26,22 +26,15 @@ describe(`PrevNext`, () => {
 
     Object.defineProperty(window, `history`, {
       value: { replaceState: replaceStateSpy, pushState: pushStateSpy },
-      writable: true,
     })
 
     Object.defineProperty(window, `scrollTo`, {
       value: scrollToSpy,
-      writable: true,
     })
 
     // Mock scroll position
     Object.defineProperty(window, `scrollX`, { value: 100, writable: true })
     Object.defineProperty(window, `scrollY`, { value: 200, writable: true })
-  })
-
-  afterEach(() => {
-    target.innerHTML = ``
-    vi.clearAllMocks()
   })
 
   test(`renders nothing with less than 3 items`, () => {
