@@ -6,7 +6,7 @@ import {
   sortable,
   tooltip,
 } from '$lib/attachments'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
@@ -401,14 +401,6 @@ describe(`click_outside`, () => {
 
   beforeEach(() => {
     cleanup_functions = []
-    document.body.innerHTML = ``
-  })
-
-  afterEach(() => {
-    cleanup_functions.forEach((cleanup) => {
-      cleanup()
-    })
-    cleanup_functions = []
   })
 
   const create_element = () => {
@@ -684,10 +676,6 @@ describe(`highlight_matches`, () => {
         }
       },
     )
-  })
-
-  afterEach(() => {
-    vi.unstubAllGlobals()
   })
 
   it.each([

@@ -1,6 +1,6 @@
 import { CopyButton } from '$lib'
 import { mount } from 'svelte'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 // Mock clipboard API
 const mock_write_text = vi.fn()
@@ -15,14 +15,6 @@ describe(`CopyButton`, () => {
 
   beforeEach(() => {
     target = document.body
-    target.innerHTML = ``
-    vi.clearAllMocks()
-  })
-
-  afterEach(() => {
-    target.innerHTML = ``
-    vi.clearAllMocks()
-    vi.unstubAllGlobals()
   })
 
   describe(`Keyboard Accessibility`, () => {
