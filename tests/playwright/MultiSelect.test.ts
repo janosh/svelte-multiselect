@@ -1052,12 +1052,9 @@ test.describe(`option grouping`, () => {
   })
 
   test(`arrow key navigation skips collapsed groups`, async ({ page }) => {
-    // Skip in CI - keyboard navigation tests are flaky (see line 410)
-    if (process.env.CI) test.skip()
+    if (process.env.CI) test.skip() // keyboard nav tests are flaky in CI
 
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
-
-    // Disable keyboardExpandsCollapsedGroups to prevent auto-expanding
     await page.click(
       `#collapsible-groups label:has-text("keyboardExpandsCollapsedGroups")`,
     )
@@ -1068,15 +1065,21 @@ test.describe(`option grouping`, () => {
     const options_list = page.locator(`#collapsible-groups ul.options`)
     const active_option = options_list.locator(`li.active[role="option"]`)
 
-    // Navigate to last visible option before collapsed Dairy group
-    // Use intermediate checks to reduce flakiness
+    await expect(options_list.locator(`li.group-header:has-text("Dairy")`))
+      .toHaveAttribute(`aria-expanded`, `false`)
+    await expect(options_list.locator(`li.group-header:has-text("Fruits")`))
+      .toHaveAttribute(`aria-expanded`, `true`)
+
     const visible_count = await options_list.locator(`li[role="option"]:visible`).count()
-    for (let idx = 0; idx < visible_count; idx++) {
+
+    await page.keyboard.press(`ArrowDown`)
+    await expect(active_option).toContainText(`Apple`)
+
+    for (let idx = 1; idx < visible_count; idx++) {
       await page.keyboard.press(`ArrowDown`)
-      await expect(active_option).toBeVisible() // Intermediate state check
+      await expect(active_option).toBeVisible()
     }
 
-    // Next ArrowDown should wrap to first option, skipping collapsed Dairy
     await page.keyboard.press(`ArrowDown`)
     await expect(active_option).toContainText(`Apple`)
   })
@@ -1139,11 +1142,10 @@ test.describe(`option grouping`, () => {
     await expect(group_headers.last()).toContainText(`A Fruits`)
   })
 
-  test(`custom group header snippet and selected count display correctly`, async ({ page }) => {
+  test(`custom group header snippet renders with emoji flags and option counts`, async ({ page }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
-
-    // Test custom group header snippet with emoji flags
     await page.click(`#custom-group-header input[autocomplete]`)
+
     const custom_list = page.locator(`#custom-group-header ul.options`)
     for (const emoji of [`🇺🇸`, `🇬🇧`, `🇯🇵`, `🇫🇷`, `🇩🇪`]) {
       await expect(custom_list.locator(`li.group-header:has-text("${emoji}")`))
@@ -1151,13 +1153,19 @@ test.describe(`option grouping`, () => {
     }
     await expect(custom_list.locator(`li.group-header:has-text("USA"):has-text("(5)")`))
       .toBeVisible()
+  })
 
-    // Test selected count updates in group header
+  test(`group header displays selected count when options are selected`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#group-select-all input[autocomplete]`)
-    const select_list = page.locator(`#group-select-all ul.options`)
-    await select_list.locator(`li[role="option"]:has-text("Red")`).click()
-    await expect(select_list.locator(`li.group-header:has-text("Primary")`))
-      .toContainText(`1/3`)
+    const options_list = page.locator(`#group-select-all ul.options`)
+    const primary_header = options_list.locator(`li.group-header:has-text("Primary")`)
+
+    await expect(primary_header).toContainText(`0/3`)
+    await options_list.locator(`li[role="option"]:has-text("Red")`).click()
+    await expect(primary_header).toContainText(`1/3`)
+    await options_list.locator(`li[role="option"]:has-text("Blue")`).click()
+    await expect(primary_header).toContainText(`2/3`)
   })
 
   test(`searchExpandsCollapsedGroups auto-expands matching collapsed groups`, async ({ page }) => {
