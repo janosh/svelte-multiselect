@@ -100,7 +100,9 @@
       {:else}
         <div>
           {#if titles.prev}<span>{@html titles.prev}</span>{/if}
-          <a {...link_props} href={prev[0]}>{prev[0]}</a>
+          <a data-sveltekit-preload-data="hover" {...link_props} href={prev[0]}>{
+            prev[0]
+          }</a>
         </div>
       {/if}
     {/if}
@@ -113,7 +115,9 @@
       {:else}
         <div>
           {#if titles.next}<span>{@html titles.next}</span>{/if}
-          <a {...link_props} href={next[0]}>{next[0]}</a>
+          <a data-sveltekit-preload-data="hover" {...link_props} href={next[0]}>{
+            next[0]
+          }</a>
         </div>
       {/if}
     {/if}
