@@ -20,6 +20,22 @@ export interface DraggableOptions {
   on_drag_end?: (event: MouseEvent) => void
 }
 
+type Dimensions = { width: number; height: number }
+type ResizeCallback = (event: MouseEvent, dimensions: Dimensions) => void
+
+export interface ResizableOptions {
+  edges?: (`top` | `right` | `bottom` | `left`)[]
+  min_width?: number
+  min_height?: number
+  max_width?: number
+  max_height?: number
+  handle_size?: number // px, default 8
+  disabled?: boolean
+  on_resize_start?: ResizeCallback
+  on_resize?: ResizeCallback
+  on_resize_end?: ResizeCallback
+}
+
 // Svelte 5 attachment factory to make an element draggable
 // @param options - Configuration options for dragging behavior
 // @returns Attachment function that sets up dragging on an element
@@ -116,6 +132,119 @@ export const draggable =
         handle.removeEventListener(`mousedown`, handle_mousedown)
         handle.style.cursor = `` // Reset cursor
       }
+    }
+  }
+
+// Svelte 5 attachment factory to make an element resizable by dragging its edges
+export const resizable =
+  (options: ResizableOptions = {}): Attachment => (element: Element) => {
+    if (options.disabled) return
+
+    const node = element as HTMLElement
+    const {
+      edges = [`right`, `bottom`],
+      min_width = 50,
+      min_height = 50,
+      max_width = Infinity,
+      max_height = Infinity,
+      handle_size = 8,
+      on_resize_start,
+      on_resize,
+      on_resize_end,
+    } = options
+
+    let active_edge: string | null = null
+    let start = { x: 0, y: 0 }
+    let initial = { width: 0, height: 0, left: 0, top: 0 }
+
+    const clamp = (val: number, min: number, max: number) =>
+      Math.max(min, Math.min(max, val))
+
+    if (getComputedStyle(node).position === `static`) node.style.position = `relative`
+
+    const get_edge = ({ clientX: cx, clientY: cy }: MouseEvent): string | null => {
+      const { left, right, top, bottom } = node.getBoundingClientRect()
+      if (edges.includes(`right`) && cx >= right - handle_size && cx <= right) {
+        return `right`
+      }
+      if (edges.includes(`bottom`) && cy >= bottom - handle_size && cy <= bottom) {
+        return `bottom`
+      }
+      if (edges.includes(`left`) && cx >= left && cx <= left + handle_size) return `left`
+      if (edges.includes(`top`) && cy >= top && cy <= top + handle_size) return `top`
+      return null
+    }
+
+    function on_mousedown(event: MouseEvent) {
+      active_edge = get_edge(event)
+      if (!active_edge) return
+
+      start = { x: event.clientX, y: event.clientY }
+      initial = {
+        width: node.offsetWidth,
+        height: node.offsetHeight,
+        left: node.offsetLeft,
+        top: node.offsetTop,
+      }
+      document.body.style.userSelect = `none`
+      on_resize_start?.(event, { width: initial.width, height: initial.height })
+      globalThis.addEventListener(`mousemove`, on_mousemove)
+      globalThis.addEventListener(`mouseup`, on_mouseup)
+    }
+
+    function on_mousemove(event: MouseEvent) {
+      if (!active_edge) return
+
+      const dx = event.clientX - start.x, dy = event.clientY - start.y
+      let { width, height } = initial
+
+      if (active_edge === `right`) width = clamp(initial.width + dx, min_width, max_width)
+      else if (active_edge === `left`) {
+        const clamped = clamp(initial.width - dx, min_width, max_width)
+        node.style.left = `${initial.left - (clamped - initial.width)}px`
+        width = clamped
+      }
+
+      if (active_edge === `bottom`) {
+        height = clamp(initial.height + dy, min_height, max_height)
+      } else if (active_edge === `top`) {
+        const clamped = clamp(initial.height - dy, min_height, max_height)
+        node.style.top = `${initial.top - (clamped - initial.height)}px`
+        height = clamped
+      }
+
+      node.style.width = `${width}px`
+      node.style.height = `${height}px`
+      on_resize?.(event, { width, height })
+    }
+
+    function on_mouseup(event: MouseEvent) {
+      if (!active_edge) return
+      document.body.style.userSelect = ``
+      on_resize_end?.(event, { width: node.offsetWidth, height: node.offsetHeight })
+      globalThis.removeEventListener(`mousemove`, on_mousemove)
+      globalThis.removeEventListener(`mouseup`, on_mouseup)
+      active_edge = null
+    }
+
+    function on_hover(event: MouseEvent) {
+      const edge = get_edge(event)
+      node.style.cursor = edge === `right` || edge === `left`
+        ? `ew-resize`
+        : edge === `top` || edge === `bottom`
+        ? `ns-resize`
+        : ``
+    }
+
+    node.addEventListener(`mousedown`, on_mousedown)
+    node.addEventListener(`mousemove`, on_hover)
+
+    return () => {
+      node.removeEventListener(`mousedown`, on_mousedown)
+      node.removeEventListener(`mousemove`, on_hover)
+      globalThis.removeEventListener(`mousemove`, on_mousemove)
+      globalThis.removeEventListener(`mouseup`, on_mouseup)
+      node.style.cursor = ``
     }
   }
 
