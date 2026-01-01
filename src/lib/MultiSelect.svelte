@@ -709,6 +709,8 @@
 
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
+    if (disabled) return // Block all keyboard handling when disabled
+
     // Check keyboard shortcuts first (before other key handling)
     const shortcut_actions: Array<{
       key: keyof typeof effective_shortcuts

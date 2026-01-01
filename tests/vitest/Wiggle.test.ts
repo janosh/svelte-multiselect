@@ -79,7 +79,7 @@ describe(`Wiggle`, () => {
     mount(Wiggle, { target, props })
 
     expect(get_value()).toBe(true)
-    vi.advanceTimersByTime(0)
+    vi.runAllTimers()
     expect(get_value()).toBe(false)
   })
 })

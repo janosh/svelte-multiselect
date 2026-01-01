@@ -20,8 +20,8 @@ export interface DraggableOptions {
   on_drag_end?: (event: MouseEvent) => void
 }
 
-type Dimensions = { width: number; height: number }
-type ResizeCallback = (event: MouseEvent, dimensions: Dimensions) => void
+export type Dimensions = { width: number; height: number }
+export type ResizeCallback = (event: MouseEvent, dimensions: Dimensions) => void
 
 export interface ResizableOptions {
   edges?: (`top` | `right` | `bottom` | `left`)[]

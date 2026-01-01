@@ -24,7 +24,7 @@ describe(`Toggle`, () => {
 
   test(`toggles on Enter key and fires change event`, () => {
     const onchange = vi.fn()
-    mount(Toggle, { target, props: { onchange } })
+    mount(Toggle, { target, props: { input_props: { onchange } } })
     const input = get_input()
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))

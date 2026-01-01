@@ -3973,34 +3973,12 @@ describe(`keyboard shortcuts`, () => {
     expect(props.selected).toHaveLength(1)
   })
 
-  test(`meta+a works as alternative to ctrl+a for Mac users`, async () => {
+  test.each([`meta+a`, `cmd+a`])(`%s shortcut works for Mac users`, async (shortcut) => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
       selectAllOption: true,
       selected: [],
-      shortcuts: { select_all: `meta+a` },
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, metaKey: true, bubbles: true }),
-    )
-    await tick()
-
-    expect(props.selected).toEqual([`a`, `b`, `c`])
-  })
-
-  test(`cmd+a shortcut works (alias for meta)`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: `cmd+a` },
+      shortcuts: { select_all: shortcut },
       open: true,
     })
 
@@ -4087,12 +4065,17 @@ describe(`keyboard shortcuts`, () => {
     expect(props.open).toBe(false)
   })
 
-  test(`shortcuts with alt modifier work correctly`, async () => {
+  test.each(
+    [
+      [`alt+a`, `a`, { altKey: true }],
+      [`ctrl+shift+alt+s`, `s`, { ctrlKey: true, shiftKey: true, altKey: true }],
+    ] as const,
+  )(`modifier combo %s works`, async (shortcut, key, modifiers) => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
       selectAllOption: true,
       selected: [],
-      shortcuts: { select_all: `alt+a` },
+      shortcuts: { select_all: shortcut },
       open: true,
     })
 
@@ -4102,19 +4085,19 @@ describe(`keyboard shortcuts`, () => {
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
     input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, altKey: true, bubbles: true }),
+      new KeyboardEvent(`keydown`, { key, ...modifiers, bubbles: true }),
     )
     await tick()
 
     expect(props.selected).toEqual([`a`, `b`, `c`])
   })
 
-  test(`combined modifiers work (ctrl+shift+alt+key)`, async () => {
+  test(`shortcuts are blocked when disabled=true`, async () => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
       selectAllOption: true,
       selected: [],
-      shortcuts: { select_all: `ctrl+shift+alt+s` },
+      disabled: true,
       open: true,
     })
 
@@ -4122,18 +4105,112 @@ describe(`keyboard shortcuts`, () => {
     await tick()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
     input.dispatchEvent(
-      new KeyboardEvent(`keydown`, {
-        key: `s`,
-        ctrlKey: true,
-        shiftKey: true,
-        altKey: true,
-        bubbles: true,
-      }),
+      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
     )
     await tick()
 
-    expect(props.selected).toEqual([`a`, `b`, `c`])
+    // Shortcuts should not work when component is disabled
+    expect(props.selected).toEqual([])
   })
+
+  test.each([
+    [`ctrl+`, { ctrlKey: true }], // missing key
+    [``, {}], // empty string
+  ])(
+    `invalid shortcut format "%s" does not trigger action`,
+    async (shortcut, modifiers) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        selectAllOption: true,
+        selected: [],
+        shortcuts: { select_all: shortcut },
+        open: true,
+      })
+
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `a`, ...modifiers, bubbles: true }),
+      )
+      await tick()
+
+      expect(props.selected).toEqual([])
+    },
+  )
+
+  test.each([
+    // deno-fmt-ignore
+    [`select_all`, { selectAllOption: true, selected: [] as string[] }, { ctrlKey: true }, [`a`, `b`, `c` ]],
+    [`clear_all`, { selected: [`a`, `b`] }, { ctrlKey: true, shiftKey: true }, []],
+  ])(
+    `%s shortcut works when dropdown is closed`,
+    async (_name, extra_props, modifiers, expected) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        open: false,
+        ...extra_props,
+      })
+
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `a`, ...modifiers, bubbles: true }),
+      )
+      await tick()
+
+      expect(props.selected).toEqual(expected)
+    },
+  )
+
+  // Helper to reduce boilerplate in shortcut tests
+  async function test_shortcut(
+    shortcut_props: Partial<MultiSelectProps>,
+    key_event: {
+      key: string
+      ctrlKey?: boolean
+      shiftKey?: boolean
+      altKey?: boolean
+      metaKey?: boolean
+    },
+  ): Promise<{ props: MultiSelectProps; input: HTMLInputElement }> {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selected: [],
+      open: true,
+      ...shortcut_props,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { ...key_event, bubbles: true }))
+    await tick()
+
+    return { props, input }
+  }
+
+  test.each(
+    [
+      [`open`, true, { open: `ctrl+o` }, `o`],
+      [`close`, false, { close: `ctrl+w` }, `w`],
+    ] as const,
+  )(
+    `%s shortcut is no-op when already %s`,
+    async (_action, initial_open, shortcuts, key) => {
+      const { props } = await test_shortcut(
+        { shortcuts, open: initial_open },
+        { key, ctrlKey: true },
+      )
+      expect(props.open).toBe(initial_open)
+    },
+  )
 })
