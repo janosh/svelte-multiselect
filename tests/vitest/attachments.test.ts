@@ -3,6 +3,7 @@ import {
   draggable,
   get_html_sort_value,
   highlight_matches,
+  resizable,
   sortable,
   tooltip,
 } from '$lib/attachments'
@@ -636,6 +637,62 @@ describe(`draggable`, () => {
     expect(element.style.left).toBe(`30px`)
     expect(element.style.top).toBe(`40px`)
   })
+
+  it(`should use offsetLeft/offsetTop for non-fixed positioning`, () => {
+    const element = create_element()
+    element.style.position = `absolute`
+    // Mock offsetLeft and offsetTop (these are read-only, so we use Object.defineProperty)
+    Object.defineProperty(element, `offsetLeft`, { value: 25, configurable: true })
+    Object.defineProperty(element, `offsetTop`, { value: 35, configurable: true })
+
+    const attach = draggable()
+    attach(element)
+
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, { clientX: 10, clientY: 10, bubbles: true }),
+    )
+
+    expect(element.style.left).toBe(`25px`)
+    expect(element.style.top).toBe(`35px`)
+
+    // Drag to new position
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, { clientX: 30, clientY: 50, bubbles: true }),
+    )
+    expect(element.style.left).toBe(`45px`) // 25 + (30-10)
+    expect(element.style.top).toBe(`75px`) // 35 + (50-10)
+  })
+
+  it(`should ignore mousemove when not dragging`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 0, top: 0 })
+    const on_drag = vi.fn()
+
+    draggable({ on_drag })(element)
+
+    // Dispatch mousemove without mousedown first
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, { clientX: 100, clientY: 100, bubbles: true }),
+    )
+
+    expect(on_drag).not.toHaveBeenCalled()
+    expect(element.style.left).toBe(``)
+  })
+
+  it(`should ignore mouseup when not dragging`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 0, top: 0 })
+    const on_drag_end = vi.fn()
+
+    draggable({ on_drag_end })(element)
+
+    // Dispatch mouseup without mousedown first
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+
+    expect(on_drag_end).not.toHaveBeenCalled()
+  })
 })
 
 describe(`highlight_matches`, () => {
@@ -937,5 +994,507 @@ describe(`sortable`, () => {
     cleanup?.()
 
     expect(header.style.color).toBe(`blue`)
+  })
+})
+
+describe(`resizable`, () => {
+  const create_element = () => {
+    const element = document.createElement(`div`)
+    element.style.width = `200px`
+    element.style.height = `150px`
+    document.body.appendChild(element)
+    return element
+  }
+
+  const mock_rect = (
+    element: HTMLElement,
+    rect: { left: number; top: number; width: number; height: number },
+  ) => {
+    element.getBoundingClientRect = vi.fn(() => ({
+      left: rect.left,
+      top: rect.top,
+      width: rect.width,
+      height: rect.height,
+      right: rect.left + rect.width,
+      bottom: rect.top + rect.height,
+      x: rect.left,
+      y: rect.top,
+      toJSON: () => ({}),
+    }))
+    Object.defineProperty(element, `offsetWidth`, {
+      value: rect.width,
+      configurable: true,
+    })
+    Object.defineProperty(element, `offsetHeight`, {
+      value: rect.height,
+      configurable: true,
+    })
+    Object.defineProperty(element, `offsetLeft`, { value: rect.left, configurable: true })
+    Object.defineProperty(element, `offsetTop`, { value: rect.top, configurable: true })
+  }
+
+  it(`should apply resize cursor on right edge hover`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable()(element)
+
+    // Hover on right edge (within handle_size=8 from right)
+    const hover_event = new MouseEvent(`mousemove`, {
+      clientX: 195,
+      clientY: 75,
+      bubbles: true,
+    })
+    element.dispatchEvent(hover_event)
+
+    expect(element.style.cursor).toBe(`ew-resize`)
+  })
+
+  it(`should apply resize cursor on bottom edge hover`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable()(element)
+
+    // Hover on bottom edge
+    const hover_event = new MouseEvent(`mousemove`, {
+      clientX: 100,
+      clientY: 145,
+      bubbles: true,
+    })
+    element.dispatchEvent(hover_event)
+
+    expect(element.style.cursor).toBe(`ns-resize`)
+  })
+
+  it(`should apply resize cursor on left edge hover when enabled`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ edges: [`left`] })(element)
+
+    // Hover on left edge
+    const hover_event = new MouseEvent(`mousemove`, {
+      clientX: 5,
+      clientY: 75,
+      bubbles: true,
+    })
+    element.dispatchEvent(hover_event)
+
+    expect(element.style.cursor).toBe(`ew-resize`)
+  })
+
+  it(`should apply resize cursor on top edge hover when enabled`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ edges: [`top`] })(element)
+
+    // Hover on top edge
+    const hover_event = new MouseEvent(`mousemove`, {
+      clientX: 100,
+      clientY: 5,
+      bubbles: true,
+    })
+    element.dispatchEvent(hover_event)
+
+    expect(element.style.cursor).toBe(`ns-resize`)
+  })
+
+  it(`should reset cursor when not hovering on edge`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable()(element)
+
+    // Hover on right edge first
+    element.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 195,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+    expect(element.style.cursor).toBe(`ew-resize`)
+
+    // Move to center (not on edge)
+    element.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 100,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+    expect(element.style.cursor).toBe(``)
+  })
+
+  it(`should respect min_width constraint`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ min_width: 100 })(element)
+
+    // Start resize on right edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 195,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    // Drag to shrink width below min_width
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 50,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    // Width should be clamped to min_width
+    expect(element.style.width).toBe(`100px`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  })
+
+  it(`should respect max_width constraint`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ max_width: 300 })(element)
+
+    // Start resize on right edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 195,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    // Drag to expand width beyond max_width
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 500,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    // Width should be clamped to max_width
+    expect(element.style.width).toBe(`300px`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  })
+
+  it(`should respect min_height constraint`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ min_height: 80 })(element)
+
+    // Start resize on bottom edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 100,
+        clientY: 145,
+        bubbles: true,
+      }),
+    )
+
+    // Drag to shrink height below min_height
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 100,
+        clientY: 30,
+        bubbles: true,
+      }),
+    )
+
+    // Height should be clamped to min_height
+    expect(element.style.height).toBe(`80px`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  })
+
+  it(`should respect max_height constraint`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ max_height: 250 })(element)
+
+    // Start resize on bottom edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 100,
+        clientY: 145,
+        bubbles: true,
+      }),
+    )
+
+    // Drag to expand height beyond max_height
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 100,
+        clientY: 400,
+        bubbles: true,
+      }),
+    )
+
+    // Height should be clamped to max_height
+    expect(element.style.height).toBe(`250px`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  })
+
+  it(`should fire on_resize_start, on_resize, and on_resize_end callbacks`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+
+    const on_resize_start = vi.fn()
+    const on_resize = vi.fn()
+    const on_resize_end = vi.fn()
+
+    resizable({ on_resize_start, on_resize, on_resize_end })(element)
+
+    // Start resize on right edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 195,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+    expect(on_resize_start).toHaveBeenCalledTimes(1)
+    expect(on_resize_start).toHaveBeenCalledWith(
+      expect.any(MouseEvent),
+      { width: 200, height: 150 },
+    )
+
+    // Drag to resize
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 250,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+    expect(on_resize).toHaveBeenCalledTimes(1)
+    expect(on_resize).toHaveBeenCalledWith(
+      expect.any(MouseEvent),
+      { width: 255, height: 150 },
+    )
+
+    // End resize
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    expect(on_resize_end).toHaveBeenCalledTimes(1)
+    expect(on_resize_end).toHaveBeenCalledWith(
+      expect.any(MouseEvent),
+      { width: 200, height: 150 }, // offsetWidth/Height from mock
+    )
+  })
+
+  it(`should handle left edge resize with position adjustment`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 100, top: 50, width: 200, height: 150 })
+    resizable({ edges: [`left`] })(element)
+
+    // Start resize on left edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 105,
+        clientY: 100,
+        bubbles: true,
+      }),
+    )
+
+    // Drag left to expand
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 55,
+        clientY: 100,
+        bubbles: true,
+      }),
+    )
+
+    // Width should increase and left position should decrease
+    expect(element.style.width).toBe(`250px`)
+    expect(element.style.left).toBe(`50px`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  })
+
+  it(`should handle top edge resize with position adjustment`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 100, top: 100, width: 200, height: 150 })
+    resizable({ edges: [`top`] })(element)
+
+    // Start resize on top edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 200,
+        clientY: 105,
+        bubbles: true,
+      }),
+    )
+
+    // Drag up to expand
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 200,
+        clientY: 55,
+        bubbles: true,
+      }),
+    )
+
+    // Height should increase and top position should decrease
+    expect(element.style.height).toBe(`200px`)
+    expect(element.style.top).toBe(`50px`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  })
+
+  it(`should do nothing when disabled`, () => {
+    const element = create_element()
+    const cleanup = resizable({ disabled: true })(element)
+
+    expect(cleanup).toBeUndefined()
+    expect(element.style.cursor).toBe(``)
+  })
+
+  it(`should set position to relative if element has static positioning`, () => {
+    const element = create_element()
+    element.style.position = ``
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+
+    // Mock getComputedStyle to return static position (jsdom/happy-dom doesn't properly report this)
+    const original_get_computed_style = globalThis.getComputedStyle
+    globalThis.getComputedStyle = vi.fn(() => ({
+      position: `static`,
+    })) as unknown as typeof getComputedStyle
+
+    resizable()(element)
+
+    expect(element.style.position).toBe(`relative`)
+
+    globalThis.getComputedStyle = original_get_computed_style
+  })
+
+  it(`should not change position if element already has non-static positioning`, () => {
+    const element = create_element()
+    element.style.position = `absolute`
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+
+    resizable()(element)
+
+    expect(element.style.position).toBe(`absolute`)
+  })
+
+  it(`should cleanup properly and remove all event listeners`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+
+    const cleanup = resizable()(element)
+
+    // Set cursor first
+    element.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 195,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+    expect(element.style.cursor).toBe(`ew-resize`)
+
+    cleanup?.()
+    expect(element.style.cursor).toBe(``)
+  })
+
+  it(`should use custom handle_size`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable({ handle_size: 20 })(element)
+
+    // Hover at 185 (within 20px handle_size from right edge at 200)
+    element.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 185,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    expect(element.style.cursor).toBe(`ew-resize`)
+
+    // Hover at 175 (outside 20px handle but would be inside 8px default)
+    element.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 175,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    // Should still not be on edge
+    expect(element.style.cursor).toBe(``)
+  })
+
+  it(`should not start resizing when clicking outside edge areas`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    const on_resize_start = vi.fn()
+    resizable({ on_resize_start })(element)
+
+    // Click in center (not on any edge)
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 100,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    expect(on_resize_start).not.toHaveBeenCalled()
+  })
+
+  it(`should ignore mousemove when not resizing`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    const on_resize = vi.fn()
+    resizable({ on_resize })(element)
+
+    // Dispatch global mousemove without starting resize
+    globalThis.dispatchEvent(
+      new MouseEvent(`mousemove`, {
+        clientX: 300,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+
+    expect(on_resize).not.toHaveBeenCalled()
+  })
+
+  it(`should ignore mouseup when not resizing`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    const on_resize_end = vi.fn()
+    resizable({ on_resize_end })(element)
+
+    // Dispatch mouseup without starting resize
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+
+    expect(on_resize_end).not.toHaveBeenCalled()
+  })
+
+  it(`should reset userSelect on mouseup`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    resizable()(element)
+
+    // Start resize on right edge
+    element.dispatchEvent(
+      new MouseEvent(`mousedown`, {
+        clientX: 195,
+        clientY: 75,
+        bubbles: true,
+      }),
+    )
+    expect(document.body.style.userSelect).toBe(`none`)
+
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    expect(document.body.style.userSelect).toBe(``)
   })
 })

@@ -1,6 +1,6 @@
 <script
   lang="ts"
-  generics="Action extends { label: string; action: (label: string) => void } & Record<string, unknown> = { label: string; action: (label: string) => void }"
+  generics="Action extends { label: string; action: (label: string) => void; group?: string } & Record<string, unknown> = { label: string; action: (label: string) => void; group?: string }"
 >
   import type { ComponentProps } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
@@ -24,8 +24,7 @@
     triggers?: string[]
     close_keys?: string[]
     fade_duration?: number // in ms
-    dialog_style?: string // for dialog
-    // for span in option snippet, has no effect when specifying a custom option snippet
+    dialog_style?: string // inline style for the dialog element
     open?: boolean
     dialog?: HTMLDialogElement | null
     input?: HTMLInputElement | null

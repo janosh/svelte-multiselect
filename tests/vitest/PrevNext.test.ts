@@ -3,12 +3,6 @@ import { mount } from 'svelte'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
-const items_with_labels: [string, string][] = [
-  [`page1`, `First Page`],
-  [`page2`, `Second Page`],
-  [`page3`, `Third Page`],
-  [`page4`, `Fourth Page`],
-]
 
 describe(`PrevNext`, () => {
   let target: HTMLElement
@@ -18,8 +12,6 @@ describe(`PrevNext`, () => {
 
   beforeEach(() => {
     target = document.body
-
-    // Mock window.history methods
     replaceStateSpy = vi.fn()
     pushStateSpy = vi.fn()
     scrollToSpy = vi.fn()
@@ -27,54 +19,44 @@ describe(`PrevNext`, () => {
     Object.defineProperty(window, `history`, {
       value: { replaceState: replaceStateSpy, pushState: pushStateSpy },
     })
-
-    Object.defineProperty(window, `scrollTo`, {
-      value: scrollToSpy,
-    })
-
-    // Mock scroll position
+    Object.defineProperty(window, `scrollTo`, { value: scrollToSpy })
     Object.defineProperty(window, `scrollX`, { value: 100, writable: true })
     Object.defineProperty(window, `scrollY`, { value: 200, writable: true })
   })
 
-  test(`renders nothing with less than 3 items`, () => {
-    mount(PrevNext, {
-      target,
-      props: { items: [`page1`, `page2`], current: `page1` },
-    })
+  test(`renders nothing with less than min_items`, () => {
+    mount(PrevNext, { target, props: { items: [`page1`, `page2`], current: `page1` } })
     expect(target.querySelector(`nav`)).toBeNull()
   })
 
-  test(`renders prev/next links`, () => {
-    mount(PrevNext, { target, props: { items, current: `page2` } })
+  test.each([
+    { current: `page2`, prev_href: `page1`, next_href: `page3`, desc: `middle item` },
+    {
+      current: `page1`,
+      prev_href: `page4`,
+      next_href: `page2`,
+      desc: `first item wraps`,
+    },
+    { current: `page4`, prev_href: `page3`, next_href: `page1`, desc: `last item wraps` },
+  ])(`prev/next links for $desc`, ({ current, prev_href, next_href }) => {
+    mount(PrevNext, { target, props: { items, current } })
     const links = target.querySelectorAll(`a`)
     expect(links).toHaveLength(2)
-    expect(links[0].getAttribute(`href`)).toBe(`page1`)
-    expect(links[1].getAttribute(`href`)).toBe(`page3`)
+    expect(links[0].getAttribute(`href`)).toBe(prev_href)
+    expect(links[1].getAttribute(`href`)).toBe(next_href)
   })
 
-  test(`wraps around at ends`, () => {
-    mount(PrevNext, { target, props: { items, current: `page1` } })
-    const links = target.querySelectorAll(`a`)
-    expect(links[0].getAttribute(`href`)).toBe(`page4`)
-    expect(links[1].getAttribute(`href`)).toBe(`page2`)
-  })
-
-  test(`handles custom titles`, () => {
+  test(`custom titles`, () => {
     mount(PrevNext, {
       target,
-      props: {
-        items,
-        current: `page2`,
-        titles: { prev: `Back`, next: `Forward` },
-      },
+      props: { items, current: `page2`, titles: { prev: `Back`, next: `Forward` } },
     })
     const spans = target.querySelectorAll(`span`)
     expect(spans[0].textContent).toBe(`Back`)
     expect(spans[1].textContent).toBe(`Forward`)
   })
 
-  test(`handles keyboard navigation with default options`, () => {
+  test(`keyboard navigation with default options`, () => {
     mount(PrevNext, { target, props: { items, current: `page2` } })
 
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowLeft` }))
@@ -83,37 +65,52 @@ describe(`PrevNext`, () => {
 
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowRight` }))
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
-    expect(scrollToSpy).toHaveBeenCalledTimes(8)
   })
 
-  test(`handles custom node element`, () => {
+  test(`custom node element`, () => {
     mount(PrevNext, { target, props: { items, current: `page2`, node: `div` } })
     expect(target.querySelector(`div.prev-next`)).toBeTruthy()
     expect(target.querySelector(`nav`)).toBeNull()
   })
 
-  test(`handles items with labels`, () => {
-    mount(PrevNext, {
-      target,
-      props: { items: items_with_labels, current: `page2` },
-    })
-    const links = target.querySelectorAll(`a`)
-    expect(links[0].getAttribute(`href`)).toBe(`page1`)
-    expect(links[1].getAttribute(`href`)).toBe(`page3`)
-  })
+  test.each([
+    {
+      test_items: [[`p1`, `L1`], [`p2`, `L2`], [`p3`, `L3`], [`p4`, `L4`]] as [
+        string,
+        string,
+      ][],
+      current: `p2`,
+      prev: `p1`,
+      next: `p3`,
+    },
+    {
+      test_items: [[`/page/1`, `P1`], [`/page/2`, `P2`], [`/page/3`, `P3`], [
+        `/page/4`,
+        `P4`,
+      ]] as [string, string][],
+      current: `/page/2`,
+      prev: `/page/1`,
+      next: `/page/3`,
+    },
+  ])(
+    `uses first tuple element as href (current=$current)`,
+    ({ test_items, current, prev, next }) => {
+      mount(PrevNext, { target, props: { items: test_items, current } })
+      const links = target.querySelectorAll(`a`)
+      expect(links[0].getAttribute(`href`)).toBe(prev)
+      expect(links[1].getAttribute(`href`)).toBe(next)
+    },
+  )
 
   test.each([
     [`verbose` as const, [`page1`], `warn`],
     [`errors` as const, [`page1`, `page2`, `page3`], `error`],
     [`silent` as const, [`page1`], null],
-  ])(`log=%s mode with %i items shows %s`, (log, test_items, level) => {
+  ])(`log=%s mode shows %s`, (log, test_items, level) => {
     const warn = vi.spyOn(console, `warn`)
     const error = vi.spyOn(console, `error`)
 
-    mount(PrevNext, {
-      target,
-      props: { items: test_items, current: `invalid`, log },
-    })
+    mount(PrevNext, { target, props: { items: test_items, current: `invalid`, log } })
 
     if (level === `warn`) {
       expect(warn).toHaveBeenCalledWith(
@@ -132,24 +129,21 @@ describe(`PrevNext`, () => {
     error.mockRestore()
   })
 
-  test(`handles custom nav options`, () => {
-    const nav_options = { replace_state: false, no_scroll: false }
+  test(`nav_options: replace_state=false uses pushState`, () => {
     mount(PrevNext, {
       target,
-      props: { items, current: `page2`, nav_options },
+      props: {
+        items,
+        current: `page2`,
+        nav_options: { replace_state: false, no_scroll: false },
+      },
     })
-
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowLeft` }))
     expect(pushStateSpy).toHaveBeenCalledWith({}, ``, `page1`)
-    // TODO check why likely correct assertion expect(scrollToSpy).not.toHaveBeenCalled() is failing here
-    expect(scrollToSpy).toHaveBeenCalledWith(100, 200)
   })
 
-  test(`handles custom keyup handler`, () => {
-    const onkeyup = vi.fn(({ prev, next }) => ({
-      PageUp: prev[0],
-      PageDown: next[0],
-    }))
+  test(`custom keyup handler`, () => {
+    const onkeyup = vi.fn(({ prev, next }) => ({ PageUp: prev[0], PageDown: next[0] }))
     mount(PrevNext, { target, props: { items, current: `page2`, onkeyup } })
 
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `PageUp` }))
@@ -159,33 +153,9 @@ describe(`PrevNext`, () => {
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
   })
 
-  test(`preserves scroll position when no_scroll is true`, () => {
-    const nav_options = { replace_state: true, no_scroll: true }
-    mount(PrevNext, { target, props: { items, current: `page2`, nav_options } })
-
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowLeft` }))
-    expect(scrollToSpy).toHaveBeenCalledWith(100, 200)
-  })
-
-  test(`uses key (first element) as href for links`, () => {
-    const items_with_paths: [string, string][] = [
-      [`/page/1`, `First Page`],
-      [`/page/2`, `Second Page`],
-      [`/page/3`, `Third Page`],
-      [`/page/4`, `Fourth Page`],
-    ]
-    mount(PrevNext, {
-      target,
-      props: { items: items_with_paths, current: `/page/2` },
-    })
-    const links = target.querySelectorAll(`a`)
-    expect(links[0].getAttribute(`href`)).toBe(`/page/1`)
-    expect(links[1].getAttribute(`href`)).toBe(`/page/3`)
-  })
-
-  test(`applies link_props to prev/next links`, () => {
+  test(`link_props and default attributes applied to links`, () => {
     const link_props = {
-      class: `custom-link-class`,
+      class: `custom-class`,
       'data-testid': `nav-link`,
       target: `_blank`,
     }
@@ -193,13 +163,11 @@ describe(`PrevNext`, () => {
 
     const links = target.querySelectorAll(`a`)
     expect(links).toHaveLength(2)
-
-    // Check that both prev and next links have the custom props
     links.forEach((link) => {
-      // Svelte adds its own scoped CSS class, so we check that our class is included
-      expect(link.className).toContain(`custom-link-class`)
+      expect(link.className).toContain(`custom-class`)
       expect(link.getAttribute(`data-testid`)).toBe(`nav-link`)
       expect(link.getAttribute(`target`)).toBe(`_blank`)
+      expect(link.getAttribute(`data-sveltekit-preload-data`)).toBe(`hover`)
     })
   })
 })

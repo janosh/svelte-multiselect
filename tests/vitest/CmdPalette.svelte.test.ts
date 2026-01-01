@@ -590,3 +590,138 @@ test(`handles custom placeholder text`, () => {
   const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
   expect(input.placeholder).toBe(custom_placeholder)
 })
+
+// Grouping tests
+const grouped_actions = [
+  { label: `New File`, action: vi.fn(), group: `File` },
+  { label: `Save`, action: vi.fn(), group: `File` },
+  { label: `Copy`, action: vi.fn(), group: `Edit` },
+  { label: `Paste`, action: vi.fn(), group: `Edit` },
+]
+
+test(`renders grouped actions with group headers`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: grouped_actions, fade_duration: 0 },
+  })
+  await tick()
+
+  // Check that group headers are rendered
+  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
+  expect(group_headers.length).toBe(2)
+
+  // Check group header text contains group names (headers include count like "File (2)")
+  const header_texts = [...group_headers].map((header) => header.textContent?.trim())
+  expect(header_texts.some((text) => text?.startsWith(`File`))).toBe(true)
+  expect(header_texts.some((text) => text?.startsWith(`Edit`))).toBe(true)
+
+  // Check all actions are rendered
+  const action_items = document.querySelectorAll(
+    `dialog ul.options li:not(.group-header)`,
+  )
+  expect(action_items.length).toBe(4)
+})
+
+test(`ungrouped actions continue to work without group headers`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: mock_actions, fade_duration: 0 },
+  })
+  await tick()
+
+  // No group headers should be rendered for ungrouped actions
+  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
+  expect(group_headers.length).toBe(0)
+
+  // All actions should still be rendered
+  const action_items = document.querySelectorAll(`dialog ul.options li`)
+  expect(action_items.length).toBe(mock_actions.length)
+})
+
+test(`collapsibleGroups prop enables collapse functionality`, async () => {
+  // Start with File group already collapsed to verify prop passthrough
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: grouped_actions,
+      collapsibleGroups: true,
+      collapsedGroups: new Set([`File`]),
+      fade_duration: 0,
+    },
+  })
+  await tick()
+
+  // Check aria-expanded attribute on group header to verify collapsibleGroups works
+  const file_header = [...document.querySelectorAll(`dialog ul.options li.group-header`)]
+    .find((header) => header.textContent?.includes(`File`))
+  expect(file_header?.getAttribute(`aria-expanded`)).toBe(`false`)
+
+  // File options should not be rendered when collapsed
+  const new_file_option = [...document.querySelectorAll(`dialog ul.options li`)]
+    .find((li) => li.textContent?.includes(`New File`))
+  expect(new_file_option).toBeUndefined()
+})
+
+test(`groupSelectAll prop enables group selection in command palette`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: grouped_actions,
+      groupSelectAll: true,
+      fade_duration: 0,
+    },
+  })
+  await tick()
+
+  // Group headers should have select-all functionality when enabled
+  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
+  expect(group_headers.length).toBe(2)
+})
+
+test(`mixed grouped and ungrouped actions render correctly`, async () => {
+  const mixed_actions = [
+    { label: `Global Action`, action: vi.fn() },
+    { label: `New File`, action: vi.fn(), group: `File` },
+    { label: `Save`, action: vi.fn(), group: `File` },
+    { label: `Another Global`, action: vi.fn() },
+  ]
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: mixed_actions, fade_duration: 0 },
+  })
+  await tick()
+
+  // Should have one group header for File group (header includes count like "File (2)")
+  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
+  expect(group_headers.length).toBe(1)
+  expect(group_headers[0].textContent?.trim()).toMatch(/^File/)
+
+  // All 4 actions should be rendered
+  const action_items = document.querySelectorAll(
+    `dialog ul.options li:not(.group-header)`,
+  )
+  expect(action_items.length).toBe(4)
+})
+
+test(`collapsedGroups prop controls which groups start collapsed`, async () => {
+  // Test that Edit group can also be collapsed
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      actions: grouped_actions,
+      collapsibleGroups: true,
+      collapsedGroups: new Set([`Edit`]),
+      fade_duration: 0,
+    },
+  })
+  await tick()
+
+  // Edit group is collapsed, so only File group options (2) should be rendered
+  const visible_options = document.querySelectorAll(
+    `dialog ul.options li:not(.group-header)`,
+  )
+  expect(visible_options.length).toBe(2)
+})
