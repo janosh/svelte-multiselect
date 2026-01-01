@@ -158,6 +158,7 @@ export const resizable =
       console.warn(
         `resizable: min dimensions exceed max dimensions (min_width=${min_width}, max_width=${max_width}, min_height=${min_height}, max_height=${max_height})`,
       )
+      return // Invalid config would cause clamp() to produce inconsistent results
     }
 
     let active_edge: string | null = null

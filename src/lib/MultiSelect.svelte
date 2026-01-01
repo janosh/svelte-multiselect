@@ -158,7 +158,7 @@
     alt: boolean
     meta: boolean
   } {
-    const parts = shortcut.toLowerCase().split(`+`)
+    const parts = shortcut.toLowerCase().split(`+`).map((part) => part.trim())
     const key = parts.pop() ?? ``
     return {
       key,
