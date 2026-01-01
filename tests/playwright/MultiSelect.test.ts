@@ -824,9 +824,8 @@ test.describe(`snippets`, () => {
   test(`renders removeIcon snippet for individual remove buttons and the remove-all button`, async ({ page }) => {
     await page.goto(`/snippets`, { waitUntil: `networkidle` })
 
-    const expand_icon_locator = page.locator(
-      `#languages-1 .multiselect > input.form-control + svg`,
-    )
+    // Use .expand-icon wrapper class for robust selection that doesn't depend on exact sibling order
+    const expand_icon_locator = page.locator(`#languages-1 .expand-icon svg`)
     await expect(
       expand_icon_locator,
       `custom expand icon snippet is not rendered`,

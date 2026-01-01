@@ -1191,28 +1191,16 @@
       form_input?.setCustomValidity(msg)
     }}
   />
-  <!-- Screen reader announcements for dropdown state, option count, and selection changes -->
-  <div class="sr-only" aria-live="polite" aria-atomic="true">
-    {#if last_action}
-      {#if last_action.type === `add`}
-        {last_action.label} selected
-      {:else if last_action.type === `remove`}
-        {last_action.label} removed
-      {:else if last_action.type === `removeAll`}
-        {last_action.label} removed
-      {/if}
-    {:else if open}
-      {matchingOptions.length} option{matchingOptions.length === 1 ? `` : `s`} available
+  <span class="expand-icon">
+    {#if expandIcon}
+      {@render expandIcon({ open })}
+    {:else}
+      <Icon
+        icon="ChevronExpand"
+        style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
+      />
     {/if}
-  </div>
-  {#if expandIcon}
-    {@render expandIcon({ open })}
-  {:else}
-    <Icon
-      icon="ChevronExpand"
-      style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
-    />
-  {/if}
+  </span>
   <ul
     class="selected {ulSelectedClass}"
     aria-label="selected options"
@@ -1591,6 +1579,20 @@
       {/if}
     </ul>
   {/if}
+  <!-- Screen reader announcements for dropdown state, option count, and selection changes -->
+  <div class="sr-only" aria-live="polite" aria-atomic="true">
+    {#if last_action}
+      {#if last_action.type === `add`}
+        {last_action.label} selected
+      {:else if last_action.type === `remove`}
+        {last_action.label} removed
+      {:else if last_action.type === `removeAll`}
+        {last_action.label} removed
+      {/if}
+    {:else if open}
+      {matchingOptions.length} option{matchingOptions.length === 1 ? `` : `s`} available
+    {/if}
+  </div>
 </div>
 
 <style>
