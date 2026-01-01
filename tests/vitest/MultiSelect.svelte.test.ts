@@ -3825,7 +3825,7 @@ describe(`option grouping feature`, () => {
 })
 
 describe(`keyboard shortcuts`, () => {
-  test(`ctrl+a selects all options when selectAllOption is enabled`, async () => {
+  test(`ctrl+a selects all and prevents default browser behavior`, async () => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
       selectAllOption: true,
@@ -3837,12 +3837,19 @@ describe(`keyboard shortcuts`, () => {
     await tick()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
-    )
+    const event = new KeyboardEvent(`keydown`, {
+      key: `a`,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    const prevent_default_spy = vi.spyOn(event, `preventDefault`)
+
+    input.dispatchEvent(event)
     await tick()
 
     expect(props.selected).toEqual([`a`, `b`, `c`])
+    expect(prevent_default_spy).toHaveBeenCalled() // prevents browser default (e.g. select all text)
   })
 
   test(`ctrl+shift+a clears all selected options`, async () => {

@@ -135,7 +135,8 @@ export const draggable =
     }
   }
 
-// Svelte 5 attachment factory to make an element resizable by dragging its edges
+// Automatically sets `position: relative` on elements with `position: static`
+// to enable proper positioning during resize. This may affect existing layouts.
 export const resizable =
   (options: ResizableOptions = {}): Attachment => (element: Element) => {
     if (options.disabled) return
@@ -152,6 +153,12 @@ export const resizable =
       on_resize,
       on_resize_end,
     } = options
+
+    if (min_width > max_width || min_height > max_height) {
+      console.warn(
+        `resizable: min dimensions exceed max dimensions (min_width=${min_width}, max_width=${max_width}, min_height=${min_height}, max_height=${max_height})`,
+      )
+    }
 
     let active_edge: string | null = null
     let start = { x: 0, y: 0 }
@@ -478,13 +485,10 @@ function clear_tooltip() {
   }
 }
 
-/**
- * Options for the tooltip attachment.
- *
- * @security Tooltip content is rendered as HTML. If you allow user-provided content
- * to be set via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize
- * it first to prevent XSS attacks. This attachment does not perform any sanitization.
- */
+// Options for the tooltip attachment.
+// Security: content is rendered as HTML. If allowing user-provided content
+// to be set via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize
+// to prevent XSS attacks. This attachment does not perform any sanitization.
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`

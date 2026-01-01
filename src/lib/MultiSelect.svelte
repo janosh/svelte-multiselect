@@ -175,6 +175,8 @@
   ): boolean {
     if (!shortcut) return false
     const parsed = parse_shortcut(shortcut)
+    // Require non-empty key to prevent "ctrl+" from matching any key with ctrl pressed
+    if (!parsed.key) return false
     const key_matches = event.key.toLowerCase() === parsed.key
     const ctrl_matches = event.ctrlKey === parsed.ctrl
     const shift_matches = event.shiftKey === parsed.shift
