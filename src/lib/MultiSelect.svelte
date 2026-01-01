@@ -150,6 +150,11 @@
     ...rest
   }: MultiSelectProps<Option> = $props()
 
+  // Generate unique IDs for ARIA associations (combobox pattern)
+  // Uses provided id prop or generates a random one using crypto API
+  const internal_id = $derived(id ?? `sms-${crypto.randomUUID().slice(0, 8)}`)
+  const listbox_id = $derived(`${internal_id}-listbox`)
+
   // Parse shortcut string into modifier+key parts
   function parse_shortcut(shortcut: string): {
     key: string
@@ -244,6 +249,19 @@
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
+
+  // Track last selection action for aria-live announcements
+  let last_action = $state<
+    { type: `add` | `remove` | `removeAll`; label: string } | null
+  >(null)
+
+  // Clear last_action after announcement so option counts can be announced again
+  $effect(() => {
+    if (last_action) {
+      const timer = setTimeout(() => (last_action = null), 1000)
+      return () => clearTimeout(timer)
+    }
+  })
 
   // Internal state for loadOptions feature (null = never loaded)
   let loaded_options = $state<Option[]>([])
@@ -515,6 +533,13 @@
     activeOption = navigable_options[activeIndex ?? -1] ?? null
   })
 
+  // Compute the ID of the currently active option for aria-activedescendant
+  const active_option_id = $derived(
+    activeIndex !== null && activeIndex < navigable_options.length
+      ? `${internal_id}-opt-${activeIndex}`
+      : undefined,
+  )
+
   // Helper to check if removing an option would violate minSelect constraint
   const can_remove = $derived(minSelect === null || selected.length > minSelect)
 
@@ -589,6 +614,7 @@
 
       clear_validity()
       handle_dropdown_after_select(event)
+      last_action = { type: `add`, label: `${get_label(option_to_add)}` }
       onadd?.({ option: option_to_add })
       onchange?.({ option: option_to_add, type: `add` })
     }
@@ -622,6 +648,7 @@
 
     selected = selected.filter((_, remove_idx) => remove_idx !== idx)
     clear_validity()
+    last_action = { type: `remove`, label: `${get_label(option_removed)}` }
     onremove?.({ option: option_removed })
     onchange?.({ option: option_removed, type: `remove` })
   }
@@ -813,6 +840,7 @@
     // Only fire events if something was actually removed
     if (removed_options.length > 0) {
       searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
+      last_action = { type: `removeAll`, label: `${removed_options.length} options` }
       onremoveAll?.({ options: removed_options })
       onchange?.({ options: selected, type: `removeAll` })
     }
@@ -1163,14 +1191,16 @@
       form_input?.setCustomValidity(msg)
     }}
   />
-  {#if expandIcon}
-    {@render expandIcon({ open })}
-  {:else}
-    <Icon
-      icon="ChevronExpand"
-      style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
-    />
-  {/if}
+  <span class="expand-icon">
+    {#if expandIcon}
+      {@render expandIcon({ open })}
+    {:else}
+      <Icon
+        icon="ChevronExpand"
+        style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
+      />
+    {/if}
+  </span>
   <ul
     class="selected {ulSelectedClass}"
     aria-label="selected options"
@@ -1241,6 +1271,12 @@
       {inputmode}
       {pattern}
       placeholder={selected.length === 0 || placeholder_persistent ? placeholder_text : null}
+      role="combobox"
+      aria-haspopup="listbox"
+      aria-expanded={open}
+      aria-controls={listbox_id}
+      aria-activedescendant={active_option_id}
+      aria-busy={loading || load_options_loading || null}
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
       onmouseup={open_dropdown}
@@ -1327,6 +1363,7 @@
             ? NodeFilter.FILTER_REJECT
             : NodeFilter.FILTER_ACCEPT,
       })}
+      id={listbox_id}
       class:hidden={!open}
       class="options {ulOptionsClass}"
       role="listbox"
@@ -1433,6 +1470,7 @@
         null}
             {#if is_option_visible(flat_idx)}
               <li
+                id="{internal_id}-opt-{flat_idx}"
                 onclick={(event) => handle_option_interact(option_item, disabled, event)}
                 title={disabled ? disabledTitle : (selected && selectedTitle) || title}
                 class:selected
@@ -1447,6 +1485,8 @@
                 }}
                 role="option"
                 aria-selected={selected ? `true` : `false`}
+                aria-posinset={flat_idx + 1}
+                aria-setsize={navigable_options.length}
                 style={optionStyle}
                 onkeydown={if_enter_or_space((event) =>
                   handle_option_interact(option_item, disabled, event)
@@ -1539,9 +1579,36 @@
       {/if}
     </ul>
   {/if}
+  <!-- Screen reader announcements for dropdown state, option count, and selection changes -->
+  <div class="sr-only" aria-live="polite" aria-atomic="true">
+    {#if last_action}
+      {#if last_action.type === `add`}
+        {last_action.label} selected
+      {:else if last_action.type === `remove`}
+        {last_action.label} removed
+      {:else if last_action.type === `removeAll`}
+        {last_action.label} removed
+      {/if}
+    {:else if open}
+      {matchingOptions.length} option{matchingOptions.length === 1 ? `` : `s`} available
+    {/if}
+  </div>
 </div>
 
 <style>
+  /* Screen reader only - visually hidden but accessible to assistive technology */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
   :is(div.multiselect) {
     position: relative;
     align-items: center;

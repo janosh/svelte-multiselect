@@ -518,6 +518,180 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
   expect(multiselect.classList.contains(`invalid`)).toBe(false)
 })
 
+describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
+  test(`implements ARIA combobox pattern with proper attributes and listbox association`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`, `baz`] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+    // Static combobox attributes
+    expect(input.getAttribute(`role`)).toBe(`combobox`)
+    expect(input.getAttribute(`aria-haspopup`)).toBe(`listbox`)
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+
+    // Open dropdown and verify listbox association
+    input.focus()
+    await tick()
+    expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
+
+    const listbox_id = input.getAttribute(`aria-controls`)
+    expect(listbox_id).toBeTruthy()
+    const listbox = doc_query(`ul.options`)
+    expect(listbox.id).toBe(listbox_id)
+    expect(listbox.getAttribute(`role`)).toBe(`listbox`)
+
+    // Close dropdown
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+  })
+
+  test(`aria-activedescendant tracks keyboard navigation with unique option IDs`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`, `baz`] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    // Verify options have unique IDs
+    const options = document.querySelectorAll<HTMLLIElement>(
+      `ul.options > li[role="option"]`,
+    )
+    const ids = [...options].map((opt) => opt.id)
+    expect(ids.every((id) => id)).toBe(true) // All truthy
+    expect(new Set(ids).size).toBe(3) // All unique
+
+    // Initially no active descendant
+    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+
+    // Navigate and verify activedescendant points to active option
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+    await tick()
+
+    const active_id = input.getAttribute(`aria-activedescendant`)
+    expect(active_id).toBeTruthy()
+    const active_option = document.getElementById(active_id as string)
+    expect(active_option?.getAttribute(`role`)).toBe(`option`)
+    expect(active_option?.classList.contains(`active`)).toBe(true)
+  })
+
+  test.each([
+    [``, `3 options available`],
+    [`ba`, `2 options available`],
+    [`foo`, `1 option available`],
+    [`xyz`, `0 options available`],
+  ])(`aria-live region announces "%s" filter as "%s"`, async (filter, expected) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`, `baz`] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    if (filter) {
+      input.value = filter
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await tick()
+    }
+
+    const live_region = doc_query(`.sr-only[aria-live="polite"]`)
+    expect(live_region.getAttribute(`aria-atomic`)).toBe(`true`)
+    expect(live_region.textContent).toContain(expected)
+  })
+
+  test(`custom id prop is used for ARIA associations`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`], id: `my-select` },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    expect(input.getAttribute(`aria-controls`)).toBe(`my-select-listbox`)
+    expect(doc_query(`ul.options`).id).toBe(`my-select-listbox`)
+
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+    await tick()
+    expect(input.getAttribute(`aria-activedescendant`)).toMatch(/^my-select-opt-/)
+  })
+
+  test(`aria-label can be passed via rest props for accessible name`, () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`], [`aria-label`]: `Select your favorite` },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.getAttribute(`aria-label`)).toBe(`Select your favorite`)
+  })
+
+  test(`aria-busy reflects loading state`, async () => {
+    const props = $state({ options: [`foo`, `bar`], loading: false })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.getAttribute(`aria-busy`)).toBeFalsy()
+
+    props.loading = true
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    props.loading = false
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBeFalsy()
+  })
+
+  test(`options have aria-posinset and aria-setsize for position announcements`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`, `baz`] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    const options = document.querySelectorAll<HTMLLIElement>(
+      `ul.options > li[role="option"]`,
+    )
+    expect(options.length).toBe(3)
+
+    options.forEach((option, idx) => {
+      expect(option.getAttribute(`aria-posinset`)).toBe(`${idx + 1}`)
+      expect(option.getAttribute(`aria-setsize`)).toBe(`3`)
+    })
+  })
+
+  test(`aria-live announces selection changes`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`, `baz`] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    // Select an option
+    const option = doc_query<HTMLLIElement>(`ul.options > li[role="option"]`)
+    option.click()
+    await tick()
+
+    const live_region = doc_query(`.sr-only[aria-live="polite"]`)
+    expect(live_region.textContent).toContain(`selected`)
+  })
+})
+
 test(`parseLabelsAsHtml renders anchor tags as links`, () => {
   mount(MultiSelect, {
     target: document.body,
