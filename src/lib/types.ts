@@ -222,6 +222,10 @@ export interface MultiSelectProps<T extends Option = Option>
 // Shortcut format: "modifier+...+key" where modifiers can be: ctrl, shift, alt, meta, cmd
 // Examples: 'ctrl+a', 'ctrl+shift+a', 'meta+a', 'cmd+a', 'alt+s'
 // Set to null to disable a shortcut.
+//
+// PRECEDENCE: Custom shortcuts are evaluated BEFORE built-in key handlers (Enter, Escape,
+// ArrowUp/Down, Backspace). This means if you set shortcuts={{ open: 'enter' }}, the Enter
+// key will open the dropdown instead of selecting the active option (intentional to allow full customization).
 export interface KeyboardShortcuts {
   select_all?: string | null // default: 'ctrl+a'
   clear_all?: string | null // default: 'ctrl+shift+a'

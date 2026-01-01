@@ -3,18 +3,16 @@ import { mount } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 
 describe(`Toggle`, () => {
-  const target = document.body
-
   const get_input = () =>
-    target.querySelector(`input[type="checkbox"]`) as HTMLInputElement
+    document.body.querySelector(`input[type="checkbox"]`) as HTMLInputElement
 
   test.each([false, true])(`renders with checked=%s`, (checked) => {
-    mount(Toggle, { target, props: { checked } })
+    mount(Toggle, { target: document.body, props: { checked } })
     expect(get_input().checked).toBe(checked)
   })
 
   test(`toggles on click`, () => {
-    mount(Toggle, { target })
+    mount(Toggle, { target: document.body })
     const input = get_input()
     input.click()
     expect(input.checked).toBe(true)
@@ -24,7 +22,7 @@ describe(`Toggle`, () => {
 
   test(`toggles on Enter key and fires change event`, () => {
     const onchange = vi.fn()
-    mount(Toggle, { target, props: { input_props: { onchange } } })
+    mount(Toggle, { target: document.body, props: { input_props: { onchange } } })
     const input = get_input()
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
@@ -38,7 +36,7 @@ describe(`Toggle`, () => {
   test.each([`A`, `Escape`, `Tab`, `Space`])(
     `doesn't toggle on %s key`,
     (key) => {
-      mount(Toggle, { target })
+      mount(Toggle, { target: document.body })
       get_input().dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
       expect(get_input().checked).toBe(false)
     },
@@ -48,7 +46,7 @@ describe(`Toggle`, () => {
     const call_order: string[] = []
     const onkeydown = vi.fn(() => call_order.push(`onkeydown`))
     mount(Toggle, {
-      target,
+      target: document.body,
       props: { onkeydown, input_props: { onclick: () => call_order.push(`click`) } },
     })
 
@@ -67,16 +65,22 @@ describe(`Toggle`, () => {
 
   test(`applies custom class and styles`, () => {
     mount(Toggle, {
-      target,
+      target: document.body,
       props: {
         class: `custom-class`,
         style: `margin: 10px;`,
         input_props: { style: `width: 20px;` },
       },
     })
-    expect(target.querySelector(`label`)?.classList.contains(`custom-class`)).toBe(true)
-    expect(target.querySelector(`label`)?.getAttribute(`style`)).toBe(`margin: 10px;`)
-    expect(target.querySelector(`input`)?.getAttribute(`style`)).toBe(`width: 20px;`)
+    expect(document.body.querySelector(`label`)?.classList.contains(`custom-class`)).toBe(
+      true,
+    )
+    expect(document.body.querySelector(`label`)?.getAttribute(`style`)).toBe(
+      `margin: 10px;`,
+    )
+    expect(document.body.querySelector(`input`)?.getAttribute(`style`)).toBe(
+      `width: 20px;`,
+    )
   })
 
   test.each(
@@ -87,24 +91,27 @@ describe(`Toggle`, () => {
     ] as const,
   )(`emits %s event`, (_, handler_prop, create_event) => {
     const handler = vi.fn()
-    mount(Toggle, { target, props: { input_props: { [handler_prop]: handler } } })
-    const input = target.querySelector(`input`) as HTMLInputElement
+    mount(Toggle, {
+      target: document.body,
+      props: { input_props: { [handler_prop]: handler } },
+    })
+    const input = document.body.querySelector(`input`) as HTMLInputElement
     if (create_event) input.dispatchEvent(create_event())
     else input.click()
     expect(handler).toHaveBeenCalledOnce()
   })
 
   test(`renders with proper structure`, () => {
-    mount(Toggle, { target })
-    expect(target.querySelector(`label`)).toBeTruthy()
-    expect(target.querySelector(`input[type="checkbox"]`)).toBeTruthy()
-    expect(target.querySelector(`span`)).toBeTruthy()
+    mount(Toggle, { target: document.body })
+    expect(document.body.querySelector(`label`)).toBeTruthy()
+    expect(document.body.querySelector(`input[type="checkbox"]`)).toBeTruthy()
+    expect(document.body.querySelector(`span`)).toBeTruthy()
   })
 
   test(`two-way binding works`, () => {
     let checked = false
     mount(Toggle, {
-      target,
+      target: document.body,
       props: {
         checked,
         input_props: {

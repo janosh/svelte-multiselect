@@ -4220,4 +4220,66 @@ describe(`keyboard shortcuts`, () => {
       expect(props.open).toBe(initial_open)
     },
   )
+
+  // Tests for shortcut override behavior - custom shortcuts take precedence over built-in keys
+  test.each(
+    [
+      // [description, shortcuts, extra_props, key, expected_open, expected_selected]
+      [
+        `open=enter overrides Enter select`,
+        { open: `enter` },
+        { open: false },
+        `Enter`,
+        true,
+        [],
+      ],
+      [
+        `close=escape behaves same as default`,
+        { close: `escape` },
+        { open: true },
+        `Escape`,
+        false,
+        [],
+      ],
+      [
+        `close=enter overrides Enter select`,
+        { close: `enter` },
+        { open: true },
+        `Enter`,
+        false,
+        [],
+      ],
+      [
+        `select_all=arrowdown overrides navigation`,
+        { select_all: `arrowdown` },
+        { open: true, selectAllOption: true },
+        `ArrowDown`,
+        true,
+        [`a`, `b`, `c`],
+      ],
+    ] as const,
+  )(
+    `shortcut precedence: %s`,
+    async (_desc, shortcuts, extra_props, key, expected_open, expected_selected) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        shortcuts,
+        selected: [],
+        ...extra_props,
+      })
+
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      await tick()
+
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
+      await tick()
+
+      expect(props.open).toBe(expected_open)
+      expect(props.selected).toEqual(expected_selected)
+    },
+  )
 })

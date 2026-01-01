@@ -1,15 +1,12 @@
 import { Wiggle } from '$lib'
 import type { ComponentProps } from 'svelte'
 import { mount } from 'svelte'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vitest'
 
 describe(`Wiggle`, () => {
-  const target = document.body
+  beforeEach(vi.useFakeTimers)
 
-  beforeEach(() => vi.useFakeTimers())
-  afterEach(() => vi.useRealTimers())
-
-  const get_span = () => target.querySelector(`span`) as HTMLSpanElement
+  const get_span = () => document.body.querySelector(`span`) as HTMLSpanElement
 
   // Helper to create bindable wiggle props
   const create_bindable_wiggle = (
@@ -30,7 +27,7 @@ describe(`Wiggle`, () => {
   }
 
   test(`renders span with transform styles`, () => {
-    mount(Wiggle, { target })
+    mount(Wiggle, { target: document.body })
     const span = get_span()
     expect(span).toBeTruthy()
     expect(span.style.transform).toContain(`rotate`)
@@ -40,7 +37,7 @@ describe(`Wiggle`, () => {
 
   test.each([200, 500])(`resets wiggle to false after duration=%dms`, (duration) => {
     const { props, get_value } = create_bindable_wiggle(true, { duration })
-    mount(Wiggle, { target, props })
+    mount(Wiggle, { target: document.body, props })
 
     expect(get_value()).toBe(true)
     vi.advanceTimersByTime(duration)
@@ -50,7 +47,7 @@ describe(`Wiggle`, () => {
   test(`accepts all animation props without error`, () => {
     expect(() => {
       mount(Wiggle, {
-        target,
+        target: document.body,
         props: {
           wiggle: true,
           angle: 15,
@@ -68,7 +65,7 @@ describe(`Wiggle`, () => {
 
   test(`does not reset wiggle when starting false`, () => {
     const { props, get_value } = create_bindable_wiggle(false)
-    mount(Wiggle, { target, props })
+    mount(Wiggle, { target: document.body, props })
 
     vi.advanceTimersByTime(500)
     expect(get_value()).toBe(false)
@@ -76,7 +73,7 @@ describe(`Wiggle`, () => {
 
   test(`resets wiggle immediately with duration=0`, () => {
     const { props, get_value } = create_bindable_wiggle(true, { duration: 0 })
-    mount(Wiggle, { target, props })
+    mount(Wiggle, { target: document.body, props })
 
     expect(get_value()).toBe(true)
     vi.runAllTimers()

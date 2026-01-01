@@ -4,14 +4,12 @@ import { mount } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
 
 describe(`Icon`, () => {
-  const target = document.body
-
-  const get_svg = () => target.querySelector(`svg`) as SVGSVGElement
+  const get_svg = () => document.body.querySelector(`svg`) as SVGSVGElement
 
   test.each(Object.keys(icon_data) as IconName[])(
     `renders %s icon with correct viewBox and path`,
     (icon_name) => {
-      mount(Icon, { target, props: { icon: icon_name } })
+      mount(Icon, { target: document.body, props: { icon: icon_name } })
       const svg = get_svg()
       const expected = icon_data[icon_name]
 
@@ -51,7 +49,7 @@ describe(`Icon`, () => {
       ],
     ] as const,
   )(`applies %s attribute via rest props`, (attr, value, getter, expected) => {
-    mount(Icon, { target, props: { icon: `Check`, [attr]: value } })
+    mount(Icon, { target: document.body, props: { icon: `Check`, [attr]: value } })
     expect(getter(get_svg())).toBe(expected)
   })
 
@@ -61,7 +59,7 @@ describe(`Icon`, () => {
       const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
 
       // @ts-expect-error - testing invalid icon name
-      mount(Icon, { target, props: { icon: invalid_icon } })
+      mount(Icon, { target: document.body, props: { icon: invalid_icon } })
 
       expect(console_error).toHaveBeenCalledWith(`Icon '${invalid_icon}' not found`)
       expect(get_svg().getAttribute(`viewBox`)).toBe(icon_data.Alert.viewBox)
@@ -74,7 +72,7 @@ describe(`Icon`, () => {
   )
 
   test(`has correct default styles`, () => {
-    mount(Icon, { target, props: { icon: `Check` } })
+    mount(Icon, { target: document.body, props: { icon: `Check` } })
     const styles = getComputedStyle(get_svg())
     expect(styles.display).toBe(`inline-block`)
     expect(styles.verticalAlign).toBe(`middle`)
