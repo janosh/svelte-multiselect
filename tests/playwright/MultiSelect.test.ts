@@ -383,6 +383,134 @@ test.describe(`accessibility`, () => {
   })
 })
 
+// VoiceOver/screen reader accessibility tests (issue #118)
+// These E2E tests verify ARIA combobox pattern in a real browser context
+test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
+  test(`input has role=combobox with proper ARIA attributes`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    const input = page.locator(`#foods input[autocomplete]`)
+
+    // Verify combobox role and attributes
+    await expect(input).toHaveAttribute(`role`, `combobox`)
+    await expect(input).toHaveAttribute(`aria-haspopup`, `listbox`)
+    await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+
+    // aria-controls should point to listbox
+    const controls_id = await input.getAttribute(`aria-controls`)
+    expect(controls_id).toBeTruthy()
+
+    // Open dropdown and verify expanded state
+    await input.click()
+    await expect(input).toHaveAttribute(`aria-expanded`, `true`)
+
+    // Verify listbox has matching ID
+    const listbox = page.locator(`#foods ul.options`)
+    expect(controls_id).toBeTruthy()
+    await expect(listbox).toHaveAttribute(`id`, controls_id as string)
+    await expect(listbox).toHaveAttribute(`role`, `listbox`)
+  })
+
+  test(`options have aria-posinset and aria-setsize for position announcements`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    await page.click(`#foods input[autocomplete]`)
+
+    const options = page.locator(`#foods ul.options > li[role="option"]`)
+    const count = await options.count()
+    expect(count).toBeGreaterThan(0)
+
+    // Verify first and last options have correct position info
+    const first_option = options.first()
+    await expect(first_option).toHaveAttribute(`aria-posinset`, `1`)
+    await expect(first_option).toHaveAttribute(`aria-setsize`, `${count}`)
+
+    const last_option = options.last()
+    await expect(last_option).toHaveAttribute(`aria-posinset`, `${count}`)
+    await expect(last_option).toHaveAttribute(`aria-setsize`, `${count}`)
+  })
+
+  test(`aria-live announces counts, selections with label, and removals`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    const input = page.locator(`#foods input[autocomplete]`)
+    const live_region = page.locator(`#foods .sr-only[aria-live="polite"]`)
+
+    await input.click()
+
+    // Live region announces option count
+    await expect(live_region).toHaveAttribute(`aria-atomic`, `true`)
+    await expect(live_region).toContainText(/\d+ options? available/)
+
+    // Get first option and select it - should announce with label
+    const first_option = page.locator(`#foods ul.options > li[role="option"]:first-child`)
+
+    // Select option - should announce with label
+    await first_option.click()
+    await expect(live_region).toContainText(/selected/)
+
+    // Remove option - should announce removal
+    const remove_btn = page.locator(`#foods ul.selected button.remove`).first()
+    await remove_btn.click()
+    await expect(live_region).toContainText(/removed/)
+  })
+
+  test(`keyboard navigation with aria-activedescendant is fully accessible`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    const input = page.locator(`#foods input[autocomplete]`)
+
+    // Focus should open dropdown
+    await input.focus()
+    await expect(input).toHaveAttribute(`aria-expanded`, `true`)
+
+    // Initially no active descendant
+    expect(await input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+
+    // Navigate with arrow keys - activedescendant should update
+    await page.keyboard.press(`ArrowDown`)
+    const first_active_id = await input.getAttribute(`aria-activedescendant`)
+    expect(first_active_id).toBeTruthy()
+
+    // Verify referenced element exists and is active
+    const active_option = page.locator(`#${first_active_id}`)
+    await expect(active_option).toHaveAttribute(`role`, `option`)
+    await expect(active_option).toHaveClass(/active/)
+
+    // Navigate again - activedescendant should change
+    await page.keyboard.press(`ArrowDown`)
+    const second_active_id = await input.getAttribute(`aria-activedescendant`)
+    expect(second_active_id).not.toBe(first_active_id)
+
+    // Select with Enter
+    await page.keyboard.press(`Enter`)
+
+    // Verify selection was made
+    const selected = page.locator(`#foods ul.selected > li[aria-selected="true"]`)
+    await expect(selected).toHaveCount(1)
+
+    // Escape should close dropdown
+    await page.keyboard.press(`Escape`)
+    await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+  })
+
+  test(`group headers are accessible with aria-label`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`#basic-grouping input[autocomplete]`)
+
+    const group_headers = page.locator(`#basic-grouping ul.options li.group-header`)
+    const count = await group_headers.count()
+    expect(count).toBeGreaterThan(0)
+
+    // Each group header should have aria-label for screen reader announcement
+    for (let idx = 0; idx < count; idx++) {
+      const header = group_headers.nth(idx)
+      const aria_label = await header.getAttribute(`aria-label`)
+      expect(aria_label).toMatch(/^Group: /)
+    }
+  })
+})
+
 test.describe(`multiselect`, () => {
   test(`can select and remove many options`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
