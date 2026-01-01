@@ -2764,7 +2764,7 @@ describe(`loadOptions feature`, () => {
     expect(load_options).toHaveBeenCalledWith({ search: ``, offset: 0, limit: 50 })
 
     // Type while first request pending
-    const input = doc_query<HTMLInputElement>(`input:not(.form-control)`)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.value = `foo`
     input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
 
@@ -3822,4 +3822,464 @@ describe(`option grouping feature`, () => {
     // Button should now say "Select all" again
     expect(select_btn.textContent?.trim()).toBe(`Select all`)
   })
+})
+
+describe(`keyboard shortcuts`, () => {
+  test(`ctrl+a selects all and prevents default browser behavior`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    const event = new KeyboardEvent(`keydown`, {
+      key: `a`,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    const prevent_default_spy = vi.spyOn(event, `preventDefault`)
+
+    input.dispatchEvent(event)
+    await tick()
+
+    expect(props.selected).toEqual([`a`, `b`, `c`])
+    expect(prevent_default_spy).toHaveBeenCalled() // prevents browser default (e.g. select all text)
+  })
+
+  test(`ctrl+shift+a clears all selected options`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selected: [`a`, `b`],
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, {
+        key: `a`,
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      }),
+    )
+    await tick()
+
+    expect(props.selected).toEqual([])
+  })
+
+  test(`custom shortcuts override defaults`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      shortcuts: { select_all: `ctrl+e` },
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+
+    // Default ctrl+a should NOT work anymore
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+    expect(props.selected).toEqual([])
+
+    // Custom ctrl+e SHOULD work
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `e`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+    expect(props.selected).toEqual([`a`, `b`, `c`])
+  })
+
+  test(`null shortcut disables the action`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      shortcuts: { select_all: null },
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+
+    // Should NOT select all since shortcut is disabled
+    expect(props.selected).toEqual([])
+  })
+
+  test(`select_all shortcut respects maxSelect constraint`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      maxSelect: 2,
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+
+    // Should only select up to maxSelect
+    expect(props.selected).toHaveLength(2)
+  })
+
+  test(`clear_all shortcut respects minSelect constraint`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selected: [`a`, `b`, `c`],
+      minSelect: 1,
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, {
+        key: `a`,
+        ctrlKey: true,
+        shiftKey: true,
+        bubbles: true,
+      }),
+    )
+    await tick()
+
+    // Should keep minSelect items
+    expect(props.selected).toHaveLength(1)
+  })
+
+  test.each([`meta+a`, `cmd+a`])(`%s shortcut works for Mac users`, async (shortcut) => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      shortcuts: { select_all: shortcut },
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `a`, metaKey: true, bubbles: true }),
+    )
+    await tick()
+
+    expect(props.selected).toEqual([`a`, `b`, `c`])
+  })
+
+  test(`select_all does nothing when selectAllOption is false`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: false,
+      selected: [],
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+
+    // Should NOT select all since selectAllOption is false
+    expect(props.selected).toEqual([])
+  })
+
+  test(`custom open shortcut opens the dropdown`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      shortcuts: { open: `ctrl+o` },
+      open: true, // Start with dropdown open
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    // Close dropdown via Escape (keeps focus on input)
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+    expect(props.open).toBe(false) // Verify dropdown is closed
+
+    // Now use open shortcut to reopen
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `o`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+
+    expect(props.open).toBe(true) // Verify shortcut reopened dropdown
+  })
+
+  test(`custom close shortcut closes the dropdown`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      shortcuts: { close: `ctrl+w` },
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `w`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+
+    expect(props.open).toBe(false)
+  })
+
+  test.each(
+    [
+      [`alt+a`, `a`, { altKey: true }],
+      [`ctrl+shift+alt+s`, `s`, { ctrlKey: true, shiftKey: true, altKey: true }],
+    ] as const,
+  )(`modifier combo %s works`, async (shortcut, key, modifiers) => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      shortcuts: { select_all: shortcut },
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key, ...modifiers, bubbles: true }),
+    )
+    await tick()
+
+    expect(props.selected).toEqual([`a`, `b`, `c`])
+  })
+
+  test(`shortcuts are blocked when disabled=true`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selectAllOption: true,
+      selected: [],
+      disabled: true,
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+
+    // Shortcuts should not work when component is disabled
+    expect(props.selected).toEqual([])
+  })
+
+  test.each([
+    [`ctrl+`, { ctrlKey: true }], // missing key
+    [``, {}], // empty string
+  ])(
+    `invalid shortcut format "%s" does not trigger action`,
+    async (shortcut, modifiers) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        selectAllOption: true,
+        selected: [],
+        shortcuts: { select_all: shortcut },
+        open: true,
+      })
+
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `a`, ...modifiers, bubbles: true }),
+      )
+      await tick()
+
+      expect(props.selected).toEqual([])
+    },
+  )
+
+  test.each([
+    // deno-fmt-ignore
+    [`select_all`, { selectAllOption: true, selected: [] as string[] }, { ctrlKey: true }, [`a`, `b`, `c` ]],
+    [`clear_all`, { selected: [`a`, `b`] }, { ctrlKey: true, shiftKey: true }, []],
+  ])(
+    `%s shortcut works when dropdown is closed`,
+    async (_name, extra_props, modifiers, expected) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        open: false,
+        ...extra_props,
+      })
+
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      input.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `a`, ...modifiers, bubbles: true }),
+      )
+      await tick()
+
+      expect(props.selected).toEqual(expected)
+    },
+  )
+
+  // Helper to reduce boilerplate in shortcut tests
+  async function test_shortcut(
+    shortcut_props: Partial<MultiSelectProps>,
+    key_event: {
+      key: string
+      ctrlKey?: boolean
+      shiftKey?: boolean
+      altKey?: boolean
+      metaKey?: boolean
+    },
+  ): Promise<{ props: MultiSelectProps; input: HTMLInputElement }> {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selected: [],
+      open: true,
+      ...shortcut_props,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { ...key_event, bubbles: true }))
+    await tick()
+
+    return { props, input }
+  }
+
+  test.each(
+    [
+      [`open`, true, { open: `ctrl+o` }, `o`],
+      [`close`, false, { close: `ctrl+w` }, `w`],
+    ] as const,
+  )(
+    `%s shortcut is no-op when already %s`,
+    async (_action, initial_open, shortcuts, key) => {
+      const { props } = await test_shortcut(
+        { shortcuts, open: initial_open },
+        { key, ctrlKey: true },
+      )
+      expect(props.open).toBe(initial_open)
+    },
+  )
+
+  // Tests for shortcut override behavior - custom shortcuts take precedence over built-in keys
+  test.each(
+    [
+      // [description, shortcuts, extra_props, key, expected_open, expected_selected]
+      [
+        `open=enter overrides Enter select`,
+        { open: `enter` },
+        { open: false },
+        `Enter`,
+        true,
+        [],
+      ],
+      [
+        `close=escape behaves same as default`,
+        { close: `escape` },
+        { open: true },
+        `Escape`,
+        false,
+        [],
+      ],
+      [
+        `close=enter overrides Enter select`,
+        { close: `enter` },
+        { open: true },
+        `Enter`,
+        false,
+        [],
+      ],
+      [
+        `select_all=arrowdown overrides navigation`,
+        { select_all: `arrowdown` },
+        { open: true, selectAllOption: true },
+        `ArrowDown`,
+        true,
+        [`a`, `b`, `c`],
+      ],
+    ] as const,
+  )(
+    `shortcut precedence: %s`,
+    async (_desc, shortcuts, extra_props, key, expected_open, expected_selected) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        shortcuts,
+        selected: [],
+        ...extra_props,
+      })
+
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      await tick()
+
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
+      await tick()
+
+      expect(props.open).toBe(expected_open)
+      expect(props.selected).toEqual(expected_selected)
+    },
+  )
 })

@@ -214,4 +214,21 @@ export interface MultiSelectProps<T extends Option = Option>
   // Programmatic group control (exposed via bindable)
   collapseAllGroups?: () => void
   expandAllGroups?: () => void
+  // Keyboard shortcuts for common actions
+  shortcuts?: Partial<KeyboardShortcuts>
+}
+
+// Keyboard shortcuts for MultiSelect actions.
+// Shortcut format: "modifier+...+key" where modifiers can be: ctrl, shift, alt, meta, cmd
+// Examples: 'ctrl+a', 'ctrl+shift+a', 'meta+a', 'cmd+a', 'alt+s'
+// Set to null to disable a shortcut.
+//
+// PRECEDENCE: Custom shortcuts are evaluated BEFORE built-in key handlers (Enter, Escape,
+// ArrowUp/Down, Backspace). This means if you set shortcuts={{ open: 'enter' }}, the Enter
+// key will open the dropdown instead of selecting the active option (intentional to allow full customization).
+export interface KeyboardShortcuts {
+  select_all?: string | null // default: 'ctrl+a'
+  clear_all?: string | null // default: 'ctrl+shift+a'
+  open?: string | null // default: null (use existing behavior)
+  close?: string | null // default: null (Escape already works)
 }

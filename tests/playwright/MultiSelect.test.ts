@@ -230,8 +230,11 @@ test.describe(`remove all button`, () => {
     const selected_buttons = page.locator(`#foods ul.selected > li > button`)
     await expect(selected_buttons).toHaveCount(2)
 
-    await page.click(`#foods button.remove-all`)
-    await expect(page.locator(`#foods button.remove-all`)).toBeHidden()
+    // Wait for flip animation to complete before clicking remove-all button
+    const remove_all_btn = page.locator(`#foods button.remove-all`)
+    await remove_all_btn.waitFor({ state: `visible` })
+    await remove_all_btn.click()
+    await expect(remove_all_btn).toBeHidden()
 
     await expect(selected_buttons).toHaveCount(0)
   })
@@ -1055,31 +1058,39 @@ test.describe(`option grouping`, () => {
     if (process.env.CI) test.skip() // keyboard nav tests are flaky in CI
 
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
-    await page.click(
+
+    // Toggle keyboardExpandsCollapsedGroups and wait for state to settle
+    const checkbox = page.locator(
       `#collapsible-groups label:has-text("keyboardExpandsCollapsedGroups")`,
     )
+    await checkbox.click()
 
     const input = page.locator(`#collapsible-groups input[autocomplete]`)
     await input.click()
 
     const options_list = page.locator(`#collapsible-groups ul.options`)
-    const active_option = options_list.locator(`li.active[role="option"]`)
+    await options_list.waitFor({ state: `visible` })
 
+    // Wait for group headers to have correct aria-expanded state
     await expect(options_list.locator(`li.group-header:has-text("Dairy")`))
       .toHaveAttribute(`aria-expanded`, `false`)
     await expect(options_list.locator(`li.group-header:has-text("Fruits")`))
       .toHaveAttribute(`aria-expanded`, `true`)
 
+    const active_option = options_list.locator(`li.active[role="option"]`)
     const visible_count = await options_list.locator(`li[role="option"]:visible`).count()
 
+    // First ArrowDown should activate Apple (first visible option in Fruits group)
     await page.keyboard.press(`ArrowDown`)
     await expect(active_option).toContainText(`Apple`)
 
+    // Cycle through all visible options
     for (let idx = 1; idx < visible_count; idx++) {
       await page.keyboard.press(`ArrowDown`)
       await expect(active_option).toBeVisible()
     }
 
+    // Should wrap back to Apple
     await page.keyboard.press(`ArrowDown`)
     await expect(active_option).toContainText(`Apple`)
   })

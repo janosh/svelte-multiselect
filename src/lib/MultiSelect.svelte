@@ -7,7 +7,7 @@
   import { highlight_matches } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
-  import type { GroupedOptions, MultiSelectProps } from './types'
+  import type { GroupedOptions, KeyboardShortcuts, MultiSelectProps } from './types'
   import { fuzzy_match, get_label, get_style, has_group, is_object } from './utils'
   import Wiggle from './Wiggle.svelte'
 
@@ -145,8 +145,60 @@
     onexpandAll,
     collapseAllGroups = $bindable(),
     expandAllGroups = $bindable(),
+    // Keyboard shortcuts for common actions
+    shortcuts = {},
     ...rest
   }: MultiSelectProps<Option> = $props()
+
+  // Parse shortcut string into modifier+key parts
+  function parse_shortcut(shortcut: string): {
+    key: string
+    ctrl: boolean
+    shift: boolean
+    alt: boolean
+    meta: boolean
+  } {
+    const parts = shortcut.toLowerCase().split(`+`).map((part) => part.trim())
+    const key = parts.pop() ?? ``
+    return {
+      key,
+      ctrl: parts.includes(`ctrl`),
+      shift: parts.includes(`shift`),
+      alt: parts.includes(`alt`),
+      meta: parts.includes(`meta`) || parts.includes(`cmd`),
+    }
+  }
+
+  function matches_shortcut(
+    event: KeyboardEvent,
+    shortcut: string | null | undefined,
+  ): boolean {
+    if (!shortcut) return false
+    const parsed = parse_shortcut(shortcut)
+    // Require non-empty key to prevent "ctrl+" from matching any key with ctrl pressed
+    if (!parsed.key) return false
+    const key_matches = event.key.toLowerCase() === parsed.key
+    const ctrl_matches = event.ctrlKey === parsed.ctrl
+    const shift_matches = event.shiftKey === parsed.shift
+    const alt_matches = event.altKey === parsed.alt
+    const meta_matches = event.metaKey === parsed.meta
+    return (
+      key_matches && ctrl_matches && shift_matches && alt_matches && meta_matches
+    )
+  }
+
+  // Default shortcuts
+  const default_shortcuts: KeyboardShortcuts = {
+    select_all: `ctrl+a`,
+    clear_all: `ctrl+shift+a`,
+    open: null,
+    close: null,
+  }
+
+  const effective_shortcuts = $derived({
+    ...default_shortcuts,
+    ...shortcuts,
+  })
 
   // Extract loadOptions config into single derived object (supports both simple function and config object)
   const load_options_config = $derived.by(() => {
@@ -659,6 +711,49 @@
 
   // handle all keyboard events this component receives
   async function handle_keydown(event: KeyboardEvent) {
+    if (disabled) return // Block all keyboard handling when disabled
+
+    // Check keyboard shortcuts first (before other key handling)
+    const shortcut_actions: Array<{
+      key: keyof typeof effective_shortcuts
+      condition: () => boolean
+      action: () => void
+    }> = [
+      {
+        key: `select_all`,
+        condition: () =>
+          !!selectAllOption && navigable_options.length > 0 && maxSelect !== 1,
+        action: () => select_all(event),
+      },
+      {
+        key: `clear_all`,
+        condition: () => selected.length > 0,
+        action: () => remove_all(event),
+      },
+      {
+        key: `open`,
+        condition: () => !open,
+        action: () => open_dropdown(event),
+      },
+      {
+        key: `close`,
+        condition: () => open,
+        action: () => {
+          close_dropdown(event)
+          searchText = ``
+        },
+      },
+    ]
+
+    for (const { key, condition, action } of shortcut_actions) {
+      if (matches_shortcut(event, effective_shortcuts[key]) && condition()) {
+        event.preventDefault()
+        event.stopPropagation()
+        action()
+        return
+      }
+    }
+
     // on escape or tab out of input: close options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
       event.stopPropagation()
