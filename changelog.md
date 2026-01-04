@@ -1,5 +1,15 @@
 # Changelog
 
+## [v11.5.0](https://github.com/janosh/svelte-multiselect/compare/v11.4.0...v11.5.0)
+
+> 4 January 2026
+
+- Add `MultiSelect` `onreorder` event and fire `onchange` event on drag-drop reordering by @janosh in https://github.com/janosh/svelte-multiselect/pull/373
+- fix: prevent extra binding updates on init and selection by @janosh in https://github.com/janosh/svelte-multiselect/pull/374
+- Option grouping with collapsible headers and per-group select all by @janosh in https://github.com/janosh/svelte-multiselect/pull/375
+- `resizable` attachment + `MultiSelect` keyboard shortcuts + more test coverage by @janosh in https://github.com/janosh/svelte-multiselect/pull/376
+- ARIA 1.2 combobox pattern for VoiceOver accessibility by @janosh in https://github.com/janosh/svelte-multiselect/pull/377
+
 ## [v11.4.0](https://github.com/janosh/svelte-multiselect/compare/v11.3.0...v11.4.0)
 
 > 25 December 2025
