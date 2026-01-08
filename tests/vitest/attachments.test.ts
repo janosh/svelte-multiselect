@@ -238,9 +238,7 @@ describe(`tooltip`, () => {
       if (attr === `title`) {
         expect(child.hasAttribute(`title`)).toBe(false)
         expect(child.getAttribute(`data-original-title`)).toBe(content)
-      } else {
-        expect(child.getAttribute(attr)).toBe(content)
-      }
+      } else expect(child.getAttribute(attr)).toBe(content)
     })
 
     it(`should handle deeply nested and multiple children`, () => {
@@ -508,6 +506,12 @@ describe(`tooltip`, () => {
     it.each([
       [`allow_html: false uses textContent`, false, `<b>bold</b>`, `<b>bold</b>`],
       [`allow_html: true uses innerHTML`, true, `<b>bold</b>`, `bold`],
+      [
+        `allow_html: undefined (default) uses innerHTML`,
+        undefined,
+        `<b>bold</b>`,
+        `bold`,
+      ],
     ])(`%s`, (_desc, allow_html, content, expected_text) => {
       const element = create_element()
       element.title = content

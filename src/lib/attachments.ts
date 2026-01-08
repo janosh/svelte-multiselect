@@ -498,9 +498,9 @@ export interface TooltipOptions {
   style?: string
   show_arrow?: boolean // Whether to show the arrow pointer (default: true)
   offset?: number // Distance from trigger element in pixels (default: 12)
-  // Security: When true, content is rendered as HTML. If allowing user-provided content
-  // via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to prevent XSS.
-  // When false (default), content is rendered as plain text.
+  // Security: When true (default), content is rendered as HTML. If allowing user-provided
+  // content via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to
+  // prevent XSS. Set to false to render content as plain text.
   allow_html?: boolean
 }
 
@@ -562,7 +562,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         content = new_content
         // Only update tooltip if this element owns it
         if (current_tooltip?._owner === element) {
-          if (options.allow_html) {
+          if (options.allow_html !== false) {
             current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
           } else {
             current_tooltip.textContent = content
@@ -608,8 +608,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           })
         }
 
-        // Security: use textContent by default, only allow HTML when explicitly enabled
-        if (options.allow_html) {
+        // Security: allow_html defaults to true; set to false for plain text rendering
+        if (options.allow_html !== false) {
           tooltip_el.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
         } else {
           tooltip_el.textContent = content ?? ``
