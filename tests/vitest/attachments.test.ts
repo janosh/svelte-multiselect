@@ -108,6 +108,12 @@ describe(`tooltip`, () => {
     }))
   }
 
+  // Shared helper for triggering tooltip display (requires vi.useFakeTimers())
+  const trigger_tooltip = (element: HTMLElement) => {
+    element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+    vi.runAllTimers()
+  }
+
   describe(`Content Sources`, () => {
     it.each([
       [`title`, `title`, `Title tooltip`, true],
@@ -298,11 +304,6 @@ describe(`tooltip`, () => {
     beforeEach(() => vi.useFakeTimers())
     afterEach(() => vi.useRealTimers())
 
-    const trigger_tooltip = (element: HTMLElement) => {
-      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
-    }
-
     it(`tracks tooltip ownership via _owner property`, () => {
       const element = create_element()
       element.title = `test`
@@ -387,11 +388,6 @@ describe(`tooltip`, () => {
   describe(`New Features`, () => {
     beforeEach(() => vi.useFakeTimers())
     afterEach(() => vi.useRealTimers())
-
-    const trigger_tooltip = (element: HTMLElement) => {
-      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
-    }
 
     it.each([
       [`hide_delay: 200 delays hiding`, { hide_delay: 200 }, true, 200],
