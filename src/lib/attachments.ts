@@ -481,42 +481,60 @@ function clear_tooltip() {
   if (show_timeout) clearTimeout(show_timeout)
   if (hide_timeout) clearTimeout(hide_timeout)
   if (current_tooltip) {
+    // Remove aria-describedby from the trigger element
+    current_tooltip._owner?.removeAttribute(`aria-describedby`)
     current_tooltip.remove()
     current_tooltip = null
   }
 }
 
 // Options for the tooltip attachment.
-// Security: content is rendered as HTML. If allowing user-provided content
-// to be set via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize
-// to prevent XSS attacks. This attachment does not perform any sanitization.
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
   delay?: number
-  disabled?: boolean
+  hide_delay?: number // Delay before hiding tooltip (ms), helps with rapid hover transitions
+  disabled?: boolean | `touch-devices` // true disables always, 'touch-devices' uses runtime detection
   style?: string
+  show_arrow?: boolean // Whether to show the arrow pointer (default: true)
+  offset?: number // Distance from trigger element in pixels (default: 12)
+  // Security: When true (default), content is rendered as HTML. If allowing user-provided
+  // content via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to
+  // prevent XSS. Set to false to render content as plain text.
+  allow_html?: boolean
 }
 
 export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Element) => {
-  // Handle null/undefined elements
-  if (!node || !(node instanceof HTMLElement)) return
+  // SSR guard + element validation
+  if (typeof document === `undefined` || !(node instanceof HTMLElement)) return
 
-  // Handle null/undefined options
-  const safe_options = options || {}
   const cleanup_functions: (() => void)[] = []
 
-  function setup_tooltip(element: HTMLElement) {
-    if (!element || safe_options.disabled) return
+  // Handle disabled option
+  if (options.disabled === true) return
 
+  // Track current input method for 'touch-devices' option (runtime detection, not capability sniffing)
+  // This allows tooltips on hybrid devices (Surface, iPad with mouse) when using mouse/stylus
+  let last_pointer_type: string = `mouse`
+  const track_pointer = (event: PointerEvent) => {
+    last_pointer_type = event.pointerType
+  }
+  if (options.disabled === `touch-devices`) {
+    document.addEventListener(`pointerdown`, track_pointer, true)
+    cleanup_functions.push(() =>
+      document.removeEventListener(`pointerdown`, track_pointer, true)
+    )
+  }
+
+  function setup_tooltip(element: HTMLElement) {
     // Use let so content can be updated reactively
-    let content = safe_options.content || element.title ||
+    let content = options.content || element.title ||
       element.getAttribute(`aria-label`) || element.getAttribute(`data-title`)
     if (!content) return
 
     // Store original title and remove it to prevent default tooltip
     // Only store title if we're not using custom content
-    if (element.title && !safe_options.content) {
+    if (element.title && !options.content) {
       element.setAttribute(`data-original-title`, element.title)
       element.removeAttribute(`title`)
     }
@@ -524,7 +542,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
     // Reactively update content when tooltip attributes change
     const tooltip_attrs = [`title`, `aria-label`, `data-title`]
     const observer = new MutationObserver((mutations) => {
-      if (safe_options.content) return // custom content takes precedence
+      if (options.content) return // custom content takes precedence
       for (const { type, attributeName } of mutations) {
         if (type !== `attributes` || !attributeName) continue
         const new_content = element.getAttribute(attributeName)
@@ -542,22 +560,35 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         content = new_content
         // Only update tooltip if this element owns it
         if (current_tooltip?._owner === element) {
-          current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
+          if (options.allow_html !== false) {
+            current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
+          } else {
+            current_tooltip.textContent = content
+          }
         }
       }
     })
     observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
 
     function show_tooltip() {
+      // Skip tooltip on touch input when 'touch-devices' option is set
+      if (options.disabled === `touch-devices` && last_pointer_type === `touch`) return
+
       clear_tooltip()
 
       show_timeout = setTimeout(() => {
-        const tooltip = document.createElement(`div`)
-        tooltip.className = `custom-tooltip`
-        const placement = safe_options.placement || `bottom`
-        tooltip.setAttribute(`data-placement`, placement)
+        const tooltip_el = document.createElement(`div`)
+        tooltip_el.className = `custom-tooltip`
+        const placement = options.placement || `bottom`
+        tooltip_el.setAttribute(`data-placement`, placement)
+
+        // Accessibility: link tooltip to trigger element
+        const tooltip_id = `tooltip-${crypto.randomUUID()}`
+        tooltip_el.id = tooltip_id
+        tooltip_el.setAttribute(`role`, `tooltip`)
+        element.setAttribute(`aria-describedby`, tooltip_id)
         // Apply base styles
-        tooltip.style.cssText = `
+        tooltip_el.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0;
           background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
           padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 6px); font-size: var(--tooltip-font-size, 13px); line-height: 1.4;
@@ -566,18 +597,21 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         `
 
         // Apply custom styles if provided (these will override base styles due to CSS specificity)
-        if (safe_options.style) {
+        if (options.style) {
           // Parse and apply custom styles as individual properties for better control
-          const custom_styles = safe_options.style.split(`;`).filter((style) =>
-            style.trim()
-          )
+          const custom_styles = options.style.split(`;`).filter((style) => style.trim())
           custom_styles.forEach((style) => {
             const [property, value] = style.split(`:`).map((s) => s.trim())
-            if (property && value) tooltip.style.setProperty(property, value)
+            if (property && value) tooltip_el.style.setProperty(property, value)
           })
         }
 
-        tooltip.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+        // Security: allow_html defaults to true; set to false for plain text rendering
+        if (options.allow_html !== false) {
+          tooltip_el.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+        } else {
+          tooltip_el.textContent = content ?? ``
+        }
 
         // Mirror CSS custom properties from the trigger node onto the tooltip element
         const trigger_styles = getComputedStyle(element)
@@ -594,96 +628,100 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           `--tooltip-arrow-size`,
         ].forEach((name) => {
           const value = trigger_styles.getPropertyValue(name).trim()
-          if (value) tooltip.style.setProperty(name, value)
+          if (value) tooltip_el.style.setProperty(name, value)
         })
 
         // Append early so we can read computed border styles for arrow border
-        document.body.appendChild(tooltip)
+        document.body.appendChild(tooltip_el)
 
-        // Arrow elements: optional border triangle behind fill triangle
-        const tooltip_styles = getComputedStyle(tooltip)
-        const arrow = document.createElement(`div`)
-        arrow.className = `custom-tooltip-arrow`
-        arrow.style.cssText =
-          `position: absolute; width: 0; height: 0; pointer-events: none;`
-        const arrow_size_raw = trigger_styles.getPropertyValue(`--tooltip-arrow-size`)
-          .trim()
-        const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
-        const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
-
-        const border_color = tooltip_styles.borderTopColor
-        const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
-        const has_border = !!border_color && border_color !== `rgba(0, 0, 0, 0)` &&
-          border_width_num > 0
-
-        const maybe_append_border_arrow = () => {
-          if (!has_border) return
-          const border_arrow = document.createElement(`div`)
-          border_arrow.className = `custom-tooltip-arrow-border`
-          border_arrow.style.cssText =
+        // Create arrow elements only if show_arrow is not false
+        if (options.show_arrow !== false) {
+          const tooltip_styles = getComputedStyle(tooltip_el)
+          const arrow = document.createElement(`div`)
+          arrow.className = `custom-tooltip-arrow`
+          arrow.style.cssText =
             `position: absolute; width: 0; height: 0; pointer-events: none;`
-          const border_size = arrow_px + (border_width_num * 1.4)
-          if (placement === `top`) {
-            border_arrow.style.left = `calc(50% - ${border_size}px)`
-            border_arrow.style.bottom = `-${border_size}px`
-            border_arrow.style.borderLeft = `${border_size}px solid transparent`
-            border_arrow.style.borderRight = `${border_size}px solid transparent`
-            border_arrow.style.borderTop = `${border_size}px solid ${border_color}`
-          } else if (placement === `left`) {
-            border_arrow.style.top = `calc(50% - ${border_size}px)`
-            border_arrow.style.right = `-${border_size}px`
-            border_arrow.style.borderTop = `${border_size}px solid transparent`
-            border_arrow.style.borderBottom = `${border_size}px solid transparent`
-            border_arrow.style.borderLeft = `${border_size}px solid ${border_color}`
-          } else if (placement === `right`) {
-            border_arrow.style.top = `calc(50% - ${border_size}px)`
-            border_arrow.style.left = `-${border_size}px`
-            border_arrow.style.borderTop = `${border_size}px solid transparent`
-            border_arrow.style.borderBottom = `${border_size}px solid transparent`
-            border_arrow.style.borderRight = `${border_size}px solid ${border_color}`
-          } else { // bottom
-            border_arrow.style.left = `calc(50% - ${border_size}px)`
-            border_arrow.style.top = `-${border_size}px`
-            border_arrow.style.borderLeft = `${border_size}px solid transparent`
-            border_arrow.style.borderRight = `${border_size}px solid transparent`
-            border_arrow.style.borderBottom = `${border_size}px solid ${border_color}`
-          }
-          tooltip.appendChild(border_arrow)
-        }
 
-        // Create the fill arrow on top
-        if (placement === `top`) {
-          arrow.style.left = `calc(50% - ${arrow_px}px)`
-          arrow.style.bottom = `-${arrow_px}px`
-          arrow.style.borderLeft = `${arrow_px}px solid transparent`
-          arrow.style.borderRight = `${arrow_px}px solid transparent`
-          arrow.style.borderTop = `${arrow_px}px solid var(--tooltip-bg, #333)`
-        } else if (placement === `left`) {
-          arrow.style.top = `calc(50% - ${arrow_px}px)`
-          arrow.style.right = `-${arrow_px}px`
-          arrow.style.borderTop = `${arrow_px}px solid transparent`
-          arrow.style.borderBottom = `${arrow_px}px solid transparent`
-          arrow.style.borderLeft = `${arrow_px}px solid var(--tooltip-bg, #333)`
-        } else if (placement === `right`) {
-          arrow.style.top = `calc(50% - ${arrow_px}px)`
-          arrow.style.left = `-${arrow_px}px`
-          arrow.style.borderTop = `${arrow_px}px solid transparent`
-          arrow.style.borderBottom = `${arrow_px}px solid transparent`
-          arrow.style.borderRight = `${arrow_px}px solid var(--tooltip-bg, #333)`
-        } else { // bottom
-          arrow.style.left = `calc(50% - ${arrow_px}px)`
-          arrow.style.top = `-${arrow_px}px`
-          arrow.style.borderLeft = `${arrow_px}px solid transparent`
-          arrow.style.borderRight = `${arrow_px}px solid transparent`
-          arrow.style.borderBottom = `${arrow_px}px solid var(--tooltip-bg, #333)`
+          const arrow_size_raw = trigger_styles.getPropertyValue(`--tooltip-arrow-size`)
+            .trim()
+          const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
+          const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
+
+          const border_color = tooltip_styles.borderTopColor
+          const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
+          const has_border = !!border_color && border_color !== `rgba(0, 0, 0, 0)` &&
+            border_width_num > 0
+
+          // Helper to create border arrow behind fill arrow
+          const append_border_arrow = () => {
+            if (!has_border) return
+            const border_arrow = document.createElement(`div`)
+            border_arrow.className = `custom-tooltip-arrow-border`
+            border_arrow.style.cssText =
+              `position: absolute; width: 0; height: 0; pointer-events: none;`
+            const border_size = arrow_px + (border_width_num * 1.4)
+            if (placement === `top`) {
+              border_arrow.style.left = `calc(50% - ${border_size}px)`
+              border_arrow.style.bottom = `-${border_size}px`
+              border_arrow.style.borderLeft = `${border_size}px solid transparent`
+              border_arrow.style.borderRight = `${border_size}px solid transparent`
+              border_arrow.style.borderTop = `${border_size}px solid ${border_color}`
+            } else if (placement === `left`) {
+              border_arrow.style.top = `calc(50% - ${border_size}px)`
+              border_arrow.style.right = `-${border_size}px`
+              border_arrow.style.borderTop = `${border_size}px solid transparent`
+              border_arrow.style.borderBottom = `${border_size}px solid transparent`
+              border_arrow.style.borderLeft = `${border_size}px solid ${border_color}`
+            } else if (placement === `right`) {
+              border_arrow.style.top = `calc(50% - ${border_size}px)`
+              border_arrow.style.left = `-${border_size}px`
+              border_arrow.style.borderTop = `${border_size}px solid transparent`
+              border_arrow.style.borderBottom = `${border_size}px solid transparent`
+              border_arrow.style.borderRight = `${border_size}px solid ${border_color}`
+            } else { // bottom
+              border_arrow.style.left = `calc(50% - ${border_size}px)`
+              border_arrow.style.top = `-${border_size}px`
+              border_arrow.style.borderLeft = `${border_size}px solid transparent`
+              border_arrow.style.borderRight = `${border_size}px solid transparent`
+              border_arrow.style.borderBottom = `${border_size}px solid ${border_color}`
+            }
+            tooltip_el.appendChild(border_arrow)
+          }
+
+          // Style and position fill arrow
+          if (placement === `top`) {
+            arrow.style.left = `calc(50% - ${arrow_px}px)`
+            arrow.style.bottom = `-${arrow_px}px`
+            arrow.style.borderLeft = `${arrow_px}px solid transparent`
+            arrow.style.borderRight = `${arrow_px}px solid transparent`
+            arrow.style.borderTop = `${arrow_px}px solid var(--tooltip-bg, #333)`
+          } else if (placement === `left`) {
+            arrow.style.top = `calc(50% - ${arrow_px}px)`
+            arrow.style.right = `-${arrow_px}px`
+            arrow.style.borderTop = `${arrow_px}px solid transparent`
+            arrow.style.borderBottom = `${arrow_px}px solid transparent`
+            arrow.style.borderLeft = `${arrow_px}px solid var(--tooltip-bg, #333)`
+          } else if (placement === `right`) {
+            arrow.style.top = `calc(50% - ${arrow_px}px)`
+            arrow.style.left = `-${arrow_px}px`
+            arrow.style.borderTop = `${arrow_px}px solid transparent`
+            arrow.style.borderBottom = `${arrow_px}px solid transparent`
+            arrow.style.borderRight = `${arrow_px}px solid var(--tooltip-bg, #333)`
+          } else { // bottom
+            arrow.style.left = `calc(50% - ${arrow_px}px)`
+            arrow.style.top = `-${arrow_px}px`
+            arrow.style.borderLeft = `${arrow_px}px solid transparent`
+            arrow.style.borderRight = `${arrow_px}px solid transparent`
+            arrow.style.borderBottom = `${arrow_px}px solid var(--tooltip-bg, #333)`
+          }
+          append_border_arrow()
+          tooltip_el.appendChild(arrow)
         }
-        maybe_append_border_arrow()
-        tooltip.appendChild(arrow)
 
         // Position tooltip
         const rect = element.getBoundingClientRect()
-        const tooltip_rect = tooltip.getBoundingClientRect()
-        const margin = 12
+        const tooltip_rect = tooltip_el.getBoundingClientRect()
+        const margin = options.offset ?? 12
 
         let top = 0, left = 0
         if (placement === `top`) {
@@ -704,25 +742,25 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         left = Math.max(8, Math.min(left, globalThis.innerWidth - tooltip_rect.width - 8))
         top = Math.max(8, Math.min(top, globalThis.innerHeight - tooltip_rect.height - 8))
 
-        tooltip.style.left = `${left + globalThis.scrollX}px`
-        tooltip.style.top = `${top + globalThis.scrollY}px`
+        tooltip_el.style.left = `${left + globalThis.scrollX}px`
+        tooltip_el.style.top = `${top + globalThis.scrollY}px`
         const custom_opacity = trigger_styles.getPropertyValue(`--tooltip-opacity`).trim()
-        tooltip.style.opacity = custom_opacity || `1`
+        tooltip_el.style.opacity = custom_opacity || `1`
 
-        current_tooltip = Object.assign(tooltip, { _owner: element })
-      }, safe_options.delay || 100)
+        current_tooltip = Object.assign(tooltip_el, { _owner: element })
+      }, options.delay || 100)
+    }
+
+    function handle_keydown(event: KeyboardEvent) {
+      if (event.key === `Escape` && current_tooltip?._owner === element) clear_tooltip()
     }
 
     function hide_tooltip() {
-      clear_tooltip()
-
-      if (current_tooltip) {
-        current_tooltip.style.opacity = `0`
-        if (current_tooltip) {
-          current_tooltip.remove()
-          current_tooltip = null
-        }
-      }
+      if (show_timeout) clearTimeout(show_timeout)
+      const delay = options.hide_delay ?? 0
+      if (delay > 0) {
+        hide_timeout = setTimeout(() => clear_tooltip(), delay)
+      } else clear_tooltip()
     }
 
     function handle_scroll(event: Event) {
@@ -741,10 +779,31 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
     // Hide tooltip when user scrolls the page (not element-level scrolls like input fields)
     globalThis.addEventListener(`scroll`, handle_scroll, true)
 
+    // Add Escape key listener to dismiss tooltip
+    document.addEventListener(`keydown`, handle_keydown)
+
+    // Watch for element removal from DOM to prevent orphaned tooltips
+    const removal_observer = new MutationObserver((mutations) => {
+      const was_removed = mutations.some((mut) =>
+        Array.from(mut.removedNodes).some((node) =>
+          node === element || (node instanceof Element && node.contains(element))
+        )
+      )
+      if (was_removed && current_tooltip?._owner === element) clear_tooltip()
+    })
+    if (element.parentElement) {
+      removal_observer.observe(element.parentElement, { childList: true, subtree: true })
+    }
+
     return () => {
       observer.disconnect()
+      removal_observer.disconnect()
       events.forEach((event, idx) => element.removeEventListener(event, handlers[idx]))
       globalThis.removeEventListener(`scroll`, handle_scroll, true)
+      document.removeEventListener(`keydown`, handle_keydown)
+
+      // Clear tooltip if this element owns it (also removes aria-describedby)
+      if (current_tooltip?._owner === element) clear_tooltip()
 
       const original_title = element.getAttribute(`data-original-title`)
       if (original_title) {
