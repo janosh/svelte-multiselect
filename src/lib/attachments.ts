@@ -527,8 +527,6 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
   }
 
   function setup_tooltip(element: HTMLElement) {
-    if (!element) return
-
     // Use let so content can be updated reactively
     let content = options.content || element.title ||
       element.getAttribute(`aria-label`) || element.getAttribute(`data-title`)
@@ -786,13 +784,12 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
 
     // Watch for element removal from DOM to prevent orphaned tooltips
     const removal_observer = new MutationObserver((mutations) => {
-      for (const mutation of mutations) {
-        for (const removed_node of Array.from(mutation.removedNodes)) {
-          const is_removed = removed_node === element ||
-            (removed_node instanceof Element && removed_node.contains(element))
-          if (is_removed && current_tooltip?._owner === element) clear_tooltip()
-        }
-      }
+      const was_removed = mutations.some((mut) =>
+        Array.from(mut.removedNodes).some((node) =>
+          node === element || (node instanceof Element && node.contains(element))
+        )
+      )
+      if (was_removed && current_tooltip?._owner === element) clear_tooltip()
     })
     if (element.parentElement) {
       removal_observer.observe(element.parentElement, { childList: true, subtree: true })
