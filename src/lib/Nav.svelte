@@ -9,10 +9,21 @@
   import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { click_outside } from './attachments'
+  import { click_outside, tooltip, type TooltipOptions } from './attachments'
   import Icon from './Icon.svelte'
 
-  let { routes = [], children, link, menu_props, link_props, page, labels, ...rest }:
+  let {
+    routes = [],
+    children,
+    link,
+    menu_props,
+    link_props,
+    page,
+    labels,
+    tooltips,
+    tooltip_options,
+    ...rest
+  }:
     & {
       routes: Route[]
       children?: Snippet<
@@ -23,6 +34,8 @@
       link_props?: HTMLAttributes<HTMLAnchorElement>
       page?: Page
       labels?: Record<string, string>
+      tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
+      tooltip_options?: Omit<TooltipOptions, `content`>
     }
     & Omit<HTMLAttributes<HTMLElementTagNameMap[`nav`]>, `children`> = $props()
 
@@ -140,6 +153,14 @@
       ? { href: first, label: first, children: second }
       : { href: first, label: second }
   }
+
+  function get_tooltip(href: string) {
+    const config = tooltips?.[href]
+    if (!config) return undefined
+    // Support both string (content only) and object (full options) formats
+    const opts = typeof config === `string` ? { content: config } : config
+    return tooltip({ ...tooltip_options, ...opts })
+  }
 </script>
 
 <svelte:window {onkeydown} />
@@ -179,6 +200,7 @@
         {@const child_is_active = is_child_current(sub_routes)}
         {@const parent_page_exists = sub_routes.includes(href)}
         {@const filtered_sub_routes = sub_routes.filter((route) => route !== href)}
+        {@const parent_tooltip = get_tooltip(href)}
         <div
           class="dropdown"
           class:active={child_is_active}
@@ -198,11 +220,20 @@
           <div>
             {#if parent_page_exists}
               {@const { label, style } = parent}
-              <a {href} aria-current={is_current(href)} onclick={close_menus} {style}>
+              <a
+                {href}
+                aria-current={is_current(href)}
+                onclick={close_menus}
+                {style}
+                {@attach parent_tooltip}
+              >
                 {@html label}
               </a>
             {:else}
-              <span style={parent.style}>{@html parent.label}</span>
+              <span
+                style={parent.style}
+                {@attach parent_tooltip}
+              >{@html parent.label}</span>
             {/if}
             <button
               type="button"
@@ -235,6 +266,7 @@
           >
             {#each filtered_sub_routes as child_href (child_href)}
               {@const child = format_label(child_href, true)}
+              {@const child_tooltip = get_tooltip(child_href)}
               {#if link}
                 {@render link({ href: child_href, label: child.label })}
               {:else}
@@ -246,6 +278,7 @@
                   onkeydown={(event) => handle_dropdown_item_keydown(event, href)}
                   {...link_props}
                   style={`${child.style}; ${link_props?.style ?? ``}`}
+                  {@attach child_tooltip}
                 >
                   {@html child.label}
                 </a>
@@ -256,6 +289,7 @@
       {:else}
         <!-- Regular link item -->
         {@const regular = format_label(label)}
+        {@const link_tooltip = get_tooltip(href)}
         {#if link}
           {@render link({ href, label })}
         {:else}
@@ -265,6 +299,7 @@
             onclick={close_menus}
             {...link_props}
             style={`${regular.style}; ${link_props?.style ?? ``}`}
+            {@attach link_tooltip}
           >
             {@html regular.label}
           </a>

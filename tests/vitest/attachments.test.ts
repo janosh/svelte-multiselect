@@ -7,7 +7,7 @@ import {
   sortable,
   tooltip,
 } from '$lib/attachments'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
@@ -295,22 +295,25 @@ describe(`tooltip`, () => {
 
   describe(`Reactive Content and Scroll Behavior`, () => {
     // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
 
-    it(`should track tooltip ownership via _owner property`, () => {
-      vi.useFakeTimers()
+    const trigger_tooltip = (element: HTMLElement) => {
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+    }
+
+    it(`tracks tooltip ownership via _owner property`, () => {
       const element = create_element()
       element.title = `test`
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
-
-      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
+      trigger_tooltip(element)
 
       const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement & {
         _owner?: HTMLElement
       }
       expect(tooltip_el?._owner).toBe(element)
-      vi.useRealTimers()
     })
 
     it.each([
@@ -319,26 +322,20 @@ describe(`tooltip`, () => {
       [`documentElement hides tooltip`, () => document.documentElement, false],
       [`body hides tooltip`, () => document.body, false],
     ])(`scroll from %s`, (_desc, get_target, should_persist) => {
-      vi.useFakeTimers()
       const element = create_element()
       element.title = `test`
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
-
-      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
+      trigger_tooltip(element)
       expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
 
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: get_target() })
       globalThis.dispatchEvent(scroll_event)
-
       expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_persist)
-      vi.useRealTimers()
     })
 
-    it(`scroll from ancestor should hide tooltip`, () => {
-      vi.useFakeTimers()
+    it(`scroll from ancestor hides tooltip`, () => {
       const ancestor = document.createElement(`div`)
       const element = create_element()
       ancestor.appendChild(element)
@@ -346,9 +343,7 @@ describe(`tooltip`, () => {
       element.title = `test`
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
-
-      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
+      trigger_tooltip(element)
 
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: ancestor })
@@ -356,11 +351,9 @@ describe(`tooltip`, () => {
 
       expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
       ancestor.remove()
-      vi.useRealTimers()
     })
 
-    it(`should show only one tooltip at a time`, () => {
-      vi.useFakeTimers()
+    it(`shows only one tooltip at a time`, () => {
       const [el1, el2] = [create_element(), create_element()]
       el1.title = `tooltip1`
       el2.title = `tooltip2`
@@ -369,18 +362,14 @@ describe(`tooltip`, () => {
       setup_tooltip(el1, { delay: 0 })
       setup_tooltip(el2, { delay: 0 })
 
-      el1.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
-      el2.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
+      trigger_tooltip(el1)
+      trigger_tooltip(el2)
 
       expect(document.querySelectorAll(`.custom-tooltip`).length).toBe(1)
       expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(`tooltip2`)
-      vi.useRealTimers()
     })
 
-    it(`should show/hide on focus/blur for accessibility`, () => {
-      vi.useFakeTimers()
+    it(`shows/hides on focus/blur for accessibility`, () => {
       const element = create_element(`button`)
       element.title = `focus tooltip`
       mock_bounds(element)
@@ -392,7 +381,123 @@ describe(`tooltip`, () => {
 
       element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
       expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
-      vi.useRealTimers()
+    })
+  })
+
+  describe(`New Features`, () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
+    const trigger_tooltip = (element: HTMLElement) => {
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+    }
+
+    it.each([
+      [`hide_delay: 200 delays hiding`, { hide_delay: 200 }, true, 200],
+      [`hide_delay: 0 hides immediately`, { hide_delay: 0 }, false, 0],
+      [`undefined hide_delay hides immediately`, {}, false, 0],
+    ])(`%s`, (_desc, options, visible_after_leave, delay_ms) => {
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0, ...options })
+
+      trigger_tooltip(element)
+      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+
+      element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+      expect(!!document.querySelector(`.custom-tooltip`)).toBe(visible_after_leave)
+
+      if (delay_ms > 0) {
+        vi.advanceTimersByTime(delay_ms)
+        expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+      }
+    })
+
+    it(`disabled: 'touch-devices' disables on touch device`, () => {
+      // Mock touch device via ontouchstart
+      Object.defineProperty(globalThis, `ontouchstart`, {
+        value: () => {},
+        configurable: true,
+      })
+
+      const element = create_element()
+      element.title = `test`
+      const cleanup = setup_tooltip(element, { disabled: `touch-devices` })
+
+      expect(cleanup).toBeUndefined()
+      expect(element.getAttribute(`title`)).toBe(`test`) // title not consumed
+
+      // Cleanup - delete the property we added
+      delete (globalThis as Record<string, unknown>).ontouchstart
+    })
+
+    it.each([
+      [`Escape dismisses tooltip`, `Escape`, false],
+      [`Enter does not dismiss`, `Enter`, true],
+    ])(`%s`, (_desc, key, should_remain) => {
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      trigger_tooltip(element)
+      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+
+      document.dispatchEvent(new KeyboardEvent(`keydown`, { key }))
+      expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_remain)
+    })
+
+    it.each([
+      [`show_arrow: false hides arrow`, { show_arrow: false }, false],
+      [`show_arrow: true (default) shows arrow`, {}, true],
+    ])(`%s`, (_desc, options, expect_arrow) => {
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0, ...options })
+
+      trigger_tooltip(element)
+
+      const tooltip_el = document.querySelector(`.custom-tooltip`)
+      expect(tooltip_el).toBeTruthy()
+      expect(!!tooltip_el?.querySelector(`.custom-tooltip-arrow`)).toBe(expect_arrow)
+    })
+
+    it(`manages aria-describedby on show/hide`, () => {
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      expect(element.hasAttribute(`aria-describedby`)).toBe(false)
+
+      trigger_tooltip(element)
+      const tooltip_el = document.querySelector(`.custom-tooltip`)
+      expect(tooltip_el?.getAttribute(`role`)).toBe(`tooltip`)
+      expect(tooltip_el?.id).toMatch(/^tooltip-/)
+      expect(element.getAttribute(`aria-describedby`)).toBe(tooltip_el?.id)
+
+      element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+      expect(element.hasAttribute(`aria-describedby`)).toBe(false)
+    })
+
+    it.each([
+      [`offset: 20`, 20, 170], // top (100) + height (50) + offset (20) = 170
+      [`offset: 5`, 5, 155], // top (100) + height (50) + offset (5) = 155
+      [`default offset: 12`, undefined, 162], // top (100) + height (50) + default (12) = 162
+    ])(`applies %s`, (_desc, offset, expected_top) => {
+      const element = create_element()
+      element.title = `test`
+      mock_bounds(element, { left: 100, top: 100, width: 50, height: 50 })
+      setup_tooltip(element, { delay: 0, offset, placement: `bottom` })
+
+      trigger_tooltip(element)
+      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+      expect(tooltip_el).toBeTruthy()
+      // Verify top position includes offset (bottom placement: element.top + element.height + offset)
+      expect(tooltip_el.style.top).toBe(`${expected_top}px`)
     })
   })
 })
