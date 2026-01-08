@@ -415,22 +415,31 @@ describe(`tooltip`, () => {
       }
     })
 
-    it(`disabled: 'touch-devices' disables on touch device`, () => {
-      // Mock touch device via ontouchstart
-      Object.defineProperty(globalThis, `ontouchstart`, {
-        value: () => {},
-        configurable: true,
-      })
-
+    it(`disabled: 'touch-devices' skips tooltip on touch input`, () => {
+      // With runtime detection, tooltip is set up but skipped when last pointer was touch
       const element = create_element()
       element.title = `test`
-      const cleanup = setup_tooltip(element, { disabled: `touch-devices` })
+      mock_bounds(element)
+      const cleanup = setup_tooltip(element, { delay: 0, disabled: `touch-devices` })
 
-      expect(cleanup).toBeUndefined()
-      expect(element.getAttribute(`title`)).toBe(`test`) // title not consumed
+      // Tooltip is set up (cleanup returned) but behavior depends on pointer type
+      expect(cleanup).toBeDefined()
 
-      // Cleanup - delete the property we added
-      delete (globalThis as Record<string, unknown>).ontouchstart
+      // Simulate touch input, then try to show tooltip
+      document.dispatchEvent(
+        new PointerEvent(`pointerdown`, { pointerType: `touch`, bubbles: true }),
+      )
+      trigger_tooltip(element)
+      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy() // No tooltip on touch
+
+      // Simulate mouse input, then show tooltip
+      document.dispatchEvent(
+        new PointerEvent(`pointerdown`, { pointerType: `mouse`, bubbles: true }),
+      )
+      trigger_tooltip(element)
+      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy() // Tooltip works with mouse
+
+      cleanup?.()
     })
 
     it.each([
@@ -498,6 +507,21 @@ describe(`tooltip`, () => {
       expect(tooltip_el).toBeTruthy()
       // Verify top position includes offset (bottom placement: element.top + element.height + offset)
       expect(tooltip_el.style.top).toBe(`${expected_top}px`)
+    })
+
+    it.each([
+      [`allow_html: false uses textContent`, false, `<b>bold</b>`, `<b>bold</b>`],
+      [`allow_html: true uses innerHTML`, true, `<b>bold</b>`, `bold`],
+    ])(`%s`, (_desc, allow_html, content, expected_text) => {
+      const element = create_element()
+      element.title = content
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0, allow_html })
+
+      trigger_tooltip(element)
+      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+      expect(tooltip_el).toBeTruthy()
+      expect(tooltip_el.textContent).toBe(expected_text)
     })
   })
 })

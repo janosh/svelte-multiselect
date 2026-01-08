@@ -489,18 +489,19 @@ function clear_tooltip() {
 }
 
 // Options for the tooltip attachment.
-// Security: content is rendered as HTML. If allowing user-provided content
-// to be set via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize
-// to prevent XSS attacks. This attachment does not perform any sanitization.
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
   delay?: number
   hide_delay?: number // Delay before hiding tooltip (ms), helps with rapid hover transitions
-  disabled?: boolean | `touch-devices` // true disables always, 'touch-devices' disables only on touch
+  disabled?: boolean | `touch-devices` // true disables always, 'touch-devices' uses runtime detection
   style?: string
   show_arrow?: boolean // Whether to show the arrow pointer (default: true)
   offset?: number // Distance from trigger element in pixels (default: 12)
+  // Security: When true, content is rendered as HTML. If allowing user-provided content
+  // via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to prevent XSS.
+  // When false (default), content is rendered as plain text.
+  allow_html?: boolean
 }
 
 export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Element) => {
@@ -509,10 +510,20 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
 
   const cleanup_functions: (() => void)[] = []
 
-  // Handle disabled option: true = always disabled, 'touch-devices' = disabled on touch only
+  // Handle disabled option
   if (options.disabled === true) return
+
+  // Track current input method for 'touch-devices' option (runtime detection, not capability sniffing)
+  // This allows tooltips on hybrid devices (Surface, iPad with mouse) when using mouse/stylus
+  let last_pointer_type: string = `mouse`
+  const track_pointer = (event: PointerEvent) => {
+    last_pointer_type = event.pointerType
+  }
   if (options.disabled === `touch-devices`) {
-    if (`ontouchstart` in globalThis || navigator.maxTouchPoints > 0) return
+    document.addEventListener(`pointerdown`, track_pointer, true)
+    cleanup_functions.push(() =>
+      document.removeEventListener(`pointerdown`, track_pointer, true)
+    )
   }
 
   function setup_tooltip(element: HTMLElement) {
@@ -551,13 +562,20 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         content = new_content
         // Only update tooltip if this element owns it
         if (current_tooltip?._owner === element) {
-          current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
+          if (options.allow_html) {
+            current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
+          } else {
+            current_tooltip.textContent = content
+          }
         }
       }
     })
     observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
 
     function show_tooltip() {
+      // Skip tooltip on touch input when 'touch-devices' option is set
+      if (options.disabled === `touch-devices` && last_pointer_type === `touch`) return
+
       clear_tooltip()
 
       show_timeout = setTimeout(() => {
@@ -590,7 +608,12 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           })
         }
 
-        tooltip_el.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+        // Security: use textContent by default, only allow HTML when explicitly enabled
+        if (options.allow_html) {
+          tooltip_el.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+        } else {
+          tooltip_el.textContent = content ?? ``
+        }
 
         // Mirror CSS custom properties from the trigger node onto the tooltip element
         const trigger_styles = getComputedStyle(element)
