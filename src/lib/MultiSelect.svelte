@@ -1609,7 +1609,9 @@
     border: 0;
   }
 
-  :is(div.multiselect) {
+  /* Use :where() for elements with user-overridable class props (outerDivClass, ulSelectedClass, liSelectedClass)
+     so user-provided classes take precedence. See: https://github.com/janosh/svelte-multiselect/issues/380 */
+  :where(div.multiselect) {
     position: relative;
     align-items: center;
     display: flex;
@@ -1626,27 +1628,27 @@
     min-height: var(--sms-min-height, 22pt);
     margin: var(--sms-margin);
   }
-  :is(div.multiselect.open) {
+  :where(div.multiselect.open) {
     /* increase z-index when open to ensure the dropdown of one <MultiSelect />
     displays above that of another slightly below it on the page */
     z-index: var(--sms-open-z-index, 4);
   }
-  :is(div.multiselect:focus-within) {
+  :where(div.multiselect:focus-within) {
     border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
   }
-  :is(div.multiselect.disabled) {
+  :where(div.multiselect.disabled) {
     background: var(--sms-disabled-bg, light-dark(lightgray, #444));
     cursor: not-allowed;
   }
 
-  :is(div.multiselect > ul.selected) {
+  :where(div.multiselect > ul.selected) {
     display: flex;
     flex: 1;
     padding: 0;
     margin: 0;
     flex-wrap: wrap;
   }
-  :is(div.multiselect > ul.selected > li) {
+  :where(div.multiselect > ul.selected > li) {
     align-items: center;
     border-radius: 3pt;
     display: flex;
@@ -1661,10 +1663,10 @@
     padding: var(--sms-selected-li-padding, 1pt 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
-  :is(div.multiselect > ul.selected > li[draggable='true']) {
+  :where(div.multiselect > ul.selected > li[draggable='true']) {
     cursor: grab;
   }
-  :is(div.multiselect > ul.selected > li.active) {
+  :where(div.multiselect > ul.selected > li.active) {
     background: var(
       --sms-li-active-bg,
       var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))
@@ -1698,7 +1700,7 @@
     margin: auto 0; /* CSS reset */
     padding: 0; /* CSS reset */
   }
-  :is(div.multiselect > ul.selected > input) {
+  :where(div.multiselect > ul.selected > input) {
     border: none;
     outline: none;
     background: none;
@@ -1712,7 +1714,7 @@
   }
 
   /* When options are selected, placeholder is hidden in which case we minimize input width to avoid adding unnecessary width to div.multiselect */
-  :is(div.multiselect > ul.selected > input:not(:placeholder-shown)) {
+  :where(div.multiselect > ul.selected > input:not(:placeholder-shown)) {
     min-width: 1px; /* Minimal width to remain interactive */
   }
 
@@ -1733,7 +1735,8 @@
     pointer-events: none;
   }
 
-  ul.options {
+  /* Use :where() for ul.options elements with class props (ulOptionsClass, liOptionClass, liUserMsgClass) */
+  :where(ul.options) {
     list-style: none;
     /* top, left, width, position are managed by portal when active */
     /* but provide defaults for non-portaled or initial state */
@@ -1761,24 +1764,24 @@
     padding: var(--sms-options-padding);
     margin: var(--sms-options-margin, 6pt 0 0 0);
   }
-  ul.options.hidden {
+  :where(ul.options.hidden) {
     visibility: hidden;
     opacity: 0;
     transform: translateY(50px);
     pointer-events: none;
   }
-  ul.options > li {
+  :where(ul.options > li) {
     padding: 3pt 1ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
     border-left: 3px solid transparent;
   }
-  ul.options .user-msg {
+  :where(ul.options .user-msg) {
     /* block needed so vertical padding applies to span */
     display: block;
     padding: 3pt 2ex;
   }
-  ul.options > li.selected {
+  :where(ul.options > li.selected) {
     background: var(
       --sms-li-selected-plain-bg,
       light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2))
@@ -1788,26 +1791,26 @@
       3px solid var(--sms-active-color, cornflowerblue)
     );
   }
-  ul.options > li.active {
+  :where(ul.options > li.active) {
     background: var(
       --sms-li-active-bg,
       var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))
     );
   }
-  ul.options > li.disabled {
+  :where(ul.options > li.disabled) {
     cursor: not-allowed;
     background: var(--sms-li-disabled-bg, light-dark(#f5f5f6, #2a2a2a));
     color: var(--sms-li-disabled-text, light-dark(#b8b8b8, #666));
   }
-  /* Checkbox styling for keepSelectedInDropdown='checkboxes' mode */
-  ul.options > li > input.option-checkbox {
+  /* Checkbox styling for keepSelectedInDropdown='checkboxes' mode - internal, no class prop */
+  :is(ul.options > li > input.option-checkbox) {
     width: 16px;
     height: 16px;
     margin-right: 6px;
     accent-color: var(--sms-active-color, cornflowerblue);
   }
-  /* Select all option styling */
-  ul.options > li.select-all {
+  /* Select all option styling - has liSelectAllClass prop */
+  :where(ul.options > li.select-all) {
     border-bottom: var(
       --sms-select-all-border-bottom,
       1px solid light-dark(lightgray, #555)
@@ -1817,7 +1820,7 @@
     background: var(--sms-select-all-bg, transparent);
     margin-bottom: var(--sms-select-all-margin-bottom, 2pt);
   }
-  ul.options > li.select-all:hover {
+  :where(ul.options > li.select-all:hover) {
     background: var(
       --sms-select-all-hover-bg,
       var(
@@ -1829,8 +1832,8 @@
       )
     );
   }
-  /* Group header styling */
-  ul.options > li.group-header {
+  /* Group header styling - has liGroupHeaderClass prop */
+  :where(ul.options > li.group-header) {
     display: flex;
     align-items: center;
     font-weight: var(--sms-group-header-font-weight, 600);
@@ -1843,30 +1846,31 @@
     text-transform: var(--sms-group-header-text-transform, uppercase);
     letter-spacing: var(--sms-group-header-letter-spacing, 0.5px);
   }
-  ul.options > li.group-header:not(:first-child) {
+  :where(ul.options > li.group-header:not(:first-child)) {
     margin-top: var(--sms-group-header-margin-top, 4pt);
     border-top: var(--sms-group-header-border-top, 1px solid light-dark(#eee, #333));
   }
-  ul.options > li.group-header.collapsible {
+  :where(ul.options > li.group-header.collapsible) {
     cursor: pointer;
   }
-  ul.options > li.group-header.collapsible:hover {
+  :where(ul.options > li.group-header.collapsible:hover) {
     background: var(
       --sms-group-header-hover-bg,
       light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05))
     );
   }
-  ul.options > li.group-header .group-label {
+  /* Internal elements without class props - keep :is() for specificity */
+  :is(ul.options > li.group-header .group-label) {
     flex: 1;
   }
-  ul.options > li.group-header .group-count {
+  :is(ul.options > li.group-header .group-count) {
     opacity: 0.6;
     font-size: 0.9em;
     font-weight: normal;
     margin-left: 4pt;
   }
   /* Sticky group headers when enabled */
-  ul.options > li.group-header.sticky {
+  :where(ul.options > li.group-header.sticky) {
     position: sticky;
     top: 0;
     z-index: 1;
@@ -1876,17 +1880,20 @@
     );
   }
   /* Indent grouped options for visual hierarchy */
-  ul.options > li:not(.group-header):not(.select-all):not(.user-msg):not(.loading-more) {
+  :where(
+    ul.options > li:not(.group-header):not(.select-all):not(.user-msg):not(.loading-more)
+  ) {
     padding-left: var(
       --sms-group-item-padding-left,
       var(--sms-group-option-indent, 1.5ex)
     );
   }
   /* Collapse/expand animation for group chevron icon */
-  ul.options > li.group-header :global(svg) {
+  :where(ul.options > li.group-header) :global(svg) {
     transition: transform var(--sms-group-collapse-duration, 0.15s) ease-out;
   }
-  ul.options > li.group-header button.group-select-all {
+  /* Keep :is() for internal buttons without class props */
+  :is(ul.options > li.group-header button.group-select-all) {
     font-size: 0.9em;
     font-weight: normal;
     text-transform: none;
@@ -1899,23 +1906,23 @@
     border-radius: 3pt;
     aspect-ratio: auto; /* override global button aspect-ratio: 1 */
   }
-  ul.options > li.group-header button.group-select-all:hover {
+  :is(ul.options > li.group-header button.group-select-all:hover) {
     background: var(
       --sms-group-select-all-hover-bg,
       light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1))
     );
   }
-  ul.options > li.group-header button.group-select-all.deselect {
+  :is(ul.options > li.group-header button.group-select-all.deselect) {
     color: var(--sms-group-deselect-color, light-dark(#c44, #f77));
   }
-  :is(span.max-select-msg) {
+  :where(span.max-select-msg) {
     padding: 0 3pt;
   }
   ::highlight(sms-search-matches) {
     color: light-dark(#1a8870, mediumaquamarine);
   }
-  /* Loading more indicator for infinite scrolling */
-  ul.options > li.loading-more {
+  /* Loading more indicator for infinite scrolling - internal, no class prop */
+  :is(ul.options > li.loading-more) {
     display: flex;
     justify-content: center;
     align-items: center;
