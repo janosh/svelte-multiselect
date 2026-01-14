@@ -8,10 +8,11 @@
 
 <Nav
   {...props}
-  routes={demo_pages}
+  routes={[`/`, ...demo_pages]}
   {page}
   style={`max-width: var(--main-max-width); ${props.style ?? ``}`}
   labels={{
+    '/': `Home`,
     '/ui': `UI`,
     '/css-classes': `CSS Classes`,
     '/kit-form-actions': `SvelteKit Form Actions`,

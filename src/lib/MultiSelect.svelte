@@ -1888,8 +1888,8 @@
       var(--sms-group-option-indent, 1.5ex)
     );
   }
-  /* Collapse/expand animation for group chevron icon */
-  :where(ul.options > li.group-header) :global(svg) {
+  /* Collapse/expand animation for group chevron icon - internal, keep :is() for specificity */
+  :is(ul.options > li.group-header) :global(svg) {
     transition: transform var(--sms-group-collapse-duration, 0.15s) ease-out;
   }
   /* Keep :is() for internal buttons without class props */
