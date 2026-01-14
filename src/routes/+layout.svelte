@@ -33,10 +33,6 @@
 
 <CopyButton global />
 
-{#if !page.error && page.url.pathname !== `/`}
-  <a href="." aria-label="Back to index page">&laquo; home</a>
-{/if}
-
 {@render children?.()}
 
 {#if page.url.pathname === `/`}
@@ -52,14 +48,6 @@
 <Footer />
 
 <style>
-  a[href='.'] {
-    position: absolute;
-    top: 1.5em;
-    left: 1.5em;
-    padding: 2pt 6pt;
-    background: var(--surface);
-    border-radius: 3px;
-  }
   :global(aside.toc.desktop) {
     position: fixed;
     font-size: 0.75rem;

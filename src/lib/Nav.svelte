@@ -442,20 +442,21 @@
     z-index: var(--nav-toggle-btn-z-index, 10);
   }
   .burger span {
+    width: 100%;
     height: 0.18rem;
-    background-color: var(--text-color);
+    background-color: var(--text);
     border-radius: 8px;
     transition: all 0.2s linear;
-    transform-origin: 1px;
+    transform-origin: center;
   }
   .burger[aria-expanded='true'] span:first-child {
-    transform: rotate(45deg);
+    transform: translateY(0.4rem) rotate(45deg);
   }
   .burger[aria-expanded='true'] span:nth-child(2) {
     opacity: 0;
   }
   .burger[aria-expanded='true'] span:nth-child(3) {
-    transform: rotate(-45deg);
+    transform: translateY(-0.4rem) rotate(-45deg);
   }
   /* Mobile styles */
   @media (max-width: 767px) {

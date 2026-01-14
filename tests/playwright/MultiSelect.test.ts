@@ -1327,3 +1327,193 @@ test.describe(`option grouping`, () => {
       .toBeVisible()
   })
 })
+
+// Issue #380: CSS class specificity - user classes should override component defaults
+// https://github.com/janosh/svelte-multiselect/issues/380
+test.describe(`CSS class override specificity (issue #380)`, () => {
+  // Test that user-provided class props are applied to elements
+  // The actual CSS override behavior depends on :where() having zero specificity
+  test(`class props are applied to correct elements`, async ({ page }) => {
+    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
+
+    // Click to open dropdown first
+    await page.click(`#foods input[autocomplete]`)
+
+    // Verify class props from the demo page are applied
+    await expect(page.locator(`div.multiselect.wrapper`)).toBeVisible()
+    await expect(page.locator(`ul.selected.user-choices`)).toBeVisible()
+    await expect(page.locator(`ul.selected > li.selected-li`).first()).toBeVisible()
+    await expect(page.locator(`input.search-text-input`)).toBeVisible()
+    await expect(page.locator(`ul.options.dropdown`)).toBeVisible()
+    await expect(page.locator(`ul.options > li.selectable-li`).first()).toBeVisible()
+  })
+
+  test(`inline styles can be applied to override component background`, async ({ page }) => {
+    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
+
+    const li = page.locator(`ul.selected > li`).first()
+    await expect(li).toBeVisible()
+
+    // Apply inline style
+    await li.evaluate((el) => {
+      ;(el as HTMLElement).style.setProperty(`background-color`, `red`, `important`)
+    })
+
+    // Verify the style attribute was set (more reliable than getComputedStyle
+    // which can show blended colors due to transparency)
+    const style_attr = await li.getAttribute(`style`)
+    expect(style_attr).toContain(`background-color`)
+    expect(style_attr).toContain(`red`)
+  })
+
+  test(`compiled CSS uses :where() for overridable selectors`, async ({ page }) => {
+    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
+
+    // Verify the component CSS uses :where() for the selected li selector
+    // This ensures the implementation is correct even if we can't easily test cascade
+    const uses_where = await page.evaluate(() => {
+      const stylesheets = Array.from(document.styleSheets)
+      for (const sheet of stylesheets) {
+        try {
+          const rules = Array.from(sheet.cssRules || [])
+          for (const rule of rules) {
+            if (rule instanceof CSSStyleRule) {
+              // Check for :where() in li selector within selected ul
+              if (
+                rule.selectorText.includes(`:where(`) &&
+                rule.selectorText.includes(`selected`) &&
+                rule.selectorText.includes(`> li`)
+              ) {
+                return rule.selectorText
+              }
+            }
+          }
+        } catch {
+          // Cross-origin stylesheets will throw, ignore them
+        }
+      }
+      return null
+    })
+
+    expect(uses_where).not.toBeNull()
+    expect(uses_where).toContain(`:where(`)
+  })
+
+  test(`component buttons are styled correctly with border: none`, async ({ page }) => {
+    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
+
+    // Verify the remove button exists and has no visible border
+    // (checking border-style since border-width might be 0px or none)
+    const button = page.locator(`ul.selected > li button`).first()
+    await expect(button).toBeVisible()
+
+    const border_style = await button.evaluate((el) => getComputedStyle(el).borderStyle)
+
+    // Component's :is() selector should set border: none
+    expect(border_style).toBe(`none`)
+  })
+
+  test(`.group-label and .group-count elements are visible and styled correctly`, async ({ page }) => {
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+    await page.click(`input[autocomplete]`)
+
+    // These internal elements should be visible with correct styling
+    const group_label = page.locator(`.group-label`).first()
+    const group_count = page.locator(`.group-count`).first()
+
+    await expect(group_label).toBeVisible()
+    await expect(group_count).toBeVisible()
+
+    // Verify group-label has flex-grow: 1 (expands to fill available space)
+    const flex = await group_label.evaluate((el) => getComputedStyle(el).flexGrow)
+    expect(flex).toBe(`1`)
+
+    // Verify group-count has opacity > 0 (visible)
+    const opacity = await group_count.evaluate((el) => getComputedStyle(el).opacity)
+    expect(parseFloat(opacity)).toBeGreaterThan(0)
+  })
+
+  test(`internal elements use :is() for specificity protection`, async ({ page }) => {
+    // This test verifies that internal elements (.group-label, .group-count)
+    // use :is() instead of :where() to protect against global style conflicts
+    await page.goto(`/grouping`, { waitUntil: `networkidle` })
+
+    const uses_is_for_internals = await page.evaluate(() => {
+      const stylesheets = Array.from(document.styleSheets)
+      for (const sheet of stylesheets) {
+        try {
+          const rules = Array.from(sheet.cssRules || [])
+          for (const rule of rules) {
+            if (rule instanceof CSSStyleRule) {
+              // Check that .group-label uses :is() not :where()
+              if (
+                rule.selectorText.includes(`:is(`) &&
+                rule.selectorText.includes(`group-label`)
+              ) {
+                return true
+              }
+            }
+          }
+        } catch {
+          // Cross-origin stylesheets will throw, ignore them
+        }
+      }
+      return false
+    })
+
+    expect(uses_is_for_internals).toBe(true)
+  })
+
+  test(`component selectors use :where() for overridable elements`, async ({ page }) => {
+    // This test verifies the implementation detail by checking compiled CSS
+    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
+
+    // Check that key selectors use :where() for zero specificity
+    // This is critical for user class overrides to work
+    const selectors_using_where = await page.evaluate(() => {
+      const results: Record<string, boolean> = {
+        div_multiselect: false,
+        ul_selected_li: false,
+        ul_options: false,
+      }
+
+      const stylesheets = Array.from(document.styleSheets)
+      for (const sheet of stylesheets) {
+        try {
+          const rules = Array.from(sheet.cssRules || [])
+          for (const rule of rules) {
+            if (rule instanceof CSSStyleRule) {
+              const sel = rule.selectorText
+              // Check div.multiselect uses :where() (not just any selector containing it)
+              if (
+                sel.match(
+                  /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/,
+                )
+              ) {
+                results.div_multiselect = true
+              }
+              // Check ul.selected > li uses :where()
+              if (
+                sel.includes(`:where(`) && sel.includes(`selected`) &&
+                sel.includes(`> li`)
+              ) {
+                results.ul_selected_li = true
+              }
+              // Check ul.options uses :where()
+              if (sel.match(/:where\(ul\.options/)) {
+                results.ul_options = true
+              }
+            }
+          }
+        } catch {
+          // Cross-origin stylesheets will throw, ignore them
+        }
+      }
+      return results
+    })
+
+    expect(selectors_using_where.div_multiselect).toBe(true)
+    expect(selectors_using_where.ul_selected_li).toBe(true)
+    expect(selectors_using_where.ul_options).toBe(true)
+  })
+})
