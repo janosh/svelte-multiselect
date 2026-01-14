@@ -97,12 +97,12 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
     margin: 2em 0;
   }
   .demo-section {
-    background: rgba(255, 255, 255, 0.05);
+    background: light-dark(#f9f9f9, rgba(255, 255, 255, 0.05));
     padding: 1.5em;
     border-radius: 8px;
   }
   .event-log {
-    background: rgba(0, 0, 0, 0.3);
+    background: light-dark(#f5f5f5, rgba(0, 0, 0, 0.3));
     border-radius: 8px;
     max-height: 60vh;
     overflow-y: auto;
@@ -113,13 +113,12 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
     display: flex;
     justify-content: space-between;
     align-items: center;
-    position: sticky;
-    background-color: black;
-    top: 0;
-    padding: 1ex 1em;
+    background-color: var(--surface);
+    height: max-content;
+    padding: 1pt 9pt;
   }
   .log-entry {
-    background: rgba(255, 255, 255, 0.05);
+    background: light-dark(#fff, rgba(255, 255, 255, 0.05));
     border-radius: 4px;
     padding: 1ex 1em;
     border-left: 3px solid #4299e1;
@@ -137,10 +136,10 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
   }
   .timestamp {
     font-size: 0.8em;
-    color: #a0aec0;
+    color: light-dark(#666, #a0aec0);
   }
   .log-data {
-    background: rgba(0, 0, 0, 0.3);
+    background: light-dark(#eee, rgba(0, 0, 0, 0.3));
     padding: 0.5em;
     border-radius: 3px;
     font-size: 0.8em;
@@ -149,7 +148,7 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
     word-break: break-word;
   }
   .no-events {
-    color: #a0aec0;
+    color: light-dark(#666, #a0aec0);
     font-style: italic;
     text-align: center;
     padding: 2em;
