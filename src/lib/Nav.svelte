@@ -482,10 +482,16 @@
     cursor: not-allowed;
     pointer-events: none;
   }
-  /* Right-aligned items */
+  /* Right-aligned items - only first one gets margin-left: auto */
   .menu > .align-right,
   .menu > .dropdown.align-right {
     margin-left: auto;
+  }
+  .menu > .align-right + .align-right,
+  .menu > .align-right + .dropdown.align-right,
+  .menu > .dropdown.align-right + .align-right,
+  .menu > .dropdown.align-right + .dropdown.align-right {
+    margin-left: 0;
   }
   /* Separator */
   .menu > .separator {
