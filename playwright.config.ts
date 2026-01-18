@@ -7,5 +7,8 @@ export default {
     reuseExistingServer: true,
   },
   testDir: `tests/playwright`,
-  timeout: 5000,
+  timeout: 15000, // 15s for CI environments
+  expect: {
+    timeout: 5000, // 5s for assertions
+  },
 } satisfies PlaywrightTestConfig
