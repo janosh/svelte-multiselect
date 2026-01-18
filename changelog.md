@@ -1,5 +1,15 @@
 # Changelog
 
+## [v11.5.1](https://github.com/janosh/svelte-multiselect/compare/v11.5.0...v11.5.1)
+
+> 18 January 2026
+
+- Enhance tooltip attachment with new options and accessibility by @janosh in https://github.com/janosh/svelte-multiselect/pull/378
+- Use :where() for user-overridable CSS selectors by @janosh in https://github.com/janosh/svelte-multiselect/pull/381
+- Add heading-anchors module for SSR-compatible heading links by @janosh in https://github.com/janosh/svelte-multiselect/pull/382
+- Add 4 new event callbacks for user feedback and analytics by @janosh in https://github.com/janosh/svelte-multiselect/pull/383
+- Enhance Nav component with extended route configuration by @janosh in https://github.com/janosh/svelte-multiselect/pull/384
+
 ## [v11.5.0](https://github.com/janosh/svelte-multiselect/compare/v11.4.0...v11.5.0)
 
 > 4 January 2026
