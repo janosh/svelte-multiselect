@@ -277,11 +277,19 @@
       search_initialized = true
       return
     }
-    if (!onsearch) return
+    // Clear any pending timer if onsearch is removed
+    if (!onsearch) {
+      if (search_debounce_timer) clearTimeout(search_debounce_timer)
+      return
+    }
 
     if (search_debounce_timer) clearTimeout(search_debounce_timer)
     search_debounce_timer = setTimeout(() => {
-      onsearch({ searchText: current_search, matchingCount: matchingOptions.length })
+      // Use optional chaining in case onsearch is removed while timer is pending
+      onsearch?.({
+        searchText: current_search,
+        matchingCount: matchingOptions.length,
+      })
     }, 150)
     return () => {
       if (search_debounce_timer) clearTimeout(search_debounce_timer)
