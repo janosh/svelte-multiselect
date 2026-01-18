@@ -45,6 +45,13 @@ export interface MultiSelectEvents<T extends Option = Option> {
   ongroupToggle?: (data: { group: string; collapsed: boolean }) => unknown // fires when group is collapsed/expanded
   oncollapseAll?: (data: { groups: string[] }) => unknown // fires when all groups are collapsed
   onexpandAll?: (data: { groups: string[] }) => unknown // fires when all groups are expanded
+  // Additional events for user feedback and analytics
+  onsearch?: (data: { searchText: string; matchingCount: number }) => unknown // fires (debounced) when search text changes
+  onmaxreached?: (
+    data: { selected: T[]; maxSelect: number; attemptedOption: T },
+  ) => unknown // fires when user tries to exceed maxSelect
+  onduplicate?: (data: { option: T }) => unknown // fires when user tries to add duplicate (when duplicates=false)
+  onactivate?: (data: { option: T | null; index: number | null }) => unknown // fires on keyboard navigation through options
 }
 
 // Dynamic options loading (https://github.com/janosh/svelte-multiselect/discussions/342)
