@@ -239,3 +239,24 @@ export interface KeyboardShortcuts {
   open?: string | null // default: null (use existing behavior)
   close?: string | null // default: null (Escape already works)
 }
+
+// Nav component types
+export interface NavRouteObject {
+  href: string
+  label?: string // custom label (default: derived from href)
+  children?: string[] // sub-routes for dropdown
+  disabled?: boolean | string // true or tooltip message
+  separator?: boolean // render as visual divider after this item
+  align?: `left` | `right` // default: `left`
+  external?: boolean // add target="_blank" rel="noopener noreferrer"
+  class?: string // custom CSS class
+  style?: string // custom inline style
+  [key: string]: unknown // allow additional custom properties
+}
+
+// NavRoute supports multiple formats for backward compatibility:
+// - string: just a path ("/about")
+// - [string, string]: [path, custom_label] ("/about", "About Us")
+// - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs/intro"])
+// - NavRouteObject: full object with all options
+export type NavRoute = string | [string, string] | [string, string[]] | NavRouteObject
