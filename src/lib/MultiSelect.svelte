@@ -277,15 +277,10 @@
       search_initialized = true
       return
     }
-    // Clear any pending timer if onsearch is removed
-    if (!onsearch) {
-      if (search_debounce_timer) clearTimeout(search_debounce_timer)
-      return
-    }
+    if (!onsearch) return // cleanup handles any pending timer
 
-    if (search_debounce_timer) clearTimeout(search_debounce_timer)
     search_debounce_timer = setTimeout(() => {
-      // Use optional chaining in case onsearch is removed while timer is pending
+      // Optional chaining in case onsearch is removed while timer is pending
       onsearch?.({
         searchText: current_search,
         matchingCount: matchingOptions.length,
@@ -766,6 +761,11 @@
       activeIndex = 0
     } else {
       const total = navigable_options.length + (has_user_msg ? 1 : 0)
+      // Guard against division by zero (can happen if options filtered away before effect resets activeIndex)
+      if (total === 0) {
+        activeIndex = null
+        return
+      }
       activeIndex = (activeIndex + direction + total) % total // +total handles negative mod
     }
 

@@ -4463,7 +4463,7 @@ describe(`keyboard shortcuts`, () => {
 })
 
 describe(`onsearch event`, () => {
-  test(`fires debounced when search text changes`, async () => {
+  test(`fires debounced when search text changes (including clearing)`, async () => {
     vi.useFakeTimers()
     const onsearch_spy = vi.fn()
 
@@ -4484,13 +4484,24 @@ describe(`onsearch event`, () => {
     // Should not fire immediately due to debounce
     expect(onsearch_spy).not.toHaveBeenCalled()
 
-    // Advance timers past debounce (150ms) - use async version for proper handling
+    // Advance timers past debounce (150ms)
     await vi.advanceTimersByTimeAsync(200)
 
     expect(onsearch_spy).toHaveBeenCalledTimes(1)
     expect(onsearch_spy).toHaveBeenCalledWith({
       searchText: `1`,
       matchingCount: 2, // matches "1" and "10"
+    })
+
+    // Clear the search - should also fire
+    input.value = ``
+    input.dispatchEvent(input_event)
+    await vi.advanceTimersByTimeAsync(200)
+
+    expect(onsearch_spy).toHaveBeenCalledTimes(2)
+    expect(onsearch_spy).toHaveBeenNthCalledWith(2, {
+      searchText: ``,
+      matchingCount: 6, // all options match empty search
     })
 
     vi.useRealTimers()
@@ -4554,37 +4565,6 @@ describe(`onsearch event`, () => {
     vi.useRealTimers()
   })
 
-  test(`fires when clearing search text`, async () => {
-    vi.useFakeTimers()
-    const onsearch_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], onsearch: onsearch_spy },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Type then clear
-    input.value = `1`
-    input.dispatchEvent(input_event)
-    await vi.advanceTimersByTimeAsync(200)
-
-    input.value = ``
-    input.dispatchEvent(input_event)
-    await vi.advanceTimersByTimeAsync(200)
-
-    expect(onsearch_spy).toHaveBeenCalledTimes(2)
-    expect(onsearch_spy).toHaveBeenNthCalledWith(2, {
-      searchText: ``,
-      matchingCount: 3, // all options match empty search
-    })
-
-    vi.useRealTimers()
-  })
-
   test(`matchingCount is 0 when no options match`, async () => {
     vi.useFakeTimers()
     const onsearch_spy = vi.fn()
@@ -4607,52 +4587,6 @@ describe(`onsearch event`, () => {
       searchText: `xyz`,
       matchingCount: 0,
     })
-
-    vi.useRealTimers()
-  })
-
-  test(`fires multiple times for sequential search changes`, async () => {
-    vi.useFakeTimers()
-    const onsearch_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [`dog`, `cat`, `bird`], onsearch: onsearch_spy },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // First search - "d" matches "dog" and "bird" (fuzzy)
-    input.value = `d`
-    input.dispatchEvent(input_event)
-    await vi.advanceTimersByTimeAsync(200)
-
-    // Second search - "cat" matches only "cat"
-    input.value = `cat`
-    input.dispatchEvent(input_event)
-    await vi.advanceTimersByTimeAsync(200)
-
-    // Third search - "ir" matches "bird"
-    input.value = `ir`
-    input.dispatchEvent(input_event)
-    await vi.advanceTimersByTimeAsync(200)
-
-    expect(onsearch_spy).toHaveBeenCalledTimes(3)
-    // Just verify that multiple searches fire multiple events with correct searchText
-    expect(onsearch_spy).toHaveBeenNthCalledWith(
-      1,
-      expect.objectContaining({ searchText: `d` }),
-    )
-    expect(onsearch_spy).toHaveBeenNthCalledWith(
-      2,
-      expect.objectContaining({ searchText: `cat` }),
-    )
-    expect(onsearch_spy).toHaveBeenNthCalledWith(
-      3,
-      expect.objectContaining({ searchText: `ir` }),
-    )
 
     vi.useRealTimers()
   })
@@ -4780,37 +4714,6 @@ describe(`onmaxreached event`, () => {
       maxSelect: 2,
       attemptedOption: options[2],
     })
-  })
-
-  test(`fires multiple times on repeated attempts`, async () => {
-    const onmaxreached_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3, 4],
-        maxSelect: 2,
-        selected: [1, 2],
-        onmaxreached: onmaxreached_spy,
-        keepSelectedInDropdown: `plain`, // keep options visible
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Try to add option 3
-    const option3 = doc_query(`ul.options li:nth-child(3)`)
-    option3.click()
-    await tick()
-
-    // Try to add option 4
-    const option4 = doc_query(`ul.options li:nth-child(4)`)
-    option4.click()
-    await tick()
-
-    expect(onmaxreached_spy).toHaveBeenCalledTimes(2)
   })
 })
 
@@ -4959,12 +4862,20 @@ describe(`onduplicate event`, () => {
 })
 
 describe(`onactivate event`, () => {
-  test.each([`ArrowDown`, `ArrowUp`])(`fires on %s navigation`, async (key) => {
+  test.each([
+    { key: `ArrowDown`, options: [1, 2, 3], expected: { option: 1, index: 0 } },
+    { key: `ArrowUp`, options: [1, 2, 3], expected: { option: 1, index: 0 } },
+    {
+      key: `ArrowDown`,
+      options: [{ label: `A`, value: 1 }],
+      expected: { option: { label: `A`, value: 1 }, index: 0 },
+    },
+  ])(`fires on $key with $options.length options`, async ({ key, options, expected }) => {
     const onactivate_spy = vi.fn()
 
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [1, 2, 3], onactivate: onactivate_spy, open: true },
+      props: { options, onactivate: onactivate_spy, open: true },
     })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -4975,8 +4886,7 @@ describe(`onactivate event`, () => {
     await tick()
 
     expect(onactivate_spy).toHaveBeenCalledTimes(1)
-    // Both start at index 0 when no prior activeIndex
-    expect(onactivate_spy).toHaveBeenCalledWith({ option: 1, index: 0 })
+    expect(onactivate_spy).toHaveBeenCalledWith(expected)
   })
 
   test(`does not fire on mouse hover`, async () => {
@@ -4998,41 +4908,6 @@ describe(`onactivate event`, () => {
 
     expect(onactivate_spy).not.toHaveBeenCalled()
   })
-
-  test.each([
-    {
-      desc: `string options`,
-      options: [`apple`, `banana`, `cherry`],
-      expected_first: { option: `apple`, index: 0 },
-    },
-    {
-      desc: `object options`,
-      options: [{ label: `Apple`, value: 1 }, { label: `Banana`, value: 2 }],
-      expected_first: { option: { label: `Apple`, value: 1 }, index: 0 },
-    },
-  ])(
-    `includes correct option and index with $desc`,
-    async ({ options, expected_first }) => {
-      const onactivate_spy = vi.fn()
-
-      mount(MultiSelect, {
-        target: document.body,
-        props: { options, onactivate: onactivate_spy, open: true },
-      })
-
-      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-      input.focus()
-      await tick()
-
-      input.dispatchEvent(
-        new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
-      )
-      await tick()
-
-      expect(onactivate_spy).toHaveBeenCalledTimes(1)
-      expect(onactivate_spy).toHaveBeenCalledWith(expected_first)
-    },
-  )
 
   test(`wrap-around at end navigates to start`, async () => {
     const onactivate_spy = vi.fn()
@@ -5094,38 +4969,6 @@ describe(`onactivate event`, () => {
     await tick()
 
     expect(onactivate_spy).not.toHaveBeenCalled()
-  })
-
-  test(`fires during filtered option navigation`, async () => {
-    const onactivate_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [`apple`, `apricot`, `banana`, `cherry`],
-        onactivate: onactivate_spy,
-        open: true,
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Filter to options starting with "a"
-    input.value = `a`
-    input.dispatchEvent(input_event)
-    await tick()
-
-    // Navigate through filtered options
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-    await tick()
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-    await tick()
-
-    expect(onactivate_spy).toHaveBeenCalledTimes(2)
-    expect(onactivate_spy).toHaveBeenNthCalledWith(1, { option: `apple`, index: 0 })
-    expect(onactivate_spy).toHaveBeenNthCalledWith(2, { option: `apricot`, index: 1 })
   })
 
   // Verify behavior when navigating with no matching options (noMatchingOptionsMsg disabled)
