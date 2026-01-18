@@ -173,8 +173,10 @@
     if (custom_label) return { label: custom_label, style: `` }
 
     if (remove_parent) text = text.split(`/`).filter(Boolean).pop() ?? text
-    const label = text.replace(/^\//, ``).replaceAll(`-`, ` `)
-    return { label, style: `text-transform: capitalize` }
+    let label = text.replace(/^\//, ``).replaceAll(`-`, ` `)
+    // Handle root path '/' which becomes empty after stripping
+    if (!label && text === `/`) label = `Home`
+    return { label, style: label ? `text-transform: capitalize` : `` }
   }
 
   // Normalize all route formats to NavRouteObject

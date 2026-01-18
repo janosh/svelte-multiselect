@@ -111,7 +111,7 @@ describe(`Nav`, () => {
     [
       `mixed routes`,
       [`/`, [`/about`, `About Page`], `/contact`] as (string | [string, string])[],
-      [``, `About Page`, `contact`],
+      [`Home`, `About Page`, `contact`],
     ],
     [`empty routes`, [], []],
     [`HTML labels`, [[`/home`, `<strong>Home</strong>`]] as [string, string][], [`Home`]],
@@ -270,7 +270,7 @@ describe(`Nav`, () => {
 
   test.each([
     [`/plot-color-bar`, `plot color bar`, undefined],
-    [`/`, ``, undefined],
+    [`/`, `Home`, undefined],
     [`/hook-up-to-api`, `Hook up to external API`, {
       '/hook-up-to-api': `Hook up to external API`,
     }],
