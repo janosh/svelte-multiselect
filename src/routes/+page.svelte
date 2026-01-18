@@ -1,9 +1,10 @@
 <script lang="ts">
+  import { heading_anchors } from '$lib'
   import Readme from '$root/readme.md'
   import { DemoNav, Examples } from '$site'
 </script>
 
-<main>
+<main {@attach heading_anchors()}>
   <Readme>
     {#snippet examples()}
       <h2>📚 &thinsp; Demos</h2>

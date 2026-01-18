@@ -21,14 +21,13 @@ function strip_svelte_expressions(str: string): string {
 }
 
 // Generate URL-friendly slug from text
-function slugify(text: string): string {
-  return text
+const slugify = (text: string): string =>
+  text
     .toLowerCase()
     .replace(/\s+/g, `-`)
     .replace(/[^\w-]/g, ``)
     .replace(/-+/g, `-`) // collapse multiple dashes
     .replace(/^-|-$/g, ``) // trim leading/trailing dashes
-}
 
 /** @type {() => import('svelte/compiler').PreprocessorGroup} */
 export function heading_ids() {
@@ -93,7 +92,7 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
   if (heading.querySelector(`a[aria-hidden="true"]`)) return
   if (!heading.id) {
     // Generate ID from text content (fallback for dynamic headings)
-    const base_id = slugify(heading.textContent ?? ``)
+    const base_id = slugify((heading.textContent ?? ``).trim())
     if (!base_id) return
     // Ensure unique ID in document
     let counter = 0

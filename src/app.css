@@ -91,7 +91,17 @@ h1 {
 h2, h3, h4, h5, h6 {
   scroll-margin-top: 60px;
 }
-/* Heading anchor links (rehype-autolink-headings) */
+/* Highlight heading on fragment navigation */
+:is(h2, h3, h4, h5, h6):target {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 25%, transparent),
+    transparent
+  );
+  border-radius: 4px;
+}
+/* Heading anchor links (heading_anchors attachment) */
 :is(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
   margin-left: 0.5em;
   opacity: 0;
