@@ -802,6 +802,30 @@ Example using several snippets:
 
    Triggers when the dropdown list of options disappears. `event` is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that triggered the close.
 
+1. ```ts
+   onsearch={({ searchText, matchingCount }) => console.log(searchText, matchingCount)}
+   ```
+
+   Triggers (debounced, 150ms) when the search text changes. Useful for analytics or loading remote options. `searchText` is the current input value, `matchingCount` is the number of options that match.
+
+1. ```ts
+   onmaxreached={({ selected, maxSelect, attemptedOption }) => console.log(attemptedOption)}
+   ```
+
+   Triggers when a user tries to select more options than `maxSelect` allows. Useful for showing feedback. Does not fire for `maxSelect=1` (which uses replace behavior).
+
+1. ```ts
+   onduplicate={({ option }) => console.log(`Duplicate:`, option)}
+   ```
+
+   Triggers when a user tries to add an already-selected option (when `duplicates=false`). Useful for showing feedback to the user.
+
+1. ```ts
+   onactivate={({ option, index }) => console.log(`Active:`, option, index)}
+   ```
+
+   Triggers during keyboard navigation (ArrowUp/ArrowDown) through options. `option` is the newly active option, `index` is its position. Does not fire on mouse hover.
+
 For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
 
 ```svelte
