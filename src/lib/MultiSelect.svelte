@@ -143,6 +143,10 @@
     ongroupToggle,
     oncollapseAll,
     onexpandAll,
+    onsearch,
+    onmaxreached,
+    onduplicate,
+    onactivate,
     collapseAllGroups = $bindable(),
     expandAllGroups = $bindable(),
     // Keyboard shortcuts for common actions
@@ -260,6 +264,30 @@
     if (last_action) {
       const timer = setTimeout(() => (last_action = null), 1000)
       return () => clearTimeout(timer)
+    }
+  })
+
+  // Debounced onsearch event - fires 150ms after search text stops changing
+  let search_debounce_timer: ReturnType<typeof setTimeout> | null = null
+  let search_initialized = false
+  $effect(() => {
+    const current_search = searchText
+    // Skip initial mount - only fire on actual user input
+    if (!search_initialized) {
+      search_initialized = true
+      return
+    }
+    if (!onsearch) return // cleanup handles any pending timer
+
+    search_debounce_timer = setTimeout(() => {
+      // Optional chaining in case onsearch is removed while timer is pending
+      onsearch?.({
+        searchText: current_search,
+        matchingCount: matchingOptions.length,
+      })
+    }, 150)
+    return () => {
+      if (search_debounce_timer) clearTimeout(search_debounce_timer)
     }
   })
 
@@ -567,6 +595,14 @@
     }
 
     const is_duplicate = selected_keys_set.has(key(option_to_add))
+    const max_reached = maxSelect !== null && maxSelect !== 1 &&
+      selected.length >= maxSelect
+    // Fire events for blocked add attempts
+    if (max_reached) {
+      onmaxreached?.({ selected, maxSelect, attemptedOption: option_to_add })
+    }
+    if (is_duplicate && !duplicates) onduplicate?.({ option: option_to_add })
+
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
       (duplicates || !is_duplicate)
@@ -725,6 +761,11 @@
       activeIndex = 0
     } else {
       const total = navigable_options.length + (has_user_msg ? 1 : 0)
+      // Guard against division by zero (can happen if options filtered away before effect resets activeIndex)
+      if (total === 0) {
+        activeIndex = null
+        return
+      }
       activeIndex = (activeIndex + direction + total) % total // +total handles negative mod
     }
 
@@ -738,6 +779,9 @@
       await tick()
       document.querySelector(`ul.options > li.active`)?.scrollIntoViewIfNeeded?.()
     }
+
+    // Fire onactivate for keyboard navigation only (not mouse hover)
+    onactivate?.({ option: activeOption, index: activeIndex })
   }
 
   // handle all keyboard events this component receives
