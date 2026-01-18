@@ -12,7 +12,10 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
 
   // Selecting an option triggers the store subscription
   await page.click(`#store-binding input[placeholder='Select colors...']`)
-  await page.click(`#store-binding ul.options >> text=Red`)
+  // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+  const dropdown = page.locator(`#store-binding ul.options`)
+  await expect(dropdown).toBeVisible()
+  await dropdown.locator(`text=Red`).click()
 
   // Verify increment stays low (would be 1000+ without fix)
   const status = page.locator(`#store-binding-status`)
@@ -196,7 +199,10 @@ test.describe(`remove single button`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.click(`#foods input[autocomplete]`)
-    await page.click(`#foods ul.options >> text=🍌 Banana`)
+    // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+    const dropdown = page.locator(`#foods ul.options`)
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator(`text=🍌 Banana`).click()
 
     await page.click(`#foods button[title='Remove 🍌 Banana']`)
 
@@ -359,7 +365,10 @@ test.describe(`accessibility`, () => {
 
   test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({ page }) => {
     await page.click(`#foods input[autocomplete]`)
-    await page.click(`#foods ul.options > li`)
+    // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+    const dropdown = page.locator(`#foods ul.options`)
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator(`li`).first().click()
     const aria_option = await page.getAttribute(
       `#foods ul.options > li`,
       `aria-selected`,
@@ -515,9 +524,12 @@ test.describe(`multiselect`, () => {
   test(`can select and remove many options`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
+    const dropdown = page.locator(`#foods ul.options`)
     for (const idx of [2, 5, 8]) {
       await page.click(`#foods input[autocomplete]`)
-      await page.click(`#foods ul.options > li >> nth=${idx}`)
+      // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+      await expect(dropdown).toBeVisible()
+      await dropdown.locator(`li >> nth=${idx}`).click()
     }
     const selected = page.locator(`#foods ul.selected`)
     for (const food of `Pear Pineapple Watermelon`.split(` `)) {
@@ -662,7 +674,10 @@ test.describe(`allowUserOptions`, () => {
 
       await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
 
-      await page.click(`#languages ul.options >> text=foobar`)
+      // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+      const dropdown = page.locator(`#languages ul.options`)
+      await expect(dropdown).toBeVisible()
+      await dropdown.locator(`text=foobar`).click()
 
       await expect(page.locator(`#languages ul.selected >> text=foobar`)).toBeVisible()
     },
@@ -694,7 +709,10 @@ test.describe(`allowUserOptions`, () => {
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
     await page.click(selector)
-    await page.click(`#languages ul.options >> text=Python`)
+    // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+    const dropdown = page.locator(`#languages ul.options`)
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator(`text=Python`).click()
 
     await page.fill(selector, `foobar`)
     await page.press(selector, `Enter`)
@@ -733,9 +751,12 @@ test.describe(`sortSelected`, () => {
   test(`default sorting is alphabetical by label`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`#default-sort input[autocomplete]`)
+    const dropdown = page.locator(`#default-sort ul.options`)
     for (const label of labels) {
-      await page.click(`#default-sort ul.options >> text=${label}`)
+      await page.click(`#default-sort input[autocomplete]`)
+      // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+      await expect(dropdown).toBeVisible()
+      await dropdown.getByText(label, { exact: true }).click()
     }
 
     await expect(page.locator(`#default-sort ul.selected`)).toHaveText(
@@ -746,9 +767,12 @@ test.describe(`sortSelected`, () => {
   test(`custom sorting`, async ({ page }) => {
     await page.goto(`/sort-selected`, { waitUntil: `networkidle` })
 
-    await page.click(`#custom-sort input[autocomplete]`)
+    const dropdown = page.locator(`#custom-sort ul.options`)
     for (const label of labels) {
-      await page.click(`#custom-sort ul.options >> text=${label}`)
+      await page.click(`#custom-sort input[autocomplete]`)
+      // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+      await expect(dropdown).toBeVisible()
+      await dropdown.getByText(label, { exact: true }).click()
     }
 
     await expect(page.locator(`#custom-sort ul.selected`)).toHaveText(
@@ -793,9 +817,12 @@ test.describe(`maxSelect`, () => {
     await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
 
     // Select maxSelect options
+    const dropdown = page.locator(`#languages ul.options`)
     for (let idx = 1; idx < max_select; idx++) {
       await page.click(`#languages input[autocomplete]`)
-      await page.click(`#languages ul.options > li >> nth=${idx}`)
+      // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+      await expect(dropdown).toBeVisible()
+      await dropdown.locator(`li >> nth=${idx}`).click()
     }
   })
 
@@ -813,7 +840,10 @@ test.describe(`maxSelect`, () => {
 
     // Try to add another option - should not work
     await page.click(`#languages input[autocomplete]`)
-    await page.click(`#languages ul.options > li >> nth=0`)
+    // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+    const dropdown = page.locator(`#languages ul.options`)
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator(`li >> nth=0`).click()
 
     // Verify selected count hasn't changed (still maxSelect)
     await expect(selected_items).toHaveCount(max_select)
