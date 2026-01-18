@@ -13,6 +13,8 @@ describe(`heading_ids preprocessor`, () => {
       [`<h6>Sixth Level</h6>`, `<h6 id="sixth-level">Sixth Level</h6>`],
       [`<h1>Title</h1>`, `<h1>Title</h1>`], // h1 unchanged
       [`<h2>Hello! World? Yes.</h2>`, `<h2 id="hello-world-yes">Hello! World? Yes.</h2>`],
+      [`<h2>✨ Styling</h2>`, `<h2 id="styling">✨ Styling</h2>`], // emoji stripped, no leading dash
+      [`<h2>🔣 Props</h2>`, `<h2 id="props">🔣 Props</h2>`], // emoji stripped
     ])(`%s → %s`, (input, expected) => {
       expect(preprocess(input).code).toBe(expected)
     })

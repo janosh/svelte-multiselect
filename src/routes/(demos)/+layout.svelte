@@ -1,13 +1,13 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { PrevNext } from '$lib'
+  import { heading_anchors, PrevNext } from '$lib'
   import type { Snippet } from 'svelte'
   import { demo_pages } from './index'
 
   let { children }: { children?: Snippet<[]> } = $props()
 </script>
 
-<main>
+<main {@attach heading_anchors()}>
   {@render children?.()}
 
   <PrevNext

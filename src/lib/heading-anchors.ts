@@ -26,6 +26,8 @@ function slugify(text: string): string {
     .toLowerCase()
     .replace(/\s+/g, `-`)
     .replace(/[^\w-]/g, ``)
+    .replace(/-+/g, `-`) // collapse multiple dashes
+    .replace(/^-|-$/g, ``) // trim leading/trailing dashes
 }
 
 /** @type {() => import('svelte/compiler').PreprocessorGroup} */
