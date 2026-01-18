@@ -27,8 +27,9 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
 
 <div class="demo-grid">
   <section class="demo-section">
-    Select options, remove them, use "Remove all", create custom options, and interact
-    with the input.
+    Select options, remove them, use "Remove all", create custom options, navigate with
+    arrow keys, and interact with the input. Try selecting 5 options and adding a 6th to
+    trigger `onmaxreached`, or selecting the same option twice to see `onduplicate`.
 
     <label style="display: block; margin-block: 1em">
       <input type="checkbox" bind:checked={allowUserOptions} />
@@ -40,7 +41,6 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
       placeholder="Select colors or type to create custom..."
       {allowUserOptions}
       createOptionMsg="Create custom color..."
-      duplicates
       maxSelect={5}
       onadd={(data) => log_event('onadd', data)}
       onremove={(data) => log_event('onremove', data)}
@@ -49,6 +49,10 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
       oncreate={(data) => log_event('oncreate', data)}
       onopen={(data) => log_event('onopen', data)}
       onclose={(data) => log_event('onclose', data)}
+      onsearch={(data) => log_event('onsearch', data)}
+      onmaxreached={(data) => log_event('onmaxreached', data)}
+      onduplicate={(data) => log_event('onduplicate', data)}
+      onactivate={(data) => log_event('onactivate', data)}
       onblur={(event) =>
       log_event('onblur', { type: event.type, target: event.target?.tagName })}
       onclick={(event) =>
@@ -160,15 +164,19 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
 
 #### Custom Events
 
-| Event         | Description                                    | Data Structure                                                          |
-| ------------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
-| `onadd`       | Fired when an option is added to selection     | `{ option: T }`                                                         |
-| `onremove`    | Fired when an option is removed from selection | `{ option: T }`                                                         |
-| `onremoveAll` | Fired when all options are removed             | `{ options: T[] }`                                                      |
-| `onchange`    | Fired for any selection change                 | `{ option?: T, options?: T[], type: 'add' \| 'remove' \| 'removeAll' }` |
-| `oncreate`    | Fired when user creates a custom option        | `{ option: T }`                                                         |
-| `onopen`      | Fired when dropdown opens                      | `{ event: Event }`                                                      |
-| `onclose`     | Fired when dropdown closes                     | `{ event: Event }`                                                      |
+| Event          | Description                                    | Data Structure                                                          |
+| -------------- | ---------------------------------------------- | ----------------------------------------------------------------------- |
+| `onadd`        | Fired when an option is added to selection     | `{ option: T }`                                                         |
+| `onremove`     | Fired when an option is removed from selection | `{ option: T }`                                                         |
+| `onremoveAll`  | Fired when all options are removed             | `{ options: T[] }`                                                      |
+| `onchange`     | Fired for any selection change                 | `{ option?: T, options?: T[], type: 'add' \| 'remove' \| 'removeAll' }` |
+| `oncreate`     | Fired when user creates a custom option        | `{ option: T }`                                                         |
+| `onopen`       | Fired when dropdown opens                      | `{ event: Event }`                                                      |
+| `onclose`      | Fired when dropdown closes                     | `{ event: Event }`                                                      |
+| `onsearch`     | Fired (debounced) when search text changes     | `{ searchText: string, matchingCount: number }`                         |
+| `onmaxreached` | Fired when user tries to exceed maxSelect      | `{ selected: T[], maxSelect: number, attemptedOption: T }`              |
+| `onduplicate`  | Fired when user tries to add duplicate         | `{ option: T }`                                                         |
+| `onactivate`   | Fired on keyboard navigation through options   | `{ option: T \| null, index: number \| null }`                          |
 
 #### Native DOM Events
 
@@ -218,3 +226,5 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
    ```
 
 1. **Custom Options**: The `oncreate` event only fires when `allowUserOptions` is enabled and users type text that doesn't match existing options.
+
+1. **New Events**: The `onsearch` event is debounced (150ms) to avoid excessive callbacks while typing. `onactivate` only fires during keyboard navigation (arrow keys), not on mouse hover. `onduplicate` only fires when `duplicates={false}` (the default).
