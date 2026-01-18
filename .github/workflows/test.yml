@@ -14,6 +14,7 @@ jobs:
     uses: janosh/workflows/.github/workflows/deno-test.yml@main
     with:
       deno-version: 2.3.7
-      test-cmd: npx vitest --run
+      node-version: '22'
+      test-cmd: NODE_OPTIONS="--experimental-strip-types" npx vitest --run
       e2e-install-cmd: npx playwright install chromium
       e2e-test-cmd: npx playwright test

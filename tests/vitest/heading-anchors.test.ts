@@ -323,10 +323,14 @@ describe(`heading_anchors attachment`, () => {
       value: undefined,
       configurable: true,
     })
-
-    expect(heading_anchors()({} as Element)).toBeUndefined()
-
-    Object.defineProperty(globalThis, `document`, { value: original, configurable: true })
+    try {
+      expect(heading_anchors()({} as Element)).toBeUndefined()
+    } finally {
+      Object.defineProperty(globalThis, `document`, {
+        value: original,
+        configurable: true,
+      })
+    }
   })
 
   describe(`edge cases`, () => {

@@ -93,13 +93,7 @@ h2, h3, h4, h5, h6 {
 }
 /* Highlight heading on fragment navigation */
 :is(h2, h3, h4, h5, h6):target {
-  background: linear-gradient(
-    90deg,
-    transparent,
-    color-mix(in srgb, var(--accent) 25%, transparent),
-    transparent
-  );
-  border-radius: 4px;
+  color: var(--accent);
 }
 /* Heading anchor links (heading_anchors attachment) */
 :is(h2, h3, h4, h5, h6) a[aria-hidden='true'] {

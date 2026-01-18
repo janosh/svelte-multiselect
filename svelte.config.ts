@@ -12,8 +12,9 @@ const defaults = {
 }
 const remarkPlugins = [[mdsvexamples, { defaults }]]
 
-/** @type {import('@sveltejs/kit').Config} */
-export default {
+import type { Config } from '@sveltejs/kit'
+
+const config: Config = {
   extensions: [`.svelte`, `.md`],
 
   compilerOptions: {
@@ -53,3 +54,5 @@ export default {
     inspector: true,
   },
 }
+
+export default config

@@ -5,6 +5,8 @@
 // 1. Start of line (for .svelte files with formatted HTML)
 // 2. After > (for mdsvex output where HTML is on single line, e.g., "</p> <h2>")
 // Avoid matching inside src={...} attributes by requiring these specific contexts
+// Note: [^>]* for attributes won't match if an attribute value contains > (e.g., data-foo="a>b")
+// This edge case is rare in practice and would require significantly more complex parsing
 const heading_regex_line_start = /^(\s*)<(h[2-6])([^>]*)>([\s\S]*?)<\/\2>/gim
 const heading_regex_after_tag = /(>)(\s*)<(h[2-6])([^>]*)>([\s\S]*?)<\/\3>/gi
 
@@ -83,7 +85,8 @@ const link_svg =
 export interface HeadingAnchorsOptions {
   // CSS selector for headings (default: 'h2, h3, h4, h5, h6')
   selector?: string
-  // Custom SVG icon (default: link icon)
+  // Custom SVG icon HTML (default: link icon)
+  // WARNING: This is assigned via innerHTML - only pass trusted/sanitized content
   icon_svg?: string
 }
 
@@ -116,19 +119,19 @@ export const heading_anchors =
     const icon_svg = options.icon_svg ?? link_svg
 
     // Process existing headings
-    for (const heading of node.querySelectorAll(selector)) {
+    for (const heading of Array.from(node.querySelectorAll(selector))) {
       add_anchor_to_heading(heading, icon_svg)
     }
 
     // Watch for new headings
     const observer = new MutationObserver((mutations) => {
       for (const { addedNodes } of mutations) {
-        for (const added of addedNodes) {
+        for (const added of Array.from(addedNodes)) {
           if (added.nodeType !== Node.ELEMENT_NODE) continue
           const el = added as Element
           if (el.matches?.(selector)) add_anchor_to_heading(el, icon_svg)
-          for (const h of el.querySelectorAll(selector)) {
-            add_anchor_to_heading(h, icon_svg)
+          for (const hdn of Array.from(el.querySelectorAll(selector))) {
+            add_anchor_to_heading(hdn, icon_svg)
           }
         }
       }
