@@ -2,9 +2,7 @@
 
 Flexible, accessible navigation with dropdown support, mobile burger menu, and keyboard navigation.
 
-## Features
-
-- 🎯 Responsive with automatic mobile burger menu (&lt; 768px)
+- 🎯 Responsive with automatic mobile burger menu (default breakpoint &lt; 768px)
 - ⌨️ Full keyboard navigation (Enter/Space/Arrows/Escape)
 - ♿ Proper ARIA attributes and focus management
 - 🎨 Customizable via CSS variables and props
@@ -22,6 +20,8 @@ Flexible, accessible navigation with dropdown support, mobile burger menu, and k
 
 <Nav {routes} {page} {link_props} />
 ```
+
+**Features shown:** Simple string routes with auto-generated labels
 
 ## Custom Labels
 
@@ -45,9 +45,11 @@ Flexible, accessible navigation with dropdown support, mobile burger menu, and k
 />
 ```
 
+**Features shown:** Override auto-generated labels via `labels` prop
+
 ## Dropdown Menus
 
-Use tuple syntax `[parent, [children...]]` for nested routes:
+Use tuple syntax `[parent, [children...]]` for nested routes. When the parent exists in children array, it becomes a clickable link. Otherwise, it's just a label.
 
 ```svelte example collapsible
 <script>
@@ -56,8 +58,8 @@ Use tuple syntax `[parent, [children...]]` for nested routes:
 
   const routes = [
     '/',
-    ['/docs', ['/docs', '/docs/api', '/docs/examples', '/docs/guides']],
-    ['/products', ['/products/item-1', '/products/item-2', '/products/item-3']],
+    ['/docs', ['/docs', '/docs/api', '/docs/guides']], // /docs is clickable (in children)
+    ['/help', ['/help/faq', '/help/support']], // /help is just a label (not in children)
     '/about',
   ]
   const link_props = { onclick: (e) => e.preventDefault() }
@@ -66,23 +68,11 @@ Use tuple syntax `[parent, [children...]]` for nested routes:
 <Nav {routes} {page} {link_props} />
 ```
 
-**Dropdown without parent page:** When the parent route doesn't exist (e.g., no `/help` page), the trigger becomes a `<span>` instead of a link:
+**Features shown:**
 
-```svelte example collapsible
-<script>
-  import { Nav } from '$lib'
-  import { page } from '$app/state'
-
-  const routes = [
-    '/',
-    ['/help', ['/help/faq', '/help/support', '/help/contact']],
-    '/about',
-  ]
-  const link_props = { onclick: (e) => e.preventDefault() }
-</script>
-
-<Nav {routes} {page} {link_props} />
-```
+- Dropdown with clickable parent (`/docs` appears in children array)
+- Dropdown with non-clickable parent (`/help` not in children array)
+- Mixed route formats (strings and tuples)
 
 ## Keyboard Navigation
 
@@ -91,9 +81,61 @@ Use tuple syntax `[parent, [children...]]` for nested routes:
 - **Arrow Down/Up**: Navigate dropdown items
 - **Escape**: Close menus
 
-## Custom Link Rendering
+## Object Route Format
 
-Use the `link` snippet to customize link rendering:
+For full control, use objects with all available properties:
+
+```svelte example collapsible
+<script>
+  import { Nav } from '$lib'
+  import { page } from '$app/state'
+
+  const routes = [
+    { href: '/', label: 'Home' },
+    { href: '/docs', children: ['/docs/api', '/docs/guides'] },
+    { href: '/pricing' },
+    { separator: true }, // standalone separator
+    { href: '/admin', disabled: 'Login required' },
+    { href: '/beta', disabled: true, separator: true }, // separator after disabled item
+    { href: '/settings', align: 'right' },
+    { href: 'https://github.com', label: 'GitHub', external: true, align: 'right' },
+  ]
+  const link_props = { onclick: (e) => e.preventDefault() }
+</script>
+
+<Nav {routes} {page} {link_props} />
+```
+
+**Features shown:**
+
+- **Custom labels**: `label: 'Home'` overrides auto-generated label
+- **Dropdowns**: `children` array creates nested menu
+- **Standalone separator**: `{ separator: true }` with no href
+- **Disabled with tooltip**: `disabled: 'Login required'` shows message on hover
+- **Disabled boolean**: `disabled: true` just grays out
+- **Separator after item**: `separator: true` on a route object
+- **Right alignment**: `align: 'right'` pushes items to the right
+- **External links**: `external: true` adds `target="_blank" rel="noopener noreferrer"`
+
+### Route Object Properties
+
+| Property    | Type                | Description                               |
+| ----------- | ------------------- | ----------------------------------------- |
+| `href`      | `string`            | Required (except separator-only). The URL |
+| `label`     | `string`            | Custom label (default: derived from href) |
+| `children`  | `string[]`          | Sub-routes for dropdown menu              |
+| `disabled`  | `boolean \| string` | Disable item; string shows as tooltip     |
+| `separator` | `boolean`           | Render visual divider after this item     |
+| `align`     | `'left' \| 'right'` | Item alignment (default: left)            |
+| `external`  | `boolean`           | Add `target="_blank" rel="noopener"`      |
+| `class`     | `string`            | Custom CSS class                          |
+| `style`     | `string`            | Custom inline styles                      |
+
+## Snippets
+
+### Custom Link Rendering
+
+Use the `link` snippet to customize how all links render:
 
 ```svelte example collapsible
 <script>
@@ -101,26 +143,25 @@ Use the `link` snippet to customize link rendering:
   import { page } from '$app/state'
 
   const routes = ['/', '/about', '/contact']
-  const link_props = { onclick: (e) => e.preventDefault() }
 </script>
 
-<Nav {routes} {page} {link_props}>
+<Nav {routes} {page}>
   {#snippet link({ href, label })}
     <a {href} onclick={(e) => e.preventDefault()}>🔗 {label}</a>
   {/snippet}
 </Nav>
 ```
 
-## Custom Children
+### Custom Children
 
-Add extra content to the nav menu:
+Add extra content to the nav menu via `children` snippet:
 
 ```svelte example collapsible
 <script>
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
-  const routes = ['/', '/about', '/contact', '/blog']
+  const routes = ['/', '/about', '/blog']
   const link_props = { onclick: (e) => e.preventDefault() }
 </script>
 
@@ -139,55 +180,14 @@ Add extra content to the nav menu:
 </Nav>
 ```
 
-## Object Route Format
+**Features shown:**
 
-For more control, use the object format with all available properties:
+- Custom button in nav
+- Access to `is_open` state (visible when burger menu is open on mobile)
 
-```svelte example collapsible
-<script>
-  import { Nav } from '$lib'
-  import { page } from '$app/state'
+### Item Snippet with Custom Properties
 
-  const routes = [
-    { href: '/', label: 'Home' },
-    {
-      href: '/docs',
-      label: 'Documentation',
-      children: ['/docs/api', '/docs/guides'],
-    },
-    { href: '/admin', label: 'Admin', disabled: 'Login required' },
-    { separator: true },
-    { href: '/settings', align: 'right' },
-    {
-      href: 'https://github.com/janosh/svelte-multiselect',
-      label: 'GitHub',
-      external: true,
-      align: 'right',
-    },
-  ]
-  const link_props = { onclick: (e) => e.preventDefault() }
-</script>
-
-<Nav {routes} {page} {link_props} />
-```
-
-### Route Object Properties
-
-| Property    | Type                | Description                               |
-| ----------- | ------------------- | ----------------------------------------- |
-| `href`      | `string`            | Required. The link URL                    |
-| `label`     | `string`            | Custom label (default: derived from href) |
-| `children`  | `string[]`          | Sub-routes for dropdown menu              |
-| `disabled`  | `boolean \| string` | Disable item; string shows as tooltip     |
-| `separator` | `boolean`           | Render visual divider after this item     |
-| `align`     | `'left' \| 'right'` | Item alignment (default: left)            |
-| `external`  | `boolean`           | Add `target="_blank" rel="noopener"`      |
-| `class`     | `string`            | Custom CSS class                          |
-| `style`     | `string`            | Custom inline styles                      |
-
-## Disabled Routes
-
-Disable routes with `disabled: true` or a tooltip message:
+Use `item` snippet for per-item customization. The `render_default` escape hatch renders the default link:
 
 ```svelte example collapsible
 <script>
@@ -195,86 +195,34 @@ Disable routes with `disabled: true` or a tooltip message:
   import { page } from '$app/state'
 
   const routes = [
-    { href: '/' },
-    { href: '/premium', disabled: true },
-    { href: '/beta', disabled: 'Coming soon!' },
-    { href: '/about' },
+    { href: '/', label: 'Home', icon: '🏠' },
+    { href: '/docs', label: 'Docs', icon: '📚' },
+    { href: '/settings', label: 'Settings', icon: '⚙️', align: 'right' },
   ]
   const link_props = { onclick: (e) => e.preventDefault() }
 </script>
 
-<Nav {routes} {page} {link_props} />
+<Nav {routes} {page} {link_props}>
+  {#snippet item({ route, render_default })}
+    <span style="display: flex; align-items: center; gap: 0.3em">
+      {#if route.icon}
+        <span>{route.icon}</span>
+      {/if}
+      {@render render_default()}
+    </span>
+  {/snippet}
+</Nav>
 ```
 
-## Separators
+**Features shown:**
 
-Add visual dividers between navigation groups:
-
-```svelte example collapsible
-<script>
-  import { Nav } from '$lib'
-  import { page } from '$app/state'
-
-  const routes = [
-    { href: '/' },
-    { href: '/docs' },
-    { separator: true },
-    { href: '/settings' },
-    { href: '/logout', separator: true },
-    { href: '/help' },
-  ]
-  const link_props = { onclick: (e) => e.preventDefault() }
-</script>
-
-<Nav {routes} {page} {link_props} />
-```
-
-## External Links
-
-Mark links as external to open in new tabs with proper security attributes:
-
-```svelte example collapsible
-<script>
-  import { Nav } from '$lib'
-  import { page } from '$app/state'
-
-  const routes = [
-    { href: '/' },
-    { href: 'https://github.com', label: 'GitHub', external: true },
-    { href: 'https://svelte.dev', label: 'Svelte Docs', external: true },
-    { href: '/about' },
-  ]
-  const link_props = { onclick: (e) => e.preventDefault() }
-</script>
-
-<Nav {routes} {page} {link_props} />
-```
-
-## Right-Aligned Items
-
-Push items to the right side of the navigation:
-
-```svelte example collapsible
-<script>
-  import { Nav } from '$lib'
-  import { page } from '$app/state'
-
-  const routes = [
-    { href: '/', label: 'Home' },
-    { href: '/docs', label: 'Docs' },
-    { href: '/about', label: 'About' },
-    { href: '/settings', align: 'right' },
-    { href: '/profile', label: '👤', align: 'right' },
-  ]
-  const link_props = { onclick: (e) => e.preventDefault() }
-</script>
-
-<Nav {routes} {page} {link_props} />
-```
+- Custom `icon` property on route objects (any extra props are allowed)
+- `render_default()` renders the standard link/span
+- Right-aligned item with icon
 
 ## Callbacks
 
-Handle navigation events with callbacks:
+Handle navigation events with `onnavigate`, `onopen`, and `onclose`:
 
 ```svelte example collapsible
 <script>
@@ -299,16 +247,21 @@ Handle navigation events with callbacks:
   {link_props}
   onnavigate={({ href }) => {
     nav_message = `Navigated to ${href}`
-    return false
+    return false // returning false prevents navigation
   }}
   onopen={() => (menu_status = 'open')}
   onclose={() => (menu_status = 'closed')}
 />
 ```
 
+**Features shown:**
+
+- `onnavigate` callback with `{ href, event, route }` - return `false` to prevent navigation
+- `onopen`/`onclose` callbacks fire when burger menu toggles (resize window to test)
+
 ## Custom Breakpoint
 
-Control when mobile menu appears with the `breakpoint` prop:
+Control when mobile burger menu appears with the `breakpoint` prop (default: 767):
 
 ```svelte
 <!-- Always show mobile menu -->
@@ -317,37 +270,8 @@ Control when mobile menu appears with the `breakpoint` prop:
 <!-- Never show mobile menu -->
 <Nav {routes} breakpoint={0} />
 
-<!-- Custom breakpoint (default: 767) -->
+<!-- Custom breakpoint -->
 <Nav {routes} breakpoint={1024} />
-```
-
-## Item Snippet
-
-Fully customize item rendering with the `item` snippet. Use `render_default` as an escape hatch to render the default item when needed:
-
-```svelte example collapsible
-<script>
-  import { Nav } from '$lib'
-  import { page } from '$app/state'
-
-  const routes = [
-    { href: '/', label: 'Home', icon: '🏠' },
-    { href: '/docs', label: 'Docs', icon: '📚' },
-    { href: '/settings', label: 'Settings', icon: '⚙️' },
-  ]
-  const link_props = { onclick: (e) => e.preventDefault() }
-</script>
-
-<Nav {routes} {page} {link_props}>
-  {#snippet item({ route, render_default })}
-    <span style="display: flex; align-items: center; gap: 0.3em">
-      {#if route.icon}
-        <span>{route.icon}</span>
-      {/if}
-      {@render render_default()}
-    </span>
-  {/snippet}
-</Nav>
 ```
 
 ## Styling
