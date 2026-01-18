@@ -15,12 +15,10 @@
   --github-corner-bg: light-dark(#222, #eee);
   --github-corner-color: light-dark(#fafafa, #1a1a1a);
 }
-
 /* Default to dark theme for docs site, respects user preference */
 html {
   color-scheme: dark light;
 }
-
 body {
   margin: 0;
   padding: clamp(1rem, 3vw, 2rem);
@@ -28,13 +26,15 @@ body {
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
+  min-height: 100vh;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
 }
-
 main {
   max-width: var(--main-max-width);
   margin: 0 auto 3em;
 }
-
 /* Links */
 a {
   color: var(--accent);
@@ -43,7 +43,6 @@ a {
 a:hover {
   color: var(--accent-hover);
 }
-
 /* Buttons */
 button,
 a.btn {
@@ -58,7 +57,6 @@ button:hover,
 a.btn:hover {
   background: light-dark(#eee, rgba(255, 255, 255, 0.15));
 }
-
 /* Code */
 code {
   padding: 0.1em 0.3em;
@@ -77,7 +75,6 @@ pre code {
   padding: 0;
   font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
 }
-
 /* Typography */
 h1 {
   display: flex;
@@ -87,11 +84,14 @@ h1 {
   font-size: clamp(1.5rem, 1.5rem + 2vw, 2.5rem);
   margin: 1em 0;
 }
-
 h2, h3, h4, h5, h6 {
   scroll-margin-top: 60px;
 }
-/* Heading anchor links (rehype-autolink-headings) */
+/* Highlight heading on fragment navigation */
+:is(h2, h3, h4, h5, h6):target {
+  color: var(--accent);
+}
+/* Heading anchor links (heading_anchors attachment) */
 :is(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
   margin-left: 0.5em;
   opacity: 0;
@@ -100,13 +100,11 @@ h2, h3, h4, h5, h6 {
 :is(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
   opacity: 1;
 }
-
 /* Labels */
 label {
   font-weight: 600;
   cursor: pointer;
 }
-
 /* Tables */
 table {
   border-collapse: collapse;
@@ -120,7 +118,6 @@ td, th {
 tbody tr:nth-child(odd) {
   background: var(--surface);
 }
-
 /* Blockquotes */
 blockquote {
   margin: 1em 0;
@@ -134,12 +131,10 @@ blockquote > :first-child {
 blockquote > :last-child {
   margin-bottom: 0;
 }
-
 /* Form validation */
 div.multiselect.invalid {
   border-color: red !important;
 }
-
 /* Icon sizing for <svg><use href="#icon"></use></svg> */
 svg:has(use:only-child) {
   width: 1em;

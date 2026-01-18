@@ -12,7 +12,7 @@
 
   const emojis = [`🥳`, `🎉`, `✨`]
 
-  let confetti: { emoji: string; x: number; y: number; r: number }[] = $state(
+  let confetti: { emoji: string; x: number; y: number; r: number }[] = $derived(
     Array(n_items)
       .fill(0)
       .map((_, idx) => ({
