@@ -287,7 +287,17 @@
     {onkeydown}
     {...menu_props}
   >
-    {#each routes as route, route_idx (`${route_idx}-${JSON.stringify(route)}`)}
+    {#each routes as
+      route,
+      route_idx
+      (`${route_idx}-${
+        typeof route === `string`
+          ? route
+          : Array.isArray(route)
+          ? route[0]
+          : route.href ?? ``
+      }`)
+    }
       {@const parsed_route = parse_route(route)}
       {@const formatted = format_label(parsed_route.label ?? parsed_route.href)}
       {@const sub_routes = parsed_route.children}

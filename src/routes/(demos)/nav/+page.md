@@ -119,17 +119,17 @@ For full control, use objects with all available properties:
 
 ### Route Object Properties
 
-| Property    | Type                | Description                               |
-| ----------- | ------------------- | ----------------------------------------- |
-| `href`      | `string`            | Required (except separator-only). The URL |
-| `label`     | `string`            | Custom label (default: derived from href) |
-| `children`  | `string[]`          | Sub-routes for dropdown menu              |
-| `disabled`  | `boolean \| string` | Disable item; string shows as tooltip     |
-| `separator` | `boolean`           | Render visual divider after this item     |
-| `align`     | `'left' \| 'right'` | Item alignment (default: left)            |
-| `external`  | `boolean`           | Add `target="_blank" rel="noopener"`      |
-| `class`     | `string`            | Custom CSS class                          |
-| `style`     | `string`            | Custom inline styles                      |
+| Property    | Type                | Description                                     |
+| ----------- | ------------------- | ----------------------------------------------- |
+| `href`      | `string`            | Required (except separator-only). The URL       |
+| `label`     | `string`            | Custom label (default: derived from href)       |
+| `children`  | `string[]`          | Sub-routes for dropdown menu                    |
+| `disabled`  | `boolean \| string` | Disable item; string shows as tooltip           |
+| `separator` | `boolean`           | Render visual divider after this item           |
+| `align`     | `'left' \| 'right'` | Item alignment (default: left)                  |
+| `external`  | `boolean`           | Add `target="_blank" rel="noopener noreferrer"` |
+| `class`     | `string`            | Custom CSS class                                |
+| `style`     | `string`            | Custom inline styles                            |
 
 ## Snippets
 
