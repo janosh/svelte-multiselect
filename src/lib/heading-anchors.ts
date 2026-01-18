@@ -11,12 +11,13 @@ const heading_regex_line_start = /^(\s*)<(h[2-6])([^>]*)>([\s\S]*?)<\/\2>/gim
 const heading_regex_after_tag = /(>)(\s*)<(h[2-6])([^>]*)>([\s\S]*?)<\/\3>/gi
 
 // Remove Svelte expressions handling nested braces (e.g., {fn({a: 1})})
+// Treats unmatched } as literal text to avoid dropping content
 function strip_svelte_expressions(str: string): string {
   let result = ``
   let depth = 0
   for (const char of str) {
     if (char === `{`) depth++
-    else if (char === `}`) depth--
+    else if (char === `}` && depth > 0) depth--
     else if (depth === 0) result += char
   }
   return result

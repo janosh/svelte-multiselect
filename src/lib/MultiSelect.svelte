@@ -443,15 +443,17 @@
     return items
   }
 
-  if (!loadOptions && !((options?.length ?? 0) > 0)) {
-    if (allowUserOptions || loading || disabled || allowEmpty) {
-      options = [] // initializing as array avoids errors when component mounts
-    } else {
-      // error on empty options if user is not allowed to create custom options and loading is false
-      // and component is not disabled and allowEmpty is false
-      console.error(`MultiSelect: received no options`)
+  untrack(() => {
+    if (!loadOptions && !((options?.length ?? 0) > 0)) {
+      if (allowUserOptions || loading || disabled || allowEmpty) {
+        options = [] // initializing as array avoids errors when component mounts
+      } else {
+        // error on empty options if user is not allowed to create custom options and loading is false
+        // and component is not disabled and allowEmpty is false
+        console.error(`MultiSelect: received no options`)
+      }
     }
-  }
+  })
   if (maxSelect !== null && maxSelect < 1) {
     console.error(
       `MultiSelect: maxSelect must be null or positive integer, got ${maxSelect}`,
@@ -462,36 +464,38 @@
       `MultiSelect: selected prop should always be an array, got ${selected}`,
     )
   }
-  if (maxSelect && typeof required === `number` && required > maxSelect) {
-    console.error(
-      `MultiSelect: maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
-    )
-  }
-  if (parseLabelsAsHtml && allowUserOptions) {
-    console.warn(
-      `MultiSelect: don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
-    )
-  }
-  if (sortSelected && selectedOptionsDraggable) {
-    console.warn(
-      `MultiSelect: sortSelected and selectedOptionsDraggable should not be combined as any ` +
-        `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
-    )
-  }
-  if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
-    console.error(
-      `MultiSelect: allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
-        `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
-    )
-  }
-  if (
-    maxOptions &&
-    (typeof maxOptions != `number` || maxOptions < 0 || maxOptions % 1 != 0)
-  ) {
-    console.error(
-      `MultiSelect: maxOptions must be undefined or a positive integer, got ${maxOptions}`,
-    )
-  }
+  $effect(() => {
+    if (maxSelect && typeof required === `number` && required > maxSelect) {
+      console.error(
+        `MultiSelect: maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
+      )
+    }
+    if (parseLabelsAsHtml && allowUserOptions) {
+      console.warn(
+        `MultiSelect: don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
+      )
+    }
+    if (sortSelected && selectedOptionsDraggable) {
+      console.warn(
+        `MultiSelect: sortSelected and selectedOptionsDraggable should not be combined as any ` +
+          `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
+      )
+    }
+    if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
+      console.error(
+        `MultiSelect: allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+          `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
+      )
+    }
+    if (
+      maxOptions &&
+      (typeof maxOptions != `number` || maxOptions < 0 || maxOptions % 1 != 0)
+    ) {
+      console.error(
+        `MultiSelect: maxOptions must be undefined or a positive integer, got ${maxOptions}`,
+      )
+    }
+  })
 
   let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
   let window_width = $state(0)
