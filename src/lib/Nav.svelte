@@ -542,6 +542,11 @@
     align-items: center;
     justify-content: center;
     border-radius: 0 var(--nav-border-radius) var(--nav-border-radius) 0;
+    outline-offset: -1px;
+  }
+  .dropdown > div:first-child > button:focus-visible {
+    outline: 2px solid currentColor;
+    outline-offset: -2px;
   }
   .dropdown > div:last-child {
     position: absolute;
