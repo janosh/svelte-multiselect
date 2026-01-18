@@ -19,7 +19,7 @@ describe(`heading_ids preprocessor`, () => {
         `<h2>Multi\nLine\nContent</h2>`,
         `<h2 id="multi-line-content">Multi\nLine\nContent</h2>`,
       ],
-    ])(`%s → %s`, (input, expected) => {
+    ])(`%s → %s`, (input: string, expected: string) => {
       expect(preprocess(input).code).toBe(expected)
     })
   })
@@ -31,7 +31,7 @@ describe(`heading_ids preprocessor`, () => {
       [`<h2 id="">Empty ID</h2>`],
       [`<h2  id="with-space" >Test</h2>`],
       [`<h2 class="test" id="existing" data-foo="bar">Text</h2>`],
-    ])(`preserves: %s`, (input) => {
+    ])(`preserves: %s`, (input: string) => {
       expect(preprocess(input).code).toBe(input)
     })
   })
@@ -49,7 +49,7 @@ describe(`heading_ids preprocessor`, () => {
         `<h2 on:click={handler}>Clickable</h2>`,
         `<h2 id="clickable" on:click={handler}>Clickable</h2>`,
       ],
-    ])(`%s → %s`, (input, expected) => {
+    ])(`%s → %s`, (input: string, expected: string) => {
       expect(preprocess(input).code).toBe(expected)
     })
   })
@@ -75,11 +75,12 @@ describe(`heading_ids preprocessor`, () => {
         `<h2>Result {fn({a: {b: {c: 1}}})}</h2>`,
         `<h2 id="result">Result {fn({a: {b: {c: 1}}})}</h2>`,
       ],
-      // unmatched } should be treated as literal text
+      // unmatched } treated as literal (not dropped) to avoid losing content when depth would go negative
       [`<h2>Price: $100}</h2>`, `<h2 id="price-100">Price: $100}</h2>`],
-      [`<h2>}{test}</h2>`, `<h2>}{test}</h2>`], // } preserved but slugifies to empty
-      [`<h2>a } b</h2>`, `<h2 id="a-b">a } b</h2>`],
-    ])(`%s → %s`, (input, expected) => {
+      // leading } preserved in text, but after stripping {test} only } remains which slugifies to empty → no id added
+      [`<h2>}{test}</h2>`, `<h2>}{test}</h2>`],
+      [`<h2>a } b</h2>`, `<h2 id="a-b">a } b</h2>`], // } kept in text, stripped by slugify
+    ])(`%s → %s`, (input: string, expected: string) => {
       expect(preprocess(input).code).toBe(expected)
     })
   })
@@ -90,7 +91,7 @@ describe(`heading_ids preprocessor`, () => {
       [`<h2>   </h2>`],
       [`<h2></h2>`],
       [`<h2><span></span></h2>`],
-    ])(`unchanged: %s`, (input) => {
+    ])(`unchanged: %s`, (input: string) => {
       expect(preprocess(input).code).toBe(input)
     })
   })
@@ -103,7 +104,7 @@ describe(`heading_ids preprocessor`, () => {
         `</p><h2>First</h2></section><h3>Second</h3>`,
         `</p><h2 id="first">First</h2></section><h3 id="second">Second</h3>`,
       ],
-    ])(`%s → %s`, (input, expected) => {
+    ])(`%s → %s`, (input: string, expected: string) => {
       expect(preprocess(input).code).toBe(expected)
     })
   })
@@ -122,7 +123,7 @@ describe(`heading_ids preprocessor`, () => {
         `<h2>Using <code>someFunction</code></h2>`,
         `<h2 id="using-somefunction">Using <code>someFunction</code></h2>`,
       ],
-    ])(`%s → %s`, (input, expected) => {
+    ])(`%s → %s`, (input: string, expected: string) => {
       expect(preprocess(input).code).toBe(expected)
     })
   })
@@ -149,7 +150,7 @@ describe(`heading_anchors attachment`, () => {
   })
 
   describe(`adds anchors to headings`, () => {
-    it.each([`h2`, `h3`, `h4`, `h5`, `h6`])(`adds anchor to %s`, (tag) => {
+    it.each([`h2`, `h3`, `h4`, `h5`, `h6`])(`adds anchor to %s`, (tag: string) => {
       const container = create_container(`<${tag} id="test">Content</${tag}>`)
       heading_anchors()(container)
       const anchor = container.querySelector(`${tag} ${anchor_selector}`)
@@ -172,7 +173,7 @@ describe(`heading_anchors attachment`, () => {
       [`<h2>Generated ID</h2>`, `generated-id`],
       [`<h2>Hello! World?</h2>`, `hello-world`],
       [`<h2>Same</h2><h3>Same</h3>`, `same`, `same-1`], // tests unique ID generation
-    ])(`%s → id includes "%s"`, (html, ...expected_ids) => {
+    ])(`%s → id includes "%s"`, (html: string, ...expected_ids: string[]) => {
       const container = create_container(html)
       heading_anchors()(container)
       const ids = Array.from(container.querySelectorAll(`h2, h3`)).map((el) => el.id)
@@ -198,13 +199,16 @@ describe(`heading_anchors attachment`, () => {
         d.innerHTML = `<h3 id="nest">X</h3>`
         c.appendChild(d)
       }],
-    ])(`adds anchors to %s dynamically inserted headings`, async (_desc, insert_fn) => {
-      const container = create_container()
-      heading_anchors()(container)
-      insert_fn(container)
-      await tick()
-      expect(container.querySelector(anchor_selector)).toBeTruthy()
-    })
+    ])(
+      `adds anchors to %s dynamically inserted headings`,
+      async (_desc: string, insert_fn: (c: Element) => void) => {
+        const container = create_container()
+        heading_anchors()(container)
+        insert_fn(container)
+        await tick()
+        expect(container.querySelector(anchor_selector)).toBeTruthy()
+      },
+    )
   })
 
   describe(`cleanup function`, () => {
@@ -296,7 +300,7 @@ describe(`heading_anchors attachment`, () => {
         `<div><section><article><h2 id="deep">Deep</h2></article></section></div>`,
         `#deep`,
       ],
-    ])(`%s`, (_desc, html, expected_href) => {
+    ])(`%s`, (_desc: string, html: string, expected_href: string) => {
       const container = create_container(html)
       heading_anchors()(container)
       expect(container.querySelector(anchor_selector)?.getAttribute(`href`)).toBe(

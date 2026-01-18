@@ -86,8 +86,10 @@ const link_svg =
 export interface HeadingAnchorsOptions {
   // CSS selector for headings (default: 'h2, h3, h4, h5, h6')
   selector?: string
-  // Custom SVG icon HTML (default: link icon)
-  // WARNING: This is assigned via innerHTML - only pass trusted/sanitized content
+  // Custom SVG icon HTML string (default: link icon)
+  // WARNING: Assigned via innerHTML - only pass trusted/sanitized content
+  // For untrusted input, sanitize first or use DOMParser:
+  // new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement
   icon_svg?: string
 }
 
