@@ -108,7 +108,7 @@
     transition-duration: var(--code-example-pre-transition-duration, 0.3s);
     border-radius: var(--code-example-pre-border-radius, 4pt);
     background-color: var(--code-example-pre-bg, var(--pre-bg));
-    padding: var(--code-example-pre-padding, 1em);
+    padding: var(--code-example-pre-padding, 1ex 1em);
   }
   pre.open {
     visibility: visible;
