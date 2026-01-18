@@ -987,7 +987,7 @@ This simplified version of the DOM structure of the component shows where these 
 
 ### With global CSS
 
-Odd as it may seem, you get the most fine-grained control over the styling of every part of this component by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component is in its `open` state. See also [simplified DOM structure](#--styling).
+Odd as it may seem, you get the most fine-grained control over the styling of every part of this component by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component is in its `open` state. See also [simplified DOM structure](#styling).
 
 ```css
 :global(div.multiselect) {

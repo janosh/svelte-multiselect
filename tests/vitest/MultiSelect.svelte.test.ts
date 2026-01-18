@@ -401,13 +401,14 @@ test.each([
   [1, 1, 0],
   [2, 1, 1],
   [1, 2, 0],
-])(`console error if required > maxSelect`, (required, maxSelect, expected) => {
+])(`console error if required > maxSelect`, async (required, maxSelect, expected) => {
   console.error = vi.fn()
 
   mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], required, maxSelect },
   })
+  await tick() // wait for $effect to run
 
   expect(console.error).toHaveBeenCalledTimes(expected)
   if (expected > 0) {
@@ -1504,7 +1505,7 @@ test(`drag-drop reordering fires onreorder and onchange events`, async () => {
 
 test.each([[true], [false]])(
   `console warning when combining sortSelected=%s and selectedOptionsDraggable`,
-  (sortSelected) => {
+  async (sortSelected) => {
     console.warn = vi.fn()
 
     mount(MultiSelect, {
@@ -1515,6 +1516,7 @@ test.each([[true], [false]])(
         selectedOptionsDraggable: true,
       },
     })
+    await tick() // wait for $effect to run
 
     if (sortSelected) {
       expect(console.warn).toHaveBeenCalledTimes(1)
@@ -1531,13 +1533,14 @@ test.each([[true], [false]])(
 describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
   test.each([[`create option`], [``], [null]])(
     `console.error when allowUserOptions is truthy but createOptionMsg is falsy`,
-    (createOptionMsg) => {
+    async (createOptionMsg) => {
       console.error = vi.fn()
 
       mount(MultiSelect, {
         target: document.body,
         props: { options: [1, 2, 3], createOptionMsg, allowUserOptions },
       })
+      await tick() // wait for $effect to run
 
       if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
         expect(console.error).toHaveBeenCalledTimes(1)
@@ -2219,13 +2222,14 @@ test.each([[0], [1], [2], [5], [undefined]])(
 
 test.each([[true], [-1], [3.5], [`foo`], [{}]])(
   `console.error when maxOptions=%s is not a positive integer or undefined`,
-  (maxOptions) => {
+  async (maxOptions) => {
     console.error = vi.fn()
 
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], maxOptions: maxOptions as number },
     })
+    await tick() // wait for $effect to run
 
     expect(console.error).toHaveBeenCalledTimes(1)
     expect(console.error).toHaveBeenCalledWith(
