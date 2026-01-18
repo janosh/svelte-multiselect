@@ -295,7 +295,7 @@
           ? route
           : Array.isArray(route)
           ? route[0]
-          : route.href ?? ``
+          : route.href ?? `sep-${route_idx}`
       }`)
     }
       {@const parsed_route = parse_route(route)}

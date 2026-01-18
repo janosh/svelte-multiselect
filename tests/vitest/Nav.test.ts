@@ -131,16 +131,17 @@ describe(`Nav`, () => {
   })
 
   test.each([
+    // String routes
     [`/about`, `/about`, `page`],
     [`/about/team`, `/about`, `page`],
     [`/contact`, `/about`, null],
     [`/`, `/`, `page`],
     [`/home`, `/`, null],
-    // Test fix for partial path matching bug
-    [`/some-page-v2`, `/some-page`, null], // should NOT match (v2 should not match base)
-    [`/some-page-v2`, `/some-page-v2`, `page`], // should match (exact)
-    [`/some-page`, `/some-page-v2`, null], // should NOT match (base should not match v2)
-    [`/some-page/sub`, `/some-page`, `page`], // should match (sub-path)
+    // Partial path matching edge cases
+    [`/some-page-v2`, `/some-page`, null],
+    [`/some-page-v2`, `/some-page-v2`, `page`],
+    [`/some-page`, `/some-page-v2`, null],
+    [`/some-page/sub`, `/some-page`, `page`],
   ])(`aria-current: pathname=%s link=%s -> %s`, (pathname, link_href, expected) => {
     const mock_page = { url: { pathname } } as Page
     mount(Nav, { target: document.body, props: { routes: [link_href], page: mock_page } })
@@ -282,46 +283,36 @@ describe(`Nav`, () => {
     expect(link.getAttribute(`style`)).toBe(labels ? `` : `text-transform: capitalize;`)
   })
 
-  test(`dropdown trigger is not a link when parent page does not exist`, () => {
-    mount(Nav, {
-      target: document.body,
-      props: { routes: [[`/how-to`, [`/how-to/guide-1`, `/how-to/guide-2`]]] },
-    })
-
+  test.each<[string, NavRoute[], string, string | null, string, string[]]>([
+    // [description, routes, expected trigger tag, expected href, expected label, expected children]
+    [
+      `not a link when parent page does not exist`,
+      [[`/how-to`, [`/how-to/guide-1`, `/how-to/guide-2`]]],
+      `SPAN`,
+      null,
+      `how to`,
+      [`/how-to/guide-1`, `/how-to/guide-2`],
+    ],
+    [
+      `a link when parent page exists`,
+      [[`/docs`, [`/docs`, `/docs/intro`, `/docs/api`]]],
+      `A`,
+      `/docs`,
+      `docs`,
+      [`/docs/intro`, `/docs/api`],
+    ],
+  ])(`dropdown trigger is %s`, (_desc, routes, tag, href, label, children) => {
+    mount(Nav, { target: document.body, props: { routes } })
     const dropdown = doc_query(`.dropdown`)
-    // When parent page doesn't exist, trigger is a span (not a link)
-    const dropdown_trigger = dropdown.querySelector(`div:first-child > span`)
-    expect(dropdown_trigger).not.toBeNull()
-    expect(dropdown_trigger?.tagName).toBe(`SPAN`)
-    expect(dropdown_trigger?.getAttribute(`href`)).toBeNull()
-    expect(dropdown_trigger?.textContent?.trim()).toBe(`how to`)
-
-    const dropdown_menu = dropdown.querySelector(`div:last-child`)
-    const dropdown_menu_links = Array.from(
-      dropdown_menu?.querySelectorAll(`a`) ?? [],
+    const selector = tag === `A` ? `div:first-child > a` : `div:first-child > span`
+    const trigger = dropdown.querySelector(selector)
+    expect(trigger?.tagName).toBe(tag)
+    expect(trigger?.getAttribute(`href`)).toBe(href)
+    expect(trigger?.textContent?.trim()).toBe(label)
+    const menu_links = Array.from(
+      dropdown.querySelector(`div:last-child`)?.querySelectorAll(`a`) ?? [],
     ).map((link) => link.getAttribute(`href`))
-    expect(dropdown_menu_links).toEqual([`/how-to/guide-1`, `/how-to/guide-2`])
-  })
-
-  test(`dropdown trigger is a link when parent page exists`, () => {
-    mount(Nav, {
-      target: document.body,
-      props: { routes: [[`/docs`, [`/docs`, `/docs/intro`, `/docs/api`]]] },
-    })
-
-    const dropdown = doc_query(`.dropdown`)
-    // When parent page exists, trigger is a link
-    const dropdown_trigger = dropdown.querySelector(`div:first-child > a`)
-    expect(dropdown_trigger).not.toBeNull()
-    expect(dropdown_trigger?.tagName).toBe(`A`)
-    expect(dropdown_trigger?.getAttribute(`href`)).toBe(`/docs`)
-    expect(dropdown_trigger?.textContent?.trim()).toBe(`docs`)
-
-    const dropdown_menu = dropdown.querySelector(`div:last-child`)
-    const dropdown_menu_links = Array.from(
-      dropdown_menu?.querySelectorAll(`a`) ?? [],
-    ).map((link) => link.getAttribute(`href`))
-    expect(dropdown_menu_links).toEqual([`/docs/intro`, `/docs/api`])
+    expect(menu_links).toEqual(children)
   })
 
   test(`dropdown accessibility and state management`, async () => {
@@ -545,28 +536,12 @@ describe(`Nav`, () => {
     })
 
     test(`applies align-right class for right-aligned items`, () => {
-      const routes: NavRoute[] = [
-        { href: `/home` },
-        { href: `/settings`, align: `right` },
-      ]
+      const routes: NavRoute[] = [{ href: `/home` }, {
+        href: `/settings`,
+        align: `right`,
+      }]
       mount(Nav, { target: document.body, props: { routes } })
-
-      const right_items = document.querySelectorAll(`.align-right`)
-      expect(right_items).toHaveLength(1)
-    })
-
-    test(`adds external link attributes`, () => {
-      const routes: NavRoute[] = [
-        { href: `/internal` },
-        { href: `https://example.com`, external: true },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-
-      const links = document.querySelectorAll(`a`)
-      expect(links[0].getAttribute(`target`)).toBeNull()
-      expect(links[0].getAttribute(`rel`)).toBeNull()
-      expect(links[1].getAttribute(`target`)).toBe(`_blank`)
-      expect(links[1].getAttribute(`rel`)).toBe(`noopener noreferrer`)
+      expect(document.querySelectorAll(`.align-right`)).toHaveLength(1)
     })
 
     test(`applies custom class and style from route object`, () => {
@@ -629,26 +604,15 @@ describe(`Nav`, () => {
 
     test(`clicking disabled item does not trigger onnavigate`, async () => {
       const on_navigate = vi.fn()
-      mount(Nav, {
-        target: document.body,
-        props: {
-          routes: [{ href: `/disabled`, disabled: true }],
-          onnavigate: on_navigate,
-        },
-      })
-      await click(doc_query(`.disabled`))
-      expect(on_navigate).not.toHaveBeenCalled()
-    })
-
-    test(`mixed enabled/disabled items`, () => {
       const routes: NavRoute[] = [
         { href: `/home` },
-        { href: `/disabled1`, disabled: true },
-        { href: `/about` },
+        { href: `/disabled`, disabled: true },
         { href: `/disabled2`, disabled: `Coming soon` },
       ]
-      mount(Nav, { target: document.body, props: { routes } })
-      expect(document.querySelectorAll(`a`)).toHaveLength(2)
+      mount(Nav, { target: document.body, props: { routes, onnavigate: on_navigate } })
+      await click(doc_query(`.disabled`))
+      expect(on_navigate).not.toHaveBeenCalled()
+      expect(document.querySelectorAll(`a`)).toHaveLength(1)
       expect(document.querySelectorAll(`.disabled`)).toHaveLength(2)
     })
 
@@ -721,20 +685,10 @@ describe(`Nav`, () => {
   })
 
   describe(`external links`, () => {
-    test(`external links have target=_blank and rel=noopener`, () => {
+    test(`external links have target=_blank and rel=noopener noreferrer`, () => {
       const routes: NavRoute[] = [
+        { href: `/internal` },
         { href: `https://github.com`, external: true },
-        { href: `https://twitter.com`, external: true, label: `Twitter` },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      document.querySelectorAll(`a`).forEach((link) => {
-        expect(link.getAttribute(`target`)).toBe(`_blank`)
-        expect(link.getAttribute(`rel`)).toBe(`noopener noreferrer`)
-      })
-    })
-
-    test(`external link with custom class, style, and label`, () => {
-      const routes: NavRoute[] = [
         {
           href: `https://example.com`,
           external: true,
@@ -744,23 +698,17 @@ describe(`Nav`, () => {
         },
       ]
       mount(Nav, { target: document.body, props: { routes } })
-      const link = doc_query(`a`)
-      expect(link.textContent?.trim()).toBe(`Link`)
-      expect(link.classList.contains(`ext`)).toBe(true)
-      expect(link.getAttribute(`style`)).toContain(`color: blue`)
-    })
-
-    test(`mixed internal and external links`, () => {
-      const routes: NavRoute[] = [
-        { href: `/home` },
-        { href: `https://docs.example.com`, external: true },
-        { href: `/about` },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
       const links = document.querySelectorAll(`a`)
+      // Internal link has no target/rel
       expect(links[0].getAttribute(`target`)).toBeNull()
+      expect(links[0].getAttribute(`rel`)).toBeNull()
+      // External links have correct attributes
       expect(links[1].getAttribute(`target`)).toBe(`_blank`)
-      expect(links[2].getAttribute(`target`)).toBeNull()
+      expect(links[1].getAttribute(`rel`)).toBe(`noopener noreferrer`)
+      // External with custom props
+      expect(links[2].textContent?.trim()).toBe(`Link`)
+      expect(links[2].classList.contains(`ext`)).toBe(true)
+      expect(links[2].getAttribute(`style`)).toContain(`color: blue`)
     })
 
     test(`external link triggers onnavigate callback`, async () => {
@@ -779,39 +727,23 @@ describe(`Nav`, () => {
     })
   })
 
-  describe(`right-aligned items`, () => {
-    test(`multiple right-aligned items`, () => {
-      const routes: NavRoute[] = [
-        { href: `/home` },
-        { href: `/settings`, align: `right` },
-        { href: `/profile`, align: `right` },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      expect(document.querySelectorAll(`.align-right`)).toHaveLength(2)
-    })
-
-    test(`right-aligned dropdown`, () => {
-      const routes: NavRoute[] = [
-        { href: `/user`, children: [`/user/profile`], align: `right` },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      expect(doc_query(`.dropdown`).classList.contains(`align-right`)).toBe(true)
-    })
-
-    test(`right-aligned item with class and style`, () => {
-      const routes: NavRoute[] = [
-        {
-          href: `/settings`,
-          align: `right`,
-          class: `settings-link`,
-          style: `font-weight: bold`,
-        },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      const link = doc_query(`.align-right a`)
-      expect(link.classList.contains(`settings-link`)).toBe(true)
-      expect(link.getAttribute(`style`)).toContain(`font-weight: bold`)
-    })
+  test(`right-aligned items and dropdowns`, () => {
+    const routes: NavRoute[] = [
+      { href: `/home` },
+      {
+        href: `/settings`,
+        align: `right`,
+        class: `settings-link`,
+        style: `font-weight: bold`,
+      },
+      { href: `/user`, children: [`/user/profile`], align: `right` },
+    ]
+    mount(Nav, { target: document.body, props: { routes } })
+    expect(document.querySelectorAll(`.align-right`)).toHaveLength(2)
+    expect(doc_query(`.dropdown`).classList.contains(`align-right`)).toBe(true)
+    const link = doc_query(`.align-right a`)
+    expect(link.classList.contains(`settings-link`)).toBe(true)
+    expect(link.getAttribute(`style`)).toContain(`font-weight: bold`)
   })
 
   describe(`custom route properties`, () => {
@@ -948,98 +880,72 @@ describe(`Nav`, () => {
     )
   })
 
-  describe(`mixed route formats`, () => {
-    test(`handles all route formats together`, () => {
-      const routes: NavRoute[] = [
-        `/simple`,
-        [`/tuple`, `Tuple Label`],
-        [`/dropdown`, [`/dropdown/a`, `/dropdown/b`]],
-        { href: `/object`, label: `Object Label` },
-        { href: `/disabled`, disabled: true },
-        { href: `/external`, external: true },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      expect(document.querySelectorAll(`a`)).toHaveLength(6)
-      expect(document.querySelectorAll(`.disabled`)).toHaveLength(1)
-      expect(doc_query(`.dropdown`)).toBeTruthy()
-    })
-
-    test(`complex navigation with all features`, () => {
-      const routes: NavRoute[] = [
-        { href: `/`, label: `Home` },
-        { separator: true } as NavRoute,
-        [`/docs`, [`/docs`, `/docs/api`]],
-        { href: `/admin`, disabled: `Login required` },
-        { href: `/settings`, align: `right` },
-        { href: `https://github.com`, external: true, align: `right` },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      expect(document.querySelectorAll(`.separator`)).toHaveLength(1)
-      expect(document.querySelectorAll(`.disabled`)).toHaveLength(1)
-      expect(document.querySelectorAll(`.align-right`)).toHaveLength(2)
-      expect(doc_query(`.dropdown`)).toBeTruthy()
-    })
-
-    test(`route order preserved and empty routes render nothing`, () => {
-      mount(Nav, {
-        target: document.body,
-        props: { routes: [{ href: `/a` }, { href: `/b` }] },
-      })
-      const links = document.querySelectorAll(`a`)
-      expect(links[0].getAttribute(`href`)).toBe(`/a`)
-      expect(links[1].getAttribute(`href`)).toBe(`/b`)
-    })
+  test(`handles all route formats together with all features`, () => {
+    const routes: NavRoute[] = [
+      `/simple`,
+      [`/tuple`, `Tuple Label`],
+      { separator: true } as NavRoute,
+      [`/docs`, [`/docs`, `/docs/api`]],
+      { href: `/object`, label: `Object Label` },
+      { href: `/disabled`, disabled: `Login required` },
+      { href: `/settings`, align: `right` },
+      { href: `https://github.com`, external: true, align: `right` },
+    ]
+    mount(Nav, { target: document.body, props: { routes } })
+    const links = document.querySelectorAll(`a`)
+    expect(links).toHaveLength(7)
+    expect(links[0].getAttribute(`href`)).toBe(`/simple`) // route order preserved
+    expect(document.querySelectorAll(`.separator`)).toHaveLength(1)
+    expect(document.querySelectorAll(`.disabled`)).toHaveLength(1)
+    expect(document.querySelectorAll(`.align-right`)).toHaveLength(2)
+    expect(doc_query(`.dropdown`)).toBeTruthy()
   })
 
-  describe(`dropdown with object format`, () => {
-    test.each([
-      [
-        `label`,
-        { href: `/docs`, label: `Documentation`, children: [`/docs/intro`] },
-        `Documentation`,
-      ],
-      [
-        `custom class`,
-        { href: `/menu`, children: [`/menu/a`], class: `custom-dropdown` },
-        `menu`,
-      ],
-    ])(`dropdown with %s`, (_desc, route, expected_text) => {
-      mount(Nav, { target: document.body, props: { routes: [route as NavRoute] } })
-      const trigger = doc_query(`.dropdown span`)
-      expect(trigger.textContent?.trim()).toBe(expected_text)
-      if (`class` in route) {
-        expect(trigger.classList.contains(route.class as string)).toBe(true)
-      }
-    })
-
-    test(`dropdown with align right and separator`, () => {
-      const routes: NavRoute[] = [
-        { href: `/user`, children: [`/user/profile`], align: `right`, separator: true },
-        { href: `/other` },
-      ]
-      mount(Nav, { target: document.body, props: { routes } })
-      expect(doc_query(`.dropdown`).classList.contains(`align-right`)).toBe(true)
-      expect(document.querySelectorAll(`.separator`)).toHaveLength(1)
-    })
-  })
-
-  describe(`aria-current with object routes`, () => {
-    test.each([
-      [{ href: `/about` }, `/about`, `page`],
-      [{ href: `/about`, label: `About Us` }, `/about`, `page`],
-      [{ href: `/contact` }, `/about`, null],
-      [{ href: `/`, label: `Home` }, `/`, `page`],
-    ])(
-      `aria-current with object route %o on pathname %s -> %s`,
-      (route, pathname, expected) => {
-        const mock_page = { url: { pathname } } as Page
-        mount(Nav, {
-          target: document.body,
-          props: { routes: [route as NavRoute], page: mock_page },
-        })
-        const link = doc_query(`a[href="${route.href}"]`)
-        expect(link.getAttribute(`aria-current`)).toBe(expected)
+  test(`dropdown with object format supports label, class, align, and separator`, () => {
+    const routes: NavRoute[] = [
+      {
+        href: `/docs`,
+        label: `Documentation`,
+        children: [`/docs/intro`],
+        class: `docs-menu`,
       },
+      { href: `/user`, children: [`/user/profile`], align: `right`, separator: true },
+    ]
+    mount(Nav, { target: document.body, props: { routes } })
+    const [docs_dropdown, user_dropdown] = Array.from(
+      document.querySelectorAll(`.dropdown`),
     )
+    expect(docs_dropdown.querySelector(`span`)?.textContent?.trim()).toBe(`Documentation`)
+    expect(docs_dropdown.querySelector(`span`)?.classList.contains(`docs-menu`)).toBe(
+      true,
+    )
+    expect(user_dropdown.classList.contains(`align-right`)).toBe(true)
+    expect(document.querySelectorAll(`.separator`)).toHaveLength(1)
+  })
+
+  test(`aria-current works with object routes`, () => {
+    const mock_page = { url: { pathname: `/about` } } as Page
+    mount(Nav, {
+      target: document.body,
+      props: { routes: [{ href: `/about`, label: `About Us` }], page: mock_page },
+    })
+    expect(doc_query(`a[href="/about"]`).getAttribute(`aria-current`)).toBe(`page`)
+  })
+
+  // Regression tests: JSON.stringify crashes on BigInt, functions, circular refs
+  describe(`non-serializable route properties`, () => {
+    const circular_route: Record<string, unknown> = { href: `/circular` }
+    circular_route.self = circular_route
+
+    test.each([
+      [`BigInt`, [{ href: `/a`, custom_id: BigInt(123) }, { href: `/b` }]],
+      [`function`, [{ href: `/a`, on_custom: () => {} }, { href: `/b` }]],
+      [`circular reference`, [circular_route, { href: `/b` }]],
+    ])(`handles routes with %s properties without crashing`, (_desc, routes) => {
+      expect(() =>
+        mount(Nav, { target: document.body, props: { routes: routes as NavRoute[] } })
+      ).not.toThrow()
+      expect(document.querySelectorAll(`a`)).toHaveLength(2)
+    })
   })
 })
