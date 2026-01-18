@@ -72,6 +72,10 @@
     "./attachments": {
       "types": "./dist/attachments.d.ts",
       "default": "./dist/attachments.js"
+    },
+    "./heading-anchors": {
+      "types": "./dist/heading-anchors.d.ts",
+      "default": "./dist/heading-anchors.js"
     }
   },
   "types": "./dist/index.d.ts",
