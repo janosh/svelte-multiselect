@@ -28,8 +28,10 @@ export function get_uuid(): string {
   buf[6] = (buf[6] & 0x0f) | 0x40
   buf[8] = (buf[8] & 0x3f) | 0x80
 
-  const hex = [...buf].map((b) => b.toString(16).padStart(2, '0')).join('')
-  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+  const hex = [...buf].map((b) => b.toString(16).padStart(2, `0`)).join(``)
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${
+    hex.slice(16, 20)
+  }-${hex.slice(20)}`
 }
 
 export interface DraggableOptions {
@@ -260,8 +262,8 @@ export const resizable =
       node.style.cursor = edge === `right` || edge === `left`
         ? `ew-resize`
         : edge === `top` || edge === `bottom`
-          ? `ns-resize`
-          : ``
+        ? `ns-resize`
+        : ``
     }
 
     node.addEventListener(`mousedown`, on_mousedown)
@@ -345,8 +347,9 @@ export const sortable = (options: SortableOptions = {}) => (node: HTMLElement) =
       }
       header.classList.add(sort_dir > 0 ? asc_class : desc_class)
       Object.assign(header.style, sorted_style)
-      header.textContent = `${header.textContent?.replace(/ ↑| ↓/, ``)} ${sort_dir > 0 ? `↑` : `↓`
-        }`
+      header.textContent = `${header.textContent?.replace(/ ↑| ↓/, ``)} ${
+        sort_dir > 0 ? `↑` : `↓`
+      }`
 
       const table_body = node.querySelector(`tbody`)
       if (!table_body) return
@@ -634,21 +637,21 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
 
         // Mirror CSS custom properties from the trigger node onto the tooltip element
         const trigger_styles = getComputedStyle(element)
-          ;[
-            `--tooltip-bg`,
-            `--text-color`,
-            `--tooltip-border`,
-            `--tooltip-padding`,
-            `--tooltip-radius`,
-            `--tooltip-font-size`,
-            `--tooltip-shadow`,
-            `--tooltip-max-width`,
-            `--tooltip-opacity`,
-            `--tooltip-arrow-size`,
-          ].forEach((name) => {
-            const value = trigger_styles.getPropertyValue(name).trim()
-            if (value) tooltip_el.style.setProperty(name, value)
-          })
+        ;[
+          `--tooltip-bg`,
+          `--text-color`,
+          `--tooltip-border`,
+          `--tooltip-padding`,
+          `--tooltip-radius`,
+          `--tooltip-font-size`,
+          `--tooltip-shadow`,
+          `--tooltip-max-width`,
+          `--tooltip-opacity`,
+          `--tooltip-arrow-size`,
+        ].forEach((name) => {
+          const value = trigger_styles.getPropertyValue(name).trim()
+          if (value) tooltip_el.style.setProperty(name, value)
+        })
 
         // Append early so we can read computed border styles for arrow border
         document.body.appendChild(tooltip_el)
