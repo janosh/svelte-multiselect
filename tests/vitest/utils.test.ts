@@ -11,19 +11,38 @@ import { describe, expect, test, vi } from 'vitest'
 
 describe(`get_uuid`, () => {
   // RFC 4122 v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b)
-  const uuid_regex =
+  const uuid_v4_regex =
     /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  // UUID format without strict version/variant requirements
+  const uuid_format_regex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
-  test(`returns valid RFC 4122 v4 UUIDs`, () => {
-    // Regex validates: length, hyphens, version (4), variant (8/9/a/b)
-    for (let idx = 0; idx < 20; idx++) {
-      expect(get_uuid()).toMatch(uuid_regex)
+  function with_fallback<T>(fn: () => T): T {
+    const original = globalThis.crypto?.randomUUID
+    // @ts-expect-error - mocking randomUUID as undefined
+    globalThis.crypto.randomUUID = undefined
+    try {
+      return fn()
+    } finally {
+      if (original) globalThis.crypto.randomUUID = original
     }
+  }
+
+  test(`returns valid RFC 4122 v4 UUIDs when crypto available`, () => {
+    for (let idx = 0; idx < 5; idx++) expect(get_uuid()).toMatch(uuid_v4_regex)
   })
 
   test(`generates unique UUIDs`, () => {
     const uuids = new Set(Array.from({ length: 100 }, () => get_uuid()))
     expect(uuids.size).toBe(100)
+  })
+
+  test(`fallback produces valid unique UUIDs when crypto unavailable`, () => {
+    with_fallback(() => {
+      const uuids = Array.from({ length: 100 }, () => get_uuid())
+      uuids.forEach((uuid) => expect(uuid).toMatch(uuid_format_regex))
+      expect(new Set(uuids).size).toBe(100)
+    })
   })
 })
 

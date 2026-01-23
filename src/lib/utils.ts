@@ -1,20 +1,11 @@
 import type { Option } from './types'
 
-// Generates a cryptographically secure RFC 4122 v4 UUID
-// Uses native randomUUID in secure contexts, falls back to getRandomValues for HTTP
+let uuid_counter = 0
+
+// Generates a UUID for component IDs. Uses crypto when available, falls back to counter.
 export function get_uuid(): string {
-  if (globalThis.isSecureContext && globalThis.crypto?.randomUUID) {
-    return globalThis.crypto.randomUUID()
-  }
-  if (!globalThis.crypto?.getRandomValues) {
-    throw new Error(`crypto.getRandomValues not available`)
-  }
-  const buf = new Uint8Array(16)
-  globalThis.crypto.getRandomValues(buf)
-  // Set version (4) and variant (RFC 4122) bits
-  buf[6] = (buf[6] & 0x0f) | 0x40
-  buf[8] = (buf[8] & 0x3f) | 0x80
-  const hex = [...buf].map((b) => b.toString(16).padStart(2, `0`)).join(``)
+  if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
+  const hex = (Date.now().toString(16) + (uuid_counter++).toString(16)).padStart(32, `0`)
   return hex.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/, `$1-$2-$3-$4-$5`)
 }
 
