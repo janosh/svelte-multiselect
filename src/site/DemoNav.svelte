@@ -11,6 +11,7 @@
   routes={[`/`, ...demo_pages]}
   {page}
   style={`max-width: var(--main-max-width); ${props.style ?? ``}`}
+  menu_props={{ style: `gap: 10pt` }}
   labels={{
     '/': `Home`,
     '/ui': `UI`,
@@ -20,7 +21,7 @@
     ...(props.labels ?? {}),
   }}
   link_props={{
-    style: `background: var(--surface); padding: 2pt 6pt; border-radius: 3px;`,
+    style: `background: rgba(0, 0, 0, 0.05); border-radius: 3px; padding: 2pt 4pt`,
     ...(props.link_props ?? {}),
   }}
 />

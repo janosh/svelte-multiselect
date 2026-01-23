@@ -18,9 +18,7 @@
       current={page.url.pathname}
       style="max-width: var(--main-max-width); margin: 2em auto"
       onkeyup={null}
-      link_props={{
-        style: `background: var(--surface); padding: 2pt 6pt; border-radius: 3px;`,
-      }}
+      link_props={{ style: `background: var(--surface); border-radius: 3px;` }}
     />
   {/if}
 </main>

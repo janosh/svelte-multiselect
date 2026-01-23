@@ -932,6 +932,280 @@ describe(`Nav`, () => {
     expect(doc_query(`a[href="/about"]`).getAttribute(`aria-current`)).toBe(`page`)
   })
 
+  describe(`pinned dropdown feature`, () => {
+    // Helper to dispatch mouse events
+    const mouse_enter = (el: Element) =>
+      el.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+    const mouse_leave = (el: Element) =>
+      el.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+
+    test(`clicking arrow icon pins dropdown open`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+      })
+      const { dropdown, dropdown_menu } = get_dropdown_elements()
+      const toggle_button = dropdown.querySelector(
+        `[data-dropdown-toggle]`,
+      ) as HTMLElement
+
+      // Initially closed
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+
+      // Click to pin open
+      await click(toggle_button)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(toggle_button.getAttribute(`aria-expanded`)).toBe(`true`)
+
+      // Click again to unpin and close
+      await click(toggle_button)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      expect(toggle_button.getAttribute(`aria-expanded`)).toBe(`false`)
+    })
+
+    test(`pinned dropdown stays open on mouse leave`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+      })
+      const { dropdown, dropdown_menu } = get_dropdown_elements()
+      const toggle_button = dropdown.querySelector(
+        `[data-dropdown-toggle]`,
+      ) as HTMLElement
+
+      // Click to pin
+      await click(toggle_button)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Mouse leave should NOT close pinned dropdown
+      mouse_leave(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Mouse leave on dropdown menu should also NOT close
+      mouse_leave(dropdown_menu)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+    })
+
+    test(`hover-opened dropdown closes on mouse leave (not pinned)`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+      })
+      const { dropdown, dropdown_menu } = get_dropdown_elements()
+
+      // Open via hover
+      mouse_enter(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Mouse leave should close (not pinned)
+      mouse_leave(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+    })
+
+    test.each([
+      [`click outside`, async () => {
+        const outside = document.createElement(`div`)
+        document.body.appendChild(outside)
+        outside.dispatchEvent(
+          new MouseEvent(`click`, { bubbles: true, cancelable: true }),
+        )
+        await tick()
+        outside.remove()
+      }],
+      [`child route click`, async (menu: HTMLElement) => {
+        await click(menu.querySelector(`a`) as HTMLElement)
+      }],
+      [`Escape key`, async () => {
+        globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
+        await tick()
+      }],
+    ])(`pinned dropdown closes on %s`, async (_trigger, close_action) => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+      })
+      const { dropdown_menu } = get_dropdown_elements()
+      await click(doc_query(`[data-dropdown-toggle]`))
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      await close_action(dropdown_menu)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+    })
+
+    test(`hovering different dropdown closes pinned dropdown`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: {
+          routes: [
+            [`/first`, [`/first`, `/first/child`]],
+            [`/second`, [`/second`, `/second/child`]],
+          ],
+        },
+      })
+      const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
+      const menu1 = dropdown1.querySelector(`div:last-child`) as HTMLElement
+      const menu2 = dropdown2.querySelector(`div:last-child`) as HTMLElement
+      const toggle1 = dropdown1.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+
+      // Pin first dropdown
+      await click(toggle1)
+      expect(menu1.classList.contains(`visible`)).toBe(true)
+      expect(menu2.classList.contains(`visible`)).toBe(false)
+
+      // Hover second dropdown - should close first (pinned) and open second
+      mouse_enter(dropdown2)
+      await tick()
+      expect(menu1.classList.contains(`visible`)).toBe(false)
+      expect(menu2.classList.contains(`visible`)).toBe(true)
+    })
+
+    test(`clicking to pin different dropdown closes first pinned dropdown`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: {
+          routes: [
+            [`/first`, [`/first`, `/first/child`]],
+            [`/second`, [`/second`, `/second/child`]],
+          ],
+        },
+      })
+      const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
+      const menu1 = dropdown1.querySelector(`div:last-child`) as HTMLElement
+      const menu2 = dropdown2.querySelector(`div:last-child`) as HTMLElement
+      const toggle1 = dropdown1.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+      const toggle2 = dropdown2.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+
+      // Pin first dropdown
+      await click(toggle1)
+      expect(menu1.classList.contains(`visible`)).toBe(true)
+      expect(menu2.classList.contains(`visible`)).toBe(false)
+
+      // Click to pin second dropdown - should close first and open second
+      await click(toggle2)
+      expect(menu1.classList.contains(`visible`)).toBe(false)
+      expect(menu2.classList.contains(`visible`)).toBe(true)
+    })
+
+    test.each([`Enter`, ` `, `ArrowDown`])(
+      `keyboard %s pins dropdown open`,
+      async (key) => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+        })
+        const { dropdown, dropdown_menu } = get_dropdown_elements()
+        const toggle_button = dropdown.querySelector(
+          `[data-dropdown-toggle]`,
+        ) as HTMLElement
+
+        toggle_button.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
+        await new Promise((resolve) => setTimeout(resolve, 0))
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+        // Mouse leave should NOT close (pinned via keyboard)
+        mouse_leave(dropdown)
+        await tick()
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      },
+    )
+
+    test(`pinned dropdown stays open on focus out (closes via click outside)`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child1`, `/parent/child2`]]] },
+      })
+      const { dropdown, dropdown_menu } = get_dropdown_elements()
+      const toggle_button = dropdown.querySelector(
+        `[data-dropdown-toggle]`,
+      ) as HTMLElement
+      const child_links = dropdown_menu.querySelectorAll(`a`)
+
+      await click(toggle_button)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Focus within dropdown - stays open
+      dropdown.dispatchEvent(
+        new FocusEvent(`focusout`, { bubbles: true, relatedTarget: child_links[0] }),
+      )
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Focus outside dropdown - still stays open (pinned closes via click_outside, not focusout)
+      const external = document.createElement(`button`)
+      document.body.appendChild(external)
+      dropdown.dispatchEvent(
+        new FocusEvent(`focusout`, { bubbles: true, relatedTarget: external }),
+      )
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      external.remove()
+    })
+
+    test(`aria-expanded reflects pinned state correctly`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
+      })
+      const { dropdown, dropdown_menu } = get_dropdown_elements()
+      const toggle_button = dropdown.querySelector(
+        `[data-dropdown-toggle]`,
+      ) as HTMLElement
+
+      // Initially collapsed
+      expect(toggle_button.getAttribute(`aria-expanded`)).toBe(`false`)
+
+      // Pin open
+      await click(toggle_button)
+      expect(toggle_button.getAttribute(`aria-expanded`)).toBe(`true`)
+
+      // Mouse leave - should stay expanded (pinned)
+      mouse_leave(dropdown)
+      await tick()
+      expect(toggle_button.getAttribute(`aria-expanded`)).toBe(`true`)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Unpin
+      await click(toggle_button)
+      expect(toggle_button.getAttribute(`aria-expanded`)).toBe(`false`)
+    })
+
+    test(`pinned state clears when burger menu closes`, async () => {
+      Object.defineProperty(globalThis, `innerWidth`, { value: 500, writable: true })
+      mount(Nav, {
+        target: document.body,
+        props: {
+          routes: [[`/parent`, [`/parent`, `/parent/child`]]],
+          breakpoint: 767,
+        },
+      })
+      await tick()
+
+      const burger_button = doc_query(`.burger`)
+      const { dropdown_menu } = get_dropdown_elements()
+      const toggle_button = doc_query(`[data-dropdown-toggle]`)
+
+      // Open burger menu
+      await click(burger_button)
+      expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
+
+      // Pin dropdown
+      await click(toggle_button)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Press Escape - should close both burger menu and dropdown
+      globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
+      await tick()
+      expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+
+      Object.defineProperty(globalThis, `innerWidth`, { value: 1024, writable: true })
+    })
+  })
+
   // Regression tests: JSON.stringify crashes on BigInt, functions, circular refs
   describe(`non-serializable route properties`, () => {
     const circular_route: Record<string, unknown> = { href: `/circular` }
