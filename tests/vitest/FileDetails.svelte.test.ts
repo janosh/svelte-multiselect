@@ -15,9 +15,13 @@ test(`FileDetails renders files in ordered list with titles and contents`, () =>
   expect(document.querySelectorAll(`li > details`).length).toBe(2)
   expect(document.querySelectorAll(`summary`).length).toBe(2)
 
-  // Check contents
+  // Check titles and contents
+  const summaries = document.querySelectorAll(`summary`)
   const contents = document.querySelectorAll(`pre > code`)
-  files.forEach((file, idx) => expect(contents[idx].textContent).toBe(file.content))
+  files.forEach((file, idx) => {
+    expect(summaries[idx].textContent).toBe(file.title)
+    expect(contents[idx].textContent).toBe(file.content)
+  })
 })
 
 test(`toggle all button opens, closes, and handles partial open state`, async () => {
@@ -26,41 +30,27 @@ test(`toggle all button opens, closes, and handles partial open state`, async ()
     { title: `file2`, content: `content2` },
     { title: `file3`, content: `content3` },
   ]
-
-  const toggle_all_btn_title = `toggle all`
   mount(FileDetails, {
     target: document.body,
-    props: { files, toggle_all_btn_title },
+    props: { files, toggle_all_btn_title: `toggle all` },
   })
   await tick()
 
   const details = Array.from(document.querySelectorAll(`details`))
-  const btn = doc_query(`button[title='${toggle_all_btn_title}']`)
+  const btn = doc_query(`button[title='toggle all']`)
+  const all_open = () => details.every((d) => d.open)
+  const all_closed = () => details.every((d) => !d.open)
 
-  // Initially all closed
-  for (const detail of details) {
-    expect(detail.open).toBe(false)
-  }
-
-  // Click to open all
+  expect(all_closed()).toBe(true) // initially closed
   btn.click()
-  for (const [idx, detail] of details.entries()) {
-    expect(detail.open, `detail ${idx} after open`).toBe(true)
-  }
-
-  // Click to close all
+  expect(all_open()).toBe(true) // opened all
   btn.click()
-  for (const [idx, detail] of details.entries()) {
-    expect(detail.open, `detail ${idx} after close`).toBe(false)
-  }
+  expect(all_closed()).toBe(true) // closed all
 
-  // Manually open some details, then click to close all
-  details[0].open = true
-  details[1].open = true
+  // partial open state: clicking closes all
+  details[0].open = details[1].open = true
   btn.click()
-  for (const [idx, detail] of details.entries()) {
-    expect(detail.open, `detail ${idx} after partial close`).toBe(false)
-  }
+  expect(all_closed()).toBe(true)
 })
 
 test(`node refs are trimmed when files are removed to prevent memory leaks`, async () => {
