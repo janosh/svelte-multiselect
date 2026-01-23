@@ -330,6 +330,8 @@
         {@const filtered_sub_routes = sub_routes.filter(
         (r) => r !== parsed_route.href,
       )}
+        {@const is_pinned = pinned_dropdown === parsed_route.href}
+        {@const dropdown_open = hovered_dropdown === parsed_route.href || is_pinned}
         <div
           class="dropdown"
           class:active={child_is_active}
@@ -339,24 +341,18 @@
           aria-current={child_is_active ? `true` : undefined}
           onmouseenter={() => {
             if (!is_touch_device) {
-              if (pinned_dropdown && pinned_dropdown !== parsed_route.href) {
-                pinned_dropdown = null
-              }
+              if (pinned_dropdown && !is_pinned) pinned_dropdown = null
               hovered_dropdown = parsed_route.href
             }
           }}
           onmouseleave={() => {
-            if (!is_touch_device && pinned_dropdown !== parsed_route.href) {
-              hovered_dropdown = null
-            }
+            if (!is_touch_device && !is_pinned) hovered_dropdown = null
           }}
           onfocusin={() => (hovered_dropdown = parsed_route.href)}
           onfocusout={(event) => {
             const next = event.relatedTarget as Node | null
             if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
-              if (pinned_dropdown !== parsed_route.href) {
-                hovered_dropdown = null
-              }
+              if (!is_pinned) hovered_dropdown = null
             }
           }}
         >
@@ -390,12 +386,10 @@
             <button
               type="button"
               class="dropdown-toggle"
-              class:open={hovered_dropdown === parsed_route.href ||
-              pinned_dropdown === parsed_route.href}
+              class:open={dropdown_open}
               data-dropdown-toggle
               aria-label="Toggle {formatted.label} submenu"
-              aria-expanded={hovered_dropdown === parsed_route.href ||
-              pinned_dropdown === parsed_route.href}
+              aria-expanded={dropdown_open}
               aria-haspopup="true"
               onclick={() => toggle_dropdown(parsed_route.href, false)}
               onkeydown={(event) =>
@@ -409,24 +403,11 @@
             </button>
           </div>
           <div
-            class:visible={hovered_dropdown === parsed_route.href ||
-            pinned_dropdown === parsed_route.href}
+            class:visible={dropdown_open}
             role="menu"
             tabindex="-1"
-            onmouseenter={() => !is_touch_device && (hovered_dropdown = parsed_route.href)}
-            onmouseleave={() => {
-              if (!is_touch_device && pinned_dropdown !== parsed_route.href) {
-                hovered_dropdown = null
-              }
-            }}
-            onfocusin={() => (hovered_dropdown = parsed_route.href)}
-            onfocusout={(event) => {
-              const next = event.relatedTarget as Node | null
-              if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
-                if (pinned_dropdown !== parsed_route.href) {
-                  hovered_dropdown = null
-                }
-              }
+            onmouseenter={() => {
+              if (!is_touch_device) hovered_dropdown = parsed_route.href
             }}
           >
             {#each filtered_sub_routes as child_href (child_href)}
@@ -511,16 +492,21 @@
     flex-wrap: wrap;
     padding: 0.5em;
   }
-  .menu > span, .menu > span > a {
-    line-height: 1.3;
-    padding: var(--nav-item-padding);
+  .menu > span {
+    display: flex;
+    align-items: center;
     border-radius: var(--nav-border-radius);
-    text-decoration: none;
-    color: inherit;
+    background-color: var(--nav-link-bg);
     transition: background-color 0.2s;
   }
-  .menu > span > a:hover {
-    background-color: var(--nav-link-bg-hover);
+  .menu > span:hover {
+    background-color: var(--nav-link-bg-hover, rgba(0, 0, 0, 0.1));
+  }
+  .menu > span > a {
+    line-height: 1.3;
+    padding: var(--nav-item-padding);
+    text-decoration: none;
+    color: inherit;
   }
   .menu > span > a[aria-current='page'] {
     color: var(--nav-link-active-color);
@@ -562,19 +548,20 @@
     content: '';
     position: absolute;
     top: 100%;
-    left: 0;
-    right: 0;
-    height: var(--nav-dropdown-margin, 3pt);
+    left: -5pt;
+    right: -5pt;
+    height: calc(var(--nav-dropdown-margin, 2pt) + 5pt);
   }
   .dropdown > div:first-child {
     display: flex;
     align-items: center;
     gap: 0;
     border-radius: var(--nav-border-radius);
+    background-color: var(--nav-link-bg);
     transition: background-color 0.2s;
   }
   .dropdown > div:first-child:hover {
-    background-color: var(--nav-link-bg-hover);
+    background-color: var(--nav-link-bg-hover, rgba(0, 0, 0, 0.1));
   }
   .dropdown > div:first-child > a, .dropdown > div:first-child > span {
     line-height: 1.3;
@@ -616,13 +603,13 @@
     position: absolute;
     top: 100%;
     left: 0;
-    margin: var(--nav-dropdown-margin, 4pt 0 0 0);
+    margin: var(--nav-dropdown-margin, 2pt) 0 0 0;
     min-width: max-content;
     background-color: var(--nav-dropdown-bg, var(--nav-surface-bg));
     border: 1px solid var(--nav-dropdown-border-color, var(--nav-surface-border));
     border-radius: var(--nav-border-radius, 6pt);
     box-shadow: var(--nav-dropdown-shadow, var(--nav-surface-shadow));
-    padding: var(--nav-dropdown-padding, 4pt 0);
+    padding: var(--nav-dropdown-padding, 3pt 0);
     display: none;
     flex-direction: column;
     gap: 0;
@@ -632,22 +619,18 @@
     display: flex;
   }
   .dropdown > div:last-child a {
-    padding: var(--nav-dropdown-link-padding, 6pt 12pt 6pt 10pt);
-    border-left: 2px solid transparent;
-    margin-left: 2pt;
+    padding: var(--nav-dropdown-link-padding, 2pt 6pt);
     text-decoration: none;
     color: inherit;
     white-space: nowrap;
     font-size: 0.92em;
-    transition: border-color 0.15s, background-color 0.15s;
+    transition: background-color 0.15s;
   }
   .dropdown > div:last-child a:hover {
-    background-color: var(--nav-link-bg-hover);
-    border-left-color: var(--nav-link-active-color, currentColor);
+    background-color: var(--nav-link-bg-hover, rgba(0, 0, 0, 0.1));
   }
   .dropdown > div:last-child a[aria-current='page'] {
     color: var(--nav-link-active-color);
-    border-left-color: var(--nav-link-active-color, currentColor);
   }
   /* Mobile burger button */
   .burger {
