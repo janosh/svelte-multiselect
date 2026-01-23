@@ -2,12 +2,9 @@
   import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import {
-    click_outside,
-    get_uuid,
-    tooltip,
-    type TooltipOptions,
-  } from './attachments'
+  import type { TooltipOptions } from './attachments'
+  import { click_outside, tooltip } from './attachments'
+  import { get_uuid } from './utils'
   import Icon from './Icon.svelte'
   import type { NavRoute, NavRouteObject } from './types'
 
@@ -39,9 +36,7 @@
     ...rest
   }: {
     routes: NavRoute[]
-    children?: Snippet<
-      [{ is_open: boolean; panel_id: string; routes: NavRoute[] }]
-    >
+    children?: Snippet<[{ is_open: boolean; panel_id: string; routes: NavRoute[] }]>
     item?: Snippet<[ItemSnippetParams]>
     link?: Snippet<[{ href: string; label: string }]>
     menu_props?: HTMLAttributes<HTMLDivElement>
@@ -51,11 +46,9 @@
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
     tooltip_options?: Omit<TooltipOptions, `content`>
     breakpoint?: number
-    onnavigate?: (data: {
-      href: string
-      event: MouseEvent
-      route: NavRouteObject
-    }) => void | false
+    onnavigate?: (
+      data: { href: string; event: MouseEvent; route: NavRouteObject },
+    ) => void | false
     onopen?: () => void
     onclose?: () => void
   } & Omit<HTMLAttributes<HTMLElementTagNameMap[`nav`]>, `children`> = $props()

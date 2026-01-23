@@ -4,7 +4,8 @@
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
-  import { get_uuid, highlight_matches } from './attachments'
+  import { highlight_matches } from './attachments'
+  import { get_uuid } from './utils'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
   import type { GroupedOptions, KeyboardShortcuts, MultiSelectProps } from './types'
@@ -167,18 +168,13 @@
     alt: boolean
     meta: boolean
   } {
-    const parts = shortcut
-      .toLowerCase()
-      .split(`+`)
-      .map((part) => part.trim())
+    const parts = shortcut.toLowerCase().split(`+`).map((part) => part.trim())
     const key = parts.pop() ?? ``
-    return {
-      key,
-      ctrl: parts.includes(`ctrl`),
-      shift: parts.includes(`shift`),
-      alt: parts.includes(`alt`),
-      meta: parts.includes(`meta`) || parts.includes(`cmd`),
-    }
+    const ctrl = parts.includes(`ctrl`)
+    const shift = parts.includes(`shift`)
+    const alt = parts.includes(`alt`)
+    const meta = parts.includes(`meta`) || parts.includes(`cmd`)
+    return { key, ctrl, shift, alt, meta }
   }
 
   function matches_shortcut(
@@ -194,13 +190,7 @@
     const shift_matches = event.shiftKey === parsed.shift
     const alt_matches = event.altKey === parsed.alt
     const meta_matches = event.metaKey === parsed.meta
-    return (
-      key_matches &&
-      ctrl_matches &&
-      shift_matches &&
-      alt_matches &&
-      meta_matches
-    )
+    return key_matches && ctrl_matches && shift_matches && alt_matches && meta_matches
   }
 
   // Default shortcuts
@@ -210,11 +200,7 @@
     open: null,
     close: null,
   }
-
-  const effective_shortcuts = $derived({
-    ...default_shortcuts,
-    ...shortcuts,
-  })
+  const effective_shortcuts = $derived({ ...default_shortcuts, ...shortcuts })
 
   // Extract loadOptions config into single derived object (supports both simple function and config object)
   const load_options_config = $derived.by(() => {
