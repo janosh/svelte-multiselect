@@ -5,6 +5,7 @@
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import { highlight_matches } from './attachments'
+  import { get_uuid } from './utils'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
   import type { GroupedOptions, KeyboardShortcuts, MultiSelectProps } from './types'
@@ -75,10 +76,10 @@
     value = $bindable(null),
     selected = $bindable(
       value !== null && value !== undefined
-        ? (Array.isArray(value) ? value : [value])
+        ? Array.isArray(value) ? value : [value]
         : (options
-          ?.filter((opt) =>
-            typeof opt === `object` && opt !== null && opt?.preselected
+          ?.filter(
+            (opt) => typeof opt === `object` && opt !== null && opt?.preselected,
           )
           .slice(0, maxSelect ?? undefined) ?? []),
     ),
@@ -156,7 +157,7 @@
 
   // Generate unique IDs for ARIA associations (combobox pattern)
   // Uses provided id prop or generates a random one using crypto API
-  const internal_id = $derived(id ?? `sms-${crypto.randomUUID().slice(0, 8)}`)
+  const internal_id = $derived(id ?? `sms-${get_uuid().slice(0, 8)}`)
   const listbox_id = $derived(`${internal_id}-listbox`)
 
   // Parse shortcut string into modifier+key parts
@@ -169,13 +170,11 @@
   } {
     const parts = shortcut.toLowerCase().split(`+`).map((part) => part.trim())
     const key = parts.pop() ?? ``
-    return {
-      key,
-      ctrl: parts.includes(`ctrl`),
-      shift: parts.includes(`shift`),
-      alt: parts.includes(`alt`),
-      meta: parts.includes(`meta`) || parts.includes(`cmd`),
-    }
+    const ctrl = parts.includes(`ctrl`)
+    const shift = parts.includes(`shift`)
+    const alt = parts.includes(`alt`)
+    const meta = parts.includes(`meta`) || parts.includes(`cmd`)
+    return { key, ctrl, shift, alt, meta }
   }
 
   function matches_shortcut(
@@ -191,9 +190,7 @@
     const shift_matches = event.shiftKey === parsed.shift
     const alt_matches = event.altKey === parsed.alt
     const meta_matches = event.metaKey === parsed.meta
-    return (
-      key_matches && ctrl_matches && shift_matches && alt_matches && meta_matches
-    )
+    return key_matches && ctrl_matches && shift_matches && alt_matches && meta_matches
   }
 
   // Default shortcuts
@@ -203,11 +200,7 @@
     open: null,
     close: null,
   }
-
-  const effective_shortcuts = $derived({
-    ...default_shortcuts,
-    ...shortcuts,
-  })
+  const effective_shortcuts = $derived({ ...default_shortcuts, ...shortcuts })
 
   // Extract loadOptions config into single derived object (supports both simple function and config object)
   const load_options_config = $derived.by(() => {
@@ -231,8 +224,10 @@
     const empty2 = val2 == null || (Array.isArray(val2) && val2.length === 0)
     if (empty1 && empty2) return true
     if (Array.isArray(val1) && Array.isArray(val2)) {
-      return val1.length === val2.length &&
+      return (
+        val1.length === val2.length &&
         val1.every((item, idx) => item === val2[idx])
+      )
     }
     return false
   }
@@ -242,13 +237,27 @@
   // infinite loops with reactive wrappers that clone arrays. See issue #309.
   $effect.pre(() => {
     const new_value = maxSelect === 1 ? (selected[0] ?? null) : selected
-    if (!values_equal(untrack(() => value), new_value)) value = new_value
+    if (
+      !values_equal(
+        untrack(() => value),
+        new_value,
+      )
+    ) {
+      value = new_value
+    }
   })
   $effect.pre(() => {
     const new_selected = maxSelect === 1
       ? (value ? [value as Option] : [])
       : (Array.isArray(value) ? value : [])
-    if (!values_equal(untrack(() => selected), new_selected)) selected = new_selected
+    if (
+      !values_equal(
+        untrack(() => selected),
+        new_selected,
+      )
+    ) {
+      selected = new_selected
+    }
   })
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
@@ -298,7 +307,9 @@
   let load_options_last_search: string | null = $state(null)
   let debounce_timer: ReturnType<typeof setTimeout> | null = null
 
-  let effective_options = $derived(loadOptions ? loaded_options : (options ?? []))
+  let effective_options = $derived(
+    loadOptions ? loaded_options : (options ?? []),
+  )
 
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))
@@ -355,7 +366,11 @@
 
     if (ungrouped.length === 0) return grouped
 
-    const ungrouped_entry = { group: null, options: ungrouped, collapsed: false }
+    const ungrouped_entry = {
+      group: null,
+      options: ungrouped,
+      collapsed: false,
+    }
     return ungroupedPosition === `first`
       ? [ungrouped_entry, ...grouped]
       : [...grouped, ungrouped_entry]
@@ -435,7 +450,9 @@
   function expand_groups(groups_to_expand: string[]) {
     if (groups_to_expand.length === 0) return
     update_collapsed_groups(`delete`, groups_to_expand)
-    for (const group of groups_to_expand) ongroupToggle?.({ group, collapsed: false })
+    for (const group of groups_to_expand) {
+      ongroupToggle?.({ group, collapsed: false })
+    }
   }
 
   // Get names of collapsed groups that have matching options
@@ -453,7 +470,7 @@
 
   // Normalize placeholder prop (supports string or { text, persistent } object)
   const placeholder_text = $derived(
-    typeof placeholder === `string` ? placeholder : placeholder?.text ?? null,
+    typeof placeholder === `string` ? placeholder : (placeholder?.text ?? null),
   )
   const placeholder_persistent = $derived(
     typeof placeholder === `object` && placeholder?.persistent === true,
@@ -573,7 +590,9 @@
   )
 
   // Helper to check if removing an option would violate minSelect constraint
-  const can_remove = $derived(minSelect === null || selected.length > minSelect)
+  const can_remove = $derived(
+    minSelect === null || selected.length > minSelect,
+  )
 
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
   function toggle_option(option_to_toggle: Option, event: Event) {
@@ -589,7 +608,8 @@
     event.stopPropagation()
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
-      !isNaN(Number(option_to_add)) && typeof selected_labels[0] === `number`
+      !isNaN(Number(option_to_add)) &&
+      typeof selected_labels[0] === `number`
     ) {
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
@@ -680,7 +700,9 @@
     if (option_removed === undefined) {
       console.error(
         `MultiSelect: can't remove option ${
-          JSON.stringify(option_to_drop)
+          JSON.stringify(
+            option_to_drop,
+          )
         }, not found in selected list`,
       )
       return
@@ -721,7 +743,8 @@
     const reached_max = selected.length >= (maxSelect ?? Infinity)
     const should_close = closeDropdownOnSelect === true ||
       closeDropdownOnSelect === `retain-focus` ||
-      (closeDropdownOnSelect === `if-mobile` && window_width &&
+      (closeDropdownOnSelect === `if-mobile` &&
+        window_width &&
         window_width < breakpoint)
     if (reached_max || should_close) {
       close_dropdown(event, closeDropdownOnSelect === `retain-focus`)
@@ -730,11 +753,12 @@
 
   // Check if a user message (create option, duplicate warning, no match) is visible
   const has_user_msg = $derived(
-    searchText.length > 0 && Boolean(
-      (allowUserOptions && createOptionMsg) ||
-        (!duplicates && selected_labels_set.has(searchText)) ||
-        (navigable_options.length === 0 && noMatchingOptionsMsg),
-    ),
+    searchText.length > 0 &&
+      Boolean(
+        (allowUserOptions && createOptionMsg) ||
+          (!duplicates && selected_labels_set.has(searchText)) ||
+          (navigable_options.length === 0 && noMatchingOptionsMsg),
+      ),
   )
 
   // Handle arrow key navigation through options (uses navigable_options to skip collapsed groups)
@@ -743,14 +767,20 @@
 
     // Auto-expand collapsed groups when keyboard navigating
     if (
-      keyboardExpandsCollapsedGroups && collapsibleGroups && collapsedGroups.size > 0
+      keyboardExpandsCollapsedGroups &&
+      collapsibleGroups &&
+      collapsedGroups.size > 0
     ) {
       expand_groups(get_collapsed_with_matches())
       await tick()
     }
 
     // toggle user message when no options match but user can create
-    if (allowUserOptions && !navigable_options.length && searchText.length > 0) {
+    if (
+      allowUserOptions &&
+      !navigable_options.length &&
+      searchText.length > 0
+    ) {
       option_msg_is_active = !option_msg_is_active
       return
     }
@@ -773,11 +803,13 @@
     option_msg_is_active = has_user_msg && activeIndex === navigable_options.length
     activeOption = option_msg_is_active
       ? null
-      : navigable_options[activeIndex] ?? null
+      : (navigable_options[activeIndex] ?? null)
 
     if (autoScroll) {
       await tick()
-      document.querySelector(`ul.options > li.active`)?.scrollIntoViewIfNeeded?.()
+      document
+        .querySelector(`ul.options > li.active`)
+        ?.scrollIntoViewIfNeeded?.()
     }
 
     // Fire onactivate for keyboard navigation only (not mouse hover)
@@ -888,7 +920,10 @@
     // Only fire events if something was actually removed
     if (removed_options.length > 0) {
       searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
-      last_action = { type: `removeAll`, label: `${removed_options.length} options` }
+      last_action = {
+        type: `removeAll`,
+        label: `${removed_options.length} options`,
+      }
       onremoveAll?.({ options: removed_options })
       onchange?.({ options: selected, type: `removeAll` })
     }
@@ -984,7 +1019,9 @@
     // Check if click is inside the main component
     if (outerDiv.contains(target)) return
     // If portal is active, also check if click is inside the portalled options dropdown
-    if (portal_params?.active && ul_options && ul_options.contains(target)) return
+    if (portal_params?.active && ul_options && ul_options.contains(target)) {
+      return
+    }
     // Click is outside both the main component and any portalled dropdown
     close_dropdown(event)
   }
@@ -1020,7 +1057,9 @@
 
   let ul_options = $state<HTMLUListElement>()
 
-  const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (event) => {
+  const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (
+    event,
+  ) => {
     handle_keydown(event) // Restore internal logic
     // Call original forwarded handler
     onkeydown?.(event)
@@ -1107,8 +1146,9 @@
           target_node = params.target_node
           render_in_place = typeof window === `undefined` ||
             !document.body.contains(node)
-          if (open && !render_in_place && target_node) tick().then(update_position)
-          else if (!open || !target_node) node.hidden = true
+          if (open && !render_in_place && target_node) {
+            tick().then(update_position)
+          } else if (!open || !target_node) node.hidden = true
         },
         destroy() {
           if (!render_in_place) node.remove()
@@ -1122,7 +1162,8 @@
   // Dynamic options loading - captures search at call time to avoid race conditions
   async function load_dynamic_options(reset: boolean) {
     if (
-      !load_options_config || load_options_loading ||
+      !load_options_config ||
+      load_options_loading ||
       (!reset && !load_options_has_more)
     ) {
       return
@@ -1189,9 +1230,13 @@
   })
 
   function handle_options_scroll(event: Event) {
-    if (!load_options_config || load_options_loading || !load_options_has_more) return
+    if (!load_options_config || load_options_loading || !load_options_has_more) {
+      return
+    }
     const { scrollTop, scrollHeight, clientHeight } = event.target as HTMLElement
-    if (scrollHeight - scrollTop - clientHeight <= 100) load_dynamic_options(false)
+    if (scrollHeight - scrollTop - clientHeight <= 100) {
+      load_dynamic_options(false)
+    }
   }
 </script>
 
@@ -1255,11 +1300,9 @@
     style={ulSelectedStyle}
   >
     {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
-      {@const selectedOptionStyle =
-        [get_style(option, `selected`), liSelectedStyle].filter(Boolean).join(
-          ` `,
-        ) ||
-        null}
+      {@const selectedOptionStyle = [get_style(option, `selected`), liSelectedStyle]
+        .filter(Boolean)
+        .join(` `) || null}
       <li
         class={liSelectedClass}
         role="option"
@@ -1277,15 +1320,9 @@
         onmouseup={(event) => event.stopPropagation()}
       >
         {#if selectedItem}
-          {@render selectedItem({
-          option,
-          idx,
-        })}
+          {@render selectedItem({ option, idx })}
         {:else if children}
-          {@render children({
-          option,
-          idx,
-        })}
+          {@render children({ option, idx })}
         {:else if parseLabelsAsHtml}
           {@html get_label(option)}
         {:else}
@@ -1443,8 +1480,9 @@
         (group_name ?? `ungrouped-${group_idx}`)
       }
         {#if group_name !== null}
-          {@const { all_selected, selected_count } = group_header_state.get(group_name) ??
-        { all_selected: false, selected_count: 0 }}
+          {@const { all_selected, selected_count } = group_header_state.get(
+        group_name,
+      ) ?? { all_selected: false, selected_count: 0 }}
           {@const handle_toggle = () =>
         collapsibleGroups && toggle_group_collapsed(group_name)}
           {@const handle_group_select = (event: Event) =>
@@ -1511,11 +1549,9 @@
       } = is_object(option_item) ? option_item : { label: option_item }}
             {@const active = activeIndex === flat_idx && flat_idx >= 0}
             {@const selected = is_selected(label)}
-            {@const optionStyle =
-        [get_style(option_item, `option`), liOptionStyle].filter(Boolean).join(
-          ` `,
-        ) ||
-        null}
+            {@const optionStyle = [get_style(option_item, `option`), liOptionStyle]
+        .filter(Boolean)
+        .join(` `) || null}
             {#if is_option_visible(flat_idx)}
               <li
                 id="{internal_id}-opt-{flat_idx}"
@@ -1550,15 +1586,9 @@
                   />
                 {/if}
                 {#if option}
-                  {@render option({
-          option: option_item,
-          idx: flat_idx,
-        })}
+                  {@render option({ option: option_item, idx: flat_idx })}
                 {:else if children}
-                  {@render children({
-          option: option_item,
-          idx: flat_idx,
-        })}
+                  {@render children({ option: option_item, idx: flat_idx })}
                 {:else if parseLabelsAsHtml}
                   {@html get_label(option_item)}
                 {:else}
@@ -1621,7 +1651,11 @@
         {/if}
       {/if}
       {#if loadOptions && load_options_loading}
-        <li class="loading-more" role="status" aria-label="Loading more options">
+        <li
+          class="loading-more"
+          role="status"
+          aria-label="Loading more options"
+        >
           <CircleSpinner />
         </li>
       {/if}
@@ -1682,7 +1716,10 @@
     z-index: var(--sms-open-z-index, 4);
   }
   :where(div.multiselect:focus-within) {
-    border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue));
+    border: var(
+      --sms-focus-border,
+      1pt solid var(--sms-active-color, cornflowerblue)
+    );
   }
   :where(div.multiselect.disabled) {
     background: var(--sms-disabled-bg, light-dark(lightgray, #444));
@@ -1717,7 +1754,10 @@
   :where(div.multiselect > ul.selected > li.active) {
     background: var(
       --sms-li-active-bg,
-      var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))
+      var(
+        --sms-active-color,
+        light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+      )
     );
   }
   :is(div.multiselect button) {
@@ -1794,10 +1834,8 @@
     width: 100%;
     /* Default z-index if not portaled/overridden by portal */
     z-index: var(--sms-options-z-index, 3);
-
     overflow: auto;
-    transition: all
-      0.2s; /* Consider if this transition is desirable with portal positioning */
+    transition: all 0.2s; /* is this transition is desirable with portal positioning? */
     box-sizing: border-box;
     background: var(--sms-options-bg, light-dark(#fafafa, #1a1a1a));
     max-height: var(--sms-options-max-height, 50vh);
@@ -1842,7 +1880,10 @@
   :where(ul.options > li.active) {
     background: var(
       --sms-li-active-bg,
-      var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))
+      var(
+        --sms-active-color,
+        light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+      )
     );
   }
   :where(ul.options > li.disabled) {
@@ -1896,7 +1937,10 @@
   }
   :where(ul.options > li.group-header:not(:first-child)) {
     margin-top: var(--sms-group-header-margin-top, 4pt);
-    border-top: var(--sms-group-header-border-top, 1px solid light-dark(#eee, #333));
+    border-top: var(
+      --sms-group-header-border-top,
+      1px solid light-dark(#eee, #333)
+    );
   }
   :where(ul.options > li.group-header.collapsible) {
     cursor: pointer;

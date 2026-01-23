@@ -1,4 +1,8 @@
 import { type Attachment } from 'svelte/attachments'
+import { get_uuid } from './utils'
+
+// Re-export get_uuid for backwards compatibility
+export { get_uuid }
 
 // Type definitions for CSS highlight API (experimental)
 declare global {
@@ -583,7 +587,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         tooltip_el.setAttribute(`data-placement`, placement)
 
         // Accessibility: link tooltip to trigger element
-        const tooltip_id = `tooltip-${crypto.randomUUID()}`
+        const tooltip_id = `tooltip-${get_uuid()}`
         tooltip_el.id = tooltip_id
         tooltip_el.setAttribute(`role`, `tooltip`)
         element.setAttribute(`aria-describedby`, tooltip_id)

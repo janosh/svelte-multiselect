@@ -2,7 +2,9 @@
   import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { click_outside, tooltip, type TooltipOptions } from './attachments'
+  import type { TooltipOptions } from './attachments'
+  import { click_outside, tooltip } from './attachments'
+  import { get_uuid } from './utils'
   import Icon from './Icon.svelte'
   import type { NavRoute, NavRouteObject } from './types'
 
@@ -56,7 +58,7 @@
   let focused_item_index = $state<number>(-1)
   let is_touch_device = $state(false)
   let is_mobile = $state(false)
-  const panel_id = `nav-menu-${crypto.randomUUID()}`
+  const panel_id = `nav-menu-${get_uuid()}`
 
   // Track previous is_open state for callbacks
   let prev_is_open = $state(false)
@@ -99,9 +101,11 @@
     // Focus management for keyboard users
     if (is_opening && focus_first) {
       setTimeout(() => {
-        document.querySelector<HTMLElement>(
-          `.dropdown[data-href="${href}"] [role="menuitem"]`,
-        )?.focus()
+        document
+          .querySelector<HTMLElement>(
+            `.dropdown[data-href="${href}"] [role="menuitem"]`,
+          )
+          ?.focus()
       }, 0)
     }
   }
@@ -124,16 +128,21 @@
     }
 
     // Arrow key navigation within open dropdown
-    if (hovered_dropdown === href && (key === `ArrowDown` || key === `ArrowUp`)) {
+    if (
+      hovered_dropdown === href &&
+      (key === `ArrowDown` || key === `ArrowUp`)
+    ) {
       event.preventDefault()
       const direction = key === `ArrowDown` ? 1 : -1
       focused_item_index = Math.max(
         0,
         Math.min(sub_routes.length - 1, focused_item_index + direction),
       )
-      document.querySelectorAll<HTMLElement>(
-        `.dropdown[data-href="${href}"] [role="menuitem"]`,
-      )?.[focused_item_index]?.focus()
+      document
+        .querySelectorAll<HTMLElement>(
+          `.dropdown[data-href="${href}"] [role="menuitem"]`,
+        )
+        ?.[focused_item_index]?.focus()
     }
 
     // Open dropdown with ArrowDown when closed
@@ -147,9 +156,11 @@
     if (event.key === `Escape`) {
       event.preventDefault()
       close_menus()
-      document.querySelector<HTMLButtonElement>(
-        `.dropdown[data-href="${href}"] [data-dropdown-toggle]`,
-      )?.focus()
+      document
+        .querySelector<HTMLButtonElement>(
+          `.dropdown[data-href="${href}"] [data-dropdown-toggle]`,
+        )
+        ?.focus()
     }
   }
 
@@ -268,7 +279,7 @@
   <button
     class="burger"
     type="button"
-    onclick={() => is_open = !is_open}
+    onclick={() => (is_open = !is_open)}
     aria-label="Toggle navigation menu"
     aria-expanded={is_open}
     aria-controls={panel_id}
@@ -295,7 +306,7 @@
           ? route
           : Array.isArray(route)
           ? route[0]
-          : route.href ?? `sep-${route_idx}`
+          : (route.href ?? `sep-${route_idx}`)
       }`)
     }
       {@const parsed_route = parse_route(route)}
@@ -313,7 +324,9 @@
         <!-- Dropdown menu item -->
         {@const child_is_active = is_child_current(sub_routes)}
         {@const parent_page_exists = sub_routes.includes(parsed_route.href)}
-        {@const filtered_sub_routes = sub_routes.filter((r) => r !== parsed_route.href)}
+        {@const filtered_sub_routes = sub_routes.filter(
+        (r) => r !== parsed_route.href,
+      )}
         <div
           class="dropdown"
           class:active={child_is_active}
@@ -372,10 +385,7 @@
                 filtered_sub_routes,
               )}
             >
-              <Icon
-                icon="ChevronExpand"
-                style="width: 0.8em; height: 0.8em"
-              />
+              <Icon icon="ChevronExpand" style="width: 0.8em; height: 0.8em" />
             </button>
           </div>
           <div
@@ -387,7 +397,10 @@
             onfocusin={() => (hovered_dropdown = parsed_route.href)}
             onfocusout={(event) => {
               const next = event.relatedTarget as Node | null
-              if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
+              if (
+                !next ||
+                !(event.currentTarget as HTMLElement).contains(next)
+              ) {
                 hovered_dropdown = null
               }
             }}
@@ -457,7 +470,10 @@
     margin: -0.75em auto 1.25em;
     --nav-border-radius: 6pt;
     --nav-surface-bg: light-dark(#fafafa, #1a1a1a);
-    --nav-surface-border: light-dark(rgba(128, 128, 128, 0.25), rgba(200, 200, 200, 0.2));
+    --nav-surface-border: light-dark(
+      rgba(128, 128, 128, 0.25),
+      rgba(200, 200, 200, 0.2)
+    );
     --nav-surface-shadow: light-dark(
       0 2px 8px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.5)

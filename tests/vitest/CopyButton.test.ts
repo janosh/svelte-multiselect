@@ -1,110 +1,40 @@
 import { CopyButton } from '$lib'
 import { mount } from 'svelte'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { expect, test, vi } from 'vitest'
 
-// Mock clipboard API
 const mock_write_text = vi.fn()
-vi.stubGlobal(`navigator`, {
-  clipboard: {
-    writeText: mock_write_text,
-  },
+vi.stubGlobal(`navigator`, { clipboard: { writeText: mock_write_text } })
+
+const mount_copy_button = (content = `test`) => {
+  mount(CopyButton, { target: document.body, props: { content, as: `div` } })
+  return document.body.querySelector(`[data-sms-copy]`) as HTMLElement
+}
+
+test.each([`Enter`, ` `])(`%s key triggers copy and prevents default`, (key) => {
+  mock_write_text.mockResolvedValue(undefined)
+  const element = mount_copy_button(`test content`)
+  const event = new KeyboardEvent(`keydown`, { key, bubbles: true })
+  const prevent_spy = vi.spyOn(event, `preventDefault`)
+
+  element.dispatchEvent(event)
+
+  expect(mock_write_text).toHaveBeenCalledWith(`test content`)
+  expect(prevent_spy).toHaveBeenCalled()
 })
 
-describe(`CopyButton`, () => {
-  let target: HTMLElement
+test.each([`Escape`, `Tab`, `ArrowUp`, `a`, `1`])(`%s key is ignored`, (key) => {
+  const element = mount_copy_button()
+  const event = new KeyboardEvent(`keydown`, { key })
+  const prevent_spy = vi.spyOn(event, `preventDefault`)
 
-  beforeEach(() => {
-    target = document.body
-  })
+  element.dispatchEvent(event)
 
-  describe(`Keyboard Accessibility`, () => {
-    test(`responds to Enter and Space keys on non-button elements`, () => {
-      mock_write_text.mockResolvedValue(undefined)
+  expect(prevent_spy).not.toHaveBeenCalled()
+})
 
-      mount(CopyButton, {
-        target,
-        props: {
-          content: `test content`,
-          as: `div`,
-        },
-      })
-
-      const element = target.querySelector(`[data-sms-copy]`) as HTMLElement
-      expect(element).toBeTruthy()
-      expect(element.tagName).toBe(`DIV`)
-
-      // Test Enter key
-      const enter_event = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
-      element.dispatchEvent(enter_event)
-
-      expect(mock_write_text).toHaveBeenCalledWith(`test content`)
-
-      // Reset mock and test Space key
-      mock_write_text.mockClear()
-      const space_event = new KeyboardEvent(`keydown`, { key: ` `, bubbles: true })
-      element.dispatchEvent(space_event)
-
-      expect(mock_write_text).toHaveBeenCalledWith(`test content`)
-    })
-
-    test(`prevents default behavior for Enter and Space keys`, () => {
-      mount(CopyButton, {
-        target,
-        props: {
-          content: `test`,
-          as: `div`,
-        },
-      })
-
-      const element = target.querySelector(`[data-sms-copy]`) as HTMLElement
-
-      // Test Enter key
-      const enter_event = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
-      const prevent_default_spy = vi.spyOn(enter_event, `preventDefault`)
-      element.dispatchEvent(enter_event)
-      expect(prevent_default_spy).toHaveBeenCalled()
-
-      // Test Space key
-      const space_event = new KeyboardEvent(`keydown`, { key: ` `, bubbles: true })
-      const prevent_default_spy_space = vi.spyOn(space_event, `preventDefault`)
-      element.dispatchEvent(space_event)
-      expect(prevent_default_spy_space).toHaveBeenCalled()
-    })
-
-    test(`ignores other keys`, () => {
-      mount(CopyButton, {
-        target,
-        props: {
-          content: `test`,
-          as: `div`,
-        },
-      })
-
-      const element = target.querySelector(`[data-sms-copy]`) as HTMLElement
-
-      // Test various other keys
-      const other_keys = [`Escape`, `Tab`, `ArrowUp`, `a`, `1`]
-      other_keys.forEach((key) => {
-        const event = new KeyboardEvent(`keydown`, { key })
-        const prevent_default_spy = vi.spyOn(event, `preventDefault`)
-        element.dispatchEvent(event)
-        expect(prevent_default_spy).not.toHaveBeenCalled()
-      })
-    })
-
-    test(`has proper accessibility attributes`, () => {
-      mount(CopyButton, {
-        target,
-        props: {
-          content: `accessibility test`,
-          as: `div`,
-        },
-      })
-
-      const element = target.querySelector(`[data-sms-copy]`) as HTMLElement
-      expect(element.getAttribute(`role`)).toBe(`button`)
-      expect(element.getAttribute(`tabindex`)).toBe(`0`)
-      expect(element.getAttribute(`data-sms-copy`)).toBe(``)
-    })
-  })
+test(`has proper accessibility attributes`, () => {
+  const element = mount_copy_button()
+  expect(element.tagName).toBe(`DIV`)
+  expect(element.getAttribute(`role`)).toBe(`button`)
+  expect(element.getAttribute(`tabindex`)).toBe(`0`)
 })
