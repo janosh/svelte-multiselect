@@ -555,7 +555,6 @@
   .dropdown > div:first-child {
     display: flex;
     align-items: center;
-    gap: 0;
     border-radius: var(--nav-border-radius);
     background-color: var(--nav-link-bg);
     transition: background-color 0.2s;
@@ -612,7 +611,6 @@
     padding: var(--nav-dropdown-padding, 3pt 0);
     display: none;
     flex-direction: column;
-    gap: 0;
     z-index: var(--nav-dropdown-z-index, 100);
   }
   .dropdown > div:last-child.visible {

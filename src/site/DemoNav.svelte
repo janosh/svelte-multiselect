@@ -5,6 +5,7 @@
 
   let props = $props()
 
+  // NOTE: Update this list when adding/removing demo pages in src/routes/(demos)/
   const grouped_routes: NavRoute[] = [
     `/`,
     {
@@ -50,15 +51,16 @@
       children: [`/nav`, `/cmd-palette`],
     },
   ]
+
+  const base_style =
+    `max-width: var(--main-max-width); --nav-link-bg: rgba(0, 0, 0, 0.05); --nav-item-padding: 2pt 4pt;`
 </script>
 
 <Nav
   {...props}
   routes={grouped_routes}
   {page}
-  style={`max-width: var(--main-max-width); --nav-link-bg: rgba(0, 0, 0, 0.05); --nav-item-padding: 2pt 4pt; ${
-    props.style ?? ``
-  }`}
+  style={base_style + (props.style ?? ``)}
   menu_props={{ style: `gap: 10pt` }}
   labels={{
     '/': `Home`,

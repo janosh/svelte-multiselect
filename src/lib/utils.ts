@@ -2,7 +2,10 @@ import type { Option } from './types'
 
 let uuid_counter = 0
 
-// Generates a UUID for component IDs. Uses crypto when available, falls back to counter.
+// Generates a UUID for component IDs. Uses native crypto.randomUUID when available.
+// Fallback uses timestamp+counter - sufficient for DOM IDs (uniqueness, not security).
+// Cryptographic randomness is unnecessary here since these IDs are only used for
+// associating labels with inputs and ensuring unique DOM element identifiers.
 export function get_uuid(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   const hex = (Date.now().toString(16) + (uuid_counter++).toString(16)).padStart(32, `0`)
