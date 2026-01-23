@@ -106,11 +106,24 @@
       setTimeout(() => {
         document
           .querySelector<HTMLElement>(
-            `.dropdown[data-href="${href}"] [role="menuitem"]`,
+            `.dropdown[data-href="${CSS.escape(href)}"] [role="menuitem"]`,
           )
           ?.focus()
       }, 0)
     }
+  }
+
+  function handle_dropdown_mouseenter(href: string) {
+    if (is_touch_device) return
+    const is_this_pinned = pinned_dropdown === href
+    if (pinned_dropdown && !is_this_pinned) pinned_dropdown = null
+    hovered_dropdown = href
+  }
+
+  function handle_dropdown_focusin(href: string) {
+    const is_this_pinned = pinned_dropdown === href
+    if (pinned_dropdown && !is_this_pinned) pinned_dropdown = null
+    hovered_dropdown = href
   }
 
   function onkeydown(event: KeyboardEvent) {
@@ -339,16 +352,11 @@
           data-href={parsed_route.href}
           role="group"
           aria-current={child_is_active ? `true` : undefined}
-          onmouseenter={() => {
-            if (!is_touch_device) {
-              if (pinned_dropdown && !is_pinned) pinned_dropdown = null
-              hovered_dropdown = parsed_route.href
-            }
-          }}
+          onmouseenter={() => handle_dropdown_mouseenter(parsed_route.href)}
           onmouseleave={() => {
             if (!is_touch_device && !is_pinned) hovered_dropdown = null
           }}
-          onfocusin={() => (hovered_dropdown = parsed_route.href)}
+          onfocusin={() => handle_dropdown_focusin(parsed_route.href)}
           onfocusout={(event) => {
             const next = event.relatedTarget as Node | null
             if (!next || !(event.currentTarget as HTMLElement).contains(next)) {

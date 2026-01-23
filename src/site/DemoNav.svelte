@@ -2,8 +2,9 @@
   import { page } from '$app/state'
   import { Nav } from '$lib'
   import type { NavRoute } from '$lib/types'
+  import type { ComponentProps } from 'svelte'
 
-  let props = $props()
+  let props: Partial<ComponentProps<typeof Nav>> = $props()
 
   // NOTE: Update this list when adding/removing demo pages in src/routes/(demos)/
   const grouped_routes: NavRoute[] = [
@@ -53,7 +54,7 @@
   ]
 
   const base_style =
-    `max-width: var(--main-max-width); --nav-link-bg: rgba(0, 0, 0, 0.05); --nav-item-padding: 2pt 4pt;`
+    `max-width: var(--main-max-width); --nav-link-bg: rgba(0, 0, 0, 0.05); --nav-item-padding: 2pt 4pt; `
 </script>
 
 <Nav
