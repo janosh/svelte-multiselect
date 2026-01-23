@@ -3,36 +3,21 @@ import { flushSync, mount, tick } from 'svelte'
 import { expect, test } from 'vitest'
 import { doc_query } from './index'
 
-test(`FileDetails renders all files passed`, () => {
+test(`FileDetails renders files in ordered list with titles and contents`, () => {
   const files = [
     { title: `file1`, content: `content1` },
     { title: `file2`, content: `content2` },
   ]
   mount(FileDetails, { target: document.body, props: { files } })
 
-  const details = document.querySelectorAll(`li > details`)
-  expect(details.length).toBe(2)
+  // Check structure: ordered list with details elements
+  expect(doc_query(`ol`).children.length).toBe(2)
+  expect(document.querySelectorAll(`li > details`).length).toBe(2)
+  expect(document.querySelectorAll(`summary`).length).toBe(2)
 
-  // check items are wrapped in ordered list
-  const ol = doc_query(`ol`)
-  expect(ol.children.length).toBe(2)
-})
-
-test(`FileDetails renders file titles and contents`, () => {
-  const files = [
-    { title: `file1`, content: `content1` },
-    { title: `file2`, content: `content2` },
-  ]
-  mount(FileDetails, { target: document.body, props: { files } })
-
-  const titles = document.querySelectorAll(`summary`)
-  expect(titles.length).toBe(2)
-
-  const contents = Array.from(document.querySelectorAll(`pre > code`))
-
-  for (const [idx, src] of contents.entries()) {
-    expect(src.textContent).toBe(files[idx].content)
-  }
+  // Check contents
+  const contents = document.querySelectorAll(`pre > code`)
+  files.forEach((file, idx) => expect(contents[idx].textContent).toBe(file.content))
 })
 
 test(`toggle all button opens, closes, and handles partial open state`, async () => {

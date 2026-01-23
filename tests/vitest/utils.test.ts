@@ -1,6 +1,31 @@
 import type { Option, OptionStyle } from '$lib'
-import { fuzzy_match, get_label, get_style, has_group, is_object } from '$lib/utils'
+import {
+  fuzzy_match,
+  get_label,
+  get_style,
+  get_uuid,
+  has_group,
+  is_object,
+} from '$lib/utils'
 import { describe, expect, test, vi } from 'vitest'
+
+describe(`get_uuid`, () => {
+  // RFC 4122 v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b)
+  const uuid_regex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+  test(`returns valid RFC 4122 v4 UUIDs`, () => {
+    // Regex validates: length, hyphens, version (4), variant (8/9/a/b)
+    for (let idx = 0; idx < 20; idx++) {
+      expect(get_uuid()).toMatch(uuid_regex)
+    }
+  })
+
+  test(`generates unique UUIDs`, () => {
+    const uuids = new Set(Array.from({ length: 100 }, () => get_uuid()))
+    expect(uuids.size).toBe(100)
+  })
+})
 
 describe(`get_label`, () => {
   test.each([
