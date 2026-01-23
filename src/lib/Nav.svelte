@@ -143,11 +143,10 @@
       return
     }
 
+    // Check if dropdown is open (either via hover or pinned)
+    const is_open = hovered_dropdown === href || pinned_dropdown === href
     // Arrow key navigation within open dropdown
-    if (
-      hovered_dropdown === href &&
-      (key === `ArrowDown` || key === `ArrowUp`)
-    ) {
+    if (is_open && (key === `ArrowDown` || key === `ArrowUp`)) {
       event.preventDefault()
       const direction = key === `ArrowDown` ? 1 : -1
       focused_item_index = Math.max(
@@ -156,13 +155,13 @@
       )
       document
         .querySelectorAll<HTMLElement>(
-          `.dropdown[data-href="${href}"] [role="menuitem"]`,
+          `.dropdown[data-href="${CSS.escape(href)}"] [role="menuitem"]`,
         )
         ?.[focused_item_index]?.focus()
     }
 
     // Open dropdown with ArrowDown when closed
-    if (hovered_dropdown !== href && key === `ArrowDown`) {
+    if (!is_open && key === `ArrowDown`) {
       event.preventDefault()
       toggle_dropdown(href, true)
     }

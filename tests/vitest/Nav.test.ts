@@ -1056,6 +1056,31 @@ describe(`Nav`, () => {
       },
     )
 
+    test(`ArrowDown navigates within pinned dropdown after mouse leave`, async () => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: [[`/parent`, [`/parent`, `/parent/child1`, `/parent/child2`]]] },
+      })
+      const { dropdown, dropdown_menu } = query_dropdown_elements()
+      const toggle = doc_query(`[data-dropdown-toggle]`)
+
+      // Pin dropdown open via click
+      await click(toggle)
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // Mouse leaves, but dropdown stays pinned
+      mouse_leave(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // ArrowDown should navigate within dropdown, not close it
+      toggle.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+      )
+      await new Promise((r) => setTimeout(r, 0))
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+    })
+
     test(`pinned dropdown stays open on focus out`, async () => {
       mount(Nav, {
         target: document.body,

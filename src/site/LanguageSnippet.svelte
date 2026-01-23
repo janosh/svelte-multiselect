@@ -33,9 +33,7 @@
 <style>
   span {
     display: flex;
-  }
-  img {
-    transform: translateY(2px);
+    align-items: center;
   }
   img[alt='Rust'] {
     filter: invert(1);
