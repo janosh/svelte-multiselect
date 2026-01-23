@@ -12,6 +12,26 @@ declare global {
   }
 }
 
+// Helper: Generates a cryptographically secure RFC 4122 v4 UUID
+// Checks for secure context first, then falls back to getRandomValues
+export function get_uuid(): string {
+  if (globalThis.isSecureContext && globalThis.crypto?.randomUUID) {
+    return globalThis.crypto.randomUUID()
+  }
+
+  // Fallback: RFC 4122 v4 via crypto.getRandomValues
+  // Supported in all modern browsers even in non-secure contexts (http)
+  const buf = new Uint8Array(16)
+  globalThis.crypto.getRandomValues(buf)
+
+  // Set version (4) and variant (RFC 4122) bits
+  buf[6] = (buf[6] & 0x0f) | 0x40
+  buf[8] = (buf[8] & 0x3f) | 0x80
+
+  const hex = [...buf].map((b) => b.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}
+
 export interface DraggableOptions {
   handle_selector?: string
   disabled?: boolean
@@ -240,8 +260,8 @@ export const resizable =
       node.style.cursor = edge === `right` || edge === `left`
         ? `ew-resize`
         : edge === `top` || edge === `bottom`
-        ? `ns-resize`
-        : ``
+          ? `ns-resize`
+          : ``
     }
 
     node.addEventListener(`mousedown`, on_mousedown)
@@ -325,9 +345,8 @@ export const sortable = (options: SortableOptions = {}) => (node: HTMLElement) =
       }
       header.classList.add(sort_dir > 0 ? asc_class : desc_class)
       Object.assign(header.style, sorted_style)
-      header.textContent = `${header.textContent?.replace(/ ↑| ↓/, ``)} ${
-        sort_dir > 0 ? `↑` : `↓`
-      }`
+      header.textContent = `${header.textContent?.replace(/ ↑| ↓/, ``)} ${sort_dir > 0 ? `↑` : `↓`
+        }`
 
       const table_body = node.querySelector(`tbody`)
       if (!table_body) return
@@ -583,7 +602,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         tooltip_el.setAttribute(`data-placement`, placement)
 
         // Accessibility: link tooltip to trigger element
-        const tooltip_id = `tooltip-${crypto.randomUUID()}`
+        const tooltip_id = `tooltip-${get_uuid()}`
         tooltip_el.id = tooltip_id
         tooltip_el.setAttribute(`role`, `tooltip`)
         element.setAttribute(`aria-describedby`, tooltip_id)
@@ -615,21 +634,21 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
 
         // Mirror CSS custom properties from the trigger node onto the tooltip element
         const trigger_styles = getComputedStyle(element)
-        ;[
-          `--tooltip-bg`,
-          `--text-color`,
-          `--tooltip-border`,
-          `--tooltip-padding`,
-          `--tooltip-radius`,
-          `--tooltip-font-size`,
-          `--tooltip-shadow`,
-          `--tooltip-max-width`,
-          `--tooltip-opacity`,
-          `--tooltip-arrow-size`,
-        ].forEach((name) => {
-          const value = trigger_styles.getPropertyValue(name).trim()
-          if (value) tooltip_el.style.setProperty(name, value)
-        })
+          ;[
+            `--tooltip-bg`,
+            `--text-color`,
+            `--tooltip-border`,
+            `--tooltip-padding`,
+            `--tooltip-radius`,
+            `--tooltip-font-size`,
+            `--tooltip-shadow`,
+            `--tooltip-max-width`,
+            `--tooltip-opacity`,
+            `--tooltip-arrow-size`,
+          ].forEach((name) => {
+            const value = trigger_styles.getPropertyValue(name).trim()
+            if (value) tooltip_el.style.setProperty(name, value)
+          })
 
         // Append early so we can read computed border styles for arrow border
         document.body.appendChild(tooltip_el)

@@ -1,19 +1,24 @@
 <script lang="ts">
-  import type { Page } from '@sveltejs/kit'
-  import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
-  import { click_outside, tooltip, type TooltipOptions } from './attachments'
-  import Icon from './Icon.svelte'
-  import type { NavRoute, NavRouteObject } from './types'
+  import type { Page } from "@sveltejs/kit";
+  import type { Snippet } from "svelte";
+  import type { HTMLAttributes } from "svelte/elements";
+  import {
+    click_outside,
+    tooltip,
+    type TooltipOptions,
+    get_uuid,
+  } from "./attachments";
+  import Icon from "./Icon.svelte";
+  import type { NavRoute, NavRouteObject } from "./types";
 
   // Props for the item snippet's render_default function context
   interface ItemSnippetParams {
-    route: NavRouteObject // normalized route object
-    href: string
-    label: string
-    is_active: boolean
-    is_dropdown: boolean
-    render_default: Snippet // escape hatch to render default
+    route: NavRouteObject; // normalized route object
+    href: string;
+    label: string;
+    is_active: boolean;
+    is_dropdown: boolean;
+    render_default: Snippet; // escape hatch to render default
   }
 
   let {
@@ -33,81 +38,88 @@
     onclose,
     ...rest
   }: {
-    routes: NavRoute[]
-    children?: Snippet<[{ is_open: boolean; panel_id: string; routes: NavRoute[] }]>
-    item?: Snippet<[ItemSnippetParams]>
-    link?: Snippet<[{ href: string; label: string }]>
-    menu_props?: HTMLAttributes<HTMLDivElement>
-    link_props?: HTMLAttributes<HTMLAnchorElement>
-    page?: Page
-    labels?: Record<string, string>
-    tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
-    tooltip_options?: Omit<TooltipOptions, `content`>
-    breakpoint?: number
-    onnavigate?: (
-      data: { href: string; event: MouseEvent; route: NavRouteObject },
-    ) => void | false
-    onopen?: () => void
-    onclose?: () => void
-  } & Omit<HTMLAttributes<HTMLElementTagNameMap[`nav`]>, `children`> = $props()
+    routes: NavRoute[];
+    children?: Snippet<
+      [{ is_open: boolean; panel_id: string; routes: NavRoute[] }]
+    >;
+    item?: Snippet<[ItemSnippetParams]>;
+    link?: Snippet<[{ href: string; label: string }]>;
+    menu_props?: HTMLAttributes<HTMLDivElement>;
+    link_props?: HTMLAttributes<HTMLAnchorElement>;
+    page?: Page;
+    labels?: Record<string, string>;
+    tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>;
+    tooltip_options?: Omit<TooltipOptions, `content`>;
+    breakpoint?: number;
+    onnavigate?: (data: {
+      href: string;
+      event: MouseEvent;
+      route: NavRouteObject;
+    }) => void | false;
+    onopen?: () => void;
+    onclose?: () => void;
+  } & Omit<HTMLAttributes<HTMLElementTagNameMap[`nav`]>, `children`> = $props();
 
-  let is_open = $state(false)
-  let hovered_dropdown = $state<string | null>(null)
-  let focused_item_index = $state<number>(-1)
-  let is_touch_device = $state(false)
-  let is_mobile = $state(false)
-  const panel_id = `nav-menu-${crypto.randomUUID()}`
+  let is_open = $state(false);
+  let hovered_dropdown = $state<string | null>(null);
+  let focused_item_index = $state<number>(-1);
+  let is_touch_device = $state(false);
+  let is_mobile = $state(false);
+  const panel_id = `nav-menu-${get_uuid()}`;
 
   // Track previous is_open state for callbacks
-  let prev_is_open = $state(false)
+  let prev_is_open = $state(false);
 
   // Detect touch device and handle responsive breakpoint
   $effect(() => {
-    if (typeof globalThis === `undefined`) return
-    is_touch_device = `ontouchstart` in globalThis || navigator.maxTouchPoints > 0
+    if (typeof globalThis === `undefined`) return;
+    is_touch_device =
+      `ontouchstart` in globalThis || navigator.maxTouchPoints > 0;
 
     // Handle responsive breakpoint via JS since CSS variables don't work in media queries
     const check_mobile = () => {
-      is_mobile = globalThis.innerWidth <= breakpoint
-    }
-    check_mobile()
-    globalThis.addEventListener(`resize`, check_mobile)
-    return () => globalThis.removeEventListener(`resize`, check_mobile)
-  })
+      is_mobile = globalThis.innerWidth <= breakpoint;
+    };
+    check_mobile();
+    globalThis.addEventListener(`resize`, check_mobile);
+    return () => globalThis.removeEventListener(`resize`, check_mobile);
+  });
 
   // Call onopen/onclose callbacks when menu state changes
   $effect(() => {
     if (is_open && !prev_is_open) {
-      onopen?.()
+      onopen?.();
     } else if (!is_open && prev_is_open) {
-      onclose?.()
+      onclose?.();
     }
-    prev_is_open = is_open
-  })
+    prev_is_open = is_open;
+  });
 
   function close_menus() {
-    is_open = false
-    hovered_dropdown = null
-    focused_item_index = -1
+    is_open = false;
+    hovered_dropdown = null;
+    focused_item_index = -1;
   }
 
   function toggle_dropdown(href: string, focus_first = false) {
-    const is_opening = hovered_dropdown !== href
-    hovered_dropdown = hovered_dropdown === href ? null : href
-    focused_item_index = is_opening && focus_first ? 0 : -1
+    const is_opening = hovered_dropdown !== href;
+    hovered_dropdown = hovered_dropdown === href ? null : href;
+    focused_item_index = is_opening && focus_first ? 0 : -1;
 
     // Focus management for keyboard users
     if (is_opening && focus_first) {
       setTimeout(() => {
-        document.querySelector<HTMLElement>(
-          `.dropdown[data-href="${href}"] [role="menuitem"]`,
-        )?.focus()
-      }, 0)
+        document
+          .querySelector<HTMLElement>(
+            `.dropdown[data-href="${href}"] [role="menuitem"]`,
+          )
+          ?.focus();
+      }, 0);
     }
   }
 
   function onkeydown(event: KeyboardEvent) {
-    if (event.key === `Escape`) close_menus()
+    if (event.key === `Escape`) close_menus();
   }
 
   function handle_dropdown_keydown(
@@ -115,114 +127,121 @@
     href: string,
     sub_routes: string[],
   ) {
-    const { key } = event
+    const { key } = event;
 
     if (key === `Enter` || key === ` `) {
-      event.preventDefault()
-      toggle_dropdown(href, true)
-      return
+      event.preventDefault();
+      toggle_dropdown(href, true);
+      return;
     }
 
     // Arrow key navigation within open dropdown
-    if (hovered_dropdown === href && (key === `ArrowDown` || key === `ArrowUp`)) {
-      event.preventDefault()
-      const direction = key === `ArrowDown` ? 1 : -1
+    if (
+      hovered_dropdown === href &&
+      (key === `ArrowDown` || key === `ArrowUp`)
+    ) {
+      event.preventDefault();
+      const direction = key === `ArrowDown` ? 1 : -1;
       focused_item_index = Math.max(
         0,
         Math.min(sub_routes.length - 1, focused_item_index + direction),
-      )
-      document.querySelectorAll<HTMLElement>(
-        `.dropdown[data-href="${href}"] [role="menuitem"]`,
-      )?.[focused_item_index]?.focus()
+      );
+      document
+        .querySelectorAll<HTMLElement>(
+          `.dropdown[data-href="${href}"] [role="menuitem"]`,
+        )
+        ?.[focused_item_index]?.focus();
     }
 
     // Open dropdown with ArrowDown when closed
     if (hovered_dropdown !== href && key === `ArrowDown`) {
-      event.preventDefault()
-      toggle_dropdown(href, true)
+      event.preventDefault();
+      toggle_dropdown(href, true);
     }
   }
 
   function handle_dropdown_item_keydown(event: KeyboardEvent, href: string) {
     if (event.key === `Escape`) {
-      event.preventDefault()
-      close_menus()
-      document.querySelector<HTMLButtonElement>(
-        `.dropdown[data-href="${href}"] [data-dropdown-toggle]`,
-      )?.focus()
+      event.preventDefault();
+      close_menus();
+      document
+        .querySelector<HTMLButtonElement>(
+          `.dropdown[data-href="${href}"] [data-dropdown-toggle]`,
+        )
+        ?.focus();
     }
   }
 
   function is_current(path: string | undefined) {
-    if (!path) return undefined
-    if (path === `/`) return page?.url.pathname === `/` ? `page` : undefined
+    if (!path) return undefined;
+    if (path === `/`) return page?.url.pathname === `/` ? `page` : undefined;
     // Match exact path or path followed by / to avoid partial matches
     // e.g. /tc-periodic-v2 should not match /tc-periodic
-    const pathname = page?.url.pathname
-    const exact_match = pathname === path
-    const prefix_match = pathname?.startsWith(path + `/`)
-    return exact_match || prefix_match ? `page` : undefined
+    const pathname = page?.url.pathname;
+    const exact_match = pathname === path;
+    const prefix_match = pathname?.startsWith(path + `/`);
+    return exact_match || prefix_match ? `page` : undefined;
   }
 
   const is_child_current = (sub_routes: string[]) =>
-    sub_routes.some((child_path) => is_current(child_path) === `page`)
+    sub_routes.some((child_path) => is_current(child_path) === `page`);
 
   function format_label(text: string | undefined, remove_parent = false) {
-    if (!text) return { label: ``, style: `` }
-    const custom_label = labels?.[text]
-    if (custom_label) return { label: custom_label, style: `` }
+    if (!text) return { label: ``, style: `` };
+    const custom_label = labels?.[text];
+    if (custom_label) return { label: custom_label, style: `` };
 
-    if (remove_parent) text = text.split(`/`).filter(Boolean).pop() ?? text
-    let label = text.replace(/^\//, ``).replaceAll(`-`, ` `)
+    if (remove_parent) text = text.split(`/`).filter(Boolean).pop() ?? text;
+    let label = text.replace(/^\//, ``).replaceAll(`-`, ` `);
     // Handle root path '/' which becomes empty after stripping
-    if (!label && text === `/`) label = `Home`
-    return { label, style: label ? `text-transform: capitalize` : `` }
+    if (!label && text === `/`) label = `Home`;
+    return { label, style: label ? `text-transform: capitalize` : `` };
   }
 
   // Normalize all route formats to NavRouteObject
   function parse_route(route: NavRoute): NavRouteObject {
-    if (typeof route === `string`) return { href: route }
+    if (typeof route === `string`) return { href: route };
     if (Array.isArray(route)) {
-      const [href, second] = route
+      const [href, second] = route;
       return Array.isArray(second)
         ? { href, children: second }
-        : { href, label: second }
+        : { href, label: second };
     }
-    return route
+    return route;
   }
 
   function get_tooltip(route: NavRouteObject) {
     // Priority: disabled message > route.tooltip > tooltips[href]
     if (typeof route.disabled === `string`) {
-      return tooltip({ ...tooltip_options, content: route.disabled })
+      return tooltip({ ...tooltip_options, content: route.disabled });
     }
-    const content = route.tooltip ?? tooltips?.[route.href]
-    if (!content) return undefined
+    const content = route.tooltip ?? tooltips?.[route.href];
+    if (!content) return undefined;
     // Support both string (content only) and object (full options) formats
-    const opts = typeof content === `string` ? { content } : content
-    return tooltip({ ...tooltip_options, ...opts })
+    const opts = typeof content === `string` ? { content } : content;
+    return tooltip({ ...tooltip_options, ...opts });
   }
 
   // Handle link click with onnavigate callback
   function handle_link_click(event: MouseEvent, route: NavRouteObject) {
     if (route.disabled) {
-      event.preventDefault()
-      return
+      event.preventDefault();
+      return;
     }
     if (onnavigate) {
-      const result = onnavigate({ href: route.href, event, route })
+      const result = onnavigate({ href: route.href, event, route });
       if (result === false) {
-        event.preventDefault()
-        return
+        event.preventDefault();
+        return;
       }
     }
-    close_menus()
+    close_menus();
   }
 
   // Get external link attributes
   function get_external_attrs(route: NavRouteObject) {
-    if (!route.external) return {}
-    return { target: `_blank`, rel: `noopener noreferrer` }
+    if (!route.external) return {};
+    return { target: `_blank`, rel: `noopener noreferrer` };
   }
 </script>
 
@@ -240,8 +259,8 @@
       class="disabled {parsed_route.class ?? ``}"
       style={`${formatted.style}; ${parsed_route.style ?? ``}`}
       aria-disabled="true"
-      {@attach item_tooltip}
-    >{@html formatted.label}</span>
+      {@attach item_tooltip}>{@html formatted.label}</span
+    >
   {:else if link}
     {@render link({ href: parsed_route.href, label: formatted.label })}
   {:else}
@@ -268,7 +287,7 @@
   <button
     class="burger"
     type="button"
-    onclick={() => is_open = !is_open}
+    onclick={() => (is_open = !is_open)}
     aria-label="Toggle navigation menu"
     aria-expanded={is_open}
     aria-controls={panel_id}
@@ -287,17 +306,7 @@
     {onkeydown}
     {...menu_props}
   >
-    {#each routes as
-      route,
-      route_idx
-      (`${route_idx}-${
-        typeof route === `string`
-          ? route
-          : Array.isArray(route)
-          ? route[0]
-          : route.href ?? `sep-${route_idx}`
-      }`)
-    }
+    {#each routes as route, route_idx (`${route_idx}-${typeof route === `string` ? route : Array.isArray(route) ? route[0] : (route.href ?? `sep-${route_idx}`)}`)}
       {@const parsed_route = parse_route(route)}
       {@const formatted = format_label(parsed_route.label ?? parsed_route.href)}
       {@const sub_routes = parsed_route.children}
@@ -313,7 +322,9 @@
         <!-- Dropdown menu item -->
         {@const child_is_active = is_child_current(sub_routes)}
         {@const parent_page_exists = sub_routes.includes(parsed_route.href)}
-        {@const filtered_sub_routes = sub_routes.filter((r) => r !== parsed_route.href)}
+        {@const filtered_sub_routes = sub_routes.filter(
+          (r) => r !== parsed_route.href,
+        )}
         <div
           class="dropdown"
           class:active={child_is_active}
@@ -321,13 +332,14 @@
           data-href={parsed_route.href}
           role="group"
           aria-current={child_is_active ? `true` : undefined}
-          onmouseenter={() => !is_touch_device && (hovered_dropdown = parsed_route.href)}
+          onmouseenter={() =>
+            !is_touch_device && (hovered_dropdown = parsed_route.href)}
           onmouseleave={() => !is_touch_device && (hovered_dropdown = null)}
           onfocusin={() => (hovered_dropdown = parsed_route.href)}
           onfocusout={(event) => {
-            const next = event.relatedTarget as Node | null
+            const next = event.relatedTarget as Node | null;
             if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
-              hovered_dropdown = null
+              hovered_dropdown = null;
             }
           }}
         >
@@ -337,8 +349,8 @@
                 class="disabled {parsed_route.class ?? ``}"
                 style={`${formatted.style}; ${parsed_route.style ?? ``}`}
                 aria-disabled="true"
-                {@attach item_tooltip}
-              >{@html formatted.label}</span>
+                {@attach item_tooltip}>{@html formatted.label}</span
+              >
             {:else if parent_page_exists}
               <a
                 href={parsed_route.href}
@@ -355,8 +367,8 @@
               <span
                 class={parsed_route.class}
                 style={`${formatted.style}; ${parsed_route.style ?? ``}`}
-                {@attach item_tooltip}
-              >{@html formatted.label}</span>
+                {@attach item_tooltip}>{@html formatted.label}</span
+              >
             {/if}
             <button
               type="button"
@@ -366,29 +378,30 @@
               aria-haspopup="true"
               onclick={() => toggle_dropdown(parsed_route.href, false)}
               onkeydown={(event) =>
-              handle_dropdown_keydown(
-                event,
-                parsed_route.href,
-                filtered_sub_routes,
-              )}
+                handle_dropdown_keydown(
+                  event,
+                  parsed_route.href,
+                  filtered_sub_routes,
+                )}
             >
-              <Icon
-                icon="ChevronExpand"
-                style="width: 0.8em; height: 0.8em"
-              />
+              <Icon icon="ChevronExpand" style="width: 0.8em; height: 0.8em" />
             </button>
           </div>
           <div
             class:visible={hovered_dropdown === parsed_route.href}
             role="menu"
             tabindex="-1"
-            onmouseenter={() => !is_touch_device && (hovered_dropdown = parsed_route.href)}
+            onmouseenter={() =>
+              !is_touch_device && (hovered_dropdown = parsed_route.href)}
             onmouseleave={() => !is_touch_device && (hovered_dropdown = null)}
             onfocusin={() => (hovered_dropdown = parsed_route.href)}
             onfocusout={(event) => {
-              const next = event.relatedTarget as Node | null
-              if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
-                hovered_dropdown = null
+              const next = event.relatedTarget as Node | null;
+              if (
+                !next ||
+                !(event.currentTarget as HTMLElement).contains(next)
+              ) {
+                hovered_dropdown = null;
               }
             }}
           >
@@ -396,14 +409,19 @@
               {@const child_formatted = format_label(child_href, true)}
               {@const child_tooltip = get_tooltip({ href: child_href })}
               {#if link}
-                {@render link({ href: child_href, label: child_formatted.label })}
+                {@render link({
+                  href: child_href,
+                  label: child_formatted.label,
+                })}
               {:else}
                 <a
                   href={child_href}
                   role="menuitem"
                   aria-current={is_current(child_href)}
-                  onclick={(event) => handle_link_click(event, { href: child_href })}
-                  onkeydown={(event) => handle_dropdown_item_keydown(event, parsed_route.href)}
+                  onclick={(event) =>
+                    handle_link_click(event, { href: child_href })}
+                  onkeydown={(event) =>
+                    handle_dropdown_item_keydown(event, parsed_route.href)}
                   {...link_props}
                   style={`${child_formatted.style}; ${link_props?.style ?? ``}`}
                   {@attach child_tooltip}
@@ -427,13 +445,13 @@
           {/snippet}
           <span class:align-right={is_right}>
             {@render item({
-          route: parsed_route,
-          href: parsed_route.href,
-          label: formatted.label,
-          is_active,
-          is_dropdown,
-          render_default: render_default_snippet,
-        })}
+              route: parsed_route,
+              href: parsed_route.href,
+              label: formatted.label,
+              is_active,
+              is_dropdown,
+              render_default: render_default_snippet,
+            })}
           </span>
         {:else}
           <span class:align-right={is_right}>
@@ -457,7 +475,10 @@
     margin: -0.75em auto 1.25em;
     --nav-border-radius: 6pt;
     --nav-surface-bg: light-dark(#fafafa, #1a1a1a);
-    --nav-surface-border: light-dark(rgba(128, 128, 128, 0.25), rgba(200, 200, 200, 0.2));
+    --nav-surface-border: light-dark(
+      rgba(128, 128, 128, 0.25),
+      rgba(200, 200, 200, 0.2)
+    );
     --nav-surface-shadow: light-dark(
       0 2px 8px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.5)
@@ -483,7 +504,7 @@
   .menu > span > a:hover {
     background-color: var(--nav-link-bg-hover);
   }
-  .menu > span > a[aria-current='page'] {
+  .menu > span > a[aria-current="page"] {
     color: var(--nav-link-active-color);
   }
   /* Disabled items */
@@ -520,7 +541,7 @@
     color: var(--nav-link-active-color);
   }
   .dropdown::after {
-    content: '';
+    content: "";
     position: absolute;
     top: 100%;
     left: 0;
@@ -545,7 +566,7 @@
     color: inherit;
     border-radius: var(--nav-border-radius) 0 0 var(--nav-border-radius);
   }
-  .dropdown > div:first-child > a[aria-current='page'] {
+  .dropdown > div:first-child > a[aria-current="page"] {
     color: var(--nav-link-active-color);
   }
   .dropdown > div:first-child > button {
@@ -571,7 +592,8 @@
     margin: var(--nav-dropdown-margin, 3pt 0 0 0);
     min-width: max-content;
     background-color: var(--nav-dropdown-bg, var(--nav-surface-bg));
-    border: 1px solid var(--nav-dropdown-border-color, var(--nav-surface-border));
+    border: 1px solid
+      var(--nav-dropdown-border-color, var(--nav-surface-border));
     border-radius: var(--nav-border-radius, 6pt);
     box-shadow: var(--nav-dropdown-shadow, var(--nav-surface-shadow));
     padding: var(--nav-dropdown-padding, 2pt 3pt);
@@ -594,7 +616,7 @@
   .dropdown > div:last-child a:hover {
     background-color: var(--nav-link-bg-hover);
   }
-  .dropdown > div:last-child a[aria-current='page'] {
+  .dropdown > div:last-child a[aria-current="page"] {
     color: var(--nav-link-active-color);
   }
   /* Mobile burger button */
@@ -619,13 +641,13 @@
     transition: all 0.2s linear;
     transform-origin: center;
   }
-  .burger[aria-expanded='true'] span:first-child {
+  .burger[aria-expanded="true"] span:first-child {
     transform: translateY(0.4rem) rotate(45deg);
   }
-  .burger[aria-expanded='true'] span:nth-child(2) {
+  .burger[aria-expanded="true"] span:nth-child(2) {
     opacity: 0;
   }
-  .burger[aria-expanded='true'] span:nth-child(3) {
+  .burger[aria-expanded="true"] span:nth-child(3) {
     transform: translateY(-0.4rem) rotate(-45deg);
   }
   /* Mobile styles - using .mobile class set via JS based on breakpoint prop */
