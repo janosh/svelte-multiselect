@@ -1,8 +1,8 @@
 import adapter from '@sveltejs/adapter-static'
 import { mdsvex } from 'mdsvex'
-import mdsvexamples from 'mdsvexamples'
 import { sveltePreprocess } from 'svelte-preprocess'
 import { heading_ids } from './src/lib/heading-anchors.ts'
+import live_examples from './src/lib/live-examples/remark.ts'
 
 import pkg from './package.json' with { type: 'json' }
 const defaults = {
@@ -10,7 +10,7 @@ const defaults = {
   repo: pkg.repository,
   hideStyle: true,
 }
-const remarkPlugins = [[mdsvexamples, { defaults }]]
+const remarkPlugins = [[live_examples, { defaults }]]
 
 import type { Config } from '@sveltejs/kit'
 

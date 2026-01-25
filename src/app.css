@@ -1,3 +1,6 @@
+/* starry-night syntax highlighting (GitHub-style, light/dark auto-switch) */
+@import '@wooorm/starry-night/style/both';
+
 :root {
   /* Core theme colors */
   --accent: cornflowerblue;
