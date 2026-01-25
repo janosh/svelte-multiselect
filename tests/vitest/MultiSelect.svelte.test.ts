@@ -5443,4 +5443,41 @@ describe(`duplicates prop variants`, () => {
       `Already selected`,
     )
   })
+
+  test(`dropdown options with same label but different values remain selectable`, async () => {
+    // Issue: label check was blocking dropdown options even when values differ
+    // The is_from_options check should skip label-based duplicate detection for dropdown items
+    const options = [
+      { label: `apple`, value: 1 },
+      { label: `apple`, value: 2 },
+      { label: `apple`, value: 3 },
+    ]
+
+    const onadd_spy = vi.fn()
+    const onduplicate_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options,
+        selected: [options[0]], // pre-select first option
+        onadd: onadd_spy,
+        onduplicate: onduplicate_spy,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    // Should show 2 remaining options (same label, different values)
+    const visible_options = document.querySelectorAll(`ul.options > li`)
+    expect(visible_options.length).toBe(2) // Click second option - should work since it has different value
+    ;(visible_options[0] as HTMLElement).click()
+    await tick()
+
+    // Verify click triggered add, not duplicate
+    expect(onduplicate_spy).not.toHaveBeenCalled()
+    expect(onadd_spy).toHaveBeenCalledTimes(1)
+  })
 })

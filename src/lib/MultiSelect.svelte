@@ -423,8 +423,8 @@
   )
   // Helper to check if a label is already selected (respects case-insensitive mode)
   const is_label_selected = (label: string): boolean =>
-    duplicates === `case-insensitive`
-      ? selected_labels_lower_set?.has(label.toLowerCase()) ?? false
+    selected_labels_lower_set
+      ? selected_labels_lower_set.has(label.toLowerCase())
       : selected_labels_set.has(label)
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
@@ -723,9 +723,15 @@
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    // Check for duplicates by key OR by label (for user-typed text matching selected labels)
+    // Check for duplicates by key, plus label check for user-created options
+    // For duplicates=false (default), label check only applies to user-typed text
+    // For duplicates='case-insensitive', label check applies to all options
+    // Use key comparison instead of reference equality (more robust with Svelte proxies)
+    const option_key = key(option_to_add)
+    const is_from_options = effective_options.some((opt) => key(opt) === option_key)
+    const check_label = duplicates === `case-insensitive` || !is_from_options
     const is_duplicate = selected_keys_set.has(key(option_to_add)) ||
-      is_label_selected(`${utils.get_label(option_to_add)}`)
+      (check_label && is_label_selected(`${utils.get_label(option_to_add)}`))
     const max_reached = maxSelect !== null && maxSelect !== 1 &&
       selected.length >= maxSelect
     // Fire events for blocked add attempts
@@ -739,7 +745,7 @@
       (duplicates === true || !is_duplicate)
     ) {
       if (
-        !effective_options.includes(option_to_add) && // first check if we find option in the options list
+        !is_from_options && // first check if we find option in the options list
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
