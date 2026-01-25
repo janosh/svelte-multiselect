@@ -73,7 +73,8 @@ const escape_svelte = (html: string): string =>
 
 // mdsvex highlighter function
 export function starry_night_highlighter(code: string, lang?: string | null): string {
-  const scope = lang ? LANG_TO_SCOPE[lang] : undefined
+  const lang_key = lang?.toLowerCase()
+  const scope = lang_key ? LANG_TO_SCOPE[lang_key] : undefined
   if (!scope) {
     // Return escaped code if language not supported
     const escaped = escape_svelte(escape_html_text(code))
@@ -81,5 +82,5 @@ export function starry_night_highlighter(code: string, lang?: string | null): st
   }
   const tree = starry_night.highlight(code, scope) as HastRoot
   const html = escape_svelte(hast_to_html(tree))
-  return `<pre class="highlight highlight-${lang}"><code>${html}</code></pre>`
+  return `<pre class="highlight highlight-${lang_key}"><code>${html}</code></pre>`
 }

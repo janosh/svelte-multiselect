@@ -24,6 +24,17 @@ describe(`starry_night_highlighter`, () => {
     })
   })
 
+  describe(`case-insensitive language matching`, () => {
+    test.each([`TS`, `TypeScript`, `JAVASCRIPT`, `Svelte`])(
+      `normalizes %s to lowercase`,
+      (lang) => {
+        const result = starry_night_highlighter(`const x = 1`, lang)
+        expect(result).toMatch(/^<pre class="highlight highlight-[a-z]+"><code>/)
+        expect(result).not.toContain(lang) // Should use lowercase version
+      },
+    )
+  })
+
   describe(`unsupported languages`, () => {
     test.each([`yaml`, `rust`, `python`, `unknown`])(
       `returns escaped code for unsupported lang: %s`,

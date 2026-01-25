@@ -197,9 +197,11 @@ export default function live_examples_plugin(
       // Collect virtual file modules that need HMR updates
       const additional_modules: typeof ctx.modules = []
 
+      // Normalize to forward slashes (ctx.file uses OS separators, Map keys use Vite's forward slashes)
+      const file = ctx.file.replace(/\\/g, `/`)
       // O(1) lookup using reverse map instead of iterating all virtual files
-      if (extensions.some((ext) => ctx.file.endsWith(ext))) {
-        const virtual_ids = parent_to_virtual.get(ctx.file)
+      if (extensions.some((ext) => file.endsWith(ext))) {
+        const virtual_ids = parent_to_virtual.get(file)
         if (virtual_ids) {
           for (const id of virtual_ids) {
             const mod = ctx.server.moduleGraph.getModuleById(id)

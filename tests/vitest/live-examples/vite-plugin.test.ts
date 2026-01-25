@@ -191,6 +191,30 @@ describe(`vite-specific hooks`, () => {
   })
 })
 
+describe(`handleHotUpdate Windows path normalization`, () => {
+  test(`normalizes backslashes to forward slashes for Map lookup`, () => {
+    const plugin = get_plugin()
+    const ctx = create_mock_context()
+    // Transform with forward-slash path (how Vite stores IDs)
+    const unix_path = `/path/to/file.md`
+    const code = `const props = { __live_example_src: "${to_base64(`<div>Test</div>`)}" }`
+    plugin.transform?.call(ctx, code, unix_path)
+
+    // HMR context uses Windows backslashes
+    const windows_path = `\\path\\to\\file.md`
+    const mock_module = { id: `virtual` }
+    const hmr_ctx = {
+      file: windows_path,
+      server: { moduleGraph: { getModuleById: vi.fn().mockReturnValue(mock_module) } },
+      modules: [],
+    }
+    const result = plugin.handleHotUpdate?.(hmr_ctx)
+
+    // Should find the virtual module despite path separator difference
+    expect(result).toContain(mock_module)
+  })
+})
+
 describe(`virtual file caching`, () => {
   test(`caches and updates virtual files`, () => {
     const plugin = get_plugin()
