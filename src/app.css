@@ -68,6 +68,7 @@ code {
   font-size: 0.9em;
 }
 pre {
+  position: relative;
   padding: 1ex 1em;
   border-radius: 6px;
   background: var(--surface);

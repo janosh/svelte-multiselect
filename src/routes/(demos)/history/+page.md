@@ -7,24 +7,30 @@ Selection history is **enabled by default**, allowing users to undo and redo the
 History tracking works out of the box with a default max of 50 entries. Pass a number to customize the limit, or `false`/`0` to disable.
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 
-  let selected = $state([])
-  let undo = $state()
-  let redo = $state()
+  interface EventLogEntry {
+    name: string
+    data: string
+    time: string
+  }
+
+  let selected: string[] = $state([])
+  let undo: (() => boolean) | undefined = $state()
+  let redo: (() => boolean) | undefined = $state()
   let canUndo = $state(false)
   let canRedo = $state(false)
-  let events = $state([])
+  let events: EventLogEntry[] = $state([])
   // Use same platform detection as component (userAgentData is modern API, userAgent is fallback)
-  const is_mac = typeof navigator !== 'undefined' &&
+  const is_mac: boolean = typeof navigator !== 'undefined' &&
     (navigator.userAgentData?.platform === 'macOS' ||
       /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
-  const mod_key = is_mac ? 'Cmd' : 'Ctrl'
+  const mod_key: string = is_mac ? 'Cmd' : 'Ctrl'
 
-  function log_event(name, data) {
+  function log_event(name: string, data: unknown): void {
     events = [
       { name, data: JSON.stringify(data), time: new Date().toLocaleTimeString() },
       ...events.slice(0, 4),

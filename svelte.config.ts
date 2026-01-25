@@ -1,8 +1,7 @@
 import adapter from '@sveltejs/adapter-static'
 import { mdsvex } from 'mdsvex'
-import { sveltePreprocess } from 'svelte-preprocess'
 import { heading_ids } from './src/lib/heading-anchors.ts'
-import live_examples from './src/lib/live-examples/remark.ts'
+import { mdsvex_transform, sveltePreprocess } from './src/lib/live-examples/index.ts'
 
 import pkg from './package.json' with { type: 'json' }
 const defaults = {
@@ -10,7 +9,7 @@ const defaults = {
   repo: pkg.repository,
   hideStyle: true,
 }
-const remarkPlugins = [[live_examples, { defaults }]]
+const remarkPlugins = [[mdsvex_transform, { defaults }]]
 
 import type { Config } from '@sveltejs/kit'
 
@@ -22,7 +21,7 @@ const config: Config = {
   },
 
   preprocess: [
-    sveltePreprocess(),
+    sveltePreprocess(), // Wrapped to skip .md files, preserving code fence formatting
     mdsvex({ remarkPlugins, extensions: [`.md`] }),
     heading_ids(),
   ],

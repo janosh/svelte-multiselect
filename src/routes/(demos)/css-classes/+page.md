@@ -1,10 +1,10 @@
 ## External CSS Classes
 
 ```svelte example id="foods"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
 
-  const options = [...Array(7).keys()].map((idx) => `Option ${idx + 1}`)
+  const options: string[] = [...Array(7).keys()].map((idx) => `Option ${idx + 1}`)
 </script>
 
 <MultiSelect

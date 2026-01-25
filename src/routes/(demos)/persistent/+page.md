@@ -3,16 +3,16 @@
 This example shows how to combine MultiSelect with `sessionStorage` to persist the `selected` state across page reloads.
 
 ```svelte example id="languages"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
   import { onMount } from 'svelte'
 
-  let selected = $state([])
+  let selected: string[] = $state([])
 
   onMount(() => {
-    const stored = sessionStorage[`languages`]
+    const stored: string | undefined = sessionStorage[`languages`]
     selected = stored ? JSON.parse(stored) : `Python TypeScript C Haskell`.split(` `)
   })
 
@@ -37,15 +37,15 @@ This example shows how to combine MultiSelect with `sessionStorage` to persist t
 Tests that binding to reactive wrappers (Svelte stores, Superforms, etc.) that clone arrays on assignment doesn't cause infinite loops. See [issue #309](https://github.com/janosh/svelte-multiselect/issues/309).
 
 ```svelte example id="store-binding"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
-  import { writable } from 'svelte/store'
+  import { type Writable, writable } from 'svelte/store'
 
   // Regression test for issue #309: store subscriptions would cause infinite
   // loops without the values_equal() fix in MultiSelect.svelte
-  const options = [`Red`, `Green`, `Blue`]
+  const options: string[] = [`Red`, `Green`, `Blue`]
   let increment = $state(0)
-  let list_store = writable([])
+  let list_store: Writable<string[]> = writable([])
 
   list_store.subscribe(() => increment++)
 </script>

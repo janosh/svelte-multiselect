@@ -3,17 +3,22 @@
 This demo showcases all the events that `<MultiSelect>` emits. Each emitted event is recorded in the event log panel on the right.
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
-  import { get_label } from '$lib/utils'
 
-  let events = $state([])
-  let selected_options = $state([])
+  interface EventLogEntry {
+    event: string
+    data: string
+    timestamp: string
+  }
+
+  let events: EventLogEntry[] = $state([])
+  let selected_options: string[] = $state([])
   let allowUserOptions = $state(true)
 
-  function log_event(event_name, data) {
+  function log_event(event_name: string, data: unknown): void {
     events = [
       {
         event: event_name,

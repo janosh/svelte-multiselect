@@ -19,7 +19,23 @@
   "svelte": "./dist/index.js",
   "bugs": "https://github.com/janosh/svelte-multiselect/issues",
   "peerDependencies": {
-    "svelte": "^5.35.6"
+    "svelte": "^5.35.6",
+    "@wooorm/starry-night": "^3.0.0",
+    "abstract-syntax-tree": "^2.0.0",
+    "hast-util-to-html": "^9.0.0",
+    "svelte-preprocess": "^6.0.0",
+    "unist-util-visit": "^5.0.0",
+    "unplugin": "^2.0.0",
+    "upath": "^2.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@wooorm/starry-night": { "optional": true },
+    "abstract-syntax-tree": { "optional": true },
+    "hast-util-to-html": { "optional": true },
+    "svelte-preprocess": { "optional": true },
+    "unist-util-visit": { "optional": true },
+    "unplugin": { "optional": true },
+    "upath": { "optional": true }
   },
   "devDependencies": {
     "@playwright/test": "^1.58.0",
@@ -82,6 +98,18 @@
     "./heading-anchors": {
       "types": "./dist/heading-anchors.d.ts",
       "default": "./dist/heading-anchors.js"
+    },
+    "./live-examples": {
+      "types": "./dist/live-examples/index.d.ts",
+      "default": "./dist/live-examples/index.js"
+    },
+    "./live-examples/mdsvex-transform": {
+      "types": "./dist/live-examples/mdsvex-transform.d.ts",
+      "default": "./dist/live-examples/mdsvex-transform.js"
+    },
+    "./live-examples/vite": {
+      "types": "./dist/live-examples/vite-plugin.d.ts",
+      "default": "./dist/live-examples/vite-plugin.js"
     }
   },
   "types": "./dist/index.d.ts",

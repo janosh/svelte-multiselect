@@ -10,12 +10,12 @@ Flexible, accessible navigation with dropdown support, mobile burger menu, and k
 ## Basic Usage
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
-  const routes = ['/', '/about', '/contact', '/blog']
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const routes: string[] = ['/', '/about', '/contact', '/blog']
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
 <Nav {routes} {page} {link_props} />
@@ -26,11 +26,11 @@ Flexible, accessible navigation with dropdown support, mobile burger menu, and k
 ## Custom Labels
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
 <Nav
@@ -52,7 +52,7 @@ Flexible, accessible navigation with dropdown support, mobile burger menu, and k
 Use tuple syntax `[parent, [children...]]` for nested routes. When the parent exists in children array, it becomes a clickable link. Otherwise, it's just a label.
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
@@ -62,7 +62,7 @@ Use tuple syntax `[parent, [children...]]` for nested routes. When the parent ex
     ['/help', ['/help/faq', '/help/support']], // /help is just a label (not in children)
     '/about',
   ]
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
 <Nav {routes} {page} {link_props} />
@@ -86,7 +86,7 @@ Use tuple syntax `[parent, [children...]]` for nested routes. When the parent ex
 For full control, use objects with all available properties:
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
@@ -100,7 +100,7 @@ For full control, use objects with all available properties:
     { href: '/settings', align: 'right', tooltip: 'Configure your preferences' },
     { href: 'https://github.com', label: 'GitHub', external: true, align: 'right' },
   ]
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
 <Nav {routes} {page} {link_props} />
@@ -142,7 +142,7 @@ For full control, use objects with all available properties:
 Use the `link` snippet to customize how all links render:
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
@@ -161,12 +161,12 @@ Use the `link` snippet to customize how all links render:
 Add extra content to the nav menu via `children` snippet:
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
   const routes = ['/', '/about', '/blog']
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
 <Nav {routes} {page} {link_props}>
@@ -194,7 +194,7 @@ Add extra content to the nav menu via `children` snippet:
 Use `item` snippet for per-item customization. The `render_default` escape hatch renders the default link:
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
@@ -203,7 +203,7 @@ Use `item` snippet for per-item customization. The `render_default` escape hatch
     { href: '/docs', label: 'Docs', icon: '📚' },
     { href: '/settings', label: 'Settings', icon: '⚙️', align: 'right' },
   ]
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
 <Nav {routes} {page} {link_props}>
@@ -229,12 +229,12 @@ Use `item` snippet for per-item customization. The `render_default` escape hatch
 Handle navigation events with `onnavigate`, `onopen`, and `onclose`:
 
 ```svelte example collapsible
-<script>
+<script lang="ts">
   import { Nav } from '$lib'
   import { page } from '$app/state'
 
   const routes = ['/', '/about', '/contact', '/blog']
-  const link_props = { onclick: (e) => e.preventDefault() }
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
   let nav_message = $state('')
   let menu_status = $state('closed')
 </script>

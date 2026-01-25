@@ -11,8 +11,8 @@ Exported from `svelte-multiselect/attachments`:
 ### `tooltip`
 
 ```svelte example id="attachments-tooltip"
-<script>
-  import { Icon, tooltip } from '$lib'
+<script lang="ts">
+  import { tooltip } from '$lib'
 
   let custom_delay = $state(0)
 </script>
@@ -154,7 +154,7 @@ Exported from `svelte-multiselect/attachments`:
 Tooltip content updates reactively via `MutationObserver` when `title`, `aria-label`, or `data-title` changes:
 
 ```svelte example id="attachments-tooltip-reactive"
-<script>
+<script lang="ts">
   import { tooltip } from '$lib'
   let text = $state(`Edit me!`)
 </script>
@@ -166,10 +166,10 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 ### `draggable`
 
 ```svelte example id="attachments-draggable"
-<script>
+<script lang="ts">
   import { draggable } from '$lib'
 
-  let last_drag = $state('')
+  let last_drag: string = $state('')
 </script>
 
 <div class="drag-area">
@@ -224,15 +224,15 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 ### `highlight_matches`
 
 ```svelte example id="attachments-highlight"
-<script>
+<script lang="ts">
   import { highlight_matches } from '$lib'
 
   let search_text = $state('')
   let disabled = $state(false)
 
   // Only highlight inside .target; skip any node inside .no-hl
-  const node_filter = (node) =>
-    node.parentElement?.closest('.no-hl')
+  const node_filter = (node: Node): number =>
+    (node as Element).parentElement?.closest('.no-hl')
       ? NodeFilter.FILTER_REJECT
       : NodeFilter.FILTER_ACCEPT
 </script>
@@ -280,7 +280,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 ### `click_outside`
 
 ```svelte example id="attachments-click-outside"
-<script>
+<script lang="ts">
   import { click_outside, tooltip } from '$lib'
 
   let open_menu = $state(false)
@@ -342,7 +342,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 ### `sortable`
 
 ```svelte example id="attachments-sortable"
-<script>
+<script lang="ts">
   import { sortable } from '$lib'
 </script>
 

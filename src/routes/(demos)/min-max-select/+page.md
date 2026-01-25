@@ -44,8 +44,8 @@ When setting an integer value for `maxSelect` Multiselect will
 <script lang="ts">
   import MultiSelect from '$lib'
 
-  function handle_submit(event: SubmitEvent) {
-    const form_data = new FormData(event.target)
+  function handle_submit(event: SubmitEvent): void {
+    const form_data = new FormData(event.target as HTMLFormElement)
     alert('form data received by submit handler:\n' + JSON.stringify(...form_data))
   }
 </script>
@@ -62,8 +62,8 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 <script lang="ts">
   import MultiSelect from '$lib'
 
-  function handle_submit(event: SubmitEvent) {
-    const form_data = new FormData(event.target)
+  function handle_submit(event: SubmitEvent): void {
+    const form_data = new FormData(event.target as HTMLFormElement)
     alert('form data received by submit handler:\n' + JSON.stringify(...form_data))
   }
 </script>
@@ -88,8 +88,16 @@ Use `selectAllOption` to add a "Select all" button at the top of the dropdown. I
 <script lang="ts">
   import MultiSelect from '$lib'
 
-  const fruits = [`Apple`, `Banana`, `Cherry`, `Date`, `Elderberry`, `Fig`, `Grape`]
-  let selected = $state([])
+  const fruits: string[] = [
+    `Apple`,
+    `Banana`,
+    `Cherry`,
+    `Date`,
+    `Elderberry`,
+    `Fig`,
+    `Grape`,
+  ]
+  let selected: string[] = $state([])
 </script>
 
 <MultiSelect
@@ -108,8 +116,13 @@ Pass a string to customize the label:
 ```svelte example
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const colors = [
+  interface ColorOption extends ObjectOption {
+    value: string
+  }
+
+  const colors: ColorOption[] = [
     { label: `Red`, value: `#ff6b6b` },
     { label: `Orange`, value: `#ffa94d` },
     { label: `Yellow`, value: `#ffd43b` },
@@ -117,7 +130,7 @@ Pass a string to customize the label:
     { label: `Blue`, value: `#4dabf7` },
     { label: `Purple`, value: `#9775fa` },
   ]
-  let selected = $state([])
+  let selected: ColorOption[] = $state([])
 </script>
 
 <MultiSelect options={colors} bind:selected selectAllOption="Add all colors" />
@@ -138,13 +151,18 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
 ```svelte example
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const options = [
+  interface ColorOption extends ObjectOption {
+    value: string
+  }
+
+  const options: ColorOption[] = [
     { label: `Red`, value: `#ffb3ba` },
     { label: `Green`, value: `#baffc9` },
     { label: `Blue`, value: `#bae1ff` },
   ]
-  let selected_color = $state(options[2]) // Pre-select Blue
+  let selected_color: ColorOption | null = $state(options[2]) // Pre-select Blue
 </script>
 
 <MultiSelect {options} bind:value={selected_color} maxSelect={1} />
@@ -155,20 +173,25 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
 ```
 
 ```svelte example
-<script>
+<script lang="ts">
   // for https://github.com/janosh/svelte-multiselect/issues/249
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const red_pill =
+  const red_pill: string =
     `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
-  const blue_pill =
+  const blue_pill: string =
     `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
-  const options = [{ label: red_pill, value: `red pill`, preselected: true }, {
+  const options: ObjectOption[] = [{
+    label: red_pill,
+    value: `red pill`,
+    preselected: true,
+  }, {
     label: blue_pill,
     value: `blue pill`,
   }]
 
-  let value = $state(null)
+  let value: ObjectOption | null = $state(null)
 </script>
 
 <MultiSelect {options} maxSelect={1} parseLabelsAsHtml bind:value />

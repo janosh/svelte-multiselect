@@ -1,5 +1,5 @@
 import { sveltekit } from '@sveltejs/kit/vite'
-import live_examples from './src/lib/live-examples/plugin.ts'
+import live_examples from './src/lib/live-examples/vite-plugin.ts'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import { defineConfig } from 'vitest/config'

@@ -1,5 +1,4 @@
 // Remark plugin - transforms ```svelte example code blocks into rendered components
-import { fileURLToPath } from 'node:url'
 import { createStarryNight } from '@wooorm/starry-night'
 import source_css from '@wooorm/starry-night/source.css'
 import source_js from '@wooorm/starry-night/source.js'
@@ -9,6 +8,8 @@ import source_svelte from '@wooorm/starry-night/source.svelte'
 import source_ts from '@wooorm/starry-night/source.ts'
 import text_html_basic from '@wooorm/starry-night/text.html.basic'
 import { toHtml } from 'hast-util-to-html'
+import { Buffer } from 'node:buffer'
+import { fileURLToPath } from 'node:url'
 import { visit } from 'unist-util-visit'
 import path from 'upath'
 
@@ -23,8 +24,12 @@ const starry_night = await createStarryNight([
   text_html_basic,
 ])
 
+// Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
   src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\\{`)
+
+// Base64 encode to prevent preprocessors from modifying the content
+const to_base64 = (src: string) => Buffer.from(src, `utf-8`).toString(`base64`)
 
 const _dirname = typeof __dirname !== `undefined`
   ? __dirname
@@ -32,7 +37,7 @@ const _dirname = typeof __dirname !== `undefined`
 
 // regex to find <script> block in svelte
 const RE_SCRIPT_START =
-  /<script(?:\s+?[a-zA-z]+(=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/
+  /<script(?:\s+?[a-zA-Z]+(=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/
 const RE_SCRIPT_BLOCK = /(<script[\s\S]*?>)([\s\S]*?)(<\/script>)/g
 const RE_STYLE_BLOCK = /(<style[\s\S]*?>)([\s\S]*?)(<\/style>)/g
 
@@ -95,7 +100,13 @@ interface RemarkFile {
   cwd: string
 }
 
-export default function remark(options: RemarkOptions = {}) {
+// Default wrapper component path - used when no Wrapper is specified or when
+// Wrapper is explicitly set to a falsy value (e.g., Wrapper="false")
+const DEFAULT_WRAPPER = path.resolve(_dirname, `../CodeExample.svelte`)
+
+type RemarkTransformer = (tree: RemarkTree, file: RemarkFile) => void
+
+export default function remark(options: RemarkOptions = {}): RemarkTransformer {
   const { defaults = {} } = options
 
   // legacy
@@ -104,14 +115,29 @@ export default function remark(options: RemarkOptions = {}) {
     console.warn(`ExampleComponent is deprecated, use defaults.Wrapper instead`)
   }
 
-  return function transformer(tree: RemarkTree, file: RemarkFile) {
-    const examples: Array<{ csr?: boolean; Wrapper: string | [string, string] }> = []
+  return function transformer(tree: RemarkTree, file: RemarkFile): void {
+    const examples: Array<{ csr?: boolean; wrapper_alias: string }> = []
+    // Track wrapper imports to avoid duplicates and generate unique aliases
+    const wrapper_aliases = new Map<string, string>() // wrapper key -> alias name
 
     const filename = path.toUnix(file.filename).split(path.toUnix(file.cwd)).pop()
 
+    // Helper to get or create a wrapper alias
+    function get_wrapper_alias(wrapper: string | [string, string]): string {
+      const wrapper_key = typeof wrapper === `string`
+        ? wrapper
+        : `${wrapper[0]}:${wrapper[1]}`
+      let alias = wrapper_aliases.get(wrapper_key)
+      if (!alias) {
+        alias = `Example_${wrapper_aliases.size}`
+        wrapper_aliases.set(wrapper_key, alias)
+      }
+      return alias
+    }
+
     visit(tree as RemarkTree, `code`, (node: RemarkNode) => {
       const meta: RemarkMeta = {
-        Wrapper: path.resolve(_dirname, `../CodeExample.svelte`),
+        Wrapper: DEFAULT_WRAPPER,
         filename,
         ...defaults,
         ...parse_meta(node.meta || ``),
@@ -122,17 +148,21 @@ export default function remark(options: RemarkOptions = {}) {
       // find code blocks with `example` meta in supported languages
       if (example && node.lang && EXAMPLE_LANGUAGES.includes(node.lang)) {
         const is_live = LIVE_LANGUAGES.includes(node.lang)
+        const actual_wrapper = Wrapper || DEFAULT_WRAPPER
+        const wrapper_alias = is_live ? get_wrapper_alias(actual_wrapper) : ``
+
         const value = create_example_component(
           node.value || ``,
           meta,
           is_live ? examples.length : -1, // -1 for code-only (no component import needed)
           node.lang,
           is_live,
+          wrapper_alias,
         )
 
         // Only track live examples for component imports
         if (is_live) {
-          examples.push({ csr, Wrapper: Wrapper || `` })
+          examples.push({ csr, wrapper_alias })
         }
 
         node.type = `paragraph`
@@ -145,15 +175,21 @@ export default function remark(options: RemarkOptions = {}) {
 
     // add imports for each generated example
     let scripts = ``
-    examples.forEach((example, idx) => {
-      const imp = typeof example.Wrapper === `string`
-        ? `import Example from "${example.Wrapper}";\n`
-        : `import { ${example.Wrapper[1]} as Example } from "${example.Wrapper[0]}";\n`
-
-      if (!scripts.includes(imp)) {
-        scripts += imp
+    // Add wrapper imports
+    for (const [wrapper_key, alias] of wrapper_aliases) {
+      const colon_idx = wrapper_key.indexOf(`:`)
+      if (colon_idx === -1) {
+        // Simple string path
+        scripts += `import ${alias} from "${wrapper_key}";\n`
+      } else {
+        // Tuple [module, export]
+        const module_path = wrapper_key.slice(0, colon_idx)
+        const export_name = wrapper_key.slice(colon_idx + 1)
+        scripts += `import { ${export_name} as ${alias} } from "${module_path}";\n`
       }
-
+    }
+    // Add example component imports
+    examples.forEach((example, idx) => {
       if (!example.csr) {
         scripts +=
           `import ${EXAMPLE_COMPONENT_PREFIX}${idx} from "${EXAMPLE_MODULE_PREFIX}${idx}.svelte";\n`
@@ -222,11 +258,13 @@ function create_example_component(
   index: number,
   lang: string,
   is_live: boolean,
+  wrapper_alias: string,
 ): string {
   const code = format_code(value, meta)
   const scope = LANG_TO_SCOPE[lang] || `source.svelte`
   const tree = starry_night.highlight(code, scope)
-  const highlighted = toHtml(tree)
+  // Convert newlines to &#10; to prevent bundlers from stripping whitespace
+  const highlighted = toHtml(tree).replace(/\n/g, `&#10;`)
 
   // Code-only examples (ts, js, css, etc.) - just render highlighted code block
   if (!is_live) {
@@ -240,15 +278,16 @@ function create_example_component(
   const live_example_component_name = `${EXAMPLE_COMPONENT_PREFIX}${index}`
 
   const props = {
-    // gets parsed as virtual file content in vite plugin and then removed
-    __live_example_src: `String.raw\`${encode_escapes(value)}\``,
+    // Base64 encoded to prevent preprocessors from modifying the content
+    // Gets parsed as virtual file content in vite plugin and then removed
+    __live_example_src: `"${to_base64(value)}"`,
     src: JSON.stringify(encode_escapes(code)),
     meta: encode_escapes(JSON.stringify(meta)),
   }
 
   // Close and reopen <p> to avoid block-in-inline HTML nesting issues
   return `</p>
-  <Example
+  <${wrapper_alias}
     __live_example_src={${props.__live_example_src}}
     src={${props.src}}
     meta={${props.meta}}
@@ -270,6 +309,6 @@ function create_example_component(
     {#snippet code()}
       {@html ${JSON.stringify(highlighted)}}
     {/snippet}
-  </Example>
+  </${wrapper_alias}>
   <p>`
 }
