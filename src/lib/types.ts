@@ -52,6 +52,9 @@ export interface MultiSelectEvents<T extends Option = Option> {
   ) => unknown // fires when user tries to exceed maxSelect
   onduplicate?: (data: { option: T }) => unknown // fires when user tries to add duplicate (when duplicates=false)
   onactivate?: (data: { option: T | null; index: number | null }) => unknown // fires on keyboard navigation through options
+  // History/undo-redo events
+  onundo?: (data: { previous: T[]; current: T[] }) => unknown // fires when undo is triggered
+  onredo?: (data: { previous: T[]; current: T[] }) => unknown // fires when redo is triggered
 }
 
 // Dynamic options loading (https://github.com/janosh/svelte-multiselect/discussions/342)
@@ -223,6 +226,14 @@ export interface MultiSelectProps<T extends Option = Option>
   expandAllGroups?: () => void
   // Keyboard shortcuts for common actions
   shortcuts?: Partial<KeyboardShortcuts>
+  // Selection history for undo/redo support (enabled by default)
+  // true (default) = 50 max states, number = custom max, false/0 = disabled
+  // Note: need at least 2 states for undo (history=2 allows 1 undo, history=1 effectively disables)
+  history?: boolean | number
+  undo?: () => boolean // bindable method to undo last selection change
+  redo?: () => boolean // bindable method to redo last undone change
+  canUndo?: boolean // bindable read-only state for UI indicators
+  canRedo?: boolean // bindable read-only state for UI indicators
 }
 
 // Keyboard shortcuts for MultiSelect actions.
@@ -238,6 +249,8 @@ export interface KeyboardShortcuts {
   clear_all?: string | null // default: 'ctrl+shift+a'
   open?: string | null // default: null (use existing behavior)
   close?: string | null // default: null (Escape already works)
+  undo?: string | null // default: platform-aware (meta+z on Mac, ctrl+z elsewhere)
+  redo?: string | null // default: platform-aware (meta+shift+z on Mac, ctrl+shift+z elsewhere)
 }
 
 // Nav component types

@@ -23,6 +23,7 @@
         `/sort-selected`,
         `/keep-selected`,
         `/allow-user-options`,
+        `/history`,
       ],
     },
     {
