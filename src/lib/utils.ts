@@ -33,6 +33,12 @@ export const get_label = (opt: Option) => {
   return `${opt}`
 }
 
+// Generate a unique key for an option, preserving value identity
+// For object options: uses value if defined, otherwise label (no case normalization)
+// For primitives: the primitive itself
+export const get_option_key = (opt: Option): unknown =>
+  is_object(opt) ? opt.value ?? get_label(opt) : opt
+
 // This function is used extract CSS strings from a {selected, option} style
 // object to be used in the style attribute of the option.
 // If the style is a string, it will be returned as is

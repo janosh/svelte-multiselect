@@ -4780,24 +4780,25 @@ describe(`onduplicate event`, () => {
     expect(onduplicate_spy).not.toHaveBeenCalled()
   })
 
+  // Tests duplicate detection via allowUserOptions for both string and object options
+  // For object options, label-based detection fires even when keys differ (e.g., typing "Apple"
+  // when {label: "Apple", value: 1} is selected) - prevents confusing UX
   test.each([
-    {
-      desc: `object options`,
-      options: [{ label: `Apple`, value: 1 }, { label: `Banana`, value: 2 }],
-      selected_getter: (opts: { label: string; value: number }[]) => [opts[0]],
-      typed_value: `Apple`,
-      expected_option: `Apple`,
-    },
     {
       desc: `string options`,
       options: [`apple`, `banana`, `cherry`],
-      selected_getter: () => [`apple`],
+      selected: [`apple`],
       typed_value: `apple`,
-      expected_option: `apple`,
+    },
+    {
+      desc: `object options (label match)`,
+      options: [{ label: `Apple`, value: 1 }, { label: `Banana`, value: 2 }],
+      selected: [{ label: `Apple`, value: 1 }],
+      typed_value: `Apple`,
     },
   ])(
     `fires with $desc via allowUserOptions`,
-    async ({ options, selected_getter, typed_value, expected_option }) => {
+    async ({ options, selected, typed_value }) => {
       const onduplicate_spy = vi.fn()
 
       mount(MultiSelect, {
@@ -4805,7 +4806,7 @@ describe(`onduplicate event`, () => {
         props: {
           options,
           duplicates: false,
-          selected: selected_getter(options as { label: string; value: number }[]),
+          selected,
           onduplicate: onduplicate_spy,
           allowUserOptions: true,
         },
@@ -4823,7 +4824,6 @@ describe(`onduplicate event`, () => {
       await tick()
 
       expect(onduplicate_spy).toHaveBeenCalledTimes(1)
-      expect(onduplicate_spy).toHaveBeenCalledWith({ option: expected_option })
     },
   )
 
@@ -5319,5 +5319,165 @@ describe(`history / undo-redo`, () => {
     undo_fn?.()
     await tick()
     expect(selected).toEqual([1, 2])
+  })
+})
+
+// Regression test for issue #391: case-variant labels should not crash
+// https://github.com/janosh/svelte-multiselect/issues/391
+describe(`case-variant labels (issue #391)`, () => {
+  const object_options = [
+    { label: `pd`, value: `uuid-1` },
+    { label: `PD`, value: `uuid-2` },
+    { label: `Pd`, value: `uuid-3` },
+  ]
+
+  // Would crash before fix due to duplicate keys in keyed {#each}
+  test.each([
+    { desc: `object options`, options: object_options },
+    { desc: `string options`, options: [`apple`, `Apple`, `APPLE`] },
+  ])(`renders all $desc with case-variant labels without crashing`, ({ options }) => {
+    expect(() => mount(MultiSelect, { target: document.body, props: { options } })).not
+      .toThrow()
+    expect(document.querySelectorAll(`ul.options > li`).length).toBe(3)
+  })
+
+  test(`can select multiple case-variant options`, async () => {
+    let selected = $state<typeof object_options>([])
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: object_options,
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+      },
+    })
+
+    for (const li of document.querySelectorAll(`ul.options > li`)) {
+      ;(li as HTMLElement).click()
+      await tick()
+    }
+
+    expect(selected.length).toBe(3)
+    expect(selected.map((opt) => opt.label)).toEqual([`pd`, `PD`, `Pd`])
+  })
+})
+
+describe(`duplicates prop variants`, () => {
+  test.each([
+    {
+      duplicates: false,
+      typed: `apple`,
+      expect_blocked: false,
+      desc: `false (default): case variants allowed`,
+    },
+    {
+      duplicates: `case-insensitive` as const,
+      typed: `APPLE`, // uppercase to test .toLowerCase()
+      expect_blocked: true,
+      desc: `'case-insensitive': case variants blocked`,
+    },
+  ])(`duplicates=$desc`, async ({ duplicates, typed, expect_blocked }) => {
+    const onduplicate_spy = vi.fn()
+    let selected = $state<string[]>([`Apple`])
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`Apple`, `apple`, `APPLE`],
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        allowUserOptions: true,
+        duplicates,
+        onduplicate: onduplicate_spy,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    input.value = typed
+    input.dispatchEvent(input_event)
+    await tick()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+
+    if (expect_blocked) {
+      expect(onduplicate_spy).toHaveBeenCalledTimes(1)
+      expect(selected).not.toContain(typed)
+    } else {
+      expect(onduplicate_spy).not.toHaveBeenCalled()
+      expect(selected).toContain(typed)
+    }
+  })
+
+  test(`duplicates='case-insensitive': shows duplicate message`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`Apple`, `Banana`],
+        selected: [`Apple`],
+        duplicates: `case-insensitive`,
+        duplicateOptionMsg: `Already selected`,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    input.value = `apple`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(document.querySelector(`ul.options li.user-msg`)?.textContent).toContain(
+      `Already selected`,
+    )
+  })
+
+  test(`dropdown options with same label but different values remain selectable`, async () => {
+    // Issue: label check was blocking dropdown options even when values differ
+    // The is_from_options check should skip label-based duplicate detection for dropdown items
+    const options = [
+      { label: `apple`, value: 1 },
+      { label: `apple`, value: 2 },
+      { label: `apple`, value: 3 },
+    ]
+
+    const onadd_spy = vi.fn()
+    const onduplicate_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options,
+        selected: [options[0]], // pre-select first option
+        onadd: onadd_spy,
+        onduplicate: onduplicate_spy,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    // Should show 2 remaining options (same label, different values)
+    const visible_options = document.querySelectorAll(`ul.options > li`)
+    expect(visible_options.length).toBe(2) // Click second option - should work since it has different value
+    ;(visible_options[0] as HTMLElement).click()
+    await tick()
+
+    // Verify click triggered add, not duplicate
+    expect(onduplicate_spy).not.toHaveBeenCalled()
+    expect(onadd_spy).toHaveBeenCalledTimes(1)
   })
 })

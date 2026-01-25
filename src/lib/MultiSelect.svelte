@@ -26,7 +26,7 @@
     duplicateOptionMsg = `This option is already selected`,
     duplicates = false,
     keepSelectedInDropdown = false,
-    key = (opt) => `${utils.get_label(opt)}`.toLowerCase(),
+    key = (opt) => utils.get_option_key(opt),
     filterFunc = (opt, searchText) => {
       if (!searchText) return true
       const label = `${utils.get_label(opt)}`
@@ -413,7 +413,19 @@
   let selected_labels = $derived(selected.map(utils.get_label))
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
-  let selected_labels_set = $derived(new Set(selected_labels))
+  // String-normalized for consistent comparison (numeric labels like 123 match "123")
+  let selected_labels_set = $derived(new Set(selected_labels.map((lbl) => `${lbl}`)))
+  // Lowercase labels set for case-insensitive duplicate detection
+  let selected_labels_lower_set = $derived(
+    duplicates === `case-insensitive`
+      ? new Set(selected_labels.map((lbl) => `${lbl}`.toLowerCase()))
+      : null,
+  )
+  // Helper to check if a label is already selected (respects case-insensitive mode)
+  const is_label_selected = (label: string): boolean =>
+    selected_labels_lower_set
+      ? selected_labels_lower_set.has(label.toLowerCase())
+      : selected_labels_set.has(label)
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
   let disabled_option_keys = $derived(
@@ -711,21 +723,29 @@
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    const is_duplicate = selected_keys_set.has(key(option_to_add))
+    // Check for duplicates by key, plus label check for user-created options
+    // For duplicates=false (default), label check only applies to user-typed text
+    // For duplicates='case-insensitive', label check applies to all options
+    // Use key comparison instead of reference equality (more robust with Svelte proxies)
+    const option_key = key(option_to_add)
+    const is_from_options = effective_options.some((opt) => key(opt) === option_key)
+    const check_label = duplicates === `case-insensitive` || !is_from_options
+    const is_duplicate = selected_keys_set.has(key(option_to_add)) ||
+      (check_label && is_label_selected(`${utils.get_label(option_to_add)}`))
     const max_reached = maxSelect !== null && maxSelect !== 1 &&
       selected.length >= maxSelect
     // Fire events for blocked add attempts
     if (max_reached) {
       onmaxreached?.({ selected, maxSelect, attemptedOption: option_to_add })
     }
-    if (is_duplicate && !duplicates) onduplicate?.({ option: option_to_add })
+    if (is_duplicate && duplicates !== true) onduplicate?.({ option: option_to_add })
 
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
-      (duplicates || !is_duplicate)
+      (duplicates === true || !is_duplicate)
     ) {
       if (
-        !effective_options.includes(option_to_add) && // first check if we find option in the options list
+        !is_from_options && // first check if we find option in the options list
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
@@ -853,7 +873,7 @@
     searchText.length > 0 &&
       Boolean(
         (allowUserOptions && createOptionMsg) ||
-          (!duplicates && selected_labels_set.has(searchText)) ||
+          (duplicates !== true && is_label_selected(searchText)) ||
           (navigable_options.length === 0 && noMatchingOptionsMsg),
       ),
   )
@@ -1099,7 +1119,7 @@
   }
 
   // O(1) lookup using pre-computed Set instead of O(n) array.includes()
-  const is_selected = (label: string | number) => selected_labels_set.has(label)
+  const is_selected = (label: string | number) => selected_labels_set.has(`${label}`)
 
   const if_enter_or_space =
     (handler: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
@@ -1707,8 +1727,7 @@
         {/if}
       {/each}
       {#if searchText}
-        {@const text_input_is_duplicate = selected_labels.includes(searchText)}
-        {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
+        {@const is_dupe = duplicates !== true && is_label_selected(searchText) && `dupe`}
         {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
         {@const no_match =
         Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg) &&
