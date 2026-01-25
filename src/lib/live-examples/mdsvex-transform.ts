@@ -1,30 +1,11 @@
 // Remark plugin - transforms ```svelte example code blocks into rendered components
-import { createStarryNight } from '@wooorm/starry-night'
-import source_css from '@wooorm/starry-night/source.css'
-import source_js from '@wooorm/starry-night/source.js'
-import source_json from '@wooorm/starry-night/source.json'
-import source_shell from '@wooorm/starry-night/source.shell'
-import source_svelte from '@wooorm/starry-night/source.svelte'
-import source_ts from '@wooorm/starry-night/source.ts'
-import text_html_basic from '@wooorm/starry-night/text.html.basic'
-import { toHtml } from 'hast-util-to-html'
-import { visit } from 'unist-util-visit'
-import path from 'upath'
 import { Buffer } from 'node:buffer'
+import path from 'node:path'
+import type { HastRoot } from './highlighter.ts'
+import { hast_to_html, LANG_TO_SCOPE, starry_night } from './highlighter.ts'
 
 // Base64 encode to prevent preprocessors from modifying the content
 const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
-
-// Initialize starry-night with Svelte and embedded language grammars
-const starry_night = await createStarryNight([
-  source_svelte,
-  source_js,
-  source_ts,
-  source_css,
-  source_json,
-  source_shell,
-  text_html_basic,
-])
 
 // Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
@@ -44,20 +25,6 @@ const RE_PARSE_META = /(\w+=\d+|\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+)/g
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
-
-// Map code fence language to starry-night grammar scope
-const LANG_TO_SCOPE: Record<string, string> = {
-  svelte: `source.svelte`,
-  html: `text.html.basic`,
-  ts: `source.ts`,
-  typescript: `source.ts`,
-  js: `source.js`,
-  javascript: `source.js`,
-  css: `source.css`,
-  json: `source.json`,
-  shell: `source.shell`,
-  bash: `source.shell`,
-}
 
 // Languages that render as live Svelte components (O(1) lookup)
 const LIVE_LANGUAGES = new Set([`svelte`, `html`])
@@ -90,6 +57,17 @@ interface RemarkNode {
   meta?: string
   value?: string
   children?: RemarkNode[]
+}
+
+// Simple tree traversal - finds all nodes of a given type
+const visit = (tree: RemarkTree, type: string, callback: (node: RemarkNode) => void) => {
+  const walk = (nodes: RemarkNode[]) => {
+    for (const node of nodes) {
+      if (node.type === type) callback(node)
+      if (node.children) walk(node.children)
+    }
+  }
+  walk(tree.children)
 }
 
 interface RemarkFile {
@@ -126,7 +104,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       return alias
     }
 
-    visit(tree as RemarkTree, `code`, (node: RemarkNode) => {
+    visit(tree, `code`, (node) => {
       const meta: RemarkMeta = {
         Wrapper: DEFAULT_WRAPPER,
         filename,
@@ -190,7 +168,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
 
     // Try to inject imports into existing script block
     let injected = false
-    visit(tree as RemarkTree, `html`, (node: RemarkNode) => {
+    visit(tree, `html`, (node) => {
       if (!injected && node.value && RE_SCRIPT_START.test(node.value)) {
         node.value = node.value.replace(
           RE_SCRIPT_START,
@@ -238,9 +216,9 @@ function create_example_component(
   wrapper_alias: string,
 ): string {
   const code = format_code(value, meta)
-  const tree = starry_night.highlight(code, LANG_TO_SCOPE[lang])
+  const tree = starry_night.highlight(code, LANG_TO_SCOPE[lang]) as HastRoot
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
-  const highlighted = toHtml(tree).replace(/\n/g, `&#10;`)
+  const highlighted = hast_to_html(tree).replace(/\n/g, `&#10;`)
 
   // Code-only examples (ts, js, css, etc.) - just render highlighted code block
   if (!is_live) {

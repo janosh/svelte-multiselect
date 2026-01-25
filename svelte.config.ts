@@ -1,7 +1,11 @@
 import adapter from '@sveltejs/adapter-static'
 import { mdsvex } from 'mdsvex'
 import { heading_ids } from './src/lib/heading-anchors.ts'
-import { mdsvex_transform, sveltePreprocess } from './src/lib/live-examples/index.ts'
+import {
+  mdsvex_transform,
+  starry_night_highlighter,
+  sveltePreprocess,
+} from './src/lib/live-examples/index.ts'
 
 import pkg from './package.json' with { type: 'json' }
 const defaults = {
@@ -22,7 +26,11 @@ const config: Config = {
 
   preprocess: [
     sveltePreprocess(), // Wrapped to skip .md files, preserving code fence formatting
-    mdsvex({ remarkPlugins, extensions: [`.md`] }),
+    mdsvex({
+      remarkPlugins,
+      extensions: [`.md`],
+      highlight: { highlighter: starry_night_highlighter },
+    }),
     heading_ids(),
   ],
 
