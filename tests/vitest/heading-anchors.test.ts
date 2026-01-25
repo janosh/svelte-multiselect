@@ -1,6 +1,27 @@
 import { heading_anchors, heading_ids } from '$lib/heading-anchors'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
+// SSR/client consistency: both should handle the same heading levels (h1-h6)
+// This test catches drift if someone changes one without the other
+describe(`SSR and client-side heading level consistency`, () => {
+  const preprocess = (content: string) => heading_ids().markup({ content })
+
+  it.each([`h1`, `h2`, `h3`, `h4`, `h5`, `h6`])(
+    `%s is processed by both SSR preprocessor and client-side attachment`,
+    (tag) => {
+      // SSR: preprocessor should add ID
+      const ssr_result = preprocess(`<${tag}>Test</${tag}>`)
+      expect(ssr_result.code).toContain(`id="test"`)
+
+      // Client: attachment should add anchor (when heading has ID)
+      document.body.innerHTML = `<main><${tag} id="test">Test</${tag}></main>`
+      const container = document.body.firstElementChild as Element
+      heading_anchors()(container)
+      expect(container.querySelector(`${tag} a[aria-hidden="true"]`)).toBeTruthy()
+    },
+  )
+})
+
 describe(`heading_ids preprocessor`, () => {
   const preprocess = (content: string) => heading_ids().markup({ content })
 
@@ -11,7 +32,7 @@ describe(`heading_ids preprocessor`, () => {
       [`<h4>Another One</h4>`, `<h4 id="another-one">Another One</h4>`],
       [`<h5>Fifth Level</h5>`, `<h5 id="fifth-level">Fifth Level</h5>`],
       [`<h6>Sixth Level</h6>`, `<h6 id="sixth-level">Sixth Level</h6>`],
-      [`<h1>Title</h1>`, `<h1>Title</h1>`], // h1 unchanged
+      [`<h1>Title</h1>`, `<h1 id="title">Title</h1>`],
       [`<h2>Hello! World? Yes.</h2>`, `<h2 id="hello-world-yes">Hello! World? Yes.</h2>`],
       [`<h2>✨ Styling</h2>`, `<h2 id="styling">✨ Styling</h2>`], // emoji stripped
       [`<h2>🔣 Props</h2>`, `<h2 id="props">🔣 Props</h2>`],

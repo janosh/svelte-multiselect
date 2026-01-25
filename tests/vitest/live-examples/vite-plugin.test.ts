@@ -241,25 +241,38 @@ describe(`index alignment`, () => {
   // examples. Non-live examples (TypeScript, etc.) don't generate __live_example_src props
   // or imports, so they don't create gaps. The vite plugin's enumeration index matches
   // the import path index because both are sequential.
-  test(`props and imports have matching sequential indices`, () => {
+  test(`props and imports have matching indices and virtual files are loadable`, () => {
     const plugin = get_plugin()
     const ctx = create_mock_context()
     const id = `/path/to/file.md`
+
+    // Expected content for each example
+    const content0 = `<div>First</div>`
+    const content1 = `<div>Second</div>`
 
     // Realistic output: 2 live examples with sequential indices 0, 1
     // (any non-live examples in between don't affect numbering)
     const code = `
       import A from "${EXAMPLE_MODULE_PREFIX}0.svelte";
       import B from "${EXAMPLE_MODULE_PREFIX}1.svelte";
-      const props0 = { __live_example_src: "${to_base64(`<div>First</div>`)}" };
-      const props1 = { __live_example_src: "${to_base64(`<div>Second</div>`)}" };
+      const props0 = { __live_example_src: "${to_base64(content0)}" };
+      const props1 = { __live_example_src: "${to_base64(content1)}" };
     `
     const result = plugin.transform?.call(ctx, code, id) as { code: string }
 
     // Import paths are rewritten to absolute virtual file IDs
-    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
-    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}1.svelte`)
+    const virtual_id0 = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
+    const virtual_id1 = `${id}${EXAMPLE_MODULE_PREFIX}1.svelte`
+    expect(result.code).toContain(virtual_id0)
+    expect(result.code).toContain(virtual_id1)
+
     // __live_example_src props are removed
     expect(result.code).not.toContain(`__live_example_src`)
+
+    // Verify virtual files are stored and loadable with matching content
+    // This catches index mismatch bugs where transform rewrites imports
+    // but stores content under different indices
+    expect(plugin.load?.call(ctx, virtual_id0)).toBe(content0)
+    expect(plugin.load?.call(ctx, virtual_id1)).toBe(content1)
   })
 })

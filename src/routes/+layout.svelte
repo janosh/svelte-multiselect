@@ -50,8 +50,8 @@
 <style>
   :global(aside.toc.desktop) {
     position: fixed;
-    font-size: 0.75rem;
-    left: calc(50vw + var(--main-max-width) / 2 + 7rem);
-    max-width: 14rem;
+    font-size: 0.6rem;
+    left: calc(50vw + var(--main-max-width) / 2 + 210px);
+    max-width: 12rem;
   }
 </style>

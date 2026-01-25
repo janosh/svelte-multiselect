@@ -7,8 +7,8 @@
 // Avoid matching inside src={...} attributes by requiring these specific contexts
 // Note: [^>]* for attributes won't match if an attribute value contains > (e.g., data-foo="a>b")
 // This edge case is rare in practice and would require significantly more complex parsing
-const heading_regex_line_start = /^(\s*)<(h[2-6])([^>]*)>([\s\S]*?)<\/\2>/gim
-const heading_regex_after_tag = /(>)(\s*)<(h[2-6])([^>]*)>([\s\S]*?)<\/\3>/gi
+const heading_regex_line_start = /^(\s*)<(h[1-6])([^>]*)>([\s\S]*?)<\/\2>/gim
+const heading_regex_after_tag = /(>)(\s*)<(h[1-6])([^>]*)>([\s\S]*?)<\/\3>/gi
 
 // Remove Svelte expressions handling nested braces (e.g., {fn({a: 1})})
 // Treats unmatched } as literal text to avoid dropping content
