@@ -55,16 +55,12 @@ describe(`exports`, () => {
 })
 
 describe(`remark plugin initialization`, () => {
-  test(`returns transformer function with empty options`, () => {
-    expect(typeof remark({})).toBe(`function`)
-  })
-
-  test(`returns transformer function with defaults`, () => {
-    expect(typeof remark({ defaults: { hideStyle: true } })).toBe(`function`)
-  })
-
-  test(`returns transformer function with no options`, () => {
-    expect(typeof remark()).toBe(`function`)
+  test.each([
+    [undefined, `no options`],
+    [{}, `empty options`],
+    [{ defaults: { hideStyle: true } }, `with defaults`],
+  ])(`returns transformer function with %s`, (opts, _desc) => {
+    expect(typeof remark(opts)).toBe(`function`)
   })
 })
 
@@ -121,26 +117,19 @@ describe(`meta parsing`, () => {
 })
 
 describe(`wrapper component handling`, () => {
-  test(`uses default wrapper when not specified`, () => {
-    const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, `example`)])
-    remark()(tree, create_file())
-    const script = find_script_node(tree)
-    expect(script).toContain(`import Example_0 from`)
-    expect(script).toContain(`$lib/CodeExample.svelte`)
-  })
-
-  test(`uses custom wrapper from defaults option`, () => {
-    const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, `example`)])
-    remark({ defaults: { Wrapper: `$lib/Custom.svelte` } })(tree, create_file())
-    expect(find_script_node(tree)).toContain(`$lib/Custom.svelte`)
-  })
-
-  test(`uses per-example wrapper from meta`, () => {
-    const tree = create_tree([
-      create_code_node(`svelte`, `<div>Test</div>`, `example Wrapper="$lib/My.svelte"`),
-    ])
-    remark()(tree, create_file())
-    expect(find_script_node(tree)).toContain(`$lib/My.svelte`)
+  test.each([
+    [undefined, `example`, `$lib/CodeExample.svelte`, `default wrapper`],
+    [
+      { defaults: { Wrapper: `$lib/Custom.svelte` } },
+      `example`,
+      `$lib/Custom.svelte`,
+      `defaults option`,
+    ],
+    [undefined, `example Wrapper="$lib/My.svelte"`, `$lib/My.svelte`, `per-example meta`],
+  ])(`uses %s from %s`, (opts, meta, expected, _desc) => {
+    const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, meta)])
+    remark(opts)(tree, create_file())
+    expect(find_script_node(tree)).toContain(expected)
   })
 
   test(`generates unique aliases and reuses for same wrapper`, () => {
@@ -261,26 +250,29 @@ describe(`multiple examples`, () => {
 })
 
 describe(`output handling`, () => {
-  test(`extracts relative filename from file context`, () => {
-    const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, `example`)])
-    remark()(tree, create_file(`/project/src/routes/demo/+page.md`, `/project`))
-    expect(get_example_value(tree)).toContain(`src/routes/demo/+page.md`)
-  })
-
-  test(`produces highlighted HTML with spans`, () => {
-    const tree = create_tree([
-      create_code_node(`svelte`, `<script>let x = 1</script>`, `example`),
-    ])
-    remark()(tree, create_file())
-    expect(get_example_value(tree)).toContain(`<span`)
-  })
-
-  test(`escapes newlines as HTML entities`, () => {
-    const tree = create_tree([
-      create_code_node(`svelte`, `<script>\nlet x = 1\n</script>`, `example`),
-    ])
-    remark()(tree, create_file())
-    expect(get_example_value(tree)).toContain(`&#10;`)
+  test.each([
+    [
+      `<div>Test</div>`,
+      `src/routes/demo/+page.md`,
+      `/project/src/routes/demo/+page.md`,
+      `extracts relative filename`,
+    ],
+    [
+      `<script>let x = 1</script>`,
+      `<span`,
+      `/project/src/test.md`,
+      `produces highlighted HTML`,
+    ],
+    [
+      `<script>\nlet x = 1\n</script>`,
+      `&#10;`,
+      `/project/src/test.md`,
+      `escapes newlines`,
+    ],
+  ])(`%s -> output contains %s`, (code, expected, filename) => {
+    const tree = create_tree([create_code_node(`svelte`, code, `example`)])
+    remark()(tree, create_file(filename, `/project`))
+    expect(get_example_value(tree)).toContain(expected)
   })
 
   test(`includes base64 encoded source`, () => {

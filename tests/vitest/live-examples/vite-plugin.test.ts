@@ -134,15 +134,13 @@ describe(`transform`, () => {
     expect(result.code).toContain(`other`)
   })
 
-  test(`updates import paths to absolute virtual file IDs`, () => {
-    const code = `import Component from "${EXAMPLE_MODULE_PREFIX}0.svelte";`
-    const id = `/path/to/file.md`
-    const result = plugin.transform?.call(ctx, code, id) as { code: string }
-    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
-  })
-
-  test(`handles dynamic imports`, () => {
-    const code = `const module = await import("${EXAMPLE_MODULE_PREFIX}0.svelte");`
+  test.each([
+    [`static import`, `import Component from "${EXAMPLE_MODULE_PREFIX}0.svelte";`],
+    [
+      `dynamic import`,
+      `const module = await import("${EXAMPLE_MODULE_PREFIX}0.svelte");`,
+    ],
+  ])(`updates %s paths to absolute virtual file IDs`, (_, code) => {
     const id = `/path/to/file.md`
     const result = plugin.transform?.call(ctx, code, id) as { code: string }
     expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)

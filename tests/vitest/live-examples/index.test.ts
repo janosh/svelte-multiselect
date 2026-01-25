@@ -39,65 +39,44 @@ describe(`sveltePreprocess wrapper`, () => {
     expect(typeof preprocessor.style).toBe(`function`)
   })
 
-  // Test markup handler skips markdown files
-  test.each([`.md`, `.mdx`, `.svx`])(`markup handler skips %s files`, async (ext) => {
-    const result = await sveltePreprocess().markup?.({
-      content: `test`,
-      filename: `/project/page${ext}`,
-    })
-    expect(result?.code).toBe(`test`)
-  })
-
-  // Test script handler skips markdown files
-  test.each([`.md`, `.mdx`, `.svx`])(`script handler skips %s files`, async (ext) => {
-    const result = await sveltePreprocess().script?.({
+  // Test all handlers skip markdown files
+  test.each(
+    [`markup`, `script`, `style`].flatMap((handler) =>
+      [`.md`, `.mdx`, `.svx`].map((ext) => [handler, ext])
+    ),
+  )(`%s handler skips %s files`, async (handler, ext) => {
+    const preprocessor = sveltePreprocess()
+    const args = {
       content: `test`,
       filename: `/project/page${ext}`,
       attributes: {},
       markup: ``,
-    })
+    }
+    const result = await (preprocessor as Record<
+      string,
+      (a: typeof args) => Promise<{ code: string }>
+    >)[handler]?.(args)
     expect(result?.code).toBe(`test`)
   })
 
-  // Test style handler skips markdown files
-  test.each([`.md`, `.mdx`, `.svx`])(`style handler skips %s files`, async (ext) => {
-    const result = await sveltePreprocess().style?.({
-      content: `test`,
-      filename: `/project/page${ext}`,
-      attributes: {},
-      markup: ``,
-    })
-    expect(result?.code).toBe(`test`)
-  })
-
-  // Test handlers process .svelte files
-  test(`markup processes .svelte files`, async () => {
-    const result = await sveltePreprocess().markup?.({
-      content: `test`,
-      filename: `/project/Component.svelte`,
-    })
-    expect(result?.code).toContain(PROCESSED_MARKER)
-  })
-
-  test(`script processes .svelte files`, async () => {
-    const result = await sveltePreprocess().script?.({
-      content: `test`,
-      filename: `/project/Component.svelte`,
-      attributes: {},
-      markup: ``,
-    })
-    expect(result?.code).toContain(PROCESSED_MARKER)
-  })
-
-  test(`style processes .svelte files`, async () => {
-    const result = await sveltePreprocess().style?.({
-      content: `test`,
-      filename: `/project/Component.svelte`,
-      attributes: {},
-      markup: ``,
-    })
-    expect(result?.code).toContain(PROCESSED_MARKER)
-  })
+  // Test all handlers process .svelte files
+  test.each([`markup`, `script`, `style`])(
+    `%s processes .svelte files`,
+    async (handler) => {
+      const preprocessor = sveltePreprocess()
+      const args = {
+        content: `test`,
+        filename: `/project/Component.svelte`,
+        attributes: {},
+        markup: ``,
+      }
+      const result = await (preprocessor as Record<
+        string,
+        (a: typeof args) => Promise<{ code: string }>
+      >)[handler]?.(args)
+      expect(result?.code).toContain(PROCESSED_MARKER)
+    },
+  )
 
   test(`handles missing filename gracefully`, async () => {
     const result = await sveltePreprocess().markup?.({
@@ -167,13 +146,12 @@ describe(`integration`, () => {
 })
 
 describe(`mdsvex_transform`, () => {
-  test(`returns transformer with no options`, () => {
-    expect(typeof mdsvex_transform()).toBe(`function`)
-  })
-
-  test(`returns transformer with defaults`, () => {
-    expect(typeof mdsvex_transform({ defaults: { hideStyle: true } })).toBe(`function`)
-  })
+  test.each([undefined, {}, { defaults: { hideStyle: true } }])(
+    `returns transformer with %s`,
+    (opts) => {
+      expect(typeof mdsvex_transform(opts)).toBe(`function`)
+    },
+  )
 })
 
 describe(`vite_plugin`, () => {

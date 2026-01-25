@@ -238,8 +238,7 @@ function create_example_component(
   wrapper_alias: string,
 ): string {
   const code = format_code(value, meta)
-  const scope = LANG_TO_SCOPE[lang] || `source.svelte`
-  const tree = starry_night.highlight(code, scope)
+  const tree = starry_night.highlight(code, LANG_TO_SCOPE[lang])
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
   const highlighted = toHtml(tree).replace(/\n/g, `&#10;`)
 

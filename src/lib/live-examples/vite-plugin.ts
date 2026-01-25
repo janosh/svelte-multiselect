@@ -70,20 +70,17 @@ export default createUnplugin((options: PluginOptions = {}) => {
       if (id.includes(EXAMPLE_MODULE_PREFIX)) {
         // Strip query parameters - Vite requests derived modules (styles, etc.) with queries
         // like ?inline&svelte&type=style&lang.css but we store the base path
-        const base_id = id.split(`?`)[0]
+        const [base_id, query = ``] = id.split(`?`)
         const src = virtual_files.get(base_id)
         if (src) return src
 
         // Virtual file not found - can happen during SSR/parallel builds when derived
         // modules (styles, scripts) are requested before parent markdown is transformed.
-        // For derived module requests, return appropriate empty content to avoid crashes.
-        const query = id.split(`?`)[1] ?? ``
-        if (query.includes(`type=style`)) {
-          // Return empty CSS for style modules - the real styles will load on rebuild
-          return ``
-        }
-        if (query.includes(`type=script`) || query.includes(`type=module`)) {
-          // Return empty script for script modules
+        // For derived module requests, return empty content to avoid crashes.
+        if (
+          query.includes(`type=style`) || query.includes(`type=script`) ||
+          query.includes(`type=module`)
+        ) {
           return ``
         }
 
