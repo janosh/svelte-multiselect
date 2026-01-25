@@ -8,20 +8,10 @@ export {
 } from './mdsvex-transform.ts'
 export { default as vite_plugin } from './vite-plugin.ts'
 
-import { mdsvex as _mdsvex, type MdsvexOptions } from 'mdsvex'
 import { sveltePreprocess as _sveltePreprocess } from 'svelte-preprocess'
-import { starry_night_highlighter } from './highlighter.ts'
 
 type SveltePreprocessOptions = Parameters<typeof _sveltePreprocess>[0]
 type PreprocessorGroup = ReturnType<typeof _sveltePreprocess>
-
-// Wrap mdsvex with starry-night highlighter as default (users can override via options.highlight.highlighter)
-export function mdsvex(options?: MdsvexOptions): PreprocessorGroup {
-  return _mdsvex({
-    ...options,
-    highlight: { highlighter: starry_night_highlighter, ...options?.highlight },
-  }) as PreprocessorGroup
-}
 
 // Wrap sveltePreprocess to skip markdown files - otherwise it transpiles code inside
 // markdown code fences, losing whitespace formatting
