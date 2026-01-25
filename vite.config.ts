@@ -5,7 +5,7 @@ import process from 'node:process'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [sveltekit(), live_examples.vite({})],
+  plugins: [sveltekit(), live_examples()],
 
   test: {
     include: [`tests/vitest/**/*.test.ts`],
