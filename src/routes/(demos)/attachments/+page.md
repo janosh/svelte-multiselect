@@ -178,7 +178,8 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
     class="drag-box"
     style="position: absolute; left: 1rem; top: 1rem"
     {@attach draggable({
-      on_drag: (event) => last_drag = `${event.clientX}, ${event.clientY}`,
+      on_drag: (event: PointerEvent) =>
+        last_drag = `${event.clientX}, ${event.clientY}`,
     })}
   >
     Drag me
@@ -192,7 +193,8 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
     {@attach draggable({
       handle_selector: `.drag-handle`,
       on_drag_start: () => last_drag = `start`,
-      on_drag: (event) => last_drag = `${event.clientX}, ${event.clientY}`,
+      on_drag: (event: PointerEvent) =>
+        last_drag = `${event.clientX}, ${event.clientY}`,
       on_drag_end: () => last_drag = `end`,
     })}
   >
@@ -232,7 +234,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 
   // Only highlight inside .target; skip any node inside .no-hl
   const node_filter = (node: Node): number =>
-    (node as Element).parentElement?.closest('.no-hl')
+    node.parentElement?.closest('.no-hl')
       ? NodeFilter.FILTER_REJECT
       : NodeFilter.FILTER_ACCEPT
 </script>

@@ -178,9 +178,9 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'
 
-  const red_pill: string =
+  const red_pill =
     `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
-  const blue_pill: string =
+  const blue_pill =
     `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
   const options: ObjectOption[] = [{
     label: red_pill,

@@ -9,7 +9,6 @@ import source_ts from '@wooorm/starry-night/source.ts'
 import text_html_basic from '@wooorm/starry-night/text.html.basic'
 import { toHtml } from 'hast-util-to-html'
 import { Buffer } from 'node:buffer'
-import { fileURLToPath } from 'node:url'
 import { visit } from 'unist-util-visit'
 import path from 'upath'
 
@@ -26,23 +25,22 @@ const starry_night = await createStarryNight([
 
 // Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
-  src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\\{`)
+  src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\{`)
 
 // Base64 encode to prevent preprocessors from modifying the content
 const to_base64 = (src: string) => Buffer.from(src, `utf-8`).toString(`base64`)
 
-const _dirname = typeof __dirname !== `undefined`
-  ? __dirname
-  : path.dirname(fileURLToPath(import.meta.url))
-
-// regex to find <script> block in svelte
+// Regex to find <script> block in svelte
+// Note: These patterns handle common cases but may have edge cases with nested
+// comments containing </script> strings or complex attribute syntax
 const RE_SCRIPT_START =
   /<script(?:\s+?[a-zA-Z]+(=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/
 const RE_SCRIPT_BLOCK = /(<script[\s\S]*?>)([\s\S]*?)(<\/script>)/g
 const RE_STYLE_BLOCK = /(<style[\s\S]*?>)([\s\S]*?)(<\/style>)/g
 
-// parses key=value pairs from a string. supports strings, numbers, booleans, and arrays
-const RE_PARSE_META = /(\w+=\d+|\w+="[^"]*"|\w+=\[[^\]]*\]|\w+)/g
+// Parses key=value pairs from a string. Supports strings (with escaped quotes),
+// numbers, booleans, and arrays. Note: nested structures in arrays are not supported.
+const RE_PARSE_META = /(\w+=\d+|\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+)/g
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
@@ -79,7 +77,6 @@ interface RemarkMeta {
 
 interface RemarkOptions {
   defaults?: Partial<RemarkMeta>
-  ExampleComponent?: string // deprecated
 }
 
 interface RemarkTree {
@@ -100,33 +97,27 @@ interface RemarkFile {
   cwd: string
 }
 
-// Default wrapper component path - used when no Wrapper is specified or when
-// Wrapper is explicitly set to a falsy value (e.g., Wrapper="false")
-const DEFAULT_WRAPPER = path.resolve(_dirname, `../CodeExample.svelte`)
+// Default wrapper component
+const DEFAULT_WRAPPER = `$lib/CodeExample.svelte`
 
 type RemarkTransformer = (tree: RemarkTree, file: RemarkFile) => void
 
-export default function remark(options: RemarkOptions = {}): RemarkTransformer {
+function remark(options: RemarkOptions = {}): RemarkTransformer {
   const { defaults = {} } = options
-
-  // legacy
-  if (options.ExampleComponent) {
-    defaults.Wrapper = options.ExampleComponent
-    console.warn(`ExampleComponent is deprecated, use defaults.Wrapper instead`)
-  }
 
   return function transformer(tree: RemarkTree, file: RemarkFile): void {
     const examples: Array<{ csr?: boolean; wrapper_alias: string }> = []
     // Track wrapper imports to avoid duplicates and generate unique aliases
     const wrapper_aliases = new Map<string, string>() // wrapper key -> alias name
 
-    const filename = path.toUnix(file.filename).split(path.toUnix(file.cwd)).pop()
+    const filename = path.relative(file.cwd, file.filename)
 
     // Helper to get or create a wrapper alias
     function get_wrapper_alias(wrapper: string | [string, string]): string {
+      // Use '::' as delimiter to avoid misparsing paths with colons (Windows, URLs)
       const wrapper_key = typeof wrapper === `string`
         ? wrapper
-        : `${wrapper[0]}:${wrapper[1]}`
+        : `${wrapper[0]}::${wrapper[1]}`
       let alias = wrapper_aliases.get(wrapper_key)
       if (!alias) {
         alias = `Example_${wrapper_aliases.size}`
@@ -148,8 +139,7 @@ export default function remark(options: RemarkOptions = {}): RemarkTransformer {
       // find code blocks with `example` meta in supported languages
       if (example && node.lang && EXAMPLE_LANGUAGES.includes(node.lang)) {
         const is_live = LIVE_LANGUAGES.includes(node.lang)
-        const actual_wrapper = Wrapper || DEFAULT_WRAPPER
-        const wrapper_alias = is_live ? get_wrapper_alias(actual_wrapper) : ``
+        const wrapper_alias = is_live ? get_wrapper_alias(Wrapper ?? DEFAULT_WRAPPER) : ``
 
         const value = create_example_component(
           node.value || ``,
@@ -176,25 +166,27 @@ export default function remark(options: RemarkOptions = {}): RemarkTransformer {
     // add imports for each generated example
     let scripts = ``
     // Add wrapper imports
+    // Use '::' as the tuple delimiter to avoid misparsing Windows paths (C:\path)
+    // or URLs (https://example.com) that contain single colons
     for (const [wrapper_key, alias] of wrapper_aliases) {
-      const colon_idx = wrapper_key.indexOf(`:`)
-      if (colon_idx === -1) {
-        // Simple string path
+      const double_colon_idx = wrapper_key.indexOf(`::`)
+      if (double_colon_idx === -1) {
+        // Simple string path (default import)
         scripts += `import ${alias} from "${wrapper_key}";\n`
       } else {
-        // Tuple [module, export]
-        const module_path = wrapper_key.slice(0, colon_idx)
-        const export_name = wrapper_key.slice(colon_idx + 1)
+        // Tuple [module, export] using '::' delimiter
+        const module_path = wrapper_key.slice(0, double_colon_idx)
+        const export_name = wrapper_key.slice(double_colon_idx + 2)
         scripts += `import { ${export_name} as ${alias} } from "${module_path}";\n`
       }
     }
     // Add example component imports
-    examples.forEach((example, idx) => {
-      if (!example.csr) {
+    for (const [idx, ex] of examples.entries()) {
+      if (!ex.csr) {
         scripts +=
           `import ${EXAMPLE_COMPONENT_PREFIX}${idx} from "${EXAMPLE_MODULE_PREFIX}${idx}.svelte";\n`
       }
-    })
+    }
 
     let is_script = false
 
@@ -220,23 +212,16 @@ export default function remark(options: RemarkOptions = {}): RemarkTransformer {
 
 function parse_meta(meta: string): Record<string, unknown> {
   const result: Record<string, unknown> = {}
-
   for (const part of meta.match(RE_PARSE_META) ?? []) {
     const eq = part.indexOf(`=`)
     const key = eq === -1 ? part : part.slice(0, eq)
     const value = eq === -1 ? `true` : part.slice(eq + 1)
-
     try {
       result[key] = JSON.parse(value)
-    } catch (err) {
-      const error = new Error(
-        `Unable to parse meta \`${key}=${value}\` - ${(err as Error).message}`,
-      )
-      error.stack = (err as Error).stack
-      throw error
+    } catch {
+      throw new Error(`Unable to parse meta \`${key}=${value}\``)
     }
   }
-
   return result
 }
 
@@ -312,3 +297,5 @@ function create_example_component(
   </${wrapper_alias}>
   <p>`
 }
+
+export default remark

@@ -66,7 +66,7 @@
   {#snippet expandIcon({ open: expandOpen })}
     <button
       onclick={() => (open = false)}
-      onkeyup={(event) => {
+      onkeyup={(event: KeyboardEvent) => {
         event.preventDefault()
         if ([`Enter`, `Space`].includes(event.code)) open = !open
       }}

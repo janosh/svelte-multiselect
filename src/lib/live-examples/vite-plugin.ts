@@ -11,29 +11,17 @@ import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
 // Decode base64 encoded source
 const from_base64 = (src: string) => Buffer.from(src, `base64`).toString(`utf-8`)
 
-// Simple string editor - collects edits and applies them in reverse order to preserve positions
-class StringEditor {
-  private source: string
-  private edits: Array<{ start: number; end: number; content: string }> = []
+// Edit operation: replace text at [start, end) with content
+type Edit = { start: number; end: number; content: string }
 
-  constructor(source: string) {
-    this.source = source
-  }
-
-  overwrite(start: number, end: number, content: string): void {
-    this.edits.push({ start, end, content })
-  }
-
-  toString(): string {
-    // Sort by position descending so earlier positions stay valid after each edit
-    const sorted = [...this.edits].sort((a, b) => b.start - a.start)
-    let result = this.source
-    for (const { start, end, content } of sorted) {
-      result = result.slice(0, start) + content + result.slice(end)
-    }
-    return result
-  }
-}
+// Apply edits in reverse order so positions stay valid
+const apply_edits = (source: string, edits: Edit[]): string =>
+  edits
+    .sort((a, b) => b.start - a.start)
+    .reduce(
+      (str, { start, end, content }) => str.slice(0, start) + content + str.slice(end),
+      source,
+    )
 
 interface PluginOptions {
   extensions?: string[]
@@ -43,10 +31,9 @@ interface AstNode {
   type: string
   key?: { name: string }
   value?: string
-  source?: { value: string; start?: number; end?: number }
+  source?: { value?: string; start?: number; end?: number }
   start?: number
   end?: number
-  [key: string]: unknown
 }
 
 export default createUnplugin((options: PluginOptions = {}) => {
@@ -97,14 +84,21 @@ export default createUnplugin((options: PluginOptions = {}) => {
     transform(code: string, id: string) {
       // Skip derived modules (styles, etc.) - only process the main markdown file
       // Vite creates derived modules like ?svelte&type=style&lang.css for style blocks
-      if (id.includes(`?`) && !id.includes(`?raw`)) return { code, map: { mappings: `` } }
+      if (id.includes(`?svelte&type=`)) return { code, map: { mappings: `` } }
 
       // Strip query params - Vite adds ?raw, ?inline, etc.
       const base_id = id.split(`?`)[0]
       if (extensions.some((ext) => base_id.endsWith(ext))) {
-        // Use AST for precise node location, StringEditor for edits that preserve formatting
-        const tree = ast.parse(code, { ranges: true })
-        const editor = new StringEditor(code)
+        // Use AST for precise node location, collect edits to apply at end
+        let tree
+        try {
+          tree = ast.parse(code, { ranges: true })
+        } catch {
+          // Code may contain Svelte syntax that the JS parser can't handle
+          // (e.g., template blocks, special directives). Skip transformation.
+          return { code, map: { mappings: `` } }
+        }
+        const edits: Edit[] = []
 
         // Find all __live_example_src properties
         const src_props = ast.find(tree, {
@@ -132,16 +126,12 @@ export default createUnplugin((options: PluginOptions = {}) => {
           if (src !== virtual_files.get(virtual_id)) {
             virtual_files.set(virtual_id, src)
 
-            // invalidate module for hmr
+            // Invalidate modules for HMR
             if (vite_server) {
               const mod = vite_server.moduleGraph.getModuleById(virtual_id)
               const parent_mod = vite_server.moduleGraph.getModuleById(base_id)
-              if (mod) {
-                vite_server.moduleGraph.invalidateModule(mod)
-                if (parent_mod) {
-                  vite_server.moduleGraph.invalidateModule(parent_mod)
-                }
-              }
+              if (mod) vite_server.moduleGraph.invalidateModule(mod)
+              if (parent_mod) vite_server.moduleGraph.invalidateModule(parent_mod)
             }
           }
 
@@ -149,34 +139,31 @@ export default createUnplugin((options: PluginOptions = {}) => {
           if (prop.start !== undefined && prop.end !== undefined) {
             let end = prop.end
             while (end < code.length && /[\s,]/.test(code[end])) end++
-            editor.overwrite(prop.start, end, ``)
+            edits.push({ start: prop.start, end, content: `` })
           }
 
           idx++
         }
 
         // Update import paths (static and dynamic) to use virtual file IDs
-        const update_import_source = (node: AstNode) => {
-          const source_node = node.source as AstNode | undefined
-          const source_val = source_node?.value as string | undefined
-          if (!source_val?.startsWith(EXAMPLE_MODULE_PREFIX)) return
-          const match = source_val.match(/___live_example___(\d+)\.svelte/)
-          if (
-            match && source_node?.start !== undefined && source_node?.end !== undefined
-          ) {
+        const imports = [
+          ...ast.find(tree, { type: `ImportDeclaration` }) as AstNode[],
+          ...ast.find(tree, { type: `ImportExpression` }) as AstNode[],
+        ]
+        for (const { source } of imports) {
+          const match = source?.value?.match(/___live_example___(\d+)\.svelte/)
+          if (match && source?.start !== undefined && source?.end !== undefined) {
             const virtual_id = `${base_id}${EXAMPLE_MODULE_PREFIX}${match[1]}.svelte`
-            editor.overwrite(source_node.start + 1, source_node.end - 1, virtual_id)
+            edits.push({
+              start: source.start + 1,
+              end: source.end - 1,
+              content: virtual_id,
+            })
           }
-        }
-        for (const imp of ast.find(tree, { type: `ImportDeclaration` }) as AstNode[]) {
-          update_import_source(imp)
-        }
-        for (const imp of ast.find(tree, { type: `ImportExpression` }) as AstNode[]) {
-          update_import_source(imp)
         }
 
         return {
-          code: editor.toString(),
+          code: apply_edits(code, edits),
           map: { mappings: `` },
         }
       }

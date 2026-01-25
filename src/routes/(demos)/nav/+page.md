@@ -151,7 +151,7 @@ Use the `link` snippet to customize how all links render:
 
 <Nav {routes} {page}>
   {#snippet link({ href, label })}
-    <a {href} onclick={(e) => e.preventDefault()}>🔗 {label}</a>
+    <a {href} onclick={(event: MouseEvent) => event.preventDefault()}>🔗 {label}</a>
   {/snippet}
 </Nav>
 ```

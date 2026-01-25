@@ -17,7 +17,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   }
   let form_data: FormData | undefined
   // the key under which selected options are stored in FormData
-  const name: string = 'martian-flag'
+  const name = 'martian-flag'
 </script>
 
 <form onsubmit={handle_submit}>
