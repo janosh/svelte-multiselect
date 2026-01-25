@@ -5,8 +5,15 @@ import { Buffer } from 'node:buffer'
 import process from 'node:process'
 import { createUnplugin } from 'unplugin'
 import path from 'upath'
-import type { ModuleNode, ViteDevServer } from 'vite'
 import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
+
+// Use generic types to avoid version conflicts between vite and unplugin's internal vite types
+interface ViteServer {
+  moduleGraph: {
+    getModuleById(id: string): unknown
+    invalidateModule(mod: unknown): void
+  }
+}
 
 // Decode base64 encoded source
 const from_base64 = (src: string) => Buffer.from(src, `base64`).toString(`utf-8`)
@@ -42,7 +49,7 @@ export default createUnplugin((options: PluginOptions = {}) => {
   // Extracted examples as individual virtual files (id -> svelte source)
   const virtual_files = new Map<string, string>()
 
-  let vite_server: ViteDevServer | undefined
+  let vite_server: ViteServer | undefined
 
   return {
     name: `live-examples-plugin`,
@@ -66,15 +73,27 @@ export default createUnplugin((options: PluginOptions = {}) => {
         const base_id = id.split(`?`)[0]
         const src = virtual_files.get(base_id)
         if (src) return src
-        // Virtual file not found - this can happen during HMR race conditions or if
-        // the parent markdown file hasn't been processed yet. In production, this
-        // indicates a bug. In dev, it may resolve on next HMR update.
+
+        // Virtual file not found - can happen during SSR/parallel builds when derived
+        // modules (styles, scripts) are requested before parent markdown is transformed.
+        // For derived module requests, return appropriate empty content to avoid crashes.
+        const query = id.split(`?`)[1] ?? ``
+        if (query.includes(`type=style`)) {
+          // Return empty CSS for style modules - the real styles will load on rebuild
+          return ``
+        }
+        if (query.includes(`type=script`) || query.includes(`type=module`)) {
+          // Return empty script for script modules
+          return ``
+        }
+
+        // For main component requests in production, fail the build
         const msg = `Example src not found for ${id}`
         if (process.env.NODE_ENV === `production`) {
           throw new Error(msg)
         }
+        // In dev, warn and return error component to surface issue visibly
         this.warn(msg)
-        // Return error component to surface the issue visibly in the browser
         return `<script>console.error(${
           JSON.stringify(msg)
         })</script><p style="color:red">${msg}</p>`
@@ -106,8 +125,7 @@ export default createUnplugin((options: PluginOptions = {}) => {
           key: { name: `__live_example_src` },
         }) as AstNode[]
 
-        let idx = 0
-        for (const prop of src_props) {
+        for (const [idx, prop] of src_props.entries()) {
           // Extract the string literal content (base64 encoded)
           const string_literals = ast.find(prop, {
             type: `Literal`,
@@ -135,14 +153,13 @@ export default createUnplugin((options: PluginOptions = {}) => {
             }
           }
 
-          // Remove the property (including trailing comma/whitespace)
+          // Remove the property (including trailing comma/whitespace, with safety bound)
           if (prop.start !== undefined && prop.end !== undefined) {
             let end = prop.end
-            while (end < code.length && /[\s,]/.test(code[end])) end++
+            const max_end = Math.min(prop.end + 50, code.length) // safety bound
+            while (end < max_end && /[\s,]/.test(code[end])) end++
             edits.push({ start: prop.start, end, content: `` })
           }
-
-          idx++
         }
 
         // Update import paths (static and dynamic) to use virtual file IDs
@@ -172,29 +189,29 @@ export default createUnplugin((options: PluginOptions = {}) => {
     },
 
     vite: {
-      configureServer(server: ViteDevServer) {
-        vite_server = server
+      configureServer(server) {
+        vite_server = server as ViteServer
       },
 
       handleHotUpdate(ctx) {
         const { server, modules: ctx_modules } = ctx
-        const modules: ModuleNode[] = []
+        // Collect virtual file modules that need HMR updates
+        const additional_modules: unknown[] = []
 
-        // return virtual file modules for parent file
+        // Find virtual file modules for the parent markdown file
         if (extensions.some((ext) => ctx.file.endsWith(ext))) {
           for (const [id] of virtual_files) {
             const parent = id.split(EXAMPLE_MODULE_PREFIX)[0]
             // Use exact path equality to avoid false positives with overlapping suffixes
             if (ctx.file === parent) {
               const mod = server.moduleGraph.getModuleById(id)
-              if (mod) {
-                modules.push(mod, ...mod.clientImportedModules, ...mod.ssrImportedModules)
-              }
+              if (mod) additional_modules.push(mod)
             }
           }
         }
 
-        return [...modules, ...ctx_modules]
+        // Return combined modules - cast needed due to unplugin/vite type version differences
+        return [...additional_modules, ...ctx_modules] as typeof ctx_modules
       },
     },
   }

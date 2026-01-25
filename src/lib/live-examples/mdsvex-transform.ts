@@ -59,11 +59,11 @@ const LANG_TO_SCOPE: Record<string, string> = {
   bash: `source.shell`,
 }
 
-// Languages that render as live Svelte components
-const LIVE_LANGUAGES = [`svelte`, `html`]
+// Languages that render as live Svelte components (O(1) lookup)
+const LIVE_LANGUAGES = new Set([`svelte`, `html`])
 
-// All languages that support the `example` meta
-const EXAMPLE_LANGUAGES = Object.keys(LANG_TO_SCOPE)
+// All languages that support the `example` meta (O(1) lookup)
+const EXAMPLE_LANGUAGES = new Set(Object.keys(LANG_TO_SCOPE))
 
 interface RemarkMeta {
   Wrapper?: string | [string, string]
@@ -137,8 +137,8 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       const { csr, example, Wrapper } = meta
 
       // find code blocks with `example` meta in supported languages
-      if (example && node.lang && EXAMPLE_LANGUAGES.includes(node.lang)) {
-        const is_live = LIVE_LANGUAGES.includes(node.lang)
+      if (example && node.lang && EXAMPLE_LANGUAGES.has(node.lang)) {
+        const is_live = LIVE_LANGUAGES.has(node.lang)
         const wrapper_alias = is_live ? get_wrapper_alias(Wrapper ?? DEFAULT_WRAPPER) : ``
 
         const value = create_example_component(
@@ -188,24 +188,21 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       }
     }
 
-    let is_script = false
-
-    // add scripts to script block
+    // Try to inject imports into existing script block
+    let injected = false
     visit(tree as RemarkTree, `html`, (node: RemarkNode) => {
-      if (node.value && RE_SCRIPT_START.test(node.value)) {
-        is_script = true
-        node.value = node.value.replace(RE_SCRIPT_START, (script) => {
-          return `${script}\n${scripts}`
-        })
+      if (!injected && node.value && RE_SCRIPT_START.test(node.value)) {
+        node.value = node.value.replace(
+          RE_SCRIPT_START,
+          (script) => `${script}\n${scripts}`,
+        )
+        injected = true
       }
     })
 
-    // create script block if needed
-    if (!is_script) {
-      tree.children.push({
-        type: `html`,
-        value: `<script>\n${scripts}</script>`,
-      })
+    // Create script block if none existed
+    if (!injected) {
+      tree.children.push({ type: `html`, value: `<script>\n${scripts}</script>` })
     }
   }
 }
@@ -226,15 +223,10 @@ function parse_meta(meta: string): Record<string, unknown> {
 }
 
 function format_code(code: string, meta: RemarkMeta): string {
-  if (meta.hideScript) {
-    code = code.replace(RE_SCRIPT_BLOCK, ``)
-  }
-
-  if (meta.hideStyle) {
-    code = code.replace(RE_STYLE_BLOCK, ``)
-  }
-
-  return code.trim()
+  let result = code
+  if (meta.hideScript) result = result.replace(RE_SCRIPT_BLOCK, ``)
+  if (meta.hideStyle) result = result.replace(RE_STYLE_BLOCK, ``)
+  return result.trim()
 }
 
 function create_example_component(
@@ -266,6 +258,7 @@ function create_example_component(
     // Base64 encoded to prevent preprocessors from modifying the content
     // Gets parsed as virtual file content in vite plugin and then removed
     __live_example_src: `"${to_base64(value)}"`,
+    // src is a string prop, meta is an object expression - different escaping needed
     src: JSON.stringify(encode_escapes(code)),
     meta: encode_escapes(JSON.stringify(meta)),
   }

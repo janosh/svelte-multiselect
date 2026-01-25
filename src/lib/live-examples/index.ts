@@ -16,17 +16,17 @@ const is_markdown = (filename?: string): boolean => /\.(md|mdx|svx)$/.test(filen
 export function sveltePreprocess(opts?: SveltePreprocessOptions): PreprocessorGroup {
   const base = _sveltePreprocess(opts)
   return {
-    markup: async (args) => {
-      if (is_markdown(args.filename)) return { code: args.content }
-      return (await base.markup?.(args)) ?? { code: args.content }
-    },
-    script: async (args) => {
-      if (is_markdown(args.filename)) return { code: args.content }
-      return (await base.script?.(args)) ?? { code: args.content }
-    },
-    style: async (args) => {
-      if (is_markdown(args.filename)) return { code: args.content }
-      return (await base.style?.(args)) ?? { code: args.content }
-    },
+    markup: async (args) =>
+      is_markdown(args.filename)
+        ? { code: args.content }
+        : (await base.markup?.(args)) ?? { code: args.content },
+    script: async (args) =>
+      is_markdown(args.filename)
+        ? { code: args.content }
+        : (await base.script?.(args)) ?? { code: args.content },
+    style: async (args) =>
+      is_markdown(args.filename)
+        ? { code: args.content }
+        : (await base.style?.(args)) ?? { code: args.content },
   }
 }
