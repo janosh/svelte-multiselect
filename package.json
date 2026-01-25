@@ -5,7 +5,7 @@
   "homepage": "https://janosh.github.io/svelte-multiselect",
   "repository": "https://github.com/janosh/svelte-multiselect",
   "license": "MIT",
-  "version": "11.5.2",
+  "version": "11.6.0",
   "type": "module",
   "scripts": {
     "dev": "vite dev",
@@ -96,14 +96,6 @@
     "./live-examples": {
       "types": "./dist/live-examples/index.d.ts",
       "default": "./dist/live-examples/index.js"
-    },
-    "./live-examples/mdsvex-transform": {
-      "types": "./dist/live-examples/mdsvex-transform.d.ts",
-      "default": "./dist/live-examples/mdsvex-transform.js"
-    },
-    "./live-examples/vite": {
-      "types": "./dist/live-examples/vite-plugin.d.ts",
-      "default": "./dist/live-examples/vite-plugin.js"
     }
   },
   "types": "./dist/index.d.ts",
