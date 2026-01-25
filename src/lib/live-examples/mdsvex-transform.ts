@@ -8,9 +8,9 @@ import source_svelte from '@wooorm/starry-night/source.svelte'
 import source_ts from '@wooorm/starry-night/source.ts'
 import text_html_basic from '@wooorm/starry-night/text.html.basic'
 import { toHtml } from 'hast-util-to-html'
-import { Buffer } from 'node:buffer'
 import { visit } from 'unist-util-visit'
 import path from 'upath'
+import { to_base64 } from './utils.ts'
 
 // Initialize starry-night with Svelte and embedded language grammars
 const starry_night = await createStarryNight([
@@ -26,9 +26,6 @@ const starry_night = await createStarryNight([
 // Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
   src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\{`)
-
-// Base64 encode to prevent preprocessors from modifying the content
-const to_base64 = (src: string) => Buffer.from(src, `utf-8`).toString(`base64`)
 
 // Regex to find <script> block in svelte
 // Note: These patterns handle common cases but may have edge cases with nested
@@ -194,7 +191,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       if (!injected && node.value && RE_SCRIPT_START.test(node.value)) {
         node.value = node.value.replace(
           RE_SCRIPT_START,
-          (script) => `${script}\n${scripts}`,
+          (opening_tag) => `${opening_tag}\n${scripts}`,
         )
         injected = true
       }

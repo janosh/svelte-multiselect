@@ -236,3 +236,29 @@ describe(`virtual file caching`, () => {
     expect(plugin.transform?.call(ctx, code2, id)).toBeDefined()
   })
 })
+
+describe(`index extraction from import paths`, () => {
+  // Tests that vite plugin extracts indices from import paths, not enumeration order
+  // This ensures correct behavior when remark transform skips indices for non-live examples
+  test(`extracts index from import path, not property enumeration order`, () => {
+    const plugin = get_plugin()
+    const ctx = create_mock_context()
+    const id = `/path/to/file.md`
+
+    // Simulate output from remark transform where live examples have indices 0 and 2
+    // (index 1 was a non-live typescript example that doesn't generate __live_example_src)
+    const code = `
+      import A from "${EXAMPLE_MODULE_PREFIX}0.svelte";
+      import B from "${EXAMPLE_MODULE_PREFIX}2.svelte";
+      const props0 = { __live_example_src: "${encode_base64(`<div>First</div>`)}" };
+      const props2 = { __live_example_src: "${encode_base64(`<div>Third</div>`)}" };
+    `
+    const result = plugin.transform?.call(ctx, code, id) as { code: string }
+
+    // Should transform import paths with correct indices from the path itself
+    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
+    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}2.svelte`)
+    // Should NOT contain index 1 (which wasn't in the imports)
+    expect(result.code).not.toContain(`${EXAMPLE_MODULE_PREFIX}1.svelte`)
+  })
+})

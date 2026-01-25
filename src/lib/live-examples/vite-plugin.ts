@@ -1,11 +1,11 @@
 // Vite plugin - handles virtual module resolution for example components
 // @ts-expect-error no types available
 import ast from 'abstract-syntax-tree'
-import { Buffer } from 'node:buffer'
 import process from 'node:process'
 import { createUnplugin } from 'unplugin'
 import path from 'upath'
 import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
+import { from_base64 } from './utils.ts'
 
 // Use generic types to avoid version conflicts between vite and unplugin's internal vite types
 interface ViteServer {
@@ -15,11 +15,10 @@ interface ViteServer {
   }
 }
 
-// Decode base64 encoded source
-const from_base64 = (src: string) => Buffer.from(src, `base64`).toString(`utf-8`)
-
 // Edit operation: replace text at [start, end) with content
 type Edit = { start: number; end: number; content: string }
+
+const TRAILING_CLEANUP_BOUND = 50 // Max chars to scan after property end for trailing comma/whitespace cleanup
 
 // Apply edits in reverse order so positions stay valid
 const apply_edits = (source: string, edits: Edit[]): string =>
@@ -48,6 +47,8 @@ export default createUnplugin((options: PluginOptions = {}) => {
 
   // Extracted examples as individual virtual files (id -> svelte source)
   const virtual_files = new Map<string, string>()
+  // Reverse lookup: parent markdown path -> set of virtual file IDs (for O(1) HMR lookups)
+  const parent_to_virtual = new Map<string, Set<string>>()
 
   let vite_server: ViteServer | undefined
 
@@ -141,6 +142,14 @@ export default createUnplugin((options: PluginOptions = {}) => {
           if (src !== virtual_files.get(virtual_id)) {
             virtual_files.set(virtual_id, src)
 
+            // Update reverse lookup for HMR
+            let virtual_set = parent_to_virtual.get(base_id)
+            if (!virtual_set) {
+              virtual_set = new Set()
+              parent_to_virtual.set(base_id, virtual_set)
+            }
+            virtual_set.add(virtual_id)
+
             // Invalidate modules for HMR
             if (vite_server) {
               const mod = vite_server.moduleGraph.getModuleById(virtual_id)
@@ -150,10 +159,10 @@ export default createUnplugin((options: PluginOptions = {}) => {
             }
           }
 
-          // Remove the property (including trailing comma/whitespace, with safety bound)
+          // Remove the property (including trailing comma/whitespace)
           if (prop.start !== undefined && prop.end !== undefined) {
             let end = prop.end
-            const max_end = Math.min(prop.end + 50, code.length) // safety bound
+            const max_end = Math.min(prop.end + TRAILING_CLEANUP_BOUND, code.length)
             while (end < max_end && /[\s,]/.test(code[end])) end++
             edits.push({ start: prop.start, end, content: `` })
           }
@@ -195,12 +204,11 @@ export default createUnplugin((options: PluginOptions = {}) => {
         // Collect virtual file modules that need HMR updates
         const additional_modules: unknown[] = []
 
-        // Find virtual file modules for the parent markdown file
+        // O(1) lookup using reverse map instead of iterating all virtual files
         if (extensions.some((ext) => ctx.file.endsWith(ext))) {
-          for (const [id] of virtual_files) {
-            const parent = id.split(EXAMPLE_MODULE_PREFIX)[0]
-            // Use exact path equality to avoid false positives with overlapping suffixes
-            if (ctx.file === parent) {
+          const virtual_ids = parent_to_virtual.get(ctx.file)
+          if (virtual_ids) {
+            for (const id of virtual_ids) {
               const mod = server.moduleGraph.getModuleById(id)
               if (mod) additional_modules.push(mod)
             }
