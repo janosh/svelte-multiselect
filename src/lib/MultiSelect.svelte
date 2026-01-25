@@ -26,7 +26,7 @@
     duplicateOptionMsg = `This option is already selected`,
     duplicates = false,
     keepSelectedInDropdown = false,
-    key = (opt) => `${utils.get_value(opt)}`,
+    key = (opt) => utils.get_option_key(opt),
     filterFunc = (opt, searchText) => {
       if (!searchText) return true
       const label = `${utils.get_label(opt)}`
@@ -407,14 +407,6 @@
   let effective_options = $derived(
     loadOptions ? loaded_options : (options ?? []),
   )
-
-  // Warn developers about case-variant labels in dev mode (runs once per options change)
-  let warned_case_variants = false
-  $effect(() => {
-    if (!warned_case_variants && effective_options.length > 0) {
-      warned_case_variants = utils.warn_case_variants(effective_options)
-    }
-  })
 
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))

@@ -2,6 +2,7 @@ import type { Option, OptionStyle } from '$lib'
 import {
   fuzzy_match,
   get_label,
+  get_option_key,
   get_style,
   get_uuid,
   has_group,
@@ -200,5 +201,42 @@ describe(`has_group`, () => {
     [42, false],
   ])(`has_group(%j) returns %s`, (input, expected) => {
     expect(has_group(input as Option)).toBe(expected)
+  })
+})
+
+describe(`get_option_key`, () => {
+  test.each([
+    // Object options - combines label + value
+    [{ label: `Apple`, value: 1 }, `Apple-1`],
+    [{ label: `Apple`, value: `uuid-123` }, `Apple-uuid-123`],
+    [{ label: `pd`, value: `uuid-1` }, `pd-uuid-1`],
+    [{ label: `PD`, value: `uuid-2` }, `PD-uuid-2`], // case preserved
+    // Object options without value - label + empty string
+    [{ label: `Apple` }, `Apple-`],
+    [{ label: `Apple`, value: undefined }, `Apple-`],
+    [{ label: `Apple`, value: null }, `Apple-`],
+    // Object options with falsy but defined values
+    [{ label: `Apple`, value: 0 }, `Apple-0`],
+    [{ label: `Apple`, value: `` }, `Apple-`],
+    [{ label: `Apple`, value: false }, `Apple-false`],
+    // Primitive options - just the label
+    [`apple`, `apple`],
+    [`Apple`, `Apple`], // case preserved
+    [123, `123`],
+    [0, `0`],
+  ])(`get_option_key(%j) returns %j`, (input, expected) => {
+    expect(get_option_key(input as Option)).toBe(expected)
+  })
+
+  test(`case-variant labels produce unique keys`, () => {
+    const options = [
+      { label: `pd`, value: `uuid-1` },
+      { label: `PD`, value: `uuid-2` },
+      { label: `Pd`, value: `uuid-3` },
+    ]
+    const keys = options.map(get_option_key)
+    expect(keys).toEqual([`pd-uuid-1`, `PD-uuid-2`, `Pd-uuid-3`])
+    // All keys should be unique
+    expect(new Set(keys).size).toBe(3)
   })
 })

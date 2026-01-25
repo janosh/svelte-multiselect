@@ -33,46 +33,11 @@ export const get_label = (opt: Option) => {
   return `${opt}`
 }
 
-// Get the value from an option object, falling back to label if value is undefined
-// For primitive options (string/number), returns the option itself
-export const get_value = (opt: Option): unknown => {
-  if (is_object(opt)) {
-    // Use value if defined, otherwise fall back to label
-    return opt.value !== undefined ? opt.value : opt.label
-  }
-  return opt
-}
-
-// Check for case-variant labels and warn developers
-// Returns true if case variants were found
-export const warn_case_variants = (options: Option[]): boolean => {
-  const labels = options.map((o) => `${get_label(o)}`)
-  const lowerLabels = labels.map((l) => l.toLowerCase())
-  const seen = new Map<string, string[]>()
-
-  labels.forEach((label, i) => {
-    const lower = lowerLabels[i]
-    const existing = seen.get(lower)
-    if (existing) {
-      existing.push(label)
-    } else {
-      seen.set(lower, [label])
-    }
-  })
-
-  const variants = [...seen.entries()]
-    .filter(([, labelList]) => labelList.length > 1 && new Set(labelList).size > 1)
-    .map(([, labelList]) => [...new Set(labelList)].join(`, `))
-
-  if (variants.length > 0) {
-    console.warn(
-      `[svelte-multiselect] Options contain labels that differ only by case: [${variants.join(`] [`)}]. ` +
-      `Each will be treated as a distinct option. If this is unintended, filter your options or provide a custom key function.`
-    )
-    return true
-  }
-  return false
-}
+// Generate a unique key for an option by combining label and value
+// For object options: "label-value" (e.g., "foo-uuid-123" or "foo-" if no value)
+// For primitives: the primitive as string
+export const get_option_key = (opt: Option): string =>
+  is_object(opt) ? `${get_label(opt)}-${opt.value ?? ``}` : `${get_label(opt)}`
 
 // This function is used extract CSS strings from a {selected, option} style
 // object to be used in the style attribute of the option.

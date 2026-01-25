@@ -149,9 +149,10 @@ export interface MultiSelectProps<T extends Option = Option>
   // 'plain' (left border and background color to differentiate selected options),
   // 'checkboxes' (each option is prefixed by a checkbox).
   keepSelectedInDropdown?: false | `plain` | `checkboxes`
-  // Function to generate unique keys for options. By default, uses the `value` field for object options
-  // (falling back to `label` if `value` is undefined), or the option itself for primitives.
-  // This ensures options with unique `value` fields (e.g., UUIDs) are treated as distinct even if labels match.
+  // Function to generate unique keys for options. By default, combines label + value for object options
+  // (e.g., "foo-uuid-123" or "foo-" if no value), or uses the primitive as string for string/number options.
+  // This ensures uniqueness even when options have case-variant labels or the same value field.
+  // Note: duplicate detection also checks labels, so typing "Apple" when any "Apple" is selected is blocked.
   key?: (opt: T) => unknown
   filterFunc?: (opt: T, searchText: string) => boolean
   fuzzy?: boolean // whether to use fuzzy matching (default: true) or substring matching (false)
