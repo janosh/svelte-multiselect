@@ -3,8 +3,11 @@ import { fileURLToPath } from 'node:url'
 import { createStarryNight } from '@wooorm/starry-night'
 import source_css from '@wooorm/starry-night/source.css'
 import source_js from '@wooorm/starry-night/source.js'
+import source_json from '@wooorm/starry-night/source.json'
+import source_shell from '@wooorm/starry-night/source.shell'
 import source_svelte from '@wooorm/starry-night/source.svelte'
 import source_ts from '@wooorm/starry-night/source.ts'
+import text_html_basic from '@wooorm/starry-night/text.html.basic'
 import { toHtml } from 'hast-util-to-html'
 import { visit } from 'unist-util-visit'
 import path from 'upath'
@@ -15,9 +18,13 @@ const starry_night = await createStarryNight([
   source_js,
   source_ts,
   source_css,
+  source_json,
+  source_shell,
+  text_html_basic,
 ])
 
-const escape = (src: string) => src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\\{`)
+const encode_escapes = (src: string) =>
+  src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\\{`)
 
 const _dirname = typeof __dirname !== `undefined`
   ? __dirname
@@ -35,7 +42,25 @@ const RE_PARSE_META = /(\w+=\d+|\w+="[^"]*"|\w+=\[[^\]]*\]|\w+)/g
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
 
-const EXAMPLE_LANGUAGES = [`svelte`, `html`]
+// Map code fence language to starry-night grammar scope
+const LANG_TO_SCOPE: Record<string, string> = {
+  svelte: `source.svelte`,
+  html: `text.html.basic`,
+  ts: `source.ts`,
+  typescript: `source.ts`,
+  js: `source.js`,
+  javascript: `source.js`,
+  css: `source.css`,
+  json: `source.json`,
+  shell: `source.shell`,
+  bash: `source.shell`,
+}
+
+// Languages that render as live Svelte components
+const LIVE_LANGUAGES = [`svelte`, `html`]
+
+// All languages that support the `example` meta
+const EXAMPLE_LANGUAGES = Object.keys(LANG_TO_SCOPE)
 
 interface RemarkMeta {
   Wrapper?: string | [string, string]
@@ -94,10 +119,21 @@ export default function remark(options: RemarkOptions = {}) {
 
       const { csr, example, Wrapper } = meta
 
-      // find svelte code blocks with meta to trigger example
+      // find code blocks with `example` meta in supported languages
       if (example && node.lang && EXAMPLE_LANGUAGES.includes(node.lang)) {
-        const value = create_example_component(node.value || ``, meta, examples.length)
-        examples.push({ csr, Wrapper: Wrapper || `` })
+        const is_live = LIVE_LANGUAGES.includes(node.lang)
+        const value = create_example_component(
+          node.value || ``,
+          meta,
+          is_live ? examples.length : -1, // -1 for code-only (no component import needed)
+          node.lang,
+          is_live,
+        )
+
+        // Only track live examples for component imports
+        if (is_live) {
+          examples.push({ csr, Wrapper: Wrapper || `` })
+        }
 
         node.type = `paragraph`
         node.children = [{ type: `text`, value }]
@@ -148,10 +184,11 @@ export default function remark(options: RemarkOptions = {}) {
 
 function parse_meta(meta: string): Record<string, unknown> {
   const result: Record<string, unknown> = {}
-  const meta_parts = meta.match(RE_PARSE_META) ?? []
 
-  for (let idx = 0; idx < meta_parts.length; idx++) {
-    const [key, value = `true`] = meta_parts[idx].split(`=`)
+  for (const part of meta.match(RE_PARSE_META) ?? []) {
+    const eq = part.indexOf(`=`)
+    const key = eq === -1 ? part : part.slice(0, eq)
+    const value = eq === -1 ? `true` : part.slice(eq + 1)
 
     try {
       result[key] = JSON.parse(value)
@@ -183,18 +220,30 @@ function create_example_component(
   value: string,
   meta: RemarkMeta,
   index: number,
+  lang: string,
+  is_live: boolean,
 ): string {
-  const live_example_component_name = `${EXAMPLE_COMPONENT_PREFIX}${index}`
-
   const code = format_code(value, meta)
-  const tree = starry_night.highlight(code, `source.svelte`)
+  const scope = LANG_TO_SCOPE[lang] || `source.svelte`
+  const tree = starry_night.highlight(code, scope)
   const highlighted = toHtml(tree)
+
+  // Code-only examples (ts, js, css, etc.) - just render highlighted code block
+  if (!is_live) {
+    // Close and reopen <p> to avoid block-in-inline HTML nesting issues
+    return `</p><pre class="highlight highlight-${lang}"><code>{@html ${
+      JSON.stringify(highlighted)
+    }}</code></pre><p>`
+  }
+
+  // Live examples (svelte, html) - render with CodeExample wrapper
+  const live_example_component_name = `${EXAMPLE_COMPONENT_PREFIX}${index}`
 
   const props = {
     // gets parsed as virtual file content in vite plugin and then removed
-    __live_example_src: `String.raw\`${escape(value)}\``,
-    src: JSON.stringify(escape(code)),
-    meta: escape(JSON.stringify(meta)),
+    __live_example_src: `String.raw\`${encode_escapes(value)}\``,
+    src: JSON.stringify(encode_escapes(code)),
+    meta: encode_escapes(JSON.stringify(meta)),
   }
 
   // Close and reopen <p> to avoid block-in-inline HTML nesting issues

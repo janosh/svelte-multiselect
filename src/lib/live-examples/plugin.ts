@@ -1,13 +1,14 @@
 // Vite plugin - handles virtual module resolution for example components
-import { createUnplugin } from 'unplugin'
-import path from 'upath'
-import { EXAMPLE_MODULE_PREFIX } from './remark.ts'
-
-const unescape = (src: string) => src.replace(/\\`/g, `\``).replace(/\\\$\\\{/g, `\${`)
 // @ts-expect-error no types available
 import ast from 'abstract-syntax-tree'
 import process from 'node:process'
+import { createUnplugin } from 'unplugin'
+import path from 'upath'
 import type { ModuleNode, ViteDevServer } from 'vite'
+import { EXAMPLE_MODULE_PREFIX } from './remark.ts'
+
+const decode_escapes = (src: string) =>
+  src.replace(/\\`/g, `\``).replace(/\\\$\\\{/g, `\${`)
 
 interface PluginOptions {
   extensions?: string[]
@@ -79,7 +80,18 @@ export default createUnplugin((options: PluginOptions = {}) => {
       if (id.includes(EXAMPLE_MODULE_PREFIX)) {
         const file = virtual_files.get(id)
         if (file) return file.src
-        this.warn(`Example src not found for ${id}`)
+        // Virtual file not found - this can happen during HMR race conditions or if
+        // the parent markdown file hasn't been processed yet. In production, this
+        // indicates a bug. In dev, it may resolve on next HMR update.
+        const msg = `Example src not found for ${id}`
+        if (process.env.NODE_ENV === `production`) {
+          throw new Error(msg)
+        }
+        this.warn(msg)
+        // Return error component to surface the issue visibly in the browser
+        return `<script>console.error(${
+          JSON.stringify(msg)
+        })</script><p style="color:red">${msg}</p>`
       }
     },
 
@@ -90,7 +102,7 @@ export default createUnplugin((options: PluginOptions = {}) => {
         iterate_example_src_nodes(tree, (src_node, value_node, idx) => {
           const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}${idx}.svelte`
           const prev = virtual_files.get(virtual_id)?.src
-          const next = unescape(value_node.value?.raw || ``)
+          const next = decode_escapes(value_node.value?.raw || ``)
 
           if (next !== prev) {
             virtual_files.set(virtual_id, { src: next })
@@ -121,6 +133,8 @@ export default createUnplugin((options: PluginOptions = {}) => {
           })
         })
 
+        // NOTE: Empty source map loses mapping info, affecting debugging of transformed
+        // files. Consider using magic-string for proper source maps if this becomes an issue.
         return {
           code: ast.generate(tree),
           map: { mappings: `` },
