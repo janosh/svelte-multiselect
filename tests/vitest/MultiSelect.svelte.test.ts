@@ -5009,3 +5009,318 @@ describe(`onactivate event`, () => {
     expect(onactivate_spy).toHaveBeenCalledTimes(1)
   })
 })
+
+describe(`history / undo-redo`, () => {
+  test(`history enabled by default - undo/redo bound without explicit history prop`, async () => {
+    let undo_fn: (() => boolean) | undefined
+    let redo_fn: (() => boolean) | undefined
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        // Note: no history prop - should be enabled by default
+        get undo() {
+          return undo_fn
+        },
+        set undo(fn) {
+          undo_fn = fn
+        },
+        get redo() {
+          return redo_fn
+        },
+        set redo(fn) {
+          redo_fn = fn
+        },
+      },
+    })
+    await tick()
+
+    // History is enabled by default, so undo/redo should be functional
+    expect(undo_fn).toBeInstanceOf(Function)
+    expect(redo_fn).toBeInstanceOf(Function)
+  })
+
+  test(`undo/redo functions bound and canUndo/canRedo initially false`, async () => {
+    let undo_fn: (() => boolean) | undefined
+    let redo_fn: (() => boolean) | undefined
+    let can_undo = true
+    let can_redo = true
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        history: true,
+        get undo() {
+          return undo_fn
+        },
+        set undo(fn) {
+          undo_fn = fn
+        },
+        get redo() {
+          return redo_fn
+        },
+        set redo(fn) {
+          redo_fn = fn
+        },
+        get canUndo() {
+          return can_undo
+        },
+        set canUndo(val) {
+          can_undo = val
+        },
+        get canRedo() {
+          return can_redo
+        },
+        set canRedo(val) {
+          can_redo = val
+        },
+      },
+    })
+    await tick()
+
+    expect(undo_fn).toBeInstanceOf(Function)
+    expect(redo_fn).toBeInstanceOf(Function)
+    expect(can_undo).toBe(false)
+    expect(can_redo).toBe(false)
+    expect(undo_fn?.()).toBe(false) // nothing to undo
+    expect(redo_fn?.()).toBe(false) // nothing to redo
+  })
+
+  test.each([`undo`, `redo`] as const)(
+    `%s returns false when disabled=true`,
+    async (method) => {
+      let fn: (() => boolean) | undefined
+      const props = {
+        options: [1, 2, 3],
+        history: true,
+        disabled: true,
+        get [method]() {
+          return fn
+        },
+        set [method](f: (() => boolean) | undefined) {
+          fn = f
+        },
+      }
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
+      expect(fn?.()).toBe(false)
+    },
+  )
+
+  test.each([true, false, 0, 1, 50] as const)(
+    `history=%s accepts prop without error`,
+    async (history_val) => {
+      let undo_fn: (() => boolean) | undefined
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: [1, 2, 3],
+          history: history_val,
+          get undo() {
+            return undo_fn
+          },
+          set undo(fn) {
+            undo_fn = fn
+          },
+        },
+      })
+      await tick()
+      expect(undo_fn).toBeInstanceOf(Function)
+      expect(undo_fn?.()).toBe(false)
+    },
+  )
+
+  test.each(
+    [
+      [`default`, {}, `z`, { ctrlKey: true }],
+      [`custom`, { shortcuts: { undo: `alt+u` } }, `u`, { altKey: true }],
+      [`null`, { shortcuts: { undo: null } }, `z`, { ctrlKey: true }],
+    ] as const,
+  )(`%s shortcuts don't throw`, async (_desc, extra, key, modifiers) => {
+    const props = $state<MultiSelectProps>({
+      options: [1, 2, 3],
+      history: true,
+      ...extra,
+    })
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key, bubbles: true, ...modifiers }),
+    )
+    await tick()
+  })
+
+  test.each([`onundo`, `onredo`] as const)(
+    `%s callback prop accepted`,
+    async (event_name) => {
+      const spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: [1, 2, 3], history: true, [event_name]: spy },
+      })
+      await tick()
+      expect(spy).not.toHaveBeenCalled()
+    },
+  )
+
+  test.each([
+    [`object options`, [{ label: `A`, value: 1 }, { label: `B`, value: 2 }], {}],
+    [`maxSelect=1`, [1, 2, 3], { maxSelect: 1 }],
+    [`preselected`, [{ label: `A`, preselected: true }, { label: `B` }], {}],
+    [`sortSelected`, [3, 1, 2], { sortSelected: true }],
+    [`duplicates`, [1, 2, 3], { duplicates: true }],
+    [`allowUserOptions`, [1, 2, 3], { allowUserOptions: true }],
+    [`minSelect`, [1, 2, 3], { minSelect: 1 }],
+    [`grouped`, [{ label: `A`, group: `G1` }, { label: `B`, group: `G2` }], {}],
+  ])(`compatible with %s`, async (_desc, options, extra) => {
+    let undo_fn: (() => boolean) | undefined
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options,
+        history: true,
+        get undo() {
+          return undo_fn
+        },
+        set undo(fn) {
+          undo_fn = fn
+        },
+        ...extra,
+      },
+    })
+    await tick()
+    expect(undo_fn).toBeInstanceOf(Function)
+  })
+
+  test(`history is isolated per component instance`, async () => {
+    let undo_1: (() => boolean) | undefined
+    let undo_2: (() => boolean) | undefined
+
+    const div1 = document.createElement(`div`)
+    const div2 = document.createElement(`div`)
+    document.body.append(div1, div2)
+
+    mount(MultiSelect, {
+      target: div1,
+      props: {
+        options: [1, 2],
+        history: true,
+        get undo() {
+          return undo_1
+        },
+        set undo(fn) {
+          undo_1 = fn
+        },
+      },
+    })
+    mount(MultiSelect, {
+      target: div2,
+      props: {
+        options: [`a`, `b`],
+        history: true,
+        get undo() {
+          return undo_2
+        },
+        set undo(fn) {
+          undo_2 = fn
+        },
+      },
+    })
+    await tick()
+
+    expect(undo_1).toBeDefined()
+    expect(undo_2).toBeDefined()
+    expect(undo_1).not.toBe(undo_2)
+
+    div1.remove()
+    div2.remove()
+  })
+
+  test(`undo restores previous selection state, redo restores undone state`, async () => {
+    let selected = $state<number[]>([])
+    let undo_fn: (() => boolean) | undefined
+    let redo_fn: (() => boolean) | undefined
+    let can_undo = false
+    let can_redo = false
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        history: true,
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        get undo() {
+          return undo_fn
+        },
+        set undo(fn) {
+          undo_fn = fn
+        },
+        get redo() {
+          return redo_fn
+        },
+        set redo(fn) {
+          redo_fn = fn
+        },
+        get canUndo() {
+          return can_undo
+        },
+        set canUndo(val) {
+          can_undo = val
+        },
+        get canRedo() {
+          return can_redo
+        },
+        set canRedo(val) {
+          can_redo = val
+        },
+      },
+    })
+    await tick()
+
+    // Initial state: empty selection, no undo/redo available
+    expect(selected).toEqual([])
+    expect(can_undo).toBe(false)
+    expect(can_redo).toBe(false)
+
+    // Select first option
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+    const first_option = doc_query(`ul.options li`)
+    first_option.click()
+    await tick()
+
+    expect(selected).toEqual([1])
+    expect(can_undo).toBe(true)
+    expect(can_redo).toBe(false)
+
+    // Undo should restore empty state
+    expect(undo_fn?.()).toBe(true)
+    await tick()
+    expect(selected).toEqual([])
+    expect(can_undo).toBe(false)
+    expect(can_redo).toBe(true)
+
+    // Calling undo again when nothing to undo should return false and not change state
+    expect(undo_fn?.()).toBe(false)
+    await tick()
+    expect(selected).toEqual([]) // state unchanged
+
+    // Redo should restore selection
+    expect(redo_fn?.()).toBe(true)
+    await tick()
+    expect(selected).toEqual([1])
+    expect(can_undo).toBe(true)
+    expect(can_redo).toBe(false)
+  })
+})

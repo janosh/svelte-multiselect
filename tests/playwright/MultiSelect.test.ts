@@ -1547,3 +1547,197 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
     expect(selectors_using_where.ul_options).toBe(true)
   })
 })
+
+test.describe(`history / undo-redo feature`, () => {
+  test(`undo/redo buttons enable/disable correctly`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const undo_btn = page.locator(`#undo-btn`)
+    const redo_btn = page.locator(`#redo-btn`)
+    const selection_count = page.locator(`#selection-count`)
+
+    // Initially both disabled
+    await expect(undo_btn).toBeDisabled()
+    await expect(redo_btn).toBeDisabled()
+
+    // Select -> undo enabled
+    await page.click(`#history-multiselect input[autocomplete]`)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await expect(undo_btn).toBeEnabled()
+    await expect(redo_btn).toBeDisabled()
+    await expect(selection_count).toContainText(`1 item`)
+
+    // Undo -> redo enabled, undo disabled
+    await undo_btn.click()
+    await expect(selection_count).toContainText(`0 items`)
+    await expect(undo_btn).toBeDisabled()
+    await expect(redo_btn).toBeEnabled()
+
+    // Redo -> back to 1 item
+    await redo_btn.click()
+    await expect(selection_count).toContainText(`1 item`)
+    await expect(redo_btn).toBeDisabled()
+  })
+
+  test(`multiple undo/redo operations chain correctly`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const undo_btn = page.locator(`#undo-btn`)
+    const selection_count = page.locator(`#selection-count`)
+
+    // Select 3 options
+    await page.click(`#history-multiselect input[autocomplete]`)
+    for (let idx = 0; idx < 3; idx++) {
+      await page.locator(`#history-multiselect ul.options li`).first().click()
+      await page.waitForTimeout(100)
+    }
+    await expect(selection_count).toContainText(`3 items`)
+
+    // Undo 3 times
+    for (const expected of [`2 items`, `1 item`, `0 items`]) {
+      await undo_btn.click()
+      await expect(selection_count).toContainText(expected)
+    }
+    await expect(undo_btn).toBeDisabled()
+  })
+
+  test(`new action after undo clears redo stack`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const undo_btn = page.locator(`#undo-btn`)
+    const redo_btn = page.locator(`#redo-btn`)
+    const input = page.locator(`#history-multiselect input[autocomplete]`)
+
+    // Select, then undo
+    await input.click()
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await page.waitForTimeout(100)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await undo_btn.click()
+    await expect(redo_btn).toBeEnabled()
+
+    // New action clears redo (need to re-open dropdown since clicking undo closes it)
+    await input.click()
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await expect(redo_btn).toBeDisabled()
+  })
+
+  test(`onundo and onredo events fire correctly`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const undo_btn = page.locator(`#undo-btn`)
+    const redo_btn = page.locator(`#redo-btn`)
+    const event_log = page.locator(`#history-event-log`)
+
+    // Select, undo, redo
+    await page.click(`#history-multiselect input[autocomplete]`)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await undo_btn.click()
+    await expect(event_log.locator(`.event-name:has-text("onundo")`)).toBeVisible()
+
+    await redo_btn.click()
+    await expect(event_log.locator(`.event-name:has-text("onredo")`)).toBeVisible()
+
+    // Event log shows previous/current
+    const log_data = await event_log.locator(`.log-entry`).first().locator(`pre`)
+      .textContent()
+    expect(log_data).toContain(`previous`)
+    expect(log_data).toContain(`current`)
+  })
+
+  test(`canUndo/canRedo status indicators update`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const can_undo = page.locator(`#can-undo-status`)
+    const can_redo = page.locator(`#can-redo-status`)
+    const undo_btn = page.locator(`#undo-btn`)
+
+    await expect(can_undo).toHaveText(`false`)
+    await expect(can_redo).toHaveText(`false`)
+
+    await page.click(`#history-multiselect input[autocomplete]`)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await expect(can_undo).toHaveText(`true`)
+    await expect(can_redo).toHaveText(`false`)
+
+    await undo_btn.click()
+    await expect(can_undo).toHaveText(`false`)
+    await expect(can_redo).toHaveText(`true`)
+  })
+
+  test(`Cmd/Ctrl+Z and Cmd/Ctrl+Shift+Z keyboard shortcuts work`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const selection_count = page.locator(`#selection-count`)
+    const input = page.locator(`#history-multiselect input[autocomplete]`)
+    // Component uses Meta (Cmd) on Mac, Control on other platforms
+    const mod = process.platform === `darwin` ? `Meta` : `Control`
+
+    await input.click()
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await expect(selection_count).toContainText(`1 item`)
+
+    // Mod+Z to undo
+    await input.focus()
+    await page.keyboard.press(`${mod}+z`)
+    await expect(selection_count).toContainText(`0 items`)
+
+    // Mod+Shift+Z to redo
+    await page.keyboard.press(`${mod}+Shift+z`)
+    await expect(selection_count).toContainText(`1 item`)
+  })
+
+  test(`remove actions tracked in history`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const undo_btn = page.locator(`#undo-btn`)
+    const selection_count = page.locator(`#selection-count`)
+
+    // Select 2, remove via X button
+    await page.click(`#history-multiselect input[autocomplete]`)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await page.waitForTimeout(100)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await expect(selection_count).toContainText(`2 items`)
+
+    // Remove all
+    await page.locator(`#history-multiselect button.remove-all`).click()
+    await expect(selection_count).toContainText(`0 items`)
+
+    // Undo restores all
+    await undo_btn.click()
+    await expect(selection_count).toContainText(`2 items`)
+  })
+
+  test(`history persists across dropdown cycles`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    const undo_btn = page.locator(`#undo-btn`)
+    const selection_count = page.locator(`#selection-count`)
+    const input = page.locator(`#history-multiselect input[autocomplete]`)
+
+    // Select, close, reopen, select again
+    await input.click()
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await page.click(`body`, { position: { x: 10, y: 10 } })
+    await page.waitForTimeout(100)
+
+    await input.click()
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await expect(selection_count).toContainText(`2 items`)
+
+    // Undo still works
+    await undo_btn.click()
+    await expect(selection_count).toContainText(`1 item`)
+  })
+
+  test(`hidden form input present with history enabled`, async ({ page }) => {
+    await page.goto(`/history`, { waitUntil: `networkidle` })
+
+    await page.click(`#history-multiselect input[autocomplete]`)
+    await page.locator(`#history-multiselect ul.options li`).first().click()
+
+    // The form input uses class="form-control" and aria-hidden="true", not type="hidden"
+    await expect(page.locator(`#history-multiselect input.form-control`)).toBeAttached()
+  })
+})

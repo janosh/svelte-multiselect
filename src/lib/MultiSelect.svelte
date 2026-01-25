@@ -152,6 +152,14 @@
     expandAllGroups = $bindable(),
     // Keyboard shortcuts for common actions
     shortcuts = {},
+    // Selection history for undo/redo (enabled by default, set to false or 0 to disable)
+    history = true,
+    undo = $bindable(),
+    redo = $bindable(),
+    canUndo = $bindable(false),
+    canRedo = $bindable(false),
+    onundo,
+    onredo,
     ...rest
   }: MultiSelectProps<Option> = $props()
 
@@ -193,12 +201,21 @@
     return key_matches && ctrl_matches && shift_matches && alt_matches && meta_matches
   }
 
+  // Platform detection for keyboard shortcuts (Mac uses Cmd, others use Ctrl)
+  const is_mac = typeof navigator !== `undefined` &&
+    // @ts-expect-error userAgentData not in all TS libs yet
+    (navigator.userAgentData?.platform === `macOS` ||
+      /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
+  const mod_key = is_mac ? `meta` : `ctrl`
+
   // Default shortcuts
   const default_shortcuts: KeyboardShortcuts = {
     select_all: `ctrl+a`,
     clear_all: `ctrl+shift+a`,
     open: null,
     close: null,
+    undo: `${mod_key}+z`,
+    redo: `${mod_key}+shift+z`,
   }
   const effective_shortcuts = $derived({ ...default_shortcuts, ...shortcuts })
 
@@ -275,6 +292,74 @@
       return () => clearTimeout(timer)
     }
   })
+
+  // History tracking for undo/redo
+  const max_history = $derived(
+    history === true ? 50 : typeof history === `number` ? history : 0,
+  )
+  let history_stack = $state<Option[][]>([])
+  let history_index = $state(-1) // -1 = no history yet
+  let prev_selected: Option[] = [] // track previous value for change detection
+
+  // Track changes to selected via $effect (catches internal + external changes)
+  $effect(() => {
+    if (!history) {
+      prev_selected = [...selected]
+      return
+    }
+    // Check if actually changed (avoid duplicates from reactive updates)
+    if (values_equal(selected, prev_selected)) return
+
+    // On first change, push initial state first
+    if (history_stack.length === 0) {
+      history_stack = [[...prev_selected]]
+      history_index = 0
+    }
+    // Truncate any redo states
+    if (history_index < history_stack.length - 1) {
+      history_stack = history_stack.slice(0, history_index + 1)
+    }
+    // Push new state
+    history_stack = [...history_stack, [...selected]]
+    history_index = history_stack.length - 1
+    // Trim to max size (remove oldest)
+    if (history_stack.length > max_history) {
+      const excess = history_stack.length - max_history
+      history_stack = history_stack.slice(excess)
+      history_index = Math.max(0, history_index - excess)
+    }
+    prev_selected = [...selected]
+  })
+
+  // Derived canUndo/canRedo (update bindable props reactively)
+  $effect(() => {
+    canUndo = !!history && !disabled && history_index > 0
+    canRedo = !!history && !disabled && history_index < history_stack.length - 1
+  })
+
+  // Undo: restore previous state
+  undo = () => {
+    if (!history || disabled || history_index <= 0) return false
+    const previous = [...selected]
+    history_index--
+    selected = [...history_stack[history_index]]
+    prev_selected = [...selected] // sync tracker to prevent $effect re-recording
+    onundo?.({ previous, current: selected })
+    return true
+  }
+
+  // Redo: restore next state
+  redo = () => {
+    if (!history || disabled || history_index >= history_stack.length - 1) {
+      return false
+    }
+    const previous = [...selected]
+    history_index++
+    selected = [...history_stack[history_index]]
+    prev_selected = [...selected] // sync tracker to prevent $effect re-recording
+    onredo?.({ previous, current: selected })
+    return true
+  }
 
   // Debounced onsearch event - fires 150ms after search text stops changing
   let search_debounce_timer: ReturnType<typeof setTimeout> | null = null
@@ -849,6 +934,16 @@
           close_dropdown(event)
           searchText = ``
         },
+      },
+      {
+        key: `undo`,
+        condition: () => !!canUndo,
+        action: () => undo?.(),
+      },
+      {
+        key: `redo`,
+        condition: () => !!canRedo,
+        action: () => redo?.(),
       },
     ]
 
