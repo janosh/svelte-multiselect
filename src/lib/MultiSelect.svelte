@@ -202,8 +202,7 @@
 
   // Platform detection for keyboard shortcuts (Mac uses Cmd, others use Ctrl)
   const is_mac = typeof navigator !== `undefined` &&
-    (navigator.userAgentData?.platform === `macOS` ||
-      /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
+    /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)
   const mod_key = is_mac ? `meta` : `ctrl`
 
   // Default shortcuts
@@ -305,8 +304,8 @@
 
   // Track changes to selected via $effect (catches internal + external changes)
   $effect(() => {
-    // Disabled when falsy OR non-positive number (negative numbers would behave unexpectedly)
-    const history_disabled = !history || (typeof history === `number` && history <= 0)
+    // Disabled when max_history is 0 (handles false, 0, negative, non-finite inputs)
+    const history_disabled = !(max_history > 0)
     if (history_disabled) {
       // Clear history when disabled so re-enabling starts fresh
       history_stack = []
@@ -346,13 +345,13 @@
 
   // Derived canUndo/canRedo (update bindable props reactively)
   $effect(() => {
-    canUndo = !!history && !disabled && history_index > 0
-    canRedo = !!history && !disabled && history_index < history_stack.length - 1
+    canUndo = max_history > 0 && !disabled && history_index > 0
+    canRedo = max_history > 0 && !disabled && history_index < history_stack.length - 1
   })
 
   // Undo: restore previous state
   undo = () => {
-    if (!history || disabled || history_index <= 0) return false
+    if (max_history <= 0 || disabled || history_index <= 0) return false
     const previous = [...selected]
     history_index--
     selected = [...history_stack[history_index]]
@@ -363,7 +362,7 @@
 
   // Redo: restore next state
   redo = () => {
-    if (!history || disabled || history_index >= history_stack.length - 1) {
+    if (max_history <= 0 || disabled || history_index >= history_stack.length - 1) {
       return false
     }
     const previous = [...selected]
