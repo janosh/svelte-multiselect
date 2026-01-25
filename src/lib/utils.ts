@@ -52,10 +52,12 @@ export const warn_case_variants = (options: Option[]): boolean => {
 
   labels.forEach((label, i) => {
     const lower = lowerLabels[i]
-    if (!seen.has(lower)) {
-      seen.set(lower, [])
+    const existing = seen.get(lower)
+    if (existing) {
+      existing.push(label)
+    } else {
+      seen.set(lower, [label])
     }
-    seen.get(lower)!.push(label)
   })
 
   const variants = [...seen.entries()]
