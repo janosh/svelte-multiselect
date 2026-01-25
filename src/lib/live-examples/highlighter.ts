@@ -26,9 +26,13 @@ interface HastRoot {
 type HastNode = HastText | HastElement | HastRoot
 export type { HastRoot }
 
+// Escape HTML special characters
+const escape_html = (str: string): string =>
+  str.replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
+
 // Convert HAST to HTML string (simplified - only handles what starry-night outputs)
 export const hast_to_html = (node: HastNode): string => {
-  if (node.type === `text`) return node.value
+  if (node.type === `text`) return escape_html(node.value)
   if (node.type === `root`) return node.children?.map(hast_to_html).join(``) ?? ``
   const { tagName, properties, children } = node
   const cls = properties?.className?.join(` `)
@@ -60,10 +64,6 @@ const LANG_TO_SCOPE: Record<string, string> = {
   bash: `source.shell`,
   sh: `source.shell`,
 }
-
-// Escape HTML special characters
-const escape_html = (str: string): string =>
-  str.replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
 
 // Escape characters that would be interpreted as Svelte template syntax
 const escape_svelte = (html: string): string =>
