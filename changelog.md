@@ -1,5 +1,18 @@
 # Changelog
 
+## [v11.6.0](https://github.com/janosh/svelte-multiselect/compare/v11.5.2...v11.6.0)
+
+> 25 January 2026
+
+- Add fallback for crypto.randomUUID to prevent crash in non-secure contexts by @AlessioBugetti in https://github.com/janosh/svelte-multiselect/pull/386
+- Add pinned dropdown feature to Nav component by @janosh in https://github.com/janosh/svelte-multiselect/pull/387
+- Add selection history with undo/redo support by @janosh in https://github.com/janosh/svelte-multiselect/pull/388
+- Reduce live-examples dependencies by 4 packages by @janosh in https://github.com/janosh/svelte-multiselect/pull/390
+
+## New Contributors
+
+- @AlessioBugetti made their first contribution in https://github.com/janosh/svelte-multiselect/pull/386
+
 ## [v11.5.1](https://github.com/janosh/svelte-multiselect/compare/v11.5.0...v11.5.1)
 
 > 18 January 2026
