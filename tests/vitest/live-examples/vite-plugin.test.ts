@@ -11,10 +11,12 @@ const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`b
 // Plugin interface for testing
 interface TestPlugin {
   name: string
-  transformInclude?: (id: string) => boolean
-  resolveId?: (id: string, importer: unknown, options: unknown) => string | undefined
+  resolveId?: (id: string) => string | undefined
   load?: (id: string) => string | undefined
-  transform?: (code: string, id: string) => { code: string; map: { mappings: string } }
+  transform?: (
+    code: string,
+    id: string,
+  ) => { code: string; map: { mappings: string } } | undefined
   configureServer?: (server: unknown) => void
   handleHotUpdate?: (
     ctx: { file: string; server: unknown; modules: unknown[] },
@@ -22,11 +24,8 @@ interface TestPlugin {
 }
 
 // Helpers
-const get_plugin = (options = {}): TestPlugin => {
-  const result = vite_plugin.vite(options)
-  const plugin = Array.isArray(result) ? result[0] : result
-  return plugin as unknown as TestPlugin
-}
+const get_plugin = (options = {}): TestPlugin =>
+  vite_plugin(options) as unknown as TestPlugin
 
 const create_mock_context = () => ({ warn: vi.fn(), error: vi.fn() })
 
@@ -37,49 +36,22 @@ describe(`plugin initialization`, () => {
   })
 })
 
-describe(`transformInclude`, () => {
-  const plugin = get_plugin()
-
-  test.each([
-    [`.md`, `/path/to/file.md`, true],
-    [`.svelte.md`, `/path/to/file.svelte.md`, true],
-    [`.svx`, `/path/to/file.svx`, true],
-    [`example module`, `/path${EXAMPLE_MODULE_PREFIX}0.svelte`, true],
-    [`.ts`, `/path/to/file.ts`, false],
-    [`.svelte`, `/path/to/file.svelte`, false],
-    [`.js`, `/path/to/file.js`, false],
-  ])(`%s file returns %s`, (_, id, expected) => {
-    expect(plugin.transformInclude?.(id)).toBe(expected)
-  })
-
-  test(`strips query params when checking extensions`, () => {
-    expect(plugin.transformInclude?.(`/file.md?raw`)).toBe(true)
-    expect(plugin.transformInclude?.(`/file.md?svelte&type=style`)).toBe(true)
-  })
-
-  test(`uses custom extensions when provided`, () => {
-    const custom = get_plugin({ extensions: [`.custom`] })
-    expect(custom.transformInclude?.(`/file.custom`)).toBe(true)
-    expect(custom.transformInclude?.(`/file.md`)).toBe(false)
-  })
-})
-
 describe(`resolveId`, () => {
   const plugin = get_plugin()
 
   test(`resolves example module paths to absolute`, () => {
-    const resolved = plugin.resolveId?.(`${EXAMPLE_MODULE_PREFIX}0.svelte`, undefined, {})
+    const resolved = plugin.resolveId?.(`${EXAMPLE_MODULE_PREFIX}0.svelte`)
     expect(resolved).toContain(EXAMPLE_MODULE_PREFIX)
     expect(resolved).toMatch(/^\//)
   })
 
   test(`preserves already absolute paths`, () => {
     const id = `${process.cwd()}/src/test.md${EXAMPLE_MODULE_PREFIX}0.svelte`
-    expect(plugin.resolveId?.(id, undefined, {})).toBe(id)
+    expect(plugin.resolveId?.(id)).toBe(id)
   })
 
   test(`returns undefined for non-example modules`, () => {
-    expect(plugin.resolveId?.(`/path/to/file.md`, undefined, {})).toBeUndefined()
+    expect(plugin.resolveId?.(`/path/to/file.md`)).toBeUndefined()
   })
 })
 
@@ -177,18 +149,18 @@ describe(`edge cases`, () => {
   const plugin = get_plugin()
   const ctx = create_mock_context()
 
-  test.each([
-    [``, `empty code`],
-    [`const x = 1; const y = 2;`, `code without __live_example_src`],
-  ])(`handles %s`, (code, _) => {
-    const result = plugin.transform?.call(ctx, code, `/file.md`)
-    expect(result).toEqual({ code, map: { mappings: `` } })
-  })
+  test.each([``, `const x = 1;`])(
+    `returns unchanged for code without markers: %s`,
+    (code) => {
+      expect(plugin.transform?.call(ctx, code, `/file.md`)).toEqual({
+        code,
+        map: { mappings: `` },
+      })
+    },
+  )
 
-  test.each([
-    `<script>const x = "hello"</script><div>{x}</div>`,
-    `<div>Hello 世界 🌍</div>`,
-  ])(`correctly decodes base64 content: %s`, (original) => {
+  test(`correctly decodes base64 with unicode`, () => {
+    const original = `<div>Hello 世界 🌍</div>`
     const code = `const props = { __live_example_src: "${to_base64(original)}" }`
     expect(plugin.transform?.call(ctx, code, `/file.md`)).toBeDefined()
   })

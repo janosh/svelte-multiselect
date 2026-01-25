@@ -7,9 +7,8 @@ import source_shell from '@wooorm/starry-night/source.shell'
 import source_svelte from '@wooorm/starry-night/source.svelte'
 import source_ts from '@wooorm/starry-night/source.ts'
 import text_html_basic from '@wooorm/starry-night/text.html.basic'
-import { toHtml } from 'hast-util-to-html'
-import { visit } from 'unist-util-visit'
-import path from 'upath'
+import path from 'node:path'
+import { hast_to_html, type HastRoot } from './highlighter.ts'
 import { Buffer } from 'node:buffer'
 
 // Base64 encode to prevent preprocessors from modifying the content
@@ -92,6 +91,17 @@ interface RemarkNode {
   children?: RemarkNode[]
 }
 
+// Simple tree traversal - finds all nodes of a given type
+const visit = (tree: RemarkTree, type: string, callback: (node: RemarkNode) => void) => {
+  const walk = (nodes: RemarkNode[]) => {
+    for (const node of nodes) {
+      if (node.type === type) callback(node)
+      if (node.children) walk(node.children)
+    }
+  }
+  walk(tree.children)
+}
+
 interface RemarkFile {
   filename: string
   cwd: string
@@ -126,7 +136,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       return alias
     }
 
-    visit(tree as RemarkTree, `code`, (node: RemarkNode) => {
+    visit(tree, `code`, (node) => {
       const meta: RemarkMeta = {
         Wrapper: DEFAULT_WRAPPER,
         filename,
@@ -190,7 +200,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
 
     // Try to inject imports into existing script block
     let injected = false
-    visit(tree as RemarkTree, `html`, (node: RemarkNode) => {
+    visit(tree, `html`, (node) => {
       if (!injected && node.value && RE_SCRIPT_START.test(node.value)) {
         node.value = node.value.replace(
           RE_SCRIPT_START,
@@ -238,9 +248,9 @@ function create_example_component(
   wrapper_alias: string,
 ): string {
   const code = format_code(value, meta)
-  const tree = starry_night.highlight(code, LANG_TO_SCOPE[lang])
+  const tree = starry_night.highlight(code, LANG_TO_SCOPE[lang]) as HastRoot
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
-  const highlighted = toHtml(tree).replace(/\n/g, `&#10;`)
+  const highlighted = hast_to_html(tree).replace(/\n/g, `&#10;`)
 
   // Code-only examples (ts, js, css, etc.) - just render highlighted code block
   if (!is_live) {

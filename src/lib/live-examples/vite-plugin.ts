@@ -1,23 +1,15 @@
 // Vite plugin - handles virtual module resolution for example components
 // @ts-expect-error no types available
 import ast from 'abstract-syntax-tree'
-import process from 'node:process'
-import { createUnplugin } from 'unplugin'
-import path from 'upath'
 import { Buffer } from 'node:buffer'
+import process from 'node:process'
+import path from 'node:path'
+import type { HmrContext, Plugin, ViteDevServer } from 'vite'
 
 // Decode base64 encoded source
 const from_base64 = (src: string): string => Buffer.from(src, `base64`).toString(`utf-8`)
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
-
-// Use generic types to avoid version conflicts between vite and unplugin's internal vite types
-interface ViteServer {
-  moduleGraph: {
-    getModuleById(id: string): unknown
-    invalidateModule(mod: unknown): void
-  }
-}
 
 // Edit operation: replace text at [start, end) with content
 type Edit = { start: number; end: number; content: string }
@@ -46,7 +38,7 @@ interface AstNode {
   end?: number
 }
 
-export default createUnplugin((options: PluginOptions = {}) => {
+export default function live_examples_plugin(options: PluginOptions = {}): Plugin {
   const { extensions = [`.svelte.md`, `.md`, `.svx`] } = options
 
   // Extracted examples as individual virtual files (id -> svelte source)
@@ -54,23 +46,23 @@ export default createUnplugin((options: PluginOptions = {}) => {
   // Reverse lookup: parent markdown path -> set of virtual file IDs (for O(1) HMR lookups)
   const parent_to_virtual = new Map<string, Set<string>>()
 
-  let vite_server: ViteServer | undefined
+  let vite_server: ViteDevServer | undefined
 
   return {
     name: `live-examples-plugin`,
-    transformInclude(id: string) {
-      // Strip query params for extension check (Vite adds ?query for HMR, styles, etc.)
-      const base_id = id.split(`?`)[0]
-      return extensions.some((ext) => base_id.endsWith(ext)) ||
-        id.includes(EXAMPLE_MODULE_PREFIX)
+
+    configureServer(server) {
+      vite_server = server
     },
+
     resolveId(id: string) {
       if (id.includes(EXAMPLE_MODULE_PREFIX)) {
         // Force absolute path (dev uses relative, prod uses absolute)
-        const cwd = path.toUnix(process.cwd())
+        const cwd = process.cwd().replace(/\\/g, `/`)
         return id.includes(cwd) ? id : path.join(cwd, id)
       }
     },
+
     load(id: string) {
       if (id.includes(EXAMPLE_MODULE_PREFIX)) {
         // Strip query parameters - Vite requests derived modules (styles, etc.) with queries
@@ -103,13 +95,19 @@ export default createUnplugin((options: PluginOptions = {}) => {
     },
 
     transform(code: string, id: string) {
+      // Strip query params for extension check (Vite adds ?query for HMR, styles, etc.)
+      const base_id = id.split(`?`)[0]
+
+      // Skip non-matching files
+      const is_example_module = id.includes(EXAMPLE_MODULE_PREFIX)
+      const is_markdown = extensions.some((ext) => base_id.endsWith(ext))
+      if (!is_example_module && !is_markdown) return
+
       // Skip derived modules (styles, etc.) - only process the main markdown file
       // Vite creates derived modules like ?svelte&type=style&lang.css for style blocks
       if (id.includes(`?svelte&type=`)) return { code, map: { mappings: `` } }
 
-      // Strip query params - Vite adds ?raw, ?inline, etc.
-      const base_id = id.split(`?`)[0]
-      if (extensions.some((ext) => base_id.endsWith(ext))) {
+      if (is_markdown) {
         // Use AST for precise node location, collect edits to apply at end
         let tree
         try {
@@ -197,30 +195,22 @@ export default createUnplugin((options: PluginOptions = {}) => {
       return { code, map: { mappings: `` } }
     },
 
-    vite: {
-      configureServer(server) {
-        vite_server = server as ViteServer
-      },
+    handleHotUpdate(ctx: HmrContext) {
+      // Collect virtual file modules that need HMR updates
+      const additional_modules: typeof ctx.modules = []
 
-      handleHotUpdate(ctx) {
-        const { server, modules: ctx_modules } = ctx
-        // Collect virtual file modules that need HMR updates
-        const additional_modules: unknown[] = []
-
-        // O(1) lookup using reverse map instead of iterating all virtual files
-        if (extensions.some((ext) => ctx.file.endsWith(ext))) {
-          const virtual_ids = parent_to_virtual.get(ctx.file)
-          if (virtual_ids) {
-            for (const id of virtual_ids) {
-              const mod = server.moduleGraph.getModuleById(id)
-              if (mod) additional_modules.push(mod)
-            }
+      // O(1) lookup using reverse map instead of iterating all virtual files
+      if (extensions.some((ext) => ctx.file.endsWith(ext))) {
+        const virtual_ids = parent_to_virtual.get(ctx.file)
+        if (virtual_ids) {
+          for (const id of virtual_ids) {
+            const mod = ctx.server.moduleGraph.getModuleById(id)
+            if (mod) additional_modules.push(mod)
           }
         }
+      }
 
-        // Return combined modules - cast needed due to unplugin/vite type version differences
-        return [...additional_modules, ...ctx_modules] as typeof ctx_modules
-      },
+      return [...additional_modules, ...ctx.modules]
     },
   }
-})
+}

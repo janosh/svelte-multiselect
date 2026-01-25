@@ -1,7 +1,10 @@
 import adapter from '@sveltejs/adapter-static'
-import { mdsvex } from 'mdsvex'
 import { heading_ids } from './src/lib/heading-anchors.ts'
-import { mdsvex_transform, sveltePreprocess } from './src/lib/live-examples/index.ts'
+import {
+  mdsvex,
+  mdsvex_transform,
+  sveltePreprocess,
+} from './src/lib/live-examples/index.ts'
 
 import pkg from './package.json' with { type: 'json' }
 const defaults = {
