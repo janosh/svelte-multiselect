@@ -136,12 +136,14 @@ describe(`heading_ids preprocessor`, () => {
 })
 
 describe(`heading_anchors attachment`, () => {
-  // Default selector targets children of main, so we attach to body and put content in main
+  // Default selector uses :scope to target children relative to the attached node
+  // In production, the attachment is applied directly to <main> elements
   const create_container = (html = ``, wrapper: `main` | `div` | `none` = `main`) => {
     document.body.innerHTML = wrapper === `none`
       ? html
       : `<${wrapper}>${html}</${wrapper}>`
-    return document.body
+    // Return the wrapper element (matching production usage of attaching to <main>)
+    return wrapper === `none` ? document.body : document.body.firstElementChild as Element
   }
   const anchor_selector = `a[aria-hidden="true"]`
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -189,8 +191,9 @@ describe(`heading_anchors attachment`, () => {
     })
   })
 
-  describe(`default selector targets main children`, () => {
-    it.each<[string, string, string, boolean, (`main` | `div`)?]>([
+  describe(`default selector targets attached node children`, () => {
+    it.each<[string, string, string, boolean]>([
+      [`direct child`, `<h2 id="dc">X</h2>`, `#dc`, true],
       [`2nd-level (grandchild)`, `<div><h2 id="gc">X</h2></div>`, `#gc`, true],
       [
         `3rd-level (too deep)`,
@@ -198,12 +201,11 @@ describe(`heading_anchors attachment`, () => {
         `#deep`,
         false,
       ],
-      [`outside main`, `<h2 id="out">X</h2>`, `#out`, false, `div`],
     ])(
       `%s → matched: %s`,
-      (_desc, html, id_sel, should_match, wrapper = `main`) => {
-        create_container(html, wrapper)
-        heading_anchors()(document.body)
+      (_desc, html, id_sel, should_match) => {
+        const container = create_container(html)
+        heading_anchors()(container)
         expect(!!document.querySelector(`${id_sel} ${anchor_selector}`)).toBe(
           should_match,
         )
@@ -213,22 +215,22 @@ describe(`heading_anchors attachment`, () => {
 
   describe(`MutationObserver for dynamic content`, () => {
     it.each([
-      [`direct child of main`, () => {
+      [`direct child`, (container: Element) => {
         const heading = document.createElement(`h2`)
         heading.id = `dyn`
-        document.querySelector(`main`)?.appendChild(heading)
+        container.appendChild(heading)
       }],
-      [`grandchild of main (2nd level)`, () => {
+      [`grandchild (2nd level)`, (container: Element) => {
         const div = document.createElement(`div`)
         div.innerHTML = `<h3 id="nest">X</h3>`
-        document.querySelector(`main`)?.appendChild(div)
+        container.appendChild(div)
       }],
     ])(
       `adds anchors to %s dynamically inserted headings`,
-      async (_desc: string, insert_fn: () => void) => {
+      async (_desc: string, insert_fn: (container: Element) => void) => {
         const container = create_container()
         heading_anchors()(container)
-        insert_fn()
+        insert_fn(container)
         await tick()
         expect(document.querySelector(anchor_selector)).toBeTruthy()
       },

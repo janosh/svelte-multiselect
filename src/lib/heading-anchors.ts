@@ -84,7 +84,7 @@ const link_svg =
   `<svg width="16" height="16" viewBox="0 0 16 16" aria-label="Link to heading" role="img"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z" fill="currentColor"/></svg>`
 
 export interface HeadingAnchorsOptions {
-  // CSS selector for headings (default: h1-h6 direct or 2nd-level children of main)
+  // CSS selector for headings (default: h1-h6 direct or 2nd-level children of attached node)
   selector?: string
   // Custom SVG icon HTML string (default: link icon)
   // WARNING: Assigned via innerHTML - only pass trusted/sanitized content
@@ -118,8 +118,10 @@ export const heading_anchors =
   (options: HeadingAnchorsOptions = {}) => (node: Element) => {
     if (typeof document === `undefined`) return
 
+    // :scope refers to the element on which querySelectorAll is called
+    // This works whether the attachment is on <main> or a parent element
     const selector = options.selector ??
-      `main > :is(h1, h2, h3, h4, h5, h6), main > * > :is(h1, h2, h3, h4, h5, h6)`
+      `:scope > :is(h1, h2, h3, h4, h5, h6), :scope > * > :is(h1, h2, h3, h4, h5, h6)`
     const icon_svg = options.icon_svg ?? link_svg
 
     // Process existing headings
@@ -127,17 +129,10 @@ export const heading_anchors =
       add_anchor_to_heading(heading, icon_svg)
     }
 
-    // Watch for new headings
-    const observer = new MutationObserver((mutations) => {
-      for (const { addedNodes } of mutations) {
-        for (const added of Array.from(addedNodes)) {
-          if (added.nodeType !== Node.ELEMENT_NODE) continue
-          const el = added as Element
-          if (el.matches?.(selector)) add_anchor_to_heading(el, icon_svg)
-          for (const hdn of Array.from(el.querySelectorAll(selector))) {
-            add_anchor_to_heading(hdn, icon_svg)
-          }
-        }
+    // Watch for new headings - requery the container to respect nesting depth constraints
+    const observer = new MutationObserver(() => {
+      for (const heading of Array.from(node.querySelectorAll(selector))) {
+        add_anchor_to_heading(heading, icon_svg)
       }
     })
     observer.observe(node, { childList: true, subtree: true })
