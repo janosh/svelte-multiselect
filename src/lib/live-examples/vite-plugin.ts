@@ -2,19 +2,17 @@
 // @ts-expect-error no types available
 import ast from 'abstract-syntax-tree'
 import { Buffer } from 'node:buffer'
-import process from 'node:process'
 import path from 'node:path'
+import process from 'node:process'
 import type { HmrContext, Plugin, ViteDevServer } from 'vite'
-
-// Decode base64 encoded source
-const from_base64 = (src: string): string => Buffer.from(src, `base64`).toString(`utf-8`)
-
-export const EXAMPLE_MODULE_PREFIX = `___live_example___`
+import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
+export { EXAMPLE_MODULE_PREFIX }
 
 // Edit operation: replace text at [start, end) with content
 type Edit = { start: number; end: number; content: string }
 
-const TRAILING_CLEANUP_BOUND = 50 // Max chars to scan after property end for trailing comma/whitespace cleanup
+// Max chars to scan after property end for trailing comma/whitespace cleanup
+const TRAILING_CLEANUP_BOUND = 50 // Generous bound - typical trailing content is ", " (2 chars)
 
 // Apply edits in reverse order so positions stay valid
 const apply_edits = (source: string, edits: Edit[]): string =>
@@ -25,10 +23,6 @@ const apply_edits = (source: string, edits: Edit[]): string =>
       source,
     )
 
-interface PluginOptions {
-  extensions?: string[]
-}
-
 interface AstNode {
   type: string
   key?: { name: string }
@@ -38,7 +32,9 @@ interface AstNode {
   end?: number
 }
 
-export default function live_examples_plugin(options: PluginOptions = {}): Plugin {
+export default function live_examples_plugin(
+  options: { extensions?: string[] } = {},
+): Plugin {
   const { extensions = [`.svelte.md`, `.md`, `.svx`] } = options
 
   // Extracted examples as individual virtual files (id -> svelte source)
@@ -58,8 +54,9 @@ export default function live_examples_plugin(options: PluginOptions = {}): Plugi
     resolveId(id: string) {
       if (id.includes(EXAMPLE_MODULE_PREFIX)) {
         // Force absolute path (dev uses relative, prod uses absolute)
+        // Use posix.join to ensure forward slashes on all platforms (Vite normalizes to /)
         const cwd = process.cwd().replace(/\\/g, `/`)
-        return id.includes(cwd) ? id : path.join(cwd, id)
+        return id.includes(cwd) ? id : path.posix.join(cwd, id)
       }
     },
 
@@ -135,8 +132,9 @@ export default function live_examples_plugin(options: PluginOptions = {}): Plugi
 
           const value_node = string_literals[0]
           // AST Literal nodes store value in .value property (string for literals)
-          const base64_content = String(value_node.value ?? ``)
-          const src = from_base64(base64_content)
+          const src = Buffer.from(String(value_node.value ?? ``), `base64`).toString(
+            `utf-8`,
+          )
 
           // Use base_id (without query params) to ensure consistent virtual file IDs
           const virtual_id = `${base_id}${EXAMPLE_MODULE_PREFIX}${idx}.svelte`

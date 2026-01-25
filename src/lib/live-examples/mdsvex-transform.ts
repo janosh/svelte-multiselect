@@ -1,29 +1,11 @@
 // Remark plugin - transforms ```svelte example code blocks into rendered components
-import { createStarryNight } from '@wooorm/starry-night'
-import source_css from '@wooorm/starry-night/source.css'
-import source_js from '@wooorm/starry-night/source.js'
-import source_json from '@wooorm/starry-night/source.json'
-import source_shell from '@wooorm/starry-night/source.shell'
-import source_svelte from '@wooorm/starry-night/source.svelte'
-import source_ts from '@wooorm/starry-night/source.ts'
-import text_html_basic from '@wooorm/starry-night/text.html.basic'
-import path from 'node:path'
-import { hast_to_html, type HastRoot } from './highlighter.ts'
 import { Buffer } from 'node:buffer'
+import path from 'node:path'
+import type { HastRoot } from './highlighter.ts'
+import { hast_to_html, LANG_TO_SCOPE, starry_night } from './highlighter.ts'
 
 // Base64 encode to prevent preprocessors from modifying the content
 const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
-
-// Initialize starry-night with Svelte and embedded language grammars
-const starry_night = await createStarryNight([
-  source_svelte,
-  source_js,
-  source_ts,
-  source_css,
-  source_json,
-  source_shell,
-  text_html_basic,
-])
 
 // Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
@@ -43,20 +25,6 @@ const RE_PARSE_META = /(\w+=\d+|\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+)/g
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
-
-// Map code fence language to starry-night grammar scope
-const LANG_TO_SCOPE: Record<string, string> = {
-  svelte: `source.svelte`,
-  html: `text.html.basic`,
-  ts: `source.ts`,
-  typescript: `source.ts`,
-  js: `source.js`,
-  javascript: `source.js`,
-  css: `source.css`,
-  json: `source.json`,
-  shell: `source.shell`,
-  bash: `source.shell`,
-}
 
 // Languages that render as live Svelte components (O(1) lookup)
 const LIVE_LANGUAGES = new Set([`svelte`, `html`])

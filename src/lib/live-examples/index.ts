@@ -15,7 +15,7 @@ import { starry_night_highlighter } from './highlighter.ts'
 type SveltePreprocessOptions = Parameters<typeof _sveltePreprocess>[0]
 type PreprocessorGroup = ReturnType<typeof _sveltePreprocess>
 
-// Wrap mdsvex to apply starry-night highlighter by default
+// Wrap mdsvex with starry-night highlighter as default (users can override via options.highlight.highlighter)
 export function mdsvex(options?: MdsvexOptions): PreprocessorGroup {
   return _mdsvex({
     ...options,

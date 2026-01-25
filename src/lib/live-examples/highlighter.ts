@@ -26,13 +26,13 @@ interface HastRoot {
 type HastNode = HastText | HastElement | HastRoot
 export type { HastRoot }
 
-// Escape HTML special characters
-const escape_html = (str: string): string =>
+// Escape HTML special characters in text content (not for attribute values)
+const escape_html_text = (str: string): string =>
   str.replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
 
 // Convert HAST to HTML string (simplified - only handles what starry-night outputs)
 export const hast_to_html = (node: HastNode): string => {
-  if (node.type === `text`) return escape_html(node.value)
+  if (node.type === `text`) return escape_html_text(node.value)
   if (node.type === `root`) return node.children?.map(hast_to_html).join(``) ?? ``
   const { tagName, properties, children } = node
   const cls = properties?.className?.join(` `)
@@ -41,7 +41,8 @@ export const hast_to_html = (node: HastNode): string => {
   return `<${tagName}${attrs}>${inner}</${tagName}>`
 }
 
-const starry_night = await createStarryNight([
+// Shared starry-night instance (grammars loaded once at build time)
+export const starry_night = await createStarryNight([
   source_svelte,
   source_js,
   source_ts,
@@ -51,7 +52,8 @@ const starry_night = await createStarryNight([
   text_html_basic,
 ])
 
-const LANG_TO_SCOPE: Record<string, string> = {
+// Map code fence language to starry-night grammar scope
+export const LANG_TO_SCOPE: Record<string, string> = {
   svelte: `source.svelte`,
   html: `text.html.basic`,
   ts: `source.ts`,
@@ -74,7 +76,7 @@ export function starry_night_highlighter(code: string, lang?: string | null): st
   const scope = lang ? LANG_TO_SCOPE[lang] : undefined
   if (!scope) {
     // Return escaped code if language not supported
-    const escaped = escape_svelte(escape_html(code))
+    const escaped = escape_svelte(escape_html_text(code))
     return `<pre class="highlight"><code>${escaped}</code></pre>`
   }
   const tree = starry_night.highlight(code, scope) as HastRoot
