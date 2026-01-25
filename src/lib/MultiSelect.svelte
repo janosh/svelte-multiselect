@@ -719,7 +719,9 @@
       option_to_add = Number(option_to_add) as Option // convert to number if possible
     }
 
-    const is_duplicate = selected_keys_set.has(key(option_to_add))
+    // Check for duplicates by key OR by label (for user-typed text matching selected labels)
+    const is_duplicate = selected_keys_set.has(key(option_to_add)) ||
+      selected_labels_set.has(`${utils.get_label(option_to_add)}`)
     const max_reached = maxSelect !== null && maxSelect !== 1 &&
       selected.length >= maxSelect
     // Fire events for blocked add attempts
