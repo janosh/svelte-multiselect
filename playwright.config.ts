@@ -6,9 +6,6 @@ export default {
     port: 3005,
     reuseExistingServer: true,
   },
+  workers: 16,
   testDir: `tests/playwright`,
-  timeout: 15000, // 15s for CI environments
-  expect: {
-    timeout: 5000, // 5s for assertions
-  },
 } satisfies PlaywrightTestConfig
