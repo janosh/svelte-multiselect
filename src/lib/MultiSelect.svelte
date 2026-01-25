@@ -295,7 +295,11 @@
 
   // History tracking for undo/redo
   const max_history = $derived(
-    history === true ? 50 : typeof history === `number` ? history : 0,
+    history === true
+      ? 50
+      : typeof history === `number` && Number.isFinite(history)
+      ? Math.max(0, Math.floor(history))
+      : 0,
   )
   let history_stack = $state<Option[][]>([])
   let history_index = $state(-1) // -1 = no history yet

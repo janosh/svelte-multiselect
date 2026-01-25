@@ -5011,47 +5011,17 @@ describe(`onactivate event`, () => {
 })
 
 describe(`history / undo-redo`, () => {
-  test(`history enabled by default - undo/redo bound without explicit history prop`, async () => {
+  test(`undo/redo bound by default, canUndo/canRedo initially false`, async () => {
     let undo_fn: (() => boolean) | undefined
     let redo_fn: (() => boolean) | undefined
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3],
-        // Note: no history prop - should be enabled by default
-        get undo() {
-          return undo_fn
-        },
-        set undo(fn) {
-          undo_fn = fn
-        },
-        get redo() {
-          return redo_fn
-        },
-        set redo(fn) {
-          redo_fn = fn
-        },
-      },
-    })
-    await tick()
-
-    // History is enabled by default, so undo/redo should be functional
-    expect(undo_fn).toBeInstanceOf(Function)
-    expect(redo_fn).toBeInstanceOf(Function)
-  })
-
-  test(`undo/redo functions bound and canUndo/canRedo initially false`, async () => {
-    let undo_fn: (() => boolean) | undefined
-    let redo_fn: (() => boolean) | undefined
-    let can_undo = true
+    let can_undo = true // start true to verify it becomes false
     let can_redo = true
 
     mount(MultiSelect, {
       target: document.body,
       props: {
         options: [1, 2, 3],
-        history: true,
+        // no history prop - enabled by default
         get undo() {
           return undo_fn
         },
@@ -5089,21 +5059,23 @@ describe(`history / undo-redo`, () => {
   })
 
   test.each([`undo`, `redo`] as const)(
-    `%s returns false when disabled=true`,
+    `%s returns false when disabled`,
     async (method) => {
       let fn: (() => boolean) | undefined
-      const props = {
-        options: [1, 2, 3],
-        history: true,
-        disabled: true,
-        get [method]() {
-          return fn
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: [1, 2, 3],
+          history: true,
+          disabled: true,
+          get [method]() {
+            return fn
+          },
+          set [method](f: (() => boolean) | undefined) {
+            fn = f
+          },
         },
-        set [method](f: (() => boolean) | undefined) {
-          fn = f
-        },
-      }
-      mount(MultiSelect, { target: document.body, props })
+      })
       await tick()
       expect(fn?.()).toBe(false)
     },
@@ -5128,25 +5100,20 @@ describe(`history / undo-redo`, () => {
       })
       await tick()
       expect(undo_fn).toBeInstanceOf(Function)
-      expect(undo_fn?.()).toBe(false)
+      expect(undo_fn?.()).toBe(false) // nothing to undo initially
     },
   )
 
-  test.each(
-    [
-      [`default`, {}, `z`, { ctrlKey: true }],
-      [`custom`, { shortcuts: { undo: `alt+u` } }, `u`, { altKey: true }],
-      [`null`, { shortcuts: { undo: null } }, `z`, { ctrlKey: true }],
-    ] as const,
-  )(`%s shortcuts don't throw`, async (_desc, extra, key, modifiers) => {
-    const props = $state<MultiSelectProps>({
-      options: [1, 2, 3],
-      history: true,
-      ...extra,
+  test.each([
+    [`default shortcuts`, {}, `z`, { ctrlKey: true }],
+    [`custom shortcuts`, { shortcuts: { undo: `alt+u` } }, `u`, { altKey: true }],
+    [`disabled shortcuts`, { shortcuts: { undo: null } }, `z`, { ctrlKey: true }],
+  ])(`%s don't throw`, async (_desc, extra, key, modifiers) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], history: true, ...extra },
     })
-    mount(MultiSelect, { target: document.body, props })
     await tick()
-
     const input = doc_query<HTMLInputElement>(`input`)
     input.focus()
     input.dispatchEvent(
@@ -5155,18 +5122,15 @@ describe(`history / undo-redo`, () => {
     await tick()
   })
 
-  test.each([`onundo`, `onredo`] as const)(
-    `%s callback prop accepted`,
-    async (event_name) => {
-      const spy = vi.fn()
-      mount(MultiSelect, {
-        target: document.body,
-        props: { options: [1, 2, 3], history: true, [event_name]: spy },
-      })
-      await tick()
-      expect(spy).not.toHaveBeenCalled()
-    },
-  )
+  test.each([`onundo`, `onredo`] as const)(`%s callback accepted`, async (event_name) => {
+    const spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], history: true, [event_name]: spy },
+    })
+    await tick()
+    expect(spy).not.toHaveBeenCalled()
+  })
 
   test.each([
     [`object options`, [{ label: `A`, value: 1 }, { label: `B`, value: 2 }], {}],
@@ -5197,12 +5161,10 @@ describe(`history / undo-redo`, () => {
     expect(undo_fn).toBeInstanceOf(Function)
   })
 
-  test(`history is isolated per component instance`, async () => {
+  test(`history isolated per component instance`, async () => {
     let undo_1: (() => boolean) | undefined
     let undo_2: (() => boolean) | undefined
-
-    const div1 = document.createElement(`div`)
-    const div2 = document.createElement(`div`)
+    const [div1, div2] = [document.createElement(`div`), document.createElement(`div`)]
     document.body.append(div1, div2)
 
     mount(MultiSelect, {
@@ -5233,10 +5195,7 @@ describe(`history / undo-redo`, () => {
     })
     await tick()
 
-    expect(undo_1).toBeDefined()
-    expect(undo_2).toBeDefined()
     expect(undo_1).not.toBe(undo_2)
-
     div1.remove()
     div2.remove()
   })

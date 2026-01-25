@@ -13,12 +13,16 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
   import { colors } from '$site/options'
 
   let selected = $state([])
-  let undo
-  let redo
+  let undo = $state()
+  let redo = $state()
   let canUndo = $state(false)
   let canRedo = $state(false)
   let events = $state([])
-  const mod_key = navigator?.platform?.includes?.('Mac') ? 'Cmd' : 'Ctrl'
+  // Use same platform detection as component (userAgentData is modern API, userAgent is fallback)
+  const is_mac = typeof navigator !== 'undefined' &&
+    (navigator.userAgentData?.platform === 'macOS' ||
+      /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
+  const mod_key = is_mac ? 'Cmd' : 'Ctrl'
 
   function log_event(name, data) {
     events = [
@@ -140,11 +144,13 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
     font-size: 0.9em;
   }
   .event-log {
-    background: light-dark(#f5f5f5, rgba(0, 0, 0, 0.3));
+    background: light-dark(#f0f7ff, rgba(66, 153, 225, 0.1));
     padding: 1em;
     border-radius: 8px;
     overflow-y: auto;
     align-self: start;
+    height: 100%;
+    box-sizing: border-box;
   }
   .event-log h4 {
     margin: 0 0 0.5em 0;
