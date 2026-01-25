@@ -144,12 +144,14 @@ export interface MultiSelectProps<T extends Option = Option>
   disabled?: boolean
   disabledInputTitle?: string
   duplicateOptionMsg?: string
-  duplicates?: boolean // whether to allow duplicate options
+  // Controls duplicate detection: false (default, case-sensitive), true (allow all), 'case-insensitive' (block case variants)
+  duplicates?: boolean | `case-insensitive`
   // keepSelectedInDropdown controls whether selected options remain in dropdown: false (default),
   // 'plain' (left border and background color to differentiate selected options),
   // 'checkboxes' (each option is prefixed by a checkbox).
   keepSelectedInDropdown?: false | `plain` | `checkboxes`
-  // case-insensitive equality comparison after string coercion and looks only at the `label` key of object options by default
+  // Function to generate unique keys for options. Default: value ?? label for objects, primitive for strings/numbers.
+  // Duplicate detection also checks labels, so typing "Apple" when any "Apple" is selected is blocked (unless duplicates=true).
   key?: (opt: T) => unknown
   filterFunc?: (opt: T, searchText: string) => boolean
   fuzzy?: boolean // whether to use fuzzy matching (default: true) or substring matching (false)
