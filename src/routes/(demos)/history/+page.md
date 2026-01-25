@@ -49,7 +49,6 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
 
     <MultiSelect
       options={colors}
-      history={true}
       placeholder="Select colors..."
       bind:selected
       bind:undo

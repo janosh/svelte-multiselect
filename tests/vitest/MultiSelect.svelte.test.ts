@@ -5114,7 +5114,8 @@ describe(`history / undo-redo`, () => {
       props: { options: [1, 2, 3], history: true, ...extra },
     })
     await tick()
-    const input = doc_query<HTMLInputElement>(`input`)
+    // Use autocomplete input (the interactive one), not the hidden form-control
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
     input.dispatchEvent(
       new KeyboardEvent(`keydown`, { key, bubbles: true, ...modifiers }),
@@ -5281,5 +5282,42 @@ describe(`history / undo-redo`, () => {
     expect(selected).toEqual([1])
     expect(can_undo).toBe(true)
     expect(can_redo).toBe(false)
+  })
+
+  test(`preselected values are correctly tracked as initial state`, async () => {
+    // Regression: prev_selected must sync to initial selected on mount,
+    // otherwise undo after deselect restores [] instead of preselected state
+    let selected = $state([1, 2])
+    let undo_fn: (() => boolean) | undefined
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        history: true,
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        get undo() {
+          return undo_fn
+        },
+        set undo(fn) {
+          undo_fn = fn
+        },
+      },
+    })
+    await tick()
+
+    // Remove one item, then undo - should restore [1, 2], not []
+    doc_query(`ul.selected li button.remove`).click()
+    await tick()
+    expect(selected).toEqual([2])
+
+    undo_fn?.()
+    await tick()
+    expect(selected).toEqual([1, 2])
   })
 })

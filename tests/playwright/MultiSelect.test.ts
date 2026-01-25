@@ -1585,13 +1585,13 @@ test.describe(`history / undo-redo feature`, () => {
     const undo_btn = page.locator(`#undo-btn`)
     const selection_count = page.locator(`#selection-count`)
 
-    // Select 3 options
+    // Select 3 different options (clicking same option toggles it due to duplicates=false)
     await page.click(`#history-multiselect input[autocomplete]`)
-    for (let idx = 0; idx < 3; idx++) {
-      await page.locator(`#history-multiselect ul.options li`).first().click()
-      await page.waitForTimeout(100)
+    for (const expected_count of [1, 2, 3]) {
+      await page.locator(`#history-multiselect ul.options li`).nth(expected_count - 1)
+        .click()
+      await expect(selection_count).toContainText(`${expected_count} item`)
     }
-    await expect(selection_count).toContainText(`3 items`)
 
     // Undo 3 times
     for (const expected of [`2 items`, `1 item`, `0 items`]) {
@@ -1608,10 +1608,10 @@ test.describe(`history / undo-redo feature`, () => {
     const redo_btn = page.locator(`#redo-btn`)
     const input = page.locator(`#history-multiselect input[autocomplete]`)
 
-    // Select, then undo
+    // Select, then deselect (clicking same option toggles), then undo
     await input.click()
     await page.locator(`#history-multiselect ul.options li`).first().click()
-    await page.waitForTimeout(100)
+    await expect(undo_btn).toBeEnabled()
     await page.locator(`#history-multiselect ul.options li`).first().click()
     await undo_btn.click()
     await expect(redo_btn).toBeEnabled()
@@ -1693,11 +1693,11 @@ test.describe(`history / undo-redo feature`, () => {
     const undo_btn = page.locator(`#undo-btn`)
     const selection_count = page.locator(`#selection-count`)
 
-    // Select 2, remove via X button
+    // Select 2 different options (clicking same option toggles it due to duplicates=false)
     await page.click(`#history-multiselect input[autocomplete]`)
-    await page.locator(`#history-multiselect ul.options li`).first().click()
-    await page.waitForTimeout(100)
-    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await page.locator(`#history-multiselect ul.options li`).nth(0).click()
+    await expect(selection_count).toContainText(`1 item`)
+    await page.locator(`#history-multiselect ul.options li`).nth(1).click()
     await expect(selection_count).toContainText(`2 items`)
 
     // Remove all
@@ -1716,14 +1716,15 @@ test.describe(`history / undo-redo feature`, () => {
     const selection_count = page.locator(`#selection-count`)
     const input = page.locator(`#history-multiselect input[autocomplete]`)
 
-    // Select, close, reopen, select again
+    // Select, close, reopen, select different option (clicking same toggles due to duplicates=false)
     await input.click()
-    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await page.locator(`#history-multiselect ul.options li`).nth(0).click()
+    await expect(selection_count).toContainText(`1 item`)
     await page.click(`body`, { position: { x: 10, y: 10 } })
-    await page.waitForTimeout(100)
+    await expect(page.locator(`#history-multiselect ul.options`)).toBeHidden()
 
     await input.click()
-    await page.locator(`#history-multiselect ul.options li`).first().click()
+    await page.locator(`#history-multiselect ul.options li`).nth(1).click()
     await expect(selection_count).toContainText(`2 items`)
 
     // Undo still works

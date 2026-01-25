@@ -5,11 +5,10 @@
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
   import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import { highlight_matches } from './attachments'
-  import { get_uuid } from './utils'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
   import type { GroupedOptions, KeyboardShortcuts, MultiSelectProps } from './types'
-  import { fuzzy_match, get_label, get_style, has_group, is_object } from './utils'
+  import * as utils from './utils'
   import Wiggle from './Wiggle.svelte'
 
   let {
@@ -27,12 +26,12 @@
     duplicateOptionMsg = `This option is already selected`,
     duplicates = false,
     keepSelectedInDropdown = false,
-    key = (opt) => `${get_label(opt)}`.toLowerCase(),
+    key = (opt) => `${utils.get_label(opt)}`.toLowerCase(),
     filterFunc = (opt, searchText) => {
       if (!searchText) return true
-      const label = `${get_label(opt)}`
+      const label = `${utils.get_label(opt)}`
       return fuzzy
-        ? fuzzy_match(searchText, label)
+        ? utils.fuzzy_match(searchText, label)
         : label.toLowerCase().includes(searchText.toLowerCase())
     },
     fuzzy = true,
@@ -165,7 +164,7 @@
 
   // Generate unique IDs for ARIA associations (combobox pattern)
   // Uses provided id prop or generates a random one using crypto API
-  const internal_id = $derived(id ?? `sms-${get_uuid().slice(0, 8)}`)
+  const internal_id = $derived(id ?? `sms-${utils.get_uuid().slice(0, 8)}`)
   const listbox_id = $derived(`${internal_id}-listbox`)
 
   // Parse shortcut string into modifier+key parts
@@ -203,15 +202,14 @@
 
   // Platform detection for keyboard shortcuts (Mac uses Cmd, others use Ctrl)
   const is_mac = typeof navigator !== `undefined` &&
-    // @ts-expect-error userAgentData not in all TS libs yet
     (navigator.userAgentData?.platform === `macOS` ||
       /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
   const mod_key = is_mac ? `meta` : `ctrl`
 
   // Default shortcuts
   const default_shortcuts: KeyboardShortcuts = {
-    select_all: `ctrl+a`,
-    clear_all: `ctrl+shift+a`,
+    select_all: `${mod_key}+a`,
+    clear_all: `${mod_key}+shift+a`,
     open: null,
     close: null,
     undo: `${mod_key}+z`,
@@ -303,11 +301,22 @@
   )
   let history_stack = $state<Option[][]>([])
   let history_index = $state(-1) // -1 = no history yet
-  let prev_selected: Option[] = [] // track previous value for change detection
+  let prev_selected: Option[] | null = null // null = uninitialized, sync on first run
 
   // Track changes to selected via $effect (catches internal + external changes)
   $effect(() => {
-    if (!history) {
+    // Disabled when falsy OR non-positive number (negative numbers would behave unexpectedly)
+    const history_disabled = !history || (typeof history === `number` && history <= 0)
+    if (history_disabled) {
+      // Clear history when disabled so re-enabling starts fresh
+      history_stack = []
+      history_index = -1
+      // Don't read `selected` here to avoid creating unnecessary reactive dependency
+      prev_selected = null
+      return
+    }
+    // Initialize prev_selected on first run to avoid phantom undo from [] → initial selection
+    if (prev_selected === null) {
       prev_selected = [...selected]
       return
     }
@@ -402,7 +411,7 @@
 
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))
-  let selected_labels = $derived(selected.map(get_label))
+  let selected_labels = $derived(selected.map(utils.get_label))
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
   let selected_labels_set = $derived(new Set(selected_labels))
@@ -411,7 +420,7 @@
   let disabled_option_keys = $derived(
     new Set(
       effective_options
-        .filter((opt) => is_object(opt) && opt.disabled)
+        .filter((opt) => utils.is_object(opt) && opt.disabled)
         .map(key),
     ),
   )
@@ -427,7 +436,7 @@
     const ungrouped: Option[] = []
 
     for (const opt of matchingOptions) {
-      if (has_group(opt)) {
+      if (utils.has_group(opt)) {
         const existing = groups_map.get(opt.group)
         if (existing) existing.push(opt)
         else groups_map.set(opt.group, [opt])
@@ -569,7 +578,7 @@
   function sort_selected(items: Option[]): Option[] {
     if (sortSelected === true) {
       return items.toSorted((op1, op2) =>
-        `${get_label(op1)}`.localeCompare(`${get_label(op2)}`)
+        `${utils.get_label(op1)}`.localeCompare(`${utils.get_label(op2)}`)
       )
     } else if (typeof sortSelected === `function`) {
       return items.toSorted(sortSelected)
@@ -637,9 +646,9 @@
   // Check if option matches search text (label or optionally group name)
   const matches_search = (opt: Option, search: string): boolean => {
     if (filterFunc(opt, search)) return true
-    if (searchMatchesGroups && search && has_group(opt)) {
+    if (searchMatchesGroups && search && utils.has_group(opt)) {
       return fuzzy
-        ? fuzzy_match(search, opt.group)
+        ? utils.fuzzy_match(search, opt.group)
         : opt.group.toLowerCase().includes(search.toLowerCase())
     }
     return false
@@ -763,7 +772,7 @@
 
       clear_validity()
       handle_dropdown_after_select(event)
-      last_action = { type: `add`, label: `${get_label(option_to_add)}` }
+      last_action = { type: `add`, label: `${utils.get_label(option_to_add)}` }
       onadd?.({ option: option_to_add })
       onchange?.({ option: option_to_add, type: `add` })
     }
@@ -799,7 +808,7 @@
 
     selected = selected.filter((_, remove_idx) => remove_idx !== idx)
     clear_validity()
-    last_action = { type: `remove`, label: `${get_label(option_removed)}` }
+    last_action = { type: `remove`, label: `${utils.get_label(option_removed)}` }
     onremove?.({ option: option_removed })
     onchange?.({ option: option_removed, type: `remove` })
   }
@@ -1399,7 +1408,7 @@
     style={ulSelectedStyle}
   >
     {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
-      {@const selectedOptionStyle = [get_style(option, `selected`), liSelectedStyle]
+      {@const selectedOptionStyle = [utils.get_style(option, `selected`), liSelectedStyle]
         .filter(Boolean)
         .join(` `) || null}
       <li
@@ -1423,16 +1432,16 @@
         {:else if children}
           {@render children({ option, idx })}
         {:else if parseLabelsAsHtml}
-          {@html get_label(option)}
+          {@html utils.get_label(option)}
         {:else}
-          {get_label(option)}
+          {utils.get_label(option)}
         {/if}
         {#if !disabled && can_remove}
           <button
             onclick={(event) => remove(option, event)}
             onkeydown={if_enter_or_space((event) => remove(option, event))}
             type="button"
-            title="{removeBtnTitle} {get_label(option)}"
+            title="{removeBtnTitle} {utils.get_label(option)}"
             class="remove"
           >
             {#if removeIcon}
@@ -1645,10 +1654,10 @@
         title = null,
         selectedTitle = null,
         disabledTitle = defaultDisabledTitle,
-      } = is_object(option_item) ? option_item : { label: option_item }}
+      } = utils.is_object(option_item) ? option_item : { label: option_item }}
             {@const active = activeIndex === flat_idx && flat_idx >= 0}
             {@const selected = is_selected(label)}
-            {@const optionStyle = [get_style(option_item, `option`), liOptionStyle]
+            {@const optionStyle = [utils.get_style(option_item, `option`), liOptionStyle]
         .filter(Boolean)
         .join(` `) || null}
             {#if is_option_visible(flat_idx)}
@@ -1680,7 +1689,7 @@
                     type="checkbox"
                     class="option-checkbox"
                     checked={selected}
-                    aria-label="Toggle {get_label(option_item)}"
+                    aria-label="Toggle {utils.get_label(option_item)}"
                     tabindex="-1"
                   />
                 {/if}
@@ -1689,9 +1698,9 @@
                 {:else if children}
                   {@render children({ option: option_item, idx: flat_idx })}
                 {:else if parseLabelsAsHtml}
-                  {@html get_label(option_item)}
+                  {@html utils.get_label(option_item)}
                 {:else}
-                  {get_label(option_item)}
+                  {utils.get_label(option_item)}
                 {/if}
               </li>
             {/if}
