@@ -248,35 +248,28 @@ function create_example_component(
   }
 
   // Live examples (svelte, html) - render with CodeExample wrapper
-  const live_example_component_name = `${EXAMPLE_COMPONENT_PREFIX}${index}`
-
-  const props = {
-    // Base64 encoded to prevent preprocessors from modifying the content
-    // Gets parsed as virtual file content in vite plugin and then removed
-    __live_example_src: `"${to_base64(value)}"`,
-    // src is a string prop, meta is an object expression - different escaping needed
-    src: JSON.stringify(encode_escapes(code)),
-    meta: encode_escapes(JSON.stringify(meta)),
-  }
+  const component = `${EXAMPLE_COMPONENT_PREFIX}${index}`
+  const base64_src = to_base64(value)
+  const escaped_src = JSON.stringify(encode_escapes(code))
+  const escaped_meta = encode_escapes(JSON.stringify(meta))
 
   // Close and reopen <p> to avoid block-in-inline HTML nesting issues
   return `</p>
   <${wrapper_alias}
-    __live_example_src={${props.__live_example_src}}
-    src={${props.src}}
-    meta={${props.meta}}
+    __live_example_src={"${base64_src}"}
+    src={${escaped_src}}
+    meta={${escaped_meta}}
   >
     {#snippet example()}
       ${
     meta.csr
-      ? `
-        {#if typeof window !== 'undefined'}
+      ? `{#if typeof window !== 'undefined'}
         {#await import("${EXAMPLE_MODULE_PREFIX}${index}.svelte") then module}
-          {@const ${live_example_component_name} = module.default}
-          <${live_example_component_name} />
+          {@const ${component} = module.default}
+          <${component} />
         {/await}
         {/if}`
-      : `<${live_example_component_name} />`
+      : `<${component} />`
   }
     {/snippet}
 

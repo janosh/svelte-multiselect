@@ -142,10 +142,9 @@ export default createUnplugin((options: PluginOptions = {}) => {
           if (src !== virtual_files.get(virtual_id)) {
             virtual_files.set(virtual_id, src)
 
-            // Update reverse lookup for HMR
-            let virtual_set = parent_to_virtual.get(base_id)
-            if (!virtual_set) {
-              virtual_set = new Set()
+            // Update reverse lookup for HMR (get-or-create pattern)
+            const virtual_set = parent_to_virtual.get(base_id) ?? new Set()
+            if (!parent_to_virtual.has(base_id)) {
               parent_to_virtual.set(base_id, virtual_set)
             }
             virtual_set.add(virtual_id)

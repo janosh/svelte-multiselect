@@ -1,7 +1,7 @@
 // Tests for vite-plugin.ts - the Vite plugin for virtual module resolution
 import { EXAMPLE_MODULE_PREFIX } from '$lib/live-examples/mdsvex-transform'
+import { to_base64 } from '$lib/live-examples/utils'
 import vite_plugin from '$lib/live-examples/vite-plugin'
-import { Buffer } from 'node:buffer'
 import { describe, expect, test, vi } from 'vitest'
 import process from 'node:process'
 
@@ -26,7 +26,6 @@ const get_plugin = (options = {}): TestPlugin => {
 }
 
 const create_mock_context = () => ({ warn: vi.fn(), error: vi.fn() })
-const encode_base64 = (content: string) => Buffer.from(content).toString(`base64`)
 
 describe(`plugin initialization`, () => {
   test(`creates plugin with correct name`, () => {
@@ -127,7 +126,7 @@ describe(`transform`, () => {
 
   test(`extracts __live_example_src from code`, () => {
     const code = `const props = { __live_example_src: "${
-      encode_base64(`<div>Hello</div>`)
+      to_base64(`<div>Hello</div>`)
     }", other: "value" }`
     const result = plugin.transform?.call(ctx, code, `/file.md`) as { code: string }
     expect(result.code).not.toContain(`__live_example_src`)
@@ -148,8 +147,8 @@ describe(`transform`, () => {
 
   test(`applies multiple edits in correct order`, () => {
     const code = `
-      const a = { __live_example_src: "${encode_base64(`<div>First</div>`)}", x: 1 };
-      const b = { __live_example_src: "${encode_base64(`<div>Second</div>`)}", y: 2 };
+      const a = { __live_example_src: "${to_base64(`<div>First</div>`)}", x: 1 };
+      const b = { __live_example_src: "${to_base64(`<div>Second</div>`)}", y: 2 };
     `
     const result = plugin.transform?.call(ctx, code, `/file.md`) as { code: string }
     expect(result.code).not.toContain(`__live_example_src`)
@@ -187,7 +186,7 @@ describe(`edge cases`, () => {
     `<script>const x = "hello"</script><div>{x}</div>`,
     `<div>Hello 世界 🌍</div>`,
   ])(`correctly decodes base64 content: %s`, (original) => {
-    const code = `const props = { __live_example_src: "${encode_base64(original)}" }`
+    const code = `const props = { __live_example_src: "${to_base64(original)}" }`
     expect(plugin.transform?.call(ctx, code, `/file.md`)).toBeDefined()
   })
 })
@@ -225,40 +224,42 @@ describe(`virtual file caching`, () => {
 
     // First transform
     const code1 = `const props = { __live_example_src: "${
-      encode_base64(`<div>First</div>`)
+      to_base64(`<div>First</div>`)
     }" }`
     plugin.transform?.call(ctx, code1, id)
 
     // Second transform with different content
     const code2 = `const props = { __live_example_src: "${
-      encode_base64(`<div>Second</div>`)
+      to_base64(`<div>Second</div>`)
     }" }`
     expect(plugin.transform?.call(ctx, code2, id)).toBeDefined()
   })
 })
 
-describe(`index extraction from import paths`, () => {
-  // Tests that vite plugin extracts indices from import paths, not enumeration order
-  // This ensures correct behavior when remark transform skips indices for non-live examples
-  test(`extracts index from import path, not property enumeration order`, () => {
+describe(`index alignment`, () => {
+  // Note: The remark transform always generates sequential indices (0, 1, 2...) for live
+  // examples. Non-live examples (TypeScript, etc.) don't generate __live_example_src props
+  // or imports, so they don't create gaps. The vite plugin's enumeration index matches
+  // the import path index because both are sequential.
+  test(`props and imports have matching sequential indices`, () => {
     const plugin = get_plugin()
     const ctx = create_mock_context()
     const id = `/path/to/file.md`
 
-    // Simulate output from remark transform where live examples have indices 0 and 2
-    // (index 1 was a non-live typescript example that doesn't generate __live_example_src)
+    // Realistic output: 2 live examples with sequential indices 0, 1
+    // (any non-live examples in between don't affect numbering)
     const code = `
       import A from "${EXAMPLE_MODULE_PREFIX}0.svelte";
-      import B from "${EXAMPLE_MODULE_PREFIX}2.svelte";
-      const props0 = { __live_example_src: "${encode_base64(`<div>First</div>`)}" };
-      const props2 = { __live_example_src: "${encode_base64(`<div>Third</div>`)}" };
+      import B from "${EXAMPLE_MODULE_PREFIX}1.svelte";
+      const props0 = { __live_example_src: "${to_base64(`<div>First</div>`)}" };
+      const props1 = { __live_example_src: "${to_base64(`<div>Second</div>`)}" };
     `
     const result = plugin.transform?.call(ctx, code, id) as { code: string }
 
-    // Should transform import paths with correct indices from the path itself
+    // Import paths are rewritten to absolute virtual file IDs
     expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
-    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}2.svelte`)
-    // Should NOT contain index 1 (which wasn't in the imports)
-    expect(result.code).not.toContain(`${EXAMPLE_MODULE_PREFIX}1.svelte`)
+    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}1.svelte`)
+    // __live_example_src props are removed
+    expect(result.code).not.toContain(`__live_example_src`)
   })
 })

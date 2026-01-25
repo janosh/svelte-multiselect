@@ -52,5 +52,6 @@
     position: fixed;
     font-size: 0.75rem;
     left: calc(50vw + var(--main-max-width) / 2 + 7rem);
+    max-width: 14rem;
   }
 </style>
