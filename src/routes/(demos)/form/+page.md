@@ -10,12 +10,12 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 
-  async function handle_submit(event: SubmitEvent) {
+  async function handle_submit(event: SubmitEvent): Promise<void> {
     event.preventDefault()
     // use bind:this={form} or event.target as arg to new FormData()
     form_data = new FormData(event.target as HTMLFormElement)
   }
-  let form_data: FormData
+  let form_data: FormData | undefined
   // the key under which selected options are stored in FormData
   const name = 'martian-flag'
 </script>

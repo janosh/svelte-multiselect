@@ -15,11 +15,17 @@ Just provide a `loadOptions` function that fetches data:
 ```svelte example id="load-basic"
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
   // Simulated large dataset - in practice, this would be a database/API
-  const all_items = Array.from({ length: 10000 }, (_, idx) => `Item ${idx + 1}`)
+  const all_items: string[] = Array.from(
+    { length: 10000 },
+    (_, idx) => `Item ${idx + 1}`,
+  )
 
-  async function load_options({ search, offset, limit }) {
+  async function load_options(
+    { search, offset, limit }: LoadOptionsParams,
+  ): Promise<LoadOptionsResult<string>> {
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 300))
 
@@ -52,13 +58,21 @@ Connect to a real API:
 ```svelte example id="load-api"
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { LoadOptionsParams, LoadOptionsResult, ObjectOption } from '$lib/types'
+
+  interface User extends ObjectOption {
+    email: string
+    id: number
+  }
 
   // Simulated API
-  async function fetch_users({ search, offset, limit }) {
+  async function fetch_users(
+    { search, offset, limit }: LoadOptionsParams,
+  ): Promise<LoadOptionsResult<User>> {
     await new Promise((resolve) => setTimeout(resolve, 400))
 
     // Simulated database
-    const all_users = Array.from({ length: 2000 }, (_, idx) => ({
+    const all_users: User[] = Array.from({ length: 2000 }, (_, idx) => ({
       label: `User ${idx + 1}`,
       email: `user${idx + 1}@example.com`,
       id: idx + 1,
@@ -98,10 +112,16 @@ For advanced control, pass an object with `fetch` function and config:
 ```svelte example id="load-config"
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
-  const all_items = Array.from({ length: 500 }, (_, idx) => `Option ${idx + 1}`)
+  const all_items: string[] = Array.from(
+    { length: 500 },
+    (_, idx) => `Option ${idx + 1}`,
+  )
 
-  async function load_options({ search, offset, limit }) {
+  async function load_options(
+    { search, offset, limit }: LoadOptionsParams,
+  ): Promise<LoadOptionsResult<string>> {
     await new Promise((resolve) => setTimeout(resolve, 200))
 
     const filtered = search
@@ -128,8 +148,13 @@ Use object options with custom snippets:
 ```svelte example id="load-objects"
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { LoadOptionsParams, LoadOptionsResult, ObjectOption } from '$lib/types'
 
-  const all_languages = [
+  interface Language extends ObjectOption {
+    year: number
+  }
+
+  const all_languages: Language[] = [
     { label: `JavaScript`, year: 1995 },
     { label: `TypeScript`, year: 2012 },
     { label: `Python`, year: 1991 },
@@ -142,7 +167,9 @@ Use object options with custom snippets:
     { label: `Swift`, year: 2014 },
   ]
 
-  async function load_options({ search, offset, limit }) {
+  async function load_options(
+    { search, offset, limit }: LoadOptionsParams,
+  ): Promise<LoadOptionsResult<Language>> {
     await new Promise((resolve) => setTimeout(resolve, 200))
 
     const filtered = search
@@ -172,10 +199,13 @@ By default, options load when the dropdown opens. Set `onOpen: false` to disable
 ```svelte example id="load-lazy"
 <script lang="ts">
   import MultiSelect from '$lib'
+  import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
-  const items = Array.from({ length: 100 }, (_, idx) => `Item ${idx + 1}`)
+  const items: string[] = Array.from({ length: 100 }, (_, idx) => `Item ${idx + 1}`)
 
-  async function load_options({ search, offset, limit }) {
+  async function load_options(
+    { search, offset, limit }: LoadOptionsParams,
+  ): Promise<LoadOptionsResult<string>> {
     await new Promise((resolve) => setTimeout(resolve, 300))
     const filtered = search
       ? items.filter((item) => item.toLowerCase().includes(search.toLowerCase()))
@@ -186,7 +216,7 @@ By default, options load when the dropdown opens. Set `onOpen: false` to disable
     }
   }
 
-  let selected = $state([])
+  let selected: string[] = $state([])
 </script>
 
 <MultiSelect

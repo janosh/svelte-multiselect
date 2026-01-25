@@ -9,11 +9,11 @@
 `allowUserOptions={true}` means users can enter custom options by entering text and hitting enter.
 
 ```svelte example id="foods"
-<script>
+<script lang="ts">
   import MultiSelect, { Toggle } from '$lib'
   import { foods } from '$site/options'
 
-  let selected = $state(
+  let selected: string[] = $state(
     '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '),
   )
   let duplicates = $state(false)
@@ -37,12 +37,12 @@
 `allowUserOptions="append"` is similar to `true` but also adds user-entered custom options to the dropdown list. They'll remain there for re-selection if users remove their custom options from selected items.
 
 ```svelte example id="languages"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
-  let selected_append = $state(['Haskell', 'TypeScript'])
+  let selected_append: string[] = $state(['Haskell', 'TypeScript'])
 </script>
 
 <MultiSelect
@@ -62,10 +62,10 @@
 You can start with no options and let users populate MultiSelect from scratch. In this case, MultiSelect acts more like a tagging component.
 
 ```svelte example id="no-default-options"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
 
-  let selected = $state([])
+  let selected: string[] = $state([])
 </script>
 
 {#if selected?.length > 0}

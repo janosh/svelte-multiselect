@@ -9,7 +9,7 @@
 ### Svelte SVG component as `"removeIcon"` snippet
 
 ```svelte example id="languages-1"
-<script>
+<script lang="ts">
   import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet, MinusIcon } from '$site'
@@ -41,7 +41,7 @@
 ### Simple HTML tag as `"removeIcon"` snippet
 
 ```svelte example id="languages-2"
-<script>
+<script lang="ts">
   import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
@@ -66,7 +66,7 @@
   {#snippet expandIcon({ open: expandOpen })}
     <button
       onclick={() => (open = false)}
-      onkeyup={(event) => {
+      onkeyup={(event: KeyboardEvent) => {
         event.preventDefault()
         if ([`Enter`, `Space`].includes(event.code)) open = !open
       }}
@@ -83,12 +83,12 @@
 ### `"user-msg"` snippet
 
 ```svelte example id="languages-2"
-<script>
+<script lang="ts">
   import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
-  let selected = $state([`Python`, `TypeScript`, `Julia`])
+  let selected: string[] = $state([`Python`, `TypeScript`, `Julia`])
   let searchText = $state(`Julia`)
 </script>
 

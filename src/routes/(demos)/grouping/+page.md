@@ -7,10 +7,11 @@ This addresses [GitHub issue #135](https://github.com/janosh/svelte-multiselect/
 ### Basic Grouping
 
 ```svelte example id="basic-grouping"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const options = Object.entries({
+  const options: ObjectOption[] = Object.entries({
     Frontend: [`JavaScript`, `TypeScript`, `React`, `Vue`, `Svelte`, `Angular`],
     Backend: [`Python`, `Go`, `Rust`, `Java`, `Node.js`, `Ruby`],
     Database: [`PostgreSQL`, `MongoDB`, `Redis`, `MySQL`, `SQLite`],
@@ -19,7 +20,7 @@ This addresses [GitHub issue #135](https://github.com/janosh/svelte-multiselect/
     options.map((option) => ({ label: option, group }))
   )
 
-  let selected = $state([])
+  let selected: ObjectOption[] = $state([])
   let searchMatchesGroups = $state(false)
 </script>
 
@@ -45,10 +46,11 @@ This addresses [GitHub issue #135](https://github.com/janosh/svelte-multiselect/
 Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpandsCollapsedGroups` or `keyboardExpandsCollapsedGroups` for auto-expansion:
 
 ```svelte example id="collapsible-groups"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const options = Object.entries({
+  const options: ObjectOption[] = Object.entries({
     Fruits: `🍎 Apple,🍊 Orange,🍌 Banana,🍇 Grapes,🍓 Strawberry,🫐 Blueberry`.split(
       `,`,
     ),
@@ -60,12 +62,12 @@ Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpan
     options.map((option) => ({ label: option, group }))
   )
 
-  let selected = $state([])
-  let collapsedGroups = $state(new Set([`Dairy`])) // Dairy starts collapsed
+  let selected: ObjectOption[] = $state([])
+  let collapsedGroups: Set<string> = $state(new Set([`Dairy`])) // Dairy starts collapsed
   let searchExpandsCollapsedGroups = $state(true)
   let keyboardExpandsCollapsedGroups = $state(true)
-  let collapseAllGroups = $state()
-  let expandAllGroups = $state()
+  let collapseAllGroups: (() => void) | undefined = $state()
+  let expandAllGroups: (() => void) | undefined = $state()
 </script>
 
 <div style="display: flex; flex-wrap: wrap; gap: 1em; margin-bottom: 0.5em">
@@ -104,10 +106,11 @@ Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpan
 Enable `groupSelectAll` to add a toggle button to each group header:
 
 ```svelte example id="group-select-all"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const options = Object.entries({
+  const options: ObjectOption[] = Object.entries({
     Primary: [`Red`, `Blue`, `Yellow`],
     Secondary: [`Orange`, `Green`, `Purple`],
     Tertiary: [`Vermilion`, `Amber`, `Chartreuse`, `Teal`, `Violet`, `Magenta`],
@@ -116,7 +119,7 @@ Enable `groupSelectAll` to add a toggle button to each group header:
     options.map((option) => ({ label: option, group }))
   )
 
-  let selected = $state([])
+  let selected: ObjectOption[] = $state([])
 </script>
 
 <MultiSelect
@@ -135,24 +138,29 @@ Enable `groupSelectAll` to add a toggle button to each group header:
 Use `ungroupedPosition` for options without a `group` key, and `groupSortOrder` to sort groups:
 
 ```svelte example id="ungrouped-sorting"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
   // Ungrouped options (no group key) mixed with grouped options
-  const ungrouped = [`⭐ Featured Item`, `🔥 Popular Choice`, `✨ Editor's Pick`].map(
+  const ungrouped: ObjectOption[] = [
+    `⭐ Featured Item`,
+    `🔥 Popular Choice`,
+    `✨ Editor's Pick`,
+  ].map(
     (label) => ({ label }),
   )
-  const grouped = Object.entries({
+  const grouped: ObjectOption[] = Object.entries({
     'Z Animals': [`Zebra`, `Zorse`, `Zebu`],
     'A Fruits': [`Apple`, `Apricot`, `Avocado`],
     'L Animals': [`Lion`, `Leopard`, `Lemur`],
     'M Fruits': [`Mango`, `Melon`, `Mulberry`],
   }).flatMap(([group, opts]) => opts.map((label) => ({ label, group })))
-  const options = [...ungrouped, ...grouped]
+  const options: ObjectOption[] = [...ungrouped, ...grouped]
 
-  let selected = $state([])
-  let ungroupedPosition = $state(`first`)
-  let groupSortOrder = $state(`asc`)
+  let selected: ObjectOption[] = $state([])
+  let ungroupedPosition: 'first' | 'last' = $state(`first`)
+  let groupSortOrder: 'none' | 'asc' | 'desc' = $state(`asc`)
 </script>
 
 <div style="display: flex; gap: 2em; margin-bottom: 1em">
@@ -181,12 +189,18 @@ Use `ungroupedPosition` for options without a `group` key, and `groupSortOrder` 
 Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
 
 ```svelte example id="sticky-dynamic"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { LoadOptionsParams, LoadOptionsResult, ObjectOption } from '$lib/types'
 
-  const departments = `Engineering,Design,Marketing,Sales,HR,Finance,Legal,Operations`
-    .split(`,`)
-  const server_data = departments.flatMap((dept) =>
+  interface TeamMember extends ObjectOption {
+    name: string
+  }
+
+  const departments: string[] =
+    `Engineering,Design,Marketing,Sales,HR,Finance,Legal,Operations`
+      .split(`,`)
+  const server_data: TeamMember[] = departments.flatMap((dept) =>
     Array.from({ length: 8 }, (_, idx) => ({
       label: `${dept.slice(0, 3)}-${String(idx + 1).padStart(3, `0`)}`,
       name: `${dept} Team Member ${idx + 1}`,
@@ -194,12 +208,14 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
     }))
   )
 
-  async function load_options({ search, offset, limit }) {
+  async function load_options(
+    { search, offset, limit }: LoadOptionsParams,
+  ): Promise<LoadOptionsResult<TeamMember>> {
     await new Promise((resolve) => setTimeout(resolve, 200))
     const filtered = search
-      ? server_data.filter((u) =>
-        u.name.toLowerCase().includes(search.toLowerCase()) ||
-        u.group.toLowerCase().includes(search.toLowerCase())
+      ? server_data.filter((user) =>
+        user.name.toLowerCase().includes(search.toLowerCase()) ||
+        (user.group?.toLowerCase().includes(search.toLowerCase()) ?? false)
       )
       : server_data
     return {
@@ -208,7 +224,7 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
     }
   }
 
-  let selected = $state([])
+  let selected: TeamMember[] = $state([])
   let stickyGroupHeaders = $state(true)
 </script>
 
@@ -232,10 +248,11 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
 Use the `groupHeader` snippet for complete control over header rendering:
 
 ```svelte example id="custom-group-header"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
 
-  const options = Object.entries({
+  const options: ObjectOption[] = Object.entries({
     USA: [`New York`, `Los Angeles`, `Chicago`, `Houston`, `Phoenix`],
     UK: [`London`, `Manchester`, `Birmingham`, `Leeds`],
     Japan: [`Tokyo`, `Osaka`, `Kyoto`, `Yokohama`],
@@ -245,8 +262,14 @@ Use the `groupHeader` snippet for complete control over header rendering:
     options.map((option) => ({ label: option, group }))
   )
 
-  const emojis = { USA: `🇺🇸`, UK: `🇬🇧`, Japan: `🇯🇵`, France: `🇫🇷`, Germany: `🇩🇪` }
-  let selected = $state([])
+  const emojis: Record<string, string> = {
+    USA: `🇺🇸`,
+    UK: `🇬🇧`,
+    Japan: `🇯🇵`,
+    France: `🇫🇷`,
+    Germany: `🇩🇪`,
+  }
+  let selected: ObjectOption[] = $state([])
 </script>
 
 <MultiSelect

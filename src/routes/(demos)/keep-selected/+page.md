@@ -3,12 +3,12 @@
 Configure how selected options behave in the dropdown. Try different modes:
 
 ```svelte example id="keep-selected-interactive"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
 
-  let selected = $state(['C', 'Go', 'TypeScript', 'Python'])
-  let keepSelectedInDropdown = $state('checkboxes')
+  let selected: string[] = $state(['C', 'Go', 'TypeScript', 'Python'])
+  let keepSelectedInDropdown: false | 'plain' | 'checkboxes' = $state('checkboxes')
 </script>
 
 {#each [
