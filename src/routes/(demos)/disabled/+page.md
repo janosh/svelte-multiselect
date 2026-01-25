@@ -3,7 +3,7 @@
 <label for="disabled">Favorite frontend tool?</label>
 
 ```svelte example id="disabled-input-title"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
 </script>
 

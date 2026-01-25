@@ -8,11 +8,12 @@
 ### Frontend Lib Picker (default sorting)
 
 ```svelte example id="default-sort"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
   import { frontend_libs } from '$site/options'
 
-  let selected = $state([])
+  let selected: ObjectOption[] = $state([])
 </script>
 
 selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) || `[]`}
@@ -29,12 +30,18 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 
 ```svelte example id="custom-sort"
 <script lang="ts">
-  import MultiSelect, { type Option } from '$lib'
+  import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
   import { frontend_libs } from '$site/options'
 
-  const sortSelected = (op1: Option, op2: Option) => {
+  interface FrontendLib extends ObjectOption {
+    lang: string
+    repo_handle: string
+  }
+
+  const sortSelected = (op1: FrontendLib, op2: FrontendLib): number => {
     if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)
-    return op1.label.localeCompare(op2.label)
+    return String(op1.label).localeCompare(String(op2.label))
   }
 </script>
 

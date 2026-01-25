@@ -3,17 +3,22 @@
 This demo showcases all the events that `<MultiSelect>` emits. Each emitted event is recorded in the event log panel on the right.
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
-  import { get_label } from '$lib/utils'
 
-  let events = $state([])
-  let selected_options = $state([])
+  interface EventLogEntry {
+    event: string
+    data: string
+    timestamp: string
+  }
+
+  let events: EventLogEntry[] = $state([])
+  let selected_options: string[] = $state([])
   let allowUserOptions = $state(true)
 
-  function log_event(event_name, data) {
+  function log_event(event_name: string, data: unknown): void {
     events = [
       {
         event: event_name,
@@ -53,13 +58,22 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
       onmaxreached={(data) => log_event('onmaxreached', data)}
       onduplicate={(data) => log_event('onduplicate', data)}
       onactivate={(data) => log_event('onactivate', data)}
-      onblur={(event) =>
-      log_event('onblur', { type: event.type, target: event.target?.tagName })}
-      onclick={(event) =>
-      log_event('onclick', { type: event.type, target: event.target?.tagName })}
-      onfocus={(event) =>
-      log_event('onfocus', { type: event.type, target: event.target?.tagName })}
-      onkeydown={(event) =>
+      onblur={(event: FocusEvent) =>
+      log_event('onblur', {
+        type: event.type,
+        target: (event.target as HTMLElement)?.tagName,
+      })}
+      onclick={(event: MouseEvent) =>
+      log_event('onclick', {
+        type: event.type,
+        target: (event.target as HTMLElement)?.tagName,
+      })}
+      onfocus={(event: FocusEvent) =>
+      log_event('onfocus', {
+        type: event.type,
+        target: (event.target as HTMLElement)?.tagName,
+      })}
+      onkeydown={(event: KeyboardEvent) =>
       log_event('onkeydown', {
         type: event.type,
         key: event.key,

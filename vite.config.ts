@@ -1,11 +1,11 @@
 import { sveltekit } from '@sveltejs/kit/vite'
-import mdsvexamples from 'mdsvexamples/vite'
+import live_examples from './src/lib/live-examples/vite-plugin.ts'
 import { resolve } from 'node:path'
 import process from 'node:process'
 import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [sveltekit(), mdsvexamples],
+  plugins: [sveltekit(), live_examples.vite({})],
 
   test: {
     include: [`tests/vitest/**/*.test.ts`],

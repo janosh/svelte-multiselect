@@ -1,5 +1,5 @@
 <script lang="ts">
-  // see svelte.config.js where this component is passed to mdsvexamples
+  // see svelte.config.js where this component is passed to live-examples remark plugin
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import Icon from './Icon.svelte'
@@ -14,7 +14,7 @@
     link_props, // Applied after computed attributes (href, title, etc.), allowing override
     button_props,
   }: {
-    // src+meta are passed in by mdsvexamples
+    // src+meta are passed in by live-examples remark plugin
     src?: string // code fence content, sadly without indentation so we prefer node?.innerText below
     meta?: { // code fence metadata
       collapsible?: boolean // whether to show a button to expand/collapse the code

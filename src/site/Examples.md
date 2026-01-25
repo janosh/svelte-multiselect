@@ -3,11 +3,11 @@
 <label for="fruits">Pick your favorite fruits <span>basic multi-select</span></label>
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from 'svelte-multiselect'
 
-  const fruits = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
-  let selected = $state([])
+  const fruits: string[] = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
+  let selected: string[] = $state([])
 </script>
 
 <MultiSelect id="fruits" bind:selected options={fruits} placeholder="Choose fruits..." />
@@ -18,11 +18,11 @@
 <label for="color">Pick one color <span>single-select with <code>maxSelect={1}</code></span></label>
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
 
-  const colors = ['Red', 'Green', 'Blue', 'Yellow', 'Purple']
-  let value = $state(null)
+  const colors: string[] = ['Red', 'Green', 'Blue', 'Yellow', 'Purple']
+  let value: string | null = $state(null)
 </script>
 
 <MultiSelect
@@ -39,17 +39,23 @@
 <label for="countries">Where have you lived? <span>options prop as array of objects</span></label>
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from 'svelte-multiselect'
+  import type { ObjectOption } from '$lib/types'
 
-  const countries = [
+  interface Country extends ObjectOption {
+    value: string
+    continent: string
+  }
+
+  const countries: Country[] = [
     { label: 'United States', value: 'US', continent: 'North America' },
     { label: 'Canada', value: 'CA', continent: 'North America' },
     { label: 'United Kingdom', value: 'UK', continent: 'Europe' },
     { label: 'Germany', value: 'DE', continent: 'Europe' },
     { label: 'Japan', value: 'JP', continent: 'Asia' },
   ]
-  let selected = $state([])
+  let selected: Country[] = $state([])
 </script>
 
 <MultiSelect
@@ -66,11 +72,11 @@
 <label for="skills">Add your skills (you can define new ones) <span>user-created options</span></label>
 
 ```svelte example
-<script>
+<script lang="ts">
   import MultiSelect from 'svelte-multiselect'
 
-  const initial_tags = ['JavaScript', 'Svelte', 'TypeScript']
-  let selected = $state([])
+  const initial_tags: string[] = ['JavaScript', 'Svelte', 'TypeScript']
+  let selected: string[] = $state([])
 </script>
 
 <MultiSelect
@@ -115,11 +121,12 @@ selected = {JSON.stringify(selected) || `[]`}
 ```svelte example collapsible repl="https://svelte.dev/playground/79e22e1905c94456aa21564b4d5f8759"
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
+  import type { ObjectOption } from '$lib/types'
   import { ml_libs } from '$site/options'
 
-  let value = $state(null)
-  let searchText = $state('')
-  let loading = $state(false)
+  let value: ObjectOption | null = $state(null)
+  let searchText: string = $state('')
+  let loading: boolean = $state(false)
   $effect(() => {
     loading = Boolean(searchText)
     // perform some fetch/database request here to get list of options matching searchText
@@ -149,12 +156,14 @@ value = {JSON.stringify(value) || `null`}
 ```svelte example collapsible repl="https://svelte.dev/playground/516279bd62ec424986115263c2cdc169"
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
+  import type { ObjectOption } from '$lib/types'
   import { frontend_libs } from '$site/options'
-  import { RepoSnippet } from '$site'
-  import { Confetti } from '$site'
-  import type { ObjectOption } from '$lib'
+  import { Confetti, RepoSnippet } from '$site'
 
-  const frontend_libs_filter_func = (op: ObjectOption, searchText: string) => {
+  const frontend_libs_filter_func = (
+    op: ObjectOption,
+    searchText: string,
+  ): boolean => {
     if (!searchText) return true
     const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
       s.toLowerCase()
@@ -162,7 +171,7 @@ value = {JSON.stringify(value) || `null`}
     return label.includes(searchStr) || lang.includes(searchStr)
   }
 
-  let show_confetti = $state(false)
+  let show_confetti: boolean = $state(false)
 </script>
 
 <MultiSelect

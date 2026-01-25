@@ -3,11 +3,11 @@
 ### Food Picker (initially invalid)
 
 ```svelte example id="foods"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
   import { foods } from '$site/options'
 
-  function random_color() {
+  function random_color(): string {
     const r = Math.floor(Math.random() * 255)
     const g = Math.floor(Math.random() * 255)
     const b = Math.floor(Math.random() * 255)

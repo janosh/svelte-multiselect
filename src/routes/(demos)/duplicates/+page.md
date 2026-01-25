@@ -1,17 +1,22 @@
 ## Duplicates MultiSelect
 
 ```svelte example id="disabled-input-title"
-<script>
+<script lang="ts">
   import MultiSelect from '$lib'
+  import type { ObjectOption } from '$lib/types'
+
+  interface IdOption extends ObjectOption {
+    id: number
+  }
 
   let duplicates = $state(true)
-  const options = [
+  const options: IdOption[] = [
     { label: 'Duplicate label', id: 1 },
     { label: 'Duplicate label', id: 1 },
     { label: 'Duplicate label', id: 2 },
   ]
-  let selected = $state([options[0]])
-  let key = $state(`JSON.stringify`)
+  let selected: IdOption[] = $state([options[0]])
+  let key: string = $state(`JSON.stringify`)
 </script>
 
 Allow duplicates: <input type="checkbox" bind:checked={duplicates} />

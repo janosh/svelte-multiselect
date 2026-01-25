@@ -1,4 +1,4 @@
-<script>
+<script lang="ts">
   // import hljs from 'highlight.js/lib/common'
   // import 'highlight.js/styles/vs2015.css'
   // import server_code from './+page.server.ts?raw'
