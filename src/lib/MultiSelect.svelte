@@ -413,7 +413,8 @@
   let selected_labels = $derived(selected.map(utils.get_label))
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
-  let selected_labels_set = $derived(new Set(selected_labels))
+  // String-normalized for consistent comparison (numeric labels like 123 match "123")
+  let selected_labels_set = $derived(new Set(selected_labels.map((lbl) => `${lbl}`)))
   // Lowercase labels set for case-insensitive duplicate detection
   let selected_labels_lower_set = $derived(
     duplicates === `case-insensitive`
@@ -421,9 +422,9 @@
       : null,
   )
   // Helper to check if a label is already selected (respects case-insensitive mode)
-  const is_label_selected = (label: string) =>
+  const is_label_selected = (label: string): boolean =>
     duplicates === `case-insensitive`
-      ? selected_labels_lower_set?.has(label.toLowerCase())
+      ? selected_labels_lower_set?.has(label.toLowerCase()) ?? false
       : selected_labels_set.has(label)
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
@@ -1112,7 +1113,7 @@
   }
 
   // O(1) lookup using pre-computed Set instead of O(n) array.includes()
-  const is_selected = (label: string | number) => selected_labels_set.has(label)
+  const is_selected = (label: string | number) => selected_labels_set.has(`${label}`)
 
   const if_enter_or_space =
     (handler: (event: KeyboardEvent) => void) => (event: KeyboardEvent) => {
