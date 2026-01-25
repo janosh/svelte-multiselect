@@ -414,6 +414,17 @@
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
   let selected_labels_set = $derived(new Set(selected_labels))
+  // Lowercase labels set for case-insensitive duplicate detection
+  let selected_labels_lower_set = $derived(
+    duplicates === `case-insensitive`
+      ? new Set(selected_labels.map((lbl) => `${lbl}`.toLowerCase()))
+      : null,
+  )
+  // Helper to check if a label is already selected (respects case-insensitive mode)
+  const is_label_selected = (label: string) =>
+    duplicates === `case-insensitive`
+      ? selected_labels_lower_set?.has(label.toLowerCase())
+      : selected_labels_set.has(label)
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
   let disabled_option_keys = $derived(
@@ -713,18 +724,18 @@
 
     // Check for duplicates by key OR by label (for user-typed text matching selected labels)
     const is_duplicate = selected_keys_set.has(key(option_to_add)) ||
-      selected_labels_set.has(`${utils.get_label(option_to_add)}`)
+      is_label_selected(`${utils.get_label(option_to_add)}`)
     const max_reached = maxSelect !== null && maxSelect !== 1 &&
       selected.length >= maxSelect
     // Fire events for blocked add attempts
     if (max_reached) {
       onmaxreached?.({ selected, maxSelect, attemptedOption: option_to_add })
     }
-    if (is_duplicate && !duplicates) onduplicate?.({ option: option_to_add })
+    if (is_duplicate && duplicates !== true) onduplicate?.({ option: option_to_add })
 
     if (
       (maxSelect === null || maxSelect === 1 || selected.length < maxSelect) &&
-      (duplicates || !is_duplicate)
+      (duplicates === true || !is_duplicate)
     ) {
       if (
         !effective_options.includes(option_to_add) && // first check if we find option in the options list
@@ -855,7 +866,7 @@
     searchText.length > 0 &&
       Boolean(
         (allowUserOptions && createOptionMsg) ||
-          (!duplicates && selected_labels_set.has(searchText)) ||
+          (duplicates !== true && is_label_selected(searchText)) ||
           (navigable_options.length === 0 && noMatchingOptionsMsg),
       ),
   )
@@ -1709,8 +1720,7 @@
         {/if}
       {/each}
       {#if searchText}
-        {@const text_input_is_duplicate = selected_labels.includes(searchText)}
-        {@const is_dupe = !duplicates && text_input_is_duplicate && `dupe`}
+        {@const is_dupe = duplicates !== true && is_label_selected(searchText) && `dupe`}
         {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
         {@const no_match =
         Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg) &&

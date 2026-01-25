@@ -4780,67 +4780,52 @@ describe(`onduplicate event`, () => {
     expect(onduplicate_spy).not.toHaveBeenCalled()
   })
 
-  // String options: typing same label triggers duplicate detection (keys match exactly)
-  test(`fires with string options via allowUserOptions`, async () => {
-    const onduplicate_spy = vi.fn()
+  // Tests duplicate detection via allowUserOptions for both string and object options
+  // For object options, label-based detection fires even when keys differ (e.g., typing "Apple"
+  // when {label: "Apple", value: 1} is selected) - prevents confusing UX
+  test.each([
+    {
+      desc: `string options`,
+      options: [`apple`, `banana`, `cherry`],
+      selected: [`apple`],
+      typed_value: `apple`,
+    },
+    {
+      desc: `object options (label match)`,
+      options: [{ label: `Apple`, value: 1 }, { label: `Banana`, value: 2 }],
+      selected: [{ label: `Apple`, value: 1 }],
+      typed_value: `Apple`,
+    },
+  ])(
+    `fires with $desc via allowUserOptions`,
+    async ({ options, selected, typed_value }) => {
+      const onduplicate_spy = vi.fn()
 
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [`apple`, `banana`, `cherry`],
-        duplicates: false,
-        selected: [`apple`],
-        onduplicate: onduplicate_spy,
-        allowUserOptions: true,
-      },
-    })
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options,
+          duplicates: false,
+          selected,
+          onduplicate: onduplicate_spy,
+          allowUserOptions: true,
+        },
+      })
 
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      await tick()
 
-    input.value = `apple`
-    input.dispatchEvent(input_event)
-    await tick()
+      input.value = typed_value
+      input.dispatchEvent(input_event)
+      await tick()
 
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    await tick()
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+      await tick()
 
-    expect(onduplicate_spy).toHaveBeenCalledTimes(1)
-    expect(onduplicate_spy).toHaveBeenCalledWith({ option: `apple` })
-  })
-
-  // Object options: typing a label that matches a selected option triggers duplicate detection
-  // even if the keys differ (e.g., typing "Apple" when {label: "Apple", value: 1} is selected)
-  // This prevents confusing UX where users see "Apple" selected but can type "Apple" again
-  test(`fires for object options when user types label matching selected option`, async () => {
-    const onduplicate_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [{ label: `Apple`, value: 1 }, { label: `Banana`, value: 2 }],
-        duplicates: false,
-        selected: [{ label: `Apple`, value: 1 }],
-        onduplicate: onduplicate_spy,
-        allowUserOptions: true,
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    input.value = `Apple`
-    input.dispatchEvent(input_event)
-    await tick()
-
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    await tick()
-
-    // Label-based duplicate detection fires even though keys differ ("Apple-" vs "Apple-1")
-    expect(onduplicate_spy).toHaveBeenCalledTimes(1)
-  })
+      expect(onduplicate_spy).toHaveBeenCalledTimes(1)
+    },
+  )
 
   test(`fires when both maxSelect reached AND duplicate attempted`, async () => {
     const onduplicate_spy = vi.fn()
@@ -5340,39 +5325,29 @@ describe(`history / undo-redo`, () => {
 // Regression test for issue #391: case-variant labels should not crash
 // https://github.com/janosh/svelte-multiselect/issues/391
 describe(`case-variant labels (issue #391)`, () => {
-  test(`does not crash when options have labels differing only by case`, () => {
-    // This would crash before the fix due to duplicate keys in keyed {#each}
-    const options = [
-      { label: `pd`, value: `uuid-1` },
-      { label: `PD`, value: `uuid-2` },
-      { label: `Pd`, value: `uuid-3` },
-    ]
+  const object_options = [
+    { label: `pd`, value: `uuid-1` },
+    { label: `PD`, value: `uuid-2` },
+    { label: `Pd`, value: `uuid-3` },
+  ]
 
-    // Should not throw
-    expect(() => {
-      mount(MultiSelect, {
-        target: document.body,
-        props: { options },
-      })
-    }).not.toThrow()
-
-    // All three options should be rendered
-    const option_lis = document.querySelectorAll(`ul.options > li`)
-    expect(option_lis.length).toBe(3)
+  // Would crash before fix due to duplicate keys in keyed {#each}
+  test.each([
+    { desc: `object options`, options: object_options },
+    { desc: `string options`, options: [`apple`, `Apple`, `APPLE`] },
+  ])(`renders all $desc with case-variant labels without crashing`, ({ options }) => {
+    expect(() => mount(MultiSelect, { target: document.body, props: { options } })).not
+      .toThrow()
+    expect(document.querySelectorAll(`ul.options > li`).length).toBe(3)
   })
 
   test(`can select multiple case-variant options`, async () => {
-    const options = [
-      { label: `pd`, value: `uuid-1` },
-      { label: `PD`, value: `uuid-2` },
-      { label: `Pd`, value: `uuid-3` },
-    ]
-    let selected = $state<typeof options>([])
+    let selected = $state<typeof object_options>([])
 
     mount(MultiSelect, {
       target: document.body,
       props: {
-        options,
+        options: object_options,
         get selected() {
           return selected
         },
@@ -5382,9 +5357,7 @@ describe(`case-variant labels (issue #391)`, () => {
       },
     })
 
-    // Select all three options
-    const option_lis = [...document.querySelectorAll(`ul.options > li`)]
-    for (const li of option_lis) {
+    for (const li of document.querySelectorAll(`ul.options > li`)) {
       ;(li as HTMLElement).click()
       await tick()
     }
@@ -5392,19 +5365,82 @@ describe(`case-variant labels (issue #391)`, () => {
     expect(selected.length).toBe(3)
     expect(selected.map((opt) => opt.label)).toEqual([`pd`, `PD`, `Pd`])
   })
+})
 
-  test(`string options with case variants work correctly`, () => {
-    // String primitives with case variants should also work
-    const options = [`apple`, `Apple`, `APPLE`]
+describe(`duplicates prop variants`, () => {
+  test.each([
+    {
+      duplicates: false,
+      typed: `apple`,
+      expect_blocked: false,
+      desc: `false (default): case variants allowed`,
+    },
+    {
+      duplicates: `case-insensitive` as const,
+      typed: `APPLE`, // uppercase to test .toLowerCase()
+      expect_blocked: true,
+      desc: `'case-insensitive': case variants blocked`,
+    },
+  ])(`duplicates=$desc`, async ({ duplicates, typed, expect_blocked }) => {
+    const onduplicate_spy = vi.fn()
+    let selected = $state<string[]>([`Apple`])
 
-    expect(() => {
-      mount(MultiSelect, {
-        target: document.body,
-        props: { options },
-      })
-    }).not.toThrow()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`Apple`, `apple`, `APPLE`],
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        allowUserOptions: true,
+        duplicates,
+        onduplicate: onduplicate_spy,
+      },
+    })
 
-    const option_lis = document.querySelectorAll(`ul.options > li`)
-    expect(option_lis.length).toBe(3)
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    input.value = typed
+    input.dispatchEvent(input_event)
+    await tick()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+
+    if (expect_blocked) {
+      expect(onduplicate_spy).toHaveBeenCalledTimes(1)
+      expect(selected).not.toContain(typed)
+    } else {
+      expect(onduplicate_spy).not.toHaveBeenCalled()
+      expect(selected).toContain(typed)
+    }
+  })
+
+  test(`duplicates='case-insensitive': shows duplicate message`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`Apple`, `Banana`],
+        selected: [`Apple`],
+        duplicates: `case-insensitive`,
+        duplicateOptionMsg: `Already selected`,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+
+    input.value = `apple`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(document.querySelector(`ul.options li.user-msg`)?.textContent).toContain(
+      `Already selected`,
+    )
   })
 })

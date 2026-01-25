@@ -206,37 +206,74 @@ describe(`has_group`, () => {
 
 describe(`get_option_key`, () => {
   test.each([
-    // Object options - combines label + value
-    [{ label: `Apple`, value: 1 }, `Apple-1`],
-    [{ label: `Apple`, value: `uuid-123` }, `Apple-uuid-123`],
-    [{ label: `pd`, value: `uuid-1` }, `pd-uuid-1`],
-    [{ label: `PD`, value: `uuid-2` }, `PD-uuid-2`], // case preserved
-    // Object options without value - label + empty string
-    [{ label: `Apple` }, `Apple-`],
-    [{ label: `Apple`, value: undefined }, `Apple-`],
-    [{ label: `Apple`, value: null }, `Apple-`],
-    // Object options with falsy but defined values
-    [{ label: `Apple`, value: 0 }, `Apple-0`],
-    [{ label: `Apple`, value: `` }, `Apple-`],
-    [{ label: `Apple`, value: false }, `Apple-false`],
-    // Primitive options - just the label
+    // Object options with value - returns value directly (preserves identity)
+    [{ label: `Apple`, value: 1 }, 1],
+    [{ label: `Apple`, value: `uuid-123` }, `uuid-123`],
+    [{ label: `pd`, value: `uuid-1` }, `uuid-1`],
+    [{ label: `PD`, value: `uuid-2` }, `uuid-2`],
+    // Object options without value - falls back to label
+    [{ label: `Apple` }, `Apple`],
+    [{ label: `Apple`, value: undefined }, `Apple`],
+    [{ label: `Apple`, value: null }, `Apple`],
+    // Object options with falsy but defined values - returns value
+    [{ label: `Apple`, value: 0 }, 0],
+    [{ label: `Apple`, value: `` }, ``],
+    [{ label: `Apple`, value: false }, false],
+    // Primitive options - returns primitive itself
     [`apple`, `apple`],
     [`Apple`, `Apple`], // case preserved
-    [123, `123`],
-    [0, `0`],
+    [123, 123],
+    [0, 0],
   ])(`get_option_key(%j) returns %j`, (input, expected) => {
     expect(get_option_key(input as Option)).toBe(expected)
   })
 
-  test(`case-variant labels produce unique keys`, () => {
+  test(`case-variant labels produce unique keys when they have unique values`, () => {
     const options = [
       { label: `pd`, value: `uuid-1` },
       { label: `PD`, value: `uuid-2` },
       { label: `Pd`, value: `uuid-3` },
     ]
     const keys = options.map(get_option_key)
-    expect(keys).toEqual([`pd-uuid-1`, `PD-uuid-2`, `Pd-uuid-3`])
+    expect(keys).toEqual([`uuid-1`, `uuid-2`, `uuid-3`])
     // All keys should be unique
     expect(new Set(keys).size).toBe(3)
+  })
+
+  test(`preserves object value identity`, () => {
+    const obj1 = { id: 1 }
+    const obj2 = { id: 2 }
+    const opt1 = { label: `Item`, value: obj1 }
+    const opt2 = { label: `Item`, value: obj2 }
+    // Keys are the actual objects, not stringified
+    expect(get_option_key(opt1)).toBe(obj1)
+    expect(get_option_key(opt2)).toBe(obj2)
+    expect(get_option_key(opt1)).not.toBe(get_option_key(opt2))
+  })
+
+  test(`case-variant labels without values use label as key`, () => {
+    // When no value, falls back to label (case-sensitive)
+    const options = [
+      { label: `pd` },
+      { label: `PD` },
+      { label: `Pd` },
+    ]
+    const keys = options.map(get_option_key)
+    expect(keys).toEqual([`pd`, `PD`, `Pd`])
+    expect(new Set(keys).size).toBe(3)
+  })
+
+  test(`case-variant labels with same value produce identical keys (expected collision)`, () => {
+    // When options share the same value, they intentionally have the same key
+    // This is correct behavior - the value field is the primary identity
+    const options = [
+      { label: `pd`, value: `shared-id` },
+      { label: `PD`, value: `shared-id` },
+      { label: `Pd`, value: `shared-id` },
+    ]
+    const keys = options.map(get_option_key)
+    expect(keys).toEqual([`shared-id`, `shared-id`, `shared-id`])
+    // All keys are identical (this is expected - same value = same identity)
+    expect(new Set(keys).size).toBe(1)
   })
 })

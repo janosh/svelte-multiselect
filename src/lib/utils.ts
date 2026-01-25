@@ -33,11 +33,11 @@ export const get_label = (opt: Option) => {
   return `${opt}`
 }
 
-// Generate a unique key for an option by combining label and value
-// For object options: "label-value" (e.g., "foo-uuid-123" or "foo-" if no value)
-// For primitives: the primitive as string
-export const get_option_key = (opt: Option): string =>
-  is_object(opt) ? `${get_label(opt)}-${opt.value ?? ``}` : `${get_label(opt)}`
+// Generate a unique key for an option, preserving value identity
+// For object options: uses value if defined, otherwise label (no case normalization)
+// For primitives: the primitive itself
+export const get_option_key = (opt: Option): unknown =>
+  is_object(opt) ? opt.value ?? get_label(opt) : opt
 
 // This function is used extract CSS strings from a {selected, option} style
 // object to be used in the style attribute of the option.
