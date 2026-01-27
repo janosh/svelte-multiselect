@@ -1034,8 +1034,10 @@ describe(`Nav`, () => {
 
         for (let idx = 0; idx < 3; idx++) {
           mouse_enter(dropdown)
+          // deno-lint-ignore no-await-in-loop
           await tick()
           mouse_leave(dropdown)
+          // deno-lint-ignore no-await-in-loop
           await vi.advanceTimersByTimeAsync(50)
           expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
         }
