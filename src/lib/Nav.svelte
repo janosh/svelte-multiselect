@@ -47,7 +47,7 @@
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
     tooltip_options?: Omit<TooltipOptions, `content`>
     breakpoint?: number
-    dropdown_cooldown?: number // ms before hiding dropdown after mouse leaves
+    dropdown_cooldown?: number // ms delay before hiding dropdown after mouse leaves (ignored when pinned)
     onnavigate?: (
       data: { href: string; event: MouseEvent; route: NavRouteObject },
     ) => void | false
@@ -91,20 +91,12 @@
     prev_is_open = is_open
   })
 
-  // Cleanup hide timeout on component destroy
   $effect(() => () => {
     if (hide_timeout) clearTimeout(hide_timeout)
-  })
-
-  function clear_hide_timeout() {
-    if (hide_timeout) {
-      clearTimeout(hide_timeout)
-      hide_timeout = null
-    }
-  }
+  }) // cleanup on destroy
 
   function close_menus() {
-    clear_hide_timeout()
+    if (hide_timeout) clearTimeout(hide_timeout)
     is_open = false
     hovered_dropdown = null
     pinned_dropdown = null
@@ -116,8 +108,6 @@
     pinned_dropdown = is_opening ? href : null
     hovered_dropdown = is_opening ? href : null
     focused_item_index = is_opening && focus_first ? 0 : -1
-
-    // Focus management for keyboard users
     if (is_opening && focus_first) {
       setTimeout(() => {
         document
@@ -129,27 +119,19 @@
     }
   }
 
-  function handle_dropdown_mouseenter(href: string) {
-    if (is_touch_device) return
-    clear_hide_timeout()
-    const is_this_pinned = pinned_dropdown === href
-    if (pinned_dropdown && !is_this_pinned) pinned_dropdown = null
+  function open_dropdown(href: string, from_mouse = false) {
+    if (from_mouse && is_touch_device) return
+    if (hide_timeout) clearTimeout(hide_timeout)
+    if (pinned_dropdown && pinned_dropdown !== href) pinned_dropdown = null
     hovered_dropdown = href
   }
 
-  function schedule_dropdown_hide(href: string, is_pinned: boolean) {
+  function schedule_hide(href: string, is_pinned: boolean) {
     if (is_touch_device || is_pinned) return
-    clear_hide_timeout()
+    clearTimeout(hide_timeout!)
     hide_timeout = setTimeout(() => {
       if (hovered_dropdown === href) hovered_dropdown = null
-      hide_timeout = null
     }, dropdown_cooldown)
-  }
-
-  function handle_dropdown_focusin(href: string) {
-    const is_this_pinned = pinned_dropdown === href
-    if (pinned_dropdown && !is_this_pinned) pinned_dropdown = null
-    hovered_dropdown = href
   }
 
   function onkeydown(event: KeyboardEvent) {
@@ -377,9 +359,9 @@
           data-href={parsed_route.href}
           role="group"
           aria-current={child_is_active ? `true` : undefined}
-          onmouseenter={() => handle_dropdown_mouseenter(parsed_route.href)}
-          onmouseleave={() => schedule_dropdown_hide(parsed_route.href, is_pinned)}
-          onfocusin={() => handle_dropdown_focusin(parsed_route.href)}
+          onmouseenter={() => open_dropdown(parsed_route.href, true)}
+          onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
+          onfocusin={() => open_dropdown(parsed_route.href)}
           onfocusout={(event) => {
             const next = event.relatedTarget as Node | null
             if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
@@ -437,8 +419,8 @@
             class:visible={dropdown_open}
             role="menu"
             tabindex="-1"
-            onmouseenter={() => handle_dropdown_mouseenter(parsed_route.href)}
-            onmouseleave={() => schedule_dropdown_hide(parsed_route.href, is_pinned)}
+            onmouseenter={() => open_dropdown(parsed_route.href, true)}
+            onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
           >
             {#each filtered_sub_routes as child_href (child_href)}
               {@const child_formatted = format_label(child_href, true)}
@@ -503,7 +485,7 @@
   nav {
     position: relative;
     margin: -0.75em auto 1.25em;
-    --nav-border-radius: 6pt;
+    --nav-border-radius: 3pt;
     --nav-surface-bg: light-dark(#fafafa, #1a1a1a);
     --nav-surface-border: light-dark(
       rgba(128, 128, 128, 0.25),
