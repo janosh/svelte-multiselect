@@ -2,7 +2,7 @@ import { Nav } from '$lib'
 import type { NavRoute } from '$lib/types'
 import type { Page } from '@sveltejs/kit'
 import { mount, tick } from 'svelte'
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { doc_query } from './index'
 
 vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/` } } }))
@@ -224,7 +224,7 @@ describe(`Nav`, () => {
       await tick()
       expect(menu.classList.contains(`visible`)).toBe(true)
       dropdown.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
-      await tick()
+      await vi.advanceTimersByTimeAsync(200) // wait for dropdown_cooldown
       expect(menu.classList.contains(`visible`)).toBe(false)
     }],
     [`mouse hover on menu`, async (_dropdown: Element, menu: Element) => {
@@ -232,7 +232,7 @@ describe(`Nav`, () => {
       await tick()
       expect(menu.classList.contains(`visible`)).toBe(true)
       menu.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
-      await tick()
+      await vi.advanceTimersByTimeAsync(200) // wait for dropdown_cooldown
       expect(menu.classList.contains(`visible`)).toBe(false)
     }],
     [`click toggle button`, async (dropdown: Element, menu: Element) => {
@@ -244,6 +244,7 @@ describe(`Nav`, () => {
       expect(menu.classList.contains(`visible`)).toBe(false)
     }],
   ])(`dropdown interaction via %s`, async (_desc, interaction) => {
+    vi.useFakeTimers()
     mount(Nav, {
       target: document.body,
       props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
@@ -251,6 +252,7 @@ describe(`Nav`, () => {
     const { dropdown, dropdown_menu } = query_dropdown_elements()
     expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
     await interaction(dropdown, dropdown_menu)
+    vi.useRealTimers()
   })
 
   test(`parent link and toggle button work independently`, async () => {
@@ -966,19 +968,8 @@ describe(`Nav`, () => {
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
     })
 
-    test(`pinned dropdown stays open on mouse leave`, async () => {
-      mount(Nav, { target: document.body, props: { routes: single_dropdown_route } })
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
-
-      await click(doc_query(`[data-dropdown-toggle]`))
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
-
-      mouse_leave(dropdown)
-      await tick()
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
-    })
-
     test(`hover-opened dropdown closes on mouse leave (not pinned)`, async () => {
+      vi.useFakeTimers()
       mount(Nav, { target: document.body, props: { routes: single_dropdown_route } })
       const { dropdown, dropdown_menu } = query_dropdown_elements()
 
@@ -987,8 +978,169 @@ describe(`Nav`, () => {
       expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
 
       mouse_leave(dropdown)
-      await tick()
+      await vi.advanceTimersByTimeAsync(200) // wait for dropdown_cooldown
       expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      vi.useRealTimers()
+    })
+
+    test(`dropdown stays open if re-entered within cooldown period`, async () => {
+      vi.useFakeTimers()
+      mount(Nav, {
+        target: document.body,
+        props: { routes: single_dropdown_route, dropdown_cooldown: 150 },
+      })
+      const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+      mouse_enter(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+      // leave but re-enter within cooldown
+      mouse_leave(dropdown)
+      await vi.advanceTimersByTimeAsync(50) // partial cooldown
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true) // still open
+      mouse_enter(dropdown)
+      await vi.advanceTimersByTimeAsync(200) // more than cooldown
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true) // should stay open
+      vi.useRealTimers()
+    })
+
+    describe(`dropdown_cooldown edge cases`, () => {
+      beforeEach(() => vi.useFakeTimers())
+      afterEach(() => vi.useRealTimers())
+
+      test(`cooldown=0 closes dropdown immediately after mouseleave`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: single_dropdown_route, dropdown_cooldown: 0 },
+        })
+        const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+        mouse_enter(dropdown)
+        await tick()
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+        mouse_leave(dropdown)
+        await vi.advanceTimersByTimeAsync(1)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      })
+
+      test(`large cooldown (5000ms) keeps dropdown open until timeout`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: single_dropdown_route, dropdown_cooldown: 5000 },
+        })
+        const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+        mouse_enter(dropdown)
+        await tick()
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+        mouse_leave(dropdown)
+        await vi.advanceTimersByTimeAsync(4000)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        await vi.advanceTimersByTimeAsync(1001)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      })
+
+      test(`multiple rapid enter/leave cycles reset cooldown each time`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: single_dropdown_route, dropdown_cooldown: 100 },
+        })
+        const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+        for (let idx = 0; idx < 3; idx++) {
+          mouse_enter(dropdown)
+          // deno-lint-ignore no-await-in-loop
+          await tick()
+          mouse_leave(dropdown)
+          // deno-lint-ignore no-await-in-loop
+          await vi.advanceTimersByTimeAsync(50)
+          expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        }
+        await vi.advanceTimersByTimeAsync(51)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      })
+
+      test(`entering dropdown panel during cooldown cancels hide`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: single_dropdown_route, dropdown_cooldown: 150 },
+        })
+        const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+        mouse_enter(dropdown)
+        await tick()
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+        mouse_leave(dropdown)
+        await vi.advanceTimersByTimeAsync(50)
+        dropdown_menu.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+        await tick()
+
+        await vi.advanceTimersByTimeAsync(200)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      })
+
+      test(`pinned dropdown ignores cooldown on mouseleave`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: single_dropdown_route, dropdown_cooldown: 150 },
+        })
+        const { dropdown, dropdown_menu } = query_dropdown_elements()
+        const toggle = dropdown.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+
+        await click(toggle)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+        mouse_leave(dropdown)
+        await vi.advanceTimersByTimeAsync(500)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      })
+
+      test(`switching between multiple dropdowns respects cooldown`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: two_dropdown_routes, dropdown_cooldown: 100 },
+        })
+        const [dd1, dd2] = Array.from(document.querySelectorAll(`.dropdown`))
+        const menu1 = dd1.querySelector(`div:last-child`) as HTMLElement
+        const menu2 = dd2.querySelector(`div:last-child`) as HTMLElement
+
+        mouse_enter(dd1)
+        await tick()
+        expect(menu1.classList.contains(`visible`)).toBe(true)
+        expect(menu2.classList.contains(`visible`)).toBe(false)
+
+        mouse_leave(dd1)
+        await vi.advanceTimersByTimeAsync(30)
+        mouse_enter(dd2)
+        await tick()
+
+        expect(menu2.classList.contains(`visible`)).toBe(true)
+        await vi.advanceTimersByTimeAsync(100)
+        expect(menu1.classList.contains(`visible`)).toBe(false)
+        expect(menu2.classList.contains(`visible`)).toBe(true)
+      })
+
+      test(`cooldown at exact boundary - closes at exactly cooldown ms`, async () => {
+        mount(Nav, {
+          target: document.body,
+          props: { routes: single_dropdown_route, dropdown_cooldown: 100 },
+        })
+        const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+        mouse_enter(dropdown)
+        await tick()
+        mouse_leave(dropdown)
+
+        await vi.advanceTimersByTimeAsync(99)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+
+        await vi.advanceTimersByTimeAsync(1)
+        expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      })
     })
 
     test.each([
@@ -1151,6 +1303,53 @@ describe(`Nav`, () => {
         mount(Nav, { target: document.body, props: { routes: routes as NavRoute[] } })
       ).not.toThrow()
       expect(document.querySelectorAll(`a`)).toHaveLength(2)
+    })
+  })
+
+  describe(`CSS custom properties for dropdown`, () => {
+    const dropdown_route: NavRoute[] = [[`/parent`, [`/parent`, `/parent/child`]]]
+    const mouse_enter = (el: Element) =>
+      el.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+
+    test.each([
+      // [style_string, css_var_name, expected_value]
+      [`--nav-dropdown-min-width: 200px`, `--nav-dropdown-min-width`, `200px`],
+      [`--nav-dropdown-max-width: 150px`, `--nav-dropdown-max-width`, `150px`],
+      [`--nav-dropdown-width: 250px`, `--nav-dropdown-width`, `250px`],
+      [`--nav-dropdown-left: 10px`, `--nav-dropdown-left`, `10px`],
+      [`--nav-dropdown-right: 5px`, `--nav-dropdown-right`, `5px`],
+      [`--nav-dropdown-z-index: 999`, `--nav-dropdown-z-index`, `999`],
+    ])(`CSS variable %s is passed to nav element`, async (style, css_var, expected) => {
+      mount(Nav, {
+        target: document.body,
+        props: { routes: dropdown_route, style },
+      })
+      const nav = doc_query(`nav`)
+      const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+      // verify CSS custom property is set on nav element
+      expect(nav.style.getPropertyValue(css_var)).toBe(expected)
+
+      // verify dropdown becomes visible on hover
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      mouse_enter(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+    })
+
+    test(`dropdown opens on hover without custom styles`, async () => {
+      mount(Nav, { target: document.body, props: { routes: dropdown_route } })
+      const nav = doc_query(`nav`)
+      const { dropdown, dropdown_menu } = query_dropdown_elements()
+
+      // no custom properties set when style prop is omitted
+      expect(nav.style.getPropertyValue(`--nav-dropdown-min-width`)).toBe(``)
+
+      // dropdown still becomes visible on hover
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      mouse_enter(dropdown)
+      await tick()
+      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
     })
   })
 })

@@ -30,6 +30,7 @@
     tooltips,
     tooltip_options,
     breakpoint = 767,
+    dropdown_cooldown = 150,
     onnavigate,
     onopen,
     onclose,
@@ -46,6 +47,7 @@
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
     tooltip_options?: Omit<TooltipOptions, `content`>
     breakpoint?: number
+    dropdown_cooldown?: number // ms before hiding dropdown after mouse leaves
     onnavigate?: (
       data: { href: string; event: MouseEvent; route: NavRouteObject },
     ) => void | false
@@ -59,6 +61,7 @@
   let focused_item_index = $state<number>(-1)
   let is_touch_device = $state(false)
   let is_mobile = $state(false)
+  let hide_timeout: ReturnType<typeof setTimeout> | null = null
   const panel_id = `nav-menu-${get_uuid()}`
 
   // Track previous is_open state for callbacks
@@ -88,7 +91,20 @@
     prev_is_open = is_open
   })
 
+  // Cleanup hide timeout on component destroy
+  $effect(() => () => {
+    if (hide_timeout) clearTimeout(hide_timeout)
+  })
+
+  function clear_hide_timeout() {
+    if (hide_timeout) {
+      clearTimeout(hide_timeout)
+      hide_timeout = null
+    }
+  }
+
   function close_menus() {
+    clear_hide_timeout()
     is_open = false
     hovered_dropdown = null
     pinned_dropdown = null
@@ -115,9 +131,19 @@
 
   function handle_dropdown_mouseenter(href: string) {
     if (is_touch_device) return
+    clear_hide_timeout()
     const is_this_pinned = pinned_dropdown === href
     if (pinned_dropdown && !is_this_pinned) pinned_dropdown = null
     hovered_dropdown = href
+  }
+
+  function schedule_dropdown_hide(href: string, is_pinned: boolean) {
+    if (is_touch_device || is_pinned) return
+    clear_hide_timeout()
+    hide_timeout = setTimeout(() => {
+      if (hovered_dropdown === href) hovered_dropdown = null
+      hide_timeout = null
+    }, dropdown_cooldown)
   }
 
   function handle_dropdown_focusin(href: string) {
@@ -352,9 +378,7 @@
           role="group"
           aria-current={child_is_active ? `true` : undefined}
           onmouseenter={() => handle_dropdown_mouseenter(parsed_route.href)}
-          onmouseleave={() => {
-            if (!is_touch_device && !is_pinned) hovered_dropdown = null
-          }}
+          onmouseleave={() => schedule_dropdown_hide(parsed_route.href, is_pinned)}
           onfocusin={() => handle_dropdown_focusin(parsed_route.href)}
           onfocusout={(event) => {
             const next = event.relatedTarget as Node | null
@@ -413,9 +437,8 @@
             class:visible={dropdown_open}
             role="menu"
             tabindex="-1"
-            onmouseenter={() => {
-              if (!is_touch_device) hovered_dropdown = parsed_route.href
-            }}
+            onmouseenter={() => handle_dropdown_mouseenter(parsed_route.href)}
+            onmouseleave={() => schedule_dropdown_hide(parsed_route.href, is_pinned)}
           >
             {#each filtered_sub_routes as child_href (child_href)}
               {@const child_formatted = format_label(child_href, true)}
@@ -608,9 +631,12 @@
   .dropdown > div:last-child {
     position: absolute;
     top: 100%;
-    left: 0;
+    left: var(--nav-dropdown-left, 0);
+    right: var(--nav-dropdown-right, auto);
     margin: var(--nav-dropdown-margin, 2pt) 0 0 0;
-    min-width: max-content;
+    min-width: var(--nav-dropdown-min-width, 100%); /* at least as wide as parent */
+    max-width: var(--nav-dropdown-max-width, none);
+    width: var(--nav-dropdown-width, max-content); /* grow wider if content needs it */
     background-color: var(--nav-dropdown-bg, var(--nav-surface-bg));
     border: 1px solid var(--nav-dropdown-border-color, var(--nav-surface-border));
     border-radius: var(--nav-border-radius, 6pt);
