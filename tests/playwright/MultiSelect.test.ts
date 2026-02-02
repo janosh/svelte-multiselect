@@ -597,14 +597,11 @@ test.describe(`multiselect`, () => {
     const active_after_synthetic_hover = await active_option.textContent()
     expect(active_after_synthetic_hover?.trim()).toBe(foods[2]) // Still Watermelon
 
-    // Now move mouse for real - dispatch mousemove on the target li (bubbles to ul,
-    // resetting ignore_hover), then dispatch mouseover on same li to activate it
+    // Move mouse for real - mousemove bubbles to ul (resets ignore_hover), then
+    // mouseover activates the option
     await page.evaluate(() => {
-      const all_lis = document.querySelectorAll(`#foods ul.options > li`)
-      const fifth_li = all_lis[4]
-      // Dispatch mousemove on the li (bubbles to ul, resets ignore_hover)
+      const fifth_li = document.querySelectorAll(`#foods ul.options > li`)[4]
       fifth_li?.dispatchEvent(new MouseEvent(`mousemove`, { bubbles: true }))
-      // Then dispatch mouseover on the same li (activates it)
       fifth_li?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
     })
 

@@ -593,6 +593,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         const border_h = parseFloat(computed.borderLeftWidth) +
           parseFloat(computed.borderRightWidth)
         const max_width = parseFloat(computed.maxWidth) || 280
+        // With border-box, width includes padding+border; with content-box, subtract them
+        const box_adjust = computed.boxSizing === `border-box` ? 0 : padding_h + border_h
         const style = tooltip_el.style
         const placement = tooltip_el.getAttribute(`data-placement`) || `bottom`
 
@@ -613,9 +615,11 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         const single_line_width = tooltip_el.offsetWidth
         Object.assign(style, saved)
 
-        if (single_line_width - padding_h - border_h <= max_width) {
+        // Convert offsetWidth to the value needed for style.width
+        const content_width = single_line_width - box_adjust
+        if (content_width <= max_width) {
           // Single-line: set exact width and prevent wrapping
-          style.width = `${single_line_width - padding_h - border_h}px`
+          style.width = `${Math.max(0, content_width)}px`
           style.textWrap = `nowrap`
         } else {
           // Multi-line: binary search for minimum width that doesn't add line breaks
@@ -633,25 +637,26 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           Object.assign(style, {
             maxWidth: saved.maxWidth,
             wordWrap: saved.wordWrap,
-            width: `${initial_width - padding_h - border_h}px`,
+            width: `${initial_width - box_adjust}px`,
           })
 
           // If longest word exceeds wrapped width, use min_width (can't shrink further)
           if (min_width >= initial_width) {
-            style.width = `${min_width - padding_h - border_h}px`
+            style.width = `${min_width - box_adjust}px`
           } else {
             // Binary search for minimum width that maintains baseline height
+            // Work in offsetWidth units, convert to style.width only when setting
             let low = min_width, high = initial_width, best = initial_width
             while (high - low > 1) {
               const mid = Math.floor((low + high) / 2)
-              style.width = `${mid - padding_h - border_h}px`
+              style.width = `${mid - box_adjust}px`
               if (tooltip_el.offsetHeight > baseline_height) low = mid
               else {
                 best = mid
                 high = mid
               }
             }
-            style.width = `${best - padding_h - border_h}px`
+            style.width = `${best - box_adjust}px`
           }
         }
 
@@ -676,9 +681,10 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         }
 
         // Keep in viewport
-        const vw = globalThis.innerWidth, vh = globalThis.innerHeight
-        left = Math.max(8, Math.min(left, vw - tooltip_rect.width - 8))
-        top = Math.max(8, Math.min(top, vh - tooltip_rect.height - 8))
+        const viewport_width = globalThis.innerWidth
+        const viewport_height = globalThis.innerHeight
+        left = Math.max(8, Math.min(left, viewport_width - tooltip_rect.width - 8))
+        top = Math.max(8, Math.min(top, viewport_height - tooltip_rect.height - 8))
 
         style.left = `${left + globalThis.scrollX}px`
         style.top = `${top + globalThis.scrollY}px`
@@ -723,7 +729,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           })
         }
 
-        // Wrap content in a span to measure actual rendered width
+        // Wrap content in a span for reactive content updates
         const content_span = document.createElement(`span`)
         content_span.className = `tooltip-content`
         // Security: allow_html defaults to true; set to false for plain text rendering
