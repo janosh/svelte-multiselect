@@ -516,7 +516,7 @@
   }
   .menu > span > a {
     line-height: 1.3;
-    padding: var(--nav-item-padding);
+    padding: var(--nav-item-padding, 2pt 6pt);
     text-decoration: none;
     color: inherit;
   }
@@ -576,7 +576,7 @@
   }
   .dropdown > div:first-child > a, .dropdown > div:first-child > span {
     line-height: 1.3;
-    padding: var(--nav-item-padding);
+    padding: var(--nav-item-padding, 2pt 6pt);
     text-decoration: none;
     color: inherit;
     border-radius: var(--nav-border-radius) 0 0 var(--nav-border-radius);

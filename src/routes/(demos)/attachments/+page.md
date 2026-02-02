@@ -142,6 +142,39 @@ Exported from `svelte-multiselect/attachments`:
   </button>
 </div>
 
+<!-- Long word shrink-to-fit demo: tooltip contracts when long words cause early wrapping -->
+<div style="display: flex; gap: 1em; margin: 2em 0; flex-wrap: wrap">
+  <button
+    {@attach tooltip({
+      content: `Donaudampfschifffahrtsgesellschaftskapitän is a German compound word`,
+      placement: `top`,
+    })}
+  >
+    Long German word
+  </button>
+  <button
+    {@attach tooltip({
+      content: `pneumonoultramicroscopicsilicovolcanoconiosis is very long`,
+      placement: `bottom`,
+    })}
+  >
+    Medical term
+  </button>
+  <button
+    {@attach tooltip({
+      content: `supercalifragilisticexpialidocious sounds quite atrocious`,
+      placement: `right`,
+    })}
+  >
+    Mary Poppins
+  </button>
+  <button
+    {@attach tooltip({ content: `antidisestablishmentarianism`, placement: `left` })}
+  >
+    Single long word
+  </button>
+</div>
+
 <style>
   button {
     padding: 0.35em 0.7em;

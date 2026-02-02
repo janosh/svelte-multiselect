@@ -584,6 +584,9 @@ test.describe(`multiselect`, () => {
     const active_option = page.locator(`#foods ul.options > li.active`)
     await expect(active_option).toHaveText(foods[2]) // Watermelon
 
+    // Wait for any async scroll operations to complete from arrow navigation
+    await page.waitForTimeout(100)
+
     // Simulate scroll-triggered mouseover (no actual mouse movement)
     await page.evaluate(() => {
       const first_option = document.querySelector(`#foods ul.options > li`)
@@ -594,13 +597,12 @@ test.describe(`multiselect`, () => {
     const active_after_synthetic_hover = await active_option.textContent()
     expect(active_after_synthetic_hover?.trim()).toBe(foods[2]) // Still Watermelon
 
-    // Now move mouse for real - this should re-enable hover via mousemove on ul.options
+    // Now move mouse for real - dispatch mousemove on ul.options (where the handler
+    // is attached) to reset ignore_hover, then mouseover on the target li
     await page.evaluate(() => {
       const ul = document.querySelector(`#foods ul.options`)
       const fifth_li = document.querySelectorAll(`#foods ul.options > li`)[4]
-      // Dispatch mousemove on ul (resets ignore_hover)
       ul?.dispatchEvent(new MouseEvent(`mousemove`, { bubbles: true }))
-      // Then dispatch mouseover on the target li
       fifth_li?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
     })
 

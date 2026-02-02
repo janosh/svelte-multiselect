@@ -506,6 +506,8 @@ export interface TooltipOptions {
   // content via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to
   // prevent XSS. Set to false to render content as plain text.
   allow_html?: boolean
+  // Optional sanitizer for HTML content - called before setting innerHTML when allow_html is true
+  sanitize_html?: (html: string) => string
 }
 
 export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Element) => {
@@ -564,15 +566,142 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         content = new_content
         // Only update tooltip if this element owns it
         if (current_tooltip?._owner === element) {
-          if (options.allow_html !== false) {
-            current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
-          } else {
-            current_tooltip.textContent = content
+          const content_el = current_tooltip.querySelector(`.tooltip-content`)
+          if (content_el) {
+            if (options.allow_html !== false) {
+              let html = content.replace(/\r/g, `<br/>`)
+              if (options.sanitize_html) html = options.sanitize_html(html)
+              content_el.innerHTML = html
+            } else {
+              content_el.textContent = content
+            }
+            // Re-run sizing/positioning after content change
+            resize_and_position_tooltip(current_tooltip, element)
           }
         }
       }
     })
     observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
+
+    // Shrink tooltip to fit content, then position for correct centering
+    function resize_and_position_tooltip(tooltip_el: HTMLElement, trigger: Element) {
+      // Reset width to allow natural sizing before measuring
+      tooltip_el.style.width = ``
+
+      requestAnimationFrame(() => {
+        if (!document.body.contains(tooltip_el)) return
+        const computed = getComputedStyle(tooltip_el)
+        const padding_h = parseFloat(computed.paddingLeft) +
+          parseFloat(computed.paddingRight)
+        const border_h = parseFloat(computed.borderLeftWidth) +
+          parseFloat(computed.borderRightWidth)
+        // Handle max-width: none as unbounded, fallback to 280 only for invalid values
+        const max_width_raw = computed.maxWidth
+        const max_width_parsed = parseFloat(max_width_raw)
+        const max_width = max_width_raw === `none`
+          ? Infinity
+          : Number.isFinite(max_width_parsed)
+          ? max_width_parsed
+          : 280
+        // With border-box, width includes padding+border; with content-box, subtract them
+        const box_adjust = computed.boxSizing === `border-box` ? 0 : padding_h + border_h
+        const style = tooltip_el.style
+        const placement = tooltip_el.getAttribute(`data-placement`) || `bottom`
+
+        // Save styles, measure single-line width with wrapping disabled
+        const saved = {
+          maxWidth: style.maxWidth,
+          wordWrap: style.wordWrap,
+          textWrap: style.textWrap,
+          whiteSpace: style.whiteSpace,
+        }
+        Object.assign(style, {
+          maxWidth: `none`,
+          wordWrap: `normal`,
+          textWrap: `nowrap`,
+          whiteSpace: `nowrap`,
+          width: `auto`,
+        })
+        const single_line_width = tooltip_el.offsetWidth
+        Object.assign(style, saved)
+
+        // Convert offsetWidth to the value needed for style.width
+        const content_width = single_line_width - box_adjust
+        if (content_width <= max_width) {
+          // Single-line: set exact width and prevent wrapping
+          style.width = `${Math.max(0, content_width)}px`
+          style.textWrap = `nowrap`
+        } else {
+          // Multi-line: binary search for minimum width that doesn't add line breaks
+          style.width = ``
+          const baseline_height = tooltip_el.offsetHeight
+          const initial_width = tooltip_el.offsetWidth
+
+          // Get min-content (longest word) as lower bound
+          Object.assign(style, {
+            maxWidth: `none`,
+            wordWrap: `normal`,
+            width: `min-content`,
+          })
+          const min_width = tooltip_el.offsetWidth
+          Object.assign(style, {
+            maxWidth: saved.maxWidth,
+            wordWrap: saved.wordWrap,
+            width: `${initial_width - box_adjust}px`,
+          })
+
+          // If longest word exceeds wrapped width, use min_width (can't shrink further)
+          if (min_width >= initial_width) {
+            style.width = `${min_width - box_adjust}px`
+          } else {
+            // Binary search for minimum width that maintains baseline height
+            // Work in offsetWidth units, convert to style.width only when setting
+            let low = min_width, high = initial_width, best = initial_width
+            while (high - low > 1) {
+              const mid = Math.floor((low + high) / 2)
+              style.width = `${mid - box_adjust}px`
+              if (tooltip_el.offsetHeight > baseline_height) low = mid
+              else {
+                best = mid
+                high = mid
+              }
+            }
+            style.width = `${best - box_adjust}px`
+          }
+        }
+
+        // Position tooltip after width adjustment so centering uses final dimensions
+        const rect = trigger.getBoundingClientRect()
+        const tooltip_rect = tooltip_el.getBoundingClientRect()
+        const margin = options.offset ?? 12
+
+        let top = 0, left = 0
+        if (placement === `top`) {
+          top = rect.top - tooltip_rect.height - margin
+          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+        } else if (placement === `left`) {
+          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
+          left = rect.left - tooltip_rect.width - margin
+        } else if (placement === `right`) {
+          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
+          left = rect.right + margin
+        } else { // bottom
+          top = rect.bottom + margin
+          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+        }
+
+        // Keep in viewport
+        const viewport_width = globalThis.innerWidth
+        const viewport_height = globalThis.innerHeight
+        left = Math.max(8, Math.min(left, viewport_width - tooltip_rect.width - 8))
+        top = Math.max(8, Math.min(top, viewport_height - tooltip_rect.height - 8))
+
+        style.left = `${left + globalThis.scrollX}px`
+        style.top = `${top + globalThis.scrollY}px`
+        style.opacity =
+          getComputedStyle(trigger).getPropertyValue(`--tooltip-opacity`).trim() || `1`
+      })
+    }
 
     function show_tooltip() {
       // Skip tooltip on touch input when 'touch-devices' option is set
@@ -593,7 +722,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         element.setAttribute(`aria-describedby`, tooltip_id)
         // Apply base styles
         tooltip_el.style.cssText = `
-          position: absolute; z-index: 9999; opacity: 0;
+          position: absolute; z-index: 9999; opacity: 0; display: inline-block;
           background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
           padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 6px); font-size: var(--tooltip-font-size, 13px); line-height: 1.4;
           max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; text-wrap: balance; pointer-events: none;
@@ -610,12 +739,18 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           })
         }
 
+        // Wrap content in a span for reactive content updates
+        const content_span = document.createElement(`span`)
+        content_span.className = `tooltip-content`
         // Security: allow_html defaults to true; set to false for plain text rendering
         if (options.allow_html !== false) {
-          tooltip_el.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+          let html = content?.replace(/\r/g, `<br/>`) ?? ``
+          if (options.sanitize_html) html = options.sanitize_html(html)
+          content_span.innerHTML = html
         } else {
-          tooltip_el.textContent = content ?? ``
+          content_span.textContent = content ?? ``
         }
+        tooltip_el.appendChild(content_span)
 
         // Mirror CSS custom properties from the trigger node onto the tooltip element
         const trigger_styles = getComputedStyle(element)
@@ -722,35 +857,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           tooltip_el.appendChild(arrow)
         }
 
-        // Position tooltip
-        const rect = element.getBoundingClientRect()
-        const tooltip_rect = tooltip_el.getBoundingClientRect()
-        const margin = options.offset ?? 12
-
-        let top = 0, left = 0
-        if (placement === `top`) {
-          top = rect.top - tooltip_rect.height - margin
-          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-        } else if (placement === `left`) {
-          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-          left = rect.left - tooltip_rect.width - margin
-        } else if (placement === `right`) {
-          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-          left = rect.right + margin
-        } else { // bottom
-          top = rect.bottom + margin
-          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-        }
-
-        // Keep in viewport
-        left = Math.max(8, Math.min(left, globalThis.innerWidth - tooltip_rect.width - 8))
-        top = Math.max(8, Math.min(top, globalThis.innerHeight - tooltip_rect.height - 8))
-
-        tooltip_el.style.left = `${left + globalThis.scrollX}px`
-        tooltip_el.style.top = `${top + globalThis.scrollY}px`
-        const custom_opacity = trigger_styles.getPropertyValue(`--tooltip-opacity`).trim()
-        tooltip_el.style.opacity = custom_opacity || `1`
-
+        resize_and_position_tooltip(tooltip_el, element)
         current_tooltip = Object.assign(tooltip_el, { _owner: element })
       }, options.delay || 100)
     }
