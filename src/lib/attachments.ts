@@ -571,11 +571,121 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
             } else {
               content_el.textContent = content
             }
+            // Re-run sizing/positioning after content change
+            resize_and_position_tooltip(current_tooltip, element)
           }
         }
       }
     })
     observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
+
+    // Shrink tooltip to fit content, then position for correct centering
+    function resize_and_position_tooltip(tooltip_el: HTMLElement, trigger: Element) {
+      // Reset width to allow natural sizing before measuring
+      tooltip_el.style.width = ``
+      tooltip_el.style.textWrap = ``
+
+      requestAnimationFrame(() => {
+        if (!document.body.contains(tooltip_el)) return
+        const computed = getComputedStyle(tooltip_el)
+        const padding_h = parseFloat(computed.paddingLeft) +
+          parseFloat(computed.paddingRight)
+        const border_h = parseFloat(computed.borderLeftWidth) +
+          parseFloat(computed.borderRightWidth)
+        const max_width = parseFloat(computed.maxWidth) || 280
+        const style = tooltip_el.style
+        const placement = tooltip_el.getAttribute(`data-placement`) || `bottom`
+
+        // Save styles, measure single-line width with wrapping disabled
+        const saved = {
+          maxWidth: style.maxWidth,
+          wordWrap: style.wordWrap,
+          textWrap: style.textWrap,
+          whiteSpace: style.whiteSpace,
+        }
+        Object.assign(style, {
+          maxWidth: `none`,
+          wordWrap: `normal`,
+          textWrap: `nowrap`,
+          whiteSpace: `nowrap`,
+          width: `auto`,
+        })
+        const single_line_width = tooltip_el.offsetWidth
+        Object.assign(style, saved)
+
+        if (single_line_width - padding_h - border_h <= max_width) {
+          // Single-line: set exact width and prevent wrapping
+          style.width = `${single_line_width - padding_h - border_h}px`
+          style.textWrap = `nowrap`
+        } else {
+          // Multi-line: binary search for minimum width that doesn't add line breaks
+          style.width = ``
+          const baseline_height = tooltip_el.offsetHeight
+          const initial_width = tooltip_el.offsetWidth
+
+          // Get min-content (longest word) as lower bound
+          Object.assign(style, {
+            maxWidth: `none`,
+            wordWrap: `normal`,
+            width: `min-content`,
+          })
+          const min_width = tooltip_el.offsetWidth
+          Object.assign(style, {
+            maxWidth: saved.maxWidth,
+            wordWrap: saved.wordWrap,
+            width: `${initial_width - padding_h - border_h}px`,
+          })
+
+          // If longest word exceeds wrapped width, use min_width (can't shrink further)
+          if (min_width >= initial_width) {
+            style.width = `${min_width - padding_h - border_h}px`
+          } else {
+            // Binary search for minimum width that maintains baseline height
+            let low = min_width, high = initial_width, best = initial_width
+            while (high - low > 1) {
+              const mid = Math.floor((low + high) / 2)
+              style.width = `${mid - padding_h - border_h}px`
+              if (tooltip_el.offsetHeight > baseline_height) low = mid
+              else {
+                best = mid
+                high = mid
+              }
+            }
+            style.width = `${best - padding_h - border_h}px`
+          }
+        }
+
+        // Position tooltip after width adjustment so centering uses final dimensions
+        const rect = trigger.getBoundingClientRect()
+        const tooltip_rect = tooltip_el.getBoundingClientRect()
+        const margin = options.offset ?? 12
+
+        let top = 0, left = 0
+        if (placement === `top`) {
+          top = rect.top - tooltip_rect.height - margin
+          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+        } else if (placement === `left`) {
+          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
+          left = rect.left - tooltip_rect.width - margin
+        } else if (placement === `right`) {
+          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
+          left = rect.right + margin
+        } else { // bottom
+          top = rect.bottom + margin
+          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+        }
+
+        // Keep in viewport
+        const vw = globalThis.innerWidth, vh = globalThis.innerHeight
+        left = Math.max(8, Math.min(left, vw - tooltip_rect.width - 8))
+        top = Math.max(8, Math.min(top, vh - tooltip_rect.height - 8))
+
+        style.left = `${left + globalThis.scrollX}px`
+        style.top = `${top + globalThis.scrollY}px`
+        style.opacity =
+          getComputedStyle(trigger).getPropertyValue(`--tooltip-opacity`).trim() || `1`
+      })
+    }
 
     function show_tooltip() {
       // Skip tooltip on touch input when 'touch-devices' option is set
@@ -729,102 +839,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           tooltip_el.appendChild(arrow)
         }
 
-        // Shrink tooltip to fit content, then position - must happen in same frame
-        // so positioning uses final dimensions for correct centering
-        requestAnimationFrame(() => {
-          // Guard: skip if tooltip was removed before this frame (user moved away quickly)
-          if (!document.body.contains(tooltip_el)) return
-          const computed = getComputedStyle(tooltip_el)
-          const padding_h = parseFloat(computed.paddingLeft) +
-            parseFloat(computed.paddingRight)
-          const max_width = parseFloat(computed.maxWidth) || 280
-          const style = tooltip_el.style
-
-          // Save styles, measure single-line width with wrapping disabled
-          const saved = {
-            maxWidth: style.maxWidth,
-            wordWrap: style.wordWrap,
-            textWrap: style.textWrap,
-            whiteSpace: style.whiteSpace,
-          }
-          Object.assign(style, {
-            maxWidth: `none`,
-            wordWrap: `normal`,
-            textWrap: `nowrap`,
-            whiteSpace: `nowrap`,
-            width: `auto`,
-          })
-          const single_line_width = tooltip_el.offsetWidth
-          Object.assign(style, saved)
-
-          if (single_line_width <= max_width) {
-            // Single-line: set exact width and prevent wrapping
-            style.width = `${single_line_width - padding_h}px`
-            style.textWrap = `nowrap`
-          } else {
-            // Multi-line: binary search for minimum width that doesn't add line breaks
-            style.width = ``
-            const baseline_height = tooltip_el.offsetHeight
-            const initial_width = tooltip_el.offsetWidth
-
-            // Get min-content (longest word) as lower bound
-            Object.assign(style, {
-              maxWidth: `none`,
-              wordWrap: `normal`,
-              width: `min-content`,
-            })
-            const min_width = tooltip_el.offsetWidth
-            Object.assign(style, {
-              maxWidth: saved.maxWidth,
-              wordWrap: saved.wordWrap,
-              width: `${initial_width - padding_h}px`,
-            })
-
-            // Binary search for minimum width that maintains baseline height
-            let low = min_width, high = initial_width, best = initial_width
-            while (high - low > 1) {
-              const mid = Math.floor((low + high) / 2)
-              style.width = `${mid - padding_h}px`
-              if (tooltip_el.offsetHeight > baseline_height) low = mid
-              else {
-                best = mid
-                high = mid
-              }
-            }
-            style.width = `${best - padding_h}px`
-          }
-
-          // Position tooltip after width adjustment so centering uses final dimensions
-          const rect = element.getBoundingClientRect()
-          const tooltip_rect = tooltip_el.getBoundingClientRect()
-          const margin = options.offset ?? 12
-
-          let top = 0, left = 0
-          if (placement === `top`) {
-            top = rect.top - tooltip_rect.height - margin
-            left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-          } else if (placement === `left`) {
-            top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-            left = rect.left - tooltip_rect.width - margin
-          } else if (placement === `right`) {
-            top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-            left = rect.right + margin
-          } else { // bottom
-            top = rect.bottom + margin
-            left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-          }
-
-          // Keep in viewport
-          const vw = globalThis.innerWidth, vh = globalThis.innerHeight
-          left = Math.max(8, Math.min(left, vw - tooltip_rect.width - 8))
-          top = Math.max(8, Math.min(top, vh - tooltip_rect.height - 8))
-
-          style.left = `${left + globalThis.scrollX}px`
-          style.top = `${top + globalThis.scrollY}px`
-          style.opacity = getComputedStyle(element)
-            .getPropertyValue(`--tooltip-opacity`).trim() || `1`
-        })
-
+        resize_and_position_tooltip(tooltip_el, element)
         current_tooltip = Object.assign(tooltip_el, { _owner: element })
       }, options.delay || 100)
     }
