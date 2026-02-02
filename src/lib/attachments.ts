@@ -564,10 +564,13 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         content = new_content
         // Only update tooltip if this element owns it
         if (current_tooltip?._owner === element) {
-          if (options.allow_html !== false) {
-            current_tooltip.innerHTML = content.replace(/\r/g, `<br/>`)
-          } else {
-            current_tooltip.textContent = content
+          const content_el = current_tooltip.querySelector(`.tooltip-content`)
+          if (content_el) {
+            if (options.allow_html !== false) {
+              content_el.innerHTML = content.replace(/\r/g, `<br/>`)
+            } else {
+              content_el.textContent = content
+            }
           }
         }
       }
@@ -593,7 +596,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         element.setAttribute(`aria-describedby`, tooltip_id)
         // Apply base styles
         tooltip_el.style.cssText = `
-          position: absolute; z-index: 9999; opacity: 0;
+          position: absolute; z-index: 9999; opacity: 0; display: inline-block;
           background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
           padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 6px); font-size: var(--tooltip-font-size, 13px); line-height: 1.4;
           max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; text-wrap: balance; pointer-events: none;
@@ -610,12 +613,16 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           })
         }
 
+        // Wrap content in a span to measure actual rendered width
+        const content_span = document.createElement(`span`)
+        content_span.className = `tooltip-content`
         // Security: allow_html defaults to true; set to false for plain text rendering
         if (options.allow_html !== false) {
-          tooltip_el.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+          content_span.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
         } else {
-          tooltip_el.textContent = content ?? ``
+          content_span.textContent = content ?? ``
         }
+        tooltip_el.appendChild(content_span)
 
         // Mirror CSS custom properties from the trigger node onto the tooltip element
         const trigger_styles = getComputedStyle(element)
@@ -722,34 +729,101 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           tooltip_el.appendChild(arrow)
         }
 
-        // Position tooltip
-        const rect = element.getBoundingClientRect()
-        const tooltip_rect = tooltip_el.getBoundingClientRect()
-        const margin = options.offset ?? 12
+        // Shrink tooltip to fit content, then position - must happen in same frame
+        // so positioning uses final dimensions for correct centering
+        requestAnimationFrame(() => {
+          // Guard: skip if tooltip was removed before this frame (user moved away quickly)
+          if (!document.body.contains(tooltip_el)) return
+          const computed = getComputedStyle(tooltip_el)
+          const padding_h = parseFloat(computed.paddingLeft) +
+            parseFloat(computed.paddingRight)
+          const max_width = parseFloat(computed.maxWidth) || 280
+          const style = tooltip_el.style
 
-        let top = 0, left = 0
-        if (placement === `top`) {
-          top = rect.top - tooltip_rect.height - margin
-          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-        } else if (placement === `left`) {
-          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-          left = rect.left - tooltip_rect.width - margin
-        } else if (placement === `right`) {
-          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-          left = rect.right + margin
-        } else { // bottom
-          top = rect.bottom + margin
-          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-        }
+          // Save styles, measure single-line width with wrapping disabled
+          const saved = {
+            maxWidth: style.maxWidth,
+            wordWrap: style.wordWrap,
+            textWrap: style.textWrap,
+            whiteSpace: style.whiteSpace,
+          }
+          Object.assign(style, {
+            maxWidth: `none`,
+            wordWrap: `normal`,
+            textWrap: `nowrap`,
+            whiteSpace: `nowrap`,
+            width: `auto`,
+          })
+          const single_line_width = tooltip_el.offsetWidth
+          Object.assign(style, saved)
 
-        // Keep in viewport
-        left = Math.max(8, Math.min(left, globalThis.innerWidth - tooltip_rect.width - 8))
-        top = Math.max(8, Math.min(top, globalThis.innerHeight - tooltip_rect.height - 8))
+          if (single_line_width <= max_width) {
+            // Single-line: set exact width and prevent wrapping
+            style.width = `${single_line_width - padding_h}px`
+            style.textWrap = `nowrap`
+          } else {
+            // Multi-line: binary search for minimum width that doesn't add line breaks
+            style.width = ``
+            const baseline_height = tooltip_el.offsetHeight
+            const initial_width = tooltip_el.offsetWidth
 
-        tooltip_el.style.left = `${left + globalThis.scrollX}px`
-        tooltip_el.style.top = `${top + globalThis.scrollY}px`
-        const custom_opacity = trigger_styles.getPropertyValue(`--tooltip-opacity`).trim()
-        tooltip_el.style.opacity = custom_opacity || `1`
+            // Get min-content (longest word) as lower bound
+            Object.assign(style, {
+              maxWidth: `none`,
+              wordWrap: `normal`,
+              width: `min-content`,
+            })
+            const min_width = tooltip_el.offsetWidth
+            Object.assign(style, {
+              maxWidth: saved.maxWidth,
+              wordWrap: saved.wordWrap,
+              width: `${initial_width - padding_h}px`,
+            })
+
+            // Binary search for minimum width that maintains baseline height
+            let low = min_width, high = initial_width, best = initial_width
+            while (high - low > 1) {
+              const mid = Math.floor((low + high) / 2)
+              style.width = `${mid - padding_h}px`
+              if (tooltip_el.offsetHeight > baseline_height) low = mid
+              else {
+                best = mid
+                high = mid
+              }
+            }
+            style.width = `${best - padding_h}px`
+          }
+
+          // Position tooltip after width adjustment so centering uses final dimensions
+          const rect = element.getBoundingClientRect()
+          const tooltip_rect = tooltip_el.getBoundingClientRect()
+          const margin = options.offset ?? 12
+
+          let top = 0, left = 0
+          if (placement === `top`) {
+            top = rect.top - tooltip_rect.height - margin
+            left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+          } else if (placement === `left`) {
+            top = rect.top + rect.height / 2 - tooltip_rect.height / 2
+            left = rect.left - tooltip_rect.width - margin
+          } else if (placement === `right`) {
+            top = rect.top + rect.height / 2 - tooltip_rect.height / 2
+            left = rect.right + margin
+          } else { // bottom
+            top = rect.bottom + margin
+            left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+          }
+
+          // Keep in viewport
+          const vw = globalThis.innerWidth, vh = globalThis.innerHeight
+          left = Math.max(8, Math.min(left, vw - tooltip_rect.width - 8))
+          top = Math.max(8, Math.min(top, vh - tooltip_rect.height - 8))
+
+          style.left = `${left + globalThis.scrollX}px`
+          style.top = `${top + globalThis.scrollY}px`
+          style.opacity = getComputedStyle(element)
+            .getPropertyValue(`--tooltip-opacity`).trim() || `1`
+        })
 
         current_tooltip = Object.assign(tooltip_el, { _owner: element })
       }, options.delay || 100)
