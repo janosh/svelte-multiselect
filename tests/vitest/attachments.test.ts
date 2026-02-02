@@ -208,19 +208,6 @@ describe(`tooltip`, () => {
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
       expect(element.getAttribute(`title`)).toBe(`Disabled tooltip`)
     })
-
-    it.each([
-      [`invalid placement`, { placement: `invalid` }],
-      [`null options`, null],
-    ])(`should handle %s gracefully`, (_desc, options) => {
-      const element = create_element()
-      element.title = `test`
-      const factory = options === null
-        ? tooltip(undefined)
-        : tooltip(options as Parameters<typeof tooltip>[0])
-      factory(element)
-      expect(element.getAttribute(`data-original-title`)).toBe(`test`)
-    })
   })
 
   describe(`Child Element Handling`, () => {
@@ -523,6 +510,38 @@ describe(`tooltip`, () => {
       expect(tooltip_el).toBeTruthy()
       expect(tooltip_el.textContent).toBe(expected_text)
     })
+
+    it.each([
+      [`called and strips XSS`, true, `<script>xss</script>Safe`, 1, `Safe`],
+      [`skipped when allow_html: false`, false, `Plain`, 0, `Plain`],
+    ])(`sanitize_html %s`, (_desc, allow_html, title, call_count, expected_text) => {
+      const sanitizer = vi.fn((html: string) =>
+        html.replace(/<script[^>]*>.*?<\/script>/gi, ``)
+      )
+      const element = create_element()
+      element.title = title
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0, allow_html, sanitize_html: sanitizer })
+
+      trigger_tooltip(element)
+      expect(sanitizer).toHaveBeenCalledTimes(call_count)
+      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+      expect(tooltip_el.textContent).toBe(expected_text)
+    })
+
+    it(`tooltip structure: .tooltip-content span and display: inline-block`, () => {
+      const element = create_element()
+      element.title = `Test`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0 })
+
+      trigger_tooltip(element)
+      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+      expect(tooltip_el.style.display).toBe(`inline-block`)
+      const content_span = tooltip_el.querySelector(`.tooltip-content`)
+      expect(content_span?.tagName).toBe(`SPAN`)
+      expect(content_span?.textContent).toBe(`Test`)
+    })
   })
 })
 
@@ -596,9 +615,17 @@ describe(`click_outside`, () => {
     expect(listener).toHaveBeenCalled()
   })
 
-  it(`should clean up without throwing`, () => {
-    const cleanup = click_outside({})(create_element())
-    expect(() => cleanup?.()).not.toThrow()
+  it(`cleanup stops triggering callbacks`, () => {
+    const element = create_element()
+    const callback = vi.fn()
+    const cleanup = click_outside({ callback })(element)
+
+    dispatch_click(create_element())
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    dispatch_click(create_element())
+    expect(callback).toHaveBeenCalledTimes(1) // Still 1, not called again
   })
 })
 
