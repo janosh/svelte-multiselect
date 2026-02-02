@@ -506,6 +506,8 @@ export interface TooltipOptions {
   // content via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to
   // prevent XSS. Set to false to render content as plain text.
   allow_html?: boolean
+  // Optional sanitizer for HTML content - called before setting innerHTML when allow_html is true
+  sanitize_html?: (html: string) => string
 }
 
 export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Element) => {
@@ -567,7 +569,9 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           const content_el = current_tooltip.querySelector(`.tooltip-content`)
           if (content_el) {
             if (options.allow_html !== false) {
-              content_el.innerHTML = content.replace(/\r/g, `<br/>`)
+              let html = content.replace(/\r/g, `<br/>`)
+              if (options.sanitize_html) html = options.sanitize_html(html)
+              content_el.innerHTML = html
             } else {
               content_el.textContent = content
             }
@@ -583,7 +587,6 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
     function resize_and_position_tooltip(tooltip_el: HTMLElement, trigger: Element) {
       // Reset width to allow natural sizing before measuring
       tooltip_el.style.width = ``
-      tooltip_el.style.textWrap = ``
 
       requestAnimationFrame(() => {
         if (!document.body.contains(tooltip_el)) return
@@ -592,7 +595,14 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           parseFloat(computed.paddingRight)
         const border_h = parseFloat(computed.borderLeftWidth) +
           parseFloat(computed.borderRightWidth)
-        const max_width = parseFloat(computed.maxWidth) || 280
+        // Handle max-width: none as unbounded, fallback to 280 only for invalid values
+        const max_width_raw = computed.maxWidth
+        const max_width_parsed = parseFloat(max_width_raw)
+        const max_width = max_width_raw === `none`
+          ? Infinity
+          : Number.isFinite(max_width_parsed)
+          ? max_width_parsed
+          : 280
         // With border-box, width includes padding+border; with content-box, subtract them
         const box_adjust = computed.boxSizing === `border-box` ? 0 : padding_h + border_h
         const style = tooltip_el.style
@@ -734,7 +744,9 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         content_span.className = `tooltip-content`
         // Security: allow_html defaults to true; set to false for plain text rendering
         if (options.allow_html !== false) {
-          content_span.innerHTML = content?.replace(/\r/g, `<br/>`) ?? ``
+          let html = content?.replace(/\r/g, `<br/>`) ?? ``
+          if (options.sanitize_html) html = options.sanitize_html(html)
+          content_span.innerHTML = html
         } else {
           content_span.textContent = content ?? ``
         }
