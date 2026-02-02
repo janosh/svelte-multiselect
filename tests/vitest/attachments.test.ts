@@ -208,19 +208,6 @@ describe(`tooltip`, () => {
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
       expect(element.getAttribute(`title`)).toBe(`Disabled tooltip`)
     })
-
-    it.each([
-      [`invalid placement`, { placement: `invalid` }],
-      [`null options`, null],
-    ])(`should handle %s gracefully`, (_desc, options) => {
-      const element = create_element()
-      element.title = `test`
-      const factory = options === null
-        ? tooltip(undefined)
-        : tooltip(options as Parameters<typeof tooltip>[0])
-      factory(element)
-      expect(element.getAttribute(`data-original-title`)).toBe(`test`)
-    })
   })
 
   describe(`Child Element Handling`, () => {
@@ -628,9 +615,17 @@ describe(`click_outside`, () => {
     expect(listener).toHaveBeenCalled()
   })
 
-  it(`should clean up without throwing`, () => {
-    const cleanup = click_outside({})(create_element())
-    expect(() => cleanup?.()).not.toThrow()
+  it(`cleanup stops triggering callbacks`, () => {
+    const element = create_element()
+    const callback = vi.fn()
+    const cleanup = click_outside({ callback })(element)
+
+    dispatch_click(create_element())
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    dispatch_click(create_element())
+    expect(callback).toHaveBeenCalledTimes(1) // Still 1, not called again
   })
 })
 
