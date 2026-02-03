@@ -2,7 +2,9 @@
 import {
   EXAMPLE_COMPONENT_PREFIX,
   EXAMPLE_MODULE_PREFIX,
+  hast_to_html,
   mdsvex_transform,
+  starry_night,
   starry_night_highlighter,
   sveltePreprocess,
   vite_plugin,
@@ -28,6 +30,9 @@ describe(`module exports`, () => {
     expect(typeof vite_plugin).toBe(`function`)
     expect(typeof sveltePreprocess).toBe(`function`)
     expect(typeof starry_night_highlighter).toBe(`function`)
+    expect(typeof hast_to_html).toBe(`function`)
+    expect(typeof starry_night.flagToScope).toBe(`function`)
+    expect(starry_night.flagToScope(`svelte`)).toBe(`source.svelte`)
     expect(EXAMPLE_MODULE_PREFIX).toBe(`___live_example___`)
     expect(EXAMPLE_COMPONENT_PREFIX).toBe(`LiveExample___`)
   })
