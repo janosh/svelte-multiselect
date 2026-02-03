@@ -3,8 +3,8 @@ import remark, {
   EXAMPLE_COMPONENT_PREFIX,
   EXAMPLE_MODULE_PREFIX,
 } from '$lib/live-examples/mdsvex-transform'
-import { describe, expect, test } from 'vitest'
 import { Buffer } from 'node:buffer'
+import { describe, expect, test } from 'vitest'
 
 // Minimal types for testing
 interface TestNode {
@@ -90,9 +90,9 @@ describe(`code block detection`, () => {
   )
 
   test(`ignores unsupported languages even with example meta`, () => {
-    const tree = create_tree([create_code_node(`python`, `print("hello")`, `example`)])
+    const tree = create_tree([create_code_node(`cobol`, `DISPLAY "hello"`, `example`)])
     remark()(tree, create_file())
-    expect(tree.children[0]).toMatchObject({ type: `code`, lang: `python` })
+    expect(tree.children[0]).toMatchObject({ type: `code`, lang: `cobol` })
   })
 })
 

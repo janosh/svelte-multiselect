@@ -2,7 +2,7 @@
 import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import type { HastRoot } from './highlighter.ts'
-import { hast_to_html, LANG_TO_SCOPE, starry_night } from './highlighter.ts'
+import { hast_to_html, starry_night } from './highlighter.ts'
 
 // Base64 encode to prevent preprocessors from modifying the content
 const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
@@ -28,9 +28,6 @@ export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
 
 // Languages that render as live Svelte components (O(1) lookup)
 const LIVE_LANGUAGES = new Set([`svelte`, `html`])
-
-// All languages that support the `example` meta (O(1) lookup)
-const EXAMPLE_LANGUAGES = new Set(Object.keys(LANG_TO_SCOPE))
 
 interface RemarkMeta {
   Wrapper?: string | [string, string]
@@ -115,7 +112,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       const { csr, example, Wrapper } = meta
 
       // find code blocks with `example` meta in supported languages
-      if (example && node.lang && EXAMPLE_LANGUAGES.has(node.lang)) {
+      if (example && node.lang && starry_night.flagToScope(node.lang)) {
         const is_live = LIVE_LANGUAGES.has(node.lang)
         const wrapper_alias = is_live ? get_wrapper_alias(Wrapper ?? DEFAULT_WRAPPER) : ``
 
@@ -216,7 +213,9 @@ function create_example_component(
   wrapper_alias: string,
 ): string {
   const code = format_code(value, meta)
-  const tree = starry_night.highlight(code, LANG_TO_SCOPE[lang]) as HastRoot
+  const scope = starry_night.flagToScope(lang)
+  if (!scope) throw new Error(`Unsupported language: ${lang}`)
+  const tree = starry_night.highlight(code, scope) as HastRoot
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
   const highlighted = hast_to_html(tree).replace(/\n/g, `&#10;`)
 
