@@ -1,5 +1,18 @@
 # Changelog
 
+## [v11.6.1](https://github.com/janosh/svelte-multiselect/compare/v11.6.0...v11.6.1)
+
+> 3 February 2026
+
+- fix: use value field for key function to prevent case-variant crashes by @davidamacey in https://github.com/janosh/svelte-multiselect/pull/392
+- Add dropdown cooldown and CSS custom properties to Nav by @janosh in https://github.com/janosh/svelte-multiselect/pull/393
+- Add tooltip shrink-to-fit algorithm and fix reactive content updates by @janosh in https://github.com/janosh/svelte-multiselect/pull/394
+- Simplify syntax highlighting with starry-night common bundle by @janosh in https://github.com/janosh/svelte-multiselect/pull/395
+
+## New Contributors
+
+- @davidamacey made their first contribution in https://github.com/janosh/svelte-multiselect/pull/392
+
 ## [v11.6.0](https://github.com/janosh/svelte-multiselect/compare/v11.5.2...v11.6.0)
 
 > 25 January 2026
