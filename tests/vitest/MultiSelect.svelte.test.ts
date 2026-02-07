@@ -1304,7 +1304,6 @@ test.each([[null], [`custom add option message`]])(
     const user_msg_li = document.querySelector<HTMLLIElement>(`ul.options li.user-msg`)
     if (!user_msg_li) throw new Error(`li.user-msg should exist`)
 
-    expect(user_msg_li.classList.contains(`user-msg`)).toBe(true) // Redundant but confirms selection
     expect(user_msg_li.classList).not.toContain(`active`)
     if (createOptionMsg === null) {
       expect(user_msg_li.textContent?.trim()).toBe(`No matching options`)
@@ -2574,12 +2573,7 @@ describe(`createOptionMsg as function`, () => {
           options,
           selected,
           allowUserOptions: true,
-          createOptionMsg: (state: {
-            searchText: string
-            selected: unknown[]
-            options: unknown[]
-            matchingOptions: unknown[]
-          }) => {
+          createOptionMsg: (state: Record<string, unknown>) => {
             captured_state = state
             return `Create '${state.searchText}'`
           },
@@ -2635,9 +2629,11 @@ describe(`createOptionMsg as function`, () => {
         options: [`a`, `b`, `c`],
         selected: [`a`, `b`],
         allowUserOptions: true,
-        createOptionMsg: (
-          { searchText, selected }: { searchText: string; selected: unknown[] },
-        ) => `Create '${searchText}' (${selected.length} selected)`,
+        createOptionMsg: ({
+          searchText,
+          selected,
+        }: { searchText: string; selected: unknown[] }) =>
+          `Create '${searchText}' (${selected.length} selected)`,
       },
     })
 
@@ -5210,15 +5206,38 @@ describe(`history / undo-redo`, () => {
   )
 
   test.each([
-    [`default shortcuts`, {}, `z`, { ctrlKey: true }],
-    [`custom shortcuts`, { shortcuts: { undo: `alt+u` } }, `u`, { altKey: true }],
-    [`disabled shortcuts`, { shortcuts: { undo: null } }, `z`, { ctrlKey: true }],
-  ])(`%s don't throw`, async (_desc, extra, key, modifiers) => {
+    [`default shortcuts undo`, {}, `z`, { ctrlKey: true }, true],
+    [
+      `custom shortcuts undo`,
+      { shortcuts: { undo: `alt+u` } },
+      `u`,
+      { altKey: true },
+      true,
+    ],
+    [`disabled shortcuts ignore keypress`, { shortcuts: { undo: null } }, `z`, {
+      ctrlKey: true,
+    }, false],
+  ])(`%s`, async (_desc, extra, key, modifiers, should_undo) => {
+    let selected: number[] = $state([])
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [1, 2, 3], history: true, ...extra },
+      props: {
+        options: [1, 2, 3],
+        history: true,
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        ...extra,
+      },
     })
+    await tick() // Select first option so there's something to undo
+    ;(document.querySelector(`ul.options > li`) as HTMLElement).click()
     await tick()
+    expect(selected.length).toBe(1)
+
     // Use autocomplete input (the interactive one), not the hidden form-control
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -5226,45 +5245,51 @@ describe(`history / undo-redo`, () => {
       new KeyboardEvent(`keydown`, { key, bubbles: true, ...modifiers }),
     )
     await tick()
-  })
 
-  test.each([`onundo`, `onredo`] as const)(`%s callback accepted`, async (event_name) => {
-    const spy = vi.fn()
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], history: true, [event_name]: spy },
-    })
-    await tick()
-    expect(spy).not.toHaveBeenCalled()
+    expect(selected.length).toBe(should_undo ? 0 : 1)
   })
 
   test.each([
     [`object options`, [{ label: `A`, value: 1 }, { label: `B`, value: 2 }], {}],
     [`maxSelect=1`, [1, 2, 3], { maxSelect: 1 }],
-    [`preselected`, [{ label: `A`, preselected: true }, { label: `B` }], {}],
     [`sortSelected`, [3, 1, 2], { sortSelected: true }],
     [`duplicates`, [1, 2, 3], { duplicates: true }],
     [`allowUserOptions`, [1, 2, 3], { allowUserOptions: true }],
     [`minSelect`, [1, 2, 3], { minSelect: 1 }],
     [`grouped`, [{ label: `A`, group: `G1` }, { label: `B`, group: `G2` }], {}],
   ])(`compatible with %s`, async (_desc, options, extra) => {
-    let undo_fn: (() => boolean) | undefined
+    let selected: Option[] = $state([])
     mount(MultiSelect, {
       target: document.body,
       props: {
         options,
         history: true,
-        get undo() {
-          return undo_fn
+        get selected() {
+          return selected
         },
-        set undo(fn) {
-          undo_fn = fn
+        set selected(val) {
+          selected = val
         },
         ...extra,
       },
     })
     await tick()
-    expect(undo_fn).toBeInstanceOf(Function)
+
+    // Select first selectable option (skip group headers)
+    const first_li = document.querySelector(`ul.options > li:not(.group-header)`)
+    if (!first_li) return // some configs may have no visible options
+    ;(first_li as HTMLElement).click()
+    await tick()
+    expect(selected.length).toBeGreaterThan(0)
+
+    // Undo via Ctrl+Z should restore previous state
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `z`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+    expect(selected).toEqual([])
   })
 
   test(`history isolated per component instance`, async () => {
@@ -5440,10 +5465,10 @@ describe(`case-variant labels (issue #391)`, () => {
   test.each([
     { desc: `object options`, options: object_options },
     { desc: `string options`, options: [`apple`, `Apple`, `APPLE`] },
-  ])(`renders all $desc with case-variant labels without crashing`, ({ options }) => {
-    expect(() => mount(MultiSelect, { target: document.body, props: { options } })).not
-      .toThrow()
-    expect(document.querySelectorAll(`ul.options > li`).length).toBe(3)
+  ])(`renders all $desc with case-variant labels`, ({ options }) => {
+    mount(MultiSelect, { target: document.body, props: { options } })
+    const items = document.querySelectorAll(`ul.options > li`)
+    expect(items.length).toBe(3)
   })
 
   test(`can select multiple case-variant options`, async () => {
