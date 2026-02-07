@@ -17,6 +17,7 @@
     '🍇 Grapes, 🍈 Melon, 🍉 Watermelon, 🍊 Tangerine'.split(', '),
   )
   let duplicates = $state(false)
+  let last_created: string | null = $state(null)
 </script>
 
 <MultiSelect
@@ -24,12 +25,24 @@
   allowUserOptions
   {duplicates}
   bind:selected
+  createOptionMsg={({ searchText }) => `Add '${searchText}' as custom food`}
+  oncreate={({ option }) => last_created = String(option)}
 />
+
+{#if last_created}
+  <p style="color: mediumseagreen; margin-top: 0.5em">
+    ✓ Created custom option: {last_created}
+  </p>
+{/if}
 
 <label for="duplicates" style="display: block; margin-top: 1em">
   Allow duplicates
   <Toggle bind:checked={duplicates} id="duplicates" />
 </label>
+
+<p style="margin-top: 0.5em">
+  Selected ({selected.length}): {selected.join(', ') || 'none'}
+</p>
 ```
 
 ## Append User Input
@@ -49,12 +62,15 @@
   options={languages}
   allowUserOptions="append"
   bind:selected={selected_append}
-  createOptionMsg="True polyglots can enter custom languages!"
+  createOptionMsg={({ searchText, options }) =>
+  `Add '${searchText}' (${options.length} languages available)`}
 >
   {#snippet children({ option })}
     <LanguageSnippet {option} />
   {/snippet}
 </MultiSelect>
+
+<p style="margin-top: 0.5em">Selected: {selected_append.join(', ')}</p>
 ```
 
 ## Start empty

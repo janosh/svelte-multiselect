@@ -12,18 +12,22 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
     event: string
     data: string
     timestamp: string
+    number: number
   }
 
   let events: EventLogEntry[] = $state([])
+  let event_counter = $state(0)
   let selected_options: string[] = $state([])
   let allowUserOptions = $state(true)
 
   function log_event(event_name: string, data: unknown): void {
+    event_counter++
     events = [
       {
         event: event_name,
         data: JSON.stringify(data, null, 2),
         timestamp: new Date().toLocaleTimeString(),
+        number: event_counter,
       },
       ...events.slice(0, 9), // Keep last 10 events
     ]
@@ -45,7 +49,7 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
       options={colors}
       placeholder="Select colors or type to create custom..."
       {allowUserOptions}
-      createOptionMsg="Create custom color..."
+      createOptionMsg={({ searchText }) => `Create custom color '${searchText}'`}
       maxSelect={5}
       onadd={(data) => log_event('onadd', data)}
       onremove={(data) => log_event('onremove', data)}
@@ -90,13 +94,22 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
   <section class="event-log">
     <header class="log-header">
       <h3 style="margin: 0">Event Log</h3>
-      <button onclick={() => events = []}>Clear</button>
+      <button
+        onclick={() => {
+          events = []
+          event_counter = 0
+        }}
+      >
+        Clear
+      </button>
     </header>
 
     {#each events as entry}
       <article class="log-entry">
         <header class="entry-header">
-          <span class="event-name">{entry.event}</span>
+          <span><span style="color: light-dark(#999, #666)">#{entry.number}</span> <span
+              class="event-name"
+            >{entry.event}</span></span>
           <span class="timestamp">{entry.timestamp}</span>
         </header>
         <pre class="log-data">{entry.data}</pre>
