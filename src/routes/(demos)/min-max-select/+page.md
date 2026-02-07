@@ -13,6 +13,9 @@
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
+
+  let selected: string[] = $state(['JavaScript'])
+  let max_msg: string | null = $state(null)
 </script>
 
 <MultiSelect
@@ -20,12 +23,18 @@
   maxSelect={5}
   placeholder="What languages do you know?"
   minSelect={1}
-  selected={['JavaScript']}
+  bind:selected
+  onmaxreached={() => max_msg = `Maximum of 5 reached!`}
 >
   {#snippet children({ option })}
     <LanguageSnippet {option} />
   {/snippet}
 </MultiSelect>
+
+<p style="margin-top: 0.5em">
+  Selected ({selected.length}/5): {selected.join(', ')}
+  {#if max_msg}<span style="color: #e74c3c; margin-left: 1em">{max_msg}</span>{/if}
+</p>
 ```
 
 <FileDetails files={[
