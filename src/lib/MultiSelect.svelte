@@ -651,8 +651,8 @@
     }
   })
 
-  // Resolve createOptionMsg (supports string or function receiving component state)
-  const resolve_create_msg = (): string | null => {
+  // Resolve createOptionMsg to a string (supports string, function, or null)
+  const resolved_create_msg = $derived.by(() => {
     if (createOptionMsg == null) return null
     if (typeof createOptionMsg === `function`) {
       return createOptionMsg({
@@ -660,10 +660,10 @@
         selected,
         options: effective_options,
         matchingOptions,
-      })
+      }) || null // coerce empty string to null so truthiness checks work
     }
     return createOptionMsg
-  }
+  })
 
   let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
   let window_width = $state(0)
@@ -886,7 +886,7 @@
   const has_user_msg = $derived(
     searchText.length > 0 &&
       Boolean(
-        (allowUserOptions && createOptionMsg) ||
+        (allowUserOptions && resolved_create_msg) ||
           (duplicates !== true && is_label_selected(searchText)) ||
           (navigable_options.length === 0 && noMatchingOptionsMsg),
       ),
@@ -1742,14 +1742,14 @@
       {/each}
       {#if searchText}
         {@const is_dupe = duplicates !== true && is_label_selected(searchText) && `dupe`}
-        {@const can_create = Boolean(allowUserOptions && createOptionMsg) && `create`}
+        {@const can_create = Boolean(allowUserOptions && resolved_create_msg) && `create`}
         {@const no_match =
         Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg) &&
         `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {@const msg = msgType && {
         dupe: duplicateOptionMsg,
-        create: resolve_create_msg(),
+        create: resolved_create_msg,
         'no-match': noMatchingOptionsMsg,
       }[msgType]}
         {@const can_add_user_option = msgType === `create` && allowUserOptions}

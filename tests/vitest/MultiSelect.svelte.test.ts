@@ -2601,10 +2601,11 @@ describe(`createOptionMsg as function`, () => {
     },
   )
 
-  // Static string and null backward compat
+  // Static string, null, and function returning empty string
   test.each([
     [`Create this option...`, `Create this option...`],
     [null, `No matches`],
+    [() => ``, `No matches`], // function returning '' should not show phantom create slot
   ])(
     `createOptionMsg=%s shows correct user message`,
     async (createOptionMsg, expected_text) => {
