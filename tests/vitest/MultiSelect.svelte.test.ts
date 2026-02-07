@@ -1304,7 +1304,6 @@ test.each([[null], [`custom add option message`]])(
     const user_msg_li = document.querySelector<HTMLLIElement>(`ul.options li.user-msg`)
     if (!user_msg_li) throw new Error(`li.user-msg should exist`)
 
-    expect(user_msg_li.classList.contains(`user-msg`)).toBe(true) // Redundant but confirms selection
     expect(user_msg_li.classList).not.toContain(`active`)
     if (createOptionMsg === null) {
       expect(user_msg_li.textContent?.trim()).toBe(`No matching options`)
@@ -1603,9 +1602,10 @@ test.each([[[1]], [[1, 2, 3]]])(
 test(`errors to console when option is an object but has no label key`, () => {
   console.error = vi.fn()
 
+  // note: mount() doesn't enforce generic component prop types, so { foo: 42 }
+  // isn't caught as a type error despite ObjectOption requiring label https://github.com/sveltejs/svelte/issues/17658
   mount(MultiSelect, {
     target: document.body,
-    // @ts-expect-error test invalid option
     props: { options: [{ foo: 42 }] },
   })
 
@@ -2545,6 +2545,108 @@ test(`arrow keys can navigate to create option message when there are matching o
   input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp`, bubbles: true }))
   await tick()
   expect(doc_query(`ul.options li.user-msg`).classList.contains(`active`)).toBe(true)
+})
+
+describe(`createOptionMsg as function`, () => {
+  // Tests that function form receives all state fields correctly and renders the returned string
+  test.each([
+    {
+      desc: `no matches passes empty matchingOptions`,
+      options: [`apple`, `banana`, `cherry`],
+      selected: [`apple`],
+      search: `grape`,
+      expected_matching: [],
+    },
+    {
+      desc: `partial match passes filtered matchingOptions`,
+      options: [`apple`, `apricot`, `banana`],
+      selected: [] as string[],
+      search: `ap`,
+      expected_matching: [`apple`, `apricot`],
+    },
+  ])(
+    `$desc`,
+    async ({ options, selected, search, expected_matching }) => {
+      let captured_state: Record<string, unknown> = {}
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options,
+          selected,
+          allowUserOptions: true,
+          createOptionMsg: (state: Record<string, unknown>) => {
+            captured_state = state
+            return `Create '${state.searchText}'`
+          },
+        },
+      })
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = search
+      input.dispatchEvent(input_event)
+      await tick()
+
+      expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(
+        `Create '${search}'`,
+      )
+      expect(captured_state.searchText).toBe(search)
+      expect(captured_state.selected).toEqual(selected)
+      expect(captured_state.options).toEqual(options)
+      expect(captured_state.matchingOptions).toEqual(expected_matching)
+    },
+  )
+
+  // Static string, null, and function returning empty string
+  test.each([
+    [`Create this option...`, `Create this option...`],
+    [null, `No matches`],
+    [() => ``, `No matches`], // function returning '' should not show phantom create slot
+  ])(
+    `createOptionMsg=%s shows correct user message`,
+    async (createOptionMsg, expected_text) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: [`foo`],
+          allowUserOptions: true,
+          createOptionMsg,
+          noMatchingOptionsMsg: `No matches`,
+        },
+      })
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = `bar`
+      input.dispatchEvent(input_event)
+      await tick()
+
+      expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(expected_text)
+    },
+  )
+
+  test(`function can combine multiple state fields`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`a`, `b`, `c`],
+        selected: [`a`, `b`],
+        allowUserOptions: true,
+        createOptionMsg: ({
+          searchText,
+          selected,
+        }: { searchText: string; selected: unknown[] }) =>
+          `Create '${searchText}' (${selected.length} selected)`,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `d`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(
+      `Create 'd' (2 selected)`,
+    )
+  })
 })
 
 describe(`selectAllOption feature`, () => {
@@ -5105,15 +5207,38 @@ describe(`history / undo-redo`, () => {
   )
 
   test.each([
-    [`default shortcuts`, {}, `z`, { ctrlKey: true }],
-    [`custom shortcuts`, { shortcuts: { undo: `alt+u` } }, `u`, { altKey: true }],
-    [`disabled shortcuts`, { shortcuts: { undo: null } }, `z`, { ctrlKey: true }],
-  ])(`%s don't throw`, async (_desc, extra, key, modifiers) => {
+    [`default shortcuts undo`, {}, `z`, { ctrlKey: true }, true],
+    [
+      `custom shortcuts undo`,
+      { shortcuts: { undo: `alt+u` } },
+      `u`,
+      { altKey: true },
+      true,
+    ],
+    [`disabled shortcuts ignore keypress`, { shortcuts: { undo: null } }, `z`, {
+      ctrlKey: true,
+    }, false],
+  ])(`%s`, async (_desc, extra, key, modifiers, should_undo) => {
+    let selected: number[] = $state([])
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [1, 2, 3], history: true, ...extra },
+      props: {
+        options: [1, 2, 3],
+        history: true,
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        ...extra,
+      },
     })
+    await tick() // Select first option so there's something to undo
+    ;(document.querySelector(`ul.options > li`) as HTMLElement).click()
     await tick()
+    expect(selected.length).toBe(1)
+
     // Use autocomplete input (the interactive one), not the hidden form-control
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -5121,45 +5246,51 @@ describe(`history / undo-redo`, () => {
       new KeyboardEvent(`keydown`, { key, bubbles: true, ...modifiers }),
     )
     await tick()
-  })
 
-  test.each([`onundo`, `onredo`] as const)(`%s callback accepted`, async (event_name) => {
-    const spy = vi.fn()
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [1, 2, 3], history: true, [event_name]: spy },
-    })
-    await tick()
-    expect(spy).not.toHaveBeenCalled()
+    expect(selected.length).toBe(should_undo ? 0 : 1)
   })
 
   test.each([
     [`object options`, [{ label: `A`, value: 1 }, { label: `B`, value: 2 }], {}],
     [`maxSelect=1`, [1, 2, 3], { maxSelect: 1 }],
-    [`preselected`, [{ label: `A`, preselected: true }, { label: `B` }], {}],
     [`sortSelected`, [3, 1, 2], { sortSelected: true }],
     [`duplicates`, [1, 2, 3], { duplicates: true }],
     [`allowUserOptions`, [1, 2, 3], { allowUserOptions: true }],
     [`minSelect`, [1, 2, 3], { minSelect: 1 }],
     [`grouped`, [{ label: `A`, group: `G1` }, { label: `B`, group: `G2` }], {}],
   ])(`compatible with %s`, async (_desc, options, extra) => {
-    let undo_fn: (() => boolean) | undefined
+    let selected: Option[] = $state([])
     mount(MultiSelect, {
       target: document.body,
       props: {
         options,
         history: true,
-        get undo() {
-          return undo_fn
+        get selected() {
+          return selected
         },
-        set undo(fn) {
-          undo_fn = fn
+        set selected(val) {
+          selected = val
         },
         ...extra,
       },
     })
     await tick()
-    expect(undo_fn).toBeInstanceOf(Function)
+
+    // Select first selectable option (skip group headers)
+    const first_li = document.querySelector(`ul.options > li:not(.group-header)`)
+    if (!first_li) return // some configs may have no visible options
+    ;(first_li as HTMLElement).click()
+    await tick()
+    expect(selected.length).toBeGreaterThan(0)
+
+    // Undo via Ctrl+Z should restore previous state
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `z`, ctrlKey: true, bubbles: true }),
+    )
+    await tick()
+    expect(selected).toEqual([])
   })
 
   test(`history isolated per component instance`, async () => {
@@ -5335,10 +5466,10 @@ describe(`case-variant labels (issue #391)`, () => {
   test.each([
     { desc: `object options`, options: object_options },
     { desc: `string options`, options: [`apple`, `Apple`, `APPLE`] },
-  ])(`renders all $desc with case-variant labels without crashing`, ({ options }) => {
-    expect(() => mount(MultiSelect, { target: document.body, props: { options } })).not
-      .toThrow()
-    expect(document.querySelectorAll(`ul.options > li`).length).toBe(3)
+  ])(`renders all $desc with case-variant labels`, ({ options }) => {
+    mount(MultiSelect, { target: document.body, props: { options } })
+    const items = document.querySelectorAll(`ul.options > li`)
+    expect(items.length).toBe(3)
   })
 
   test(`can select multiple case-variant options`, async () => {

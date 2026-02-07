@@ -29,7 +29,7 @@ repos:
         args: [--config, deno.jsonc, --permit-no-files, --fix]
       - id: svelte-check
         name: Svelte type check
-        entry: bash -c 'deno run -A npm:@sveltejs/kit sync && deno run -A npm:svelte-check --fail-on-warnings --threshold error'
+        entry: bash -c 'deno run -A npm:@sveltejs/kit sync && deno run -A npm:svelte-check-rs@latest --fail-on-warnings --threshold error'
         language: system
         types_or: [ts, svelte]
         pass_filenames: false
@@ -48,7 +48,7 @@ repos:
         exclude: changelog\.md
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.0.0-rc.1
+    rev: v10.0.0
     hooks:
       - id: eslint
         types: [file]

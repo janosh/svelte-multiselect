@@ -128,7 +128,7 @@
 
   function schedule_hide(href: string, is_pinned: boolean) {
     if (is_touch_device || is_pinned) return
-    clearTimeout(hide_timeout!)
+    if (hide_timeout) clearTimeout(hide_timeout)
     hide_timeout = setTimeout(() => {
       if (hovered_dropdown === href) hovered_dropdown = null
     }, dropdown_cooldown)
@@ -282,7 +282,7 @@
     <a
       href={parsed_route.href}
       aria-current={is_current(parsed_route.href)}
-      onclick={(event) => handle_link_click(event, parsed_route)}
+      onclick={(event: MouseEvent) => handle_link_click(event, parsed_route)}
       class={parsed_route.class}
       {...link_props}
       {...get_external_attrs(parsed_route)}
@@ -362,7 +362,7 @@
           onmouseenter={() => open_dropdown(parsed_route.href, true)}
           onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
           onfocusin={() => open_dropdown(parsed_route.href)}
-          onfocusout={(event) => {
+          onfocusout={(event: FocusEvent) => {
             const next = event.relatedTarget as Node | null
             if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
               if (!is_pinned) hovered_dropdown = null
@@ -381,7 +381,7 @@
               <a
                 href={parsed_route.href}
                 aria-current={is_current(parsed_route.href)}
-                onclick={(event) => handle_link_click(event, parsed_route)}
+                onclick={(event: MouseEvent) => handle_link_click(event, parsed_route)}
                 class={parsed_route.class}
                 style={`${formatted.style}; ${parsed_route.style ?? ``}`}
                 {...get_external_attrs(parsed_route)}
@@ -405,7 +405,7 @@
               aria-expanded={dropdown_open}
               aria-haspopup="true"
               onclick={() => toggle_dropdown(parsed_route.href, false)}
-              onkeydown={(event) =>
+              onkeydown={(event: KeyboardEvent) =>
               handle_dropdown_keydown(
                 event,
                 parsed_route.href,
@@ -420,7 +420,15 @@
             role="menu"
             tabindex="-1"
             onmouseenter={() => open_dropdown(parsed_route.href, true)}
-            onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
+            onmouseleave={(event: MouseEvent) => {
+              // Don't schedule hide if mouse moved to sibling element within same dropdown
+              const related = event.relatedTarget as Node | null
+              const dropdown_el = (event.currentTarget as Element).closest(
+                `.dropdown`,
+              )
+              if (related && dropdown_el?.contains(related)) return
+              schedule_hide(parsed_route.href, is_pinned)
+            }}
           >
             {#each filtered_sub_routes as child_href (child_href)}
               {@const child_formatted = format_label(child_href, true)}
@@ -432,8 +440,10 @@
                   href={child_href}
                   role="menuitem"
                   aria-current={is_current(child_href)}
-                  onclick={(event) => handle_link_click(event, { href: child_href })}
-                  onkeydown={(event) => handle_dropdown_item_keydown(event, parsed_route.href)}
+                  onclick={(event: MouseEvent) =>
+                  handle_link_click(event, { href: child_href })}
+                  onkeydown={(event: KeyboardEvent) =>
+                  handle_dropdown_item_keydown(event, parsed_route.href)}
                   {...link_props}
                   style={`${child_formatted.style}; ${link_props?.style ?? ``}`}
                   {@attach child_tooltip}
@@ -623,7 +633,7 @@
     border: 1px solid var(--nav-dropdown-border-color, var(--nav-surface-border));
     border-radius: var(--nav-border-radius, 6pt);
     box-shadow: var(--nav-dropdown-shadow, var(--nav-surface-shadow));
-    padding: var(--nav-dropdown-padding, 3pt 0);
+    padding: var(--nav-dropdown-padding, 0);
     display: none;
     flex-direction: column;
     z-index: var(--nav-dropdown-z-index, 100);

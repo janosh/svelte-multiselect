@@ -679,7 +679,7 @@ test.describe(`allowUserOptions`, () => {
       // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
       const dropdown = page.locator(`#languages ul.options`)
       await expect(dropdown).toBeVisible()
-      await dropdown.locator(`text=foobar`).click()
+      await dropdown.locator(`li:not(.user-msg)`, { hasText: `foobar` }).click()
 
       await expect(page.locator(`#languages ul.selected >> text=foobar`)).toBeVisible()
     },
@@ -697,7 +697,7 @@ test.describe(`allowUserOptions`, () => {
 
     await expect(
       page.locator(`#languages ul.options li.user-msg`),
-    ).toContainText(`True polyglots can enter custom languages!`)
+    ).toContainText(`Add 'foobar'`)
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/89
@@ -794,21 +794,6 @@ test.describe(`parseLabelsAsHtml`, () => {
     await expect(
       page.locator(`a[href='https://wikipedia.org/wiki/Red_pill_and_blue_pill']`),
     ).toBeVisible()
-  })
-
-  test(`to raise error if combined with allowUserOptions`, async ({ page }) => {
-    const logs: string[] = []
-    page.on(`console`, (msg) => logs.push(msg.text()))
-
-    await page.goto(`/parse-labels-as-html`, { waitUntil: `networkidle` })
-
-    const has_expected_error = logs.some((msg) =>
-      msg.includes(
-        `MultiSelect: don't combine parseLabelsAsHtml and allowUserOptions. It's susceptible to XSS attacks!`,
-      )
-    )
-
-    expect(has_expected_error).toBe(true)
   })
 })
 

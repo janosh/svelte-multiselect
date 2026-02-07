@@ -55,8 +55,7 @@ describe(`Wiggle`, () => {
           dx: 5,
           dy: 3,
           duration: 150,
-          stiffness: 0.08,
-          damping: 0.15,
+          spring_options: { stiffness: 0.08, damping: 0.15 },
         },
       })
     }).not.toThrow()
