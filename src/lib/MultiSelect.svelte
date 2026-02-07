@@ -651,6 +651,20 @@
     }
   })
 
+  // Resolve createOptionMsg (supports string or function receiving component state)
+  const resolve_create_msg = (): string | null => {
+    if (createOptionMsg == null) return null
+    if (typeof createOptionMsg === `function`) {
+      return createOptionMsg({
+        searchText,
+        selected,
+        options: effective_options,
+        matchingOptions,
+      })
+    }
+    return createOptionMsg
+  }
+
   let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
   let window_width = $state(0)
 
@@ -1735,7 +1749,7 @@
         {@const msgType = is_dupe || can_create || no_match}
         {@const msg = msgType && {
         dupe: duplicateOptionMsg,
-        create: createOptionMsg,
+        create: resolve_create_msg(),
         'no-match': noMatchingOptionsMsg,
       }[msgType]}
         {@const can_add_user_option = msgType === `create` && allowUserOptions}
@@ -1745,11 +1759,7 @@
           <li
             onclick={handle_create}
             onkeydown={can_add_user_option ? if_enter_or_space(handle_create) : undefined}
-            title={msgType === `create`
-            ? createOptionMsg
-            : msgType === `dupe`
-            ? duplicateOptionMsg
-            : ``}
+            title={msgType !== `no-match` ? msg : ``}
             class:active={option_msg_is_active}
             onmouseover={() => !ignore_hover && (option_msg_is_active = true)}
             onfocus={() => (option_msg_is_active = true)}
@@ -1981,6 +1991,9 @@
     opacity: 0;
     transform: translateY(50px);
     pointer-events: none;
+    /* position: fixed prevents the hidden dropdown from contributing to
+       ancestor scrollHeight (unlike position: absolute which extends it) */
+    position: fixed;
   }
   :where(ul.options > li) {
     padding: 3pt 1ex;

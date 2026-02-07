@@ -134,7 +134,15 @@ export interface MultiSelectProps<T extends Option = Option>
     > {
   activeIndex?: number | null
   activeOption?: T | null
-  createOptionMsg?: string | null
+  createOptionMsg?:
+    | string
+    | ((state: {
+      searchText: string
+      selected: T[]
+      options: T[]
+      matchingOptions: T[]
+    }) => string)
+    | null
   allowUserOptions?: boolean | `append`
   allowEmpty?: boolean // added for https://github.com/janosh/svelte-multiselect/issues/192
   autocomplete?: HTMLInputAttributes[`autocomplete`]

@@ -2547,6 +2547,110 @@ test(`arrow keys can navigate to create option message when there are matching o
   expect(doc_query(`ul.options li.user-msg`).classList.contains(`active`)).toBe(true)
 })
 
+describe(`createOptionMsg as function`, () => {
+  // Tests that function form receives all state fields correctly and renders the returned string
+  test.each([
+    {
+      desc: `no matches passes empty matchingOptions`,
+      options: [`apple`, `banana`, `cherry`],
+      selected: [`apple`],
+      search: `grape`,
+      expected_matching: [],
+    },
+    {
+      desc: `partial match passes filtered matchingOptions`,
+      options: [`apple`, `apricot`, `banana`],
+      selected: [] as string[],
+      search: `ap`,
+      expected_matching: [`apple`, `apricot`],
+    },
+  ])(
+    `$desc`,
+    async ({ options, selected, search, expected_matching }) => {
+      let captured_state: Record<string, unknown> = {}
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options,
+          selected,
+          allowUserOptions: true,
+          createOptionMsg: (state: {
+            searchText: string
+            selected: unknown[]
+            options: unknown[]
+            matchingOptions: unknown[]
+          }) => {
+            captured_state = state
+            return `Create '${state.searchText}'`
+          },
+        },
+      })
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = search
+      input.dispatchEvent(input_event)
+      await tick()
+
+      expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(
+        `Create '${search}'`,
+      )
+      expect(captured_state.searchText).toBe(search)
+      expect(captured_state.selected).toEqual(selected)
+      expect(captured_state.options).toEqual(options)
+      expect(captured_state.matchingOptions).toEqual(expected_matching)
+    },
+  )
+
+  // Static string and null backward compat
+  test.each([
+    [`Create this option...`, `Create this option...`],
+    [null, `No matches`],
+  ])(
+    `createOptionMsg=%s shows correct user message`,
+    async (createOptionMsg, expected_text) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: [`foo`],
+          allowUserOptions: true,
+          createOptionMsg,
+          noMatchingOptionsMsg: `No matches`,
+        },
+      })
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = `bar`
+      input.dispatchEvent(input_event)
+      await tick()
+
+      expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(expected_text)
+    },
+  )
+
+  test(`function can combine multiple state fields`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`a`, `b`, `c`],
+        selected: [`a`, `b`],
+        allowUserOptions: true,
+        createOptionMsg: (
+          { searchText, selected }: { searchText: string; selected: unknown[] },
+        ) => `Create '${searchText}' (${selected.length} selected)`,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `d`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(
+      `Create 'd' (2 selected)`,
+    )
+  })
+})
+
 describe(`selectAllOption feature`, () => {
   const options = [`Apple`, `Banana`, `Cherry`, `Date`]
 
