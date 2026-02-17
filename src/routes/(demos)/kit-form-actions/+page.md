@@ -1,9 +1,3 @@
-<script lang="ts">
-  // import hljs from 'highlight.js/lib/common'
-  // import 'highlight.js/styles/vs2015.css'
-  // import server_code from './+page.server.ts?raw'
-</script>
-
 ## Hook up Multiselect to SvelteKit form action incl. form validation
 
 This example shows the SvelteKit form action way of handling MultiSelect fields in form submission events. If you're not interested in [progressively enhanced forms](https://kit.svelte.dev/docs/form-actions#progressive-enhancement) (i.e. supporting no-JS browsers) take a look at the [JS form example](form) instead.

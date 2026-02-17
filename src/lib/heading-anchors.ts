@@ -112,26 +112,39 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
   heading.appendChild(anchor)
 }
 
+const is_heading = (element: Element): boolean => /^H[1-6]$/.test(element.tagName)
+
+const get_default_headings = (node: Element): Element[] => {
+  const headings: Element[] = []
+  for (const child of Array.from(node.children)) {
+    if (is_heading(child)) headings.push(child)
+    for (const grandchild of Array.from(child.children)) {
+      if (is_heading(grandchild)) headings.push(grandchild)
+    }
+  }
+  return headings
+}
+
 // Svelte 5 attachment that adds anchor links to headings within a container
 // Uses MutationObserver to handle dynamically added headings
 export const heading_anchors =
   (options: HeadingAnchorsOptions = {}) => (node: Element) => {
     if (typeof document === `undefined`) return
 
-    // :scope refers to the element on which querySelectorAll is called
-    // This works whether the attachment is on <main> or a parent element
-    const selector = options.selector ??
-      `:scope > :is(h1, h2, h3, h4, h5, h6), :scope > * > :is(h1, h2, h3, h4, h5, h6)`
     const icon_svg = options.icon_svg ?? link_svg
+    const selector = options.selector
+    const get_headings = selector
+      ? () => Array.from(node.querySelectorAll(selector))
+      : () => get_default_headings(node)
 
     // Process existing headings
-    for (const heading of Array.from(node.querySelectorAll(selector))) {
+    for (const heading of get_headings()) {
       add_anchor_to_heading(heading, icon_svg)
     }
 
     // Watch for new headings - requery the container to respect nesting depth constraints
     const observer = new MutationObserver(() => {
-      for (const heading of Array.from(node.querySelectorAll(selector))) {
+      for (const heading of get_headings()) {
         add_anchor_to_heading(heading, icon_svg)
       }
     })

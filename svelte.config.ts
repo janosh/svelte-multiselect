@@ -11,6 +11,7 @@ import pkg from './package.json' with { type: 'json' }
 const defaults = {
   Wrapper: `/src/lib/CodeExample.svelte`,
   repo: pkg.repository,
+  collapsible: true,
   hideStyle: true,
 }
 const remarkPlugins = [[mdsvex_transform, { defaults }]]
