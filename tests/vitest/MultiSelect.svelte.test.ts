@@ -379,33 +379,37 @@ describe.each([
   test.each([1, 2, null])(`and maxSelect=%s form validation`, async (maxSelect) => {
     const form = document.createElement(`form`)
     document.body.appendChild(form)
-    mount(MultiSelect, {
-      target: form,
-      props: { options: [1, 2, 3], required, selected, maxSelect },
-    })
+    try {
+      mount(MultiSelect, {
+        target: form,
+        props: { options: [1, 2, 3], required, selected, maxSelect },
+      })
 
-    // form should be valid if MultiSelect not required or n_selected >= n_required and <= maxSelect
-    const form_valid = !required ||
-      (selected.length >= Number(required) &&
-        selected.length <= (maxSelect ?? Infinity))
-    expect(form.checkValidity(), `form_valid=${form_valid}`).toBe(form_valid) // This test fails for required=2, selected=[1, 2], maxSelect=1
+      // form should be valid if MultiSelect not required or n_selected >= n_required and <= maxSelect
+      const form_valid = !required ||
+        (selected.length >= Number(required) &&
+          selected.length <= (maxSelect ?? Infinity))
+      expect(form.checkValidity(), `form_valid=${form_valid}`).toBe(form_valid) // This test fails for required=2, selected=[1, 2], maxSelect=1
 
-    let submit_count = 0
-    let submit_default_prevented = false
-    form.addEventListener(`submit`, (event) => {
-      submit_count += 1
-      submit_default_prevented = event.defaultPrevented
-      event.preventDefault()
-    })
-    const submit_button = document.createElement(`button`)
-    submit_button.type = `submit`
-    form.appendChild(submit_button)
-    submit_button.click()
-    await tick()
+      let submit_count = 0
+      let submit_default_prevented = false
+      form.addEventListener(`submit`, (event) => {
+        submit_count += 1
+        submit_default_prevented = event.defaultPrevented
+        event.preventDefault()
+      })
+      const submit_button = document.createElement(`button`)
+      submit_button.type = `submit`
+      form.appendChild(submit_button)
+      submit_button.click()
+      await tick()
 
-    expect(submit_count, `form_valid=${form_valid}`).toBe(form_valid ? 1 : 0)
-    if (form_valid) {
-      expect(submit_default_prevented).toBe(false)
+      expect(submit_count, `form_valid=${form_valid}`).toBe(form_valid ? 1 : 0)
+      if (form_valid) {
+        expect(submit_default_prevented).toBe(false)
+      }
+    } finally {
+      form.remove()
     }
   })
 })
@@ -2395,65 +2399,70 @@ test.each([
 test.each([true, false, `if-mobile`] as const)(
   `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
   async (closeDropdownOnSelect) => {
-    globalThis.innerWidth = 600 // simulate mobile
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: { options: [1, 2, 3], closeDropdownOnSelect, open: true },
-    })
+    const original_inner_width = globalThis.innerWidth
+    try {
+      globalThis.innerWidth = 600 // simulate mobile
+      const select = mount(Test2WayBind, {
+        target: document.body,
+        props: { options: [1, 2, 3], closeDropdownOnSelect, open: true },
+      })
 
-    // simulate selecting an option
-    const first_option = doc_query(`ul.options > li`)
-    first_option.click()
-    await tick() // let jsdom update document.activeElement after potential input.focus() in add()
+      // simulate selecting an option
+      const first_option = doc_query(`ul.options > li`)
+      first_option.click()
+      await tick() // let jsdom update document.activeElement after potential input.focus() in add()
 
-    const is_desktop = globalThis.innerWidth > select.breakpoint
-    const should_be_closed = closeDropdownOnSelect === true ||
-      (closeDropdownOnSelect === `if-mobile` && !is_desktop)
+      const is_desktop = globalThis.innerWidth > select.breakpoint
+      const should_be_closed = closeDropdownOnSelect === true ||
+        (closeDropdownOnSelect === `if-mobile` && !is_desktop)
 
-    // count number of selected items
-    const selected_items = document.querySelectorAll(`ul.selected > li`)
-    expect(selected_items).toHaveLength(1)
+      // count number of selected items
+      const selected_items = document.querySelectorAll(`ul.selected > li`)
+      expect(selected_items).toHaveLength(1)
 
-    // check that dropdown is closed when closeDropdownOnSelect = true
-    const dropdown = doc_query(`ul.options`)
-    const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    const state = JSON.stringify({
-      is_desktop,
-      should_be_closed,
-      closeDropdownOnSelect,
-      breakpoint: select.breakpoint,
-    })
+      // check that dropdown is closed when closeDropdownOnSelect = true
+      const dropdown = doc_query(`ul.options`)
+      const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      const state = JSON.stringify({
+        is_desktop,
+        should_be_closed,
+        closeDropdownOnSelect,
+        breakpoint: select.breakpoint,
+      })
 
-    expect(dropdown.classList.contains(`hidden`), state).toBe(should_be_closed)
-    // focus tracking is reliable only for the close path in happy-dom
-    if (should_be_closed) {
-      expect(document.activeElement === input_el).toBe(false)
-    } else {
-      expect(
-        document.activeElement === input_el || document.activeElement === document.body,
-      ).toBe(true)
-    }
-
-    if (closeDropdownOnSelect === `if-mobile`) {
-      // reduce window width to simulate mobile
-      globalThis.innerWidth = 400
-      globalThis.dispatchEvent(new Event(`resize`))
-      expect(globalThis.innerWidth).toBeLessThan(select.breakpoint)
-
-      // Re-simulate selection on mobile
-      const another_option = doc_query(
-        `ul.options li:not(.selected)`,
-      ) as HTMLLIElement
-      if (another_option) {
-        another_option.click()
-        // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
-        expect(dropdown.classList).toContain(`hidden`) // Now it should be closed
+      expect(dropdown.classList.contains(`hidden`), state).toBe(should_be_closed)
+      // focus tracking is reliable only for the close path in happy-dom
+      if (should_be_closed) {
         expect(document.activeElement === input_el).toBe(false)
       } else {
-        console.warn(
-          `Could not find another option to test mobile selection behavior`,
-        )
+        expect(
+          document.activeElement === input_el || document.activeElement === document.body,
+        ).toBe(true)
       }
+
+      if (closeDropdownOnSelect === `if-mobile`) {
+        // reduce window width to simulate mobile
+        globalThis.innerWidth = 400
+        globalThis.dispatchEvent(new Event(`resize`))
+        expect(globalThis.innerWidth).toBeLessThan(select.breakpoint)
+
+        // Re-simulate selection on mobile
+        const another_option = doc_query(
+          `ul.options li:not(.selected)`,
+        ) as HTMLLIElement
+        if (another_option) {
+          another_option.click()
+          // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
+          expect(dropdown.classList).toContain(`hidden`) // Now it should be closed
+          expect(document.activeElement === input_el).toBe(false)
+        } else {
+          console.warn(
+            `Could not find another option to test mobile selection behavior`,
+          )
+        }
+      }
+    } finally {
+      globalThis.innerWidth = original_inner_width
     }
   },
 )
