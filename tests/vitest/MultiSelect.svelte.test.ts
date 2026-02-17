@@ -855,17 +855,12 @@ test.each([
   }']`
   const remove_button = document.querySelector<HTMLButtonElement>(button_selector)
 
-  if (remove_button) {
-    remove_button.click()
-    await tick()
-  } else {
-    console.warn(`Remove button not found for: ${get_label(option_to_remove)}`)
-    expect(
-      remove_button,
-      `Button to remove '${get_label(option_to_remove)}' not found`,
-    ).not.toBeNull()
-    return
-  }
+  expect(
+    remove_button,
+    `Button to remove '${get_label(option_to_remove)}' not found`,
+  ).not.toBeNull()
+  remove_button?.click()
+  await tick()
 
   const selected_ul = doc_query(`ul.selected`)
   const remaining_labels = options_set.slice(1).map(get_label).join(` `).trim()
@@ -2450,16 +2445,15 @@ test.each([true, false, `if-mobile`] as const)(
         const another_option = doc_query(
           `ul.options li:not(.selected)`,
         ) as HTMLLIElement
-        if (another_option) {
-          another_option.click()
-          // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
-          expect(dropdown.classList).toContain(`hidden`) // Now it should be closed
-          expect(document.activeElement === input_el).toBe(false)
-        } else {
-          console.warn(
-            `Could not find another option to test mobile selection behavior`,
-          )
-        }
+        expect(
+          another_option,
+          `Could not find another option to test mobile selection behavior`,
+        ).toBeTruthy()
+        another_option?.click()
+        await tick()
+        // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
+        expect(dropdown.classList).toContain(`hidden`) // Now it should be closed
+        expect(document.activeElement === input_el).toBe(false)
       }
     } finally {
       globalThis.innerWidth = original_inner_width
