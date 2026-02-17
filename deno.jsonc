@@ -6,8 +6,8 @@
     "serve": "deno task build && deno task preview",
     "test": "deno task vitest --run && deno task e2e",
     "vitest": "deno run -A --node-modules-dir npm:vitest",
-    "e2e": "npx playwright test",
-    "test:install": "npx playwright install chromium",
+    "e2e": "env -u NO_COLOR node node_modules/@playwright/test/cli.js test",
+    "test:install": "env -u NO_COLOR node node_modules/@playwright/test/cli.js install chromium",
     "package": "svelte-package",
     "changelog": "deno run -A https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts",
     "check": "svelte-check"

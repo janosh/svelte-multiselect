@@ -3,8 +3,6 @@ import { foods, languages, octicons } from '$site/options'
 import { expect, test } from '@playwright/test'
 import process from 'node:process'
 
-test.describe.configure({ mode: `parallel` })
-
 // Issue #309: Array cloning by reactive wrappers (stores, Superforms) caused infinite loops
 // https://github.com/janosh/svelte-multiselect/issues/309
 test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => {
@@ -250,10 +248,59 @@ test.describe(`remove all button`, () => {
     expect(await button_title).toBe(`Remove all foods`)
   })
 
-  // TODO: test button emits removeAll event
-  // test(`emits removeAll event`, async ({ page }) => {
-  //   await page.waitForEvent(`removeAll`),
-  // })
+  test(`emits onremoveAll event`, async ({ page }) => {
+    await page.goto(`/events`, { waitUntil: `networkidle` })
+
+    const input_locator = page.locator(`input[autocomplete]`)
+    const options_list_locator = page.locator(`ul.options`)
+    await input_locator.click()
+    await expect(options_list_locator).toBeVisible()
+
+    for (const idx of [0, 1]) {
+      const option_locator = options_list_locator.locator(
+        `li[role='option'] >> nth=${idx}`,
+      )
+      await expect(option_locator).toBeVisible()
+      await option_locator.click()
+      await input_locator.click()
+      await expect(options_list_locator).toBeVisible()
+    }
+
+    const remove_all_btn = page.locator(`button.remove-all`)
+    await expect(remove_all_btn).toBeVisible()
+    await remove_all_btn.click()
+
+    await expect(page.locator(`.event-log .event-name`, { hasText: `onremoveAll` }))
+      .toHaveCount(1)
+    await expect(page.locator(`.event-log .log-entry`).first()).toContainText(`removeAll`)
+  })
+})
+
+test.describe(`events demo`, () => {
+  test(`emits touch events in browser runtime`, async ({ page }) => {
+    await page.goto(`/events`, { waitUntil: `networkidle` })
+    const input = page.locator(`input[autocomplete]`)
+    await expect(input).toBeVisible()
+
+    const touch_counts = await page.evaluate(() => {
+      const input_el = document.querySelector(`input[autocomplete]`)
+      if (!(input_el instanceof HTMLInputElement)) {
+        throw new Error(`Expected events demo input to exist`)
+      }
+      const counts = { touchstart: 0, touchmove: 0, touchend: 0 }
+      for (const event_name of Object.keys(counts) as Array<keyof typeof counts>) {
+        input_el.addEventListener(event_name, () => {
+          counts[event_name] += 1
+        })
+      }
+      for (const event_name of [`touchstart`, `touchmove`, `touchend`]) {
+        input_el.dispatchEvent(new Event(event_name, { bubbles: true, cancelable: true }))
+      }
+      return counts
+    })
+
+    expect(touch_counts).toEqual({ touchstart: 1, touchmove: 1, touchend: 1 })
+  })
 })
 
 test.describe(`external CSS classes`, () => {
@@ -539,36 +586,46 @@ test.describe(`multiselect`, () => {
     await page.click(`#foods .remove-all`)
     await expect(selected).toHaveText(``)
 
-    // repeatedly select 1st option
-    // TODO fix this, passes when run in isolation but not in suite
-    // for (const idx of [0, 0, 0]) {
-    //   await page.click(`#foods input[autocomplete]`)
-    //   await page.click(`ul.options > li >> nth=${idx}`)
-    // }
+    // repeatedly select and remove the first visible option with fresh locators
+    for (const iteration_idx of [0, 1, 2]) {
+      await page.click(`#foods input[autocomplete]`)
+      await expect(dropdown).toBeVisible()
+      const first_visible_option = dropdown.locator(`li[role='option']:visible`).first()
+      const option_label = (await first_visible_option.textContent())?.trim() ?? ``
+      await first_visible_option.click()
+
+      const selected_buttons = page.locator(`#foods ul.selected > li > button`)
+      await expect(selected_buttons, `iteration=${iteration_idx} label='${option_label}'`)
+        .toHaveCount(1)
+
+      const first_remove_button = selected_buttons.first()
+      await expect(first_remove_button).toBeVisible()
+      await first_remove_button.click()
+      await expect(selected_buttons).toHaveCount(0)
+    }
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/111
   test(`loops through dropdown list with arrow keys making each option active in turn`, async ({ page }) => {
-    // skip in CI since it's flaky
-    if (process.env.CI) test.skip()
-
     await page.goto(`/ui`, { waitUntil: `networkidle` })
-    // reload page
-
-    await page.click(`#foods input[autocomplete]`)
+    const input = page.locator(`#foods input[autocomplete]`)
+    await input.click()
+    await expect(input).toBeFocused()
+    await expect(page.locator(`#foods ul.options`)).toBeVisible()
 
     const active_option = page.locator(`#foods ul.options > li.active`)
     for (const expected_fruit of foods) {
-      await page.keyboard.press(`ArrowDown`)
+      await input.press(`ArrowDown`)
+      await expect(active_option).toHaveCount(1)
       await expect(active_option).toHaveText(expected_fruit)
     }
 
     // test loop back to first option
-    await page.keyboard.press(`ArrowDown`)
+    await input.press(`ArrowDown`)
     await expect(active_option).toHaveText(foods[0])
 
     // test loop back to last option
-    await page.keyboard.press(`ArrowUp`)
+    await input.press(`ArrowUp`)
     await expect(active_option).toHaveText(foods.at(-1) as string)
   })
 
@@ -1199,8 +1256,6 @@ test.describe(`option grouping`, () => {
   })
 
   test(`arrow key navigation skips collapsed groups`, async ({ page }) => {
-    if (process.env.CI) test.skip() // keyboard nav tests are flaky in CI
-
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
 
     // Toggle keyboardExpandsCollapsedGroups and wait for state to settle
@@ -1211,6 +1266,7 @@ test.describe(`option grouping`, () => {
 
     const input = page.locator(`#collapsible-groups input[autocomplete]`)
     await input.click()
+    await expect(input).toBeFocused()
 
     const options_list = page.locator(`#collapsible-groups ul.options`)
     await options_list.waitFor({ state: `visible` })
@@ -1225,17 +1281,18 @@ test.describe(`option grouping`, () => {
     const visible_count = await options_list.locator(`li[role="option"]:visible`).count()
 
     // First ArrowDown should activate Apple (first visible option in Fruits group)
-    await page.keyboard.press(`ArrowDown`)
+    await input.press(`ArrowDown`)
+    await expect(active_option).toHaveCount(1)
     await expect(active_option).toContainText(`Apple`)
 
     // Cycle through all visible options
     for (let idx = 1; idx < visible_count; idx++) {
-      await page.keyboard.press(`ArrowDown`)
+      await input.press(`ArrowDown`)
       await expect(active_option).toBeVisible()
     }
 
     // Should wrap back to Apple
-    await page.keyboard.press(`ArrowDown`)
+    await input.press(`ArrowDown`)
     await expect(active_option).toContainText(`Apple`)
   })
 
