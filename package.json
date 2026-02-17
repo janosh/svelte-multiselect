@@ -11,7 +11,7 @@
     "dev": "vite dev",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest --run && env -u NO_COLOR node node_modules/@playwright/test/cli.js test",
+    "test": "vitest --run && node node_modules/@playwright/test/cli.js test",
     "package": "svelte-package && find dist -name '*.js' -o -name '*.d.ts' | xargs sed -i '' -E \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\"",
     "prepublishOnly": "pnpm package"
   },

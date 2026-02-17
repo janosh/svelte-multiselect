@@ -224,6 +224,8 @@ test(`can select 1st and last option with arrow and enter key`, () => {
 })
 
 describe(`bubbles <input> node DOM events`, () => {
+  const default_options = [1, 2, 3]
+
   test.each([
     [`blur`, new FocusEvent(`blur`, { bubbles: true })],
     [`click`, new MouseEvent(`click`, { bubbles: true })],
@@ -233,13 +235,12 @@ describe(`bubbles <input> node DOM events`, () => {
     [`mouseenter`, new MouseEvent(`mouseenter`, { bubbles: true })],
     [`mouseleave`, new MouseEvent(`mouseleave`, { bubbles: true })],
   ])(`bubbles <input> node "%s" event`, async (name, event) => {
-    const options = [1, 2, 3]
     const spy = vi.fn()
 
     mount(MultiSelect, {
       target: document.body,
       props: {
-        options,
+        options: default_options,
         [`on${name}`]: spy,
       },
     })

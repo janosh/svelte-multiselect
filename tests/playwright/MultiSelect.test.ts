@@ -270,9 +270,11 @@ test.describe(`remove all button`, () => {
     await expect(remove_all_btn).toBeVisible()
     await remove_all_btn.click()
 
-    await expect(page.locator(`.event-log .event-name`, { hasText: `onremoveAll` }))
-      .toHaveCount(1)
-    await expect(page.locator(`.event-log .log-entry`).first()).toContainText(`removeAll`)
+    const remove_all_log = page.locator(`.event-log .log-entry`, {
+      has: page.locator(`.event-name`, { hasText: `onremoveAll` }),
+    })
+    await expect(remove_all_log).toHaveCount(1)
+    await expect(remove_all_log).toContainText(`removeAll`)
   })
 })
 
@@ -287,13 +289,16 @@ test.describe(`events demo`, () => {
       if (!(input_el instanceof HTMLInputElement)) {
         throw new Error(`Expected events demo input to exist`)
       }
-      const counts = { touchstart: 0, touchmove: 0, touchend: 0 }
-      for (const event_name of Object.keys(counts) as Array<keyof typeof counts>) {
+      const touch_events = [`touchstart`, `touchmove`, `touchend`] as const
+      const counts = Object.fromEntries(
+        touch_events.map((event_name) => [event_name, 0]),
+      ) as Record<(typeof touch_events)[number], number>
+      for (const event_name of touch_events) {
         input_el.addEventListener(event_name, () => {
           counts[event_name] += 1
         })
       }
-      for (const event_name of [`touchstart`, `touchmove`, `touchend`]) {
+      for (const event_name of touch_events) {
         input_el.dispatchEvent(new Event(event_name, { bubbles: true, cancelable: true }))
       }
       return counts
@@ -591,11 +596,14 @@ test.describe(`multiselect`, () => {
       await page.click(`#foods input[autocomplete]`)
       await expect(dropdown).toBeVisible()
       const first_visible_option = dropdown.locator(`li[role='option']:visible`).first()
-      const option_label = (await first_visible_option.textContent())?.trim() ?? ``
       await first_visible_option.click()
 
       const selected_buttons = page.locator(`#foods ul.selected > li > button`)
-      await expect(selected_buttons, `iteration=${iteration_idx} label='${option_label}'`)
+      const selected_label = (await selected_buttons.first().textContent())?.trim() ?? ``
+      await expect(
+        selected_buttons,
+        `iteration=${iteration_idx} selected='${selected_label}'`,
+      )
         .toHaveCount(1)
 
       const first_remove_button = selected_buttons.first()
