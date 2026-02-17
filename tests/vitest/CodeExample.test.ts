@@ -5,36 +5,29 @@ import { doc_query } from './index'
 
 const [id, src] = [`uniq-id`, `some code`]
 
-test.each([[true, false]])(
-  `CodeExample toggles class .open on <pre> on button click`,
-  async (collapsible) => {
-    const meta = { collapsible, id }
+test(`CodeExample toggles class .open on <pre> on button click`, async () => {
+  const meta = { collapsible: true, id }
 
-    mount(CodeExample, { target: document.body, props: { meta, src } })
+  mount(CodeExample, { target: document.body, props: { meta, src } })
 
-    expect(doc_query(`div.code-example#${id}`)).toBeInstanceOf(HTMLDivElement)
+  expect(doc_query(`div.code-example#${id}`)).toBeInstanceOf(HTMLDivElement)
+  expect(document.querySelector(`nav`)).toBeInstanceOf(HTMLElement)
 
-    if (collapsible) {
-      expect(document.querySelector(`pre.open`)).toBeNull()
-      doc_query(`nav > button`).click()
-      await tick()
-      expect(document.querySelector(`pre.open`)).toBeInstanceOf(HTMLElement)
-    }
-  },
-)
+  const toggle_button = doc_query<HTMLButtonElement>(`nav > button`)
+  expect(toggle_button.textContent).toContain(`View code`)
+  expect(document.querySelector(`pre.open`)).toBeNull()
+
+  toggle_button.click()
+  await tick()
+
+  expect(document.querySelector(`pre.open`)).toBeInstanceOf(HTMLElement)
+  expect(toggle_button.textContent).toContain(`Close`)
+})
 
 test(`renders a <pre> with the src`, () => {
   mount(CodeExample, { target: document.body, props: { src } })
 
   expect(doc_query(`pre > code`).textContent).toBe(src)
-})
-
-test(`renders nav with button when collapsible is true`, () => {
-  const meta = { collapsible: true }
-  mount(CodeExample, { target: document.body, props: { src, meta } })
-
-  expect(document.querySelector(`nav`)).toBeInstanceOf(HTMLElement)
-  expect(document.querySelector(`nav > button`)).toBeInstanceOf(HTMLButtonElement)
 })
 
 test(`renders links in nav when repl is provided`, () => {

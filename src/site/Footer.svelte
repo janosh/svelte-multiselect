@@ -12,15 +12,17 @@
     Edit this page
   </a>
   <small title="For keyboad-only site navigation">
-    Use <kbd>cmd+k</kbd> to bring up a nav palette.
+    <kbd>cmd+k</kbd> to open nav palette.
   </small>
 </footer>
 
 <style>
   footer {
     padding: 2em;
-    margin: 3em calc(-1 * clamp(1rem, 3vw, 2rem)) calc(-1 * clamp(1rem, 3vw, 2rem));
-    width: calc(100% + 2 * clamp(1rem, 3vw, 2rem));
+    margin-top: auto;
+    width: calc(100% + 2 * var(--page-pad));
+    position: relative;
+    left: calc(-1 * var(--page-pad));
     box-sizing: border-box;
     background: var(--surface);
     text-align: center;

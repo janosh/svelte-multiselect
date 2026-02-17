@@ -24,7 +24,7 @@
 {/if}
 
 {#if page.url.pathname !== `/`}
-  <DemoNav />
+  <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}
 
 <CmdPalette {actions} placeholder="Go to..." />

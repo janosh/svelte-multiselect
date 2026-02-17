@@ -5,6 +5,7 @@ export const routes = Object.keys(import.meta.glob(`./**/+page.{svelte,md}`))
     const parts = filename.split(`/`).filter((part) => !part.startsWith(`(`)) // remove hidden route segments
     return { route: `/${parts.slice(1, -1).join(`/`)}`, filename }
   })
+  .filter(({ filename }) => !filename.includes(`/(hide)/`))
   .filter(({ route }) => !hidden_demos.includes(route))
 
 if (routes.length < 3) {
