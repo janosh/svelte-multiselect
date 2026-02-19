@@ -1,5 +1,12 @@
 # Changelog
 
+## [v11.6.2](https://github.com/janosh/svelte-multiselect/compare/v11.6.1...v11.6.2)
+
+> 19 February 2026
+
+- add `CopyButton` disabled/reset/callback support with demo page by @janosh in https://github.com/janosh/svelte-multiselect/pull/397
+- fix hidden dropdown scroll height and dynamic `createOptionMsg` support by @janosh in https://github.com/janosh/svelte-multiselect/pull/396
+
 ## [v11.6.1](https://github.com/janosh/svelte-multiselect/compare/v11.6.0...v11.6.1)
 
 > 3 February 2026
