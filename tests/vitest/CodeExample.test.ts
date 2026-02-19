@@ -1,9 +1,15 @@
 import { CodeExample, CopyButton } from '$lib'
-import { mount, tick } from 'svelte'
+import { mount, tick, unmount } from 'svelte'
 import { expect, test } from 'vitest'
 import { doc_query } from './index'
 
 const [id, src] = [`uniq-id`, `some code`]
+
+const mount_global_copy_button = (props: Record<string, unknown> = {}) =>
+  mount(CopyButton, {
+    target: document.body,
+    props: { global: true, ...props },
+  })
 
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const meta = { collapsible: true, id }
@@ -55,7 +61,7 @@ test(`renders GitHub link when github and repo are provided`, () => {
 
 test(`dynamically added pre > code elements get copy buttons applied`, async () => {
   // Mount a CopyButton with global enabled to activate MutationObserver
-  mount(CopyButton, { target: document.body, props: { global: true } })
+  const copy_button_component = mount_global_copy_button()
 
   // Create a new pre > code element dynamically
   const new_pre = document.createElement(`pre`)
@@ -71,11 +77,12 @@ test(`dynamically added pre > code elements get copy buttons applied`, async () 
   const copy_button = new_pre.querySelector(`button`)
   expect(copy_button).toBeInstanceOf(HTMLButtonElement)
   expect(copy_button?.style.position).toBe(`absolute`)
+  unmount(copy_button_component)
 })
 
 test(`prevents duplicate copy buttons when as !== button`, async () => {
   // Mount a CopyButton with global enabled and as='a' to test duplicate prevention
-  mount(CopyButton, { target: document.body, props: { global: true, as: `a` } })
+  const copy_button_component = mount_global_copy_button({ as: `a` })
 
   // Create a pre > code element
   const pre = document.createElement(`pre`)
@@ -96,4 +103,5 @@ test(`prevents duplicate copy buttons when as !== button`, async () => {
   // Verify no duplicate was created
   const copy_buttons_after = pre.querySelectorAll(`a[data-sms-copy]`)
   expect(copy_buttons_after).toHaveLength(1)
+  unmount(copy_button_component)
 })
