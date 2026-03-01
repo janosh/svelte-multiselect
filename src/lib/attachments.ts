@@ -538,9 +538,10 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       element.getAttribute(`aria-label`) || element.getAttribute(`data-title`)
     if (!content) return
 
-    // Store original title and remove it to prevent default tooltip
-    // Only store title if we're not using custom content
-    if (element.title && !options.content) {
+    // Store original title and remove it to prevent native browser tooltip.
+    // This must happen even when options.content is provided, otherwise both
+    // custom and native tooltips may appear.
+    if (element.hasAttribute(`title`)) {
       element.setAttribute(`data-original-title`, element.title)
       element.removeAttribute(`title`)
     }
@@ -548,7 +549,6 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
     // Reactively update content when tooltip attributes change
     const tooltip_attrs = [`title`, `aria-label`, `data-title`]
     const observer = new MutationObserver((mutations) => {
-      if (options.content) return // custom content takes precedence
       for (const { type, attributeName } of mutations) {
         if (type !== `attributes` || !attributeName) continue
         const new_content = element.getAttribute(attributeName)
@@ -560,7 +560,12 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           observer.disconnect()
           element.removeAttribute(`title`)
           observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
+          // Preserve original title for cleanup if title is set later dynamically
+          if (!element.hasAttribute(`data-original-title`) && new_content) {
+            element.setAttribute(`data-original-title`, new_content)
+          }
         }
+        if (options.content) continue // custom content takes precedence
         // Only update content if non-empty
         if (!new_content) continue
         content = new_content
@@ -582,6 +587,63 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       }
     })
     observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
+
+    type Placement = `top` | `right` | `bottom` | `left`
+    const opposite: Record<Placement, Placement> = {
+      top: `bottom`,
+      bottom: `top`,
+      left: `right`,
+      right: `left`,
+    }
+
+    const apply_triangle_style = (
+      el: HTMLElement,
+      placement: Placement,
+      px: number,
+      color: string,
+    ) => {
+      el.style.cssText = `position: absolute; width: 0; height: 0; pointer-events: none;`
+      const vert = placement === `top` || placement === `bottom`
+      const set = (prop: string, val: string) => el.style.setProperty(prop, val)
+      set(vert ? `left` : `top`, `calc(50% - ${px}px)`)
+      set(opposite[placement], `-${px}px`)
+      set(`border-${vert ? `left` : `top`}`, `${px}px solid transparent`)
+      set(`border-${vert ? `right` : `bottom`}`, `${px}px solid transparent`)
+      set(`border-${placement}`, `${px}px solid ${color}`)
+    }
+
+    const sync_arrow_styles = (tooltip_el: HTMLElement, placement: Placement) => {
+      const arrow = tooltip_el.querySelector<HTMLElement>(`.custom-tooltip-arrow`)
+      if (!arrow) return
+
+      const tooltip_styles = getComputedStyle(tooltip_el)
+      const arrow_size_raw = tooltip_styles.getPropertyValue(`--tooltip-arrow-size`)
+        .trim()
+      const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
+      const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
+      apply_triangle_style(arrow, placement, arrow_px, `var(--tooltip-bg, #333)`)
+
+      const border_arrow = tooltip_el.querySelector<HTMLElement>(
+        `.custom-tooltip-arrow-border`,
+      )
+      if (!border_arrow) return
+
+      const border_color = tooltip_styles.borderTopColor
+      const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
+      const is_transparent = !border_color || border_color === `transparent` ||
+        /rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0\s*\)/.test(border_color)
+      const has_border = !is_transparent && border_width_num > 0
+      if (!has_border) {
+        border_arrow.remove()
+        return
+      }
+      apply_triangle_style(
+        border_arrow,
+        placement,
+        arrow_px + (border_width_num * 1.4),
+        border_color,
+      )
+    }
 
     // Shrink tooltip to fit content, then position for correct centering
     function resize_and_position_tooltip(tooltip_el: HTMLElement, trigger: Element) {
@@ -606,7 +668,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         // With border-box, width includes padding+border; with content-box, subtract them
         const box_adjust = computed.boxSizing === `border-box` ? 0 : padding_h + border_h
         const style = tooltip_el.style
-        const placement = tooltip_el.getAttribute(`data-placement`) || `bottom`
+        const requested_placement =
+          (tooltip_el.getAttribute(`data-placement`) || `bottom`) as Placement
 
         // Save styles, measure single-line width with wrapping disabled
         const saved = {
@@ -675,26 +738,58 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         const tooltip_rect = tooltip_el.getBoundingClientRect()
         const margin = options.offset ?? 12
 
-        let top = 0, left = 0
-        if (placement === `top`) {
-          top = rect.top - tooltip_rect.height - margin
-          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
-        } else if (placement === `left`) {
-          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-          left = rect.left - tooltip_rect.width - margin
-        } else if (placement === `right`) {
-          top = rect.top + rect.height / 2 - tooltip_rect.height / 2
-          left = rect.right + margin
-        } else { // bottom
-          top = rect.bottom + margin
-          left = rect.left + rect.width / 2 - tooltip_rect.width / 2
+        const center_h = rect.left + rect.width / 2 - tooltip_rect.width / 2
+        const center_v = rect.top + rect.height / 2 - tooltip_rect.height / 2
+
+        const position_by_placement: Record<Placement, { top: number; left: number }> = {
+          top: { top: rect.top - tooltip_rect.height - margin, left: center_h },
+          bottom: { top: rect.bottom + margin, left: center_h },
+          left: { top: center_v, left: rect.left - tooltip_rect.width - margin },
+          right: { top: center_v, left: rect.right + margin },
         }
 
+        const fallback_order: Record<Placement, Placement[]> = {
+          bottom: [`bottom`, `top`, `right`, `left`],
+          top: [`top`, `bottom`, `right`, `left`],
+          right: [`right`, `left`, `bottom`, `top`],
+          left: [`left`, `right`, `bottom`, `top`],
+        }
+
+        const min_padding = 8
+        const { innerWidth, innerHeight } = globalThis
+
+        const get_overflow = ({ top, left }: { top: number; left: number }) =>
+          Math.max(0, min_padding - top) +
+          Math.max(0, min_padding - left) +
+          Math.max(0, top + tooltip_rect.height + min_padding - innerHeight) +
+          Math.max(0, left + tooltip_rect.width + min_padding - innerWidth)
+
+        let chosen_placement = requested_placement
+        let best_overflow = Infinity
+        for (const candidate of fallback_order[requested_placement]) {
+          const overflow = get_overflow(position_by_placement[candidate])
+          if (overflow < best_overflow) {
+            chosen_placement = candidate
+            best_overflow = overflow
+          }
+          if (overflow === 0) break
+        }
+
+        // Persist final placement for downstream styling.
+        tooltip_el.setAttribute(`data-placement`, chosen_placement)
+        sync_arrow_styles(tooltip_el, chosen_placement)
+
+        let { top, left } = position_by_placement[chosen_placement]
+
         // Keep in viewport
-        const viewport_width = globalThis.innerWidth
-        const viewport_height = globalThis.innerHeight
-        left = Math.max(8, Math.min(left, viewport_width - tooltip_rect.width - 8))
-        top = Math.max(8, Math.min(top, viewport_height - tooltip_rect.height - 8))
+        left = Math.max(
+          min_padding,
+          Math.min(left, innerWidth - tooltip_rect.width - min_padding),
+        )
+        top = Math.max(
+          min_padding,
+          Math.min(top, innerHeight - tooltip_rect.height - min_padding),
+        )
 
         style.left = `${left + globalThis.scrollX}px`
         style.top = `${top + globalThis.scrollY}px`
@@ -773,91 +868,18 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         // Append early so we can read computed border styles for arrow border
         document.body.appendChild(tooltip_el)
 
-        // Create arrow elements only if show_arrow is not false
+        // Create arrow elements before resize so the rAF inside
+        // resize_and_position_tooltip can find and style them with the resolved placement.
         if (options.show_arrow !== false) {
-          const tooltip_styles = getComputedStyle(tooltip_el)
+          const border_arrow = document.createElement(`div`)
+          border_arrow.className = `custom-tooltip-arrow-border`
           const arrow = document.createElement(`div`)
           arrow.className = `custom-tooltip-arrow`
-          arrow.style.cssText =
-            `position: absolute; width: 0; height: 0; pointer-events: none;`
-
-          const arrow_size_raw = trigger_styles.getPropertyValue(`--tooltip-arrow-size`)
-            .trim()
-          const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
-          const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
-
-          const border_color = tooltip_styles.borderTopColor
-          const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
-          const has_border = !!border_color && border_color !== `rgba(0, 0, 0, 0)` &&
-            border_width_num > 0
-
-          // Helper to create border arrow behind fill arrow
-          const append_border_arrow = () => {
-            if (!has_border) return
-            const border_arrow = document.createElement(`div`)
-            border_arrow.className = `custom-tooltip-arrow-border`
-            border_arrow.style.cssText =
-              `position: absolute; width: 0; height: 0; pointer-events: none;`
-            const border_size = arrow_px + (border_width_num * 1.4)
-            if (placement === `top`) {
-              border_arrow.style.left = `calc(50% - ${border_size}px)`
-              border_arrow.style.bottom = `-${border_size}px`
-              border_arrow.style.borderLeft = `${border_size}px solid transparent`
-              border_arrow.style.borderRight = `${border_size}px solid transparent`
-              border_arrow.style.borderTop = `${border_size}px solid ${border_color}`
-            } else if (placement === `left`) {
-              border_arrow.style.top = `calc(50% - ${border_size}px)`
-              border_arrow.style.right = `-${border_size}px`
-              border_arrow.style.borderTop = `${border_size}px solid transparent`
-              border_arrow.style.borderBottom = `${border_size}px solid transparent`
-              border_arrow.style.borderLeft = `${border_size}px solid ${border_color}`
-            } else if (placement === `right`) {
-              border_arrow.style.top = `calc(50% - ${border_size}px)`
-              border_arrow.style.left = `-${border_size}px`
-              border_arrow.style.borderTop = `${border_size}px solid transparent`
-              border_arrow.style.borderBottom = `${border_size}px solid transparent`
-              border_arrow.style.borderRight = `${border_size}px solid ${border_color}`
-            } else { // bottom
-              border_arrow.style.left = `calc(50% - ${border_size}px)`
-              border_arrow.style.top = `-${border_size}px`
-              border_arrow.style.borderLeft = `${border_size}px solid transparent`
-              border_arrow.style.borderRight = `${border_size}px solid transparent`
-              border_arrow.style.borderBottom = `${border_size}px solid ${border_color}`
-            }
-            tooltip_el.appendChild(border_arrow)
-          }
-
-          // Style and position fill arrow
-          if (placement === `top`) {
-            arrow.style.left = `calc(50% - ${arrow_px}px)`
-            arrow.style.bottom = `-${arrow_px}px`
-            arrow.style.borderLeft = `${arrow_px}px solid transparent`
-            arrow.style.borderRight = `${arrow_px}px solid transparent`
-            arrow.style.borderTop = `${arrow_px}px solid var(--tooltip-bg, #333)`
-          } else if (placement === `left`) {
-            arrow.style.top = `calc(50% - ${arrow_px}px)`
-            arrow.style.right = `-${arrow_px}px`
-            arrow.style.borderTop = `${arrow_px}px solid transparent`
-            arrow.style.borderBottom = `${arrow_px}px solid transparent`
-            arrow.style.borderLeft = `${arrow_px}px solid var(--tooltip-bg, #333)`
-          } else if (placement === `right`) {
-            arrow.style.top = `calc(50% - ${arrow_px}px)`
-            arrow.style.left = `-${arrow_px}px`
-            arrow.style.borderTop = `${arrow_px}px solid transparent`
-            arrow.style.borderBottom = `${arrow_px}px solid transparent`
-            arrow.style.borderRight = `${arrow_px}px solid var(--tooltip-bg, #333)`
-          } else { // bottom
-            arrow.style.left = `calc(50% - ${arrow_px}px)`
-            arrow.style.top = `-${arrow_px}px`
-            arrow.style.borderLeft = `${arrow_px}px solid transparent`
-            arrow.style.borderRight = `${arrow_px}px solid transparent`
-            arrow.style.borderBottom = `${arrow_px}px solid var(--tooltip-bg, #333)`
-          }
-          append_border_arrow()
-          tooltip_el.appendChild(arrow)
+          tooltip_el.append(border_arrow, arrow)
         }
 
         resize_and_position_tooltip(tooltip_el, element)
+
         current_tooltip = Object.assign(tooltip_el, { _owner: element })
       }, options.delay || 100)
     }
@@ -916,9 +938,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
       // Clear tooltip if this element owns it (also removes aria-describedby)
       if (current_tooltip?._owner === element) clear_tooltip()
 
-      const original_title = element.getAttribute(`data-original-title`)
-      if (original_title) {
-        element.setAttribute(`title`, original_title)
+      if (element.hasAttribute(`data-original-title`)) {
+        element.setAttribute(`title`, element.getAttribute(`data-original-title`) ?? ``)
         element.removeAttribute(`data-original-title`)
       }
     }

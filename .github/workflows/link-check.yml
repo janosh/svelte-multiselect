@@ -16,4 +16,4 @@ jobs:
       - name: Discover broken links
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --exclude '%7B' --exclude '/' --accept 100..=103,200..=299,403,429 -- ./**/*.{md,svelte,ts}
+          args: --exclude '%7B' --exclude '^file://' --root-dir . --accept 100..=103,200..=299,403,429,502 -- ./**/*.{md,svelte,ts}

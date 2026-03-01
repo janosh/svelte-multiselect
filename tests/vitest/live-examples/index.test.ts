@@ -126,7 +126,7 @@ describe(`integration`, () => {
 })
 
 describe(`mdsvex_transform`, () => {
-  test.each([undefined, {}, { defaults: { hideStyle: true } }])(
+  test.each([undefined, {}, { defaults: { hide_style: true } }])(
     `returns transformer with %s`,
     (opts) => {
       expect(typeof mdsvex_transform(opts)).toBe(`function`)

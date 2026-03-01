@@ -108,6 +108,103 @@ describe(`tooltip`, () => {
     }))
   }
 
+  const mock_viewport = (width: number, height: number) => {
+    const original_width = globalThis.innerWidth
+    const original_height = globalThis.innerHeight
+    Object.defineProperty(globalThis, `innerWidth`, { configurable: true, value: width })
+    Object.defineProperty(globalThis, `innerHeight`, {
+      configurable: true,
+      value: height,
+    })
+    return () => {
+      Object.defineProperty(globalThis, `innerWidth`, {
+        configurable: true,
+        value: original_width,
+      })
+      Object.defineProperty(globalThis, `innerHeight`, {
+        configurable: true,
+        value: original_height,
+      })
+    }
+  }
+
+  const mock_tooltip_size = (width: number, height: number) => {
+    const original_get_bounding_client_rect = HTMLElement.prototype.getBoundingClientRect
+    const original_offset_width = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      `offsetWidth`,
+    )
+    const original_offset_height = Object.getOwnPropertyDescriptor(
+      HTMLElement.prototype,
+      `offsetHeight`,
+    )
+
+    const bounds_spy = vi.spyOn(HTMLElement.prototype, `getBoundingClientRect`)
+      .mockImplementation(function (this: HTMLElement) {
+        if (this.classList.contains(`custom-tooltip`)) {
+          return {
+            left: 0,
+            top: 0,
+            width,
+            height,
+            right: width,
+            bottom: height,
+            x: 0,
+            y: 0,
+            toJSON: () => ({}),
+          }
+        }
+        return original_get_bounding_client_rect.call(this)
+      })
+
+    Object.defineProperty(HTMLElement.prototype, `offsetWidth`, {
+      configurable: true,
+      get() {
+        if (this.classList.contains(`custom-tooltip`)) return width
+        return original_offset_width?.get?.call(this) ?? 0
+      },
+    })
+    Object.defineProperty(HTMLElement.prototype, `offsetHeight`, {
+      configurable: true,
+      get() {
+        if (this.classList.contains(`custom-tooltip`)) return height
+        return original_offset_height?.get?.call(this) ?? 0
+      },
+    })
+
+    return () => {
+      bounds_spy.mockRestore()
+      if (original_offset_width) {
+        Object.defineProperty(HTMLElement.prototype, `offsetWidth`, original_offset_width)
+      }
+      if (original_offset_height) {
+        Object.defineProperty(
+          HTMLElement.prototype,
+          `offsetHeight`,
+          original_offset_height,
+        )
+      }
+    }
+  }
+
+  const with_mocked_tooltip_geometry = (
+    viewport: { width: number; height: number },
+    tooltip_size: { width: number; height: number },
+    callback: () => void,
+  ) => {
+    const restore_viewport = mock_viewport(viewport.width, viewport.height)
+    const restore_tooltip_size = mock_tooltip_size(
+      tooltip_size.width,
+      tooltip_size.height,
+    )
+    try {
+      callback()
+    } finally {
+      restore_tooltip_size()
+      restore_viewport()
+    }
+  }
+
   // Shared helper for triggering tooltip display (requires vi.useFakeTimers())
   const trigger_tooltip = (element: HTMLElement) => {
     element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
@@ -138,7 +235,8 @@ describe(`tooltip`, () => {
       const element = create_element()
       element.title = `Title content`
       setup_tooltip(element, { content: `Custom content` })
-      expect(element.hasAttribute(`data-original-title`)).toBe(false)
+      expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
+      expect(element.hasAttribute(`title`)).toBe(false)
     })
 
     it(`should prioritize title over aria-label`, () => {
@@ -273,6 +371,25 @@ describe(`tooltip`, () => {
       expect(spy).toHaveBeenCalledWith(`scroll`, expect.any(Function), true)
       spy.mockRestore()
     })
+
+    it.each([
+      [`with custom content`, { content: `Custom content` }],
+      [`without custom content`, {}],
+    ])(`suppresses dynamically set title %s`, async (_desc, tooltip_options) => {
+      const element = create_element()
+      element.setAttribute(`aria-label`, `initial label`)
+      const cleanup = setup_tooltip(element, tooltip_options)
+
+      element.setAttribute(`title`, `Late title`)
+      await Promise.resolve()
+
+      expect(element.hasAttribute(`title`)).toBe(false)
+      expect(element.getAttribute(`data-original-title`)).toBe(`Late title`)
+
+      cleanup?.()
+      expect(element.getAttribute(`title`)).toBe(`Late title`)
+      expect(element.hasAttribute(`data-original-title`)).toBe(false)
+    })
   })
 
   describe(`Error Handling`, () => {
@@ -373,6 +490,98 @@ describe(`tooltip`, () => {
   describe(`New Features`, () => {
     beforeEach(() => vi.useFakeTimers())
     afterEach(() => vi.useRealTimers())
+
+    it.each([
+      {
+        test_name: `auto-flips bottom to top when bottom overflows`,
+        trigger_bounds: { left: 100, top: 120, width: 40, height: 20 },
+        viewport: { width: 300, height: 180 },
+        tooltip_size: { width: 120, height: 60 },
+        expected_placement: `top`,
+      },
+      {
+        test_name: `falls back to right when top and bottom overflow`,
+        trigger_bounds: { left: 100, top: 40, width: 40, height: 20 },
+        viewport: { width: 320, height: 120 },
+        tooltip_size: { width: 80, height: 70 },
+        expected_placement: `right`,
+      },
+      {
+        test_name: `falls back to left when right also overflows`,
+        trigger_bounds: { left: 260, top: 40, width: 40, height: 20 },
+        viewport: { width: 320, height: 120 },
+        tooltip_size: { width: 80, height: 70 },
+        expected_placement: `left`,
+      },
+      {
+        test_name: `keeps bottom placement when there is no overflow`,
+        trigger_bounds: { left: 100, top: 100, width: 40, height: 20 },
+        viewport: { width: 320, height: 300 },
+        tooltip_size: { width: 120, height: 60 },
+        expected_placement: `bottom`,
+      },
+      {
+        test_name: `auto-flips top to bottom when top overflows`,
+        trigger_bounds: { left: 100, top: 30, width: 40, height: 20 },
+        viewport: { width: 300, height: 300 },
+        tooltip_size: { width: 120, height: 60 },
+        expected_placement: `bottom`,
+        requested_placement: `top`,
+      },
+      {
+        test_name: `auto-flips left to right when left overflows`,
+        trigger_bounds: { left: 30, top: 100, width: 40, height: 20 },
+        viewport: { width: 300, height: 300 },
+        tooltip_size: { width: 80, height: 40 },
+        expected_placement: `right`,
+        requested_placement: `left`,
+      },
+      {
+        test_name: `auto-flips right to left when right overflows`,
+        trigger_bounds: { left: 230, top: 100, width: 40, height: 20 },
+        viewport: { width: 300, height: 300 },
+        tooltip_size: { width: 80, height: 40 },
+        expected_placement: `left`,
+        requested_placement: `right`,
+      },
+    ])(
+      `$test_name`,
+      (
+        {
+          trigger_bounds,
+          viewport,
+          tooltip_size,
+          expected_placement,
+          requested_placement,
+        },
+      ) => {
+        // Arrow points away from trigger: offset side has negative value, opposite side is unset
+        const arrow_offset_side: Record<string, [string, string]> = {
+          top: [`bottom`, `top`],
+          bottom: [`top`, `bottom`],
+          left: [`right`, `left`],
+          right: [`left`, `right`],
+        }
+
+        with_mocked_tooltip_geometry(viewport, tooltip_size, () => {
+          const element = create_element()
+          element.title = `test`
+          mock_bounds(element, trigger_bounds)
+          setup_tooltip(element, { delay: 0, placement: requested_placement ?? `bottom` })
+
+          trigger_tooltip(element)
+          const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+          expect(tooltip_el).toBeTruthy()
+          expect(tooltip_el.getAttribute(`data-placement`)).toBe(expected_placement)
+          const arrow = tooltip_el.querySelector(`.custom-tooltip-arrow`) as HTMLElement
+          expect(arrow).toBeTruthy()
+
+          const [set_side, empty_side] = arrow_offset_side[expected_placement]
+          expect(arrow.style[set_side as `top`]).toContain(`-`)
+          expect(arrow.style[empty_side as `top`]).toBe(``)
+        })
+      },
+    )
 
     it.each([
       [`hide_delay: 200 delays hiding`, { hide_delay: 200 }, true, 200],

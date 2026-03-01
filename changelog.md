@@ -33,7 +33,7 @@
 
 - @AlessioBugetti made their first contribution in https://github.com/janosh/svelte-multiselect/pull/386
 
-## [v11.5.1](https://github.com/janosh/svelte-multiselect/compare/v11.5.0...v11.5.1)
+## [v11.5.2](https://github.com/janosh/svelte-multiselect/compare/v11.5.0...v11.5.2)
 
 > 18 January 2026
 
