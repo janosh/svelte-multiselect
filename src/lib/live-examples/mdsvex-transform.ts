@@ -34,8 +34,8 @@ interface RemarkMeta {
   filename?: string
   csr?: boolean
   example?: boolean
-  hideScript?: boolean
-  hideStyle?: boolean
+  hide_script?: boolean
+  hide_style?: boolean
   [key: string]: unknown
 }
 
@@ -199,8 +199,8 @@ function parse_meta(meta: string): Record<string, unknown> {
 
 function format_code(code: string, meta: RemarkMeta): string {
   let result = code
-  if (meta.hideScript) result = result.replace(RE_SCRIPT_BLOCK, ``)
-  if (meta.hideStyle) result = result.replace(RE_STYLE_BLOCK, ``)
+  if (meta.hide_script) result = result.replace(RE_SCRIPT_BLOCK, ``)
+  if (meta.hide_style) result = result.replace(RE_STYLE_BLOCK, ``)
   return result.trim()
 }
 

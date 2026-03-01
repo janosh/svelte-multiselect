@@ -18,7 +18,7 @@
     src?: string // code fence content, sadly without indentation so we prefer node?.innerText below
     meta?: { // code fence metadata
       collapsible?: boolean // whether to show a button to expand/collapse the code
-      code_above?: boolean // whether to show the code above the example, default is below
+      code_above?: boolean // whether to show the code above the example (default: true when collapsible, false otherwise)
       id?: string // id of the <div> wrapping the code and example (e.g. to write very specific testing selectors)
       repl?: string // Svelte REPL URL
       github?: string | boolean // GitHub URL or true to link to the file serving the current page
@@ -35,7 +35,8 @@
     button_props?: HTMLAttributes<HTMLButtonElement>
   } = $props()
 
-  let { id, collapsible, code_above, repl, github, repo, file } = $derived(meta)
+  let { id, collapsible, repl, github, repo, file } = $derived(meta)
+  let code_above = $derived(meta.code_above ?? collapsible) // if code is collapsed, render code above example by default
   const links = { target: `_blank`, rel: `noreferrer` }
 </script>
 
@@ -70,22 +71,20 @@
   {/if}
 </nav>
 <!-- wrap in div with id for precise CSS selectors in playwright E2E tests -->
-<div {id} class="code-example">
-  {#if !code_above}
-    {@render example?.()}
-  {/if}
-
+<div {id} class="code-example" class:code-above={code_above}>
+  {@render example?.()}
   <pre class:open><code>{#if code}{@render code()}{:else}{src}{/if}</code></pre>
-
-  {#if code_above}
-    {@render example?.()}
-  {/if}
 </div>
 
 <style>
   div.code-example {
+    display: flex;
+    flex-direction: column;
     margin: var(--code-example-margin, 1em auto);
     position: relative;
+  }
+  div.code-example.code-above > pre {
+    order: -1;
   }
   nav {
     display: flex;
@@ -115,5 +114,8 @@
     opacity: 1;
     max-height: 9999vh;
     margin: var(--code-example-pre-margin, 1em 0 0 0);
+  }
+  .code-above > pre.open {
+    margin: var(--code-example-pre-margin, 0 0 1em 0);
   }
 </style>
