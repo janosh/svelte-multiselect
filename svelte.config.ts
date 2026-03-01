@@ -12,7 +12,7 @@ const defaults = {
   Wrapper: `/src/lib/CodeExample.svelte`,
   repo: pkg.repository,
   collapsible: true,
-  hideStyle: true,
+  hide_style: true,
 }
 const remarkPlugins = [[mdsvex_transform, { defaults }]]
 

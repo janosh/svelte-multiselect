@@ -56,10 +56,10 @@ describe(`exports`, () => {
 
 describe(`remark plugin initialization`, () => {
   test.each([
-    [undefined, `no options`],
-    [{}, `empty options`],
-    [{ defaults: { hideStyle: true } }, `with defaults`],
-  ])(`returns transformer function with %s`, (opts, _desc) => {
+    { opts: undefined, desc: `no options` },
+    { opts: {}, desc: `empty options` },
+    { opts: { defaults: { hide_style: true } }, desc: `with defaults` },
+  ])(`returns transformer function with $desc`, ({ opts }) => {
     expect(typeof remark(opts)).toBe(`function`)
   })
 })
@@ -118,15 +118,25 @@ describe(`meta parsing`, () => {
 
 describe(`wrapper component handling`, () => {
   test.each([
-    [undefined, `example`, `$lib/CodeExample.svelte`, `default wrapper`],
-    [
-      { defaults: { Wrapper: `$lib/Custom.svelte` } },
-      `example`,
-      `$lib/Custom.svelte`,
-      `defaults option`,
-    ],
-    [undefined, `example Wrapper="$lib/My.svelte"`, `$lib/My.svelte`, `per-example meta`],
-  ])(`uses %s from %s`, (opts, meta, expected, _desc) => {
+    {
+      desc: `default wrapper`,
+      opts: undefined,
+      meta: `example`,
+      expected: `$lib/CodeExample.svelte`,
+    },
+    {
+      desc: `defaults option`,
+      opts: { defaults: { Wrapper: `$lib/Custom.svelte` } },
+      meta: `example`,
+      expected: `$lib/Custom.svelte`,
+    },
+    {
+      desc: `per-example meta`,
+      opts: undefined,
+      meta: `example Wrapper="$lib/My.svelte"`,
+      expected: `$lib/My.svelte`,
+    },
+  ])(`uses wrapper from $desc`, ({ opts, meta, expected }) => {
     const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, meta)])
     remark(opts)(tree, create_file())
     expect(find_script_node(tree)).toContain(expected)
@@ -175,28 +185,63 @@ describe(`CSR mode`, () => {
   })
 })
 
-describe(`hideScript and hideStyle options`, () => {
-  test.each([
-    [`hideScript`, `<script>let x = 1</script><div>Test</div>`, `let x = 1`, `Test`],
-    [
-      `hideStyle`,
-      `<div>Test</div><style>div { color: red }</style>`,
-      `color: red`,
-      `Test`,
-    ],
-  ])(`%s removes block from highlighted code`, (option, code, hidden, visible) => {
-    const tree = create_tree([create_code_node(`svelte`, code, `example ${option}`)])
+const hide_option_cases = [
+  {
+    option: `hide_script`,
+    code: `<script>let x = 1</script><div>Test</div>`,
+    hidden: `let x = 1`,
+    visible: `Test`,
+  },
+  {
+    option: `hide_style`,
+    code: `<div>Test</div><style>div { color: red }</style>`,
+    hidden: `color: red`,
+    visible: `Test`,
+  },
+]
+
+describe(`hide_script and hide_style options`, () => {
+  test.each(hide_option_cases)(
+    `$option via meta removes block`,
+    ({ option, code, hidden, visible }) => {
+      const tree = create_tree([create_code_node(`svelte`, code, `example ${option}`)])
+      remark()(tree, create_file())
+      const value = get_example_value(tree)
+      expect(value).not.toContain(hidden)
+      expect(value).toContain(visible)
+    },
+  )
+
+  test.each(hide_option_cases)(
+    `$option via defaults removes block`,
+    ({ option, code, hidden }) => {
+      const tree = create_tree([create_code_node(`svelte`, code, `example`)])
+      remark({ defaults: { [option]: true } })(tree, create_file())
+      expect(get_example_value(tree)).not.toContain(hidden)
+    },
+  )
+
+  test(`hide_script and hide_style combined strips both blocks`, () => {
+    const code =
+      `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`
+    const tree = create_tree([
+      create_code_node(`svelte`, code, `example hide_script hide_style`),
+    ])
     remark()(tree, create_file())
     const value = get_example_value(tree)
-    expect(value).not.toContain(hidden)
-    expect(value).toContain(visible)
+    expect(value).not.toContain(`let x = 1`)
+    expect(value).not.toContain(`color: red`)
+    expect(value).toContain(`Test`)
   })
 
-  test(`applies hideStyle from defaults`, () => {
-    const code = `<div>Test</div><style>div { color: red }</style>`
+  test(`preserves script and style blocks when options are not set`, () => {
+    const code =
+      `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])
-    remark({ defaults: { hideStyle: true } })(tree, create_file())
-    expect(get_example_value(tree)).not.toContain(`color: red`)
+    remark()(tree, create_file())
+    const value = get_example_value(tree)
+    expect(value).toContain(`let x`)
+    expect(value).toContain(`color`)
   })
 })
 
@@ -251,25 +296,25 @@ describe(`multiple examples`, () => {
 
 describe(`output handling`, () => {
   test.each([
-    [
-      `<div>Test</div>`,
-      `src/routes/demo/+page.md`,
-      `/project/src/routes/demo/+page.md`,
-      `extracts relative filename`,
-    ],
-    [
-      `<script>let x = 1</script>`,
-      `<span`,
-      `/project/src/test.md`,
-      `produces highlighted HTML`,
-    ],
-    [
-      `<script>\nlet x = 1\n</script>`,
-      `&#10;`,
-      `/project/src/test.md`,
-      `escapes newlines`,
-    ],
-  ])(`%s -> output contains %s`, (code, expected, filename) => {
+    {
+      desc: `extracts relative filename`,
+      code: `<div>Test</div>`,
+      expected: `src/routes/demo/+page.md`,
+      filename: `/project/src/routes/demo/+page.md`,
+    },
+    {
+      desc: `produces highlighted HTML`,
+      code: `<script>let x = 1</script>`,
+      expected: `<span`,
+      filename: `/project/src/test.md`,
+    },
+    {
+      desc: `escapes newlines`,
+      code: `<script>\nlet x = 1\n</script>`,
+      expected: `&#10;`,
+      filename: `/project/src/test.md`,
+    },
+  ])(`$desc`, ({ code, expected, filename }) => {
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])
     remark()(tree, create_file(filename, `/project`))
     expect(get_example_value(tree)).toContain(expected)
