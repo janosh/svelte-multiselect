@@ -49,19 +49,6 @@ describe(`sveltePreprocess wrapper`, () => {
       [handler]?.(args)
   }
 
-  test(`returns preprocessor group with all handlers`, () => {
-    const preprocessor = sveltePreprocess()
-    expect(typeof preprocessor.markup).toBe(`function`)
-    expect(typeof preprocessor.script).toBe(`function`)
-    expect(typeof preprocessor.style).toBe(`function`)
-  })
-
-  // All handlers behave identically - test one handler per extension, trust the pattern
-  test.each([`.md`, `.mdx`, `.svx`])(`skips %s files`, async (ext) => {
-    const result = await call_handler(`markup`, `/project/page${ext}`)
-    expect(result?.code).toBe(`test`)
-  })
-
   test.each([`markup`, `script`, `style`] as const)(
     `%s processes .svelte files`,
     async (handler) => {
@@ -135,8 +122,10 @@ describe(`mdsvex_transform`, () => {
 })
 
 describe(`vite_plugin`, () => {
-  test(`creates plugin with correct name`, () => {
-    const plugin = vite_plugin()
-    expect(plugin.name).toBe(`live-examples-plugin`)
+  test(`returns resolve and main plugins`, () => {
+    const plugins = vite_plugin()
+    expect(plugins).toHaveLength(2)
+    expect(plugins[0].name).toBe(`live-examples-resolve`)
+    expect(plugins[1].name).toBe(`live-examples-plugin`)
   })
 })

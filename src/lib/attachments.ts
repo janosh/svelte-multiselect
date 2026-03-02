@@ -782,14 +782,10 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         let { top, left } = position_by_placement[chosen_placement]
 
         // Keep in viewport
-        left = Math.max(
-          min_padding,
-          Math.min(left, innerWidth - tooltip_rect.width - min_padding),
-        )
-        top = Math.max(
-          min_padding,
-          Math.min(top, innerHeight - tooltip_rect.height - min_padding),
-        )
+        const max_left = innerWidth - tooltip_rect.width - min_padding
+        left = Math.max(min_padding, Math.min(left, max_left))
+        const max_top = innerHeight - tooltip_rect.height - min_padding
+        top = Math.max(min_padding, Math.min(top, max_top))
 
         style.left = `${left + globalThis.scrollX}px`
         style.top = `${top + globalThis.scrollY}px`

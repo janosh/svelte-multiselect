@@ -5,7 +5,7 @@ import { defineConfig } from 'vitest/config'
 import live_examples from './src/lib/live-examples/vite-plugin.ts'
 
 export default defineConfig({
-  plugins: [sveltekit(), live_examples()],
+  plugins: [sveltekit(), ...live_examples()],
 
   test: {
     include: [`tests/vitest/**/*.test.ts`],
