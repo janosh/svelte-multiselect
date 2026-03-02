@@ -2,7 +2,6 @@
 // @ts-expect-error no types available
 import ast from 'abstract-syntax-tree'
 import { Buffer } from 'node:buffer'
-import path from 'node:path'
 import process from 'node:process'
 import type { HmrContext, Plugin, ViteDevServer } from 'vite'
 import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
@@ -32,9 +31,16 @@ interface AstNode {
   end?: number
 }
 
+// Normalize a module ID to absolute path for consistent lookups.
+// Can't use path.posix.join because it treats /src/... as already absolute.
+function to_absolute(id: string, cwd: string): string {
+  if (id.startsWith(cwd)) return id
+  return id.startsWith(`/`) ? `${cwd}${id}` : `${cwd}/${id}`
+}
+
 export default function live_examples_plugin(
   options: { extensions?: string[] } = {},
-): Plugin {
+): Plugin[] {
   const { extensions = [`.svelte.md`, `.md`, `.svx`] } = options
 
   // Extracted examples as individual virtual files (id -> svelte source)
@@ -43,40 +49,38 @@ export default function live_examples_plugin(
   const parent_to_virtual = new Map<string, Set<string>>()
 
   let vite_server: ViteDevServer | undefined
+  const cwd = process.cwd().replace(/\\/g, `/`)
 
-  return {
+  // Pre-enforce plugin ensures resolveId runs before vite-plugin-svelte's
+  // load-compiled-css:resolveId, so CSS derived modules get the same absolute
+  // path as the main component (needed for module graph CSS cache lookup).
+  const resolve_plugin: Plugin = {
+    name: `live-examples-resolve`,
+    enforce: `pre`,
+    resolveId(id: string) {
+      if (id.includes(EXAMPLE_MODULE_PREFIX)) {
+        return to_absolute(id, cwd)
+      }
+    },
+  }
+
+  const main_plugin: Plugin = {
     name: `live-examples-plugin`,
 
     configureServer(server) {
       vite_server = server
     },
 
-    resolveId(id: string) {
-      if (id.includes(EXAMPLE_MODULE_PREFIX)) {
-        // Force absolute path (dev uses relative, prod uses absolute)
-        // Use posix.join to ensure forward slashes on all platforms (Vite normalizes to /)
-        const cwd = process.cwd().replace(/\\/g, `/`)
-        return id.includes(cwd) ? id : path.posix.join(cwd, id)
-      }
-    },
-
     load(id: string) {
       if (id.includes(EXAMPLE_MODULE_PREFIX)) {
-        // Strip query parameters - Vite requests derived modules (styles, etc.) with queries
-        // like ?inline&svelte&type=style&lang.css but we store the base path
         const [base_id, query = ``] = id.split(`?`)
+
+        // Skip derived module requests (CSS, scripts) - let vite-plugin-svelte handle them.
+        // Must check BEFORE virtual_files lookup to avoid returning Svelte source for CSS.
+        if (/type=(style|script|module)/.test(query)) return
+
         const src = virtual_files.get(base_id)
         if (src) return src
-
-        // Virtual file not found - can happen during SSR/parallel builds when derived
-        // modules (styles, scripts) are requested before parent markdown is transformed.
-        // For derived module requests, return empty content to avoid crashes.
-        if (
-          query.includes(`type=style`) || query.includes(`type=script`) ||
-          query.includes(`type=module`)
-        ) {
-          return ``
-        }
 
         // For main component requests in production, fail the build
         const msg = `Example src not found for ${id}`
@@ -100,9 +104,9 @@ export default function live_examples_plugin(
       const is_markdown = extensions.some((ext) => base_id.endsWith(ext))
       if (!is_example_module && !is_markdown) return
 
-      // Skip derived modules (styles, etc.) - only process the main markdown file
-      // Vite creates derived modules like ?svelte&type=style&lang.css for style blocks
-      if (id.includes(`?svelte&type=`)) return { code, map: { mappings: `` } }
+      // Skip derived modules (styles, etc.) - only process the main markdown file.
+      // Match both ?svelte&type= and ?inline&svelte&type= (SSR adds ?inline prefix)
+      if (id.includes(`svelte&type=`)) return { code, map: { mappings: `` } }
 
       if (is_markdown) {
         // Use AST for precise node location, collect edits to apply at end
@@ -213,4 +217,6 @@ export default function live_examples_plugin(
       return [...additional_modules, ...ctx.modules]
     },
   }
+
+  return [resolve_plugin, main_plugin]
 }
