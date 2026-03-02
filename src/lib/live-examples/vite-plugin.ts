@@ -34,7 +34,7 @@ interface AstNode {
 // Normalize a module ID to absolute path for consistent lookups.
 // Can't use path.posix.join because it treats /src/... as already absolute.
 function to_absolute(id: string, cwd: string): string {
-  if (id.startsWith(cwd)) return id
+  if (id.startsWith(`${cwd}/`) || id === cwd) return id
   return id.startsWith(`/`) ? `${cwd}${id}` : `${cwd}/${id}`
 }
 
