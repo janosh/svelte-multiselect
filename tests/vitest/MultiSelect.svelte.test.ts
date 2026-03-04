@@ -827,7 +827,7 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
   expect(expand.dataset.open).toBe(`true`)
 })
 
-test(`removeIcon snippet receives option for per-item and remove_all flag`, async () => {
+test(`removeIcon snippet receives option for per-item and isRemoveAll flag`, async () => {
   mount(TestMultiSelectSnippets, {
     target: document.body,
     props: { options: [1, 2, 3], selected: [1, 2] },
@@ -1939,7 +1939,8 @@ test(`onadd selected accumulates and onremove selected reflects removal`, async 
   expect(onadd_spy).toHaveBeenLastCalledWith({ option: 2, selected: [1, 2] })
 
   doc_query(`ul.selected button.remove`).click()
-  expect(onremove_spy).toHaveBeenCalledWith({ option: 1, selected: [2] })
+  expect(onremove_spy).toHaveBeenCalledTimes(1)
+  expect(onremove_spy).toHaveBeenLastCalledWith({ option: 1, selected: [2] })
 })
 
 test(`onadd selected reflects replacement when maxSelect=1`, async () => {
