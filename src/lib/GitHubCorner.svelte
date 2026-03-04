@@ -52,7 +52,7 @@
 <style>
   a {
     position: fixed;
-    z-index: 1;
+    z-index: var(--github-corner-z-index, 1);
     fill: var(--github-corner-bg, light-dark(#222, #eee));
     color: var(--github-corner-color, light-dark(#fafafa, #1a1a1a));
     width: var(--github-corner-size, 70px);
@@ -75,6 +75,13 @@
     bottom: 0;
     right: 0;
     transform: rotate(90deg);
+  }
+  a:hover {
+    fill: var(--github-corner-bg-hover, var(--github-corner-bg, light-dark(#222, #eee)));
+    color: var(
+      --github-corner-color-hover,
+      var(--github-corner-color, light-dark(#fafafa, #1a1a1a))
+    );
   }
   a:hover .octo-arm {
     animation: octocat-wave 0.5s ease-in-out;
