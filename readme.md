@@ -710,7 +710,7 @@ These reflect internal component state:
 
 1. `#snippet option({ option, idx })`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
 1. `#snippet selectedItem({ option, idx })`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
-1. `#snippet children({ option, idx })`: Convenience snippet that applies to both dropdown options AND selected items. Use this when you want the same custom rendering for both. Takes precedence if `option` or `selectedItem` are not provided.
+1. `#snippet children({ option, idx, type })`: Convenience snippet that applies to both dropdown options AND selected items. Use this when you want the same custom rendering for both. Takes precedence if `option` or `selectedItem` are not provided. `type` is `'selected'` when rendering a selected pill and `'option'` when rendering a dropdown item, allowing conditional styling/content by context.
 1. `#snippet spinner()`: Custom spinner component to display when in `loading` state. Receives no props.
 1. `#snippet disabledIcon()`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `{#snippet disabledIcon()}{/snippet}` to remove the default disabled icon.
 1. `#snippet expandIcon({ open })`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. `open` is `true` if the dropdown is visible and `false` if hidden.
@@ -725,13 +725,13 @@ Example using several snippets:
 
 ```svelte
 <MultiSelect options={[`Red`, `Green`, `Blue`, `Yellow`, `Purple`]}>
-  {#snippet children({ idx, option })}
+  {#snippet children({ idx, option, type })}
     <span style="display: flex; align-items: center; gap: 6pt">
       <span
         style:background={`${option}`}
         style="border-radius: 50%; width: 1em; height: 1em"
       ></span>
-      {idx + 1}
+      {#if type === `option`}{idx + 1}{/if}
       {option}
     </span>
   {/snippet}

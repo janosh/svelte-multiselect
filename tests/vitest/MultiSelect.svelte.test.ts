@@ -10,6 +10,7 @@ import { get_label, get_style } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
 import Test2WayBind from './Test2WayBind.svelte'
+import TestChildrenSnippet from './TestChildrenSnippet.svelte'
 
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
 const input_event = new InputEvent(`input`, { bubbles: true })
@@ -724,6 +725,33 @@ test(`parseLabelsAsHtml renders anchor tags as links`, () => {
   expect(anchor).toBeInstanceOf(HTMLAnchorElement)
 })
 
+test(`children snippet receives type='selected' for pills and type='option' for dropdown items`, async () => {
+  mount(TestChildrenSnippet, {
+    target: document.body,
+    props: { options: [`Red`, `Green`, `Blue`], selected: [`Red`] },
+  })
+
+  // selected pill should have type='selected'
+  const selected_span = doc_query(`ul.selected span.child-snippet`)
+  expect(selected_span.dataset.type).toBe(`selected`)
+  expect(selected_span.textContent).toBe(`Red`)
+
+  // open dropdown to render option items
+  doc_query(`div.multiselect`).dispatchEvent(
+    new MouseEvent(`mouseup`, { bubbles: true }),
+  )
+  await tick()
+
+  // dropdown options should have type='option'
+  const option_spans = document.querySelectorAll<HTMLElement>(
+    `ul.options span.child-snippet`,
+  )
+  expect(option_spans.length).toBeGreaterThan(0)
+  for (const span of option_spans) {
+    expect(span.dataset.type).toBe(`option`)
+  }
+})
+
 test(`filters dropdown to show only matching options when entering text`, async () => {
   const options = [`foo`, `bar`, `baz`]
 
@@ -1010,23 +1038,37 @@ test.each([2, 5, 10])(
 )
 
 // https://github.com/janosh/svelte-multiselect/issues/353
-test(`clicking on selected options does not open dropdown`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
+test.each([
+  {
+    name: `stays closed when can_remove is true`,
     props: { options: [1, 2, 3], selected: [1, 2] },
-  })
+    expect_open: false,
+  },
+  {
+    name: `opens when minSelect prevents removal`,
+    props: {
+      options: [`Red`, `Green`, `Yellow`],
+      selected: [`Red`],
+      minSelect: 1,
+      maxSelect: 1,
+    },
+    expect_open: true,
+  },
+])(
+  `clicking selected item $name`,
+  async ({ props, expect_open }) => {
+    mount(MultiSelect, { target: document.body, props })
 
-  // starts with closed dropdown
-  expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
+    expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(false)
 
-  // click on a selected option (not the remove button)
-  const selected_li = doc_query(`ul.selected > li`)
-  selected_li.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-  await tick()
+    doc_query(`ul.selected > li`).dispatchEvent(
+      new MouseEvent(`mouseup`, { bubbles: true }),
+    )
+    await tick()
 
-  // dropdown should still be closed
-  expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
-})
+    expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(expect_open)
+  },
+)
 
 test(`closes dropdown on tab out`, async () => {
   mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })

@@ -862,6 +862,52 @@ test.describe(`parseLabelsAsHtml`, () => {
   })
 })
 
+test.describe(`minSelect pill click behavior`, () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
+  })
+
+  test(`clicking selected pill opens dropdown when minSelect prevents removal`, async ({ page }) => {
+    // JavaScript is pre-selected with minSelect=1, so can_remove is false
+    const selected_li = page.locator(`#languages ul.selected > li[aria-selected="true"]`)
+    await expect(selected_li).toHaveCount(1)
+    await expect(selected_li).toContainText(`JavaScript`)
+
+    // No remove button when can_remove is false
+    await expect(selected_li.locator(`button.remove`)).toHaveCount(0)
+
+    // Clicking the pill should open the dropdown (mouseup bubbles to wrapper)
+    const dropdown = page.locator(`#languages ul.options`)
+    await expect(dropdown).toBeHidden()
+    await selected_li.click()
+    await expect(dropdown).toBeVisible()
+  })
+
+  test(`remove button click does not reopen dropdown when can_remove is true`, async ({ page }) => {
+    // Select a second option so can_remove becomes true (2 > minSelect=1)
+    await page.click(`#languages input[autocomplete]`)
+    const dropdown = page.locator(`#languages ul.options`)
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator(`li`).first().click()
+
+    const selected_items = page.locator(
+      `#languages ul.selected > li[aria-selected="true"]`,
+    )
+    await expect(selected_items).toHaveCount(2)
+
+    // Close dropdown
+    await page.keyboard.press(`Escape`)
+    await expect(dropdown).toBeHidden()
+
+    // Click remove button — should remove item without opening dropdown
+    const remove_btn = page.locator(`#languages ul.selected > li > button.remove`).first()
+    await expect(remove_btn).toBeVisible()
+    await remove_btn.click()
+    await expect(selected_items).toHaveCount(1)
+    await expect(dropdown).toBeHidden()
+  })
+})
+
 test.describe(`maxSelect`, () => {
   const max_select = 5
 

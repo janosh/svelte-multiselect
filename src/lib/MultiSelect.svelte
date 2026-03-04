@@ -1458,12 +1458,12 @@
         ondragenter={() => (drag_idx = idx)}
         class:active={drag_idx === idx}
         style={selectedOptionStyle}
-        onmouseup={(event) => event.stopPropagation()}
+        onmouseup={can_remove && !disabled ? (event) => event.stopPropagation() : undefined}
       >
         {#if selectedItem}
           {@render selectedItem({ option, idx })}
         {:else if children}
-          {@render children({ option, idx })}
+          {@render children({ option, idx, type: `selected` })}
         {:else if parseLabelsAsHtml}
           {@html utils.get_label(option)}
         {:else}
@@ -1729,7 +1729,7 @@
                 {#if option}
                   {@render option({ option: option_item, idx: flat_idx })}
                 {:else if children}
-                  {@render children({ option: option_item, idx: flat_idx })}
+                  {@render children({ option: option_item, idx: flat_idx, type: `option` })}
                 {:else if parseLabelsAsHtml}
                   {@html utils.get_label(option_item)}
                 {:else}

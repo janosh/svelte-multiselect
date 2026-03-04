@@ -109,7 +109,7 @@ export type GroupedOptions<T extends Option = Option> = {
 export interface MultiSelectSnippets<T extends Option = Option> {
   expandIcon?: Snippet<[{ open: boolean }]>
   selectedItem?: Snippet<[{ option: T; idx: number }]>
-  children?: Snippet<[{ option: T; idx: number }]>
+  children?: Snippet<[{ option: T; idx: number; type: `option` | `selected` }]>
   removeIcon?: Snippet
   afterInput?: Snippet<[AfterInputProps]>
   spinner?: Snippet
