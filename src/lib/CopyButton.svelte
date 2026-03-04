@@ -38,7 +38,9 @@
     skip_selector?: string | null
     as?: string
     labels?: Record<State, { icon: IconName; text: string }>
-    children?: Snippet<[{ state: State; icon: IconName; text: string }]>
+    children?: Snippet<
+      [{ state: State; icon: IconName; text: string; disabled: boolean }]
+    >
   } = $props()
 
   let reset_timeout: ReturnType<typeof setTimeout> | null = null
@@ -149,7 +151,7 @@
     {...rest}
   >
     {#if children}
-      {@render children({ state, icon, text })}
+      {@render children({ state, icon, text, disabled })}
     {:else}
       <span>
         <Icon {icon} />

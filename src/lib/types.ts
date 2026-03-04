@@ -29,12 +29,12 @@ export type PlaceholderConfig = {
 
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
-  onadd?: (data: { option: T }) => unknown
+  onadd?: (data: { option: T; selected: T[] }) => unknown
   oncreate?: (data: { option: T }) => unknown // fires when users entered custom text from which new option is created
-  onremove?: (data: { option: T }) => unknown
+  onremove?: (data: { option: T; selected: T[] }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
   onselectAll?: (data: { options: T[] }) => unknown // fires when select all is triggered
-  onreorder?: (data: { options: T[] }) => unknown // fires when selected options are reordered via drag-and-drop
+  onreorder?: (data: { options: T[]; previous: T[] }) => unknown // fires when selected options are reordered via drag-and-drop
   onchange?: (data: {
     option?: T
     options?: T[]
@@ -46,7 +46,7 @@ export interface MultiSelectEvents<T extends Option = Option> {
   oncollapseAll?: (data: { groups: string[] }) => unknown // fires when all groups are collapsed
   onexpandAll?: (data: { groups: string[] }) => unknown // fires when all groups are expanded
   // Additional events for user feedback and analytics
-  onsearch?: (data: { searchText: string; matchingCount: number }) => unknown // fires (debounced) when search text changes
+  onsearch?: (data: { searchText: string; matchingOptions: T[] }) => unknown // fires (debounced) when search text changes
   onmaxreached?: (
     data: { selected: T[]; maxSelect: number; attemptedOption: T },
   ) => unknown // fires when user tries to exceed maxSelect
@@ -86,7 +86,14 @@ export type LoadOptions<T extends Option = Option> =
 
 type AfterInputProps = Pick<
   MultiSelectProps,
-  `selected` | `disabled` | `invalid` | `id` | `placeholder` | `open` | `required`
+  | `selected`
+  | `disabled`
+  | `invalid`
+  | `id`
+  | `placeholder`
+  | `open`
+  | `required`
+  | `searchText`
 >
 type UserMsgProps = {
   searchText: string
@@ -107,16 +114,20 @@ export type GroupedOptions<T extends Option = Option> = {
 }
 
 export interface MultiSelectSnippets<T extends Option = Option> {
-  expandIcon?: Snippet<[{ open: boolean }]>
+  expandIcon?: Snippet<[{ open: boolean; disabled: boolean }]>
   selectedItem?: Snippet<[{ option: T; idx: number }]>
   children?: Snippet<[{ option: T; idx: number; type: `option` | `selected` }]>
-  removeIcon?: Snippet
+  removeIcon?: Snippet<
+    [{ option: T; isRemoveAll: false } | { option?: undefined; isRemoveAll: true }]
+  >
   afterInput?: Snippet<[AfterInputProps]>
   spinner?: Snippet
   disabledIcon?: Snippet
-  option?: Snippet<[{ option: T; idx: number }]>
+  option?: Snippet<
+    [{ option: T; idx: number; selected: boolean; active: boolean; disabled: boolean }]
+  >
   userMsg?: Snippet<[UserMsgProps]>
-  groupHeader?: Snippet<[GroupHeaderProps<T>]> // custom group header rendering
+  groupHeader?: Snippet<[GroupHeaderProps<T>]>
 }
 
 export interface PortalParams {

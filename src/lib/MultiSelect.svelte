@@ -387,10 +387,7 @@
 
     search_debounce_timer = setTimeout(() => {
       // Optional chaining in case onsearch is removed while timer is pending
-      onsearch?.({
-        searchText: current_search,
-        matchingCount: matchingOptions.length,
-      })
+      onsearch?.({ searchText: current_search, matchingOptions })
     }, 150)
     return () => {
       if (search_debounce_timer) clearTimeout(search_debounce_timer)
@@ -806,7 +803,7 @@
       clear_validity()
       handle_dropdown_after_select(event)
       last_action = { type: `add`, label: `${utils.get_label(option_to_add)}` }
-      onadd?.({ option: option_to_add })
+      onadd?.({ option: option_to_add, selected })
       onchange?.({ option: option_to_add, type: `add` })
     }
   }
@@ -842,7 +839,7 @@
     selected = selected.filter((_, remove_idx) => remove_idx !== idx)
     clear_validity()
     last_action = { type: `remove`, label: `${utils.get_label(option_removed)}` }
-    onremove?.({ option: option_removed })
+    onremove?.({ option: option_removed, selected })
     onchange?.({ option: option_removed, type: `remove` })
   }
 
@@ -1173,6 +1170,7 @@
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
     const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
+    const previous = [...selected]
     const new_selected = [...selected]
 
     if (start_idx < target_idx) {
@@ -1184,7 +1182,7 @@
     }
     selected = new_selected
     drag_idx = null
-    onreorder?.({ options: new_selected })
+    onreorder?.({ options: new_selected, previous })
     onchange?.({ options: new_selected, type: `reorder` })
   }
 
@@ -1427,7 +1425,7 @@
   />
   <span class="expand-icon">
     {#if expandIcon}
-      {@render expandIcon({ open })}
+      {@render expandIcon({ open, disabled })}
     {:else}
       <Icon
         icon="ChevronExpand"
@@ -1478,7 +1476,7 @@
             class="remove"
           >
             {#if removeIcon}
-              {@render removeIcon()}
+              {@render removeIcon({ option, isRemoveAll: false })}
             {:else}
               <Icon icon="Cross" style="width: 15px" />
             {/if}
@@ -1528,6 +1526,7 @@
         placeholder: placeholder_text,
         open,
         required,
+        searchText,
       })}
   </ul>
   {#if loading}
@@ -1565,7 +1564,7 @@
         onkeydown={if_enter_or_space(remove_all)}
       >
         {#if removeIcon}
-          {@render removeIcon()}
+          {@render removeIcon({ isRemoveAll: true })}
         {:else}
           <Icon icon="Cross" style="width: 15px" />
         {/if}
@@ -1727,7 +1726,13 @@
                   />
                 {/if}
                 {#if option}
-                  {@render option({ option: option_item, idx: flat_idx })}
+                  {@render option({
+          option: option_item,
+          idx: flat_idx,
+          selected,
+          active,
+          disabled: disabled ?? false,
+        })}
                 {:else if children}
                   {@render children({ option: option_item, idx: flat_idx, type: `option` })}
                 {:else if parseLabelsAsHtml}

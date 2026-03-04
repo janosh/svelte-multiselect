@@ -4,6 +4,7 @@ import type { Page } from '@sveltejs/kit'
 import { mount, tick } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { doc_query } from './index'
+import TestNavLinkSnippet from './TestNavLinkSnippet.svelte'
 
 vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/` } } }))
 
@@ -444,6 +445,26 @@ describe(`Nav`, () => {
     expect(dropdown2.classList.contains(`active`)).toBe(
       !is_active && pathname === `/other`,
     )
+  })
+
+  test(`link snippet receives is_active for current and non-current routes`, () => {
+    const mock_page = { url: { pathname: `/about` } } as Page
+    mount(TestNavLinkSnippet, {
+      target: document.body,
+      props: { routes: [`/`, `/about`, `/contact`], page: mock_page },
+    })
+
+    const links = [...document.querySelectorAll<HTMLElement>(`.link-snippet`)]
+    expect(links).toHaveLength(3)
+
+    expect(links[0].dataset.isActive).toBe(`false`)
+    expect(links[0].getAttribute(`href`)).toBe(`/`)
+
+    expect(links[1].dataset.isActive).toBe(`true`)
+    expect(links[1].getAttribute(`href`)).toBe(`/about`)
+
+    expect(links[2].dataset.isActive).toBe(`false`)
+    expect(links[2].getAttribute(`href`)).toBe(`/contact`)
   })
 
   test(`dropdown accessibility: role and aria-label attributes`, () => {

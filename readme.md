@@ -708,18 +708,18 @@ These reflect internal component state:
 
 `MultiSelect.svelte` accepts the following named snippets:
 
-1. `#snippet option({ option, idx })`: Customize rendering of dropdown options. Receives as props an `option` and the zero-indexed position (`idx`) it has in the dropdown.
+1. `#snippet option({ option, idx, selected, active, disabled })`: Customize rendering of dropdown options. Receives the `option`, its zero-indexed position (`idx`) in the dropdown, whether it is `selected`, `active` (keyboard-highlighted), and `disabled`.
 1. `#snippet selectedItem({ option, idx })`: Customize rendering of selected items. Receives as props an `option` and the zero-indexed position (`idx`) it has in the list of selected items.
 1. `#snippet children({ option, idx, type })`: Convenience snippet that applies to both dropdown options AND selected items. Use this when you want the same custom rendering for both. Takes precedence if `option` or `selectedItem` are not provided. `type` is `'selected'` when rendering a selected pill and `'option'` when rendering a dropdown item, allowing conditional styling/content by context.
 1. `#snippet spinner()`: Custom spinner component to display when in `loading` state. Receives no props.
 1. `#snippet disabledIcon()`: Custom icon to display inside the input when in `disabled` state. Receives no props. Use an empty `{#snippet disabledIcon()}{/snippet}` to remove the default disabled icon.
-1. `#snippet expandIcon({ open })`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. `open` is `true` if the dropdown is visible and `false` if hidden.
-1. `#snippet removeIcon()`: Custom icon to display as remove button. Will be used both by buttons to remove individual selected options and the 'remove all' button that clears all options at once. Receives no props.
+1. `#snippet expandIcon({ open, disabled })`: Allows setting a custom icon to indicate to users that the Multiselect text input field is expandable into a dropdown list. `open` is `true` if the dropdown is visible and `false` if hidden. `disabled` reflects the component's disabled state.
+1. `#snippet removeIcon({ option, isRemoveAll })`: Custom icon to display as remove button. Used both by per-option remove buttons (`isRemoveAll: false`, `option` is the item being removed) and the 'remove all' button (`isRemoveAll: true`, `option` is `undefined`).
 1. `#snippet userMsg({ searchText, msgType, msg })`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
    - `searchText`: The text user typed into search input.
    - `msgType: false | 'create' | 'dupe' | 'no-match'`: `'dupe'` means user input is a duplicate of an existing option. `'create'` means user is allowed to convert their input into a new option not previously in the dropdown. `'no-match'` means user input doesn't match any dropdown items and users are not allowed to create new options. `false` means none of the above.
    - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
-1. `#snippet afterInput({ selected, disabled, invalid, id, placeholder, open, required })`: Placed after the search input. For arbitrary content like icons or temporary messages. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
+1. `#snippet afterInput({ selected, disabled, invalid, id, placeholder, open, required, searchText })`: Placed after the search input. For arbitrary content like icons or temporary messages. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
 Example using several snippets:
 
@@ -738,8 +738,8 @@ Example using several snippets:
   {#snippet spinner()}
     <CustomSpinner />
   {/snippet}
-  {#snippet removeIcon()}
-    <strong>X</strong>
+  {#snippet removeIcon({ isRemoveAll })}
+    <strong>{isRemoveAll ? `Clear` : `X`}</strong>
   {/snippet}
 </MultiSelect>
 ```
@@ -749,10 +749,10 @@ Example using several snippets:
 `MultiSelect.svelte` provides the following event callback props:
 
 1. ```ts
-   onadd={({ option }) => console.log(option)}
+   onadd={({ option, selected }) => console.log(option, selected)}
    ```
 
-   Triggers when a new option is selected. The newly selected option is provided as `option`.
+   Triggers when a new option is selected. `option` is the newly selected option, `selected` is the updated array of all selected options.
 
 1. ```ts
    oncreate={({ option }) => console.log(option)}
@@ -761,10 +761,10 @@ Example using several snippets:
    Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `option`.
 
 1. ```ts
-   onremove={({ option }) => console.log(option)}
+   onremove={({ option, selected }) => console.log(option, selected)}
    ```
 
-   Triggers when a single selected option is removed. The removed option is provided as `option`.
+   Triggers when a single selected option is removed. `option` is the removed option, `selected` is the updated array of remaining selected options.
 
 1. ```ts
    onremoveAll={({ options }) => console.log(options)}
@@ -779,10 +779,10 @@ Example using several snippets:
    Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added.
 
 1. ```ts
-   onreorder={({ options }) => console.log(options)}
+   onreorder={({ options, previous }) => console.log(options, previous)}
    ```
 
-   Triggers when selected options are reordered via drag-and-drop (enabled by default when `sortSelected` is false). The `options` payload is the newly ordered array of selected options.
+   Triggers when selected options are reordered via drag-and-drop (enabled by default when `sortSelected` is false). `options` is the newly ordered array, `previous` is the array before reordering.
 
 1. ```ts
    onchange={({ type, option, options }) => console.log(type, option ?? options)}
@@ -803,10 +803,10 @@ Example using several snippets:
    Triggers when the dropdown list of options disappears. `event` is the DOM's `FocusEvent`, `KeyboardEvent` or `ClickEvent` that triggered the close.
 
 1. ```ts
-   onsearch={({ searchText, matchingCount }) => console.log(searchText, matchingCount)}
+   onsearch={({ searchText, matchingOptions }) => console.log(searchText, matchingOptions.length)}
    ```
 
-   Triggers (debounced, 150ms) when the search text changes. Useful for analytics or loading remote options. `searchText` is the current input value, `matchingCount` is the number of options that match.
+   Triggers (debounced, 150ms) when the search text changes. Useful for analytics or loading remote options. `searchText` is the current input value, `matchingOptions` is the array of options matching the search.
 
 1. ```ts
    onmaxreached={({ selected, maxSelect, attemptedOption }) => console.log(attemptedOption)}
