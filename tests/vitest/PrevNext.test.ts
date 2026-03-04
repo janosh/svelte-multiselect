@@ -161,7 +161,7 @@ describe(`PrevNext`, () => {
     })
 
     const snippets = [
-      ...document.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
+      ...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
     ]
     expect(snippets).toHaveLength(2)
 
@@ -183,7 +183,7 @@ describe(`PrevNext`, () => {
     })
 
     const snippets = [
-      ...document.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
+      ...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
     ]
     expect(snippets).toHaveLength(2)
     expect(snippets[0].dataset.index).toBeUndefined()
