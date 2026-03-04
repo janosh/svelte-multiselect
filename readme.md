@@ -738,8 +738,8 @@ Example using several snippets:
   {#snippet spinner()}
     <CustomSpinner />
   {/snippet}
-  {#snippet removeIcon({ option, isRemoveAll })}
-    <strong>X</strong>
+  {#snippet removeIcon({ isRemoveAll })}
+    <strong>{isRemoveAll ? `Clear` : `X`}</strong>
   {/snippet}
 </MultiSelect>
 ```

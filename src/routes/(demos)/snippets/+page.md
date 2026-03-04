@@ -25,10 +25,14 @@
     <LanguageSnippet {option} />
   {/snippet}
   {#snippet expandIcon({ open, disabled })}
-    <Icon icon={open ? 'Collapse' : 'Expand'} />
+    <Icon icon={open ? 'Collapse' : 'Expand'} style={disabled ? `opacity: 0.5` : ``} />
   {/snippet}
-  {#snippet removeIcon({ option, isRemoveAll })}
-    <MinusIcon width="1em" />
+  {#snippet removeIcon({ isRemoveAll })}
+    {#if isRemoveAll}
+      <span style="font-size: 0.8em">Clear all</span>
+    {:else}
+      <MinusIcon width="1em" />
+    {/if}
   {/snippet}
 </MultiSelect>
 ```
@@ -60,22 +64,16 @@
   {#snippet selectedItem({ option })}
     <LanguageSnippet {option} />
   {/snippet}
-  {#snippet option({ option, idx, selected, active, disabled })}
-    <LanguageSnippet {option} />
+  {#snippet option({ option, selected })}
+    <LanguageSnippet {option} style={selected ? `opacity: 0.6` : ``} />
   {/snippet}
   {#snippet expandIcon({ open: expandOpen, disabled })}
-    <button
-      onclick={() => (open = false)}
-      onkeyup={(event: KeyboardEvent) => {
-        event.preventDefault()
-        if ([`Enter`, `Space`].includes(event.code)) open = !open
-      }}
-    >
+    <button {disabled}>
       <Icon icon={expandOpen ? `Collapse` : `Expand`} />
     </button>
   {/snippet}
-  {#snippet removeIcon({ option, isRemoveAll })}
-    <span style="width: 2ex">x</span>
+  {#snippet removeIcon({ option: opt, isRemoveAll })}
+    <span style="width: 2ex">{isRemoveAll ? `✕✕` : `✕`}</span>
   {/snippet}
 </MultiSelect>
 ```

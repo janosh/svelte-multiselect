@@ -156,7 +156,7 @@ describe(`PrevNext`, () => {
 
   test(`children snippet receives index and total`, () => {
     mount(TestPrevNextSnippet, {
-      target: document.body,
+      target,
       props: { items, current: `page2` },
     })
 
@@ -176,9 +176,9 @@ describe(`PrevNext`, () => {
     expect(snippets[1].dataset.total).toBe(`4`)
   })
 
-  test(`children snippet passes index=null when current is invalid`, () => {
+  test(`children snippet passes index=undefined when current is invalid`, () => {
     mount(TestPrevNextSnippet, {
-      target: document.body,
+      target,
       props: { items, current: `nonexistent`, log: `silent` },
     })
 

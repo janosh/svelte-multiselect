@@ -187,8 +187,8 @@ value = {JSON.stringify(value) || `null`}
     }
   }}
 >
-  {#snippet option({ idx, option, selected, active, disabled })}
-    <RepoSnippet {idx} {option} />
+  {#snippet option({ idx, option, selected })}
+    <RepoSnippet {idx} {option} style={selected ? `opacity: 0.5` : ``} />
   {/snippet}
 </MultiSelect>
 {#if show_confetti}
