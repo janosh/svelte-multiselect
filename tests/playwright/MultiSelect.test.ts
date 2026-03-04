@@ -949,7 +949,7 @@ test.describe(`maxSelect`, () => {
 })
 
 test.describe(`snippets`, () => {
-  test(`renders removeIcon snippet for individual remove buttons and the remove-all button`, async ({ page }) => {
+  test(`renders custom removeIcon snippets with per-item icons and Clear all label`, async ({ page }) => {
     await page.goto(`/snippets`, { waitUntil: `networkidle` })
 
     // Use .expand-icon wrapper class for robust selection that doesn't depend on exact sibling order

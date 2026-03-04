@@ -25,7 +25,7 @@
     <LanguageSnippet {option} />
   {/snippet}
   {#snippet expandIcon({ open, disabled })}
-    <Icon icon={open ? 'Collapse' : 'Expand'} style={disabled ? `opacity: 0.5` : ``} />
+    <Icon icon={open ? 'Collapse' : 'Expand'} style={disabled ? `opacity: 0.5` : null} />
   {/snippet}
   {#snippet removeIcon({ isRemoveAll })}
     {#if isRemoveAll}
@@ -73,7 +73,9 @@
     </button>
   {/snippet}
   {#snippet removeIcon({ option: opt, isRemoveAll })}
-    <span style="width: 2ex">{isRemoveAll ? `✕✕` : `✕`}</span>
+    <span style="width: 2ex" title={isRemoveAll ? `Remove all` : `Remove ${opt}`}>{
+      isRemoveAll ? `✕✕` : `✕`
+    }</span>
   {/snippet}
 </MultiSelect>
 ```
