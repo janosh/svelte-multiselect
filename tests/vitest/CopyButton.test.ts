@@ -3,6 +3,7 @@ import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
 import { beforeEach, expect, test, vi } from 'vitest'
 import TestCopyButtonGlobalUpdate from './TestCopyButtonGlobalUpdate.svelte'
+import TestCopyButtonSnippet from './TestCopyButtonSnippet.svelte'
 
 const mock_write_text = vi.fn()
 vi.stubGlobal(`navigator`, { clipboard: { writeText: mock_write_text } })
@@ -12,10 +13,6 @@ const default_labels = {
   success: { icon: `Check`, text: `success` },
   error: { icon: `Alert`, text: `error` },
 } as const
-const empty_children_snippet = (() => ``) as unknown as NonNullable<
-  ComponentProps<typeof CopyButton>[`children`]
->
-
 const mount_copy_button = (
   props: Partial<ComponentProps<typeof CopyButton>> = {},
 ) => {
@@ -127,11 +124,20 @@ test(`renders default icon and ready label`, () => {
   expect(copy_button.textContent).toContain(`ready`)
 })
 
-test(`custom children render without default content wrapper`, () => {
-  const { copy_button } = mount_copy_button({ children: empty_children_snippet })
-  expect(copy_button.textContent).toBe(``)
-  expect(copy_button.querySelector(`svg`)).toBeNull()
-})
+test.each([true, false])(
+  `custom children snippet renders and receives disabled=%s`,
+  (disabled) => {
+    mount(TestCopyButtonSnippet, {
+      target: document.body,
+      props: { content: `test`, disabled },
+    })
+    const copy_button = document.body.querySelector(`[data-sms-copy]`) as HTMLElement
+    expect(copy_button.querySelector(`svg`)).toBeNull()
+    const snippet = copy_button.querySelector(`.copy-snippet`) as HTMLElement
+    expect(snippet.dataset.disabled).toBe(`${disabled}`)
+    expect(snippet.dataset.state).toBe(`ready`)
+  },
+)
 
 test(`disabled=true blocks copy and preserves ready state`, async () => {
   const { copy_button } = mount_copy_button({

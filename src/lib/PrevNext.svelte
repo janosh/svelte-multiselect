@@ -27,10 +27,12 @@
     onkeyup?:
       | ((obj: { prev: Item; next: Item }) => Record<string, string | undefined>)
       | null
-    prev_snippet?: Snippet<[{ item: Item }]>
-    children?: Snippet<[{ kind: `prev` | `next`; item: Item }]>
+    prev_snippet?: Snippet<[{ item: Item; index: number | null; total: number }]>
+    children?: Snippet<
+      [{ kind: `prev` | `next`; item: Item; index: number | null; total: number }]
+    >
     between?: Snippet<[]>
-    next_snippet?: Snippet<[{ item: Item }]>
+    next_snippet?: Snippet<[{ item: Item; index: number | null; total: number }]>
     min_items?: number
     link_props?: HTMLAttributes<HTMLAnchorElement>
   } = $props()
@@ -44,6 +46,8 @@
 
   // Calculate prev/next items with wraparound
   let idx = $derived(items_arr.findIndex(([key]) => key === current))
+  let index = $derived(idx >= 0 ? idx : null)
+  let total = $derived(items_arr.length)
   let prev = $derived(items_arr[idx - 1] ?? items_arr[items_arr.length - 1])
   let next = $derived(items_arr[idx + 1] ?? items_arr[0])
 
@@ -94,9 +98,9 @@
     -->
     {#if prev?.length >= 2}
       {#if prev_snippet}
-        {@render prev_snippet({ item: prev })}
+        {@render prev_snippet({ item: prev, index, total })}
       {:else if children}
-        {@render children({ kind: `prev`, item: prev })}
+        {@render children({ kind: `prev`, item: prev, index, total })}
       {:else}
         <div>
           {#if titles.prev}<span>{@html titles.prev}</span>{/if}
@@ -109,9 +113,9 @@
     {@render between?.()}
     {#if next?.length >= 2}
       {#if next_snippet}
-        {@render next_snippet({ item: next })}
+        {@render next_snippet({ item: next, index, total })}
       {:else if children}
-        {@render children({ kind: `next`, item: next })}
+        {@render children({ kind: `next`, item: next, index, total })}
       {:else}
         <div>
           {#if titles.next}<span>{@html titles.next}</span>{/if}

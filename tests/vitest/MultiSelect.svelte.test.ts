@@ -11,6 +11,8 @@ import { get_label, get_style } from '$lib/utils'
 import { doc_query, type Test2WayBindProps } from './index'
 import Test2WayBind from './Test2WayBind.svelte'
 import TestChildrenSnippet from './TestChildrenSnippet.svelte'
+import TestMultiSelectSnippets from './TestMultiSelectSnippets.svelte'
+import TestOptionSnippet from './TestOptionSnippet.svelte'
 
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
 const input_event = new InputEvent(`input`, { bubbles: true })
@@ -750,6 +752,105 @@ test(`children snippet receives type='selected' for pills and type='option' for 
   for (const span of option_spans) {
     expect(span.dataset.type).toBe(`option`)
   }
+})
+
+test(`option snippet receives selected, active, and disabled booleans`, async () => {
+  mount(TestOptionSnippet, {
+    target: document.body,
+    props: {
+      options: [
+        { label: `Enabled`, value: 1 },
+        { label: `Disabled`, value: 2, disabled: true },
+      ],
+      selected: [{ label: `Enabled`, value: 1 }],
+      keepSelectedInDropdown: `plain`,
+    },
+  })
+
+  // open dropdown
+  doc_query(`div.multiselect`).dispatchEvent(
+    new MouseEvent(`mouseup`, { bubbles: true }),
+  )
+  await tick()
+
+  const option_spans = [
+    ...document.querySelectorAll<HTMLElement>(`ul.options span.option-snippet`),
+  ]
+  expect(option_spans).toHaveLength(2)
+
+  // first option is selected (keepSelectedInDropdown shows it)
+  expect(option_spans[0].dataset.selected).toBe(`true`)
+  expect(option_spans[0].dataset.disabled).toBe(`false`)
+
+  // second option is disabled
+  expect(option_spans[1].dataset.selected).toBe(`false`)
+  expect(option_spans[1].dataset.disabled).toBe(`true`)
+})
+
+test(`expandIcon snippet receives open and disabled`, () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3], disabled: true },
+  })
+
+  const expand = doc_query<HTMLElement>(`.expand-snippet`)
+  expect(expand.dataset.disabled).toBe(`true`)
+  expect(expand.dataset.open).toBe(`false`)
+})
+
+test(`expandIcon open toggles to true when dropdown opens`, async () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3] },
+  })
+
+  const expand = doc_query<HTMLElement>(`.expand-snippet`)
+  expect(expand.dataset.open).toBe(`false`)
+
+  doc_query(`div.multiselect`).dispatchEvent(
+    new MouseEvent(`mouseup`, { bubbles: true }),
+  )
+  await tick()
+  expect(expand.dataset.open).toBe(`true`)
+})
+
+test(`removeIcon snippet receives option for per-item and remove_all flag`, async () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3], selected: [1, 2] },
+  })
+  await tick()
+
+  const remove_spans = [
+    ...document.querySelectorAll<HTMLElement>(`.remove-snippet`),
+  ]
+  expect(remove_spans).toHaveLength(3)
+
+  // first 2 are per-option removes
+  expect(remove_spans[0].dataset.isRemoveAll).toBe(`false`)
+  expect(remove_spans[0].dataset.option).toBe(`1`)
+  expect(remove_spans[1].dataset.isRemoveAll).toBe(`false`)
+  expect(remove_spans[1].dataset.option).toBe(`2`)
+  // last is the remove-all button
+  expect(remove_spans[2].dataset.isRemoveAll).toBe(`true`)
+  expect(remove_spans[2].dataset.option).toBeUndefined()
+})
+
+test(`afterInput snippet receives searchText`, async () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3] },
+  })
+
+  const after_input = doc_query<HTMLElement>(`.after-input-snippet`)
+  expect(after_input.dataset.searchText).toBe(``)
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `test`
+  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  await tick()
+
+  expect(after_input.dataset.searchText).toBe(`test`)
 })
 
 test(`filters dropdown to show only matching options when entering text`, async () => {
@@ -1557,7 +1658,7 @@ test(`drag-drop reordering fires onreorder and onchange events`, async () => {
 
   // verify onreorder was called with the new order
   expect(onreorder_spy).toHaveBeenCalledTimes(1)
-  expect(onreorder_spy).toHaveBeenCalledWith({ options: [2, 1, 3] })
+  expect(onreorder_spy).toHaveBeenCalledWith({ options: [2, 1, 3], previous: [1, 2, 3] })
 
   // verify onchange was called with type 'reorder'
   expect(onchange_spy).toHaveBeenCalledTimes(1)
@@ -1797,9 +1898,52 @@ test.each([
     expect(onadd_spy).toHaveBeenCalledTimes(1)
     expect(onadd_spy).toHaveBeenCalledWith({
       option: expected_created_option,
+      selected: [expected_created_option],
     })
   },
 )
+
+test(`onadd selected accumulates and onremove selected reflects removal`, async () => {
+  const onadd_spy = vi.fn()
+  const onremove_spy = vi.fn()
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], onadd: onadd_spy, onremove: onremove_spy },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+  await tick()
+  doc_query(`ul.options li`).click()
+  await tick()
+  expect(onadd_spy).toHaveBeenLastCalledWith({ option: 1, selected: [1] })
+
+  input.focus()
+  await tick()
+  doc_query(`ul.options li`).click()
+  await tick()
+  expect(onadd_spy).toHaveBeenLastCalledWith({ option: 2, selected: [1, 2] })
+
+  doc_query(`ul.selected button.remove`).click()
+  expect(onremove_spy).toHaveBeenCalledWith({ option: 1, selected: [2] })
+})
+
+test(`onadd selected reflects replacement when maxSelect=1`, async () => {
+  const onadd_spy = vi.fn()
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], maxSelect: 1, selected: [1], onadd: onadd_spy },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+  await tick()
+  doc_query(`ul.options li`).click()
+  await tick()
+
+  expect(onadd_spy).toHaveBeenCalledWith({ option: 2, selected: [2] })
+})
 
 test.each(
   [
@@ -4659,7 +4803,7 @@ describe(`onsearch event`, () => {
     expect(onsearch_spy).toHaveBeenCalledTimes(1)
     expect(onsearch_spy).toHaveBeenCalledWith({
       searchText: `1`,
-      matchingCount: 2, // matches "1" and "10"
+      matchingOptions: [1, 10],
     })
 
     // Clear the search - should also fire
@@ -4670,7 +4814,7 @@ describe(`onsearch event`, () => {
     expect(onsearch_spy).toHaveBeenCalledTimes(2)
     expect(onsearch_spy).toHaveBeenNthCalledWith(2, {
       searchText: ``,
-      matchingCount: 6, // all options match empty search
+      matchingOptions: [1, 2, 3, 10, 20, 30],
     })
 
     vi.useRealTimers()
@@ -4728,13 +4872,13 @@ describe(`onsearch event`, () => {
     expect(onsearch_spy).toHaveBeenCalledTimes(1)
     expect(onsearch_spy).toHaveBeenCalledWith({
       searchText: `ap`,
-      matchingCount: 2, // matches "apple" and "apricot"
+      matchingOptions: [`apple`, `apricot`],
     })
 
     vi.useRealTimers()
   })
 
-  test(`matchingCount is 0 when no options match`, async () => {
+  test(`matchingOptions is empty when no options match`, async () => {
     vi.useFakeTimers()
     const onsearch_spy = vi.fn()
 
@@ -4747,14 +4891,13 @@ describe(`onsearch event`, () => {
     input.focus()
     await tick()
 
-    // Type something that matches nothing
     input.value = `xyz`
     input.dispatchEvent(input_event)
     await vi.advanceTimersByTimeAsync(200)
 
     expect(onsearch_spy).toHaveBeenCalledWith({
       searchText: `xyz`,
-      matchingCount: 0,
+      matchingOptions: [],
     })
 
     vi.useRealTimers()

@@ -187,7 +187,7 @@ value = {JSON.stringify(value) || `null`}
     }
   }}
 >
-  {#snippet option({ idx, option })}
+  {#snippet option({ idx, option, selected, active, disabled })}
     <RepoSnippet {idx} {option} />
   {/snippet}
 </MultiSelect>

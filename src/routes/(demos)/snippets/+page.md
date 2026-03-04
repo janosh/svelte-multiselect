@@ -24,10 +24,10 @@
   {#snippet children({ option })}
     <LanguageSnippet {option} />
   {/snippet}
-  {#snippet expandIcon({ open })}
+  {#snippet expandIcon({ open, disabled })}
     <Icon icon={open ? 'Collapse' : 'Expand'} />
   {/snippet}
-  {#snippet removeIcon()}
+  {#snippet removeIcon({ option, isRemoveAll })}
     <MinusIcon width="1em" />
   {/snippet}
 </MultiSelect>
@@ -60,10 +60,10 @@
   {#snippet selectedItem({ option })}
     <LanguageSnippet {option} />
   {/snippet}
-  {#snippet option({ option })}
+  {#snippet option({ option, idx, selected, active, disabled })}
     <LanguageSnippet {option} />
   {/snippet}
-  {#snippet expandIcon({ open: expandOpen })}
+  {#snippet expandIcon({ open: expandOpen, disabled })}
     <button
       onclick={() => (open = false)}
       onkeyup={(event: KeyboardEvent) => {
@@ -74,7 +74,7 @@
       <Icon icon={expandOpen ? `Collapse` : `Expand`} />
     </button>
   {/snippet}
-  {#snippet removeIcon()}
+  {#snippet removeIcon({ option, isRemoveAll })}
     <span style="width: 2ex">x</span>
   {/snippet}
 </MultiSelect>
