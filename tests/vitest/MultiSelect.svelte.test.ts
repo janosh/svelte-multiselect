@@ -781,10 +781,23 @@ test(`option snippet receives selected, active, and disabled booleans`, async ()
   // first option is selected (keepSelectedInDropdown shows it)
   expect(option_spans[0].dataset.selected).toBe(`true`)
   expect(option_spans[0].dataset.disabled).toBe(`false`)
+  expect(option_spans[0].dataset.active).toBe(`false`)
 
   // second option is disabled
   expect(option_spans[1].dataset.selected).toBe(`false`)
   expect(option_spans[1].dataset.disabled).toBe(`true`)
+  expect(option_spans[1].dataset.active).toBe(`false`)
+
+  // hover first option to activate it
+  doc_query(`ul.options > li`).dispatchEvent(
+    new MouseEvent(`mouseover`, { bubbles: true }),
+  )
+  await tick()
+  const updated_spans = [
+    ...document.querySelectorAll<HTMLElement>(`ul.options span.option-snippet`),
+  ]
+  expect(updated_spans[0].dataset.active).toBe(`true`)
+  expect(updated_spans[1].dataset.active).toBe(`false`)
 })
 
 test(`expandIcon snippet receives open and disabled`, () => {
