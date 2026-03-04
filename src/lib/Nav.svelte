@@ -39,7 +39,7 @@
     routes: NavRoute[]
     children?: Snippet<[{ is_open: boolean; panel_id: string; routes: NavRoute[] }]>
     item?: Snippet<[ItemSnippetParams]>
-    link?: Snippet<[{ href: string; label: string }]>
+    link?: Snippet<[{ href: string; label: string; isActive: boolean }]>
     menu_props?: HTMLAttributes<HTMLDivElement>
     link_props?: HTMLAttributes<HTMLAnchorElement>
     page?: Page
@@ -277,7 +277,11 @@
       {@attach item_tooltip}
     >{@html formatted.label}</span>
   {:else if link}
-    {@render link({ href: parsed_route.href, label: formatted.label })}
+    {@render link({
+    href: parsed_route.href,
+    label: formatted.label,
+    isActive: is_current(parsed_route.href) === `page`,
+  })}
   {:else}
     <a
       href={parsed_route.href}
@@ -434,7 +438,11 @@
               {@const child_formatted = format_label(child_href, true)}
               {@const child_tooltip = get_tooltip({ href: child_href })}
               {#if link}
-                {@render link({ href: child_href, label: child_formatted.label })}
+                {@render link({
+            href: child_href,
+            label: child_formatted.label,
+            isActive: is_current(child_href) === `page`,
+          })}
               {:else}
                 <a
                   href={child_href}

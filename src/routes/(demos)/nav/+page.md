@@ -150,8 +150,12 @@ Use the `link` snippet to customize how all links render:
 </script>
 
 <Nav {routes} {page}>
-  {#snippet link({ href, label })}
-    <a {href} onclick={(event: MouseEvent) => event.preventDefault()}>🔗 {label}</a>
+  {#snippet link({ href, label, isActive })}
+    <a
+      {href}
+      style:font-weight={isActive ? `bold` : `normal`}
+      onclick={(event: MouseEvent) => event.preventDefault()}
+    >🔗 {label}</a>
   {/snippet}
 </Nav>
 ```

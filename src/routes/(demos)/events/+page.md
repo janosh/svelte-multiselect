@@ -191,19 +191,23 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
 
 #### Custom Events
 
-| Event          | Description                                      | Data Structure                                                          |
-| -------------- | ------------------------------------------------ | ----------------------------------------------------------------------- |
-| `onadd`        | Fired when an option is added to selection       | `{ option: T }`                                                         |
-| `onremove`     | Fired when an option is removed from selection   | `{ option: T }`                                                         |
-| `onremoveAll`  | Fired when all options are removed               | `{ options: T[] }`                                                      |
-| `onchange`     | Fired for any selection change                   | `{ option?: T, options?: T[], type: 'add' \| 'remove' \| 'removeAll' }` |
-| `oncreate`     | Fired when user creates a custom option          | `{ option: T }`                                                         |
-| `onopen`       | Fired when dropdown opens                        | `{ event: Event }`                                                      |
-| `onclose`      | Fired when dropdown closes                       | `{ event: Event }`                                                      |
-| `onsearch`     | Fired (debounced 150ms) when search text changes | `{ searchText: string, matchingCount: number }`                         |
-| `onmaxreached` | Fired when user tries to exceed maxSelect        | `{ selected: T[], maxSelect: number, attemptedOption: T }`              |
-| `onduplicate`  | Fired when user tries to add duplicate           | `{ option: T }`                                                         |
-| `onactivate`   | Fired on keyboard navigation through options     | `{ option: T \| null, index: number \| null }`                          |
+| Event           | Description                                      | Data Structure                                                                                      |
+| --------------- | ------------------------------------------------ | --------------------------------------------------------------------------------------------------- |
+| `onadd`         | Fired when an option is added to selection       | `{ option: T, selected: T[] }`                                                                      |
+| `onremove`      | Fired when an option is removed from selection   | `{ option: T, selected: T[] }`                                                                      |
+| `onremoveAll`   | Fired when all options are removed               | `{ options: T[] }`                                                                                  |
+| `onselectAll`   | Fired when select all is triggered               | `{ options: T[] }`                                                                                  |
+| `onreorder`     | Fired when selected options are reordered        | `{ options: T[], previous: T[] }`                                                                   |
+| `onchange`      | Fired for any selection change                   | `{ option?: T, options?: T[], type: 'add' \| 'remove' \| 'removeAll' \| 'selectAll' \| 'reorder' }` |
+| `oncreate`      | Fired when user creates a custom option          | `{ option: T }`                                                                                     |
+| `onopen`        | Fired when dropdown opens                        | `{ event: Event }`                                                                                  |
+| `onclose`       | Fired when dropdown closes                       | `{ event: Event }`                                                                                  |
+| `onsearch`      | Fired (debounced 150ms) when search text changes | `{ searchText: string, matchingOptions: T[] }`                                                      |
+| `onmaxreached`  | Fired when user tries to exceed maxSelect        | `{ selected: T[], maxSelect: number, attemptedOption: T }`                                          |
+| `onduplicate`   | Fired when user tries to add duplicate           | `{ option: T }`                                                                                     |
+| `onactivate`    | Fired on keyboard navigation through options     | `{ option: T \| null, index: number \| null }`                                                      |
+| `oncollapseAll` | Fired when all groups are collapsed              | `{ groups: string[] }`                                                                              |
+| `onexpandAll`   | Fired when all groups are expanded               | `{ groups: string[] }`                                                                              |
 
 #### Native DOM Events
 

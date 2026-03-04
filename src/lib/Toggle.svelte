@@ -11,7 +11,7 @@
   }: HTMLAttributes<HTMLLabelElement> & {
     checked?: boolean // whether the toggle is on or off
     onkeydown?: (event: KeyboardEvent) => void
-    children?: Snippet<[]>
+    children?: Snippet<[{ checked: boolean }]>
     input_props?: HTMLAttributes<HTMLInputElement>
   } = $props()
 
@@ -27,7 +27,7 @@
 </script>
 
 <label {...rest}>
-  {@render children?.()}
+  {@render children?.({ checked })}
   <input
     type="checkbox"
     bind:checked

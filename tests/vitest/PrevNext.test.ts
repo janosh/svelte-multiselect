@@ -1,6 +1,7 @@
 import { PrevNext } from '$lib'
 import { mount } from 'svelte'
 import { beforeEach, describe, expect, test, vi } from 'vitest'
+import TestPrevNextSnippet from './TestPrevNextSnippet.svelte'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
 
@@ -151,6 +152,43 @@ describe(`PrevNext`, () => {
 
     globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `PageDown` }))
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
+  })
+
+  test(`children snippet receives index and total`, () => {
+    mount(TestPrevNextSnippet, {
+      target,
+      props: { items, current: `page2` },
+    })
+
+    const snippets = [
+      ...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
+    ]
+    expect(snippets).toHaveLength(2)
+
+    // prev snippet gets current page index and total count
+    expect(snippets[0].dataset.kind).toBe(`prev`)
+    expect(snippets[0].dataset.index).toBe(`1`)
+    expect(snippets[0].dataset.total).toBe(`4`)
+
+    // next snippet gets same index/total (it's the current page position)
+    expect(snippets[1].dataset.kind).toBe(`next`)
+    expect(snippets[1].dataset.index).toBe(`1`)
+    expect(snippets[1].dataset.total).toBe(`4`)
+  })
+
+  test(`children snippet passes index=undefined when current is invalid`, () => {
+    mount(TestPrevNextSnippet, {
+      target,
+      props: { items, current: `nonexistent`, log: `silent` },
+    })
+
+    const snippets = [
+      ...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
+    ]
+    expect(snippets).toHaveLength(2)
+    expect(snippets[0].dataset.index).toBeUndefined()
+    expect(snippets[1].dataset.index).toBeUndefined()
+    expect(snippets[0].dataset.total).toBe(`4`)
   })
 
   test(`link_props and default attributes applied to links`, () => {

@@ -1,6 +1,7 @@
 import { Toggle } from '$lib'
-import { mount } from 'svelte'
+import { mount, tick } from 'svelte'
 import { describe, expect, test, vi } from 'vitest'
+import TestToggleSnippet from './TestToggleSnippet.svelte'
 
 describe(`Toggle`, () => {
   const get_input = () =>
@@ -106,6 +107,21 @@ describe(`Toggle`, () => {
     expect(document.body.querySelector(`label`)).toBeTruthy()
     expect(document.body.querySelector(`input[type="checkbox"]`)).toBeTruthy()
     expect(document.body.querySelector(`span`)).toBeTruthy()
+  })
+
+  test(`children snippet receives checked state and updates on toggle`, async () => {
+    mount(TestToggleSnippet, { target: document.body, props: { checked: false } })
+
+    const snippet = document.body.querySelector(`.toggle-snippet`) as HTMLElement
+    expect(snippet.dataset.checked).toBe(`false`)
+
+    get_input().click()
+    await tick()
+    expect(snippet.dataset.checked).toBe(`true`)
+
+    get_input().click()
+    await tick()
+    expect(snippet.dataset.checked).toBe(`false`)
   })
 
   test(`two-way binding works`, () => {
