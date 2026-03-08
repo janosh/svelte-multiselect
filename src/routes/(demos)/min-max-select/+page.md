@@ -171,7 +171,7 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
     { label: `Green`, value: `#baffc9` },
     { label: `Blue`, value: `#bae1ff` },
   ]
-  let selected_color: ColorOption | null = $state(options[2]) // Pre-select Blue
+  let selected_color: ColorOption | null = $state(options[2]) // Preselect Blue
 </script>
 
 <MultiSelect {options} bind:value={selected_color} maxSelect={1} />

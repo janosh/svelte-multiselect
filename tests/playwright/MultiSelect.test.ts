@@ -868,7 +868,7 @@ test.describe(`minSelect pill click behavior`, () => {
   })
 
   test(`clicking selected pill opens dropdown when minSelect prevents removal`, async ({ page }) => {
-    // JavaScript is pre-selected with minSelect=1, so can_remove is false
+    // JavaScript is preselected with minSelect=1, so can_remove is false
     const selected_li = page.locator(`#languages ul.selected > li[aria-selected="true"]`)
     await expect(selected_li).toHaveCount(1)
     await expect(selected_li).toContainText(`JavaScript`)

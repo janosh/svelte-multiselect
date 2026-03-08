@@ -825,7 +825,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
           // Parse and apply custom styles as individual properties for better control
           const custom_styles = options.style.split(`;`).filter((style) => style.trim())
           custom_styles.forEach((style) => {
-            const [property, value] = style.split(`:`).map((s) => s.trim())
+            const [property, value] = style.split(`:`).map((part) => part.trim())
             if (property && value) tooltip_el.style.setProperty(property, value)
           })
         }

@@ -53,8 +53,7 @@ a:hover {
   color: var(--accent-hover);
 }
 /* Buttons */
-button,
-a.btn {
+button {
   color: inherit;
   background: var(--surface);
   border: 1px solid var(--border);
@@ -62,8 +61,7 @@ a.btn {
   padding: 0.25em 0.5em;
   cursor: pointer;
 }
-button:hover,
-a.btn:hover {
+button:hover {
   background: light-dark(#eee, rgba(255, 255, 255, 0.15));
 }
 /* Code */

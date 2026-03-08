@@ -135,7 +135,7 @@ These are the core props you'll use in most cases:
 
    ```svelte
    <script>
-     let selected = $state(['Red']) // Pre-select Red
+     let selected = $state(['Red']) // Preselect Red
    </script>
    <MultiSelect bind:selected options={colors} />
    ```
@@ -285,16 +285,16 @@ These are the core props you'll use in most cases:
    Currently active option (hovered or navigated to with arrow keys).
 
 1. ```ts
-   createOptionMsg: string | null = `Create this option...`
+   createOptionMsg: string | ((state: { searchText: string; selected: Option[]; options: Option[]; matchingOptions: Option[] }) => string) | null = `Create this option...`
    ```
 
-   Message shown when `allowUserOptions` is enabled and user can create a new option.
+   Message shown when `allowUserOptions` is enabled and user can create a new option. Can be a static string or a function that receives component state and returns a dynamic message.
 
 1. ```ts
-   duplicates: boolean = false
+   duplicates: boolean | 'case-insensitive' = false
    ```
 
-   Whether to allow selecting the same option multiple times.
+   Controls duplicate detection. `false` (default) blocks exact duplicates. `true` allows selecting the same option multiple times. `'case-insensitive'` blocks case variants (e.g. "Apple" blocks "apple").
 
 <!-- deno-fmt-ignore -->
 1. ```ts
@@ -388,6 +388,36 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    ```
 
    When `true`, collapsed groups automatically expand when the search query matches options within them.
+
+1. ```ts
+   searchMatchesGroups: boolean = false
+   ```
+
+   When `true`, the search query also matches against group names, not just option labels. If a group name matches, all options in that group are shown.
+
+1. ```ts
+   keyboardExpandsCollapsedGroups: boolean = false
+   ```
+
+   When `true`, collapsed groups automatically expand when the user navigates into them with arrow keys.
+
+1. ```ts
+   stickyGroupHeaders: boolean = false
+   ```
+
+   When `true`, group headers stick to the top of the dropdown while scrolling through their options.
+
+1. ```ts
+   collapseAllGroups: () => void  // bindable
+   ```
+
+   Programmatically collapse all groups. Use with `bind:collapseAllGroups` to get a callable function.
+
+1. ```ts
+   expandAllGroups: () => void  // bindable
+   ```
+
+   Programmatically expand all groups. Use with `bind:expandAllGroups` to get a callable function.
 
 1. ```ts
    liGroupHeaderClass: string = ''
@@ -518,6 +548,59 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    ```
 
    Animation parameters for the [Svelte flip animation](https://svelte.dev/docs/svelte/svelte-animate) when reordering selected options via drag-and-drop. Set `{ duration: 0 }` to disable animation. Accepts `duration`, `delay`, and `easing` properties.
+
+### Keyboard Shortcuts
+
+1. ```ts
+   shortcuts: Partial<KeyboardShortcuts> = {}
+   ```
+
+   Override default keyboard shortcuts. Shortcut format: `"modifier+...+key"` where modifiers can be `ctrl`, `shift`, `alt`, `meta`, `cmd`. Set a shortcut to `null` to disable it. Custom shortcuts take precedence over built-in key handlers (Enter, Escape, ArrowUp/Down, Backspace).
+
+   Available shortcuts and their defaults:
+
+   | Key          | Default                             | Action                                      |
+   | ------------ | ----------------------------------- | ------------------------------------------- |
+   | `select_all` | `'ctrl+a'`                          | Select all visible options                  |
+   | `clear_all`  | `'ctrl+shift+a'`                    | Deselect all options                        |
+   | `open`       | `null`                              | Open dropdown                               |
+   | `close`      | `null`                              | Close dropdown (Escape works by default)    |
+   | `undo`       | `'meta+z'` / `'ctrl+z'`             | Undo last selection change (platform-aware) |
+   | `redo`       | `'meta+shift+z'` / `'ctrl+shift+z'` | Redo last undone change (platform-aware)    |
+
+### Selection History (Undo/Redo)
+
+1. ```ts
+   history: boolean | number = true
+   ```
+
+   Enable selection history for undo/redo support. `true` (default) stores up to 50 states. Pass a number to set a custom maximum. `false` or `0` disables history. Note: you need at least `history=2` for a single undo (history=1 effectively disables it).
+
+1. ```ts
+   undo: ;
+   ;(() => boolean) // bindable
+   ```
+
+   Undo the last selection change. Returns `true` if undo was performed. Use with `bind:undo` to get a callable function.
+
+1. ```ts
+   redo: ;
+   ;(() => boolean) // bindable
+   ```
+
+   Redo the last undone selection change. Returns `true` if redo was performed. Use with `bind:redo` to get a callable function.
+
+1. ```ts
+   canUndo: boolean // bindable
+   ```
+
+   Whether an undo operation is available. Use with `bind:canUndo` for UI indicators (e.g. disabling an undo button).
+
+1. ```ts
+   canRedo: boolean // bindable
+   ```
+
+   Whether a redo operation is available. Use with `bind:canRedo` for UI indicators (e.g. disabling a redo button).
 
 ### Message Props
 
@@ -702,7 +785,7 @@ These reflect internal component state:
 
 ### Bindable Props
 
-`selected`, `value`, `searchText`, `open`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`, `form_input`, `options`, `matchingOptions`
+`selected`, `value`, `searchText`, `open`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`, `form_input`, `options`, `matchingOptions`, `collapsedGroups`, `collapseAllGroups`, `expandAllGroups`, `undo`, `redo`, `canUndo`, `canRedo`
 
 ## 🎰 &thinsp; Snippets
 
@@ -826,6 +909,30 @@ Example using several snippets:
 
    Triggers during keyboard navigation (ArrowUp/ArrowDown) through options. `option` is the newly active option, `index` is its position. Does not fire on mouse hover.
 
+1. ```ts
+   oncollapseAll={({ groups }) => console.log(`Collapsed:`, groups)}
+   ```
+
+   Triggers when all groups are collapsed (e.g. via `collapseAllGroups()`). `groups` lists the group names that were collapsed.
+
+1. ```ts
+   onexpandAll={({ groups }) => console.log(`Expanded:`, groups)}
+   ```
+
+   Triggers when all groups are expanded (e.g. via `expandAllGroups()`). `groups` lists the group names that were expanded.
+
+1. ```ts
+   onundo={({ previous, current }) => console.log(`Undo:`, previous, `→`, current)}
+   ```
+
+   Triggers when an undo operation restores a previous selection state. `previous` is the selection before undo, `current` is the restored selection.
+
+1. ```ts
+   onredo={({ previous, current }) => console.log(`Redo:`, previous, `→`, current)}
+   ```
+
+   Triggers when a redo operation re-applies a previously undone selection change. `previous` is the selection before redo, `current` is the new selection.
+
 For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
 
 ```svelte
@@ -879,10 +986,26 @@ import {
   LoadOptionsParams,
   LoadOptionsResult,
   MultiSelectEvents,
-  MultiSelectEvents,
+  MultiSelectSnippets,
   ObjectOption,
   Option,
 } from 'svelte-multiselect'
+```
+
+### Subpath Exports
+
+This package also provides subpath exports for utilities used by the component:
+
+```ts
+import {
+  click_outside,
+  draggable,
+  highlight_matches,
+  sortable,
+  tooltip,
+} from 'svelte-multiselect/attachments'
+import { fuzzy_match, get_label } from 'svelte-multiselect/utils'
+import { heading_anchors } from 'svelte-multiselect/heading-anchors'
 ```
 
 ## ✨ &thinsp; Styling
@@ -904,7 +1027,7 @@ There are 3 ways to style this component. To understand which options do what, i
 
 ### With CSS variables
 
-If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context. See [`app.css`](https://github.com/janosh/svelte-multiselect/blob/main/src/app.css) for how these variables are set on the demo site of this component.
+If you only want to make small adjustments, you can pass the following CSS variables directly to the component as props or define them in a `:global()` CSS context. All variables have sensible defaults defined inside `MultiSelect.svelte` itself.
 
 Minimal example that changes the background color of the options dropdown:
 
@@ -949,7 +1072,7 @@ Minimal example that changes the background color of the options dropdown:
   - `border-width: var(--sms-options-border-width)`
   - `border-radius: var(--sms-options-border-radius, 1ex)`
   - `padding: var(--sms-options-padding)`
-  - `margin: var(--sms-options-margin, inherit)`
+  - `margin: var(--sms-options-margin, 6pt 0 0 0)`
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
@@ -960,6 +1083,32 @@ Minimal example that changes the background color of the options dropdown:
 - `div.multiselect > ul.options > li.disabled`
   - `background: var(--sms-li-disabled-bg, light-dark(#f5f5f6, #2a2a2a))`: Background of disabled options in the dropdown list.
   - `color: var(--sms-li-disabled-text, light-dark(#b8b8b8, #666))`: Text color of disabled option in the dropdown list.
+- `div.multiselect > ul.options > li.select-all`
+  - `border-bottom: var(--sms-select-all-border-bottom, 1px solid light-dark(lightgray, #555))`: Bottom border separating "Select All" from regular options.
+  - `font-weight: var(--sms-select-all-font-weight, 500)`: Font weight of "Select All" text.
+  - `color: var(--sms-select-all-color, inherit)`: Text color of "Select All" option.
+  - `background: var(--sms-select-all-bg, transparent)`: Background of "Select All" option.
+  - `margin-bottom: var(--sms-select-all-margin-bottom, 2pt)`: Space below "Select All" option.
+  - `background (hover): var(--sms-select-all-hover-bg, ...)`: Background of "Select All" on hover. Falls back to `--sms-li-active-bg` then `--sms-active-color`.
+- `div.multiselect > ul.options > li.group-header`
+  - `font-weight: var(--sms-group-header-font-weight, 600)`: Font weight of group headers.
+  - `font-size: var(--sms-group-header-font-size, 0.85em)`: Font size of group headers.
+  - `color: var(--sms-group-header-color, light-dark(#666, #aaa))`: Text color of group headers.
+  - `background: var(--sms-group-header-bg, transparent)`: Background of group headers.
+  - `padding: var(--sms-group-header-padding, 6pt 1ex 3pt)`: Padding around group header text.
+  - `text-transform: var(--sms-group-header-text-transform, uppercase)`: Text transform for group headers.
+  - `letter-spacing: var(--sms-group-header-letter-spacing, 0.5px)`: Letter spacing for group headers.
+  - `margin-top: var(--sms-group-header-margin-top, 4pt)`: Top margin for group headers (except the first).
+  - `border-top: var(--sms-group-header-border-top, 1px solid light-dark(#eee, #333))`: Top border for group headers (except the first).
+  - `background (hover): var(--sms-group-header-hover-bg, light-dark(rgba(0, 0, 0, 0.05), rgba(255, 255, 255, 0.05)))`: Background of collapsible group headers on hover.
+  - `background (sticky): var(--sms-group-header-sticky-bg, ...)`: Background when `stickyGroupHeaders` is enabled. Falls back to `--sms-options-bg`.
+- `div.multiselect > ul.options > li` (grouped options)
+  - `padding-left: var(--sms-group-item-padding-left, var(--sms-group-option-indent, 1.5ex))`: Indentation for options within a group.
+- Group chevron icon
+  - `transition: transform var(--sms-group-collapse-duration, 0.15s) ease-out`: Animation duration for group collapse/expand chevron rotation.
+- Group "Select/Deselect All" button
+  - `background (hover): var(--sms-group-select-all-hover-bg, light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1)))`: Background of per-group select-all button on hover.
+  - `color (deselect): var(--sms-group-deselect-color, light-dark(#c44, #f77))`: Text color of "Deselect All" button (when all group options are already selected).
 - `::highlight(sms-search-matches)`: applies to search results in dropdown list that match the current search query if `highlightMatches=true`. These styles [cannot be set via CSS variables](https://stackoverflow.com/a/56799215). Instead, use a new rule set. For example:
 
   ```css

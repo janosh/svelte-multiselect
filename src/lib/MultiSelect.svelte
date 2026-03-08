@@ -1250,6 +1250,9 @@
     form_input?.setCustomValidity(``)
   })
 
+  // Portal action: use: directive instead of @attach because portalling requires
+  // synchronous DOM manipulation during element creation and in-place updates
+  // (the action's update method avoids teardown/re-creation when outerDiv changes).
   type PortalParams = { target_node: HTMLElement | null; active?: boolean }
   function portal(node: HTMLElement, params: PortalParams) {
     let { target_node, active } = params

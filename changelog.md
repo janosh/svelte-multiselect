@@ -1,5 +1,13 @@
 # Changelog
 
+## [v11.6.3](https://github.com/janosh/svelte-multiselect/compare/v11.6.2...v11.6.3)
+
+> 8 March 2026
+
+- Tooltip: suppress native title, auto-flip placement, sync arrow by @janosh in https://github.com/janosh/svelte-multiselect/pull/398
+- Fix live example CSS resolution during SSR by @janosh in https://github.com/janosh/svelte-multiselect/pull/399
+- Enrich snippet props and event callback payloads by @janosh in https://github.com/janosh/svelte-multiselect/pull/400
+
 ## [v11.6.2](https://github.com/janosh/svelte-multiselect/compare/v11.6.1...v11.6.2)
 
 > 19 February 2026
