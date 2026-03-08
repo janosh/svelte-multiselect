@@ -42,7 +42,7 @@ repos:
         types: [ts]
 
   - repo: https://github.com/codespell-project/codespell
-    rev: v2.4.1
+    rev: v2.4.2
     hooks:
       - id: codespell
         stages: [pre-commit, commit-msg]
@@ -50,7 +50,7 @@ repos:
         exclude: changelog\.md
 
   - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.0.0
+    rev: v10.0.3
     hooks:
       - id: eslint
         types: [file]

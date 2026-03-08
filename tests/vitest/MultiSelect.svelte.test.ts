@@ -291,14 +291,14 @@ describe.each([[null], [1]])(`value is `, (maxSelect) => {
         props: { options, maxSelect, selected: options },
       })
 
-      // this also tests that only 1st option is pre-selected although all options are marked such, i.e. no more than maxSelect options can be pre-selected
+      // this also tests that only 1st option is preselected although all options are marked such, i.e. no more than maxSelect options can be preselected
       // Use toStrictEqual for deep equality checks with arrays/objects
       expect(select.value).toStrictEqual(maxSelect === 1 ? options[0] : options)
     },
   )
 })
 
-test(`value is null when maxSelect=1 and no option is pre-selected`, () => {
+test(`value is null when maxSelect=1 and no option is preselected`, () => {
   const select = mount(Test2WayBind, {
     target: document.body,
     props: { options: [1, 2, 3], maxSelect: 1 },
@@ -5815,7 +5815,7 @@ describe(`duplicates prop variants`, () => {
       target: document.body,
       props: {
         options,
-        selected: [options[0]], // pre-select first option
+        selected: [options[0]], // preselect first option
         onadd: onadd_spy,
         onduplicate: onduplicate_spy,
       },

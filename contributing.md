@@ -11,8 +11,8 @@ To submit a pull request, clone the repo, install dependencies and start the dev
 ```sh
 git clone https://github.com/janosh/svelte-multiselect
 cd svelte-multiselect
-npm install
-npm run dev
+pnpm install
+pnpm dev
 ```
 
 Before you start committing, create and check out a descriptively named branch:
@@ -28,7 +28,7 @@ git checkout -b test-some-feature
 To ensure your changes didn't break anything, run the full test suite (which also runs in CI):
 
 ```sh
-npm run test
+pnpm test
 ```
 
 Any new features should come with corresponding tests. If you fix a bug, please add a test that fails under the old code and passes with your changes. If you're having trouble writing tests, you can submit your PR anyway. Others might be able to help with tests but chances are your code will take longer to get merged.
@@ -38,7 +38,7 @@ Any new features should come with corresponding tests. If you fix a bug, please 
 This repo has 3 required CI checks that have to pass for every PR before merging:
 
 - tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/test.yml))
-- linting: handled by [pre-commit.ci](https://results.pre-commit.ci/latest/github/janosh/svelte-multiselect/main)
+- linting: handled by [prek](https://github.com/j178/prek) pre-commit hooks
 - docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/gh-pages.yml) through GitHub Pages
 
 ## 🆕 New release
@@ -52,13 +52,13 @@ To make a release, increase the `"version"` field in `package.json`. This packag
 Now run the `changelog` script from `package.json` to update `changelog.md`.
 
 ```sh
-npm run changelog  # or npm run changelog
+pnpm changelog
 ```
 
 If there have been significant code changes since the last release, it's good to update the coverage badges in the readme.
 
 ```sh
-npm run update-coverage
+pnpm update-coverage
 ```
 
 Then commit `package.json`, `changelog.md` and `readme.md` files to the `main` branch using the new version number prefixed by `'v'` as commit message and tag:

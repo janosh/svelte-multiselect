@@ -228,33 +228,21 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
 
 ### Event Handling Tips
 
-1. **Destructuring Safety**: Check for `event.detail` before destructuring:
-
-   ```ts
-   function handleChange(event) {
-     if (!event.detail) return // Guard against undefined detail
-     const { option, type } = event.detail
-     // ... handle the event
-   }
-   ```
-
-1. **Type Safety**: For better type checking in TypeScript projects, use `MultiSelectEvents` and `MultiSelectNativeEvents` interfaces:
+1. **Type Safety**: For better type checking in TypeScript projects, use the `MultiSelectEvents` interface:
 
    ```ts
    <script lang="ts">
-    import type { MultiSelectEvents, MultiSelectNativeEvents } from '$lib/types'
+    import type { MultiSelectEvents } from '$lib/types'
 
      const onadd: MultiSelectEvents['onadd'] = (data) => {
        console.log(`onadd`, data)
      }
-
-     const onblur: MultiSelectNativeEvents['onblur'] = (event) => {
-       console.log(`onblur`, event)
-     }
    </script>
 
-   <MultiSelect {onadd} {onblur} options={[{ label: `foo` }]} />
+   <MultiSelect {onadd} options={[{ label: `foo` }]} />
    ```
+
+   Native DOM event handlers like `onblur`, `onfocus`, `onkeydown`, etc. are forwarded from the `<input>` element and use standard DOM event types (e.g. `FocusEvent`, `KeyboardEvent`).
 
 1. **Custom Options**: The `oncreate` event only fires when `allowUserOptions` is enabled and users type text that doesn't match existing options.
 

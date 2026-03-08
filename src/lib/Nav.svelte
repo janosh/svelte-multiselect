@@ -352,7 +352,7 @@
         {@const child_is_active = is_child_current(sub_routes)}
         {@const parent_page_exists = sub_routes.includes(parsed_route.href)}
         {@const filtered_sub_routes = sub_routes.filter(
-        (r) => r !== parsed_route.href,
+        (route) => route !== parsed_route.href,
       )}
         {@const is_pinned = pinned_dropdown === parsed_route.href}
         {@const dropdown_open = hovered_dropdown === parsed_route.href || is_pinned}
