@@ -4,9 +4,7 @@
 
 ## Dynamic Options Loading
 
-For large datasets or server-side data, use `loadOptions` to dynamically load options as the user scrolls and searches. The component handles all state management, debouncing, and pagination automatically.
-
-This addresses [GitHub discussion #342](https://github.com/janosh/svelte-multiselect/discussions/342).
+For large datasets or server-side data, use `loadOptions` to dynamically load options as the user scrolls and searches. The component handles all state management, debouncing, and pagination automatically. Requested in [GitHub discussion #342](https://github.com/janosh/svelte-multiselect/discussions/342).
 
 ### Basic Example
 

@@ -1,20 +1,20 @@
 import adapter from '@sveltejs/adapter-static'
 import { mdsvex } from 'mdsvex'
+import pkg from './package.json' with { type: 'json' }
 import { heading_ids } from './src/lib/heading-anchors.ts'
 import {
   mdsvex_transform,
   starry_night_highlighter,
-  sveltePreprocess,
 } from './src/lib/live-examples/index.ts'
 
-import pkg from './package.json' with { type: 'json' }
-const defaults = {
-  Wrapper: `/src/lib/CodeExample.svelte`,
-  repo: pkg.repository,
-  collapsible: true,
-  hide_style: true,
-}
-const remarkPlugins = [[mdsvex_transform, { defaults }]]
+const remarkPlugins = [[mdsvex_transform, {
+  defaults: {
+    Wrapper: `/src/lib/CodeExample.svelte`,
+    repo: pkg.repository,
+    collapsible: true,
+    hide_style: true,
+  },
+}]]
 
 import type { Config } from '@sveltejs/kit'
 
@@ -26,7 +26,6 @@ const config: Config = {
   },
 
   preprocess: [
-    sveltePreprocess(), // Wrapped to skip .md files, preserving code fence formatting
     mdsvex({
       remarkPlugins,
       extensions: [`.md`],

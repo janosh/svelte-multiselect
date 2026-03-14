@@ -430,7 +430,7 @@ describe(`tooltip`, () => {
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: get_target() })
@@ -480,7 +480,7 @@ describe(`tooltip`, () => {
 
       element.dispatchEvent(new FocusEvent(`focus`, { bubbles: true }))
       vi.runAllTimers()
-      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
       expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
@@ -571,10 +571,10 @@ describe(`tooltip`, () => {
 
           trigger_tooltip(element)
           const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
-          expect(tooltip_el).toBeTruthy()
+          expect(tooltip_el).toBeInstanceOf(HTMLElement)
           expect(tooltip_el.getAttribute(`data-placement`)).toBe(expected_placement)
           const arrow = tooltip_el.querySelector(`.custom-tooltip-arrow`) as HTMLElement
-          expect(arrow).toBeTruthy()
+          expect(arrow).toBeInstanceOf(HTMLElement)
 
           const [set_side, empty_side] = arrow_offset_side[expected_placement]
           expect(arrow.style[set_side as `top`]).toContain(`-`)
@@ -594,7 +594,7 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0, ...options })
 
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
       expect(!!document.querySelector(`.custom-tooltip`)).toBe(visible_after_leave)
@@ -613,7 +613,7 @@ describe(`tooltip`, () => {
       const cleanup = setup_tooltip(element, { delay: 0, disabled: `touch-devices` })
 
       // Tooltip is set up (cleanup returned) but behavior depends on pointer type
-      expect(cleanup).toBeDefined()
+      expect(cleanup).toBeTypeOf(`function`)
 
       // Simulate touch input, then try to show tooltip
       document.dispatchEvent(
@@ -627,7 +627,7 @@ describe(`tooltip`, () => {
         new PointerEvent(`pointerdown`, { pointerType: `mouse`, bubbles: true }),
       )
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy() // Tooltip works with mouse
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement) // Tooltip works with mouse
 
       cleanup?.()
     })
@@ -642,7 +642,7 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0 })
 
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeTruthy()
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       document.dispatchEvent(new KeyboardEvent(`keydown`, { key }))
       expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_remain)
@@ -660,7 +660,7 @@ describe(`tooltip`, () => {
       trigger_tooltip(element)
 
       const tooltip_el = document.querySelector(`.custom-tooltip`)
-      expect(tooltip_el).toBeTruthy()
+      expect(tooltip_el).toBeInstanceOf(HTMLElement)
       expect(!!tooltip_el?.querySelector(`.custom-tooltip-arrow`)).toBe(expect_arrow)
     })
 
@@ -694,8 +694,7 @@ describe(`tooltip`, () => {
 
       trigger_tooltip(element)
       const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
-      expect(tooltip_el).toBeTruthy()
-      // Verify top position includes offset (bottom placement: element.top + element.height + offset)
+      expect(tooltip_el).toBeInstanceOf(HTMLElement)
       expect(tooltip_el.style.top).toBe(`${expected_top}px`)
     })
 
@@ -716,7 +715,7 @@ describe(`tooltip`, () => {
 
       trigger_tooltip(element)
       const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
-      expect(tooltip_el).toBeTruthy()
+      expect(tooltip_el).toBeInstanceOf(HTMLElement)
       expect(tooltip_el.textContent).toBe(expected_text)
     })
 

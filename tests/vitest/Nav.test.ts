@@ -34,7 +34,7 @@ describe(`Nav`, () => {
     expect(burger_button.tagName).toBe(`BUTTON`)
     expect(burger_button.getAttribute(`aria-label`)).toBe(`Toggle navigation menu`)
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
-    expect(burger_button.getAttribute(`aria-controls`)).toBeTruthy()
+    expect(burger_button.getAttribute(`aria-controls`)).toBeTypeOf(`string`)
     expect(burger_button.querySelectorAll(`span`)).toHaveLength(3)
   })
 
@@ -65,7 +65,7 @@ describe(`Nav`, () => {
     const menu = doc_query(`.menu`)
     const panel_id = button.getAttribute(`aria-controls`)
 
-    expect(panel_id).toBeTruthy()
+    expect(panel_id).toBeTypeOf(`string`)
     expect(menu.id).toBe(panel_id)
     expect(panel_id?.startsWith(`nav-menu-`)).toBe(true)
     expect(menu.getAttribute(`role`)).toBe(`menu`)
@@ -487,7 +487,6 @@ describe(`Nav`, () => {
     // Check toggle button has aria-label
     const toggle_button = doc_query(`[data-dropdown-toggle]`)
     const aria_label = toggle_button.getAttribute(`aria-label`)
-    expect(aria_label).toBeTruthy()
     expect(aria_label).toMatch(/Toggle.*submenu/)
   })
 
@@ -522,7 +521,7 @@ describe(`Nav`, () => {
     ]
     mount(Nav, { target: document.body, props: { routes } })
     const dropdown = doc_query(`.dropdown`)
-    expect(dropdown).toBeTruthy()
+    expect(dropdown).toBeInstanceOf(HTMLElement)
     const hrefs = Array.from(
       dropdown.querySelector(`div:last-child`)?.querySelectorAll(`a`) ?? [],
     ).map((link) => link.getAttribute(`href`))
@@ -638,7 +637,7 @@ describe(`Nav`, () => {
       ]
       mount(Nav, { target: document.body, props: { routes } })
       expect(document.querySelectorAll(`.separator`)).toHaveLength(1)
-      expect(doc_query(`.dropdown`)).toBeTruthy()
+      expect(doc_query(`.dropdown`)).toBeInstanceOf(HTMLElement)
     })
   })
 
@@ -854,7 +853,7 @@ describe(`Nav`, () => {
     expect(document.querySelectorAll(`.separator`)).toHaveLength(1)
     expect(document.querySelectorAll(`.disabled`)).toHaveLength(1)
     expect(document.querySelectorAll(`.align-right`)).toHaveLength(2)
-    expect(doc_query(`.dropdown`)).toBeTruthy()
+    expect(doc_query(`.dropdown`)).toBeInstanceOf(HTMLElement)
   })
 
   test(`dropdown trigger span forwards label and class from object route`, () => {

@@ -1,8 +1,6 @@
 ## Option Grouping
 
-Group related options together with visual headers. Add a `group` key to option objects and they're automatically grouped with section headers.
-
-This addresses [GitHub issue #135](https://github.com/janosh/svelte-multiselect/issues/135).
+Group related options together with visual headers. Add a `group` key to option objects and they're automatically grouped with section headers. Requested in [GitHub issue #135](https://github.com/janosh/svelte-multiselect/issues/135).
 
 ### Basic Grouping
 
@@ -181,7 +179,13 @@ Use `ungroupedPosition` for options without a `group` key, and `groupSortOrder` 
   </label>
 </div>
 
-<MultiSelect {options} bind:selected {ungroupedPosition} {groupSortOrder} />
+<MultiSelect
+  {options}
+  bind:selected
+  {ungroupedPosition}
+  {groupSortOrder}
+  placeholder="Select items..."
+/>
 ```
 
 ### Sticky Headers & Dynamic Loading
@@ -315,9 +319,9 @@ Use the `groupHeader` snippet for complete control over header rendering:
 | Variable                         | Default                  | Description      |
 | -------------------------------- | ------------------------ | ---------------- |
 | `--sms-group-header-font-weight` | `600`                    | Font weight      |
-| `--sms-group-header-font-size`   | `0.85em`                 | Font size        |
+| `--sms-group-header-font-size`   | `0.9em`                  | Font size        |
 | `--sms-group-header-color`       | `light-dark(#666, #aaa)` | Text color       |
 | `--sms-group-header-bg`          | `transparent`            | Background       |
-| `--sms-group-header-padding`     | `6pt 1ex 3pt`            | Padding          |
+| `--sms-group-header-padding`     | `2pt 1ex`                | Padding          |
 | `--sms-group-header-hover-bg`    | `light-dark(...)`        | Hover background |
 | `--sms-group-item-padding-left`  | `1.5ex`                  | Option indent    |

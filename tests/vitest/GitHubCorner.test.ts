@@ -7,5 +7,5 @@ test(`GitHubCorner renders link with svg`, () => {
   mount(GitHubCorner, { target: document.body, props: { href } })
   const link = document.querySelector(`a`)
   expect(link?.getAttribute(`href`)).toBe(href)
-  expect(link?.querySelector(`svg`)).toBeTruthy()
+  expect(link?.querySelector(`svg`)).toBeInstanceOf(SVGElement)
 })

@@ -40,7 +40,7 @@
     headingSelector="main > :where(h2, h3)"
     breakpoint={1500}
     open_button_style="display: flex; padding: 3px;"
-    --toc-mobile-bg="light-dark(#fff, #1a1a1a)"
+    --toc-mobile-bg="light-dark(#fff, #222226)"
     --toc-padding="1em 0 1em 1em"
   />
 {/if}

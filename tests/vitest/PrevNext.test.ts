@@ -70,7 +70,7 @@ describe(`PrevNext`, () => {
 
   test(`custom node element`, () => {
     mount(PrevNext, { target, props: { items, current: `page2`, node: `div` } })
-    expect(target.querySelector(`div.prev-next`)).toBeTruthy()
+    expect(target.querySelector(`div.prev-next`)).toBeInstanceOf(HTMLDivElement)
     expect(target.querySelector(`nav`)).toBeNull()
   })
 

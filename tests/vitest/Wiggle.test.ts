@@ -29,7 +29,7 @@ describe(`Wiggle`, () => {
   test(`renders span with transform styles`, () => {
     mount(Wiggle, { target: document.body })
     const span = get_span()
-    expect(span).toBeTruthy()
+    expect(span).toBeInstanceOf(HTMLSpanElement)
     expect(span.style.transform).toContain(`rotate`)
     expect(span.style.transform).toContain(`scale`)
     expect(span.style.transform).toContain(`translate`)
@@ -44,22 +44,23 @@ describe(`Wiggle`, () => {
     expect(get_value()).toBe(false)
   })
 
-  test(`accepts all animation props without error`, () => {
-    expect(() => {
-      mount(Wiggle, {
-        target: document.body,
-        props: {
-          wiggle: true,
-          angle: 15,
-          scale: 1.1,
-          dx: 5,
-          dy: 3,
-          duration: 150,
-          spring_options: { stiffness: 0.08, damping: 0.15 },
-        },
-      })
-    }).not.toThrow()
-    expect(get_span().style.transform).toBeDefined()
+  test(`custom animation props produce matching transform values`, () => {
+    mount(Wiggle, {
+      target: document.body,
+      props: {
+        wiggle: true,
+        angle: 15,
+        scale: 1.1,
+        dx: 5,
+        dy: 3,
+        duration: 150,
+        spring_options: { stiffness: 0.08, damping: 0.15 },
+      },
+    })
+    const transform = get_span().style.transform
+    expect(transform).toContain(`rotate`)
+    expect(transform).toContain(`scale`)
+    expect(transform).toContain(`translate`)
   })
 
   test(`does not reset wiggle when starting false`, () => {

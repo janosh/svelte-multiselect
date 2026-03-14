@@ -8,7 +8,7 @@
   --main-max-width: 50em;
 
   /* Derived colors using light-dark for theme awareness */
-  --bg: light-dark(#fafafa, #0b0b1b);
+  --bg: light-dark(#fafafa, #141418);
   --text: light-dark(#222, #ccc);
   --text-muted: light-dark(#666, #999);
   --surface: light-dark(#fff, rgba(255, 255, 255, 0.05));
@@ -57,7 +57,7 @@ button {
   color: inherit;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 3pt;
   padding: 0.25em 0.5em;
   cursor: pointer;
 }
@@ -67,14 +67,14 @@ button:hover {
 /* Code */
 code {
   padding: 0.1em 0.3em;
-  border-radius: 3px;
+  border-radius: 3pt;
   background: var(--surface);
   font-size: 0.9em;
 }
 pre {
   position: relative;
   padding: 1ex 1em;
-  border-radius: 6px;
+  border-radius: 5pt;
   background: var(--surface);
   overflow-x: auto;
 }
@@ -141,7 +141,7 @@ blockquote > :last-child {
 }
 /* Form validation */
 div.multiselect.invalid {
-  border-color: red !important;
+  border-color: light-dark(#c33, #f66) !important;
 }
 /* Icon sizing for <svg><use href="#icon"></use></svg> */
 svg:has(use:only-child) {

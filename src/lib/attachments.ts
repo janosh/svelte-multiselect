@@ -621,7 +621,7 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         .trim()
       const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
       const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
-      apply_triangle_style(arrow, placement, arrow_px, `var(--tooltip-bg, #333)`)
+      apply_triangle_style(arrow, placement, arrow_px, `var(--tooltip-bg, #2a2a2e)`)
 
       const border_arrow = tooltip_el.querySelector<HTMLElement>(
         `.custom-tooltip-arrow-border`,
@@ -814,8 +814,8 @@ export const tooltip = (options: TooltipOptions = {}): Attachment => (node: Elem
         // Apply base styles
         tooltip_el.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0; display: inline-block;
-          background: var(--tooltip-bg, #333); color: var(--text-color, white); border: var(--tooltip-border, none);
-          padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 6px); font-size: var(--tooltip-font-size, 13px); line-height: 1.4;
+          background: var(--tooltip-bg, #2a2a2e); color: var(--text-color, #eee); border: var(--tooltip-border, none);
+          padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 5pt); font-size: var(--tooltip-font-size, 0.8rem); line-height: 1.4;
           max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; text-wrap: balance; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
         `

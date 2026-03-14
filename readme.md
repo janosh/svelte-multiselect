@@ -1,6 +1,6 @@
 <h1 align="center">
   <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/static/favicon.svg" alt="Svelte MultiSelect" height="60" width="60">
-  <br class="hide-in-docs">&ensp;Svelte MultiSelect
+  <br class="hide-in-docs"> Svelte MultiSelect
 </h1>
 
 <h4 align="center">
@@ -1039,7 +1039,7 @@ Minimal example that changes the background color of the options dropdown:
   - `border: var(--sms-border, 1pt solid light-dark(lightgray, #555))`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
   - `border-radius: var(--sms-border-radius, 3pt)`
   - `padding: var(--sms-padding, 0 3pt)`
-  - `background: var(--sms-bg, light-dark(white, #1a1a1a))`
+  - `background: var(--sms-bg, light-dark(white, #222226))`
   - `color: var(--sms-text-color)`
   - `min-height: var(--sms-min-height, 22pt)`
   - `width: var(--sms-width)`
@@ -1057,13 +1057,13 @@ Minimal example that changes the background color of the options dropdown:
   - `opacity: var(--sms-placeholder-opacity)`
 - `div.multiselect > ul.selected > li`
   - `background: var(--sms-selected-bg, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15)))`: Background of selected options.
-  - `padding: var(--sms-selected-li-padding, 1pt 5pt)`: Height of selected options.
+  - `padding: var(--sms-selected-li-padding, 0 2pt 0 5pt)`: Padding of selected options.
   - `color: var(--sms-selected-text-color, var(--sms-text-color))`: Text color for selected options.
 - `ul.selected > li button:hover, button.remove-all:hover, button:focus`
-  - `color: var(--sms-remove-btn-hover-color, light-dark(#0088cc, lightskyblue))`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
+  - `color: var(--sms-remove-btn-hover-color, inherit)`: Color of the remove-icon buttons for removing all or individual selected options when in `:focus` or `:hover` state.
   - `background: var(--sms-remove-btn-hover-bg, light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2)))`: Background for hovered remove buttons.
 - `div.multiselect > ul.options`
-  - `background: var(--sms-options-bg, light-dark(#fafafa, #1a1a1a))`: Background of dropdown list.
+  - `background: var(--sms-options-bg, light-dark(#fafafa, #222226))`: Background of dropdown list.
   - `max-height: var(--sms-options-max-height, 50vh)`: Maximum height of options dropdown.
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
   - `z-index: var(--sms-options-z-index, 3)`: Z-index for the dropdown options list.
@@ -1092,10 +1092,10 @@ Minimal example that changes the background color of the options dropdown:
   - `background (hover): var(--sms-select-all-hover-bg, ...)`: Background of "Select All" on hover. Falls back to `--sms-li-active-bg` then `--sms-active-color`.
 - `div.multiselect > ul.options > li.group-header`
   - `font-weight: var(--sms-group-header-font-weight, 600)`: Font weight of group headers.
-  - `font-size: var(--sms-group-header-font-size, 0.85em)`: Font size of group headers.
+  - `font-size: var(--sms-group-header-font-size, 0.9em)`: Font size of group headers.
   - `color: var(--sms-group-header-color, light-dark(#666, #aaa))`: Text color of group headers.
   - `background: var(--sms-group-header-bg, transparent)`: Background of group headers.
-  - `padding: var(--sms-group-header-padding, 6pt 1ex 3pt)`: Padding around group header text.
+  - `padding: var(--sms-group-header-padding, 2pt 1ex)`: Padding around group header text.
   - `text-transform: var(--sms-group-header-text-transform, uppercase)`: Text transform for group headers.
   - `letter-spacing: var(--sms-group-header-letter-spacing, 0.5px)`: Letter spacing for group headers.
   - `margin-top: var(--sms-group-header-margin-top, 4pt)`: Top margin for group headers (except the first).

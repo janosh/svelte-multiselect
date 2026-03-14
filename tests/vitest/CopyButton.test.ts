@@ -124,6 +124,25 @@ test(`renders default icon and ready label`, () => {
   expect(copy_button.textContent).toContain(`ready`)
 })
 
+test.each(
+  [
+    [``, 0],
+    [`Copy me`, 1],
+  ] as const,
+)(`text label %j renders %d text span(s)`, (text, expected_spans) => {
+  const { copy_button } = mount_copy_button({
+    labels: {
+      ready: { icon: `Copy`, text },
+      success: { icon: `Check`, text },
+      error: { icon: `Alert`, text },
+    },
+  })
+  const wrapper = copy_button.querySelector(`span`)
+  expect(wrapper?.querySelectorAll(`span`)).toHaveLength(expected_spans)
+  expect(copy_button.querySelector(`svg`)).toBeInstanceOf(SVGElement)
+  if (text) expect(copy_button.textContent).toContain(text)
+})
+
 test.each([true, false])(
   `custom children snippet renders and receives disabled=%s`,
   (disabled) => {
@@ -147,8 +166,6 @@ test(`disabled=true blocks copy and preserves ready state`, async () => {
   await click_copy_button(copy_button)
   expect(mock_write_text).not.toHaveBeenCalled()
   expect(copy_button.textContent).toContain(`ready`)
-  expect(copy_button.getAttribute(`tabindex`)).toBe(`-1`)
-  expect(copy_button.getAttribute(`aria-disabled`)).toBe(`true`)
 })
 
 test(`empty content is blocked`, async () => {

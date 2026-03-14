@@ -26,7 +26,9 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   toggle_button.click()
   await tick()
 
-  expect(document.querySelector(`pre.open`)).toBeInstanceOf(HTMLElement)
+  const pre = doc_query<HTMLPreElement>(`pre.open`)
+  expect(pre).toBeInstanceOf(HTMLElement)
+  expect(pre.textContent).toBe(src)
   expect(toggle_button.textContent).toContain(`Close`)
 })
 
@@ -57,6 +59,17 @@ test(`renders GitHub link when github and repo are provided`, () => {
   const github_link = document.querySelector(`nav a[href*="github.com"]`)
   expect(github_link).toBeInstanceOf(HTMLAnchorElement)
   expect(github_link?.getAttribute(`target`)).toBe(`_blank`)
+})
+
+test(`collapsed pre has no padding or margin to avoid layout space leak`, () => {
+  const meta = { collapsible: true, id }
+  mount(CodeExample, { target: document.body, props: { meta, src } })
+
+  const pre = doc_query<HTMLPreElement>(`pre`)
+  expect(pre.classList.contains(`open`)).toBe(false)
+  const style = getComputedStyle(pre)
+  expect(style.maxHeight).toBe(`0`)
+  expect(style.overflow).toBe(`hidden`)
 })
 
 test(`dynamically added pre > code elements get copy buttons applied`, async () => {

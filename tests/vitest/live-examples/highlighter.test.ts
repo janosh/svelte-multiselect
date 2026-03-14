@@ -21,7 +21,7 @@ describe(`starry_night.flagToScope`, () => {
     `sql`,
   ])(
     `resolves %s`,
-    (lang) => expect(starry_night.flagToScope(lang)).toBeDefined(),
+    (lang) => expect(starry_night.flagToScope(lang)).toBeTypeOf(`string`),
   )
 
   test.each([

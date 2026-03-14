@@ -504,7 +504,7 @@
     position: relative;
     margin: -0.75em auto 1.25em;
     --nav-border-radius: 3pt;
-    --nav-surface-bg: light-dark(#fafafa, #1a1a1a);
+    --nav-surface-bg: light-dark(#fafafa, #222226);
     --nav-surface-border: light-dark(
       rgba(128, 128, 128, 0.25),
       rgba(200, 200, 200, 0.2)
@@ -654,7 +654,7 @@
     text-decoration: none;
     color: inherit;
     white-space: nowrap;
-    font-size: 0.92em;
+    font-size: 0.9em;
     transition: background-color 0.15s;
   }
   .dropdown > div:last-child a:hover {
@@ -681,7 +681,7 @@
     width: 100%;
     height: 0.18rem;
     background-color: var(--text);
-    border-radius: 8px;
+    border-radius: 8pt;
     transition: all 0.2s linear;
     transform-origin: center;
   }
@@ -714,7 +714,7 @@
     justify-content: start;
     gap: 0.2em;
     max-width: 90vw;
-    border-radius: 6px;
+    border-radius: 6pt;
   }
   nav.mobile .menu.open {
     opacity: 1;
