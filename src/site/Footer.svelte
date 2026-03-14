@@ -39,7 +39,7 @@
     background: var(--surface);
     border: 1px solid var(--border);
     padding: 0.1em 0.4em;
-    border-radius: 3px;
+    border-radius: 3pt;
     font-size: 0.9em;
   }
 </style>

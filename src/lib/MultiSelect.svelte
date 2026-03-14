@@ -1426,7 +1426,7 @@
       form_input?.setCustomValidity(msg)
     }}
   />
-  <span class="expand-icon">
+  <span class="expand-icon" style="display: flex; align-items: center">
     {#if expandIcon}
       {@render expandIcon({ open, disabled })}
     {:else}
@@ -1845,7 +1845,7 @@
     box-sizing: border-box;
     border: var(--sms-border, 1pt solid light-dark(lightgray, #555));
     border-radius: var(--sms-border-radius, 3pt);
-    background: var(--sms-bg, light-dark(white, #1a1a1a));
+    background: var(--sms-bg, light-dark(white, #222226));
     width: var(--sms-width);
     max-width: var(--sms-max-width);
     padding: var(--sms-padding, 0 3pt);
@@ -1889,7 +1889,7 @@
       --sms-selected-bg,
       light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
     );
-    padding: var(--sms-selected-li-padding, 1pt 5pt);
+    padding: var(--sms-selected-li-padding, 0 2pt 0 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
   }
   :where(div.multiselect > ul.selected > li[draggable='true']) {
@@ -1908,20 +1908,22 @@
     border-radius: 50%;
     aspect-ratio: 1; /* ensure circle, not ellipse */
     display: flex;
+    align-items: center;
+    justify-content: center;
     transition: 0.2s;
     color: inherit;
     background: transparent;
     border: none;
     cursor: pointer;
     outline: none;
-    padding: 1pt;
-    margin: 0 0 0 3pt; /* CSS reset */
+    padding: 0;
+    margin: 0 0 0 2pt; /* CSS reset */
   }
   :is(div.multiselect button.remove-all) {
     margin: 0 3pt;
   }
   :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
-    color: var(--sms-remove-btn-hover-color, light-dark(#0088cc, lightskyblue));
+    color: var(--sms-remove-btn-hover-color, inherit);
     background: var(
       --sms-remove-btn-hover-bg,
       light-dark(rgba(0, 0, 0, 0.2), rgba(255, 255, 255, 0.2))
@@ -1981,7 +1983,7 @@
     overflow: auto;
     transition: all 0.2s; /* is this transition is desirable with portal positioning? */
     box-sizing: border-box;
-    background: var(--sms-options-bg, light-dark(#fafafa, #1a1a1a));
+    background: var(--sms-options-bg, light-dark(#fafafa, #222226));
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(
@@ -2073,10 +2075,10 @@
     display: flex;
     align-items: center;
     font-weight: var(--sms-group-header-font-weight, 600);
-    font-size: var(--sms-group-header-font-size, 0.85em);
+    font-size: var(--sms-group-header-font-size, 0.9em);
     color: var(--sms-group-header-color, light-dark(#666, #aaa));
     background: var(--sms-group-header-bg, transparent);
-    padding: var(--sms-group-header-padding, 6pt 1ex 3pt);
+    padding: var(--sms-group-header-padding, 2pt 1ex);
     cursor: default;
     border-left: none;
     text-transform: var(--sms-group-header-text-transform, uppercase);
@@ -2115,7 +2117,7 @@
     z-index: 1;
     background: var(
       --sms-group-header-sticky-bg,
-      var(--sms-options-bg, light-dark(#fafafa, #1a1a1a))
+      var(--sms-options-bg, light-dark(#fafafa, #222226))
     );
   }
   /* Indent grouped options for visual hierarchy */
@@ -2158,7 +2160,7 @@
     padding: 0 3pt;
   }
   ::highlight(sms-search-matches) {
-    color: light-dark(#1a8870, mediumaquamarine);
+    color: light-dark(#1a8870, #6cc9a8);
   }
   /* Loading more indicator for infinite scrolling - internal, no class prop */
   :is(ul.options > li.loading-more) {

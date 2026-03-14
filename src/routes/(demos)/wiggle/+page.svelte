@@ -26,7 +26,7 @@
     {dy}
     {duration}
     spring_options={{ stiffness, damping }}
-    style="display: inline-block; padding: 0.5em 1em; background: var(--surface); border-radius: 6px"
+    style="display: inline-block; padding: 0.5em 1em; background: var(--surface); border-radius: 6pt"
   >
     🎯 Click to wiggle!
   </Wiggle>

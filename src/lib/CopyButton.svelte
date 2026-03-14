@@ -155,7 +155,7 @@
     {:else}
       <span>
         <Icon {icon} />
-        <span>{@html text}</span>
+        {#if text}<span>{@html text}</span>{/if}
       </span>
     {/if}
   </svelte:element>

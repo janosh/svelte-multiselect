@@ -78,7 +78,7 @@
   .modal-content {
     background-color: var(--modal-bg, #2d2d2d);
     padding: 10px 20px 20px;
-    border-radius: 8px;
+    border-radius: 8pt;
   }
   .modal-content h2 {
     margin-top: 0;
@@ -88,7 +88,7 @@
     color: white;
     border: none;
     padding: 8px 15px;
-    border-radius: 4px;
+    border-radius: 4pt;
     cursor: pointer;
     transition: background-color 0.2s;
     margin-top: 1em; /* Add some space above the close button */

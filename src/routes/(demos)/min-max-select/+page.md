@@ -60,7 +60,13 @@ When setting an integer value for `maxSelect` Multiselect will
 </script>
 
 <form onsubmit={handle_submit}>
-  <MultiSelect options={[1, 2, 3, 4, 5, 6]} required={3} name="numbers" sortSelected />
+  <MultiSelect
+    options={[1, 2, 3, 4, 5, 6]}
+    required={3}
+    name="numbers"
+    sortSelected
+    placeholder="Pick at least 3..."
+  />
   <button>submit</button>
 </form>
 ```
@@ -142,7 +148,7 @@ Pass a string to customize the label:
   let selected: ColorOption[] = $state([])
 </script>
 
-<MultiSelect options={colors} bind:selected selectAllOption="Add all colors" />
+<MultiSelect options={colors} bind:selected selectAllOption="Add all colors" placeholder="Select colors..." />
 
 <div style="display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;">
   {#each selected as color}
