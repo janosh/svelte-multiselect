@@ -17,7 +17,9 @@ describe(`SSR and client-side heading level consistency`, () => {
       document.body.innerHTML = `<main><${tag} id="test">Test</${tag}></main>`
       const container = document.body.firstElementChild as Element
       heading_anchors()(container)
-      expect(container.querySelector(`${tag} a[aria-hidden="true"]`)).toBeTruthy()
+      expect(container.querySelector(`${tag} a[aria-hidden="true"]`)).toBeInstanceOf(
+        HTMLAnchorElement,
+      )
     },
   )
 })
@@ -179,7 +181,7 @@ describe(`heading_anchors attachment`, () => {
       const container = create_container(`<${tag} id="test">Content</${tag}>`)
       heading_anchors()(container)
       const anchor = container.querySelector(`${tag} ${anchor_selector}`)
-      expect(anchor).toBeTruthy()
+      expect(anchor).toBeInstanceOf(HTMLAnchorElement)
       expect(anchor?.getAttribute(`href`)).toBe(`#test`)
     })
 
@@ -253,7 +255,7 @@ describe(`heading_anchors attachment`, () => {
         heading_anchors()(container)
         insert_fn(container)
         await tick()
-        expect(document.querySelector(anchor_selector)).toBeTruthy()
+        expect(document.querySelector(anchor_selector)).toBeInstanceOf(HTMLAnchorElement)
       },
     )
   })
@@ -315,7 +317,9 @@ describe(`heading_anchors attachment`, () => {
         container,
       )
       heading_anchors({ selector: `#t2` })(container)
-      expect(container.querySelector(`#t1 ${anchor_selector} .custom`)).toBeTruthy()
+      expect(container.querySelector(`#t1 ${anchor_selector} .custom`)).toBeInstanceOf(
+        Element,
+      )
       expect(container.querySelector(`#t2 ${anchor_selector}`)?.innerHTML).toContain(
         `aria-label`,
       )
@@ -373,8 +377,8 @@ describe(`heading_anchors attachment`, () => {
         const el = document.getElementById(id)
         if (el) heading_anchors({ selector: `h2` })(el)
       }
-      expect(document.querySelector(`#h1 a`)).toBeTruthy()
-      expect(document.querySelector(`#h2 a`)).toBeTruthy()
+      expect(document.querySelector(`#h1 a`)).toBeInstanceOf(HTMLAnchorElement)
+      expect(document.querySelector(`#h2 a`)).toBeInstanceOf(HTMLAnchorElement)
     })
   })
 })

@@ -1,6 +1,5 @@
 // Vite plugin - handles virtual module resolution for example components
-// @ts-expect-error no types available
-import ast from 'abstract-syntax-tree'
+import { parse } from 'acorn'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
 import type { HmrContext, Plugin, ViteDevServer } from 'vite'
@@ -29,6 +28,36 @@ interface AstNode {
   source?: { value?: string; start?: number; end?: number }
   start?: number
   end?: number
+}
+
+// Check if an AST node matches a shallow pattern object
+function matches(node: unknown, pattern: Record<string, unknown>): boolean {
+  if (!node || typeof node !== `object`) return false
+  for (const [key, expected] of Object.entries(pattern)) {
+    const actual = (node as Record<string, unknown>)[key]
+    if (expected && typeof expected === `object`) {
+      if (!matches(actual, expected as Record<string, unknown>)) return false
+    } else if (actual !== expected) return false
+  }
+  return true
+}
+
+// Recursively find all AST nodes matching a pattern
+function find_nodes(
+  node: unknown,
+  pattern: Record<string, unknown>,
+  results: AstNode[] = [],
+): AstNode[] {
+  if (!node || typeof node !== `object`) return results
+  if (matches(node, pattern)) results.push(node as AstNode)
+  for (const val of Object.values(node as Record<string, unknown>)) {
+    if (Array.isArray(val)) {
+      for (const item of val) find_nodes(item, pattern, results)
+    } else if (val && typeof val === `object`) {
+      find_nodes(val, pattern, results)
+    }
+  }
+  return results
 }
 
 // Normalize a module ID to absolute path for consistent lookups.
@@ -112,7 +141,11 @@ export default function live_examples_plugin(
         // Use AST for precise node location, collect edits to apply at end
         let tree
         try {
-          tree = ast.parse(code, { ranges: true })
+          tree = parse(code, {
+            ranges: true,
+            ecmaVersion: `latest`,
+            sourceType: `module`,
+          })
         } catch {
           // Code may contain Svelte syntax that the JS parser can't handle
           // (e.g., template blocks, special directives). Skip transformation.
@@ -121,16 +154,14 @@ export default function live_examples_plugin(
         const edits: Edit[] = []
 
         // Find all __live_example_src properties
-        const src_props = ast.find(tree, {
+        const src_props = find_nodes(tree, {
           type: `Property`,
           key: { name: `__live_example_src` },
-        }) as AstNode[]
+        })
 
         for (const [idx, prop] of src_props.entries()) {
           // Extract the string literal content (base64 encoded)
-          const string_literals = ast.find(prop, {
-            type: `Literal`,
-          }) as AstNode[]
+          const string_literals = find_nodes(prop, { type: `Literal` })
 
           if (string_literals.length === 0) continue
 
@@ -173,8 +204,8 @@ export default function live_examples_plugin(
 
         // Update import paths (static and dynamic) to use virtual file IDs
         const imports = [
-          ...ast.find(tree, { type: `ImportDeclaration` }) as AstNode[],
-          ...ast.find(tree, { type: `ImportExpression` }) as AstNode[],
+          ...find_nodes(tree, { type: `ImportDeclaration` }),
+          ...find_nodes(tree, { type: `ImportExpression` }),
         ]
         for (const { source } of imports) {
           const match = source?.value?.match(/___live_example___(\d+)\.svelte/)

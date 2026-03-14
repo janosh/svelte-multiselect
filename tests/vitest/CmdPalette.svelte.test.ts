@@ -304,7 +304,7 @@ test.each([
     mount(CmdPalette, { target: document.body, props })
 
     const dialog = doc_query(`dialog`)
-    expect(dialog).toBeTruthy()
+    expect(dialog).toBeInstanceOf(HTMLDialogElement)
 
     if (!should_have_options) {
       // Empty actions should render empty options list
@@ -327,7 +327,7 @@ test(`opens dialog with trigger key when closed`, async () => {
   await tick()
 
   expect(props.open).toBe(true)
-  expect(document.querySelector(`dialog`)).toBeTruthy()
+  expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
 test(`ignores non-trigger events when dialog is closed`, async () => {
@@ -356,7 +356,7 @@ test(`remains open when trigger keys are pressed while already open`, async () =
   await tick()
 
   expect(props.open).toBe(true)
-  expect(document.querySelector(`dialog`)).toBeTruthy()
+  expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
 test(`uses default values when props not provided`, () => {
@@ -367,7 +367,7 @@ test(`uses default values when props not provided`, () => {
 
   const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
   expect(input.placeholder).toBe(`Filter actions...`)
-  expect(doc_query(`dialog`)).toBeTruthy()
+  expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
 test(`dialog remains functional when open`, () => {
@@ -375,16 +375,11 @@ test(`dialog remains functional when open`, () => {
   mount(CmdPalette, { target: document.body, props })
 
   const dialog = doc_query(`dialog`)
-  expect(dialog).toBeTruthy()
+  expect(dialog).toBeInstanceOf(HTMLDialogElement)
   expect(props.open).toBe(true)
 
-  // Verify dialog has the expected content
-  const input = doc_query(`dialog input[autocomplete]`)
-  expect(input).toBeTruthy()
-
-  // Verify actions are present
-  const multiselect = doc_query(`dialog div.multiselect`)
-  expect(multiselect).toBeTruthy()
+  expect(doc_query(`dialog input[autocomplete]`)).toBeInstanceOf(HTMLInputElement)
+  expect(doc_query(`dialog div.multiselect`)).toBeInstanceOf(HTMLDivElement)
 })
 
 test.each([
@@ -504,7 +499,7 @@ test(`handles multiple trigger keys simultaneously`, async () => {
 test(`handles custom fade duration`, () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 500 })
   mount(CmdPalette, { target: document.body, props })
-  expect(doc_query(`dialog`)).toBeTruthy()
+  expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
   expect(props.fade_duration).toBe(500)
 })
 
@@ -554,7 +549,7 @@ test(`handles action execution with different label types`, () => {
     props: { open: true, actions, fade_duration: 0 },
   })
 
-  expect(doc_query(`dialog div.multiselect`)).toBeTruthy()
+  expect(doc_query(`dialog div.multiselect`)).toBeInstanceOf(HTMLDivElement)
   expect(doc_query(`dialog ul.options li`)?.textContent).toContain(`simple action`)
 })
 

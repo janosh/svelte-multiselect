@@ -60,8 +60,7 @@ guard, and reset timing.
   <label>
     <span
       style="cursor: help; text-decoration: underline dotted"
-      title="reset_sec is in seconds. Zero or negative values disable auto-reset"
-      {@attach tooltip()}
+      {@attach tooltip({ content: `Zero or negative values disable auto-reset` })}
     >
       reset_sec:
     </span>

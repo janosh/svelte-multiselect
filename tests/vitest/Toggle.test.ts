@@ -104,9 +104,11 @@ describe(`Toggle`, () => {
 
   test(`renders with proper structure`, () => {
     mount(Toggle, { target: document.body })
-    expect(document.body.querySelector(`label`)).toBeTruthy()
-    expect(document.body.querySelector(`input[type="checkbox"]`)).toBeTruthy()
-    expect(document.body.querySelector(`span`)).toBeTruthy()
+    expect(document.body.querySelector(`label`)).toBeInstanceOf(HTMLLabelElement)
+    expect(document.body.querySelector(`input[type="checkbox"]`)).toBeInstanceOf(
+      HTMLInputElement,
+    )
+    expect(document.body.querySelector(`span`)).toBeInstanceOf(HTMLSpanElement)
   })
 
   test(`children snippet receives checked state and updates on toggle`, async () => {

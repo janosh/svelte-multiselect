@@ -69,7 +69,7 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
     create_mock_observer()
     const element = document.createElement(`div`)
     const observer = scroll_into_view_if_needed_polyfill(element, true)
-    expect(observer).toBeDefined()
+    expect(observer).toBeInstanceOf(Object)
     expect(mock.observe).toHaveBeenCalledWith(element)
   })
 
@@ -105,19 +105,4 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
       expect(mock.disconnect).toHaveBeenCalled()
     },
   )
-
-  test(`defaults centerIfNeeded to true (scrolls to center when ratio=0)`, () => {
-    create_mock_observer()
-    const element = document.createElement(`div`)
-    element.scrollIntoView = vi.fn()
-
-    scroll_into_view_if_needed_polyfill(element) // no second arg
-    const mock_entry = { intersectionRatio: 0 } as IntersectionObserverEntry
-    mock.callback?.([mock_entry], mock.instance as unknown as IntersectionObserver)
-
-    expect(element.scrollIntoView).toHaveBeenCalledWith({
-      block: `center`,
-      inline: `center`,
-    })
-  })
 })

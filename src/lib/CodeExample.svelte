@@ -99,20 +99,22 @@
   }
   pre {
     position: relative;
-    overflow-x: auto;
-    visibility: hidden;
-    opacity: 0;
+    overflow: hidden;
     max-height: 0;
-    transition: max-height, opacity, visibility;
+    opacity: 0;
+    padding: 0 1em;
+    margin: 0;
+    transition-property: max-height, opacity, padding, margin;
     transition-duration: var(--code-example-pre-transition-duration, 0.3s);
+    transition-timing-function: ease;
     border-radius: var(--code-example-pre-border-radius, 4pt);
     background-color: var(--code-example-pre-bg, var(--pre-bg));
-    padding: var(--code-example-pre-padding, 1ex 1em);
   }
   pre.open {
-    visibility: visible;
     opacity: 1;
-    max-height: 9999vh;
+    max-height: var(--code-example-pre-max-height, 80vh);
+    overflow-x: auto;
+    padding: var(--code-example-pre-padding, 1ex 1em);
     margin: var(--code-example-pre-margin, 1em 0 0 0);
   }
   .code-above > pre.open {

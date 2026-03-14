@@ -13,7 +13,7 @@ describe(`Icon`, () => {
       const svg = get_svg()
       const expected = icon_data[icon_name]
 
-      expect(svg).toBeTruthy()
+      expect(svg).toBeInstanceOf(SVGElement)
       expect(svg.getAttribute(`viewBox`)).toBe(expected.viewBox)
       expect(svg.getAttribute(`fill`)).toBe(`currentColor`)
       expect(svg.querySelector(`path`)?.getAttribute(`d`)).toBe(expected.path)

@@ -278,7 +278,9 @@ describe(`bubbles <input> node DOM events`, () => {
         ontouchend: () => {},
       },
     })
-    expect(doc_query<HTMLInputElement>(`input[autocomplete]`)).toBeTruthy()
+    expect(doc_query<HTMLInputElement>(`input[autocomplete]`)).toBeInstanceOf(
+      HTMLInputElement,
+    )
   })
 })
 
@@ -560,7 +562,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
 
     const listbox_id = input.getAttribute(`aria-controls`)
-    expect(listbox_id).toBeTruthy()
+    expect(listbox_id).toBeTypeOf(`string`)
     const listbox = doc_query(`ul.options`)
     expect(listbox.id).toBe(listbox_id)
     expect(listbox.getAttribute(`role`)).toBe(`listbox`)
@@ -597,7 +599,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     await tick()
 
     const active_id = input.getAttribute(`aria-activedescendant`)
-    expect(active_id).toBeTruthy()
+    expect(active_id).toBeTypeOf(`string`)
     const active_option = document.getElementById(active_id as string)
     expect(active_option?.getAttribute(`role`)).toBe(`option`)
     expect(active_option?.classList.contains(`active`)).toBe(true)
@@ -923,7 +925,7 @@ test.each([undefined, `Custom no options message`])(
     expect(dropdown.textContent?.trim()).toBe(expected_msg)
 
     const no_match_li = doc_query(`ul.options li.user-msg`)
-    expect(no_match_li).toBeTruthy()
+    expect(no_match_li).toBeInstanceOf(HTMLLIElement)
     expect(no_match_li.textContent?.trim()).toBe(expected_msg)
 
     // Click on no matching options message
@@ -2648,7 +2650,7 @@ test.each([true, false, `if-mobile`] as const)(
         expect(
           another_option,
           `Could not find another option to test mobile selection behavior`,
-        ).toBeTruthy()
+        ).toBeInstanceOf(HTMLElement)
         another_option?.click()
         await tick()
         // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
@@ -3364,7 +3366,6 @@ describe(`CSS light-dark theme awareness`, () => {
     `--sms-disabled-bg`,
     `--sms-selected-bg`,
     `--sms-li-active-bg`,
-    `--sms-remove-btn-hover-color`,
     `--sms-remove-btn-hover-bg`,
     `--sms-options-bg`,
     `--sms-options-shadow`,
@@ -3501,7 +3502,7 @@ describe(`option grouping feature`, () => {
     await tick()
 
     const genre_header = find_group_header(`Genre`)
-    expect(genre_header).toBeDefined()
+    expect(genre_header).toBeInstanceOf(HTMLElement)
     expect(genre_header.classList.contains(`collapsible`)).toBe(true)
 
     // Get initial option count
@@ -3702,7 +3703,7 @@ describe(`option grouping feature`, () => {
     const c_major_option = Array.from(visible_options_after_collapse).find((li) =>
       li.textContent?.trim() === `C Major`
     )
-    expect(c_major_option).toBeDefined()
+    expect(c_major_option).toBeInstanceOf(HTMLElement)
   })
 
   test.each(
@@ -3758,7 +3759,7 @@ describe(`option grouping feature`, () => {
     await tick()
 
     const genre_header = find_group_header(`Genre`)
-    expect(genre_header).toBeDefined()
+    expect(genre_header).toBeInstanceOf(HTMLElement)
 
     const initial_options = document.querySelectorAll(
       `ul.options > li:not(.group-header)`,
@@ -3856,7 +3857,7 @@ describe(`option grouping feature`, () => {
     const select_all_btn = genre_header.querySelector(
       `button.group-select-all`,
     ) as HTMLElement
-    expect(select_all_btn).toBeTruthy()
+    expect(select_all_btn).toBeInstanceOf(HTMLButtonElement)
     select_all_btn.click()
     await tick()
 
@@ -4039,7 +4040,7 @@ describe(`option grouping feature`, () => {
 
       const genre_header = find_group_header(`Genre`)
       const count_span = genre_header.querySelector(`.group-count`)
-      expect(count_span).toBeDefined()
+      expect(count_span).toBeInstanceOf(HTMLSpanElement)
       expect(count_span?.textContent?.trim()).toBe(expected_count)
     },
   )
