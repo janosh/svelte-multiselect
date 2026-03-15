@@ -28,11 +28,7 @@
     <Icon icon={open ? 'Collapse' : 'Expand'} style={disabled ? `opacity: 0.5` : null} />
   {/snippet}
   {#snippet removeIcon({ isRemoveAll })}
-    {#if isRemoveAll}
-      <span style="font-size: 0.8em">Clear all</span>
-    {:else}
-      <MinusIcon width="1em" />
-    {/if}
+    {#if isRemoveAll}Clear all{:else}<MinusIcon width="1em" />{/if}
   {/snippet}
 </MultiSelect>
 ```
@@ -73,9 +69,7 @@
     </button>
   {/snippet}
   {#snippet removeIcon({ option: opt, isRemoveAll })}
-    <span style="width: 2ex" title={isRemoveAll ? `Remove all` : `Remove ${opt}`}>{
-      isRemoveAll ? `✕✕` : `✕`
-    }</span>
+    <span style="width: 2ex" title={isRemoveAll ? `Remove all` : `Remove ${opt}`}>✕</span>
   {/snippet}
 </MultiSelect>
 ```

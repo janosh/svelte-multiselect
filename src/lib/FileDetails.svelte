@@ -12,7 +12,7 @@
   let {
     files = $bindable([]),
     toggle_all_btn_title = `Toggle all`,
-    default_lang = `typescript`,
+    default_lang = `svelte`,
     as = `ol`,
     title_snippet,
     button_props,
@@ -52,6 +52,57 @@
       node.open = !should_close
     }
   }
+
+  // Lazy-loaded syntax highlighter using starry-night (CSS already loaded in app.css)
+  interface HastNode {
+    type: string
+    value?: string
+    tagName?: string
+    properties?: { className?: string[] }
+    children?: HastNode[]
+  }
+  let highlighter: {
+    highlight: (code: string, scope: string) => HastNode
+    flagToScope: (flag: string) => string | undefined
+  } | undefined
+  const escape_html = (str: string): string =>
+    str.replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
+  const hast_to_html = (node: HastNode): string => {
+    if (node.type === `text`) return escape_html(node.value ?? ``)
+    if (node.type === `root`) return (node.children ?? []).map(hast_to_html).join(``)
+    const cls = node.properties?.className?.join(` `)
+    const attrs = cls ? ` class="${cls}"` : ``
+    const inner = (node.children ?? []).map(hast_to_html).join(``)
+    return `<${node.tagName}${attrs}>${inner}</${node.tagName}>`
+  }
+  async function highlight(code: string, lang: string): Promise<string> {
+    if (!highlighter) {
+      const { createStarryNight, common } = await import(`@wooorm/starry-night`)
+      const source_svelte =
+        (await import(`@wooorm/starry-night/source.svelte`)).default
+      highlighter = await createStarryNight([...common, source_svelte])
+    }
+    const scope = highlighter.flagToScope(lang)
+    if (!scope) return escape_html(code)
+    return hast_to_html(highlighter.highlight(code, scope))
+  }
+
+  // Cache of highlighted HTML keyed by content+language
+  let highlighted_cache = $state<Record<string, string>>({})
+  $effect(() => {
+    for (const file of files) {
+      const lang = file.language ?? default_lang
+      const key = `${lang}:${file.content}`
+      if (!(key in highlighted_cache)) {
+        highlight(file.content, lang).then(
+          (html) => {
+            highlighted_cache[key] = html
+          },
+          () => {}, // silently skip unsupported languages
+        )
+      }
+    }
+  })
 </script>
 
 {#if files?.length > 1}
@@ -63,6 +114,7 @@
 <svelte:element this={as} {...rest}>
   {#each files as file, idx (file.title)}
     {@const { title, content, language = default_lang } = file ?? {}}
+    {@const cache_key = `${language}:${content}`}
     <li>
       <details bind:this={node_refs[idx]} {...details_props}>
         {#if title || title_snippet}
@@ -75,7 +127,9 @@
           </summary>
         {/if}
 
-        <pre class="language-{language}"><code>{content}</code></pre>
+        <pre
+          class="language-{language}"
+        ><code>{#if highlighted_cache[cache_key]}{@html highlighted_cache[cache_key]}{:else}{content}{/if}</code></pre>
       </details>
     </li>
   {/each}
@@ -90,5 +144,8 @@
   }
   ol > li {
     margin: 1ex 0;
+  }
+  pre {
+    background: var(--pre-bg, light-dark(#f3f5f8, rgba(0, 0, 0, 0.3)));
   }
 </style>

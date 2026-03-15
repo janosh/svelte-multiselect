@@ -93,7 +93,7 @@
 
 <label for="fav-languages">Favorite programming languages? <span>multi-select with custom snippet</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/playground/e3b88f59f62b498d943ecf7756ab75d7"
+```svelte example collapsible
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import { languages } from '$site/options'
@@ -118,7 +118,7 @@ selected = {JSON.stringify(selected) || `[]`}
 
 <label for="fav-ml-tool">Favorite machine learning framework? <span>single-select with loading indicator on text input</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/playground/79e22e1905c94456aa21564b4d5f8759"
+```svelte example collapsible
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import type { ObjectOption } from '$lib/types'
@@ -153,7 +153,7 @@ value = {JSON.stringify(value) || `null`}
 
 <label for="confetti-select">Chance of Confetti <span>max select with custom filter function and callback on item selection</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/playground/516279bd62ec424986115263c2cdc169"
+```svelte example collapsible
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import type { ObjectOption } from '$lib/types'
@@ -198,7 +198,7 @@ value = {JSON.stringify(value) || `null`}
 
 <label for="color-select">Color select <span>with form submission</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/playground/3a217c39932047a09f61d6425b04a7c3"
+```svelte example collapsible
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import { colors } from '$site/options'
@@ -237,7 +237,7 @@ value = {JSON.stringify(value) || `null`}
 
 <label for="countries">What country are you from? <span><code>minSelect=1</code> means no <code>x</code> button to remove the selected option</span></label>
 
-```svelte example collapsible repl="https://svelte.dev/playground/4ff40862436e4bfbb2bd55d234352bb1"
+```svelte example collapsible
 <script lang="ts">
   import MultiSelect from 'svelte-multiselect'
   import { countries } from '$site/options'

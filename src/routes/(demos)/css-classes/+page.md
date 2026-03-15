@@ -25,7 +25,7 @@
   allowUserOptions
   maxSelect={2}
   --sms-bg="color-mix(in srgb, cornflowerblue 15%, light-dark(white, #1a1a2e))"
-  --sms-options-bg="color-mix(in srgb, mediumseagreen 20%, light-dark(white, #1a1a2e))"
+  --sms-options-bg="color-mix(in srgb, cornflowerblue 10%, light-dark(white, #1a1a2e))"
 />
 <!-- maxSelect={2} needed for maxSelectMsg to show up -->
 

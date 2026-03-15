@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { HTMLAttributes } from 'svelte/elements'
+
   // Display an animated Octocat in a corner of the screen to link to the GitHub repo.
   let {
     href,
@@ -8,8 +10,8 @@
     color = null,
     fill = null,
     corner = `top-right`,
-    style = ``,
-  }: {
+    ...rest
+  }: HTMLAttributes<HTMLAnchorElement> & {
     // adapted from https://github.com/tholman/github-corners
     href: string
     title?: string
@@ -19,7 +21,6 @@
     fill?: string | null
     // bottomLeft/Right look bad, shouldn't normally be used
     corner?: `top-left` | `top-right` | `bottom-left` | `bottom-right`
-    style?: string
   } = $props()
 </script>
 
@@ -28,7 +29,7 @@
   {target}
   {title}
   aria-label={aria_label ?? title}
-  {style}
+  {...rest}
   class={corner}
   style:color
   style:fill

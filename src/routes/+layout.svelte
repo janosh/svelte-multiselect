@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from '$app/environment'
   import { goto } from '$app/navigation'
   import { page } from '$app/state'
   import { CmdPalette, CopyButton, GitHubCorner } from '$lib'
@@ -10,11 +11,20 @@
   import { routes } from './(demos)'
 
   let { children }: { children?: Snippet<[]> } = $props()
+  let toc_desktop = $state(true)
 
   const actions = routes.map(({ route }) => ({
     label: route,
     action: () => goto(route),
   }))
+
+  if (browser) {
+    const saved_theme_mode = localStorage.getItem(`theme`)
+    if (saved_theme_mode === `light` || saved_theme_mode === `dark`) {
+      document.documentElement.style.colorScheme = saved_theme_mode
+      document.documentElement.dataset.theme = saved_theme_mode
+    }
+  }
 </script>
 
 {#if page.url.pathname !== `/`}
@@ -31,7 +41,7 @@
 
 <GitHubCorner href={repository} />
 
-<CopyButton global />
+<CopyButton global global_selector="pre:not(li > pre) > code" />
 
 {@render children?.()}
 
@@ -39,19 +49,15 @@
   <Toc
     headingSelector="main > :where(h2, h3)"
     breakpoint={1500}
-    open_button_style="display: flex; padding: 3px;"
+    bind:desktop={toc_desktop}
+    asideStyle={toc_desktop
+    ? `position: fixed; right: 2em; font-size: 0.7rem; max-width: 17rem;`
+    : ``}
+    openButtonStyle="display: flex; padding: 3px;"
     --toc-mobile-bg="light-dark(#fff, #222226)"
     --toc-padding="1em 0 1em 1em"
+    --toc-active-color="var(--accent)"
   />
 {/if}
 
 <Footer />
-
-<style>
-  :global(aside.toc.desktop) {
-    position: fixed;
-    font-size: 0.6rem;
-    left: calc(50vw + var(--main-max-width) / 2 + 210px);
-    max-width: 12rem;
-  }
-</style>

@@ -1477,6 +1477,7 @@
             type="button"
             title="{removeBtnTitle} {utils.get_label(option)}"
             class="remove"
+            class:default-icon={!removeIcon}
           >
             {#if removeIcon}
               {@render removeIcon({ option, isRemoveAll: false })}
@@ -1562,6 +1563,7 @@
       <button
         type="button"
         class="remove remove-all"
+        class:default-icon={!removeIcon}
         title={removeAllTitle}
         onclick={remove_all}
         onkeydown={if_enter_or_space(remove_all)}
@@ -1569,7 +1571,7 @@
         {#if removeIcon}
           {@render removeIcon({ isRemoveAll: true })}
         {:else}
-          <Icon icon="Cross" style="width: 15px" />
+          <Icon icon="Cross" style="width: 17px" />
         {/if}
       </button>
     {/if}
@@ -1843,7 +1845,7 @@
     display: flex;
     cursor: text;
     box-sizing: border-box;
-    border: var(--sms-border, 1pt solid light-dark(lightgray, #555));
+    border: var(--sms-border, 1px solid light-dark(lightgray, #555));
     border-radius: var(--sms-border-radius, 3pt);
     background: var(--sms-bg, light-dark(white, #222226));
     width: var(--sms-width);
@@ -1862,7 +1864,7 @@
   :where(div.multiselect:focus-within) {
     border: var(
       --sms-focus-border,
-      1pt solid var(--sms-active-color, cornflowerblue)
+      1px solid var(--sms-active-color, cornflowerblue)
     );
   }
   :where(div.multiselect.disabled) {
@@ -1887,7 +1889,7 @@
     white-space: nowrap;
     background: var(
       --sms-selected-bg,
-      light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+      light-dark(rgba(100, 120, 140, 0.15), rgba(120, 170, 255, 0.2))
     );
     padding: var(--sms-selected-li-padding, 0 2pt 0 5pt);
     color: var(--sms-selected-text-color, var(--sms-text-color));
@@ -1919,8 +1921,18 @@
     padding: 0;
     margin: 0 0 0 2pt; /* CSS reset */
   }
+  :is(div.multiselect button.default-icon) {
+    min-height: 0; /* let aspect-ratio win over content sizing */
+    overflow: hidden;
+  }
   :is(div.multiselect button.remove-all) {
     margin: 0 3pt;
+    padding: 1pt;
+  }
+  :is(div.multiselect button.remove-all:not(.default-icon)) {
+    border-radius: 3pt;
+    aspect-ratio: auto;
+    padding: 1pt 2pt;
   }
   :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-btn-hover-color, inherit);
@@ -1983,14 +1995,14 @@
     overflow: auto;
     transition: all 0.2s; /* is this transition is desirable with portal positioning? */
     box-sizing: border-box;
-    background: var(--sms-options-bg, light-dark(#fafafa, #222226));
+    background: var(--sms-options-bg, light-dark(#fcfcfc, #222226));
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(
       --sms-options-shadow,
-      light-dark(0 0 14pt -8pt black, 0 0 14pt -4pt rgba(0, 0, 0, 0.8))
+      light-dark(0 0 14pt -3pt rgba(0, 0, 0, 0.2), 0 0 14pt -4pt rgba(0, 0, 0, 0.8))
     );
-    border: var(--sms-options-border);
+    border: var(--sms-options-border, 1px solid light-dark(lightgray, #555));
     border-width: var(--sms-options-border-width);
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding);
@@ -2031,7 +2043,7 @@
       --sms-li-active-bg,
       var(
         --sms-active-color,
-        light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+        light-dark(rgba(70, 70, 140, 0.2), rgba(120, 170, 170, 0.2))
       )
     );
   }
@@ -2065,7 +2077,7 @@
         --sms-li-active-bg,
         var(
           --sms-active-color,
-          light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
+          light-dark(rgba(70, 70, 140, 0.2), rgba(120, 170, 255, 0.2))
         )
       )
     );
@@ -2117,7 +2129,7 @@
     z-index: 1;
     background: var(
       --sms-group-header-sticky-bg,
-      var(--sms-options-bg, light-dark(#fafafa, #222226))
+      var(--sms-options-bg, light-dark(#fcfcfc, #222226))
     );
   }
   /* Indent grouped options for visual hierarchy */
