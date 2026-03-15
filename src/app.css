@@ -13,10 +13,22 @@
   --text-muted: light-dark(#666, #999);
   --surface: light-dark(#fff, rgba(255, 255, 255, 0.05));
   --border: light-dark(#ddd, rgba(255, 255, 255, 0.15));
-  --pre-bg: light-dark(#f4f4f4, rgba(0, 0, 0, 0.3));
+  --pre-bg: light-dark(rgba(0, 0, 20, 0.03), rgba(0, 0, 0, 0.3));
 
   --github-corner-bg: light-dark(#222, #eee);
   --github-corner-color: light-dark(#fafafa, #1a1a1a);
+}
+/* Ensure starry-night token colors follow explicit theme toggle, not only OS preference. */
+html[data-theme='dark'] {
+  /* Keep this minimal: the common token colors that dominate Svelte/TS examples. */
+  --color-prettylights-syntax-comment: #9198a1;
+  --color-prettylights-syntax-constant: #79c0ff;
+  --color-prettylights-syntax-entity: #d2a8ff;
+  --color-prettylights-syntax-entity-tag: #7ee787;
+  --color-prettylights-syntax-keyword: #ff7b72;
+  --color-prettylights-syntax-storage-modifier-import: #f0f6fc;
+  --color-prettylights-syntax-string: #a5d6ff;
+  --color-prettylights-syntax-variable: #ffa657;
 }
 /* Default to dark theme for docs site, respects user preference */
 html {
@@ -75,10 +87,11 @@ pre {
   position: relative;
   padding: 1ex 1em;
   border-radius: 5pt;
-  background: var(--surface);
-  overflow-x: auto;
+  background: var(--pre-bg);
 }
 pre code {
+  display: block;
+  overflow-x: auto;
   background: transparent;
   padding: 0;
   font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);

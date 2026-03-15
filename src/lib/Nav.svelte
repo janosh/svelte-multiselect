@@ -513,6 +513,11 @@
       0 2px 8px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.5)
     );
+    --nav-link-bg-hover: light-dark(
+      rgba(70, 70, 140, 0.2),
+      rgba(120, 170, 255, 0.2)
+    );
+    --nav-dropdown-border-color: color-mix(in srgb, currentColor 30%, transparent 70%);
   }
   .menu {
     display: flex;

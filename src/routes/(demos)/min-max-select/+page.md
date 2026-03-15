@@ -173,9 +173,9 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
   }
 
   const options: ColorOption[] = [
-    { label: `Red`, value: `#ffb3ba` },
-    { label: `Green`, value: `#baffc9` },
-    { label: `Blue`, value: `#bae1ff` },
+    { label: `Red`, value: `#e05060` },
+    { label: `Green`, value: `#30a050` },
+    { label: `Blue`, value: `#4080d0` },
   ]
   let selected_color: ColorOption | null = $state(options[2]) // Preselect Blue
 </script>

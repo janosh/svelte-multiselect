@@ -987,14 +987,12 @@ test.describe(`snippets`, () => {
       `unexpected number of custom remove icon snippets rendered`,
     ).toHaveCount(3)
 
-    const remove_all_label = page.locator(
-      `#languages-1 button.remove-all > span`,
-    )
+    const remove_all_btn = page.locator(`#languages-1 button.remove-all`)
     await expect(
-      remove_all_label,
+      remove_all_btn,
       `custom remove-all snippet is not rendered`,
     ).toHaveCount(1)
-    await expect(remove_all_label).toHaveText(`Clear all`)
+    await expect(remove_all_btn).toHaveText(`Clear all`)
   })
 })
 

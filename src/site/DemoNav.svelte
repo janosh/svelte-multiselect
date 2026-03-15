@@ -1,6 +1,6 @@
 <script lang="ts">
   import { page } from '$app/state'
-  import { Nav } from '$lib'
+  import { Nav, ThemeToggle } from '$lib'
   import type { NavRoute } from '$lib/types'
   import type { ComponentProps } from 'svelte'
 
@@ -10,14 +10,15 @@
   const grouped_routes: NavRoute[] = [
     `/`,
     {
-      href: `#basics`,
+      href: `/basics`,
       label: `Basics`,
-      children: [`/form`, `/events`, `/disabled`],
+      children: [`/basics`, `/form`, `/events`, `/disabled`],
     },
     {
-      href: `#selection`,
+      href: `/selection`,
       label: `Selection`,
       children: [
+        `/selection`,
         `/min-max-select`,
         `/duplicates`,
         `/sort-selected`,
@@ -27,9 +28,10 @@
       ],
     },
     {
-      href: `#styling`,
+      href: `/styling`,
       label: `Styling`,
       children: [
+        `/styling`,
         `/ui`,
         `/css-classes`,
         `/snippets`,
@@ -38,24 +40,23 @@
       ],
     },
     {
-      href: `#data`,
+      href: `/data`,
       label: `Data`,
-      children: [`/grouping`, `/infinite-scroll`],
+      children: [`/data`, `/grouping`, `/infinite-scroll`],
     },
     {
-      href: `#integration`,
+      href: `/integration`,
       label: `Integration`,
-      children: [`/kit-form-actions`, `/persistent`, `/attachments`],
+      children: [`/integration`, `/kit-form-actions`, `/persistent`, `/attachments`],
     },
     {
-      href: `#components`,
+      href: `/components`,
       label: `Components`,
-      children: [`/nav`, `/cmd-palette`],
+      children: [`/components`, `/nav`, `/cmd-palette`],
     },
   ]
 
-  const base_style =
-    `max-width: var(--main-max-width); --nav-link-bg: rgba(0, 0, 0, 0.05); --nav-item-padding: 2pt 4pt; `
+  const base_style = `max-width: var(--main-max-width); --nav-item-padding: 2pt 4pt; `
 </script>
 
 <Nav
@@ -78,4 +79,6 @@
     '/infinite-scroll': `Infinite Scroll`,
     ...(props.labels ?? {}),
   }}
-/>
+>
+  <ThemeToggle style="margin-left: 6pt" />
+</Nav>

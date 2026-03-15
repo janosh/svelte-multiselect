@@ -1774,8 +1774,22 @@ test.each([[[1]], [[1, 2, 3]]])(
     expect(document.querySelectorAll(`button.remove.remove-all`)).toHaveLength(
       selected.length > 1 ? 1 : 0,
     )
+
+    // without removeIcon snippet, all remove buttons get default-icon class
+    expect(
+      document.querySelectorAll(`button.remove.default-icon`),
+    ).toHaveLength(selected.length + (selected.length > 1 ? 1 : 0))
   },
 )
+
+test(`remove buttons lack default-icon class when removeIcon snippet is provided`, async () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3], selected: [1, 2] },
+  })
+  await tick()
+  expect(document.querySelectorAll(`button.remove.default-icon`)).toHaveLength(0)
+})
 
 test(`errors to console when option is an object but has no label key`, () => {
   console.error = vi.fn()
@@ -3354,7 +3368,7 @@ describe(`binding update event count`, () => {
   )
 })
 
-describe(`CSS light-dark theme awareness`, () => {
+describe(`CSS static analysis`, () => {
   const css = readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`).match(
     /<style>([\s\S]*?)<\/style>/,
   )?.[1] ??
@@ -3386,6 +3400,37 @@ describe(`CSS light-dark theme awareness`, () => {
   test(`--sms-active-color fallbacks use light-dark()`, () => {
     expect(css.match(/--sms-active-color,\s*light-dark\(/g)?.length)
       .toBeGreaterThanOrEqual(2)
+  })
+
+  test(`default-icon buttons enforce circle via min-height: 0 + overflow: hidden`, () => {
+    const default_icon_block = css.match(
+      /:is\(div\.multiselect button\.default-icon\)\s*\{([\s\S]*?)\}/,
+    )?.[1]
+    expect(default_icon_block).toBeTruthy()
+    expect(default_icon_block).toMatch(/min-height:\s*0/)
+    expect(default_icon_block).toMatch(/overflow:\s*hidden/)
+  })
+
+  test(`options dropdown has border with light-dark default`, () => {
+    expect(css).toMatch(/--sms-options-border,\s*1px solid light-dark\(/)
+  })
+
+  test(`options dropdown bg contrasts with typical page bg`, () => {
+    const options_block = css.match(
+      /:where\(ul\.options\)\s*\{([\s\S]*?)\}/,
+    )?.[1]
+    expect(options_block).toBeTruthy()
+    expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/)
+  })
+
+  test(`custom-snippet remove-all overrides circular defaults`, () => {
+    const custom_remove_all = css.match(
+      /:is\(div\.multiselect button\.remove-all:not\(\.default-icon\)\)\s*\{([\s\S]*?)\}/,
+    )?.[1]
+    expect(custom_remove_all).toBeTruthy()
+    expect(custom_remove_all).toMatch(/border-radius:\s*3pt/)
+    expect(custom_remove_all).toMatch(/aspect-ratio:\s*auto/)
+    expect(custom_remove_all).toMatch(/padding:\s*1pt 2pt/)
   })
 })
 

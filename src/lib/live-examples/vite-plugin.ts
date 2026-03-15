@@ -24,7 +24,7 @@ const apply_edits = (source: string, edits: Edit[]): string =>
 interface AstNode {
   type: string
   key?: { name: string }
-  value?: string
+  value?: unknown
   source?: { value?: string; start?: number; end?: number }
   start?: number
   end?: number
@@ -160,16 +160,15 @@ export default function live_examples_plugin(
         })
 
         for (const [idx, prop] of src_props.entries()) {
-          // Extract the string literal content (base64 encoded)
-          const string_literals = find_nodes(prop, { type: `Literal` })
+          // Read the property value directly instead of recursively searching nested literals.
+          const prop_value = prop.value
+          if (!prop_value || typeof prop_value !== `object`) continue
 
-          if (string_literals.length === 0) continue
+          const literal_type = (prop_value as AstNode).type
+          const literal_value = (prop_value as AstNode).value
+          if (literal_type !== `Literal` || typeof literal_value !== `string`) continue
 
-          const value_node = string_literals[0]
-          // AST Literal nodes store value in .value property (string for literals)
-          const src = Buffer.from(String(value_node.value ?? ``), `base64`).toString(
-            `utf-8`,
-          )
+          const src = Buffer.from(literal_value, `base64`).toString(`utf-8`)
 
           // Use base_id (without query params) to ensure consistent virtual file IDs
           const virtual_id = `${base_id}${EXAMPLE_MODULE_PREFIX}${idx}.svelte`

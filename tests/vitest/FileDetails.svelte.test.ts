@@ -1,6 +1,6 @@
 import { FileDetails } from '$lib'
 import { flushSync, mount, tick } from 'svelte'
-import { expect, test } from 'vitest'
+import { expect, test, vi } from 'vitest'
 import { doc_query } from './index'
 
 test(`FileDetails renders files in ordered list with titles and contents`, () => {
@@ -22,6 +22,59 @@ test(`FileDetails renders files in ordered list with titles and contents`, () =>
     expect(summaries[idx].textContent).toBe(file.title)
     expect(contents[idx].textContent).toBe(file.content)
   })
+})
+
+test.each([
+  { file: { title: `comp.svelte`, content: `<p>hi</p>` }, expected_lang: `svelte` },
+  {
+    file: { title: `util.ts`, content: `const x = 1`, language: `typescript` },
+    expected_lang: `typescript`,
+  },
+])(`pre element gets language-$expected_lang class`, ({ file, expected_lang }) => {
+  mount(FileDetails, { target: document.body, props: { files: [file] } })
+  expect(doc_query(`pre`).className).toContain(`language-${expected_lang}`)
+})
+
+test(`content with HTML characters is escaped before highlighting loads`, () => {
+  const html_content = `<div class="foo">&amp; bar</div>`
+  mount(FileDetails, {
+    target: document.body,
+    props: { files: [{ title: `test.svelte`, content: html_content }] },
+  })
+  const code_el = doc_query(`pre code`)
+  expect(code_el.textContent).toBe(html_content)
+  expect(code_el.innerHTML).not.toContain(`<div class="foo">`)
+})
+
+test(`unsupported language falls back to escaped raw content`, async () => {
+  const content = `some <weird> content`
+  mount(FileDetails, {
+    target: document.body,
+    props: { files: [{ title: `file.xyz`, content, language: `nonexistent-lang-xyz` }] },
+  })
+  // wait for highlight attempt to complete and fall back
+  await vi.waitFor(() => {
+    const code_el = doc_query(`pre code`)
+    if (code_el.innerHTML.includes(`&lt;`)) return
+    throw new Error(`not escaped yet`)
+  }, { timeout: 5000 })
+  const code_el = doc_query(`pre code`)
+  expect(code_el.textContent).toBe(content)
+})
+
+test(`syntax highlighting produces starry-night spans`, async () => {
+  const svelte_code = `<script lang="ts">\n  let count = $state(0)\n</script>`
+  mount(FileDetails, {
+    target: document.body,
+    props: { files: [{ title: `App.svelte`, content: svelte_code }] },
+  })
+
+  await vi.waitFor(() => {
+    if (!doc_query(`pre code`).querySelector(`span[class^="pl-"]`)) {
+      throw new Error(`no highlighted spans yet`)
+    }
+  }, { timeout: 5000 })
+  expect(doc_query(`pre code`).textContent).toContain(`let count`)
 })
 
 test(`toggle all button opens, closes, and handles partial open state`, async () => {
