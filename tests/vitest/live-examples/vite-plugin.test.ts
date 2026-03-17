@@ -2,9 +2,11 @@
 import vite_plugin, { EXAMPLE_MODULE_PREFIX } from '$lib/live-examples/vite-plugin'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
-import { describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 
 const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
+const make_code = (src: string): string =>
+  `const props = { __live_example_src: "${to_base64(src)}" }`
 
 interface TestPlugin {
   name: string
@@ -28,6 +30,13 @@ const get_plugin = (options = {}): TestPlugin => {
 }
 
 const create_mock_context = () => ({ warn: vi.fn(), error: vi.fn() })
+const create_mock_server = (hot_send = vi.fn()) => ({
+  moduleGraph: {
+    getModuleById: vi.fn().mockReturnValue(null),
+    invalidateModule: vi.fn(),
+  },
+  hot: { send: hot_send },
+})
 
 describe(`plugin initialization`, () => {
   test(`returns two plugins: resolve (pre) and main`, () => {
@@ -198,9 +207,6 @@ describe(`transform`, () => {
     const id = `/path/to/file.md`
     const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
 
-    const make_code = (src: string) =>
-      `const props = { __live_example_src: "${to_base64(src)}" }`
-
     plugin.transform?.call(ctx, make_code(`<div>First</div>`), id)
     expect(plugin.load?.call(ctx, virtual_id)).toBe(`<div>First</div>`)
 
@@ -239,42 +245,55 @@ describe(`transform`, () => {
 })
 
 describe(`vite-specific hooks`, () => {
-  test(`configureServer accepts server without throwing`, () => {
-    const plugin = get_plugin()
-    const mock_server = {
-      moduleGraph: { getModuleById: vi.fn(), invalidateModule: vi.fn() },
-    }
-    expect(() => plugin.configureServer?.(mock_server)).not.toThrow()
-  })
-
   test.each([
-    [`/path/to/file.md`, true],
-    [`/path/to/file.ts`, false],
-  ])(`handleHotUpdate for %s returns modules`, (file, is_markdown) => {
+    [`/path/to/file.md`],
+    [`/path/to/file.ts`],
+  ])(`handleHotUpdate for %s returns only ctx.modules`, (file) => {
     const plugin = get_plugin()
-    const ctx = {
-      file,
-      server: { moduleGraph: { getModuleById: vi.fn().mockReturnValue(null) } },
-      modules: [{ id: `existing` }],
-    }
+    const ctx = { file, server: create_mock_server(), modules: [{ id: `existing` }] }
     const result = plugin.handleHotUpdate?.(ctx)
-    expect(result).toContain(ctx.modules[0])
-    if (!is_markdown) expect(result).toEqual(ctx.modules)
+    expect(result).toEqual(ctx.modules)
   })
+})
 
-  test(`handleHotUpdate normalizes backslashes for Windows paths`, () => {
+describe(`pending_hmr_file lifecycle`, () => {
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  const setup_hmr = () => {
     const plugin = get_plugin()
     const ctx = create_mock_context()
-    const unix_path = `/path/to/file.md`
-    const code = `const props = { __live_example_src: "${to_base64(`<div>Test</div>`)}" }`
-    plugin.transform?.call(ctx, code, unix_path)
+    const id = `/path/to/file.md`
+    const hot_send = vi.fn()
+    plugin.configureServer?.(create_mock_server(hot_send))
+    return { plugin, ctx, id, hot_send }
+  }
 
-    const mock_module = { id: `virtual` }
-    const hmr_ctx = {
-      file: `\\path\\to\\file.md`,
-      server: { moduleGraph: { getModuleById: vi.fn().mockReturnValue(mock_module) } },
-      modules: [],
-    }
-    expect(plugin.handleHotUpdate?.(hmr_ctx)).toContain(mock_module)
+  test(`stale flag cleared after no-change transform — no spurious reload`, () => {
+    const { plugin, ctx, id, hot_send } = setup_hmr()
+
+    plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
+    plugin.handleHotUpdate?.({ file: id, server: {}, modules: [] })
+
+    // re-transform with identical examples — fix clears pending_hmr_file
+    plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
+
+    // later: examples change WITHOUT a preceding handleHotUpdate.
+    // Without the fix, stale pending_hmr_file causes spurious full-reload.
+    plugin.transform?.call(ctx, make_code(`<div>V2</div>`), id)
+    vi.advanceTimersByTime(500)
+
+    expect(hot_send).not.toHaveBeenCalled()
+  })
+
+  test(`triggers full-reload when examples actually change during HMR`, () => {
+    const { plugin, ctx, id, hot_send } = setup_hmr()
+
+    plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
+    plugin.handleHotUpdate?.({ file: id, server: {}, modules: [] })
+    plugin.transform?.call(ctx, make_code(`<div>V2</div>`), id)
+    vi.advanceTimersByTime(500)
+
+    expect(hot_send).toHaveBeenCalledWith({ type: `full-reload`, path: `*` })
   })
 })

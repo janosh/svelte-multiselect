@@ -25,15 +25,34 @@ test(`FileDetails renders files in ordered list with titles and contents`, () =>
 })
 
 test.each([
+  // inferred from title extension
   { file: { title: `comp.svelte`, content: `<p>hi</p>` }, expected_lang: `svelte` },
+  { file: { title: `util.ts`, content: `const x = 1` }, expected_lang: `typescript` },
+  { file: { title: `app.js`, content: `let x` }, expected_lang: `javascript` },
+  { file: { title: `styles.css`, content: `.a{}` }, expected_lang: `css` },
+  { file: { title: `script.py`, content: `x = 1` }, expected_lang: `python` },
+  { file: { title: `config.yml`, content: `key: val` }, expected_lang: `yaml` },
+  // HTML-wrapped title — extension extracted after stripping tags
   {
-    file: { title: `util.ts`, content: `const x = 1`, language: `typescript` },
+    file: { title: `<code>options.ts</code>`, content: `export const x = 1` },
     expected_lang: `typescript`,
   },
-])(`pre element gets language-$expected_lang class`, ({ file, expected_lang }) => {
-  mount(FileDetails, { target: document.body, props: { files: [file] } })
-  expect(doc_query(`pre`).className).toContain(`language-${expected_lang}`)
-})
+  // explicit language overrides title inference
+  {
+    file: { title: `data.json`, content: `{}`, language: `javascript` },
+    expected_lang: `javascript`,
+  },
+  // unknown extension uses extension directly as language flag
+  { file: { title: `readme.xyz`, content: `hello` }, expected_lang: `xyz` },
+  // no extension falls back to default_lang
+  { file: { title: `Makefile`, content: `all:` }, expected_lang: `svelte` },
+])(
+  `pre element gets language-$expected_lang class for "$file.title"`,
+  ({ file, expected_lang }) => {
+    mount(FileDetails, { target: document.body, props: { files: [file] } })
+    expect(doc_query(`pre`).className).toContain(`language-${expected_lang}`)
+  },
+)
 
 test(`content with HTML characters is escaped before highlighting loads`, () => {
   const html_content = `<div class="foo">&amp; bar</div>`

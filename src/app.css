@@ -3,7 +3,7 @@
 
 :root {
   /* Core theme colors */
-  --accent: cornflowerblue;
+  --accent: light-dark(#4a7abf, cornflowerblue);
   --accent-hover: orange;
   --main-max-width: 50em;
 

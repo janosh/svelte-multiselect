@@ -160,15 +160,12 @@ value = {JSON.stringify(value) || `null`}
   import { frontend_libs } from '$site/options'
   import { Confetti, RepoSnippet } from '$site'
 
-  const frontend_libs_filter_func = (
-    op: ObjectOption,
-    searchText: string,
-  ): boolean => {
+  const filter_func = (op: ObjectOption, searchText: string): boolean => {
     if (!searchText) return true
-    const [label, lang, searchStr] = [op.label, op.lang, searchText].map((s) =>
-      s.toLowerCase()
+    const [label, lang, lowerSearch] = [op.label, op.lang, searchText].map((str) =>
+      str.toLowerCase()
     )
-    return label.includes(searchStr) || lang.includes(searchStr)
+    return label.includes(lowerSearch) || lang.includes(lowerSearch)
   }
 
   let show_confetti: boolean = $state(false)
@@ -179,7 +176,7 @@ value = {JSON.stringify(value) || `null`}
   options={frontend_libs}
   maxSelect={4}
   placeholder="Favorite web framework?"
-  filterFunc={frontend_libs_filter_func}
+  filterFunc={filter_func}
   onadd={(event) => {
     if (event.option.label === `Svelte`) {
       show_confetti = true

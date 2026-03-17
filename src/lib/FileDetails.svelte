@@ -53,6 +53,26 @@
     }
   }
 
+  // Map file extensions that differ from their starry-night language flag
+  const ext_to_lang: Record<string, string> = {
+    ts: `typescript`,
+    js: `javascript`,
+    md: `markdown`,
+    py: `python`,
+    rs: `rust`,
+    sh: `shell`,
+    yml: `yaml`,
+  }
+
+  // Infer language from title (may contain HTML like <code>foo.ts</code>)
+  function lang_from_title(title: string): string | undefined {
+    const ext = title.replace(/<[^>]*>/g, ``).match(/\.(\w+)$/)?.[1]?.toLowerCase()
+    return ext ? ext_to_lang[ext] ?? ext : undefined
+  }
+
+  const resolve_lang = (file: File): string =>
+    file.language ?? lang_from_title(file.title) ?? default_lang
+
   // Lazy-loaded syntax highlighter using starry-night (CSS already loaded in app.css)
   interface HastNode {
     type: string
@@ -91,7 +111,7 @@
   let highlighted_cache = $state<Record<string, string>>({})
   $effect(() => {
     for (const file of files) {
-      const lang = file.language ?? default_lang
+      const lang = resolve_lang(file)
       const key = `${lang}:${file.content}`
       if (!(key in highlighted_cache)) {
         highlight(file.content, lang).then(
@@ -113,7 +133,8 @@
 
 <svelte:element this={as} {...rest}>
   {#each files as file, idx (file.title)}
-    {@const { title, content, language = default_lang } = file ?? {}}
+    {@const { title, content } = file}
+    {@const language = resolve_lang(file)}
     {@const cache_key = `${language}:${content}`}
     <li>
       <details bind:this={node_refs[idx]} {...details_props}>

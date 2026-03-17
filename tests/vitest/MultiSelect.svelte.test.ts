@@ -1919,9 +1919,7 @@ test.each([
 
     // Verify oncreate event was fired with correct payload
     expect(oncreate_spy).toHaveBeenCalledTimes(1)
-    expect(oncreate_spy).toHaveBeenCalledWith({
-      option: expected_created_option,
-    })
+    expect(oncreate_spy).toHaveBeenCalledWith({ option: expected_created_option })
 
     // Verify onadd event was also fired (user-created options trigger both events)
     expect(onadd_spy).toHaveBeenCalledTimes(1)
@@ -1933,8 +1931,7 @@ test.each([
 )
 
 test(`onadd selected accumulates and onremove selected reflects removal`, async () => {
-  const onadd_spy = vi.fn()
-  const onremove_spy = vi.fn()
+  const [onadd_spy, onremove_spy] = [vi.fn(), vi.fn()]
 
   mount(MultiSelect, {
     target: document.body,
@@ -1975,31 +1972,50 @@ test(`onadd selected reflects replacement when maxSelect=1`, async () => {
   expect(onadd_spy).toHaveBeenCalledWith({ option: 2, selected: [2] })
 })
 
-test.each(
-  [
-    [`onopen`, `open`, FocusEvent],
-    [`onclose`, `close`, KeyboardEvent],
-  ] as const,
-)(`fires %s event when dropdown %ss`, async (event_name, _action, event_type) => {
-  const spy = vi.fn()
-
+test(`onopen fires once with FocusEvent, not again when already open`, async () => {
+  const open_spy = vi.fn()
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [1, 2, 3], [event_name]: spy },
+    props: { options: [1, 2, 3], onopen: open_spy },
   })
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.focus()
   await tick()
+  expect(open_spy).toHaveBeenCalledOnce()
+  expect(open_spy.mock.calls[0][0].event).toBeInstanceOf(FocusEvent)
 
-  if (event_name === `onclose`) {
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
-    await tick()
-  }
+  // clicking the input again while already open should NOT fire onopen again
+  input.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  await tick()
+  expect(open_spy).toHaveBeenCalledOnce()
+})
 
-  expect(spy).toHaveBeenCalled()
-  const events = spy.mock.calls.map((call) => call[0].event)
-  expect(events.some((event) => event instanceof event_type)).toBe(true)
+test(`onclose fires once with KeyboardEvent, not again when already closed`, async () => {
+  const close_spy = vi.fn()
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], onclose: close_spy },
+  })
+
+  // dropdown starts closed — clicking outside should NOT fire onclose
+  document.body.click()
+  await tick()
+  expect(close_spy).not.toHaveBeenCalled()
+
+  // open then close — should fire exactly once with KeyboardEvent
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+  await tick()
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+  await tick()
+  expect(close_spy).toHaveBeenCalledOnce()
+  expect(close_spy.mock.calls[0][0].event).toBeInstanceOf(KeyboardEvent)
+
+  // clicking outside again while already closed — still no extra fire
+  document.body.click()
+  await tick()
+  expect(close_spy).toHaveBeenCalledOnce()
 })
 
 describe.each([

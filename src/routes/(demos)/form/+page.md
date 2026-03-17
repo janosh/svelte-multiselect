@@ -52,7 +52,6 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   form {
     background-color: rgba(255, 255, 255, 0.1);
     padding: 1ex 1em;
-    margin: 2em auto;
     border-radius: 3pt;
   }
 </style>

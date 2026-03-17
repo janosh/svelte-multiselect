@@ -12,5 +12,10 @@ beforeAll(() => {
 
 Object.defineProperty(window, `matchMedia`, {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({ media: query })),
+  value: vi.fn().mockImplementation((query) => ({
+    media: query,
+    matches: false,
+    addEventListener: vi.fn(),
+    removeEventListener: vi.fn(),
+  })),
 })
