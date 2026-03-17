@@ -1,8 +1,8 @@
 <script lang="ts">
   // see svelte.config.js where this component is passed to live-examples remark plugin
-  import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
-  import Icon from './Icon.svelte'
+  import type { Snippet } from 'svelte';
+  import type { HTMLAttributes } from 'svelte/elements';
+  import Icon from './Icon.svelte';
 
   let {
     src = ``,
@@ -26,6 +26,7 @@
       Wrapper?: string // Svelte component to wrap the example
       example?: boolean
       file?: string
+      lang?: string
     }
     open?: boolean
     title?: Snippet<[]>
@@ -35,7 +36,7 @@
     button_props?: HTMLAttributes<HTMLButtonElement>
   } = $props()
 
-  let { id, collapsible, repl, github, repo, file } = $derived(meta)
+  let { id, collapsible, repl, github, repo, file, lang } = $derived(meta)
   let code_above = $derived(meta.code_above ?? collapsible) // if code is collapsed, render code above example by default
   const links = { target: `_blank`, rel: `noreferrer` }
 </script>
@@ -73,7 +74,7 @@
 <!-- wrap in div with id for precise CSS selectors in playwright E2E tests -->
 <div {id} class="code-example" class:code-above={code_above}>
   {@render example?.()}
-  <pre class:open><code>{#if code}{@render code()}{:else}{src}{/if}</code></pre>
+  <pre class:open>{#if lang}<span class="lang-label">{lang}</span>{/if}<code>{#if code}{@render code()}{:else}{src}{/if}</code></pre>
 </div>
 
 <style>

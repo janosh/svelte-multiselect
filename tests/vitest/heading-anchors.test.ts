@@ -1,5 +1,5 @@
 import { heading_anchors, heading_ids } from '$lib/heading-anchors'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 // SSR/client consistency: both should handle the same heading levels (h1-h6)
 // This test catches drift if someone changes one without the other
@@ -162,11 +162,12 @@ describe(`heading_anchors attachment`, () => {
   // Default selector uses :scope to target children relative to the attached node
   // In production, the attachment is applied directly to <main> elements
   const create_container = (html = ``, wrapper: `main` | `div` | `none` = `main`) => {
-    document.body.innerHTML = wrapper === `none`
-      ? html
-      : `<${wrapper}>${html}</${wrapper}>`
+    document.body.innerHTML =
+      wrapper === `none` ? html : `<${wrapper}>${html}</${wrapper}>`
     // Return the wrapper element (matching production usage of attaching to <main>)
-    return wrapper === `none` ? document.body : document.body.firstElementChild as Element
+    return wrapper === `none`
+      ? document.body
+      : (document.body.firstElementChild as Element)
   }
   const anchor_selector = `a[aria-hidden="true"]`
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -224,30 +225,31 @@ describe(`heading_anchors attachment`, () => {
         `#deep`,
         false,
       ],
-    ])(
-      `%s → matched: %s`,
-      (_desc, html, id_sel, should_match) => {
-        const container = create_container(html)
-        heading_anchors()(container)
-        expect(!!document.querySelector(`${id_sel} ${anchor_selector}`)).toBe(
-          should_match,
-        )
-      },
-    )
+    ])(`%s → matched: %s`, (_desc, html, id_sel, should_match) => {
+      const container = create_container(html)
+      heading_anchors()(container)
+      expect(!!document.querySelector(`${id_sel} ${anchor_selector}`)).toBe(should_match)
+    })
   })
 
   describe(`MutationObserver for dynamic content`, () => {
     it.each([
-      [`direct child`, (container: Element) => {
-        const heading = document.createElement(`h2`)
-        heading.id = `dyn`
-        container.appendChild(heading)
-      }],
-      [`grandchild (2nd level)`, (container: Element) => {
-        const div = document.createElement(`div`)
-        div.innerHTML = `<h3 id="nest">X</h3>`
-        container.appendChild(div)
-      }],
+      [
+        `direct child`,
+        (container: Element) => {
+          const heading = document.createElement(`h2`)
+          heading.id = `dyn`
+          container.append(heading)
+        },
+      ],
+      [
+        `grandchild (2nd level)`,
+        (container: Element) => {
+          const div = document.createElement(`div`)
+          div.innerHTML = `<h3 id="nest">X</h3>`
+          container.append(div)
+        },
+      ],
     ])(
       `adds anchors to %s dynamically inserted headings`,
       async (_desc: string, insert_fn: (container: Element) => void) => {
@@ -265,7 +267,7 @@ describe(`heading_anchors attachment`, () => {
       const spy = vi.spyOn(MutationObserver.prototype, `disconnect`)
       // Use isolated container with custom selector to avoid interference from other tests
       const container = document.createElement(`div`)
-      document.body.appendChild(container)
+      document.body.append(container)
       const cleanup = heading_anchors({ selector: `h2` })(container)
       expect(cleanup).toBeTypeOf(`function`)
       cleanup?.()
@@ -275,7 +277,7 @@ describe(`heading_anchors attachment`, () => {
       // verify no anchors added after cleanup
       const heading = document.createElement(`h2`)
       heading.id = `after`
-      container.appendChild(heading)
+      container.append(heading)
       await tick()
       expect(heading.querySelector(anchor_selector)).toBeFalsy()
     })
@@ -301,15 +303,12 @@ describe(`heading_anchors attachment`, () => {
         `#a`,
         true,
       ],
-    ])(
-      `selector %s`,
-      (_desc, selector, html, sel1, match1, sel2, match2) => {
-        const container = create_container(html)
-        heading_anchors({ selector })(container)
-        expect(!!container.querySelector(`${sel1} ${anchor_selector}`)).toBe(match1)
-        expect(!!container.querySelector(`${sel2} ${anchor_selector}`)).toBe(match2)
-      },
-    )
+    ])(`selector %s`, (_desc, selector, html, sel1, match1, sel2, match2) => {
+      const container = create_container(html)
+      heading_anchors({ selector })(container)
+      expect(!!container.querySelector(`${sel1} ${anchor_selector}`)).toBe(match1)
+      expect(!!container.querySelector(`${sel2} ${anchor_selector}`)).toBe(match2)
+    })
 
     it(`icon_svg customizes icon, default has aria-label`, () => {
       const container = create_container(`<h2 id="t1">T1</h2><h3 id="t2">T2</h3>`)
@@ -371,8 +370,7 @@ describe(`heading_anchors attachment`, () => {
     })
 
     it(`multiple independent containers`, () => {
-      document.body.innerHTML =
-        `<div id="c1"><h2 id="h1">C1</h2></div><div id="c2"><h2 id="h2">C2</h2></div>`
+      document.body.innerHTML = `<div id="c1"><h2 id="h1">C1</h2></div><div id="c2"><h2 id="h2">C2</h2></div>`
       for (const id of [`c1`, `c2`]) {
         const el = document.getElementById(id)
         if (el) heading_anchors({ selector: `h2` })(el)

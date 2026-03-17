@@ -234,8 +234,8 @@
   // Treats null/undefined/[] as equivalent empty states to prevent extra updates on init (#369).
   function values_equal(val1: unknown, val2: unknown): boolean {
     if (val1 === val2) return true
-    const empty1 = val1 == null || (Array.isArray(val1) && val1.length === 0)
-    const empty2 = val2 == null || (Array.isArray(val2) && val2.length === 0)
+    const empty1 = val1 === null || val1 === undefined || (Array.isArray(val1) && val1.length === 0)
+    const empty2 = val2 === null || val2 === undefined || (Array.isArray(val2) && val2.length === 0)
     if (empty1 && empty2) return true
     if (Array.isArray(val1) && Array.isArray(val2)) {
       return (
@@ -640,7 +640,7 @@
     }
     if (
       maxOptions &&
-      (typeof maxOptions != `number` || maxOptions < 0 || maxOptions % 1 != 0)
+      (typeof maxOptions !== `number` || maxOptions < 0 || maxOptions % 1 !== 0)
     ) {
       console.error(
         `MultiSelect: maxOptions must be undefined or a positive integer, got ${maxOptions}`,
@@ -650,7 +650,7 @@
 
   // Resolve createOptionMsg to a string (supports string, function, or null)
   const resolved_create_msg = $derived.by(() => {
-    if (createOptionMsg == null) return null
+    if (createOptionMsg === null || createOptionMsg === undefined) return null
     if (typeof createOptionMsg === `function`) {
       return createOptionMsg({
         searchText,
@@ -1065,7 +1065,7 @@
 
   // Check if option index is within maxOptions visibility limit
   const is_option_visible = (idx: number) =>
-    idx >= 0 && (maxOptions == null || idx < maxOptions)
+    idx >= 0 && (maxOptions === null || maxOptions === undefined || idx < maxOptions)
 
   // Get non-disabled, selectable options from a list
   // For collapsed groups: returns all non-disabled options (user explicitly wants this group)
@@ -1253,11 +1253,11 @@
   function portal(node: HTMLElement, params: PortalParams) {
     let { target_node, active } = params
     if (!active) return
-    let render_in_place = typeof window === `undefined` ||
+    let render_in_place = typeof globalThis.document === `undefined` ||
       !document.body.contains(node)
 
     if (!render_in_place) {
-      document.body.appendChild(node)
+      document.body.append(node)
       node.style.position = `fixed`
 
       const update_position = () => {
@@ -1271,8 +1271,8 @@
 
       if (open) tick().then(update_position)
 
-      window.addEventListener(`scroll`, update_position, true)
-      window.addEventListener(`resize`, update_position)
+      globalThis.addEventListener(`scroll`, update_position, true)
+      globalThis.addEventListener(`resize`, update_position)
 
       $effect(() => {
         if (open && target_node) update_position()
@@ -1282,7 +1282,7 @@
       return {
         update(params: PortalParams) {
           target_node = params.target_node
-          render_in_place = typeof window === `undefined` ||
+          render_in_place = typeof globalThis.document === `undefined` ||
             !document.body.contains(node)
           if (open && !render_in_place && target_node) {
             tick().then(update_position)
@@ -1290,8 +1290,8 @@
         },
         destroy() {
           if (!render_in_place) node.remove()
-          window.removeEventListener(`scroll`, update_position, true)
-          window.removeEventListener(`resize`, update_position)
+          globalThis.removeEventListener(`scroll`, update_position, true)
+          globalThis.removeEventListener(`resize`, update_position)
         },
       }
     }
@@ -1316,8 +1316,8 @@
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
       load_options_last_search = search
-    } catch (err) {
-      console.error(`MultiSelect: loadOptions error:`, err)
+    } catch (error) {
+      console.error(`MultiSelect: loadOptions error:`, error)
     } finally {
       load_options_loading = false
     }

@@ -206,7 +206,7 @@
     const custom_label = labels?.[text]
     if (custom_label) return { label: custom_label, style: `` }
 
-    if (remove_parent) text = text.split(`/`).filter(Boolean).pop() ?? text
+    if (remove_parent) text = text.split(`/`).findLast(Boolean) ?? text
     let label = text.replace(/^\//, ``).replaceAll(`-`, ` `)
     // Handle root path '/' which becomes empty after stripping
     if (!label && text === `/`) label = `Home`

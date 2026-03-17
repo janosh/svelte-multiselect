@@ -1,7 +1,7 @@
 import { CopyButton } from '$lib'
 import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vite-plus/test'
 import TestCopyButtonGlobalUpdate from './TestCopyButtonGlobalUpdate.svelte'
 import TestCopyButtonSnippet from './TestCopyButtonSnippet.svelte'
 
@@ -13,9 +13,7 @@ const default_labels = {
   success: { icon: `Check`, text: `success` },
   error: { icon: `Alert`, text: `error` },
 } as const
-const mount_copy_button = (
-  props: Partial<ComponentProps<typeof CopyButton>> = {},
-) => {
+const mount_copy_button = (props: Partial<ComponentProps<typeof CopyButton>> = {}) => {
   const copy_button_component = mount(CopyButton, {
     target: document.body,
     props: { content: `test`, as: `div`, labels: default_labels, ...props },
@@ -37,8 +35,8 @@ const create_pre_with_code = (
   const code = document.createElement(`code`)
   code.className = class_name
   code.textContent = code_text
-  pre.appendChild(code)
-  document.body.appendChild(pre)
+  pre.append(code)
+  document.body.append(pre)
   return { pre, code }
 }
 
@@ -82,31 +80,29 @@ test.each([`Escape`, `Tab`, `ArrowUp`, `a`, `1`])(`%s key is ignored`, (key: str
   expect(prevent_spy).not.toHaveBeenCalled()
 })
 
-test.each(
-  [
-    {
-      as: `div`,
-      disabled: false,
-      expected_tabindex: `0`,
-      expected_aria: null,
-      is_native: false,
-    },
-    {
-      as: `div`,
-      disabled: true,
-      expected_tabindex: `-1`,
-      expected_aria: `true`,
-      is_native: false,
-    },
-    {
-      as: `button`,
-      disabled: true,
-      expected_tabindex: `-1`,
-      expected_aria: `true`,
-      is_native: true,
-    },
-  ] as const,
-)(
+test.each([
+  {
+    as: `div`,
+    disabled: false,
+    expected_tabindex: `0`,
+    expected_aria: null,
+    is_native: false,
+  },
+  {
+    as: `div`,
+    disabled: true,
+    expected_tabindex: `-1`,
+    expected_aria: `true`,
+    is_native: false,
+  },
+  {
+    as: `button`,
+    disabled: true,
+    expected_tabindex: `-1`,
+    expected_aria: `true`,
+    is_native: true,
+  },
+] as const)(
   `accessibility attrs for as=$as disabled=$disabled`,
   ({ as, disabled, expected_tabindex, expected_aria, is_native }) => {
     const { copy_button } = mount_copy_button({ as, disabled })
@@ -124,12 +120,10 @@ test(`renders default icon and ready label`, () => {
   expect(copy_button.textContent).toContain(`ready`)
 })
 
-test.each(
-  [
-    [``, 0],
-    [`Copy me`, 1],
-  ] as const,
-)(`text label %j renders %d text span(s)`, (text, expected_spans) => {
+test.each([
+  [``, 0],
+  [`Copy me`, 1],
+] as const)(`text label %j renders %d text span(s)`, (text, expected_spans) => {
   const { copy_button } = mount_copy_button({
     labels: {
       ready: { icon: `Copy`, text },
@@ -196,13 +190,11 @@ test(`calls on_copy_error with error and content`, async () => {
   console_error_spy.mockRestore()
 })
 
-test.each(
-  [
-    [`default reset_sec`, { content: `default reset` }, 2000, 1999],
-    [`custom reset_sec`, { content: `half sec`, reset_sec: 0.5 }, 500, 499],
-    [`fine-grained reset_sec`, { content: `timed`, reset_sec: 0.05 }, 50, 49],
-  ] as const,
-)(
+test.each([
+  [`default reset_sec`, { content: `default reset` }, 2000, 1999],
+  [`custom reset_sec`, { content: `half sec`, reset_sec: 0.5 }, 500, 499],
+  [`fine-grained reset_sec`, { content: `timed`, reset_sec: 0.05 }, 50, 49],
+] as const)(
   `%s schedules millisecond delay and resets on time`,
   async (_desc, props, expected_delay_ms, elapsed_before_reset_ms) => {
     await with_fake_timers(async () => {

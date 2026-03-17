@@ -8,7 +8,7 @@ import {
   has_group,
   is_object,
 } from '$lib/utils'
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`get_uuid`, () => {
   // RFC 4122 v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b)
@@ -90,13 +90,11 @@ describe(`get_style`, () => {
     selected: `color: blue`,
     option: `color: green`,
   }
-  test.each(
-    [
-      [{ style: option_style }, `selected`, `color: blue`],
-      [{ style: option_style }, `option`, `color: green`],
-      [{ style: { selected: `color: blue` } }, `option`, ``],
-    ] as const,
-  )(
+  test.each([
+    [{ style: option_style }, `selected`, `color: blue`],
+    [{ style: option_style }, `option`, `color: green`],
+    [{ style: { selected: `color: blue` } }, `option`, ``],
+  ] as const)(
     `handles object styles correctly for %j with key %s`,
     (option, key, expected) => {
       // @ts-expect-error missing key option in last test case
@@ -253,11 +251,7 @@ describe(`get_option_key`, () => {
 
   test(`case-variant labels without values use label as key`, () => {
     // When no value, falls back to label (case-sensitive)
-    const options = [
-      { label: `pd` },
-      { label: `PD` },
-      { label: `Pd` },
-    ]
+    const options = [{ label: `pd` }, { label: `PD` }, { label: `Pd` }]
     const keys = options.map(get_option_key)
     expect(keys).toEqual([`pd`, `PD`, `Pd`])
     expect(new Set(keys).size).toBe(3)

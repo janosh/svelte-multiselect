@@ -1,6 +1,6 @@
 import { PrevNext } from '$lib'
 import { mount } from 'svelte'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import TestPrevNextSnippet from './TestPrevNextSnippet.svelte'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
@@ -17,12 +17,12 @@ describe(`PrevNext`, () => {
     pushStateSpy = vi.fn()
     scrollToSpy = vi.fn()
 
-    Object.defineProperty(window, `history`, {
+    Object.defineProperty(globalThis, `history`, {
       value: { replaceState: replaceStateSpy, pushState: pushStateSpy },
     })
-    Object.defineProperty(window, `scrollTo`, { value: scrollToSpy })
-    Object.defineProperty(window, `scrollX`, { value: 100, writable: true })
-    Object.defineProperty(window, `scrollY`, { value: 200, writable: true })
+    Object.defineProperty(globalThis, `scrollTo`, { value: scrollToSpy })
+    Object.defineProperty(globalThis, `scrollX`, { value: 100, writable: true })
+    Object.defineProperty(globalThis, `scrollY`, { value: 200, writable: true })
   })
 
   test(`renders nothing with less than min_items`, () => {
@@ -76,19 +76,23 @@ describe(`PrevNext`, () => {
 
   test.each([
     {
-      test_items: [[`p1`, `L1`], [`p2`, `L2`], [`p3`, `L3`], [`p4`, `L4`]] as [
-        string,
-        string,
-      ][],
+      test_items: [
+        [`p1`, `L1`],
+        [`p2`, `L2`],
+        [`p3`, `L3`],
+        [`p4`, `L4`],
+      ] as [string, string][],
       current: `p2`,
       prev: `p1`,
       next: `p3`,
     },
     {
-      test_items: [[`/page/1`, `P1`], [`/page/2`, `P2`], [`/page/3`, `P3`], [
-        `/page/4`,
-        `P4`,
-      ]] as [string, string][],
+      test_items: [
+        [`/page/1`, `P1`],
+        [`/page/2`, `P2`],
+        [`/page/3`, `P3`],
+        [`/page/4`, `P4`],
+      ] as [string, string][],
       current: `/page/2`,
       prev: `/page/1`,
       next: `/page/3`,
@@ -160,9 +164,7 @@ describe(`PrevNext`, () => {
       props: { items, current: `page2` },
     })
 
-    const snippets = [
-      ...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
-    ]
+    const snippets = [...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`)]
     expect(snippets).toHaveLength(2)
 
     // prev snippet gets current page index and total count
@@ -182,9 +184,7 @@ describe(`PrevNext`, () => {
       props: { items, current: `nonexistent`, log: `silent` },
     })
 
-    const snippets = [
-      ...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`),
-    ]
+    const snippets = [...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`)]
     expect(snippets).toHaveLength(2)
     expect(snippets[0].dataset.index).toBeUndefined()
     expect(snippets[1].dataset.index).toBeUndefined()

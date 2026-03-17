@@ -38,7 +38,10 @@ body {
   --page-pad: clamp(1rem, 3vw, 2rem);
   margin: 0;
   padding: var(--page-pad) var(--page-pad) 0;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family:
+    system-ui,
+    -apple-system,
+    sans-serif;
   background: var(--bg);
   color: var(--text);
   line-height: 1.6;
@@ -96,6 +99,17 @@ pre code {
   padding: 0;
   font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
 }
+pre .lang-label {
+  position: absolute;
+  bottom: 2px;
+  right: 6px;
+  font-size: 0.65rem;
+  opacity: 0.35;
+  text-transform: uppercase;
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
 /* Typography */
 h1 {
   display: flex;
@@ -105,7 +119,11 @@ h1 {
   font-size: clamp(1.5rem, 1.5rem + 2vw, 2.5rem);
   margin: 1em 0;
 }
-h2, h3, h4, h5, h6 {
+h2,
+h3,
+h4,
+h5,
+h6 {
   scroll-margin-top: 60px;
 }
 /* Highlight heading on fragment navigation */
@@ -131,7 +149,8 @@ table {
   border-collapse: collapse;
   width: 100%;
 }
-td, th {
+td,
+th {
   border: 1px solid var(--border);
   padding: 0.5em 0.75em;
   text-align: left;

@@ -1,6 +1,6 @@
 import { CircleSpinner } from '$lib'
 import { mount } from 'svelte'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 import { doc_query } from './index'
 
 test(`CircleSpinner prop size`, () => {

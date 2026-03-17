@@ -1,7 +1,7 @@
 // Test that DemoNav's grouped_routes stays in sync with actual demo pages
 import { DemoNav } from '$site'
 import { mount } from 'svelte'
-import { expect, test, vi } from 'vitest'
+import { expect, test, vi } from 'vite-plus/test'
 import { demo_pages } from '../../src/routes/(demos)'
 
 vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/` } } }))

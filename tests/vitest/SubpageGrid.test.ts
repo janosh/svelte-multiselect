@@ -1,6 +1,6 @@
 import { SubpageGrid } from '$lib'
 import { mount } from 'svelte'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 
 test(`renders tuple subpages correctly`, () => {
   mount(SubpageGrid, {

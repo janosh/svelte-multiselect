@@ -33,8 +33,9 @@ test.describe(`fuzzy matching`, () => {
     await page.fill(`#foods input[autocomplete]`, `ga`)
 
     await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
-    await expect(page.locator(`#foods ul.options li:has-text("Green Apple")`))
-      .toBeVisible()
+    await expect(
+      page.locator(`#foods ul.options li:has-text("Green Apple")`),
+    ).toBeVisible()
     await expect(page.locator(`#foods ul.options li:has-text("Banana")`)).toBeHidden()
   })
 
@@ -44,8 +45,9 @@ test.describe(`fuzzy matching`, () => {
     await page.fill(`#foods input[autocomplete]`, `ga`)
 
     await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
-    await expect(page.locator(`#foods ul.options li:has-text("Green Apple")`))
-      .toBeVisible()
+    await expect(
+      page.locator(`#foods ul.options li:has-text("Green Apple")`),
+    ).toBeVisible()
   })
 
   test(`fuzzy=false only matches substrings`, async ({ page }) => {
@@ -54,9 +56,8 @@ test.describe(`fuzzy matching`, () => {
     await page.evaluate(() => {
       const container = document.createElement(`div`)
       container.id = `substring-test`
-      container.innerHTML =
-        `<div class="multiselect"><ul class="selected"><input autocomplete="off" /></ul></div>`
-      document.body.appendChild(container)
+      container.innerHTML = `<div class="multiselect"><ul class="selected"><input autocomplete="off" /></ul></div>`
+      document.body.append(container)
 
       const input = container.querySelector(`input`)
       if (!input) throw new Error(`Input not found`)
@@ -65,7 +66,7 @@ test.describe(`fuzzy matching`, () => {
       input.addEventListener(`input`, (evt) => {
         const search_text = (evt.target as HTMLInputElement).value.toLowerCase()
         const filtered_options = options.filter((opt) =>
-          opt.toLowerCase().includes(search_text)
+          opt.toLowerCase().includes(search_text),
         )
 
         const options_list = document.createElement(`ul`)
@@ -73,22 +74,24 @@ test.describe(`fuzzy matching`, () => {
         filtered_options.forEach((opt) => {
           const li = document.createElement(`li`)
           li.textContent = opt
-          options_list.appendChild(li)
+          options_list.append(li)
         })
 
         const existing_options = container.querySelector(`.options`)
         if (existing_options) existing_options.remove()
-        container.appendChild(options_list)
+        container.append(options_list)
       })
     })
 
     await page.click(`#substring-test input[autocomplete]`)
     await page.fill(`#substring-test input[autocomplete]`, `ga`)
 
-    await expect(page.locator(`#substring-test ul.options li:has-text("garlic")`))
-      .toBeVisible()
-    await expect(page.locator(`#substring-test ul.options li:has-text("green apple")`))
-      .toBeHidden()
+    await expect(
+      page.locator(`#substring-test ul.options li:has-text("garlic")`),
+    ).toBeVisible()
+    await expect(
+      page.locator(`#substring-test ul.options li:has-text("green apple")`),
+    ).toBeHidden()
   })
 
   test(`fuzzy highlighting works correctly`, async ({ page }) => {
@@ -115,8 +118,9 @@ test.describe(`fuzzy matching`, () => {
     await page.fill(`#foods input[autocomplete]`, `ga`)
 
     await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
-    await expect(page.locator(`#foods ul.options li:has-text("Green Apple")`))
-      .toBeVisible()
+    await expect(
+      page.locator(`#foods ul.options li:has-text("Green Apple")`),
+    ).toBeVisible()
   })
 })
 
@@ -171,17 +175,15 @@ test.describe(`input`, () => {
 
     const dropdown = await page.locator(`#foods ul.options`)
     await dropdown.waitFor({ state: `hidden` })
-    const visibility = await dropdown.evaluate(
-      (el) => getComputedStyle(el).visibility,
-    )
-    const opacity = await dropdown.evaluate(
-      (el) => getComputedStyle(el).opacity,
-    )
+    const visibility = await dropdown.evaluate((el) => getComputedStyle(el).visibility)
+    const opacity = await dropdown.evaluate((el) => getComputedStyle(el).opacity)
     expect(visibility).toBe(`hidden`)
     expect(opacity).toBe(`0`)
   })
 
-  test(`filters dropdown to show only matching options when entering text`, async ({ page }) => {
+  test(`filters dropdown to show only matching options when entering text`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.fill(`#foods input[autocomplete]`, `Pineapple`)
@@ -230,7 +232,9 @@ test.describe(`remove all button`, () => {
     await second_option.click()
   })
 
-  test(`only appears if more than 1 option is selected and removes all selected`, async ({ page }) => {
+  test(`only appears if more than 1 option is selected and removes all selected`, async ({
+    page,
+  }) => {
     const selected_buttons = page.locator(`#foods ul.selected > li > button`)
     await expect(selected_buttons).toHaveCount(2)
 
@@ -309,35 +313,33 @@ test.describe(`events demo`, () => {
 })
 
 test.describe(`external CSS classes`, () => {
-  for (
-    const [prop, selector, cls] of [
-      [`outerDiv`, `div.multiselect`, `wrapper`],
-      [`ulSelected`, `ul.selected`, `user-choices`],
-      [`ulOptions`, `ul.options`, `dropdown`],
-      [`liOption`, `ul.options > li`, `selectable-li`],
-      [`liUserMsgClass`, `ul.options > li.user-msg`, `selectable-msg-li`],
-      [`input`, `input[autocomplete]`, `search-text-input`],
-      // below classes requires component interaction before appearing in DOM
-      [`liSelected`, `ul.selected > li`, `selected-li`],
-      [`liActiveOption`, `ul.options > li.active`, `hovered-or-arrow-keyed-li`],
-      [
-        `liActiveUserMsgClass`,
-        `ul.options > li.active.user-msg`,
-        `hovered-or-arrow-keyed-msg-li`,
-      ],
-      [`maxSelectMsg`, `span.max-select-msg`, `user-hint-max-selected-reached`],
-    ]
-  ) {
+  for (const [prop, selector, cls] of [
+    [`outerDiv`, `div.multiselect`, `wrapper`],
+    [`ulSelected`, `ul.selected`, `user-choices`],
+    [`ulOptions`, `ul.options`, `dropdown`],
+    [`liOption`, `ul.options > li`, `selectable-li`],
+    [`liUserMsgClass`, `ul.options > li.user-msg`, `selectable-msg-li`],
+    [`input`, `input[autocomplete]`, `search-text-input`],
+    // below classes requires component interaction before appearing in DOM
+    [`liSelected`, `ul.selected > li`, `selected-li`],
+    [`liActiveOption`, `ul.options > li.active`, `hovered-or-arrow-keyed-li`],
+    [
+      `liActiveUserMsgClass`,
+      `ul.options > li.active.user-msg`,
+      `hovered-or-arrow-keyed-msg-li`,
+    ],
+    [`maxSelectMsg`, `span.max-select-msg`, `user-hint-max-selected-reached`],
+  ]) {
     test(`${prop}Class`, async ({ page }) => {
       await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
       await page.click(`#foods input[autocomplete]`)
       await page.keyboard.type(`O`) // type a word so that the user message shows up
 
-      if (prop !== `liActiveUserMsgClass`) {
-        await page.hover(`ul.options > li`) // hover any option to give it active state
-      } else {
+      if (prop === `liActiveUserMsgClass`) {
         await page.hover(`ul.options > li:last-child`) // hover last option to give it active state
+      } else {
+        await page.hover(`ul.options > li`) // hover any option to give it active state
       }
 
       await expect(page.locator(`${selector}.${cls}`).first()).toBeVisible()
@@ -397,34 +399,29 @@ test.describe(`accessibility`, () => {
   })
 
   test(`has aria-expanded='false' when closed`, async ({ page }) => {
-    const before = await page.getAttribute(
-      `#foods ul.options`,
-      `aria-expanded`,
-      { strict: true },
-    )
+    const before = await page.getAttribute(`#foods ul.options`, `aria-expanded`, {
+      strict: true,
+    })
     expect(before).toBe(`false`)
   })
 
   test(`has aria-expanded='true' when open`, async ({ page }) => {
     await page.click(`#foods input[autocomplete]`)
-    const after = await page.getAttribute(
-      `#foods ul.options`,
-      `aria-expanded`,
-      { strict: true },
-    )
+    const after = await page.getAttribute(`#foods ul.options`, `aria-expanded`, {
+      strict: true,
+    })
     expect(after).toBe(`true`)
   })
 
-  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({ page }) => {
+  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({
+    page,
+  }) => {
     await page.click(`#foods input[autocomplete]`)
     // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
     const dropdown = page.locator(`#foods ul.options`)
     await expect(dropdown).toBeVisible()
     await dropdown.locator(`li`).first().click()
-    const aria_option = await page.getAttribute(
-      `#foods ul.options > li`,
-      `aria-selected`,
-    )
+    const aria_option = await page.getAttribute(`#foods ul.options > li`, `aria-selected`)
     expect(aria_option).toBe(`false`)
     const aria_selected = await page.getAttribute(
       `#foods ul.selected > li`,
@@ -435,11 +432,9 @@ test.describe(`accessibility`, () => {
 
   test(`invisible input.form-control is aria-hidden`, async ({ page }) => {
     // https://github.com/janosh/svelte-multiselect/issues/58
-    const hidden = await page.getAttribute(
-      `#foods input.form-control`,
-      `aria-hidden`,
-      { strict: true },
-    )
+    const hidden = await page.getAttribute(`#foods input.form-control`, `aria-hidden`, {
+      strict: true,
+    })
     expect(hidden).toBe(`true`)
   })
 })
@@ -472,7 +467,9 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     await expect(listbox).toHaveAttribute(`role`, `listbox`)
   })
 
-  test(`options have aria-posinset and aria-setsize for position announcements`, async ({ page }) => {
+  test(`options have aria-posinset and aria-setsize for position announcements`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     await page.click(`#foods input[autocomplete]`)
@@ -491,7 +488,9 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     await expect(last_option).toHaveAttribute(`aria-setsize`, `${count}`)
   })
 
-  test(`aria-live announces counts, selections with label, and removals`, async ({ page }) => {
+  test(`aria-live announces counts, selections with label, and removals`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const input = page.locator(`#foods input[autocomplete]`)
@@ -516,7 +515,9 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     await expect(live_region).toContainText(/removed/)
   })
 
-  test(`keyboard navigation with aria-activedescendant is fully accessible`, async ({ page }) => {
+  test(`keyboard navigation with aria-activedescendant is fully accessible`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const input = page.locator(`#foods input[autocomplete]`)
@@ -603,8 +604,7 @@ test.describe(`multiselect`, () => {
       await expect(
         selected_buttons,
         `iteration=${iteration_idx} selected='${selected_label}'`,
-      )
-        .toHaveCount(1)
+      ).toHaveCount(1)
 
       const first_remove_button = selected_buttons.first()
       await expect(first_remove_button).toBeVisible()
@@ -614,7 +614,9 @@ test.describe(`multiselect`, () => {
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/111
-  test(`loops through dropdown list with arrow keys making each option active in turn`, async ({ page }) => {
+  test(`loops through dropdown list with arrow keys making each option active in turn`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const input = page.locator(`#foods input[autocomplete]`)
     await input.click()
@@ -638,7 +640,9 @@ test.describe(`multiselect`, () => {
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/357
-  test(`keyboard nav ignores scroll-triggered mouseover but re-enables on mouse movement`, async ({ page }) => {
+  test(`keyboard nav ignores scroll-triggered mouseover but re-enables on mouse movement`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     await page.click(`#foods input[autocomplete]`)
 
@@ -675,7 +679,9 @@ test.describe(`multiselect`, () => {
     await expect(active_option).toHaveText(foods[4]) // Lemon
   })
 
-  test(`retains its selected state on page reload when bound to localStorage`, async ({ page }) => {
+  test(`retains its selected state on page reload when bound to localStorage`, async ({
+    page,
+  }) => {
     // Clear sessionStorage before navigating to start fresh
     await page.goto(`/persistent`, { waitUntil: `networkidle` })
     await page.evaluate(() => sessionStorage.clear())
@@ -701,7 +707,9 @@ test.describe(`multiselect`, () => {
 })
 
 test.describe(`allowUserOptions`, () => {
-  test(`entering custom option adds it to selected but not to options`, async ({ page }) => {
+  test(`entering custom option adds it to selected but not to options`, async ({
+    page,
+  }) => {
     const selector = `#foods input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
@@ -723,32 +731,29 @@ test.describe(`allowUserOptions`, () => {
     await expect(page.locator(`#foods ul.options >> text=Durian`)).toHaveCount(0)
   })
 
-  test(
-    `entering custom option in append mode adds it to selected
-      list _and_ to options in dropdown menu`,
-    async ({ page }) => {
-      // i.e. it remains selectable from the dropdown after removing from selected
-      const selector = `#languages input[autocomplete]`
+  test(`entering custom option in append mode adds it to selected
+      list _and_ to options in dropdown menu`, async ({ page }) => {
+    // i.e. it remains selectable from the dropdown after removing from selected
+    const selector = `#languages input[autocomplete]`
 
-      await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
+    await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
 
-      await page.click(selector)
+    await page.click(selector)
 
-      await page.fill(selector, `foobar`)
+    await page.fill(selector, `foobar`)
 
-      await page.press(selector, `Enter`) // create custom option
-      await page.press(selector, `Backspace`) // remove custom option from selected items
+    await page.press(selector, `Enter`) // create custom option
+    await page.press(selector, `Backspace`) // remove custom option from selected items
 
-      await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
+    await page.fill(selector, `foobar`) // filter dropdown options to only show custom one
 
-      // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
-      const dropdown = page.locator(`#languages ul.options`)
-      await expect(dropdown).toBeVisible()
-      await dropdown.locator(`li:not(.user-msg)`, { hasText: `foobar` }).click()
+    // Wait for dropdown to be visible and stable (has 0.2s CSS transition)
+    const dropdown = page.locator(`#languages ul.options`)
+    await expect(dropdown).toBeVisible()
+    await dropdown.locator(`li:not(.user-msg)`, { hasText: `foobar` }).click()
 
-      await expect(page.locator(`#languages ul.selected >> text=foobar`)).toBeVisible()
-    },
-  )
+    await expect(page.locator(`#languages ul.selected >> text=foobar`)).toBeVisible()
+  })
 
   test(`shows custom createOptionMsg if no options match`, async ({ page }) => {
     const selector = `#languages input[autocomplete]`
@@ -760,9 +765,9 @@ test.describe(`allowUserOptions`, () => {
     // enter some search text so no options match, should cause createOptionMsg to be shown
     await page.fill(selector, `foobar`)
 
-    await expect(
-      page.locator(`#languages ul.options li.user-msg`),
-    ).toContainText(`Add 'foobar'`)
+    await expect(page.locator(`#languages ul.options li.user-msg`)).toContainText(
+      `Add 'foobar'`,
+    )
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/89
@@ -770,7 +775,9 @@ test.describe(`allowUserOptions`, () => {
   // entered text 'foobar' (good so far) but instead of creating a custom option from it,
   // delete the previously added option 'Python'. was due to Python still being the activeOption
   // so Enter key would toggle it.
-  test(`creates custom option correctly after selecting a provided option`, async ({ page }) => {
+  test(`creates custom option correctly after selecting a provided option`, async ({
+    page,
+  }) => {
     const selector = `#languages input[autocomplete]`
 
     await page.goto(`/allow-user-options`, { waitUntil: `networkidle` })
@@ -806,7 +813,7 @@ test.describe(`allowUserOptions`, () => {
     await expect(page.locator(`#no-default-options ul.selected >> text=42`)).toBeVisible()
 
     const logged_err_msg = logs.some((msg) =>
-      msg.includes(`MultiSelect received no options`)
+      msg.includes(`MultiSelect received no options`),
     )
     expect(logged_err_msg).toBe(false)
   })
@@ -867,7 +874,9 @@ test.describe(`minSelect pill click behavior`, () => {
     await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
   })
 
-  test(`clicking selected pill opens dropdown when minSelect prevents removal`, async ({ page }) => {
+  test(`clicking selected pill opens dropdown when minSelect prevents removal`, async ({
+    page,
+  }) => {
     // JavaScript is preselected with minSelect=1, so can_remove is false
     const selected_li = page.locator(`#languages ul.selected > li[aria-selected="true"]`)
     await expect(selected_li).toHaveCount(1)
@@ -883,7 +892,9 @@ test.describe(`minSelect pill click behavior`, () => {
     await expect(dropdown).toBeVisible()
   })
 
-  test(`remove button click does not reopen dropdown when can_remove is true`, async ({ page }) => {
+  test(`remove button click does not reopen dropdown when can_remove is true`, async ({
+    page,
+  }) => {
     // Select a second option so can_remove becomes true (2 > minSelect=1)
     await page.click(`#languages input[autocomplete]`)
     const dropdown = page.locator(`#languages ul.options`)
@@ -931,7 +942,9 @@ test.describe(`maxSelect`, () => {
     await expect(dropdown).toHaveClass(/hidden/)
   })
 
-  test(`no more options can be added after reaching maxSelect items`, async ({ page }) => {
+  test(`no more options can be added after reaching maxSelect items`, async ({
+    page,
+  }) => {
     // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
     const selected_items = page.locator(`#languages ul.selected > li[aria-selected=true]`)
     await expect(selected_items).toHaveCount(max_select)
@@ -949,7 +962,9 @@ test.describe(`maxSelect`, () => {
 })
 
 test.describe(`snippets`, () => {
-  test(`renders custom removeIcon snippets with per-item icons and Clear all label`, async ({ page }) => {
+  test(`renders custom removeIcon snippets with per-item icons and Clear all label`, async ({
+    page,
+  }) => {
     await page.goto(`/snippets`, { waitUntil: `networkidle` })
 
     // Use .expand-icon wrapper class for robust selection that doesn't depend on exact sibling order
@@ -973,10 +988,9 @@ test.describe(`snippets`, () => {
       .locator(`path`)
       .first()
       .getAttribute(`d`)
-    expect(
-      expand_icon_path,
-      `Expand and collapse icon paths should differ`,
-    ).not.toBe(collapse_icon_path)
+    expect(expand_icon_path, `Expand and collapse icon paths should differ`).not.toBe(
+      collapse_icon_path,
+    )
     // ^^^ expand-icon test done
 
     const remove_icons_locator = page.locator(
@@ -988,16 +1002,17 @@ test.describe(`snippets`, () => {
     ).toHaveCount(3)
 
     const remove_all_btn = page.locator(`#languages-1 button.remove-all`)
-    await expect(
-      remove_all_btn,
-      `custom remove-all snippet is not rendered`,
-    ).toHaveCount(1)
+    await expect(remove_all_btn, `custom remove-all snippet is not rendered`).toHaveCount(
+      1,
+    )
     await expect(remove_all_btn).toHaveText(`Clear all`)
   })
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/176
-test(`dragging selected options across each other changes their order`, async ({ page }) => {
+test(`dragging selected options across each other changes their order`, async ({
+  page,
+}) => {
   await page.goto(`/persistent`, { waitUntil: `networkidle` })
   const selected = page.locator(`#languages ul.selected`)
   await expect(selected).toHaveText(`1  Python 2  TypeScript 3  C 4  Haskell`)
@@ -1010,7 +1025,9 @@ test(`dragging selected options across each other changes their order`, async ({
 })
 
 test.describe(`portal feature`, () => {
-  test(`dropdown renders within component when portal is inactive (/ui page)`, async ({ page }) => {
+  test(`dropdown renders within component when portal is inactive (/ui page)`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
 
     const foods_multiselect = page.locator(`#foods`)
@@ -1019,10 +1036,7 @@ test.describe(`portal feature`, () => {
     // Options list should be a child of the multiselect wrapper and visible
     const foods_options_in_component = foods_multiselect.locator(`ul.options`)
     await expect(foods_options_in_component).toBeVisible()
-    await expect(foods_options_in_component).toHaveAttribute(
-      `aria-expanded`,
-      `true`,
-    )
+    await expect(foods_options_in_component).toHaveAttribute(`aria-expanded`, `true`)
 
     // Options list should NOT be portalled to the body
     const portalled_foods_options = page.locator(
@@ -1070,12 +1084,15 @@ test.describe(`portal feature`, () => {
     // Without fix: dropdown closes, test times out. With fix: dropdown stays open, test passes.
     expect(dropdown_stays_open).toBe(true)
 
-    await portalled_languages_options.getByRole(`option`, {
-      name: languages[0],
-      exact: true,
-    }).click()
-    await expect(modal_content.getByRole(`button`, { name: `Remove ${languages[0]}` }))
-      .toBeVisible()
+    await portalled_languages_options
+      .getByRole(`option`, {
+        name: languages[0],
+        exact: true,
+      })
+      .click()
+    await expect(
+      modal_content.getByRole(`button`, { name: `Remove ${languages[0]}` }),
+    ).toBeVisible()
   })
 
   test(`dropdowns in modal render in body when portal is active`, async ({ page }) => {
@@ -1099,9 +1116,7 @@ test.describe(`portal feature`, () => {
     const languages_multiselect_wrapper = modal_content.locator(
       `div.multiselect:has(input[placeholder='Choose languages...'])`,
     )
-    await expect(
-      languages_multiselect_wrapper.locator(`> ul.options`),
-    ).not.toBeAttached()
+    await expect(languages_multiselect_wrapper.locator(`> ul.options`)).not.toBeAttached()
 
     await portalled_languages_options
       .getByRole(`option`, { name: languages[0], exact: true })
@@ -1136,9 +1151,7 @@ test.describe(`portal feature`, () => {
     const octicons_multiselect_wrapper = modal_content.locator(
       `div.multiselect:has(input[placeholder='Choose octicons...'])`,
     )
-    await expect(
-      octicons_multiselect_wrapper.locator(`> ul.options`),
-    ).not.toBeAttached()
+    await expect(octicons_multiselect_wrapper.locator(`> ul.options`)).not.toBeAttached()
 
     // Select an octicon option
     const first_octicon_option_text = octicons[0]
@@ -1170,9 +1183,7 @@ test(`input width minimizes when options are selected`, async ({ page }) => {
   const input = page.locator(`#foods input[autocomplete]`)
 
   // Normal width when no selection (placeholder shown)
-  const init_input_width = await input.evaluate(
-    (el) => getComputedStyle(el).minWidth,
-  )
+  const init_input_width = await input.evaluate((el) => getComputedStyle(el).minWidth)
   expect(init_input_width).toBe(`32px`)
 
   await input.click() // Select any option to hide placeholder
@@ -1207,15 +1218,20 @@ test.describe(`option grouping`, () => {
     )
 
     // Check options under each group
-    await expect(options_list.locator(`li[role="option"]:has-text("JavaScript")`))
-      .toBeVisible()
-    await expect(options_list.locator(`li[role="option"]:has-text("Python")`))
-      .toBeVisible()
-    await expect(options_list.locator(`li[role="option"]:has-text("PostgreSQL")`))
-      .toBeVisible()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("JavaScript")`),
+    ).toBeVisible()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("Python")`),
+    ).toBeVisible()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("PostgreSQL")`),
+    ).toBeVisible()
   })
 
-  test(`search filtering shows only matching options and hides empty groups`, async ({ page }) => {
+  test(`search filtering shows only matching options and hides empty groups`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     const input = page.locator(`#basic-grouping input[autocomplete]`)
     await input.click()
@@ -1223,14 +1239,18 @@ test.describe(`option grouping`, () => {
 
     const options_list = page.locator(`#basic-grouping ul.options`)
     // Only Backend group should be visible since Python is in Backend
-    await expect(options_list.locator(`li.group-header:has-text("Backend")`))
-      .toBeVisible()
-    await expect(options_list.locator(`li.group-header:has-text("Frontend")`))
-      .toBeHidden()
-    await expect(options_list.locator(`li.group-header:has-text("Database")`))
-      .toBeHidden()
-    await expect(options_list.locator(`li[role="option"]:has-text("Python")`))
-      .toBeVisible()
+    await expect(
+      options_list.locator(`li.group-header:has-text("Backend")`),
+    ).toBeVisible()
+    await expect(
+      options_list.locator(`li.group-header:has-text("Frontend")`),
+    ).toBeHidden()
+    await expect(
+      options_list.locator(`li.group-header:has-text("Database")`),
+    ).toBeHidden()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("Python")`),
+    ).toBeVisible()
   })
 
   test(`searchMatchesGroups includes group name in search matching`, async ({ page }) => {
@@ -1245,13 +1265,16 @@ test.describe(`option grouping`, () => {
 
     const options_list = page.locator(`#basic-grouping ul.options`)
     // All Backend options should be visible when searching for "Backend"
-    await expect(options_list.locator(`li[role="option"]:has-text("Python")`))
-      .toBeVisible()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("Python")`),
+    ).toBeVisible()
     await expect(options_list.locator(`li[role="option"]:has-text("Go")`)).toBeVisible()
     await expect(options_list.locator(`li[role="option"]:has-text("Rust")`)).toBeVisible()
   })
 
-  test(`collapsible groups toggle visibility and aria-expanded on click`, async ({ page }) => {
+  test(`collapsible groups toggle visibility and aria-expanded on click`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#collapsible-groups input[autocomplete]`)
 
@@ -1325,10 +1348,12 @@ test.describe(`option grouping`, () => {
     await options_list.waitFor({ state: `visible` })
 
     // Wait for group headers to have correct aria-expanded state
-    await expect(options_list.locator(`li.group-header:has-text("Dairy")`))
-      .toHaveAttribute(`aria-expanded`, `false`)
-    await expect(options_list.locator(`li.group-header:has-text("Fruits")`))
-      .toHaveAttribute(`aria-expanded`, `true`)
+    await expect(
+      options_list.locator(`li.group-header:has-text("Dairy")`),
+    ).toHaveAttribute(`aria-expanded`, `false`)
+    await expect(
+      options_list.locator(`li.group-header:has-text("Fruits")`),
+    ).toHaveAttribute(`aria-expanded`, `true`)
 
     const active_option = options_list.locator(`li.active[role="option"]`)
     const visible_count = await options_list.locator(`li[role="option"]:visible`).count()
@@ -1371,7 +1396,9 @@ test.describe(`option grouping`, () => {
     await expect(selected).not.toContainText(`Yellow`)
   })
 
-  test(`ungroupedPosition and groupSortOrder control option ordering`, async ({ page }) => {
+  test(`ungroupedPosition and groupSortOrder control option ordering`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
 
     const demo = page.locator(`#ungrouped-sorting`)
@@ -1407,20 +1434,26 @@ test.describe(`option grouping`, () => {
     await expect(group_headers.last()).toContainText(`A Fruits`)
   })
 
-  test(`custom group header snippet renders with emoji flags and option counts`, async ({ page }) => {
+  test(`custom group header snippet renders with emoji flags and option counts`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#custom-group-header input[autocomplete]`)
 
     const custom_list = page.locator(`#custom-group-header ul.options`)
     for (const emoji of [`🇺🇸`, `🇬🇧`, `🇯🇵`, `🇫🇷`, `🇩🇪`]) {
-      await expect(custom_list.locator(`li.group-header:has-text("${emoji}")`))
-        .toBeVisible()
+      await expect(
+        custom_list.locator(`li.group-header:has-text("${emoji}")`),
+      ).toBeVisible()
     }
-    await expect(custom_list.locator(`li.group-header:has-text("USA"):has-text("(5)")`))
-      .toBeVisible()
+    await expect(
+      custom_list.locator(`li.group-header:has-text("USA"):has-text("(5)")`),
+    ).toBeVisible()
   })
 
-  test(`group header shows total count and select all toggles correctly`, async ({ page }) => {
+  test(`group header shows total count and select all toggles correctly`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`#group-select-all input[autocomplete]`)
 
@@ -1434,7 +1467,9 @@ test.describe(`option grouping`, () => {
     await expect(primary_header.locator(`button`)).toContainText(`Deselect`)
   })
 
-  test(`searchExpandsCollapsedGroups auto-expands matching collapsed groups`, async ({ page }) => {
+  test(`searchExpandsCollapsedGroups auto-expands matching collapsed groups`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
 
     const input = page.locator(`#collapsible-groups input[autocomplete]`)
@@ -1443,15 +1478,17 @@ test.describe(`option grouping`, () => {
     const options_list = page.locator(`#collapsible-groups ul.options`)
 
     // Dairy is collapsed initially
-    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
-      .toBeHidden()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("🥛 Milk")`),
+    ).toBeHidden()
 
     // Type search matching Dairy option (searchExpandsCollapsedGroups is enabled by default in demo)
     await input.fill(`Milk`)
 
     // Dairy group should auto-expand
-    await expect(options_list.locator(`li[role="option"]:has-text("🥛 Milk")`))
-      .toBeVisible()
+    await expect(
+      options_list.locator(`li[role="option"]:has-text("🥛 Milk")`),
+    ).toBeVisible()
   })
 })
 
@@ -1475,7 +1512,9 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
     await expect(page.locator(`ul.options > li.selectable-li`).first()).toBeVisible()
   })
 
-  test(`inline styles can be applied to override component background`, async ({ page }) => {
+  test(`inline styles can be applied to override component background`, async ({
+    page,
+  }) => {
     await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 
     const li = page.locator(`ul.selected > li`).first()
@@ -1504,15 +1543,13 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
         try {
           const rules = Array.from(sheet.cssRules || [])
           for (const rule of rules) {
-            if (rule instanceof CSSStyleRule) {
-              // Check for :where() in li selector within selected ul
-              if (
-                rule.selectorText.includes(`:where(`) &&
-                rule.selectorText.includes(`selected`) &&
-                rule.selectorText.includes(`> li`)
-              ) {
-                return rule.selectorText
-              }
+            if (
+              rule instanceof CSSStyleRule &&
+              rule.selectorText.includes(`:where(`) &&
+              rule.selectorText.includes(`selected`) &&
+              rule.selectorText.includes(`> li`)
+            ) {
+              return rule.selectorText
             }
           }
         } catch {
@@ -1540,7 +1577,9 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
     expect(border_style).toBe(`none`)
   })
 
-  test(`.group-label and .group-count elements are visible and styled correctly`, async ({ page }) => {
+  test(`.group-label and .group-count elements are visible and styled correctly`, async ({
+    page,
+  }) => {
     await page.goto(`/grouping`, { waitUntil: `networkidle` })
     await page.click(`input[autocomplete]`)
 
@@ -1571,14 +1610,12 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
         try {
           const rules = Array.from(sheet.cssRules || [])
           for (const rule of rules) {
-            if (rule instanceof CSSStyleRule) {
-              // Check that .group-label uses :is() not :where()
-              if (
-                rule.selectorText.includes(`:is(`) &&
-                rule.selectorText.includes(`group-label`)
-              ) {
-                return true
-              }
+            if (
+              rule instanceof CSSStyleRule &&
+              rule.selectorText.includes(`:is(`) &&
+              rule.selectorText.includes(`group-label`)
+            ) {
+              return true
             }
           }
         } catch {
@@ -1613,21 +1650,22 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
               const sel = rule.selectorText
               // Check div.multiselect uses :where() (not just any selector containing it)
               if (
-                sel.match(
-                  /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/,
+                /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/.test(
+                  sel,
                 )
               ) {
                 results.div_multiselect = true
               }
               // Check ul.selected > li uses :where()
               if (
-                sel.includes(`:where(`) && sel.includes(`selected`) &&
+                sel.includes(`:where(`) &&
+                sel.includes(`selected`) &&
                 sel.includes(`> li`)
               ) {
                 results.ul_selected_li = true
               }
               // Check ul.options uses :where()
-              if (sel.match(/:where\(ul\.options/)) {
+              if (/:where\(ul\.options/.test(sel)) {
                 results.ul_options = true
               }
             }
@@ -1685,7 +1723,9 @@ test.describe(`history / undo-redo feature`, () => {
     // Select 3 different options (clicking same option toggles it due to duplicates=false)
     await page.click(`#history-multiselect input[autocomplete]`)
     for (const expected_count of [1, 2, 3]) {
-      await page.locator(`#history-multiselect ul.options li`).nth(expected_count - 1)
+      await page
+        .locator(`#history-multiselect ul.options li`)
+        .nth(expected_count - 1)
         .click()
       await expect(selection_count).toContainText(`${expected_count} item`)
     }
@@ -1736,7 +1776,10 @@ test.describe(`history / undo-redo feature`, () => {
     await expect(event_log.locator(`.event-name:has-text("onredo")`)).toBeVisible()
 
     // Event log shows previous/current
-    const log_data = await event_log.locator(`.log-entry`).first().locator(`pre`)
+    const log_data = await event_log
+      .locator(`.log-entry`)
+      .first()
+      .locator(`pre`)
       .textContent()
     expect(log_data).toContain(`previous`)
     expect(log_data).toContain(`current`)

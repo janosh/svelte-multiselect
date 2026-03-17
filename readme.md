@@ -42,8 +42,6 @@
 
 ```sh
 npm install --dev svelte-multiselect
-pnpm add -D svelte-multiselect
-yarn add --dev svelte-multiselect
 ```
 
 ## 📙 &thinsp; Usage
@@ -297,6 +295,7 @@ These are the core props you'll use in most cases:
    Controls duplicate detection. `false` (default) blocks exact duplicates. `true` allows selecting the same option multiple times. `'case-insensitive'` blocks case variants (e.g. "Apple" blocks "apple").
 
 <!-- deno-fmt-ignore -->
+
 1. ```ts
    filterFunc: (opt: Option, searchText: string) => boolean
    ```
@@ -304,6 +303,7 @@ These are the core props you'll use in most cases:
    Custom function to filter options based on search text. Default filters by label.
 
 <!-- deno-fmt-ignore -->
+
 1. ```ts
    key: (opt: Option) => unknown
    ```
@@ -577,15 +577,13 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    Enable selection history for undo/redo support. `true` (default) stores up to 50 states. Pass a number to set a custom maximum. `false` or `0` disables history. Note: you need at least `history=2` for a single undo (history=1 effectively disables it).
 
 1. ```ts
-   undo: ;
-   ;(() => boolean) // bindable
+   undo: () => boolean // bindable
    ```
 
    Undo the last selection change. Returns `true` if undo was performed. Use with `bind:undo` to get a callable function.
 
 1. ```ts
-   redo: ;
-   ;(() => boolean) // bindable
+   redo: () => boolean // bindable
    ```
 
    Redo the last undone selection change. Returns `true` if redo was performed. Use with `bind:redo` to get a callable function.
@@ -641,6 +639,7 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    Tooltip for individual remove buttons.
 
 <!-- deno-fmt-ignore -->
+
 1. ```ts
    maxSelectMsg: ((current: number, max: number) => string) | null
    ```

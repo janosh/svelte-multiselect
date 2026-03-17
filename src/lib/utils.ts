@@ -37,7 +37,7 @@ export const get_label = (opt: Option) => {
 // For object options: uses value if defined, otherwise label (no case normalization)
 // For primitives: the primitive itself
 export const get_option_key = (opt: Option): unknown =>
-  is_object(opt) ? opt.value ?? get_label(opt) : opt
+  is_object(opt) ? (opt.value ?? get_label(opt)) : opt
 
 // This function is used extract CSS strings from a {selected, option} style
 // object to be used in the style attribute of the option.
@@ -70,9 +70,12 @@ export function get_style(
 export function fuzzy_match(search_text: string, target_text: string): boolean {
   // Handle null/undefined inputs first
   if (
-    search_text === null || search_text === undefined || target_text === null ||
+    search_text === null ||
+    search_text === undefined ||
+    target_text === null ||
     target_text === undefined
-  ) return false
+  )
+    return false
 
   if (!search_text) return true
   if (!target_text) return false

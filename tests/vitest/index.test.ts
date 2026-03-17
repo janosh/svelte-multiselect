@@ -4,7 +4,7 @@ import DefaultExport, {
   scroll_into_view_if_needed_polyfill,
 } from '$lib'
 import MultiSelect from '$lib/MultiSelect.svelte'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 
 test(`default export from index.ts is same as component file`, () => {
   expect(DefaultExport).toBe(MultiSelect)
@@ -12,8 +12,8 @@ test(`default export from index.ts is same as component file`, () => {
 })
 
 test(`src/lib/index.ts re-exports all Svelte components`, () => {
-  const components = Object.keys(import.meta.glob(`$lib/*.svelte`)).map(
-    (path) => path.split(`/`).pop()?.split(`.`).shift(),
+  const components = Object.keys(import.meta.glob(`$lib/*.svelte`)).map((path) =>
+    path.split(`/`).pop()?.split(`.`).shift(),
   )
   expect(Object.keys(lib)).toEqual(expect.arrayContaining(components))
 })
@@ -73,17 +73,15 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
     expect(mock.observe).toHaveBeenCalledWith(element)
   })
 
-  test.each(
-    [
-      // [ratio, centerIfNeeded, expectedBlock, shouldScroll]
-      [0, true, `center`, true],
-      [0, false, `nearest`, true],
-      [0.5, true, `nearest`, true],
-      [0.5, false, `nearest`, true],
-      [1, true, null, false],
-      [1, false, null, false],
-    ] as const,
-  )(
+  test.each([
+    // [ratio, centerIfNeeded, expectedBlock, shouldScroll]
+    [0, true, `center`, true],
+    [0, false, `nearest`, true],
+    [0.5, true, `nearest`, true],
+    [0.5, false, `nearest`, true],
+    [1, true, null, false],
+    [1, false, null, false],
+  ] as const)(
     `ratio=%d centerIfNeeded=%s scrolls to %s (shouldScroll=%s)`,
     (ratio, center_if_needed, expected_block, should_scroll) => {
       create_mock_observer()

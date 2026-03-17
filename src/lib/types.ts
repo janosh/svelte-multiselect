@@ -47,9 +47,11 @@ export interface MultiSelectEvents<T extends Option = Option> {
   onexpandAll?: (data: { groups: string[] }) => unknown // fires when all groups are expanded
   // Additional events for user feedback and analytics
   onsearch?: (data: { searchText: string; matchingOptions: T[] }) => unknown // fires (debounced) when search text changes
-  onmaxreached?: (
-    data: { selected: T[]; maxSelect: number; attemptedOption: T },
-  ) => unknown // fires when user tries to exceed maxSelect
+  onmaxreached?: (data: {
+    selected: T[]
+    maxSelect: number
+    attemptedOption: T
+  }) => unknown // fires when user tries to exceed maxSelect
   onduplicate?: (data: { option: T }) => unknown // fires when user tries to add duplicate (when duplicates=false)
   onactivate?: (data: { option: T | null; index: number | null }) => unknown // fires on keyboard navigation through options
   // History/undo-redo events
@@ -148,11 +150,11 @@ export interface MultiSelectProps<T extends Option = Option>
   createOptionMsg?:
     | string
     | ((state: {
-      searchText: string
-      selected: T[]
-      options: T[]
-      matchingOptions: T[]
-    }) => string)
+        searchText: string
+        selected: T[]
+        options: T[]
+        matchingOptions: T[]
+      }) => string)
     | null
   allowUserOptions?: boolean | `append`
   allowEmpty?: boolean // added for https://github.com/janosh/svelte-multiselect/issues/192

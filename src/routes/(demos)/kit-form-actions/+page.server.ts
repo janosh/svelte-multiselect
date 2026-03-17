@@ -3,7 +3,7 @@ import type { Actions } from './$types'
 
 // Form actions require a server and cannot work on static sites.
 // The underscore prefix disables this export during static build.
-// To test locally with `pnpm dev`, rename `_actions` to `actions`.
+// To test locally with `npm run dev`, rename `_actions` to `actions`.
 export const _actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
@@ -15,8 +15,8 @@ export const _actions = {
 
     try {
       colors = JSON.parse(colors)
-    } catch (err) {
-      return fail(400, { colors, error: `json: ${err}` })
+    } catch (error) {
+      return fail(400, { colors, error: `json: ${error}` })
     }
 
     if (!Array.isArray(colors)) {

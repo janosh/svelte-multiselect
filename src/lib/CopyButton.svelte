@@ -118,10 +118,10 @@
       await navigator.clipboard.writeText(content)
       state = `success`
       on_copy_success(content)
-    } catch (err) {
-      console.error(err)
+    } catch (error) {
+      console.error(error)
       state = `error`
-      on_copy_error(err, content)
+      on_copy_error(error, content)
     }
     if (reset_sec > 0) {
       reset_timeout = setTimeout(() => {

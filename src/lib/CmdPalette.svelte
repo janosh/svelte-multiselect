@@ -36,7 +36,7 @@
     if (open && input && document.activeElement !== input) input.focus()
   })
 
-  async function toggle(event: KeyboardEvent) {
+  function toggle(event: KeyboardEvent) {
     const is_trigger = triggers.includes(event.key) &&
       (event.metaKey || event.ctrlKey)
     if (is_trigger && !open) open = true

@@ -1,7 +1,7 @@
 import { Icon } from '$lib'
 import { icon_data, type IconName } from '$lib/icons'
 import { mount } from 'svelte'
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`Icon`, () => {
   const get_svg = () => document.body.querySelector(`svg`) as SVGSVGElement
@@ -20,35 +20,33 @@ describe(`Icon`, () => {
     },
   )
 
-  test.each(
+  test.each([
     [
-      [
-        `class`,
-        `custom-class`,
-        (svg: SVGSVGElement) => svg.classList.contains(`custom-class`),
-        true,
-      ],
-      [
-        `style`,
-        `width: 2em;`,
-        (svg: SVGSVGElement) => svg.getAttribute(`style`),
-        `width: 2em;`,
-      ],
-      [
-        `aria-label`,
-        `Checkmark icon`,
-        (svg: SVGSVGElement) => svg.getAttribute(`aria-label`),
-        `Checkmark icon`,
-      ],
-      [`role`, `img`, (svg: SVGSVGElement) => svg.getAttribute(`role`), `img`],
-      [
-        `data-name`,
-        `disabled-icon`,
-        (svg: SVGSVGElement) => svg.getAttribute(`data-name`),
-        `disabled-icon`,
-      ],
-    ] as const,
-  )(`applies %s attribute via rest props`, (attr, value, getter, expected) => {
+      `class`,
+      `custom-class`,
+      (svg: SVGSVGElement) => svg.classList.contains(`custom-class`),
+      true,
+    ],
+    [
+      `style`,
+      `width: 2em;`,
+      (svg: SVGSVGElement) => svg.getAttribute(`style`),
+      `width: 2em;`,
+    ],
+    [
+      `aria-label`,
+      `Checkmark icon`,
+      (svg: SVGSVGElement) => svg.getAttribute(`aria-label`),
+      `Checkmark icon`,
+    ],
+    [`role`, `img`, (svg: SVGSVGElement) => svg.getAttribute(`role`), `img`],
+    [
+      `data-name`,
+      `disabled-icon`,
+      (svg: SVGSVGElement) => svg.getAttribute(`data-name`),
+      `disabled-icon`,
+    ],
+  ] as const)(`applies %s attribute via rest props`, (attr, value, getter, expected) => {
     mount(Icon, { target: document.body, props: { icon: `Check`, [attr]: value } })
     expect(getter(get_svg())).toBe(expected)
   })

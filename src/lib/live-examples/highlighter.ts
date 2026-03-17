@@ -22,7 +22,7 @@ export type { HastRoot }
 
 // Escape HTML special characters in text content (not for attribute values)
 const escape_html_text = (str: string): string =>
-  str.replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
+  str.replaceAll(`&`, `&amp;`).replaceAll(`<`, `&lt;`).replaceAll(`>`, `&gt;`)
 
 // Convert HAST to HTML string (simplified - only handles what starry-night outputs)
 export const hast_to_html = (node: HastNode): string => {
@@ -37,7 +37,7 @@ export const hast_to_html = (node: HastNode): string => {
 
 // Escape characters that would be interpreted as Svelte template syntax
 const escape_svelte = (html: string): string =>
-  html.replace(/\{/g, `&#123;`).replace(/\}/g, `&#125;`)
+  html.replaceAll(`{`, `&#123;`).replaceAll(`}`, `&#125;`)
 
 // Shared starry-night instance (grammars loaded once at build time)
 // Uses common bundle (34 grammars) + Svelte

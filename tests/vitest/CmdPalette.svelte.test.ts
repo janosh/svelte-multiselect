@@ -1,6 +1,6 @@
 import { CmdPalette } from '$lib'
 import { mount, tick } from 'svelte'
-import { expect, test, vi } from 'vitest'
+import { expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const mock_actions = [
@@ -153,23 +153,18 @@ test.each([
 test.each([
   { opens_via: `keypress`, description: `via keypress` },
   { opens_via: `programmatic`, description: `programmatically` },
-])(
-  `opens dialog and manages focus correctly $description`,
-  async ({ opens_via }) => {
-    const props = $state({ actions: mock_actions, open: false, fade_duration: 0 })
-    mount(CmdPalette, { target: document.body, props })
+])(`opens dialog and manages focus correctly $description`, async ({ opens_via }) => {
+  const props = $state({ actions: mock_actions, open: false, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
 
-    if (opens_via === `keypress`) {
-      globalThis.dispatchEvent(
-        new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }),
-      )
-    } else props.open = true
-    await tick()
+  if (opens_via === `keypress`) {
+    globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
+  } else props.open = true
+  await tick()
 
-    expect(props.open).toBe(true)
-    expect(document.activeElement).toBe(doc_query(`dialog input[autocomplete]`))
-  },
-)
+  expect(props.open).toBe(true)
+  expect(document.activeElement).toBe(doc_query(`dialog input[autocomplete]`))
+})
 
 test(`handles action selection and execution`, () => {
   const actions_with_spies = mock_actions.map(({ label }) => ({
@@ -217,7 +212,7 @@ test(`does not close dialog when clicking on portalled options`, async () => {
   const portalled_options = document.createElement(`ul`)
   portalled_options.className = `options`
   portalled_options.innerHTML = `<li>Option 1</li><li>Option 2</li>`
-  document.body.appendChild(portalled_options)
+  document.body.append(portalled_options)
 
   // Click on the portalled options
   const option_li = portalled_options.querySelector(`li`)
@@ -244,7 +239,7 @@ test(`!target.closest('ul.options') prevents premature closure`, async () => {
       <li><span>Nested option</span></li>
     </ul>
   `
-  document.body.appendChild(container)
+  document.body.append(container)
 
   // Click on nested span inside ul.options
   const span = container.querySelector(`span`)
@@ -295,9 +290,7 @@ test(`applies custom styles and props correctly`, async () => {
   expect(li_el.style.fontWeight).toBe(`bold`)
 })
 
-test.each([
-  { scenario: `empty actions array`, actions: [], should_have_options: false },
-])(
+test.each([{ scenario: `empty actions array`, actions: [], should_have_options: false }])(
   `handles edge cases: $scenario`,
   ({ actions, should_have_options }) => {
     const props = $state({ open: true, actions, fade_duration: 0 })
@@ -321,9 +314,7 @@ test(`opens dialog with trigger key when closed`, async () => {
   expect(props.open).toBe(false)
 
   // Trigger key should open dialog when closed
-  globalThis.dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }),
-  )
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
   await tick()
 
   expect(props.open).toBe(true)
@@ -350,9 +341,7 @@ test(`remains open when trigger keys are pressed while already open`, async () =
   expect(props.open).toBe(true)
 
   // Trigger key should not change state when already open
-  globalThis.dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }),
-  )
+  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
   await tick()
 
   expect(props.open).toBe(true)
@@ -443,32 +432,29 @@ test.each([
     expected: [`No matching options`],
     description: `exact match 'xyz' -> no matches message`,
   },
-])(
-  `filtering with fuzzy=$fuzzy: $description`,
-  async ({ fuzzy, search, expected }) => {
-    const actions = [
-      { label: `create user`, action: vi.fn() },
-      { label: `delete file`, action: vi.fn() },
-      { label: `update config`, action: vi.fn() },
-    ]
-    mount(CmdPalette, {
-      target: document.body,
-      props: { open: true, actions, fuzzy, fade_duration: 0 },
-    })
+])(`filtering with fuzzy=$fuzzy: $description`, async ({ fuzzy, search, expected }) => {
+  const actions = [
+    { label: `create user`, action: vi.fn() },
+    { label: `delete file`, action: vi.fn() },
+    { label: `update config`, action: vi.fn() },
+  ]
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions, fuzzy, fade_duration: 0 },
+  })
 
-    const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
-    input.value = search
-    input.dispatchEvent(new Event(`input`, { bubbles: true }))
-    await tick()
+  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  input.value = search
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
 
-    const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
-    expect(visible_options).toHaveLength(expected.length)
+  const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
+  expect(visible_options).toHaveLength(expected.length)
 
-    expected.forEach((expected_label, idx) => {
-      expect(visible_options[idx].textContent).toContain(expected_label)
-    })
-  },
-)
+  expected.forEach((expected_label, idx) => {
+    expect(visible_options[idx].textContent).toContain(expected_label)
+  })
+})
 
 test(`handles multiple trigger keys simultaneously`, async () => {
   const props = $state({
@@ -648,13 +634,15 @@ test(`collapsibleGroups prop enables collapse functionality`, async () => {
   await tick()
 
   // Check aria-expanded attribute on group header to verify collapsibleGroups works
-  const file_header = [...document.querySelectorAll(`dialog ul.options li.group-header`)]
-    .find((header) => header.textContent?.includes(`File`))
+  const file_header = [
+    ...document.querySelectorAll(`dialog ul.options li.group-header`),
+  ].find((header) => header.textContent?.includes(`File`))
   expect(file_header?.getAttribute(`aria-expanded`)).toBe(`false`)
 
   // File options should not be rendered when collapsed
-  const new_file_option = [...document.querySelectorAll(`dialog ul.options li`)]
-    .find((li) => li.textContent?.includes(`New File`))
+  const new_file_option = [...document.querySelectorAll(`dialog ul.options li`)].find(
+    (li) => li.textContent?.includes(`New File`),
+  )
   expect(new_file_option).toBeUndefined()
 })
 

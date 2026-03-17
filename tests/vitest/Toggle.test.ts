@@ -1,6 +1,6 @@
 import { Toggle } from '$lib'
 import { mount, tick } from 'svelte'
-import { describe, expect, test, vi } from 'vitest'
+import { describe, expect, test, vi } from 'vite-plus/test'
 import TestToggleSnippet from './TestToggleSnippet.svelte'
 
 describe(`Toggle`, () => {
@@ -34,14 +34,11 @@ describe(`Toggle`, () => {
     expect(input.checked).toBe(false)
   })
 
-  test.each([`A`, `Escape`, `Tab`, `Space`])(
-    `doesn't toggle on %s key`,
-    (key) => {
-      mount(Toggle, { target: document.body })
-      get_input().dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
-      expect(get_input().checked).toBe(false)
-    },
-  )
+  test.each([`A`, `Escape`, `Tab`, `Space`])(`doesn't toggle on %s key`, (key) => {
+    mount(Toggle, { target: document.body })
+    get_input().dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
+    expect(get_input().checked).toBe(false)
+  })
 
   test(`Enter key prevents default and calls onkeydown first`, () => {
     const call_order: string[] = []
@@ -84,13 +81,11 @@ describe(`Toggle`, () => {
     )
   })
 
-  test.each(
-    [
-      [`change`, `onchange`, () => new Event(`change`, { bubbles: true })],
-      [`blur`, `onblur`, () => new FocusEvent(`blur`)],
-      [`click`, `onclick`, null], // null means use .click()
-    ] as const,
-  )(`emits %s event`, (_, handler_prop, create_event) => {
+  test.each([
+    [`change`, `onchange`, () => new Event(`change`, { bubbles: true })],
+    [`blur`, `onblur`, () => new FocusEvent(`blur`)],
+    [`click`, `onclick`, null], // null means use .click()
+  ] as const)(`emits %s event`, (_, handler_prop, create_event) => {
     const handler = vi.fn()
     mount(Toggle, {
       target: document.body,

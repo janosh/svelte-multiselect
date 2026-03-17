@@ -2,7 +2,7 @@
 import vite_plugin, { EXAMPLE_MODULE_PREFIX } from '$lib/live-examples/vite-plugin'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
 const make_code = (src: string): string =>
@@ -18,9 +18,11 @@ interface TestPlugin {
     id: string,
   ) => { code: string; map: { mappings: string } } | undefined
   configureServer?: (server: unknown) => void
-  handleHotUpdate?: (
-    ctx: { file: string; server: unknown; modules: unknown[] },
-  ) => unknown[]
+  handleHotUpdate?: (ctx: {
+    file: string
+    server: unknown
+    modules: unknown[]
+  }) => unknown[]
 }
 
 // Merge resolve (enforce:'pre') and main plugins into one for testing
@@ -54,7 +56,7 @@ describe(`resolveId`, () => {
     [`relative`, `${EXAMPLE_MODULE_PREFIX}0.svelte`],
     [`root-relative`, `/src/file.md${EXAMPLE_MODULE_PREFIX}0.svelte`],
   ])(`resolves %s paths to absolute without double slashes`, (_, id) => {
-    const cwd = process.cwd().replace(/\\/g, `/`)
+    const cwd = process.cwd().replaceAll(`\\`, `/`)
     const resolved = plugin.resolveId?.(id)
     expect(resolved).toContain(EXAMPLE_MODULE_PREFIX)
     expect(resolved?.startsWith(cwd)).toBe(true)
@@ -97,8 +99,9 @@ describe(`load`, () => {
   })
 
   test(`returns undefined for non-example modules`, () => {
-    expect(plugin.load?.call(create_mock_context(), `/path/to/regular.md`))
-      .toBeUndefined()
+    expect(
+      plugin.load?.call(create_mock_context(), `/path/to/regular.md`),
+    ).toBeUndefined()
   })
 
   test(`returns undefined for CSS query even when virtual file exists`, () => {
@@ -110,8 +113,9 @@ describe(`load`, () => {
     plugin.transform?.call(ctx, code, id)
 
     const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
-    expect(plugin.load?.call(ctx, `${virtual_id}?inline&svelte&type=style&lang.css`))
-      .toBeUndefined()
+    expect(
+      plugin.load?.call(ctx, `${virtual_id}?inline&svelte&type=style&lang.css`),
+    ).toBeUndefined()
   })
 })
 
@@ -137,9 +141,9 @@ describe(`transform`, () => {
   })
 
   test(`extracts __live_example_src from code`, () => {
-    const code = `const props = { __live_example_src: "${
-      to_base64(`<div>Hello</div>`)
-    }", other: "value" }`
+    const code = `const props = { __live_example_src: "${to_base64(
+      `<div>Hello</div>`,
+    )}", other: "value" }`
     const result = plugin.transform?.call(ctx, code, `/file.md`) as { code: string }
     expect(result.code).not.toContain(`__live_example_src`)
     expect(result.code).toContain(`other`)
@@ -245,15 +249,15 @@ describe(`transform`, () => {
 })
 
 describe(`vite-specific hooks`, () => {
-  test.each([
-    [`/path/to/file.md`],
-    [`/path/to/file.ts`],
-  ])(`handleHotUpdate for %s returns only ctx.modules`, (file) => {
-    const plugin = get_plugin()
-    const ctx = { file, server: create_mock_server(), modules: [{ id: `existing` }] }
-    const result = plugin.handleHotUpdate?.(ctx)
-    expect(result).toEqual(ctx.modules)
-  })
+  test.each([[`/path/to/file.md`], [`/path/to/file.ts`]])(
+    `handleHotUpdate for %s returns only ctx.modules`,
+    (file) => {
+      const plugin = get_plugin()
+      const ctx = { file, server: create_mock_server(), modules: [{ id: `existing` }] }
+      const result = plugin.handleHotUpdate?.(ctx)
+      expect(result).toEqual(ctx.modules)
+    },
+  )
 })
 
 describe(`pending_hmr_file lifecycle`, () => {

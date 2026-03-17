@@ -11,10 +11,21 @@ on:
 
 jobs:
   tests:
-    uses: janosh/workflows/.github/workflows/deno-test.yml@main
-    with:
-      deno-version: 2.3.7
-      node-version: '22'
-      test-cmd: NODE_OPTIONS=--experimental-strip-types npx vitest --run
-      e2e-install-cmd: npx playwright install chromium
-      e2e-test-cmd: npx playwright test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+
+      - name: Unit tests
+        run: npx vp test --run
+
+      - name: Install Playwright
+        run: npx playwright install chromium
+
+      - name: E2E tests
+        run: npx playwright test
