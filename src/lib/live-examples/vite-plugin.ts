@@ -2,7 +2,7 @@
 import { parse } from 'acorn'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
-import type { HmrContext, Plugin, ViteDevServer } from 'vite'
+import type { HmrContext, Plugin, ViteDevServer } from 'vite-plus'
 import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
 export { EXAMPLE_MODULE_PREFIX }
 
@@ -15,7 +15,7 @@ const TRAILING_CLEANUP_BOUND = 50 // Generous bound - typical trailing content i
 // Apply edits in reverse order so positions stay valid
 const apply_edits = (source: string, edits: Edit[]): string =>
   edits
-    .sort((a, b) => b.start - a.start)
+    .toSorted((a, b) => b.start - a.start)
     .reduce(
       (str, { start, end, content }) => str.slice(0, start) + content + str.slice(end),
       source,
@@ -77,7 +77,7 @@ export default function live_examples_plugin(
 
   let vite_server: ViteDevServer | undefined
   let pending_hmr_file: string | null = null
-  const cwd = process.cwd().replace(/\\/g, `/`)
+  const cwd = process.cwd().replaceAll(`\\`, `/`)
 
   // Pre-enforce plugin ensures resolveId runs before vite-plugin-svelte's
   // load-compiled-css:resolveId, so CSS derived modules get the same absolute
@@ -117,9 +117,9 @@ export default function live_examples_plugin(
         }
         // In dev, warn and return error component to surface issue visibly
         this.warn(msg)
-        return `<script>console.error(${
-          JSON.stringify(msg)
-        })</script><p style="color:red">${msg}</p>`
+        return `<script>console.error(${JSON.stringify(
+          msg,
+        )})</script><p style="color:red">${msg}</p>`
       }
     },
 
@@ -240,7 +240,7 @@ export default function live_examples_plugin(
     },
 
     handleHotUpdate(ctx: HmrContext) {
-      const file = ctx.file.replace(/\\/g, `/`)
+      const file = ctx.file.replaceAll(`\\`, `/`)
       if (extensions.some((ext) => file.endsWith(ext))) {
         pending_hmr_file = file
       }

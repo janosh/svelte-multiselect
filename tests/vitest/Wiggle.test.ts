@@ -1,7 +1,7 @@
 import { Wiggle } from '$lib'
 import type { ComponentProps } from 'svelte'
 import { mount } from 'svelte'
-import { beforeEach, describe, expect, test, vi } from 'vitest'
+import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`Wiggle`, () => {
   beforeEach(vi.useFakeTimers)

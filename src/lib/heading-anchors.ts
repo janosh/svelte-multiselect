@@ -27,10 +27,10 @@ function strip_svelte_expressions(str: string): string {
 const slugify = (text: string): string =>
   text
     .toLowerCase()
-    .replace(/\s+/g, `-`)
-    .replace(/[^\w-]/g, ``)
-    .replace(/-+/g, `-`) // collapse multiple dashes
-    .replace(/^-|-$/g, ``) // trim leading/trailing dashes
+    .replaceAll(/\s+/g, `-`)
+    .replaceAll(/[^\w-]/g, ``)
+    .replaceAll(/-+/g, `-`) // collapse multiple dashes
+    .replaceAll(/^-|-$/g, ``) // trim leading/trailing dashes
 
 /** @type {() => import('svelte/compiler').PreprocessorGroup} */
 export function heading_ids() {
@@ -44,7 +44,7 @@ export function heading_ids() {
         // Skip if already has an id (use ^|\s to avoid matching data-id, aria-id, etc.)
         if (/(^|\s)id\s*=/.test(attrs)) return null
 
-        const text = strip_svelte_expressions(inner.replace(/<[^>]+>/g, ``)).trim()
+        const text = strip_svelte_expressions(inner.replaceAll(/<[^>]+>/g, ``)).trim()
         if (!text) return null
 
         const base_id = slugify(text)
@@ -80,8 +80,7 @@ export function heading_ids() {
 }
 
 // SVG link icon for heading anchors
-const link_svg =
-  `<svg width="16" height="16" viewBox="0 0 16 16" aria-label="Link to heading" role="img"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z" fill="currentColor"/></svg>`
+const link_svg = `<svg width="16" height="16" viewBox="0 0 16 16" aria-label="Link to heading" role="img"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z" fill="currentColor"/></svg>`
 
 export interface HeadingAnchorsOptions {
   // CSS selector for headings (default: h1-h6 direct or 2nd-level children of attached node)
@@ -109,7 +108,7 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
   anchor.href = `#${heading.id}`
   anchor.setAttribute(`aria-hidden`, `true`)
   anchor.innerHTML = icon_svg
-  heading.appendChild(anchor)
+  heading.append(anchor)
 }
 
 const is_heading = (element: Element): boolean => /^H[1-6]$/.test(element.tagName)
@@ -128,7 +127,8 @@ const get_default_headings = (node: Element): Element[] => {
 // Svelte 5 attachment that adds anchor links to headings within a container
 // Uses MutationObserver to handle dynamically added headings
 export const heading_anchors =
-  (options: HeadingAnchorsOptions = {}) => (node: Element) => {
+  (options: HeadingAnchorsOptions = {}) =>
+  (node: Element) => {
     if (typeof document === `undefined`) return
 
     const icon_svg = options.icon_svg ?? link_svg

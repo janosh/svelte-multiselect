@@ -34,9 +34,6 @@
   <h1>
     <img src="favicon.svg" alt={name} height="50" width="50" />&ensp;Svelte MultiSelect
   </h1>
-{/if}
-
-{#if page.url.pathname !== `/`}
   <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}
 

@@ -79,12 +79,12 @@
     if (to !== undefined) {
       const { replace_state, no_scroll } = nav_options
       const [scroll_x, scroll_y] = no_scroll
-        ? [window.scrollX, window.scrollY]
+        ? [globalThis.scrollX, globalThis.scrollY]
         : [0, 0]
-      const goto = window.history[replace_state ? `replaceState` : `pushState`]
-      goto.call(window.history, {}, ``, to) // Navigate using appropriate history method
+      const goto = globalThis.history[replace_state ? `replaceState` : `pushState`]
+      goto.call(globalThis.history, {}, ``, to) // Navigate using appropriate history method
 
-      if (no_scroll) window.scrollTo(scroll_x, scroll_y) // Restore scroll position if needed
+      if (no_scroll) globalThis.scrollTo(scroll_x, scroll_y) // Restore scroll position if needed
     }
   }
 </script>

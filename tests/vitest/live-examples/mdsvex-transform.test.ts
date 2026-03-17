@@ -4,7 +4,7 @@ import remark, {
   EXAMPLE_MODULE_PREFIX,
 } from '$lib/live-examples/mdsvex-transform'
 import { Buffer } from 'node:buffer'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 // Minimal types for testing
 interface TestNode {
@@ -222,8 +222,7 @@ describe(`hide_script and hide_style options`, () => {
   )
 
   test(`hide_script and hide_style combined strips both blocks`, () => {
-    const code =
-      `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`
+    const code = `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`
     const tree = create_tree([
       create_code_node(`svelte`, code, `example hide_script hide_style`),
     ])
@@ -235,8 +234,7 @@ describe(`hide_script and hide_style options`, () => {
   })
 
   test(`preserves script and style blocks when options are not set`, () => {
-    const code =
-      `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`
+    const code = `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])
     remark()(tree, create_file())
     const value = get_example_value(tree)

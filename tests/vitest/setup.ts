@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, vi } from 'vitest'
+import { beforeAll, beforeEach, vi } from 'vite-plus/test'
 
 beforeEach(() => {
   document.body.innerHTML = ``
@@ -10,7 +10,7 @@ beforeAll(() => {
   Element.prototype.getAnimations = () => [animation]
 })
 
-Object.defineProperty(window, `matchMedia`, {
+Object.defineProperty(globalThis, `matchMedia`, {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
     media: query,

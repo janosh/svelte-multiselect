@@ -10,7 +10,7 @@ guard, and reset timing.
 
   type Copy_state = `ready` | `success` | `error`
 
-  let content = $state(`pnpm test`)
+  let content = $state(`npm test`)
   let disabled = $state(false)
   let reset_sec = $state(2)
   let state = $state<Copy_state>(`ready`)

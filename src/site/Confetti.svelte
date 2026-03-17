@@ -21,13 +21,13 @@
         y: -20 - Math.random() * 100,
         r: 0.1 + Math.random() * 1,
       }))
-      .sort((conf_a, conf_b) => conf_a.r - conf_b.r),
+      .toSorted((conf_a, conf_b) => conf_a.r - conf_b.r),
   )
   let frame_id: number | undefined
   let is_running = false
 
   function loop() {
-    if (typeof requestAnimationFrame == `undefined`) return
+    if (typeof requestAnimationFrame === `undefined`) return
     if (freeze) return
 
     frame_id = requestAnimationFrame(loop)

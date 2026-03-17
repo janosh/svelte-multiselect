@@ -7,13 +7,13 @@ import {
   sortable,
   tooltip,
 } from '$lib/attachments'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
   const add_data_sort = (element: HTMLElement, value: string) =>
     element.setAttribute(`data-sort-value`, value)
-  const add_text = (element: HTMLElement, text: string) => element.textContent = text
+  const add_text = (element: HTMLElement, text: string) => (element.textContent = text)
 
   it.each([
     [
@@ -48,8 +48,8 @@ describe(`get_html_sort_value`, () => {
     add_text(child, `Child text`)
     add_data_sort(grandchild, `grandchild-value`)
     add_text(grandchild, `Grandchild text`)
-    child.appendChild(grandchild)
-    parent.appendChild(child)
+    child.append(grandchild)
+    parent.append(child)
     expect(get_html_sort_value(parent)).toBe(`grandchild-value`)
   })
 
@@ -68,7 +68,7 @@ describe(`get_html_sort_value`, () => {
     for (let idx = 0; idx < 10; idx++) {
       const child = create_element()
       add_text(child, `Level ${idx}`)
-      current.appendChild(child)
+      current.append(child)
       current = child
     }
     add_data_sort(current, `deep-value`)
@@ -85,7 +85,7 @@ describe(`get_html_sort_value`, () => {
 describe(`tooltip`, () => {
   const create_element = (tag = `div`) => {
     const element = document.createElement(tag)
-    document.body.appendChild(element)
+    document.body.append(element)
     return element
   }
 
@@ -139,7 +139,8 @@ describe(`tooltip`, () => {
       `offsetHeight`,
     )
 
-    const bounds_spy = vi.spyOn(HTMLElement.prototype, `getBoundingClientRect`)
+    const bounds_spy = vi
+      .spyOn(HTMLElement.prototype, `getBoundingClientRect`)
       .mockImplementation(function (this: HTMLElement) {
         if (this.classList.contains(`custom-tooltip`)) {
           return {
@@ -275,7 +276,7 @@ describe(`tooltip`, () => {
       element.title = content
       setup_tooltip(element)
       expect(element.getAttribute(`data-original-title`)).toBe(
-        expected.replace(/<br\/>/g, `\r`),
+        expected.replaceAll(`<br/>`, `\r`),
       )
     })
   })
@@ -317,7 +318,7 @@ describe(`tooltip`, () => {
       const parent = create_element()
       const child = document.createElement(`span`)
       child.setAttribute(attr, content)
-      parent.appendChild(child)
+      parent.append(child)
       setup_tooltip(parent)
 
       if (attr === `title`) {
@@ -332,7 +333,7 @@ describe(`tooltip`, () => {
       for (let idx = 0; idx < 5; idx++) {
         const child = document.createElement(`div`)
         child.title = `Level ${idx}`
-        current.appendChild(child)
+        current.append(child)
         current = child
       }
       setup_tooltip(parent)
@@ -344,7 +345,7 @@ describe(`tooltip`, () => {
       setup_tooltip(parent)
       const child = document.createElement(`div`)
       child.title = `Dynamic`
-      parent.appendChild(child)
+      parent.append(child)
       expect(child.hasAttribute(`data-original-title`)).toBe(false)
     })
   })
@@ -441,8 +442,8 @@ describe(`tooltip`, () => {
     it(`scroll from ancestor hides tooltip`, () => {
       const ancestor = document.createElement(`div`)
       const element = create_element()
-      ancestor.appendChild(element)
-      document.body.appendChild(ancestor)
+      ancestor.append(element)
+      document.body.append(ancestor)
       element.title = `test`
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
@@ -546,15 +547,13 @@ describe(`tooltip`, () => {
       },
     ])(
       `$test_name`,
-      (
-        {
-          trigger_bounds,
-          viewport,
-          tooltip_size,
-          expected_placement,
-          requested_placement,
-        },
-      ) => {
+      ({
+        trigger_bounds,
+        viewport,
+        tooltip_size,
+        expected_placement,
+        requested_placement,
+      }) => {
         // Arrow points away from trigger: offset side has negative value, opposite side is unset
         const arrow_offset_side: Record<string, [string, string]> = {
           top: [`bottom`, `top`],
@@ -724,7 +723,7 @@ describe(`tooltip`, () => {
       [`skipped when allow_html: false`, false, `Plain`, 0, `Plain`],
     ])(`sanitize_html %s`, (_desc, allow_html, title, call_count, expected_text) => {
       const sanitizer = vi.fn((html: string) =>
-        html.replace(/<script[^>]*>.*?<\/script>/gi, ``)
+        html.replaceAll(/<script[^>]*>.*?<\/script>/gi, ``),
       )
       const element = create_element()
       element.title = title
@@ -756,7 +755,7 @@ describe(`tooltip`, () => {
 describe(`click_outside`, () => {
   const create_element = () => {
     const element = document.createElement(`div`)
-    document.body.appendChild(element)
+    document.body.append(element)
     return element
   }
 
@@ -800,10 +799,10 @@ describe(`click_outside`, () => {
     ]
     excluded1.className = `modal`
     excluded2.className = `popover`
-    excluded1.appendChild(nested)
-    excluded1.closest = vi.fn((sel) => sel === `.modal` ? excluded1 : null)
-    excluded2.closest = vi.fn((sel) => sel === `.popover` ? excluded2 : null)
-    nested.closest = vi.fn((sel) => sel === `.modal` ? excluded1 : null)
+    excluded1.append(nested)
+    excluded1.closest = vi.fn((sel) => (sel === `.modal` ? excluded1 : null))
+    excluded2.closest = vi.fn((sel) => (sel === `.popover` ? excluded2 : null))
+    nested.closest = vi.fn((sel) => (sel === `.modal` ? excluded1 : null))
 
     const callback = vi.fn()
     click_outside({ callback, exclude: [`.modal`, `.popover`] })(element)
@@ -840,7 +839,7 @@ describe(`click_outside`, () => {
 describe(`draggable`, () => {
   const create_element = () => {
     const element = document.createElement(`div`)
-    document.body.appendChild(element)
+    document.body.append(element)
     return element
   }
 
@@ -976,7 +975,7 @@ describe(`draggable`, () => {
 
     const handle = document.createElement(`div`)
     handle.className = `drag-handle`
-    element.appendChild(handle)
+    element.append(handle)
 
     const attach = draggable({ handle_selector: `.drag-handle` })
     attach(element)
@@ -1200,9 +1199,7 @@ describe(`highlight_matches`, () => {
       )
 
       if (css_supported) {
-        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(
-          0,
-        )
+        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(0)
         if (expected_set_calls > 0) {
           expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
             `highlight-match`,
@@ -1236,10 +1233,10 @@ describe(`sortable`, () => {
     ;[`Planet`, `Moons`].forEach((text) => {
       const th = document.createElement(`th`)
       th.textContent = text
-      tr.appendChild(th)
+      tr.append(th)
     })
-    thead.appendChild(tr)
-    table.appendChild(thead)
+    thead.append(tr)
+    table.append(thead)
 
     const tbody = document.createElement(`tbody`)
     const rows = [
@@ -1254,16 +1251,16 @@ describe(`sortable`, () => {
       td1.textContent = planet
       td2.textContent = moons
       row.append(td1, td2)
-      tbody.appendChild(row)
+      tbody.append(row)
     })
-    table.appendChild(tbody)
-    document.body.appendChild(table)
+    table.append(tbody)
+    document.body.append(table)
     return table
   }
 
   const get_column_values = (table: HTMLTableElement, col_idx: number) =>
-    Array.from(table.querySelectorAll(`tbody tr`)).map((row) =>
-      row.children[col_idx].textContent
+    Array.from(table.querySelectorAll(`tbody tr`)).map(
+      (row) => row.children[col_idx].textContent,
     )
 
   it(`should sort ascending then descending when clicking the same header`, () => {
@@ -1333,7 +1330,7 @@ describe(`sortable`, () => {
   it(`should handle empty table body and custom header_selector`, () => {
     const table = document.createElement(`table`)
     table.innerHTML = `<thead><tr><th class="sortable">A</th><th>B</th></tr></thead>`
-    document.body.appendChild(table)
+    document.body.append(table)
 
     sortable({ header_selector: `th.sortable` })(table)
 
@@ -1344,7 +1341,7 @@ describe(`sortable`, () => {
     expect(() =>
       (table.querySelector(`th.sortable`) as HTMLElement).dispatchEvent(
         new MouseEvent(`click`),
-      )
+      ),
     ).not.toThrow()
   })
 
@@ -1366,7 +1363,7 @@ describe(`resizable`, () => {
     const element = document.createElement(`div`)
     element.style.width = `200px`
     element.style.height = `150px`
-    document.body.appendChild(element)
+    document.body.append(element)
     return element
   }
 
@@ -1622,10 +1619,10 @@ describe(`resizable`, () => {
       }),
     )
     expect(on_resize_start).toHaveBeenCalledTimes(1)
-    expect(on_resize_start).toHaveBeenCalledWith(
-      expect.any(MouseEvent),
-      { width: 200, height: 150 },
-    )
+    expect(on_resize_start).toHaveBeenCalledWith(expect.any(MouseEvent), {
+      width: 200,
+      height: 150,
+    })
 
     // Drag to resize
     globalThis.dispatchEvent(
@@ -1636,10 +1633,10 @@ describe(`resizable`, () => {
       }),
     )
     expect(on_resize).toHaveBeenCalledTimes(1)
-    expect(on_resize).toHaveBeenCalledWith(
-      expect.any(MouseEvent),
-      { width: 255, height: 150 },
-    )
+    expect(on_resize).toHaveBeenCalledWith(expect.any(MouseEvent), {
+      width: 255,
+      height: 150,
+    })
 
     // End resize
     globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))

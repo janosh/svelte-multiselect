@@ -8,30 +8,27 @@ repos:
       - id: check-symlinks
       - id: check-yaml
       - id: destroyed-symlinks
-      - id: double-quote-string-fixer
       - id: end-of-file-fixer
       - id: mixed-line-ending
       - id: trailing-whitespace
 
   - repo: local
     hooks:
-      - id: deno-fmt
-        name: Deno format
-        entry: deno fmt
+      - id: vp-fmt
+        name: Format (oxfmt)
+        entry: vp fmt --write
         types_or: [file]
         language: system
-        args: [--config, deno.jsonc, --permit-no-files]
-      - id: deno-lint
-        name: Deno lint
-        entry: deno lint
+        pass_filenames: false
+      - id: vp-lint
+        name: Lint (oxlint)
+        entry: vp lint --fix
         types_or: [file]
         language: system
-        args: [--config, deno.jsonc, --permit-no-files, --fix]
+        pass_filenames: false
       - id: svelte-check
         name: Svelte type check
-        # svelte-check-rs 0.9.x has false positives (Snippet narrowing, defineConfig overloads)
-        # so we run it as verbose (shows errors) but don't block commits on failure
-        entry: bash -c 'deno run -A npm:@sveltejs/kit sync && deno run -A npm:svelte-check-rs@latest --threshold error || true'
+        entry: bash -c 'npx svelte-kit sync && npx svelte-check --threshold error || true'
         language: system
         types_or: [ts, svelte]
         pass_filenames: false
@@ -48,18 +45,3 @@ repos:
         stages: [pre-commit, commit-msg]
         args: [--ignore-words-list, falsy, --check-filenames]
         exclude: changelog\.md
-
-  - repo: https://github.com/pre-commit/mirrors-eslint
-    rev: v10.0.3
-    hooks:
-      - id: eslint
-        types: [file]
-        args: [--fix]
-        files: \.(js|ts|svelte)$
-        additional_dependencies:
-          - 'typescript-eslint'
-          - eslint
-          - eslint-plugin-svelte
-          - svelte
-          - typescript
-          - '@stylistic/eslint-plugin'

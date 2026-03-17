@@ -19,7 +19,7 @@
       .then((data: Contributor[]) => {
         contributors = data.filter((usr) => !usr.login.includes(`[bot]`))
       })
-      .catch((err) => console.error(`Failed to fetch contributors:`, err))
+      .catch((error) => console.error(`Failed to fetch contributors:`, error))
   })
 </script>
 

@@ -1,6 +1,6 @@
 import { CodeExample, CopyButton } from '$lib'
 import { mount, tick, unmount } from 'svelte'
-import { expect, test } from 'vitest'
+import { expect, test } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const [id, src] = [`uniq-id`, `some code`]
@@ -28,7 +28,7 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
 
   const pre = doc_query<HTMLPreElement>(`pre.open`)
   expect(pre).toBeInstanceOf(HTMLElement)
-  expect(pre.textContent).toBe(src)
+  expect(doc_query(`pre.open > code`).textContent).toBe(src)
   expect(toggle_button.textContent).toContain(`Close`)
 })
 
@@ -80,10 +80,10 @@ test(`dynamically added pre > code elements get copy buttons applied`, async () 
   const new_pre = document.createElement(`pre`)
   const new_code = document.createElement(`code`)
   new_code.textContent = `dynamically added code`
-  new_pre.appendChild(new_code)
+  new_pre.append(new_code)
 
   // Add it to the DOM
-  document.body.appendChild(new_pre)
+  document.body.append(new_pre)
   await tick()
 
   // Verify that a copy button was added to the new pre element
@@ -101,8 +101,8 @@ test(`prevents duplicate copy buttons when as !== button`, async () => {
   const pre = document.createElement(`pre`)
   const code = document.createElement(`code`)
   code.textContent = `test code`
-  pre.appendChild(code)
-  document.body.appendChild(pre)
+  pre.append(code)
+  document.body.append(pre)
   await tick()
 
   // Verify only one copy button (anchor) was created

@@ -5,7 +5,7 @@ import {
   starry_night,
   vite_plugin,
 } from '$lib/live-examples/index'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 describe(`module exports`, () => {
   test(`prefix constants have expected values`, () => {

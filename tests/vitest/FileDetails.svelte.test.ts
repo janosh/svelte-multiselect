@@ -1,6 +1,6 @@
 import { FileDetails } from '$lib'
 import { flushSync, mount, tick } from 'svelte'
-import { expect, test, vi } from 'vitest'
+import { expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 test(`FileDetails renders files in ordered list with titles and contents`, () => {
@@ -72,11 +72,14 @@ test(`unsupported language falls back to escaped raw content`, async () => {
     props: { files: [{ title: `file.xyz`, content, language: `nonexistent-lang-xyz` }] },
   })
   // wait for highlight attempt to complete and fall back
-  await vi.waitFor(() => {
-    const code_el = doc_query(`pre code`)
-    if (code_el.innerHTML.includes(`&lt;`)) return
-    throw new Error(`not escaped yet`)
-  }, { timeout: 5000 })
+  await vi.waitFor(
+    () => {
+      const code_el = doc_query(`pre code`)
+      if (code_el.innerHTML.includes(`&lt;`)) return
+      throw new Error(`not escaped yet`)
+    },
+    { timeout: 5000 },
+  )
   const code_el = doc_query(`pre code`)
   expect(code_el.textContent).toBe(content)
 })
@@ -88,11 +91,14 @@ test(`syntax highlighting produces starry-night spans`, async () => {
     props: { files: [{ title: `App.svelte`, content: svelte_code }] },
   })
 
-  await vi.waitFor(() => {
-    if (!doc_query(`pre code`).querySelector(`span[class^="pl-"]`)) {
-      throw new Error(`no highlighted spans yet`)
-    }
-  }, { timeout: 5000 })
+  await vi.waitFor(
+    () => {
+      if (!doc_query(`pre code`).querySelector(`span[class^="pl-"]`)) {
+        throw new Error(`no highlighted spans yet`)
+      }
+    },
+    { timeout: 5000 },
+  )
   expect(doc_query(`pre code`).textContent).toContain(`let count`)
 })
 

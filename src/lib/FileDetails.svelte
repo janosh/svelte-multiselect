@@ -66,7 +66,7 @@
 
   // Infer language from title (may contain HTML like <code>foo.ts</code>)
   function lang_from_title(title: string): string | undefined {
-    const ext = title.replace(/<[^>]*>/g, ``).match(/\.(\w+)$/)?.[1]?.toLowerCase()
+    const ext = title.replaceAll(/<[^>]*>/g, ``).match(/\.(\w+)$/)?.[1]?.toLowerCase()
     return ext ? ext_to_lang[ext] ?? ext : undefined
   }
 
@@ -86,7 +86,7 @@
     flagToScope: (flag: string) => string | undefined
   } | undefined
   const escape_html = (str: string): string =>
-    str.replace(/&/g, `&amp;`).replace(/</g, `&lt;`).replace(/>/g, `&gt;`)
+    str.replaceAll(`&`, `&amp;`).replaceAll(`<`, `&lt;`).replaceAll(`>`, `&gt;`)
   const hast_to_html = (node: HastNode): string => {
     if (node.type === `text`) return escape_html(node.value ?? ``)
     if (node.type === `root`) return (node.children ?? []).map(hast_to_html).join(``)
@@ -148,9 +148,7 @@
           </summary>
         {/if}
 
-        <pre
-          class="language-{language}"
-        ><code>{#if highlighted_cache[cache_key]}{@html highlighted_cache[cache_key]}{:else}{content}{/if}</code></pre>
+        <pre class="language-{language}"><span class="lang-label">{language}</span><code>{#if highlighted_cache[cache_key]}{@html highlighted_cache[cache_key]}{:else}{content}{/if}</code></pre>
       </details>
     </li>
   {/each}
@@ -167,6 +165,7 @@
     margin: 1ex 0;
   }
   pre {
+    position: relative;
     background: var(--pre-bg, light-dark(#f3f5f8, rgba(0, 0, 0, 0.3)));
   }
 </style>

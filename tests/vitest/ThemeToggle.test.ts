@@ -1,6 +1,6 @@
 import { ThemeToggle } from '$lib'
 import { mount, tick } from 'svelte'
-import { beforeEach, expect, test, vi } from 'vitest'
+import { beforeEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index.ts'
 
 // happy-dom's localStorage may lack standard methods — provide a minimal shim
@@ -41,15 +41,13 @@ test(`initial render stays hidden until hydration`, () => {
   expect(button.querySelector(`svg`)).toBeNull()
 })
 
-test.each(
-  [
-    { storage_key: `theme`, stored: `light`, effective: `light` },
-    { storage_key: `theme`, stored: `dark`, effective: `dark` },
-    { storage_key: `theme`, stored: `system`, effective: `light` },
-    { storage_key: `theme_mode`, stored: `light`, effective: `light` },
-    { storage_key: `theme_mode`, stored: `dark`, effective: `dark` },
-  ] as const,
-)(
+test.each([
+  { storage_key: `theme`, stored: `light`, effective: `light` },
+  { storage_key: `theme`, stored: `dark`, effective: `dark` },
+  { storage_key: `theme`, stored: `system`, effective: `light` },
+  { storage_key: `theme_mode`, stored: `light`, effective: `light` },
+  { storage_key: `theme_mode`, stored: `dark`, effective: `dark` },
+] as const)(
   `mount applies $storage_key=$stored`,
   async ({ storage_key, stored, effective }) => {
     localStorage.setItem(storage_key, stored)

@@ -4,7 +4,7 @@ import {
   starry_night,
   starry_night_highlighter,
 } from '$lib/live-examples/highlighter'
-import { describe, expect, test } from 'vitest'
+import { describe, expect, test } from 'vite-plus/test'
 
 describe(`starry_night.flagToScope`, () => {
   test.each([
@@ -19,10 +19,7 @@ describe(`starry_night.flagToScope`, () => {
     `go`,
     `yaml`,
     `sql`,
-  ])(
-    `resolves %s`,
-    (lang) => expect(starry_night.flagToScope(lang)).toBeTypeOf(`string`),
-  )
+  ])(`resolves %s`, (lang) => expect(starry_night.flagToScope(lang)).toBeTypeOf(`string`))
 
   test.each([
     [`js`, `javascript`],
@@ -67,13 +64,11 @@ describe(`hast_to_html`, () => {
     expect(hast_to_html(node)).toBe(expected)
   })
 
-  test.each(
-    [
-      [[`pl-k`], `const`, `<span class="pl-k">const</span>`],
-      [[`pl-k`, `pl-s`], `x`, `<span class="pl-k pl-s">x</span>`],
-      [undefined, `x`, `<span>x</span>`],
-    ] as const,
-  )(`element with className=%j`, (className, text, expected) => {
+  test.each([
+    [[`pl-k`], `const`, `<span class="pl-k">const</span>`],
+    [[`pl-k`, `pl-s`], `x`, `<span class="pl-k pl-s">x</span>`],
+    [undefined, `x`, `<span>x</span>`],
+  ] as const)(`element with className=%j`, (className, text, expected) => {
     const node = {
       type: `element` as const,
       tagName: `span`,
@@ -145,7 +140,7 @@ describe(`starry_night_highlighter`, () => {
     [`md`, `# Hello`],
   ])(`highlights %s code`, (lang, code) => {
     const result = starry_night_highlighter(code, lang)
-    const escaped_lang = lang.replace(/[+]/g, `\\$&`)
+    const escaped_lang = lang.replaceAll(/[+]/g, `\\$&`)
     expect(result).toMatch(
       new RegExp(
         `^<pre class="highlight highlight-${escaped_lang}"><code>.*</code></pre>$`,

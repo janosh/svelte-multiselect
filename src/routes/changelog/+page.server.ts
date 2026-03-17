@@ -11,7 +11,5 @@ const section_level = (str: string) =>
   str.replace(`###`, `#`).replaceAll(`##`, `#`)
 
 export const load = async () => ({
-  changelog: await compile(
-    backticks_to_lt_gt(brace_to_paren(section_level(changelog))),
-  ),
+  changelog: await compile(backticks_to_lt_gt(brace_to_paren(section_level(changelog)))),
 })

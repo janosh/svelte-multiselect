@@ -22,7 +22,9 @@ test.describe(`Nav dropdown`, () => {
     await expect(dropdown.locator(`div[role="menu"] a`).first()).toBeVisible()
   })
 
-  test(`click pins dropdown: stays open on mouse leave, closes on click outside/Escape/toggle`, async ({ page }) => {
+  test(`click pins dropdown: stays open on mouse leave, closes on click outside/Escape/toggle`, async ({
+    page,
+  }) => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
 
     const dropdown = page.locator(`.dropdown`).first()

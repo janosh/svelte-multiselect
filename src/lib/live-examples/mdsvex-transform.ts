@@ -9,7 +9,7 @@ const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`b
 
 // Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
-  src.replace(/`/g, `\\\``).replace(/\$\{/g, `\\$\{`)
+  src.replaceAll(`\``, `\\\``).replaceAll(`\${`, `\\$\{`)
 
 // Regex to find <script> block in svelte
 // Note: These patterns handle common cases but may have edge cases with nested
@@ -90,9 +90,8 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
     // Helper to get or create a wrapper alias
     function get_wrapper_alias(wrapper: string | [string, string]): string {
       // Use '::' as delimiter to avoid misparsing paths with colons (Windows, URLs)
-      const wrapper_key = typeof wrapper === `string`
-        ? wrapper
-        : `${wrapper[0]}::${wrapper[1]}`
+      const wrapper_key =
+        typeof wrapper === `string` ? wrapper : `${wrapper[0]}::${wrapper[1]}`
       let alias = wrapper_aliases.get(wrapper_key)
       if (!alias) {
         alias = `Example_${wrapper_aliases.size}`
@@ -158,8 +157,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
     // Add example component imports
     for (const [idx, ex] of examples.entries()) {
       if (!ex.csr) {
-        scripts +=
-          `import ${EXAMPLE_COMPONENT_PREFIX}${idx} from "${EXAMPLE_MODULE_PREFIX}${idx}.svelte";\n`
+        scripts += `import ${EXAMPLE_COMPONENT_PREFIX}${idx} from "${EXAMPLE_MODULE_PREFIX}${idx}.svelte";\n`
       }
     }
 
@@ -217,21 +215,21 @@ function create_example_component(
   if (!scope) throw new Error(`Unsupported language: ${lang}`)
   const tree = starry_night.highlight(code, scope) as HastRoot
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
-  const highlighted = hast_to_html(tree).replace(/\n/g, `&#10;`)
+  const highlighted = hast_to_html(tree).replaceAll(`\n`, `&#10;`)
 
   // Code-only examples (ts, js, css, etc.) - just render highlighted code block
   if (!is_live) {
     // Close and reopen <p> to avoid block-in-inline HTML nesting issues
-    return `</p><pre class="highlight highlight-${lang}"><code>{@html ${
-      JSON.stringify(highlighted)
-    }}</code></pre><p>`
+    return `</p><pre class="highlight highlight-${lang}"><span class="lang-label">${lang}</span><code>{@html ${JSON.stringify(
+      highlighted,
+    )}}</code></pre><p>`
   }
 
   // Live examples (svelte, html) - render with CodeExample wrapper
   const component = `${EXAMPLE_COMPONENT_PREFIX}${index}`
   const base64_src = to_base64(value)
   const escaped_src = JSON.stringify(encode_escapes(code))
-  const escaped_meta = encode_escapes(JSON.stringify(meta))
+  const escaped_meta = encode_escapes(JSON.stringify({ ...meta, lang }))
 
   // Close and reopen <p> to avoid block-in-inline HTML nesting issues
   return `</p>
@@ -242,15 +240,15 @@ function create_example_component(
   >
     {#snippet example()}
       ${
-    meta.csr
-      ? `{#if typeof window !== 'undefined'}
+        meta.csr
+          ? `{#if typeof window !== 'undefined'}
         {#await import("${EXAMPLE_MODULE_PREFIX}${index}.svelte") then module}
           {@const ${component} = module.default}
           <${component} />
         {/await}
         {/if}`
-      : `<${component} />`
-  }
+          : `<${component} />`
+      }
     {/snippet}
 
     {#snippet code()}

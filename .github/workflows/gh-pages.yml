@@ -7,8 +7,34 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  pages: write
+  id-token: write
+
 jobs:
   build:
-    uses: janosh/workflows/.github/workflows/deno-gh-pages.yml@main
-    with:
-      deno-version: 2.3.7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - run: npm install
+      - run: npx vp build
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: build
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4

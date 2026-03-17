@@ -7,14 +7,19 @@ import {
   starry_night_highlighter,
 } from './src/lib/live-examples/index.ts'
 
-const remarkPlugins = [[mdsvex_transform, {
-  defaults: {
-    Wrapper: `/src/lib/CodeExample.svelte`,
-    repo: pkg.repository,
-    collapsible: true,
-    hide_style: true,
-  },
-}]]
+const remarkPlugins = [
+  [
+    mdsvex_transform,
+    {
+      defaults: {
+        Wrapper: `/src/lib/CodeExample.svelte`,
+        repo: pkg.repository,
+        collapsible: true,
+        hide_style: true,
+      },
+    },
+  ],
+]
 
 import type { Config } from '@sveltejs/kit'
 
@@ -47,7 +52,7 @@ const config: Config = {
       handleMissingId: ({ id }) => {
         // list of ok-to-be-missing IDs
         if ([`🔣-props`].includes(id)) return
-        throw `Missing ID: ${id}`
+        throw new Error(`Missing ID: ${id}`)
       },
       handleHttpError: ({ status, referrer, message }) => {
         // Ignore 404s from the /nav demo page which contains links to non-existent routes
