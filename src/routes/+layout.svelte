@@ -19,11 +19,14 @@
   }))
 
   if (browser) {
-    const saved_theme_mode = localStorage.getItem(`theme`)
-    if (saved_theme_mode === `light` || saved_theme_mode === `dark`) {
-      document.documentElement.style.colorScheme = saved_theme_mode
-      document.documentElement.dataset.theme = saved_theme_mode
-    }
+    const saved = localStorage.getItem(`theme`)
+    const effective = saved === `light` || saved === `dark`
+      ? saved
+      : matchMedia(`(prefers-color-scheme: dark)`).matches
+      ? `dark`
+      : `light`
+    document.documentElement.style.colorScheme = effective
+    document.documentElement.dataset.theme = effective
   }
 </script>
 

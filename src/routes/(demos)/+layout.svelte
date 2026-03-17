@@ -13,13 +13,8 @@
   {@render children?.()}
 
   {#if is_visible_demo}
-    <PrevNext
-      items={demo_pages}
-      current={page.url.pathname}
-      style="max-width: var(--main-max-width); margin: 2em auto"
-      onkeyup={null}
-      link_props={{ style: `background: var(--surface); padding: 2pt 6pt; border-radius: 3pt;` }}
-    />
+    {@const style = `max-width: var(--main-max-width); margin: 2em auto`}
+    <PrevNext items={demo_pages} current={page.url.pathname} onkeyup={null} {style} />
   {/if}
 </main>
 

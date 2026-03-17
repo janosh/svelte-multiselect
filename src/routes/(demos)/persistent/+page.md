@@ -26,7 +26,7 @@ This example shows how to combine MultiSelect with `sessionStorage` to persist t
   placeholder="What languages do you know?"
   bind:selected
 >
-  {#snippet selectedItem({ idx, option })}
+  {#snippet children({ idx, option })}
     <LanguageSnippet {option} {idx} />
   {/snippet}
 </MultiSelect>

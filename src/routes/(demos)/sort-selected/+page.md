@@ -31,13 +31,7 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 ```svelte example id="custom-sort"
 <script lang="ts">
   import MultiSelect from '$lib'
-  import type { ObjectOption } from '$lib/types'
-  import { frontend_libs } from '$site/options'
-
-  interface FrontendLib extends ObjectOption {
-    lang: string
-    repo_handle: string
-  }
+  import { frontend_libs, type FrontendLib } from '$site/options'
 
   const sortSelected = (op1: FrontendLib, op2: FrontendLib): number => {
     if (op1.lang !== op2.lang) return op1.lang.localeCompare(op2.lang)

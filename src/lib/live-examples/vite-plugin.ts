@@ -74,10 +74,9 @@ export default function live_examples_plugin(
 
   // Extracted examples as individual virtual files (id -> svelte source)
   const virtual_files = new Map<string, string>()
-  // Reverse lookup: parent markdown path -> set of virtual file IDs (for O(1) HMR lookups)
-  const parent_to_virtual = new Map<string, Set<string>>()
 
   let vite_server: ViteDevServer | undefined
+  let pending_hmr_file: string | null = null
   const cwd = process.cwd().replace(/\\/g, `/`)
 
   // Pre-enforce plugin ensures resolveId runs before vite-plugin-svelte's
@@ -176,19 +175,28 @@ export default function live_examples_plugin(
           if (src !== virtual_files.get(virtual_id)) {
             virtual_files.set(virtual_id, src)
 
-            // Update reverse lookup for HMR (get-or-create pattern)
-            const virtual_set = parent_to_virtual.get(base_id) ?? new Set()
-            if (!parent_to_virtual.has(base_id)) {
-              parent_to_virtual.set(base_id, virtual_set)
-            }
-            virtual_set.add(virtual_id)
-
-            // Invalidate modules for HMR
+            // Invalidate virtual modules and schedule a deferred reload so
+            // load() returns fresh content from virtual_files (which was just updated).
             if (vite_server) {
               const mod = vite_server.moduleGraph.getModuleById(virtual_id)
               const parent_mod = vite_server.moduleGraph.getModuleById(base_id)
               if (mod) vite_server.moduleGraph.invalidateModule(mod)
               if (parent_mod) vite_server.moduleGraph.invalidateModule(parent_mod)
+
+              // Also invalidate CSS derived modules so stale CSS cache is cleared
+              const css_id = `${virtual_id}?svelte&type=style&lang.css`
+              const css_mod = vite_server.moduleGraph.getModuleById(css_id)
+              if (css_mod) vite_server.moduleGraph.invalidateModule(css_mod)
+
+              // Trigger full-reload only during HMR (not initial page load).
+              // reloadModule alone doesn't work because vite-plugin-svelte's hot-update
+              // handler skips CSS-only changes when the JS output is identical.
+              if (pending_hmr_file === base_id) {
+                pending_hmr_file = null
+                setTimeout(() => {
+                  vite_server?.hot.send({ type: `full-reload`, path: `*` })
+                }, 200)
+              }
             }
           }
 
@@ -200,6 +208,10 @@ export default function live_examples_plugin(
             edits.push({ start: prop.start, end, content: `` })
           }
         }
+
+        // Clear pending state even if no examples changed — stale flag would
+        // cause an unnecessary full-reload on a future edit
+        if (pending_hmr_file === base_id) pending_hmr_file = null
 
         // Update import paths (static and dynamic) to use virtual file IDs
         const imports = [
@@ -228,23 +240,14 @@ export default function live_examples_plugin(
     },
 
     handleHotUpdate(ctx: HmrContext) {
-      // Collect virtual file modules that need HMR updates
-      const additional_modules: typeof ctx.modules = []
-
-      // Normalize to forward slashes (ctx.file uses OS separators, Map keys use Vite's forward slashes)
       const file = ctx.file.replace(/\\/g, `/`)
-      // O(1) lookup using reverse map instead of iterating all virtual files
       if (extensions.some((ext) => file.endsWith(ext))) {
-        const virtual_ids = parent_to_virtual.get(file)
-        if (virtual_ids) {
-          for (const id of virtual_ids) {
-            const mod = ctx.server.moduleGraph.getModuleById(id)
-            if (mod) additional_modules.push(mod)
-          }
-        }
+        pending_hmr_file = file
       }
-
-      return [...additional_modules, ...ctx.modules]
+      // Don't add virtual modules here — they'd be loaded with stale content
+      // since the parent .md hasn't been re-transformed yet. The transform
+      // hook handles invalidation + reload after virtual_files is updated.
+      return ctx.modules
     },
   }
 

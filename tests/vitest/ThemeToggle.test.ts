@@ -3,23 +3,35 @@ import { mount, tick } from 'svelte'
 import { beforeEach, expect, test, vi } from 'vitest'
 import { doc_query } from './index.ts'
 
-const mount_theme_toggle = async () => {
-  mount(ThemeToggle, { target: document.body })
-  await tick()
-  const button = doc_query<HTMLButtonElement>(`button`)
-  return { button }
-}
-
-const expect_applied_theme = (theme_mode: `light` | `dark`) => {
-  expect(document.documentElement.style.colorScheme).toBe(theme_mode)
-  expect(document.documentElement.dataset.theme).toBe(theme_mode)
-}
+// happy-dom's localStorage may lack standard methods — provide a minimal shim
+const storage = new Map<string, string>()
+Object.defineProperty(globalThis, `localStorage`, {
+  value: {
+    getItem: (key: string) => storage.get(key) ?? null,
+    setItem: (key: string, val: string) => storage.set(key, val),
+    removeItem: (key: string) => storage.delete(key),
+    clear: () => storage.clear(),
+  },
+  writable: true,
+})
 
 beforeEach(() => {
-  localStorage.clear()
+  vi.restoreAllMocks()
+  storage.clear()
   document.documentElement.style.colorScheme = ``
   delete document.documentElement.dataset.theme
 })
+
+const mount_theme_toggle = async () => {
+  mount(ThemeToggle, { target: document.body })
+  await tick()
+  return doc_query<HTMLButtonElement>(`button`)
+}
+
+const expect_applied_theme = (effective: `light` | `dark`) => {
+  expect(document.documentElement.style.colorScheme).toBe(effective)
+  expect(document.documentElement.dataset.theme).toBe(effective)
+}
 
 test(`initial render stays hidden until hydration`, () => {
   localStorage.setItem(`theme`, `light`)
@@ -31,52 +43,58 @@ test(`initial render stays hidden until hydration`, () => {
 
 test.each(
   [
-    { storage_key: `theme`, stored_theme_mode: `light` },
-    { storage_key: `theme`, stored_theme_mode: `dark` },
-    { storage_key: `theme_mode`, stored_theme_mode: `light` },
-    { storage_key: `theme_mode`, stored_theme_mode: `dark` },
+    { storage_key: `theme`, stored: `light`, effective: `light` },
+    { storage_key: `theme`, stored: `dark`, effective: `dark` },
+    { storage_key: `theme`, stored: `system`, effective: `light` },
+    { storage_key: `theme_mode`, stored: `light`, effective: `light` },
+    { storage_key: `theme_mode`, stored: `dark`, effective: `dark` },
   ] as const,
 )(
-  `mount applies $storage_key=$stored_theme_mode`,
-  async ({ storage_key, stored_theme_mode }) => {
-    const next_mode = stored_theme_mode === `light` ? `dark` : `light`
-    const expected_title = `Switch to ${next_mode} theme`
-    localStorage.setItem(storage_key, stored_theme_mode)
-    const { button } = await mount_theme_toggle()
-    expect_applied_theme(stored_theme_mode)
-    expect(button.title).toBe(expected_title)
+  `mount applies $storage_key=$stored`,
+  async ({ storage_key, stored, effective }) => {
+    localStorage.setItem(storage_key, stored)
+    await mount_theme_toggle()
+    expect_applied_theme(effective)
   },
 )
 
 test(`gracefully degrades when localStorage throws`, async () => {
-  const get_spy = vi.spyOn(localStorage, `getItem`).mockImplementation(() => {
+  vi.spyOn(localStorage, `getItem`).mockImplementation(() => {
     throw new DOMException(`storage disabled`)
   })
-  const set_spy = vi.spyOn(localStorage, `setItem`).mockImplementation(() => {
+  vi.spyOn(localStorage, `setItem`).mockImplementation(() => {
     throw new DOMException(`storage disabled`)
   })
 
-  const { button } = await mount_theme_toggle()
+  const button = await mount_theme_toggle()
   expect(button.style.visibility).toBe(`visible`)
-  expect(document.documentElement.dataset.theme).toMatch(/^(light|dark)$/)
+  expect_applied_theme(`light`)
 
   button.click()
   await tick()
-  expect(document.documentElement.dataset.theme).toMatch(/^(light|dark)$/)
-
-  get_spy.mockRestore()
-  set_spy.mockRestore()
+  expect_applied_theme(`dark`)
 })
 
-test(`click toggles theme and persists only theme key`, async () => {
-  localStorage.setItem(`theme`, `dark`)
-  const { button } = await mount_theme_toggle()
+test(`click cycles through light -> system -> dark -> light`, async () => {
+  localStorage.setItem(`theme`, `light`)
+  const button = await mount_theme_toggle()
+  expect_applied_theme(`light`)
 
+  // light -> system (resolves to light via mock with matches: false)
   button.click()
   await tick()
-
+  expect(localStorage.getItem(`theme`)).toBe(`system`)
   expect_applied_theme(`light`)
+
+  // system -> dark
+  button.click()
+  await tick()
+  expect(localStorage.getItem(`theme`)).toBe(`dark`)
+  expect_applied_theme(`dark`)
+
+  // dark -> light
+  button.click()
+  await tick()
   expect(localStorage.getItem(`theme`)).toBe(`light`)
-  expect(localStorage.getItem(`theme_mode`)).toBeNull()
-  expect(button.title).toBe(`Switch to dark theme`)
+  expect_applied_theme(`light`)
 })

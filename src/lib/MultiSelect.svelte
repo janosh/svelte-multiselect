@@ -781,11 +781,8 @@
         // Fire oncreate event for all user-created options, regardless of type
         oncreate?.({ option: option_to_add })
         if (allowUserOptions === `append`) {
-          if (loadOptions) {
-            loaded_options = [...loaded_options, option_to_add]
-          } else {
-            options = [...(options ?? []), option_to_add]
-          }
+          if (loadOptions) loaded_options = [...loaded_options, option_to_add]
+          else options = [...(options ?? []), option_to_add]
         }
       }
 
@@ -828,9 +825,7 @@
     if (option_removed === undefined) {
       console.error(
         `MultiSelect: can't remove option ${
-          JSON.stringify(
-            option_to_drop,
-          )
+          JSON.stringify(option_to_drop)
         }, not found in selected list`,
       )
       return
@@ -846,7 +841,7 @@
   function open_dropdown(event: Event) {
     event.stopPropagation()
 
-    if (disabled) return
+    if (disabled || open) return
     open = true
     if (!(event instanceof FocusEvent)) {
       // avoid double-focussing input when event that opened dropdown was already input FocusEvent
@@ -856,6 +851,7 @@
   }
 
   function close_dropdown(event: Event, retain_focus = false) {
+    if (!open) return
     open = false
     if (!retain_focus) input?.blur()
     activeIndex = null
