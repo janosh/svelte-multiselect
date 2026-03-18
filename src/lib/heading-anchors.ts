@@ -101,7 +101,8 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
     if (!base_id) return
     // Ensure unique ID in document
     let counter = 0
-    while (document.getElementById(counter ? `${base_id}-${counter}` : base_id)) counter++
+    while (document.querySelector(`#${counter ? `${base_id}-${counter}` : base_id}`))
+      counter++
     heading.id = counter ? `${base_id}-${counter}` : base_id
   }
   const anchor = document.createElement(`a`)

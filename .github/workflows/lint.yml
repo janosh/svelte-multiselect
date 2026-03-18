@@ -18,5 +18,8 @@ jobs:
 
       - run: npm install
 
-      - name: Lint and format check
+      - name: Lint, format, and type check
         run: npx vp check
+
+      - name: Svelte type check
+        run: npx svelte-kit sync && npx svelte-check-rs --threshold error

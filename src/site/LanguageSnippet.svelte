@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements'
 
-  let { option, idx = undefined, height = `20px`, gap = `5pt`, ...rest }: {
+  let { option, idx, height = `20px`, gap = `5pt`, ...rest }: {
     option: string
     idx?: number | undefined
     height?: string

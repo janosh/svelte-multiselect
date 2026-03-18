@@ -188,7 +188,7 @@
   }
 
   function is_current(path: string | undefined) {
-    if (!path) return undefined
+    if (!path) return
     if (path === `/`) return page?.url.pathname === `/` ? `page` : undefined
     // Match exact path or path followed by / to avoid partial matches
     // e.g. /tc-periodic-v2 should not match /tc-periodic
@@ -231,7 +231,7 @@
       return tooltip({ ...tooltip_options, content: route.disabled })
     }
     const content = route.tooltip ?? tooltips?.[route.href]
-    if (!content) return undefined
+    if (!content) return
     // Support both string (content only) and object (full options) formats
     const opts = typeof content === `string` ? { content } : content
     return tooltip({ ...tooltip_options, ...opts })

@@ -53,7 +53,7 @@
     liUserMsgClass = ``,
     loading = false,
     matchingOptions = $bindable([]),
-    maxOptions = undefined,
+    maxOptions,
     maxSelect = $bindable(null),
     maxSelectMsg = (current, max) => (max > 1 ? `${current}/${max}` : ``),
     maxSelectMsgClass = ``,
@@ -767,16 +767,14 @@
         if (typeof effective_options[0] === `object`) {
           // if 1st option is an object, we create new option as object to keep type homogeneity
           option_to_add = { label: searchText } as Option
+        } else if (
+          [`number`, `undefined`].includes(typeof effective_options[0]) &&
+          !isNaN(Number(searchText))
+        ) {
+          // create new option as number if it parses to a number and 1st option is also number or missing
+          option_to_add = Number(searchText) as Option
         } else {
-          if (
-            [`number`, `undefined`].includes(typeof effective_options[0]) &&
-            !isNaN(Number(searchText))
-          ) {
-            // create new option as number if it parses to a number and 1st option is also number or missing
-            option_to_add = Number(searchText) as Option
-          } else {
-            option_to_add = searchText as Option // else create custom option as string
-          }
+          option_to_add = searchText as Option // else create custom option as string
         }
         // Fire oncreate event for all user-created options, regardless of type
         oncreate?.({ option: option_to_add })
@@ -902,13 +900,13 @@
     // toggle user message when no options match but user can create
     if (
       allowUserOptions &&
-      !navigable_options.length &&
+      navigable_options.length === 0 &&
       searchText.length > 0
     ) {
       option_msg_is_active = !option_msg_is_active
       return
     }
-    if (activeIndex === null && !navigable_options.length) return // nothing to navigate
+    if (activeIndex === null && navigable_options.length === 0) return // nothing to navigate
 
     // activate first option or navigate with wrap-around
     if (activeIndex === null) {
@@ -1165,7 +1163,7 @@
   const drop = (target_idx: number) => (event: DragEvent) => {
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
-    const start_idx = parseInt(event.dataTransfer.getData(`text/plain`))
+    const start_idx = parseInt(event.dataTransfer.getData(`text/plain`), 10)
     const previous = [...selected]
     const new_selected = [...selected]
 

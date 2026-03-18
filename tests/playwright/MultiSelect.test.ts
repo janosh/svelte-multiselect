@@ -22,7 +22,7 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
 
   // Also verify count directly for robustness
   const count_text = await status.textContent()
-  const count = parseInt(count_text?.match(/\d+/)?.[0] ?? `0`)
+  const count = parseInt(count_text?.match(/\d+/)?.[0] ?? `0`, 10)
   expect(count).toBeLessThan(10)
 })
 
@@ -1662,7 +1662,7 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
                 results.ul_selected_li = true
               }
               // Check ul.options uses :where()
-              if (/:where\(ul\.options/.test(sel)) {
+              if (sel.includes(`:where(ul.options`)) {
                 results.ul_options = true
               }
             }

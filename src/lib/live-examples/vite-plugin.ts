@@ -186,8 +186,9 @@ export default function live_examples_plugin(
               // handler skips CSS-only changes when the JS output is identical.
               if (pending_hmr_file === base_id) {
                 pending_hmr_file = null
+                const server_ref = vite_server
                 setTimeout(() => {
-                  vite_server?.hot.send({ type: `full-reload`, path: `*` })
+                  server_ref?.hot.send({ type: `full-reload`, path: `*` })
                 }, 200)
               }
             }

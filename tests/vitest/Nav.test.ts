@@ -815,7 +815,7 @@ describe(`Nav`, () => {
     })
 
     test.each([
-      [`clicking link`, async () => await click(doc_query(`a`))],
+      [`clicking link`, () => click(doc_query(`a`))],
       [
         `pressing Escape`,
         () => globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` })),
@@ -1112,7 +1112,7 @@ describe(`Nav`, () => {
         const toggle = doc_query(`[data-dropdown-toggle]`)
 
         toggle.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
-        await new Promise((r) => setTimeout(r, 0))
+        await new Promise((resolve) => setTimeout(resolve, 0))
         expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
         mouse_leave(dropdown)
@@ -1143,7 +1143,7 @@ describe(`Nav`, () => {
         new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
       )
       // toggle_dropdown uses setTimeout(..., 0) to focus first item, so need macrotask flush
-      await new Promise((r) => setTimeout(r, 0))
+      await new Promise((resolve) => setTimeout(resolve, 0))
       expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       expect(document.activeElement).toBe(dropdown_menu?.querySelector(`a`))
     })

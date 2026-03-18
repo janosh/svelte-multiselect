@@ -1,4 +1,4 @@
-import { type Attachment } from 'svelte/attachments'
+import type { Attachment } from 'svelte/attachments'
 import { get_uuid } from './utils'
 
 // Re-export get_uuid for backwards compatibility
@@ -315,7 +315,7 @@ export const sortable =
       original_style: string
     }[] = []
 
-    for (const [idx, header] of headers.entries()) {
+    headers.forEach((header, idx) => {
       const original_text = header.textContent ?? ``
       const original_style = header.getAttribute(`style`) ?? ``
       header.style.cursor = `pointer` // add cursor pointer to headers
@@ -373,7 +373,7 @@ export const sortable =
 
       header.addEventListener(`click`, click_handler)
       header_state.push({ header, handler: click_handler, original_text, original_style })
-    }
+    })
 
     // Return cleanup function that fully restores original state
     return () => {
@@ -459,25 +459,24 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       }
 
       return []
-    } else {
-      // Substring highlighting: highlight consecutive substrings
-      const indices = []
-      let start_pos = 0
-      while (start_pos < text.length) {
-        const index = text.indexOf(search, start_pos)
-        if (index === -1) break
-        indices.push(index)
-        start_pos = index + search.length
-      }
-
-      // create range object for each substring found in the text node
-      return indices.map((index) => {
-        const range = new Range()
-        range.setStart(el, index)
-        range.setEnd(el, index + search.length)
-        return range
-      })
     }
+    // Substring highlighting: highlight consecutive substrings
+    const indices = []
+    let start_pos = 0
+    while (start_pos < text.length) {
+      const index = text.indexOf(search, start_pos)
+      if (index === -1) break
+      indices.push(index)
+      start_pos = index + search.length
+    }
+
+    // create range object for each substring found in the text node
+    return indices.map((index) => {
+      const range = new Range()
+      range.setStart(el, index)
+      range.setEnd(el, index + search.length)
+      return range
+    })
   })
 
   // create Highlight object from ranges and add to registry
@@ -562,11 +561,9 @@ export const tooltip =
 
     function setup_tooltip(element: HTMLElement) {
       const tooltip_attrs = [`title`, `aria-label`, `data-title`]
-      // Use let so content can be updated reactively
+      // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string should fall through
       let content =
-        options.content ||
-        element.title ||
-        element.getAttribute(`aria-label`) ||
+        ((options.content ?? element.title) || element.getAttribute(`aria-label`)) ??
         element.getAttribute(`data-title`)
       if (!content) return
 
@@ -716,13 +713,13 @@ export const tooltip =
           // Save styles, measure single-line width with wrapping disabled
           const saved = {
             maxWidth: style.maxWidth,
-            wordWrap: style.wordWrap,
+            overflowWrap: style.overflowWrap,
             textWrap: style.textWrap,
             whiteSpace: style.whiteSpace,
           }
           Object.assign(style, {
             maxWidth: `none`,
-            wordWrap: `normal`,
+            overflowWrap: `normal`,
             textWrap: `nowrap`,
             whiteSpace: `nowrap`,
             width: `auto`,
@@ -751,7 +748,7 @@ export const tooltip =
             const min_width = tooltip_el.offsetWidth
             Object.assign(style, {
               maxWidth: saved.maxWidth,
-              wordWrap: saved.wordWrap,
+              overflowWrap: saved.overflowWrap,
               width: `${initial_width - box_adjust}px`,
             })
 
@@ -848,7 +845,7 @@ export const tooltip =
         show_timeout = setTimeout(() => {
           const tooltip_el = document.createElement(`div`)
           tooltip_el.className = `custom-tooltip`
-          const placement = options.placement || `bottom`
+          const placement = options.placement ?? `bottom`
           tooltip_el.setAttribute(`data-placement`, placement)
 
           // Accessibility: link tooltip to trigger element
@@ -916,7 +913,7 @@ export const tooltip =
           resize_and_position_tooltip(tooltip_el, element)
 
           current_tooltip = Object.assign(tooltip_el, { _owner: element })
-        }, options.delay || 100)
+        }, options.delay ?? 100)
       }
 
       function handle_keydown(event: KeyboardEvent) {

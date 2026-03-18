@@ -54,9 +54,7 @@ export function get_style(
     if (typeof option.style === `string`) css_str = option.style
     if (typeof option.style === `object`) {
       if (key && key in option.style) return option.style[key] ?? ``
-      else {
-        console.error(`MultiSelect: invalid style object for option`, option)
-      }
+      else if (key) console.error(`MultiSelect: invalid style object for option`, option)
     }
   }
   // ensure css_str ends with a semicolon

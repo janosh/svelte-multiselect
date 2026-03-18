@@ -224,7 +224,7 @@ test(`does not close dialog when clicking on portalled options`, async () => {
   expect(document.querySelector(`dialog`)).not.toBe(null)
 
   // Clean up
-  document.body.removeChild(portalled_options)
+  portalled_options.remove()
 })
 
 test(`!target.closest('ul.options') prevents premature closure`, async () => {
