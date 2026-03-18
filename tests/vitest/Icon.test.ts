@@ -4,9 +4,9 @@ import { mount } from 'svelte'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`Icon`, () => {
-  const get_svg = () => document.body.querySelector(`svg`) as SVGSVGElement
+  const get_svg = () => document.body.querySelector<SVGSVGElement>(`svg`)
 
-  test.each(Object.keys(icon_data) as IconName[])(
+  test.each(Object.keys(icon_data).filter((key): key is IconName => key in icon_data))(
     `renders %s icon with correct viewBox and path`,
     (icon_name) => {
       mount(Icon, { target: document.body, props: { icon: icon_name } })
@@ -14,9 +14,9 @@ describe(`Icon`, () => {
       const expected = icon_data[icon_name]
 
       expect(svg).toBeInstanceOf(SVGElement)
-      expect(svg.getAttribute(`viewBox`)).toBe(expected.viewBox)
-      expect(svg.getAttribute(`fill`)).toBe(`currentColor`)
-      expect(svg.querySelector(`path`)?.getAttribute(`d`)).toBe(expected.path)
+      expect(svg?.getAttribute(`viewBox`)).toBe(expected.viewBox)
+      expect(svg?.getAttribute(`fill`)).toBe(`currentColor`)
+      expect(svg?.querySelector(`path`)?.getAttribute(`d`)).toBe(expected.path)
     },
   )
 
@@ -48,7 +48,10 @@ describe(`Icon`, () => {
     ],
   ] as const)(`applies %s attribute via rest props`, (attr, value, getter, expected) => {
     mount(Icon, { target: document.body, props: { icon: `Check`, [attr]: value } })
-    expect(getter(get_svg())).toBe(expected)
+    const svg = get_svg()
+    expect(svg).not.toBeNull()
+    if (!svg) return
+    expect(getter(svg)).toBe(expected)
   })
 
   test.each([`NonExistentIcon`, ``, `   `])(
@@ -56,12 +59,15 @@ describe(`Icon`, () => {
     (invalid_icon) => {
       const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
 
-      // @ts-expect-error - testing invalid icon name
-      mount(Icon, { target: document.body, props: { icon: invalid_icon } })
+      mount(Icon, {
+        target: document.body,
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing invalid icon name
+        props: { icon: invalid_icon as IconName },
+      })
 
       expect(console_error).toHaveBeenCalledWith(`Icon '${invalid_icon}' not found`)
-      expect(get_svg().getAttribute(`viewBox`)).toBe(icon_data.Alert.viewBox)
-      expect(get_svg().querySelector(`path`)?.getAttribute(`d`)).toBe(
+      expect(get_svg()?.getAttribute(`viewBox`)).toBe(icon_data.Alert.viewBox)
+      expect(get_svg()?.querySelector(`path`)?.getAttribute(`d`)).toBe(
         icon_data.Alert.path,
       )
 
@@ -71,7 +77,10 @@ describe(`Icon`, () => {
 
   test(`has correct default styles`, () => {
     mount(Icon, { target: document.body, props: { icon: `Check` } })
-    const styles = getComputedStyle(get_svg())
+    const svg = get_svg()
+    expect(svg).not.toBeNull()
+    if (!svg) return
+    const styles = getComputedStyle(svg)
     expect(styles.display).toBe(`inline-block`)
     expect(styles.verticalAlign).toBe(`middle`)
   })

@@ -27,9 +27,18 @@ interface TestPlugin {
 
 // Merge resolve (enforce:'pre') and main plugins into one for testing
 const get_plugin = (options = {}): TestPlugin => {
-  const [resolve, main] = vite_plugin(options) as unknown as TestPlugin[]
+  // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- plugin returns Plugin[] which we test via TestPlugin
+  const plugins = vite_plugin(options) as unknown as TestPlugin[]
+  const [resolve, main] = plugins
   return { ...main, resolveId: resolve.resolveId, enforce: resolve.enforce }
 }
+
+const transform_code = (
+  plugin: TestPlugin,
+  ctx: ReturnType<typeof create_mock_context>,
+  code: string,
+  id: string,
+) => plugin.transform?.call(ctx, code, id)?.code ?? ``
 
 const create_mock_context = () => ({ warn: vi.fn(), error: vi.fn() })
 const create_mock_server = (hot_send = vi.fn()) => ({
@@ -42,6 +51,7 @@ const create_mock_server = (hot_send = vi.fn()) => ({
 
 describe(`plugin initialization`, () => {
   test(`returns two plugins: resolve (pre) and main`, () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing plugin shape
     const [resolve, main] = vite_plugin() as unknown as TestPlugin[]
     expect(resolve.name).toBe(`live-examples-resolve`)
     expect(resolve.enforce).toBe(`pre`)
@@ -128,10 +138,7 @@ describe(`transform`, () => {
     [`?inline&svelte&type=style&lang.css`, `SSR with ?inline prefix`],
   ])(`skips derived modules with query %s (%s)`, (query) => {
     const code = `const props = { __live_example_src: "${to_base64(`<div>Test</div>`)}" }`
-    const result = plugin.transform?.call(ctx, code, `/file.md${query}`) as {
-      code: string
-    }
-    expect(result.code).toBe(code)
+    expect(transform_code(plugin, ctx, code, `/file.md${query}`)).toBe(code)
   })
 
   test(`returns original code when AST parsing fails`, () => {
@@ -144,9 +151,9 @@ describe(`transform`, () => {
     const code = `const props = { __live_example_src: "${to_base64(
       `<div>Hello</div>`,
     )}", other: "value" }`
-    const result = plugin.transform?.call(ctx, code, `/file.md`) as { code: string }
-    expect(result.code).not.toContain(`__live_example_src`)
-    expect(result.code).toContain(`other`)
+    const result_code = transform_code(plugin, ctx, code, `/file.md`)
+    expect(result_code).not.toContain(`__live_example_src`)
+    expect(result_code).toContain(`other`)
   })
 
   test.each([
@@ -157,8 +164,8 @@ describe(`transform`, () => {
     ],
   ])(`updates %s paths to absolute virtual file IDs`, (_, code) => {
     const id = `/path/to/file.md`
-    const result = plugin.transform?.call(ctx, code, id) as { code: string }
-    expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
+    const result_code = transform_code(plugin, ctx, code, id)
+    expect(result_code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
   })
 
   test(`applies multiple edits in correct order`, () => {
@@ -166,10 +173,10 @@ describe(`transform`, () => {
       const a = { __live_example_src: "${to_base64(`<div>First</div>`)}", x: 1 };
       const b = { __live_example_src: "${to_base64(`<div>Second</div>`)}", y: 2 };
     `
-    const result = plugin.transform?.call(ctx, code, `/file.md`) as { code: string }
-    expect(result.code).not.toContain(`__live_example_src`)
-    expect(result.code).toContain(`x: 1`)
-    expect(result.code).toContain(`y: 2`)
+    const result_code = transform_code(plugin, ctx, code, `/file.md`)
+    expect(result_code).not.toContain(`__live_example_src`)
+    expect(result_code).toContain(`x: 1`)
+    expect(result_code).toContain(`y: 2`)
   })
 
   test(`handles multiple static and dynamic imports`, () => {
@@ -179,9 +186,9 @@ describe(`transform`, () => {
       const C = await import("${EXAMPLE_MODULE_PREFIX}2.svelte");
     `
     const id = `/path/to/file.md`
-    const result = plugin.transform?.call(ctx, code, id) as { code: string }
+    const result_code = transform_code(plugin, ctx, code, id)
     for (const idx of [0, 1, 2]) {
-      expect(result.code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}${idx}.svelte`)
+      expect(result_code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}${idx}.svelte`)
     }
   })
 
@@ -235,13 +242,13 @@ describe(`transform`, () => {
       const props0 = { __live_example_src: "${to_base64(content0)}" };
       const props1 = { __live_example_src: "${to_base64(content1)}" };
     `
-    const result = plugin.transform?.call(ctx, code, id) as { code: string }
+    const result_code = transform_code(plugin, ctx, code, id)
 
     const virtual_id0 = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
     const virtual_id1 = `${id}${EXAMPLE_MODULE_PREFIX}1.svelte`
-    expect(result.code).toContain(virtual_id0)
-    expect(result.code).toContain(virtual_id1)
-    expect(result.code).not.toContain(`__live_example_src`)
+    expect(result_code).toContain(virtual_id0)
+    expect(result_code).toContain(virtual_id1)
+    expect(result_code).not.toContain(`__live_example_src`)
 
     expect(plugin.load?.call(ctx, virtual_id0)).toBe(content0)
     expect(plugin.load?.call(ctx, virtual_id1)).toBe(content1)

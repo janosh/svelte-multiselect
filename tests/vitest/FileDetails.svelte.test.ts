@@ -115,7 +115,7 @@ test(`toggle all button opens, closes, and handles partial open state`, async ()
   await tick()
 
   const details = Array.from(document.querySelectorAll(`details`))
-  const btn = doc_query(`button[title='toggle all']`)
+  const btn = doc_query<HTMLElement>(`button[title='toggle all']`)
   const all_open = () => details.every((d) => d.open)
   const all_closed = () => details.every((d) => !d.open)
 

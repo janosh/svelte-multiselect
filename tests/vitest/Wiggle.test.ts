@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 describe(`Wiggle`, () => {
   beforeEach(vi.useFakeTimers)
 
-  const get_span = () => document.body.querySelector(`span`) as HTMLSpanElement
+  const get_span = () => document.body.querySelector<HTMLSpanElement>(`span`)
 
   // Helper to create bindable wiggle props
   const create_bindable_wiggle = (
@@ -30,9 +30,9 @@ describe(`Wiggle`, () => {
     mount(Wiggle, { target: document.body })
     const span = get_span()
     expect(span).toBeInstanceOf(HTMLSpanElement)
-    expect(span.style.transform).toContain(`rotate`)
-    expect(span.style.transform).toContain(`scale`)
-    expect(span.style.transform).toContain(`translate`)
+    expect(span?.style.transform).toContain(`rotate`)
+    expect(span?.style.transform).toContain(`scale`)
+    expect(span?.style.transform).toContain(`translate`)
   })
 
   test.each([200, 500])(`resets wiggle to false after duration=%dms`, (duration) => {
@@ -57,7 +57,7 @@ describe(`Wiggle`, () => {
         spring_options: { stiffness: 0.08, damping: 0.15 },
       },
     })
-    const transform = get_span().style.transform
+    const transform = get_span()?.style.transform
     expect(transform).toContain(`rotate`)
     expect(transform).toContain(`scale`)
     expect(transform).toContain(`translate`)

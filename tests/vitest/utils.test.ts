@@ -19,7 +19,7 @@ describe(`get_uuid`, () => {
     /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 
   function with_fallback<T>(fn: () => T): T {
-    const original = globalThis.crypto?.randomUUID
+    const original = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)
     // @ts-expect-error - mocking randomUUID as undefined
     globalThis.crypto.randomUUID = undefined
     try {
@@ -60,7 +60,8 @@ describe(`get_label`, () => {
     [{ value: 42, name: `Test` }, undefined, true],
   ])(`handles option %j correctly`, (input, expected, should_log_error) => {
     console.error = vi.fn()
-    const result = get_label(input as Option)
+    // @ts-expect-error testing runtime behavior with non-Option types
+    const result = get_label(input)
     expect(result).toBe(expected)
 
     if (should_log_error) {
@@ -198,7 +199,8 @@ describe(`has_group`, () => {
     [`plain string`, false],
     [42, false],
   ])(`has_group(%j) returns %s`, (input, expected) => {
-    expect(has_group(input as Option)).toBe(expected)
+    // @ts-expect-error testing runtime behavior with non-Option types
+    expect(has_group(input)).toBe(expected)
   })
 })
 

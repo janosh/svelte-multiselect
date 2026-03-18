@@ -10,12 +10,13 @@ vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/` } } }))
 
 describe(`Nav`, () => {
   const default_routes = [`/`, `/about`, `/contact`]
-  const click = (el: Element) => {
-    el.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
+  const click = (el?: Element | null) => {
+    el?.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
+    return tick()
   }
   const query_dropdown_elements = () => {
     const dropdown = doc_query(`.dropdown`)
-    const dropdown_menu = dropdown.querySelector(`div:last-child`) as HTMLElement
+    const dropdown_menu = dropdown.querySelector<HTMLElement>(`div:last-child`)
     return { dropdown, dropdown_menu }
   }
 
@@ -142,6 +143,7 @@ describe(`Nav`, () => {
     [`/some-page`, `/some-page-v2`, null],
     [`/some-page/sub`, `/some-page`, `page`],
   ])(`aria-current: pathname=%s link=%s -> %s`, (pathname, link_href, expected) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
     const mock_page = { url: { pathname } } as Page
     mount(Nav, { target: document.body, props: { routes: [link_href], page: mock_page } })
     expect(doc_query(`a[href="${link_href}"]`).getAttribute(`aria-current`)).toBe(
@@ -155,7 +157,7 @@ describe(`Nav`, () => {
     const menu = doc_query(`.menu`)
 
     await click(button)
-    menu.click()
+    await click(menu)
     expect(button.getAttribute(`aria-expanded`)).toBe(`true`)
 
     const outside = document.createElement(`div`)
@@ -179,7 +181,7 @@ describe(`Nav`, () => {
     await click(burger_button)
     await click(toggle_button)
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
-    expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+    expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
     // Click outside should close both
     const outside = document.createElement(`div`)
@@ -187,7 +189,7 @@ describe(`Nav`, () => {
     outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
     await tick()
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
-    expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+    expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
     outside.remove()
   })
 
@@ -258,25 +260,25 @@ describe(`Nav`, () => {
       props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
     })
     const { dropdown, dropdown_menu } = query_dropdown_elements()
-    expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
-    await interaction(dropdown, dropdown_menu)
+    expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
+    if (dropdown_menu) await interaction(dropdown, dropdown_menu)
     vi.useRealTimers()
   })
 
   test(`parent link and toggle button work independently`, async () => {
     mount(Nav, { target: document.body, props: { routes: [[`/p`, [`/p`, `/p/c`]]] } })
     const { dropdown, dropdown_menu } = query_dropdown_elements()
-    const parent_link = dropdown.querySelector(`div:first-child > a`) as HTMLElement
+    const parent_link = dropdown.querySelector<HTMLElement>(`div:first-child > a`)
     const toggle = doc_query(`[data-dropdown-toggle]`)
 
     await click(parent_link)
-    expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+    expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
 
     await click(toggle)
-    expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+    expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
     await click(toggle)
-    expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+    expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
   })
 
   test.each([
@@ -330,6 +332,7 @@ describe(`Nav`, () => {
   })
 
   test(`dropdown accessibility and state management`, async () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
     const mock_page = { url: { pathname: `/parent/child` } } as Page
     mount(Nav, {
       target: document.body,
@@ -343,37 +346,37 @@ describe(`Nav`, () => {
     })
 
     const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
-    const menu1 = dropdown1.querySelector(`div:last-child`) as HTMLElement
-    const toggle1 = dropdown1.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+    const menu1 = dropdown1.querySelector<HTMLElement>(`div:last-child`)
+    const toggle1 = dropdown1.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
 
     // aria-expanded toggles correctly on toggle button
     // Note: aria-controls linkage is not currently implemented for dropdowns (only for burger menu)
-    expect(toggle1.getAttribute(`aria-expanded`)).toBe(`false`)
+    expect(toggle1?.getAttribute(`aria-expanded`)).toBe(`false`)
     await click(toggle1)
-    expect(toggle1.getAttribute(`aria-expanded`)).toBe(`true`)
-    expect(menu1.classList.contains(`visible`)).toBe(true)
+    expect(toggle1?.getAttribute(`aria-expanded`)).toBe(`true`)
+    expect(menu1?.classList.contains(`visible`)).toBe(true)
 
     // Escape key closes dropdown
     globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
     await tick()
-    expect(menu1.classList.contains(`visible`)).toBe(false)
+    expect(menu1?.classList.contains(`visible`)).toBe(false)
 
     // Multiple dropdowns work independently
-    const toggle2 = dropdown2.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+    const toggle2 = dropdown2.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
     await click(toggle1)
-    const menu2 = dropdown2.querySelector(`div:last-child`) as HTMLElement
-    expect(menu1.classList.contains(`visible`)).toBe(true)
-    expect(menu2.classList.contains(`visible`)).toBe(false)
+    const menu2 = dropdown2.querySelector<HTMLElement>(`div:last-child`)
+    expect(menu1?.classList.contains(`visible`)).toBe(true)
+    expect(menu2?.classList.contains(`visible`)).toBe(false)
 
     await click(toggle2)
-    expect(menu1.classList.contains(`visible`)).toBe(false)
-    expect(menu2.classList.contains(`visible`)).toBe(true)
+    expect(menu1?.classList.contains(`visible`)).toBe(false)
+    expect(menu2?.classList.contains(`visible`)).toBe(true)
 
     // aria-current applied to parent link and dropdown child
     const parent_link = dropdown1.querySelector(`div:first-child > a`)
     expect(parent_link?.getAttribute(`aria-current`)).toBe(`page`)
-    const dropdown_links = menu1.querySelectorAll(`a`)
-    expect(dropdown_links[0].getAttribute(`aria-current`)).toBe(`page`)
+    const dropdown_links = menu1?.querySelectorAll(`a`)
+    expect(dropdown_links?.[0].getAttribute(`aria-current`)).toBe(`page`)
   })
 
   test(`keyboard navigation: Enter/Space/ArrowDown open, arrows navigate, Escape closes`, async () => {
@@ -395,13 +398,13 @@ describe(`Nav`, () => {
       key(open_key)
       // deno-lint-ignore no-await-in-loop
       await wait_for_focus()
-      expect(menu.classList.contains(`visible`)).toBe(true)
-      expect(document.activeElement).toBe(menu.querySelector(`a`))
+      expect(menu?.classList.contains(`visible`)).toBe(true)
+      expect(document.activeElement).toBe(menu?.querySelector(`a`))
       globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
     }
 
     // Arrow navigation
-    const [item1, item2] = Array.from(menu.querySelectorAll(`a`))
+    const [item1, item2] = Array.from(menu?.querySelectorAll(`a`) ?? [])
     key(`Enter`)
     await wait_for_focus()
     expect(document.activeElement).toBe(item1)
@@ -413,9 +416,9 @@ describe(`Nav`, () => {
     expect(document.activeElement).toBe(item1)
 
     // Escape from item returns focus to toggle button
-    key(`Escape`, item1 as HTMLElement)
+    if (item1) key(`Escape`, item1)
     await wait_for_focus()
-    expect(menu.classList.contains(`visible`)).toBe(false)
+    expect(menu?.classList.contains(`visible`)).toBe(false)
     expect(document.activeElement).toBe(toggle_button)
   })
 
@@ -427,7 +430,7 @@ describe(`Nav`, () => {
       new FocusEvent(`focusin`, { bubbles: true, relatedTarget: null }),
     )
     await tick()
-    expect(menu.classList.contains(`visible`)).toBe(true)
+    expect(menu?.classList.contains(`visible`)).toBe(true)
 
     const external = document.createElement(`button`)
     document.body.append(external)
@@ -435,7 +438,7 @@ describe(`Nav`, () => {
       new FocusEvent(`focusout`, { bubbles: true, relatedTarget: external }),
     )
     await tick()
-    expect(menu.classList.contains(`visible`)).toBe(false)
+    expect(menu?.classList.contains(`visible`)).toBe(false)
     external.remove()
   })
 
@@ -444,6 +447,7 @@ describe(`Nav`, () => {
     [`/parent`, true],
     [`/other`, false],
   ])(`dropdown active state: pathname=%s -> active=%s`, (pathname, is_active) => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
     const mock_page = { url: { pathname } } as Page
     mount(Nav, {
       target: document.body,
@@ -464,6 +468,7 @@ describe(`Nav`, () => {
   })
 
   test(`link snippet receives is_active for current and non-current routes`, () => {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
     const mock_page = { url: { pathname: `/about` } } as Page
     mount(TestNavLinkSnippet, {
       target: document.body,
@@ -554,6 +559,7 @@ describe(`Nav`, () => {
         `my disabled page`,
       ],
     ])(`disabled item with %s`, (_desc, route, expected_text) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
       mount(Nav, { target: document.body, props: { routes: [route as NavRoute] } })
       const disabled = doc_query(`.disabled`)
       expect(disabled.getAttribute(`aria-disabled`)).toBe(`true`)
@@ -638,6 +644,7 @@ describe(`Nav`, () => {
         { separators: 2, links: 1 },
       ],
     ])(`%s`, (_desc, routes, expected) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
       mount(Nav, { target: document.body, props: { routes: routes as NavRoute[] } })
       const separators = document.querySelectorAll(`.separator`)
       expect(separators).toHaveLength(expected.separators)
@@ -720,6 +727,7 @@ describe(`Nav`, () => {
 
   test(`custom route properties accessible in onnavigate callback`, async () => {
     const on_navigate = vi.fn()
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
     const routes = [{ href: `/custom`, icon: `gear`, count: 42 }] as NavRoute[]
     mount(Nav, { target: document.body, props: { routes, onnavigate: on_navigate } })
     await click(doc_query(`a`))
@@ -858,6 +866,7 @@ describe(`Nav`, () => {
     const routes: NavRoute[] = [
       `/simple`,
       [`/tuple`, `Tuple Label`],
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
       { separator: true } as NavRoute,
       [`/docs`, [`/docs`, `/docs/api`]],
       { href: `/object`, label: `Object Label` },
@@ -896,10 +905,10 @@ describe(`Nav`, () => {
     [`/first`, [`/first`, `/first/child`]],
     [`/second`, [`/second`, `/second/child`]],
   ]
-  const mouse_enter = (el: Element) =>
-    el.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-  const mouse_leave = (el: Element) =>
-    el.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+  const mouse_enter = (el?: Element | null) =>
+    el?.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+  const mouse_leave = (el?: Element | null) =>
+    el?.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
 
   describe(`pinned dropdown feature`, () => {
     test(`click toggles pinned state and aria-expanded`, async () => {
@@ -907,20 +916,20 @@ describe(`Nav`, () => {
       const { dropdown, dropdown_menu } = query_dropdown_elements()
       const toggle = doc_query(`[data-dropdown-toggle]`)
 
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
 
       await click(toggle) // pin open
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`true`)
 
       mouse_leave(dropdown) // stays open when pinned
       await tick()
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`true`)
 
       await click(toggle) // unpin
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
     })
 
@@ -937,15 +946,15 @@ describe(`Nav`, () => {
 
         mouse_enter(dropdown)
         await tick()
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
         mouse_leave(dropdown)
         if (cooldown > 0) {
           await vi.advanceTimersByTimeAsync(cooldown - 1)
-          expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+          expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
         }
         await vi.advanceTimersByTimeAsync(1)
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
       })
 
       test(`multiple rapid enter/leave cycles reset cooldown each time`, async () => {
@@ -962,10 +971,10 @@ describe(`Nav`, () => {
           mouse_leave(dropdown)
           // deno-lint-ignore no-await-in-loop
           await vi.advanceTimersByTimeAsync(50)
-          expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+          expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
         }
         await vi.advanceTimersByTimeAsync(51)
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
       })
 
       test.each([
@@ -991,9 +1000,9 @@ describe(`Nav`, () => {
         mouse_leave(dropdown)
         await vi.advanceTimersByTimeAsync(50)
 
-        reinteract(dropdown, dropdown_menu)
+        if (dropdown_menu) reinteract(dropdown, dropdown_menu)
         await vi.advanceTimersByTimeAsync(200)
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       })
 
       test(`pinned dropdown ignores cooldown on mouseleave`, async () => {
@@ -1002,14 +1011,14 @@ describe(`Nav`, () => {
           props: { routes: single_dropdown_route, dropdown_cooldown: 150 },
         })
         const { dropdown, dropdown_menu } = query_dropdown_elements()
-        const toggle = dropdown.querySelector(`[data-dropdown-toggle]`) as HTMLElement
+        const toggle = dropdown.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
 
         await click(toggle)
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
         mouse_leave(dropdown)
         await vi.advanceTimersByTimeAsync(500)
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       })
 
       test(`switching between multiple dropdowns respects cooldown`, async () => {
@@ -1018,21 +1027,21 @@ describe(`Nav`, () => {
           props: { routes: two_dropdown_routes, dropdown_cooldown: 100 },
         })
         const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
-        const menu1 = dropdown1.querySelector(`div:last-child`) as HTMLElement
-        const menu2 = dropdown2.querySelector(`div:last-child`) as HTMLElement
+        const menu1 = dropdown1.querySelector<HTMLElement>(`div:last-child`)
+        const menu2 = dropdown2.querySelector<HTMLElement>(`div:last-child`)
 
         mouse_enter(dropdown1)
         await tick()
-        expect(menu1.classList.contains(`visible`)).toBe(true)
+        expect(menu1?.classList.contains(`visible`)).toBe(true)
 
         mouse_leave(dropdown1)
         await vi.advanceTimersByTimeAsync(30)
         mouse_enter(dropdown2)
         await tick()
 
-        expect(menu2.classList.contains(`visible`)).toBe(true)
+        expect(menu2?.classList.contains(`visible`)).toBe(true)
         await vi.advanceTimersByTimeAsync(100)
-        expect(menu1.classList.contains(`visible`)).toBe(false)
+        expect(menu1?.classList.contains(`visible`)).toBe(false)
       })
     })
 
@@ -1050,7 +1059,7 @@ describe(`Nav`, () => {
       [
         `child route click`,
         async (menu: HTMLElement) => {
-          await click(menu.querySelector(`a`) as HTMLElement)
+          await click(menu.querySelector<HTMLElement>(`a`))
         },
       ],
       [
@@ -1064,9 +1073,9 @@ describe(`Nav`, () => {
       mount(Nav, { target: document.body, props: { routes: single_dropdown_route } })
       const { dropdown_menu } = query_dropdown_elements()
       await click(doc_query(`[data-dropdown-toggle]`))
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
-      await close_action(dropdown_menu)
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
+      if (dropdown_menu) await close_action(dropdown_menu)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
     })
 
     test.each([
@@ -1078,22 +1087,21 @@ describe(`Nav`, () => {
       ],
       [
         `click toggle`,
-        (dropdown: Element) =>
-          click(dropdown.querySelector(`[data-dropdown-toggle]`) as Element),
+        (dropdown: Element) => click(dropdown.querySelector(`[data-dropdown-toggle]`)),
       ],
     ])(`%s on different dropdown closes pinned dropdown`, async (_method, activate) => {
       mount(Nav, { target: document.body, props: { routes: two_dropdown_routes } })
       const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
-      const menu1 = dropdown1.querySelector(`div:last-child`) as HTMLElement
-      const menu2 = dropdown2.querySelector(`div:last-child`) as HTMLElement
+      const menu1 = dropdown1.querySelector<HTMLElement>(`div:last-child`)
+      const menu2 = dropdown2.querySelector<HTMLElement>(`div:last-child`)
 
-      await click(dropdown1.querySelector(`[data-dropdown-toggle]`) as HTMLElement)
-      expect(menu1.classList.contains(`visible`)).toBe(true)
+      await click(dropdown1.querySelector(`[data-dropdown-toggle]`))
+      expect(menu1?.classList.contains(`visible`)).toBe(true)
 
-      activate(dropdown2)
+      await activate(dropdown2)
       await tick()
-      expect(menu1.classList.contains(`visible`)).toBe(false)
-      expect(menu2.classList.contains(`visible`)).toBe(true)
+      expect(menu1?.classList.contains(`visible`)).toBe(false)
+      expect(menu2?.classList.contains(`visible`)).toBe(true)
     })
 
     test.each([`Enter`, ` `, `ArrowDown`])(
@@ -1105,11 +1113,11 @@ describe(`Nav`, () => {
 
         toggle.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
         await new Promise((r) => setTimeout(r, 0))
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
         mouse_leave(dropdown)
         await tick()
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       },
     )
 
@@ -1123,12 +1131,12 @@ describe(`Nav`, () => {
 
       // Pin dropdown open via click
       await click(toggle)
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
       // Mouse leaves, but dropdown stays pinned
       mouse_leave(dropdown)
       await tick()
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
       // ArrowDown should navigate within dropdown, not close it
       toggle.dispatchEvent(
@@ -1136,8 +1144,8 @@ describe(`Nav`, () => {
       )
       // toggle_dropdown uses setTimeout(..., 0) to focus first item, so need macrotask flush
       await new Promise((r) => setTimeout(r, 0))
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
-      expect(document.activeElement).toBe(dropdown_menu.querySelector(`a`))
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
+      expect(document.activeElement).toBe(dropdown_menu?.querySelector(`a`))
     })
 
     test(`pinned dropdown stays open on focus out`, async () => {
@@ -1148,17 +1156,17 @@ describe(`Nav`, () => {
       const { dropdown, dropdown_menu } = query_dropdown_elements()
 
       await click(doc_query(`[data-dropdown-toggle]`))
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
       // Focus within dropdown - stays open
       dropdown.dispatchEvent(
         new FocusEvent(`focusout`, {
           bubbles: true,
-          relatedTarget: dropdown_menu.querySelector(`a`),
+          relatedTarget: dropdown_menu?.querySelector(`a`),
         }),
       )
       await tick()
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
       // Focus outside - still stays open (pinned closes via click_outside, not focusout)
       dropdown.dispatchEvent(
@@ -1168,7 +1176,7 @@ describe(`Nav`, () => {
         }),
       )
       await tick()
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
     })
 
     test(`pinned state clears when burger menu closes`, async () => {
@@ -1185,12 +1193,12 @@ describe(`Nav`, () => {
 
       await click(burger)
       await click(toggle)
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
 
       globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
       await tick()
       expect(burger.getAttribute(`aria-expanded`)).toBe(`false`)
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
 
       Object.defineProperty(globalThis, `innerWidth`, { value: 1024, writable: true })
     })
@@ -1207,6 +1215,7 @@ describe(`Nav`, () => {
       [`circular reference`, [circular_route, { href: `/b` }]],
     ])(`handles routes with %s properties without crashing`, (_desc, routes) => {
       expect(() =>
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
         mount(Nav, { target: document.body, props: { routes: routes as NavRoute[] } }),
       ).not.toThrow()
       expect(document.querySelectorAll(`a`)).toHaveLength(2)
@@ -1235,22 +1244,22 @@ describe(`Nav`, () => {
     test.each([
       [
         `trigger div`,
-        (dropdown: Element) => dropdown.querySelector(`div:first-child`) as HTMLElement,
+        (dropdown: Element) => dropdown.querySelector<HTMLElement>(`div:first-child`),
       ],
       [
         `toggle button`,
         (dropdown: Element) =>
-          dropdown.querySelector(`[data-dropdown-toggle]`) as HTMLElement,
+          dropdown.querySelector<HTMLElement>(`[data-dropdown-toggle]`),
       ],
     ])(
       `panel stays open when mouse moves to %s within dropdown`,
       async (_desc, get_target) => {
         const { dropdown, dropdown_menu } = await open_and_enter_panel()
-        dropdown_menu.dispatchEvent(
+        dropdown_menu?.dispatchEvent(
           new MouseEvent(`mouseleave`, { relatedTarget: get_target(dropdown) }),
         )
         await vi.advanceTimersByTimeAsync(200)
-        expect(dropdown_menu.classList.contains(`visible`)).toBe(true)
+        expect(dropdown_menu?.classList.contains(`visible`)).toBe(true)
       },
     )
 
@@ -1259,11 +1268,11 @@ describe(`Nav`, () => {
       [`null (mouse left window)`, null],
     ])(`panel closes when mouse leaves to %s`, async (_desc, related_target) => {
       const { dropdown_menu } = await open_and_enter_panel()
-      dropdown_menu.dispatchEvent(
+      dropdown_menu?.dispatchEvent(
         new MouseEvent(`mouseleave`, { relatedTarget: related_target }),
       )
       await vi.advanceTimersByTimeAsync(100)
-      expect(dropdown_menu.classList.contains(`visible`)).toBe(false)
+      expect(dropdown_menu?.classList.contains(`visible`)).toBe(false)
     })
 
     test(`panel closes when mouse moves to a different dropdown`, async () => {
@@ -1272,16 +1281,16 @@ describe(`Nav`, () => {
         props: { routes: two_dropdown_routes, dropdown_cooldown: 50 },
       })
       const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
-      const menu1 = dropdown1.querySelector(`div:last-child`) as HTMLElement
-      const other_trigger = dropdown2.querySelector(`div:first-child`) as HTMLElement
+      const menu1 = dropdown1.querySelector<HTMLElement>(`div:last-child`)
+      const other_trigger = dropdown2.querySelector<HTMLElement>(`div:first-child`)
 
       mouse_enter(dropdown1)
       await tick()
       mouse_enter(menu1)
       await tick()
-      menu1.dispatchEvent(new MouseEvent(`mouseleave`, { relatedTarget: other_trigger }))
+      menu1?.dispatchEvent(new MouseEvent(`mouseleave`, { relatedTarget: other_trigger }))
       await vi.advanceTimersByTimeAsync(100)
-      expect(menu1.classList.contains(`visible`)).toBe(false)
+      expect(menu1?.classList.contains(`visible`)).toBe(false)
     })
   })
 
@@ -1300,7 +1309,7 @@ describe(`Nav`, () => {
         target: document.body,
         props: { routes: single_dropdown_route, style },
       })
-      expect(doc_query(`nav`).style.getPropertyValue(css_var)).toBe(expected)
+      expect(doc_query<HTMLElement>(`nav`).style.getPropertyValue(css_var)).toBe(expected)
     })
   })
 })

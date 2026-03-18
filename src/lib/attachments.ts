@@ -48,7 +48,8 @@ export const draggable =
   (element: Element) => {
     if (options.disabled) return
 
-    const node = element as HTMLElement
+    if (!(element instanceof HTMLElement)) return
+    const node = element
 
     // Use simple variables for maximum performance
     let dragging = false
@@ -68,7 +69,7 @@ export const draggable =
 
     function handle_mousedown(event: MouseEvent) {
       // Only drag if mousedown is on the handle or its children
-      if (!handle?.contains?.(event.target as Node)) return
+      if (!(event.target instanceof Node) || !handle?.contains?.(event.target)) return
 
       dragging = true
 
@@ -147,7 +148,8 @@ export const resizable =
   (element: Element) => {
     if (options.disabled) return
 
-    const node = element as HTMLElement
+    if (!(element instanceof HTMLElement)) return
+    const node = element
     const {
       edges = [`right`, `bottom`],
       min_width = 50,
@@ -269,7 +271,8 @@ export function get_html_sort_value(element: HTMLElement): string {
     return element.dataset.sortValue
   }
   for (const child of Array.from(element.children)) {
-    const child_val = get_html_sort_value(child as HTMLElement)
+    if (!(child instanceof HTMLElement)) continue
+    const child_val = get_html_sort_value(child)
     if (child_val !== ``) return child_val
   }
   return element.textContent ?? ``
@@ -704,8 +707,11 @@ export const tooltip =
           const box_adjust =
             computed.boxSizing === `border-box` ? 0 : padding_h + border_h
           const style = tooltip_el.style
-          const requested_placement = (tooltip_el.getAttribute(`data-placement`) ||
-            `bottom`) as Placement
+          const raw = tooltip_el.getAttribute(`data-placement`) ?? ``
+          const requested_placement: Placement =
+            raw === `top` || raw === `right` || raw === `bottom` || raw === `left`
+              ? raw
+              : `bottom`
 
           // Save styles, measure single-line width with wrapping disabled
           const saved = {
@@ -982,8 +988,9 @@ export const tooltip =
     const main_cleanup = setup_tooltip(node)
     if (main_cleanup) cleanup_functions.push(main_cleanup)
 
-    node.querySelectorAll(`[title], [aria-label], [data-title]`).forEach((element) => {
-      const child_cleanup = setup_tooltip(element as HTMLElement)
+    node.querySelectorAll(`[title], [aria-label], [data-title]`).forEach((el) => {
+      if (!(el instanceof HTMLElement)) return
+      const child_cleanup = setup_tooltip(el)
       if (child_cleanup) cleanup_functions.push(child_cleanup)
     })
 
@@ -1009,7 +1016,8 @@ export const click_outside =
     if (!enabled) return // Early return avoids registering unused listener
 
     function handle_click(event: MouseEvent) {
-      const target = event.target as HTMLElement
+      const { target } = event
+      if (!(target instanceof HTMLElement)) return
       const path = event.composedPath()
 
       // Check if click target is the node or inside it

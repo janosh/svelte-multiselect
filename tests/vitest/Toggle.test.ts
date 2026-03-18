@@ -5,20 +5,20 @@ import TestToggleSnippet from './TestToggleSnippet.svelte'
 
 describe(`Toggle`, () => {
   const get_input = () =>
-    document.body.querySelector(`input[type="checkbox"]`) as HTMLInputElement
+    document.body.querySelector<HTMLInputElement>(`input[type="checkbox"]`)
 
   test.each([false, true])(`renders with checked=%s`, (checked) => {
     mount(Toggle, { target: document.body, props: { checked } })
-    expect(get_input().checked).toBe(checked)
+    expect(get_input()?.checked).toBe(checked)
   })
 
   test(`toggles on click`, () => {
     mount(Toggle, { target: document.body })
     const input = get_input()
-    input.click()
-    expect(input.checked).toBe(true)
-    input.click()
-    expect(input.checked).toBe(false)
+    input?.click()
+    expect(input?.checked).toBe(true)
+    input?.click()
+    expect(input?.checked).toBe(false)
   })
 
   test(`toggles on Enter key and fires change event`, () => {
@@ -26,18 +26,18 @@ describe(`Toggle`, () => {
     mount(Toggle, { target: document.body, props: { input_props: { onchange } } })
     const input = get_input()
 
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    expect(input.checked).toBe(true)
+    input?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    expect(input?.checked).toBe(true)
     expect(onchange).toHaveBeenCalledWith(expect.any(Event))
 
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    expect(input.checked).toBe(false)
+    input?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    expect(input?.checked).toBe(false)
   })
 
   test.each([`A`, `Escape`, `Tab`, `Space`])(`doesn't toggle on %s key`, (key) => {
     mount(Toggle, { target: document.body })
-    get_input().dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
-    expect(get_input().checked).toBe(false)
+    get_input()?.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
+    expect(get_input()?.checked).toBe(false)
   })
 
   test(`Enter key prevents default and calls onkeydown first`, () => {
@@ -54,7 +54,7 @@ describe(`Toggle`, () => {
       cancelable: true,
     })
     const prevent_default_spy = vi.spyOn(event, `preventDefault`)
-    get_input().dispatchEvent(event)
+    get_input()?.dispatchEvent(event)
 
     expect(prevent_default_spy).toHaveBeenCalled()
     expect(onkeydown).toHaveBeenCalledWith(expect.any(KeyboardEvent))
@@ -91,9 +91,9 @@ describe(`Toggle`, () => {
       target: document.body,
       props: { input_props: { [handler_prop]: handler } },
     })
-    const input = document.body.querySelector(`input`) as HTMLInputElement
-    if (create_event) input.dispatchEvent(create_event())
-    else input.click()
+    const input = get_input()
+    if (create_event) input?.dispatchEvent(create_event())
+    else input?.click()
     expect(handler).toHaveBeenCalledOnce()
   })
 
@@ -109,16 +109,16 @@ describe(`Toggle`, () => {
   test(`children snippet receives checked state and updates on toggle`, async () => {
     mount(TestToggleSnippet, { target: document.body, props: { checked: false } })
 
-    const snippet = document.body.querySelector(`.toggle-snippet`) as HTMLElement
-    expect(snippet.dataset.checked).toBe(`false`)
+    const snippet = document.body.querySelector<HTMLElement>(`.toggle-snippet`)
+    expect(snippet?.dataset.checked).toBe(`false`)
 
-    get_input().click()
+    get_input()?.click()
     await tick()
-    expect(snippet.dataset.checked).toBe(`true`)
+    expect(snippet?.dataset.checked).toBe(`true`)
 
-    get_input().click()
+    get_input()?.click()
     await tick()
-    expect(snippet.dataset.checked).toBe(`false`)
+    expect(snippet?.dataset.checked).toBe(`false`)
   })
 
   test(`two-way binding works`, () => {
@@ -129,16 +129,16 @@ describe(`Toggle`, () => {
         checked,
         input_props: {
           onchange: (event: Event) => {
-            checked = (event.target as HTMLInputElement).checked
+            if (event.target instanceof HTMLInputElement) checked = event.target.checked
           },
         },
       },
     })
 
     const input = get_input()
-    input.click()
-    input.dispatchEvent(new Event(`change`))
-    expect(input.checked).toBe(true)
+    input?.click()
+    input?.dispatchEvent(new Event(`change`))
+    expect(input?.checked).toBe(true)
     expect(checked).toBe(true)
   })
 })
