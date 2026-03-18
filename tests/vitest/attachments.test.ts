@@ -762,7 +762,7 @@ describe(`click_outside`, () => {
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
       value: () =>
-        path.length
+        path.length > 0
           ? path
           : [target, document.body, document.documentElement, document, globalThis],
     })
@@ -1190,7 +1190,7 @@ describe(`highlight_matches`, () => {
       html_content,
       fuzzy,
       expected_set_calls,
-      node_filter = undefined,
+      node_filter,
     ) => {
       if (css_supported === undefined) {
         vi.stubGlobal(`CSS`, undefined)

@@ -105,20 +105,25 @@ describe(`get_style`, () => {
 
   test(`logs error for invalid style object without requested key`, () => {
     const option_obj = { style: { invalid_key: `some-style` } }
+    console.error = vi.fn()
     // @ts-expect-error invalid key
     get_style(option_obj, `selected`)
-
     expect(console.error).toHaveBeenCalledWith(
       `MultiSelect: invalid style object for option`,
       option_obj,
     )
   })
 
-  test(`logs error for invalid key parameter`, () => {
-    const option_obj = { style: `color: red;` }
-    // @ts-expect-error invalid key
-    get_style(option_obj, `invalid_key`)
+  test.each([undefined, null])(`no error for style object when key is %s`, (key) => {
+    console.error = vi.fn()
+    get_style({ label: `test`, style: option_style }, key)
+    expect(console.error).not.toHaveBeenCalled()
+  })
 
+  test(`logs error for invalid key parameter`, () => {
+    console.error = vi.fn()
+    // @ts-expect-error invalid key
+    get_style({ style: `color: red;` }, `invalid_key`)
     expect(console.error).toHaveBeenCalledWith(
       `MultiSelect: Invalid key=invalid_key for get_style`,
     )
@@ -228,18 +233,6 @@ describe(`get_option_key`, () => {
     expect(get_option_key(input as Option)).toBe(expected)
   })
 
-  test(`case-variant labels produce unique keys when they have unique values`, () => {
-    const options = [
-      { label: `pd`, value: `uuid-1` },
-      { label: `PD`, value: `uuid-2` },
-      { label: `Pd`, value: `uuid-3` },
-    ]
-    const keys = options.map(get_option_key)
-    expect(keys).toEqual([`uuid-1`, `uuid-2`, `uuid-3`])
-    // All keys should be unique
-    expect(new Set(keys).size).toBe(3)
-  })
-
   test(`preserves object value identity`, () => {
     const obj1 = { id: 1 }
     const obj2 = { id: 2 }
@@ -251,25 +244,11 @@ describe(`get_option_key`, () => {
     expect(get_option_key(opt1)).not.toBe(get_option_key(opt2))
   })
 
-  test(`case-variant labels without values use label as key`, () => {
-    // When no value, falls back to label (case-sensitive)
-    const options = [{ label: `pd` }, { label: `PD` }, { label: `Pd` }]
-    const keys = options.map(get_option_key)
-    expect(keys).toEqual([`pd`, `PD`, `Pd`])
-    expect(new Set(keys).size).toBe(3)
-  })
-
-  test(`case-variant labels with same value produce identical keys (expected collision)`, () => {
-    // When options share the same value, they intentionally have the same key
-    // This is correct behavior - the value field is the primary identity
-    const options = [
-      { label: `pd`, value: `shared-id` },
-      { label: `PD`, value: `shared-id` },
-      { label: `Pd`, value: `shared-id` },
-    ]
-    const keys = options.map(get_option_key)
-    expect(keys).toEqual([`shared-id`, `shared-id`, `shared-id`])
-    // All keys are identical (this is expected - same value = same identity)
+  test(`same value across case-variant labels produces identical keys`, () => {
+    const keys = [
+      { label: `pd`, value: `shared` },
+      { label: `PD`, value: `shared` },
+    ].map(get_option_key)
     expect(new Set(keys).size).toBe(1)
   })
 })

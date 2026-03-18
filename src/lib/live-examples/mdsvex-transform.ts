@@ -104,7 +104,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
         Wrapper: DEFAULT_WRAPPER,
         filename,
         ...defaults,
-        ...parse_meta(node.meta || ``),
+        ...parse_meta(node.meta ?? ``),
       }
 
       const { csr, example, Wrapper } = meta
@@ -115,7 +115,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
         const wrapper_alias = is_live ? get_wrapper_alias(Wrapper ?? DEFAULT_WRAPPER) : ``
 
         const value = create_example_component(
-          node.value || ``,
+          node.value ?? ``,
           meta,
           is_live ? examples.length : -1, // -1 for code-only (no component import needed)
           node.lang,

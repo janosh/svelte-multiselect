@@ -49,7 +49,7 @@
   // position of `current` in items (not the prev/next item), null if not found
   let index = $derived(idx >= 0 ? idx : null)
   let total = $derived(items_arr.length)
-  let prev = $derived(items_arr[idx - 1] ?? items_arr[items_arr.length - 1])
+  let prev = $derived(items_arr[idx - 1] ?? items_arr.at(-1))
   let next = $derived(items_arr[idx + 1] ?? items_arr[0])
 
   // Validation and logging

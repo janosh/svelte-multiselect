@@ -372,7 +372,7 @@ describe(`heading_anchors attachment`, () => {
     it(`multiple independent containers`, () => {
       document.body.innerHTML = `<div id="c1"><h2 id="h1">C1</h2></div><div id="c2"><h2 id="h2">C2</h2></div>`
       for (const id of [`c1`, `c2`]) {
-        const el = document.getElementById(id)
+        const el = document.querySelector(`#${id}`)
         if (el) heading_anchors({ selector: `h2` })(el)
       }
       expect(document.querySelector(`#h1 a`)).toBeInstanceOf(HTMLAnchorElement)

@@ -473,7 +473,7 @@ test.each([
   const btn = document.createElement(`button`)
   form.append(btn)
 
-  for (const _ of Array(3)) {
+  for (const _ of Array.from({ length: 3 })) {
     const li = doc_query<HTMLElement>(`ul.options li`)
     li.click()
     await tick()
@@ -579,7 +579,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
       `ul.options > li[role="option"]`,
     )
     const ids = [...options].map((opt) => opt.id)
-    expect(ids.every((id) => id)).toBe(true) // All truthy
+    expect(ids.every(Boolean)).toBe(true) // All truthy
     expect(new Set(ids).size).toBe(3) // All unique
 
     // Initially no active descendant
@@ -591,7 +591,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
 
     const active_id = input.getAttribute(`aria-activedescendant`)
     expect(active_id).toBeTypeOf(`string`)
-    const active_option = document.getElementById(active_id ?? ``)
+    const active_option = document.querySelector(`#${active_id}`)
     expect(active_option?.getAttribute(`role`)).toBe(`option`)
     expect(active_option?.classList.contains(`active`)).toBe(true)
   })
@@ -1101,12 +1101,12 @@ test.each([2, 5, 10])(
   async (maxSelect: number) => {
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [...Array(10).keys()], maxSelect },
+      props: { options: [...Array.from({ length: 10 }).keys()], maxSelect },
     })
 
     // Attempt to click all 10 underlying options
     const li_options = [...document.querySelectorAll<HTMLLIElement>(`ul.options > li`)]
-    for (const idx of Array(10).keys()) {
+    for (const idx of Array.from({ length: 10 }).keys()) {
       let li_to_click = li_options[idx]
       for (const li_element of li_options) {
         if (li_element.textContent?.trim() === String(idx)) {
@@ -1121,7 +1121,7 @@ test.each([2, 5, 10])(
 
     const selected_ul = doc_query(`ul.selected`)
     expect(selected_ul.textContent?.trim()).toEqual(
-      [...Array(maxSelect).keys()].join(` `), // Ensure comparison is string-based if labels are numbers
+      [...Array.from({ length: maxSelect }).keys()].join(` `), // Ensure comparison is string-based if labels are numbers
     )
   },
 )
@@ -1357,7 +1357,7 @@ test(`2-way binding of selected`, async () => {
   mount(Test2WayBind, { target: document.body, props })
 
   // test internal changes to selected bind outwards
-  for (const _ of Array(2)) {
+  for (const _ of Array.from({ length: 2 })) {
     const li = doc_query<HTMLElement>(`ul.options li`)
     li.click()
     await tick()
@@ -3307,7 +3307,7 @@ describe(`binding update event count`, () => {
       expect(spy.mock.calls.length).toBeGreaterThanOrEqual(1)
       // The fix ensures value stays null (no sync to [])
       // Without fix: spy would be called with [] for maxSelect=null
-      const last_value = spy.mock.calls[spy.mock.calls.length - 1][0]
+      const last_value = spy.mock.calls.at(-1)?.[0]
       expect(last_value, `value should be null, not []`).toBeNull()
     },
   )

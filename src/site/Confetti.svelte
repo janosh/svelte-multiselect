@@ -13,15 +13,12 @@
   const emojis = [`🥳`, `🎉`, `✨`]
 
   let confetti: { emoji: string; x: number; y: number; r: number }[] = $derived(
-    Array(n_items)
-      .fill(0)
-      .map((_, idx) => ({
-        emoji: emojis[idx % emojis.length],
-        x: Math.random() * 100,
-        y: -20 - Math.random() * 100,
-        r: 0.1 + Math.random() * 1,
-      }))
-      .toSorted((conf_a, conf_b) => conf_a.r - conf_b.r),
+    Array.from({ length: n_items }, (_, idx) => ({
+      emoji: emojis[idx % emojis.length],
+      x: Math.random() * 100,
+      y: -20 - Math.random() * 100,
+      r: 0.1 + Math.random() * 1,
+    })).toSorted((conf_a, conf_b) => conf_a.r - conf_b.r),
   )
   let frame_id: number | undefined
   let is_running = false

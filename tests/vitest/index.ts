@@ -1,4 +1,4 @@
-import { type MultiSelectProps } from '$lib'
+import type { MultiSelectProps } from '$lib'
 import { assert } from 'vite-plus/test'
 
 export function doc_query<T extends Element>(selector: string): T {
