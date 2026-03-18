@@ -1,5 +1,6 @@
 import { heading_anchors, heading_ids } from '$lib/heading-anchors'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { doc_query } from './index'
 
 // SSR/client consistency: both should handle the same heading levels (h1-h6)
 // This test catches drift if someone changes one without the other
@@ -15,7 +16,7 @@ describe(`SSR and client-side heading level consistency`, () => {
 
       // Client: attachment should add anchor (when heading has ID)
       document.body.innerHTML = `<main><${tag} id="test">Test</${tag}></main>`
-      const container = document.body.firstElementChild as Element
+      const container = doc_query(`main`)
       heading_anchors()(container)
       expect(container.querySelector(`${tag} a[aria-hidden="true"]`)).toBeInstanceOf(
         HTMLAnchorElement,
@@ -165,9 +166,7 @@ describe(`heading_anchors attachment`, () => {
     document.body.innerHTML =
       wrapper === `none` ? html : `<${wrapper}>${html}</${wrapper}>`
     // Return the wrapper element (matching production usage of attaching to <main>)
-    return wrapper === `none`
-      ? document.body
-      : (document.body.firstElementChild as Element)
+    return wrapper === `none` ? document.body : doc_query(wrapper)
   }
   const anchor_selector = `a[aria-hidden="true"]`
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
@@ -337,13 +336,14 @@ describe(`heading_anchors attachment`, () => {
   })
 
   it(`returns undefined in SSR (no document)`, () => {
+    const dummy = document.createElement(`div`)
     const original = globalThis.document
     Object.defineProperty(globalThis, `document`, {
       value: undefined,
       configurable: true,
     })
     try {
-      expect(heading_anchors()({} as Element)).toBeUndefined()
+      expect(heading_anchors()(dummy)).toBeUndefined()
     } finally {
       Object.defineProperty(globalThis, `document`, {
         value: original,

@@ -1,7 +1,7 @@
 import { type MultiSelectProps } from '$lib'
 import { assert } from 'vite-plus/test'
 
-export function doc_query<T extends HTMLElement>(selector: string): T {
+export function doc_query<T extends Element>(selector: string): T {
   const node = document.querySelector<T>(selector)
   assert(node !== null, `No element found for selector: ${selector}`)
   return node

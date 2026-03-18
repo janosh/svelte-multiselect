@@ -278,14 +278,14 @@ test(`applies custom styles and props correctly`, async () => {
   const select_wrapper = doc_query(`dialog div.multiselect`)
   expect(select_wrapper.classList.contains(custom_class)).toBe(true)
 
-  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   expect(input.placeholder).toBe(custom_placeholder)
 
-  const dialog = doc_query(`dialog`) as HTMLDialogElement
+  const dialog = doc_query<HTMLDialogElement>(`dialog`)
   expect(dialog.style.border).toBe(`2px solid red`)
   expect(dialog.style.padding).toBe(`20px`)
 
-  const li_el = doc_query(`dialog ul.options li`)
+  const li_el = doc_query<HTMLLIElement>(`dialog ul.options li`)
   expect(li_el.style.color).toBe(`blue`)
   expect(li_el.style.fontWeight).toBe(`bold`)
 })
@@ -354,7 +354,7 @@ test(`uses default values when props not provided`, () => {
     props: { open: true, actions: mock_actions },
   })
 
-  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   expect(input.placeholder).toBe(`Filter actions...`)
   expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
@@ -443,7 +443,7 @@ test.each([
     props: { open: true, actions, fuzzy, fade_duration: 0 },
   })
 
-  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   input.value = search
   input.dispatchEvent(new Event(`input`, { bubbles: true }))
   await tick()
@@ -495,7 +495,7 @@ test(`handles empty search text`, async () => {
     props: { open: true, actions: mock_actions, fade_duration: 0 },
   })
 
-  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   input.value = ``
   input.dispatchEvent(new Event(`input`, { bubbles: true }))
   await tick()
@@ -551,7 +551,7 @@ test(`handles custom dialog styles`, () => {
     },
   })
 
-  const dialog = doc_query(`dialog`) as HTMLDialogElement
+  const dialog = doc_query<HTMLDialogElement>(`dialog`)
   expect(dialog.style.border).toBe(`2px solid red`)
   expect(dialog.style.padding).toBe(`10px`)
 })
@@ -568,7 +568,7 @@ test(`handles custom placeholder text`, () => {
     },
   })
 
-  const input = doc_query(`dialog input[autocomplete]`) as HTMLInputElement
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   expect(input.placeholder).toBe(custom_placeholder)
 })
 

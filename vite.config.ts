@@ -12,6 +12,10 @@ export default defineConfig({
   },
   lint: {
     plugins: [`oxc`, `typescript`, `unicorn`, `import`, `jest`],
+    options: {
+      typeAware: true,
+      typeCheck: true,
+    },
     categories: {
       correctness: `error`,
       suspicious: `error`,

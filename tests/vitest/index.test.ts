@@ -25,7 +25,7 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
       | null
     disconnect: ReturnType<typeof vi.fn>
     observe: ReturnType<typeof vi.fn>
-    instance: { disconnect: ReturnType<typeof vi.fn> } | null
+    instance: unknown
   }
 
   let mock: MockState = {
@@ -47,7 +47,7 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
         ) => void,
       ) {
         mock.callback = callback
-        mock.instance = this as unknown as typeof mock.instance
+        mock.instance = this
       }
       disconnect = mock.disconnect
       observe = mock.observe
@@ -61,7 +61,7 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
   }
 
   afterEach(() => {
-    mock = { callback: null, disconnect: vi.fn(), observe: vi.fn(), instance: null }
+    mock = { callback: null, disconnect: vi.fn(), observe: vi.fn(), instance: undefined }
     vi.unstubAllGlobals()
   })
 
@@ -88,17 +88,20 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
       const element = document.createElement(`div`)
       element.scrollIntoView = vi.fn()
 
+      const scroll_spy = vi.fn()
+      element.scrollIntoView = scroll_spy
+
       scroll_into_view_if_needed_polyfill(element, center_if_needed)
-      const mock_entry = { intersectionRatio: ratio } as IntersectionObserverEntry
-      mock.callback?.([mock_entry], mock.instance as unknown as IntersectionObserver)
+      // @ts-expect-error partial IntersectionObserverEntry mock + unknown instance
+      mock.callback?.([{ intersectionRatio: ratio }], mock.instance)
 
       if (should_scroll) {
-        expect(element.scrollIntoView).toHaveBeenCalledWith({
+        expect(scroll_spy).toHaveBeenCalledWith({
           block: expected_block,
           inline: expected_block,
         })
       } else {
-        expect(element.scrollIntoView).not.toHaveBeenCalled()
+        expect(scroll_spy).not.toHaveBeenCalled()
       }
       expect(mock.disconnect).toHaveBeenCalled()
     },

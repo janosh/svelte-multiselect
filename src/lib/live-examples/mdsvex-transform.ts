@@ -1,7 +1,6 @@
 // Remark plugin - transforms ```svelte example code blocks into rendered components
 import { Buffer } from 'node:buffer'
 import path from 'node:path'
-import type { HastRoot } from './highlighter.ts'
 import { hast_to_html, starry_night } from './highlighter.ts'
 
 // Base64 encode to prevent preprocessors from modifying the content
@@ -213,7 +212,7 @@ function create_example_component(
   const code = format_code(value, meta)
   const scope = starry_night.flagToScope(lang)
   if (!scope) throw new Error(`Unsupported language: ${lang}`)
-  const tree = starry_night.highlight(code, scope) as HastRoot
+  const tree = starry_night.highlight(code, scope)
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
   const highlighted = hast_to_html(tree).replaceAll(`\n`, `&#10;`)
 

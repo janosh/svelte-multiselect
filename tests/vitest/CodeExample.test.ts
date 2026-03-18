@@ -90,7 +90,7 @@ test(`dynamically added pre > code elements get copy buttons applied`, async () 
   const copy_button = new_pre.querySelector(`button`)
   expect(copy_button).toBeInstanceOf(HTMLButtonElement)
   expect(copy_button?.style.position).toBe(`absolute`)
-  unmount(copy_button_component)
+  void unmount(copy_button_component)
 })
 
 test(`prevents duplicate copy buttons when as !== button`, async () => {
@@ -116,5 +116,5 @@ test(`prevents duplicate copy buttons when as !== button`, async () => {
   // Verify no duplicate was created
   const copy_buttons_after = pre.querySelectorAll(`a[data-sms-copy]`)
   expect(copy_buttons_after).toHaveLength(1)
-  unmount(copy_button_component)
+  void unmount(copy_button_component)
 })

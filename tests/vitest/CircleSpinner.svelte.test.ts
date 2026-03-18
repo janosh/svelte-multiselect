@@ -11,7 +11,7 @@ test(`CircleSpinner prop size`, () => {
     props: { size },
   })
 
-  const div = doc_query(`div`)
+  const div = doc_query<HTMLElement>(`div`)
   expect(div.style.width).toBe(size)
   expect(div.style.height).toBe(size)
 })

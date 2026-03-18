@@ -64,7 +64,8 @@ test.describe(`fuzzy matching`, () => {
       const options = [`garlic`, `green apple`, `grape`, `banana`]
 
       input.addEventListener(`input`, (evt) => {
-        const search_text = (evt.target as HTMLInputElement).value.toLowerCase()
+        if (!(evt.target instanceof HTMLInputElement)) return
+        const search_text = evt.target.value.toLowerCase()
         const filtered_options = options.filter((opt) =>
           opt.toLowerCase().includes(search_text),
         )
@@ -146,9 +147,7 @@ test.describe(`input`, () => {
     await expect(dropdown).toBeHidden()
 
     await page.evaluate(() => {
-      const input = document.querySelector(
-        `#foods input[autocomplete]`,
-      ) as HTMLInputElement
+      const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
       input?.focus()
     })
     await expect(dropdown).not.toHaveClass(/hidden/)
@@ -156,9 +155,7 @@ test.describe(`input`, () => {
 
     // also test that input.blur() closes dropdown
     await page.evaluate(() => {
-      const input = document.querySelector(
-        `#foods input[autocomplete]`,
-      ) as HTMLInputElement
+      const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
       input?.blur()
     })
     await expect(dropdown).toHaveClass(/hidden/)
@@ -173,7 +170,7 @@ test.describe(`input`, () => {
 
     await page.keyboard.press(`Tab`)
 
-    const dropdown = await page.locator(`#foods ul.options`)
+    const dropdown = page.locator(`#foods ul.options`)
     await dropdown.waitFor({ state: `hidden` })
     const visibility = await dropdown.evaluate((el) => getComputedStyle(el).visibility)
     const opacity = await dropdown.evaluate((el) => getComputedStyle(el).opacity)
@@ -249,7 +246,7 @@ test.describe(`remove all button`, () => {
 
   test(`has custom title`, async ({ page }) => {
     const button_title = await page.getAttribute(`#foods button.remove-all`, `title`)
-    expect(await button_title).toBe(`Remove all foods`)
+    expect(button_title).toBe(`Remove all foods`)
   })
 
   test(`emits onremoveAll event`, async ({ page }) => {
@@ -294,9 +291,9 @@ test.describe(`events demo`, () => {
         throw new Error(`Expected events demo input to exist`)
       }
       const touch_events = [`touchstart`, `touchmove`, `touchend`] as const
-      const counts = Object.fromEntries(
+      const counts: Record<string, number> = Object.fromEntries(
         touch_events.map((event_name) => [event_name, 0]),
-      ) as Record<(typeof touch_events)[number], number>
+      )
       for (const event_name of touch_events) {
         input_el.addEventListener(event_name, () => {
           counts[event_name] += 1
@@ -463,7 +460,7 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     // Verify listbox has matching ID
     const listbox = page.locator(`#foods ul.options`)
     expect(controls_id).toBeTruthy()
-    await expect(listbox).toHaveAttribute(`id`, controls_id as string)
+    await expect(listbox).toHaveAttribute(`id`, String(controls_id))
     await expect(listbox).toHaveAttribute(`role`, `listbox`)
   })
 
@@ -636,7 +633,7 @@ test.describe(`multiselect`, () => {
 
     // test loop back to last option
     await input.press(`ArrowUp`)
-    await expect(active_option).toHaveText(foods.at(-1) as string)
+    await expect(active_option).toHaveText(foods.at(-1) ?? ``)
   })
 
   // https://github.com/janosh/svelte-multiselect/issues/357
@@ -1522,7 +1519,7 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
 
     // Apply inline style
     await li.evaluate((el) => {
-      ;(el as HTMLElement).style.setProperty(`background-color`, `red`, `important`)
+      el.style.setProperty(`background-color`, `red`, `important`)
     })
 
     // Verify the style attribute was set (more reliable than getComputedStyle

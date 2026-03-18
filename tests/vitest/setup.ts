@@ -5,9 +5,8 @@ beforeEach(() => {
 })
 
 beforeAll(() => {
-  const animation = {} as Animation
-  Element.prototype.animate = () => animation
-  Element.prototype.getAnimations = () => [animation]
+  Element.prototype.animate = vi.fn().mockReturnValue({})
+  Element.prototype.getAnimations = vi.fn().mockReturnValue([{}])
 })
 
 Object.defineProperty(globalThis, `matchMedia`, {

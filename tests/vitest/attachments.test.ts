@@ -129,7 +129,6 @@ describe(`tooltip`, () => {
   }
 
   const mock_tooltip_size = (width: number, height: number) => {
-    const original_get_bounding_client_rect = HTMLElement.prototype.getBoundingClientRect
     const original_offset_width = Object.getOwnPropertyDescriptor(
       HTMLElement.prototype,
       `offsetWidth`,
@@ -142,20 +141,18 @@ describe(`tooltip`, () => {
     const bounds_spy = vi
       .spyOn(HTMLElement.prototype, `getBoundingClientRect`)
       .mockImplementation(function (this: HTMLElement) {
-        if (this.classList.contains(`custom-tooltip`)) {
-          return {
-            left: 0,
-            top: 0,
-            width,
-            height,
-            right: width,
-            bottom: height,
-            x: 0,
-            y: 0,
-            toJSON: () => ({}),
-          }
+        const is_tooltip = this.classList.contains(`custom-tooltip`)
+        return {
+          left: 0,
+          top: 0,
+          width: is_tooltip ? width : 0,
+          height: is_tooltip ? height : 0,
+          right: is_tooltip ? width : 0,
+          bottom: is_tooltip ? height : 0,
+          x: 0,
+          y: 0,
+          toJSON: () => ({}),
         }
-        return original_get_bounding_client_rect.call(this)
       })
 
     Object.defineProperty(HTMLElement.prototype, `offsetWidth`, {
@@ -398,7 +395,9 @@ describe(`tooltip`, () => {
       [`null element`, null],
       [`undefined element`, undefined],
     ])(`should handle %s gracefully`, (_desc, el) => {
-      expect(tooltip()(el as unknown as Element)).toBeUndefined()
+      const attach = tooltip()
+      // @ts-expect-error testing null/undefined inputs
+      expect(attach(el)).toBeUndefined()
     })
   })
 
@@ -414,10 +413,9 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0 })
       trigger_tooltip(element)
 
-      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement & {
-        _owner?: HTMLElement
-      }
-      expect(tooltip_el?._owner).toBe(element)
+      const tooltip_el = document.querySelector(`.custom-tooltip`)
+      expect(tooltip_el).toBeInstanceOf(HTMLElement)
+      expect(Reflect.get(tooltip_el ?? {}, `_owner`)).toBe(element)
     })
 
     it.each([
@@ -569,15 +567,15 @@ describe(`tooltip`, () => {
           setup_tooltip(element, { delay: 0, placement: requested_placement ?? `bottom` })
 
           trigger_tooltip(element)
-          const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+          const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
           expect(tooltip_el).toBeInstanceOf(HTMLElement)
-          expect(tooltip_el.getAttribute(`data-placement`)).toBe(expected_placement)
-          const arrow = tooltip_el.querySelector(`.custom-tooltip-arrow`) as HTMLElement
+          expect(tooltip_el?.getAttribute(`data-placement`)).toBe(expected_placement)
+          const arrow = tooltip_el?.querySelector<HTMLElement>(`.custom-tooltip-arrow`)
           expect(arrow).toBeInstanceOf(HTMLElement)
 
           const [set_side, empty_side] = arrow_offset_side[expected_placement]
-          expect(arrow.style[set_side as `top`]).toContain(`-`)
-          expect(arrow.style[empty_side as `top`]).toBe(``)
+          expect(arrow?.style.getPropertyValue(set_side)).toContain(`-`)
+          expect(arrow?.style.getPropertyValue(empty_side)).toBe(``)
         })
       },
     )
@@ -692,9 +690,9 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0, offset, placement: `bottom` })
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
       expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(tooltip_el.style.top).toBe(`${expected_top}px`)
+      expect(tooltip_el?.style.top).toBe(`${expected_top}px`)
     })
 
     it.each([
@@ -713,9 +711,9 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0, allow_html })
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
+      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
       expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(tooltip_el.textContent).toBe(expected_text)
+      expect(tooltip_el?.textContent).toBe(expected_text)
     })
 
     it.each([
@@ -732,8 +730,8 @@ describe(`tooltip`, () => {
 
       trigger_tooltip(element)
       expect(sanitizer).toHaveBeenCalledTimes(call_count)
-      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
-      expect(tooltip_el.textContent).toBe(expected_text)
+      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
+      expect(tooltip_el?.textContent).toBe(expected_text)
     })
 
     it(`tooltip structure: .tooltip-content span and display: inline-block`, () => {
@@ -743,9 +741,9 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0 })
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector(`.custom-tooltip`) as HTMLElement
-      expect(tooltip_el.style.display).toBe(`inline-block`)
-      const content_span = tooltip_el.querySelector(`.tooltip-content`)
+      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
+      expect(tooltip_el?.style.display).toBe(`inline-block`)
+      const content_span = tooltip_el?.querySelector(`.tooltip-content`)
       expect(content_span?.tagName).toBe(`SPAN`)
       expect(content_span?.textContent).toBe(`Test`)
     })
@@ -1061,16 +1059,24 @@ describe(`draggable`, () => {
 describe(`highlight_matches`, () => {
   let mock_element: HTMLElement
   let mock_css_highlights: Map<string, string>
+  let clear_highlights_spy: ReturnType<typeof vi.fn>
+  let set_highlights_spy: ReturnType<typeof vi.fn>
+  let delete_highlights_spy: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     mock_element = document.createElement(`div`)
     mock_css_highlights = new Map()
+    clear_highlights_spy = vi.fn(() => mock_css_highlights.clear())
+    set_highlights_spy = vi.fn((key: string, value: string) =>
+      mock_css_highlights.set(key, value),
+    )
+    delete_highlights_spy = vi.fn((key: string) => mock_css_highlights.delete(key))
 
     const css_mock = {
       highlights: {
-        clear: vi.fn(() => mock_css_highlights.clear()),
-        set: vi.fn((key: string, value: string) => mock_css_highlights.set(key, value)),
-        delete: vi.fn((key: string) => mock_css_highlights.delete(key)),
+        clear: clear_highlights_spy,
+        set: set_highlights_spy,
+        delete: delete_highlights_spy,
       },
     }
 
@@ -1199,9 +1205,9 @@ describe(`highlight_matches`, () => {
       )
 
       if (css_supported) {
-        expect(globalThis.CSS.highlights.clear).toHaveBeenCalledTimes(0)
+        expect(clear_highlights_spy).toHaveBeenCalledTimes(0)
         if (expected_set_calls > 0) {
-          expect(globalThis.CSS.highlights.set).toHaveBeenCalledWith(
+          expect(set_highlights_spy).toHaveBeenCalledWith(
             `highlight-match`,
             expect.any(Object),
           )
@@ -1221,11 +1227,22 @@ describe(`highlight_matches`, () => {
     // Verify our highlight was added and others preserved
     expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
     expect(mock_css_highlights.has(`other-highlight`)).toBe(true)
-    expect(globalThis.CSS.highlights.clear).not.toHaveBeenCalled()
+    expect(clear_highlights_spy).not.toHaveBeenCalled()
   })
 })
 
 describe(`sortable`, () => {
+  const get_required_header = (
+    table: HTMLTableElement,
+    selector = `thead th`,
+  ): HTMLTableCellElement => {
+    const header = table.querySelector(selector)
+    if (!(header instanceof HTMLTableCellElement)) {
+      throw new Error(`expected table header '${selector}'`)
+    }
+    return header
+  }
+
   const create_table = () => {
     const table = document.createElement(`table`)
     const thead = document.createElement(`thead`)
@@ -1283,16 +1300,16 @@ describe(`sortable`, () => {
   it(`should not set up sorting when disabled`, () => {
     const table = create_table()
     expect(sortable({ disabled: true })(table)).toBeUndefined()
-    expect((table.querySelector(`thead th`) as HTMLElement).style.cursor).toBe(``)
+    expect(get_required_header(table).style.cursor).toBe(``)
   })
 
   it(`should add pointer cursor and fully restore on cleanup`, () => {
     const table = create_table()
-    const headers = Array.from(table.querySelectorAll(`thead th`))
+    const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
     const original_texts = headers.map((h) => h.textContent)
 
     const cleanup = sortable()(table)
-    headers.forEach((h) => expect((h as HTMLElement).style.cursor).toBe(`pointer`))
+    headers.forEach((header) => expect(header.style.cursor).toBe(`pointer`))
 
     headers[0].dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(headers[0].textContent).toContain(`↑`)
@@ -1313,11 +1330,11 @@ describe(`sortable`, () => {
       desc_class: `desc`,
       sorted_style: { backgroundColor: `red` },
     })(table)
-    const [h1, h2] = Array.from(table.querySelectorAll(`thead th`))
+    const [h1, h2] = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
 
     h1.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(h1.classList.contains(`asc`)).toBe(true)
-    expect((h1 as HTMLElement).style.backgroundColor).toBe(`red`)
+    expect(h1.style.backgroundColor).toBe(`red`)
 
     h1.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(h1.classList.contains(`desc`)).toBe(true)
@@ -1334,20 +1351,16 @@ describe(`sortable`, () => {
 
     sortable({ header_selector: `th.sortable` })(table)
 
-    expect((table.querySelector(`th.sortable`) as HTMLElement).style.cursor).toBe(
-      `pointer`,
-    )
-    expect((table.querySelectorAll(`th`)[1] as HTMLElement).style.cursor).toBe(``)
-    expect(() =>
-      (table.querySelector(`th.sortable`) as HTMLElement).dispatchEvent(
-        new MouseEvent(`click`),
-      ),
-    ).not.toThrow()
+    const sortable_header = get_required_header(table, `th.sortable`)
+    const second_header = table.querySelectorAll<HTMLTableCellElement>(`th`)[1]
+    expect(sortable_header.style.cursor).toBe(`pointer`)
+    expect(second_header?.style.cursor).toBe(``)
+    expect(() => sortable_header.dispatchEvent(new MouseEvent(`click`))).not.toThrow()
   })
 
   it(`should restore pre-existing custom styles`, () => {
     const table = create_table()
-    const header = table.querySelector(`thead th`) as HTMLElement
+    const header = get_required_header(table)
     header.style.color = `blue`
 
     const cleanup = sortable()(table)
@@ -1717,20 +1730,12 @@ describe(`resizable`, () => {
 
   it(`should set position to relative if element has static positioning`, () => {
     const element = create_element()
-    element.style.position = ``
+    element.style.position = `static`
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
-
-    // Mock getComputedStyle to return static position (jsdom/happy-dom doesn't properly report this)
-    const original_get_computed_style = globalThis.getComputedStyle
-    globalThis.getComputedStyle = vi.fn(() => ({
-      position: `static`,
-    })) as unknown as typeof getComputedStyle
 
     resizable()(element)
 
     expect(element.style.position).toBe(`relative`)
-
-    globalThis.getComputedStyle = original_get_computed_style
   })
 
   it(`should not change position if element already has non-static positioning`, () => {

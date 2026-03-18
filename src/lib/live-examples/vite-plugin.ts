@@ -21,22 +21,17 @@ const apply_edits = (source: string, edits: Edit[]): string =>
       source,
     )
 
-interface AstNode {
-  type: string
-  key?: { name: string }
-  value?: unknown
-  source?: { value?: string; start?: number; end?: number }
-  start?: number
-  end?: number
+function is_record(val: unknown): val is Record<string, unknown> {
+  return typeof val === `object` && val !== null
 }
 
 // Check if an AST node matches a shallow pattern object
 function matches(node: unknown, pattern: Record<string, unknown>): boolean {
-  if (!node || typeof node !== `object`) return false
+  if (!is_record(node)) return false
   for (const [key, expected] of Object.entries(pattern)) {
-    const actual = (node as Record<string, unknown>)[key]
-    if (expected && typeof expected === `object`) {
-      if (!matches(actual, expected as Record<string, unknown>)) return false
+    const actual = node[key]
+    if (is_record(expected)) {
+      if (!matches(actual, expected)) return false
     } else if (actual !== expected) return false
   }
   return true
@@ -46,14 +41,14 @@ function matches(node: unknown, pattern: Record<string, unknown>): boolean {
 function find_nodes(
   node: unknown,
   pattern: Record<string, unknown>,
-  results: AstNode[] = [],
-): AstNode[] {
-  if (!node || typeof node !== `object`) return results
-  if (matches(node, pattern)) results.push(node as AstNode)
-  for (const val of Object.values(node as Record<string, unknown>)) {
+  results: Record<string, unknown>[] = [],
+): Record<string, unknown>[] {
+  if (!is_record(node)) return results
+  if (matches(node, pattern)) results.push(node)
+  for (const val of Object.values(node)) {
     if (Array.isArray(val)) {
       for (const item of val) find_nodes(item, pattern, results)
-    } else if (val && typeof val === `object`) {
+    } else if (is_record(val)) {
       find_nodes(val, pattern, results)
     }
   }
@@ -161,13 +156,11 @@ export default function live_examples_plugin(
         for (const [idx, prop] of src_props.entries()) {
           // Read the property value directly instead of recursively searching nested literals.
           const prop_value = prop.value
-          if (!prop_value || typeof prop_value !== `object`) continue
+          if (!is_record(prop_value)) continue
+          if (prop_value.type !== `Literal` || typeof prop_value.value !== `string`)
+            continue
 
-          const literal_type = (prop_value as AstNode).type
-          const literal_value = (prop_value as AstNode).value
-          if (literal_type !== `Literal` || typeof literal_value !== `string`) continue
-
-          const src = Buffer.from(literal_value, `base64`).toString(`utf-8`)
+          const src = Buffer.from(prop_value.value, `base64`).toString(`utf-8`)
 
           // Use base_id (without query params) to ensure consistent virtual file IDs
           const virtual_id = `${base_id}${EXAMPLE_MODULE_PREFIX}${idx}.svelte`
@@ -201,7 +194,7 @@ export default function live_examples_plugin(
           }
 
           // Remove the property (including trailing comma/whitespace)
-          if (prop.start !== undefined && prop.end !== undefined) {
+          if (typeof prop.start === `number` && typeof prop.end === `number`) {
             let end = prop.end
             const max_end = Math.min(prop.end + TRAILING_CLEANUP_BOUND, code.length)
             while (end < max_end && /[\s,]/.test(code[end])) end++
@@ -218,9 +211,15 @@ export default function live_examples_plugin(
           ...find_nodes(tree, { type: `ImportDeclaration` }),
           ...find_nodes(tree, { type: `ImportExpression` }),
         ]
-        for (const { source } of imports) {
-          const match = source?.value?.match(/___live_example___(\d+)\.svelte/)
-          if (match && source?.start !== undefined && source?.end !== undefined) {
+        for (const import_node of imports) {
+          const source = import_node.source
+          if (!is_record(source) || typeof source.value !== `string`) continue
+          const match = source.value.match(/___live_example___(\d+)\.svelte/)
+          if (
+            match &&
+            typeof source.start === `number` &&
+            typeof source.end === `number`
+          ) {
             const virtual_id = `${base_id}${EXAMPLE_MODULE_PREFIX}${match[1]}.svelte`
             edits.push({
               start: source.start + 1,
