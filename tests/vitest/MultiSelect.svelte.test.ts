@@ -1706,6 +1706,74 @@ describe(`arrow key navigation between selected items`, () => {
     await tick()
     expect(highlighted().length).toBe(0)
   })
+
+  test(`external selected shrink clamps highlighted_idx`, async () => {
+    const props = $state<MultiSelectProps>({
+      options,
+      selected: [`Red`, `Green`, `Blue`],
+    })
+    mount(MultiSelect, { target: document.body, props })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    // highlight idx 2 (Blue)
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(is_highlighted(2)).toBe(true)
+    // externally shrink to 2 items — idx 2 is out of bounds
+    props.selected = [`Red`, `Green`]
+    await tick()
+    expect(selected_items().length).toBe(2)
+    // $effect should clamp to last valid index (1)
+    expect(is_highlighted(1)).toBe(true)
+  })
+
+  test(`external selected clear nullifies highlighted_idx`, async () => {
+    const props = $state<MultiSelectProps>({
+      options,
+      selected: [`Red`, `Green`, `Blue`],
+    })
+    mount(MultiSelect, { target: document.body, props })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(highlighted().length).toBe(1)
+    props.selected = []
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`highlighted pill gets aria-activedescendant on input`, async () => {
+    const input = setup()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    const active_id = input.getAttribute(`aria-activedescendant`)
+    expect(active_id).toBeTruthy()
+    // the id should match the highlighted <li>'s id
+    const highlighted_li = document.querySelector(`ul.selected > li.highlighted`)
+    expect(highlighted_li?.id).toBe(active_id)
+  })
+
+  test(`aria-activedescendant clears when highlight clears`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeTruthy()
+    input.dispatchEvent(press(`Escape`))
+    await tick()
+    // should revert to null/undefined (no active dropdown option either since dropdown closed)
+    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+  })
+
+  test(`each selected <li> has a stable id`, () => {
+    setup()
+    const items = selected_items()
+    for (let idx = 0; idx < items.length; idx++) {
+      expect(items[idx]?.id).toMatch(/-selected-\d+$/)
+    }
+    // ids should be unique
+    const ids = [...items].map((li) => li.id)
+    expect(new Set(ids).size).toBe(ids.length)
+  })
 })
 
 test(`remove all button does not remove items when minSelect constraint would be violated`, async () => {

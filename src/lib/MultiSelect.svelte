@@ -278,6 +278,13 @@
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
   let highlighted_idx: number | null = $state(null) // index of highlighted selected item for arrow key navigation
 
+  // Clamp highlighted_idx when selected items change externally (undo/redo, parent prop, select_all)
+  $effect(() => {
+    if (highlighted_idx !== null && highlighted_idx >= selected.length) {
+      highlighted_idx = selected.length > 0 ? selected.length - 1 : null
+    }
+  })
+
   // Track last selection action for aria-live announcements
   let last_action = $state<
     { type: `add` | `remove` | `removeAll`; label: string } | null
@@ -703,11 +710,14 @@
     activeOption = navigable_options[activeIndex ?? -1] ?? null
   })
 
-  // Compute the ID of the currently active option for aria-activedescendant
+  // Compute the ID of the currently active element for aria-activedescendant
+  // (highlighted selected pill takes priority, then active dropdown option)
   const active_option_id = $derived(
-    activeIndex !== null && activeIndex < navigable_options.length
-      ? `${internal_id}-opt-${activeIndex}`
-      : undefined,
+    highlighted_idx === null
+      ? activeIndex !== null && activeIndex < navigable_options.length
+        ? `${internal_id}-opt-${activeIndex}`
+        : undefined
+      : `${internal_id}-selected-${highlighted_idx}`,
   )
 
   // Helper to check if removing an option would violate minSelect constraint
@@ -1463,6 +1473,7 @@
         .filter(Boolean)
         .join(` `) || null}
       <li
+        id="{internal_id}-selected-{idx}"
         class={liSelectedClass}
         class:highlighted={highlighted_idx === idx}
         role="option"
