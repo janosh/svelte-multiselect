@@ -68,13 +68,11 @@
   {title}
   aria-label={title}
   style:visibility={is_hydrated ? `visible` : `hidden`}
-  {@attach tooltip_opts !== false
-  ? tooltip({
+  {@attach tooltip_opts !== false && tooltip({
     placement: `bottom`,
     style: `font-size: 0.7rem; padding: 2pt 4pt;`,
     ...tooltip_opts,
-  })
-  : () => {}}
+  })}
   {...rest}
 >
   {#if is_hydrated}

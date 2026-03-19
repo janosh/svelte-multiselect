@@ -3513,6 +3513,105 @@ describe(`loadOptions feature`, () => {
   })
 })
 
+// https://github.com/janosh/svelte-multiselect/discussions/401
+// User messages during async loading: create/no-match suppressed, dupe allowed
+test.each([
+  {
+    name: `createOptionMsg hidden while loading, shown after`,
+    props: { allowUserOptions: true, createOptionMsg: `Create this option` },
+    initial_options: [`Existing`],
+    search: `new tag`,
+    while_loading: null,
+    after_resolve: `Create this option`,
+    resolve_with: [] as string[],
+  },
+  {
+    name: `duplicateOptionMsg shown during loading`,
+    props: { selected: [`Apple`], duplicateOptionMsg: `Already selected` },
+    initial_options: [`Apple`, `Banana`],
+    search: `Apple`,
+    while_loading: `Already selected`,
+    after_resolve: null,
+    resolve_with: null,
+  },
+  {
+    name: `noMatchingOptionsMsg hidden while loading, shown after`,
+    props: { noMatchingOptionsMsg: `No matches` },
+    initial_options: [`Apple`],
+    search: `xyz`,
+    while_loading: null,
+    after_resolve: `No matches`,
+    resolve_with: [] as string[],
+  },
+])(
+  `$name`,
+  async ({
+    props,
+    initial_options,
+    search,
+    while_loading,
+    after_resolve,
+    resolve_with,
+  }) => {
+    vi.useFakeTimers()
+    try {
+      const resolvers: ((r: { options: string[]; hasMore: boolean }) => void)[] = []
+      const fetch_fn = vi.fn(
+        () =>
+          new Promise<{ options: string[]; hasMore: boolean }>((r) => resolvers.push(r)),
+      )
+
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: fetch_fn, debounceMs: 0 }, open: true, ...props },
+      })
+      await vi.runAllTimersAsync()
+      resolvers[0]({ options: [...initial_options], hasMore: false })
+      await vi.runAllTimersAsync()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = search
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(fetch_fn.mock.calls.length).toBeGreaterThanOrEqual(2)
+
+      const msg_during = document.querySelector(`.user-msg`)?.textContent?.trim()
+      if (while_loading) expect(msg_during).toBe(while_loading)
+      else expect(document.querySelector(`.user-msg`)).toBeNull()
+
+      if (resolve_with) {
+        resolvers[1]({ options: resolve_with, hasMore: false })
+        await vi.runAllTimersAsync()
+        expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+          after_resolve,
+        )
+      }
+    } finally {
+      vi.useRealTimers()
+    }
+  },
+)
+
+test(`createOptionMsg shows immediately with static options`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [`Apple`, `Banana`],
+      allowUserOptions: true,
+      createOptionMsg: `Create this option`,
+      open: true,
+    },
+  })
+  await tick()
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `Cherry`
+  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  await tick()
+  expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+    `Create this option`,
+  )
+})
+
 // https://github.com/janosh/svelte-multiselect/issues/369
 describe(`binding update event count`, () => {
   test(`onchange fires 0 times on init and exactly once per selection`, async () => {

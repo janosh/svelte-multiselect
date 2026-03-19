@@ -890,9 +890,9 @@
   const has_user_msg = $derived(
     searchText.length > 0 &&
       Boolean(
-        (allowUserOptions && resolved_create_msg) ||
+        (allowUserOptions && resolved_create_msg && !load_options_loading) ||
           (duplicates !== true && is_label_selected(searchText)) ||
-          (navigable_options.length === 0 && noMatchingOptionsMsg),
+          (navigable_options.length === 0 && noMatchingOptionsMsg && !load_options_loading),
       ),
   )
 
@@ -913,6 +913,7 @@
     // toggle user message when no options match but user can create
     if (
       allowUserOptions &&
+      !load_options_loading &&
       navigable_options.length === 0 &&
       searchText.length > 0
     ) {
@@ -1783,9 +1784,9 @@
       {/each}
       {#if searchText}
         {@const is_dupe = duplicates !== true && is_label_selected(searchText) && `dupe`}
-        {@const can_create = Boolean(allowUserOptions && resolved_create_msg) && `create`}
+        {@const can_create = Boolean(allowUserOptions && resolved_create_msg && !load_options_loading) && `create`}
         {@const no_match =
-        Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg) &&
+        Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg && !load_options_loading) &&
         `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {@const msg = msgType && {
