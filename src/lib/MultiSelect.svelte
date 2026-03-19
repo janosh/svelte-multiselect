@@ -276,6 +276,14 @@
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
+  let highlighted_idx: number | null = $state(null) // index of highlighted selected item for arrow key navigation
+
+  // Clamp highlighted_idx when selected items change externally (undo/redo, parent prop, select_all)
+  $effect(() => {
+    if (highlighted_idx !== null && highlighted_idx >= selected.length) {
+      highlighted_idx = selected.length > 0 ? selected.length - 1 : null
+    }
+  })
 
   // Track last selection action for aria-live announcements
   let last_action = $state<
@@ -702,11 +710,14 @@
     activeOption = navigable_options[activeIndex ?? -1] ?? null
   })
 
-  // Compute the ID of the currently active option for aria-activedescendant
+  // Compute the ID of the currently active element for aria-activedescendant
+  // (highlighted selected pill takes priority, then active dropdown option)
   const active_option_id = $derived(
-    activeIndex !== null && activeIndex < navigable_options.length
-      ? `${internal_id}-opt-${activeIndex}`
-      : undefined,
+    highlighted_idx === null
+      ? activeIndex !== null && activeIndex < navigable_options.length
+        ? `${internal_id}-opt-${activeIndex}`
+        : undefined
+      : `${internal_id}-selected-${highlighted_idx}`,
   )
 
   // Helper to check if removing an option would violate minSelect constraint
@@ -804,11 +815,13 @@
   }
 
   // remove an option from selected list
-  function remove(option_to_drop: Option, event: Event) {
+  // at_idx overrides findIndex lookup so duplicates=true removes the correct occurrence
+  function remove(option_to_drop: Option, event: Event, at_idx?: number) {
     event.stopPropagation()
     if (selected.length === 0) return
+    highlighted_idx = null
 
-    const idx = selected.findIndex((opt) => key(opt) === key(option_to_drop))
+    const idx = at_idx ?? selected.findIndex((opt) => key(opt) === key(option_to_drop))
     let option_removed = selected[idx]
 
     if (option_removed === undefined && allowUserOptions) {
@@ -993,6 +1006,10 @@
       }
     }
 
+    // Clear selected-item highlight for any key except arrow/backspace navigation
+    if (highlighted_idx !== null && ![`ArrowLeft`, `ArrowRight`, `Backspace`].includes(event.key))
+      highlighted_idx = null
+
     // on escape or tab out of input: close options dropdown and reset search text
     if (event.key === `Escape` || event.key === `Tab`) {
       event.stopPropagation()
@@ -1015,19 +1032,34 @@
         // in which case enter means open it
         open_dropdown(event)
       }
+    } // on left/right arrow keys: navigate between selected items
+    else if (event.key === `ArrowLeft` && selected.length > 0 && !searchText) {
+      event.preventDefault()
+      highlighted_idx = highlighted_idx === null
+        ? selected.length - 1
+        : Math.max(0, highlighted_idx - 1)
+    } else if (event.key === `ArrowRight` && highlighted_idx !== null) {
+      event.preventDefault()
+      highlighted_idx = highlighted_idx < selected.length - 1
+        ? highlighted_idx + 1
+        : null
     } // on up/down arrow keys: update active option
     else if (event.key === `ArrowDown` || event.key === `ArrowUp`) {
       event.stopPropagation()
       event.preventDefault()
       await handle_arrow_navigation(event.key === `ArrowUp` ? -1 : 1)
-    } // on backspace key: remove last selected option
+    } // on backspace key: remove highlighted or last selected option
     else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
       event.stopPropagation()
       if (can_remove) {
-        const last_option = selected.at(-1)
-        if (last_option) remove(last_option, event)
+        const prev_highlighted = highlighted_idx
+        const target_idx = prev_highlighted ?? selected.length - 1
+        const target = selected[target_idx]
+        if (target !== undefined) remove(target, event, target_idx)
+        if (prev_highlighted !== null) {
+          highlighted_idx = selected.length === 0 ? null : Math.min(prev_highlighted, selected.length - 1)
+        }
       }
-      // Don't prevent default, allow normal backspace behavior if not removing
     } // make first matching option active on any keypress (if none of the above special cases match)
     else if (navigable_options.length > 0 && activeIndex === null) {
       // Don't stop propagation or prevent default here, allow normal character input
@@ -1037,6 +1069,7 @@
 
   function remove_all(event: Event) {
     event.stopPropagation()
+    highlighted_idx = null
 
     // Keep the first minSelect items, remove the rest
     let removed_options: Option[] = []
@@ -1176,6 +1209,7 @@
     }
     selected = new_selected
     drag_idx = null
+    highlighted_idx = null
     onreorder?.({ options: new_selected, previous })
     onchange?.({ options: new_selected, type: `reorder` })
   }
@@ -1199,6 +1233,7 @@
   }
 
   const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
+    highlighted_idx = null
     open_dropdown(event)
     onfocus?.(event)
   }
@@ -1440,7 +1475,9 @@
         .filter(Boolean)
         .join(` `) || null}
       <li
+        id="{internal_id}-selected-{idx}"
         class={liSelectedClass}
+        class:highlighted={highlighted_idx === idx}
         role="option"
         aria-selected="true"
         animate:flip={selectedFlipParams}
@@ -1899,6 +1936,9 @@
         light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))
       )
     );
+  }
+  :where(div.multiselect > ul.selected > li).highlighted {
+    outline: 2px solid var(--sms-active-color, cornflowerblue);
   }
   :is(div.multiselect button) {
     border-radius: 50%;

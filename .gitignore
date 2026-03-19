@@ -13,3 +13,4 @@ test-results
 coverage
 
 package-lock.json
+.vite-hooks/
