@@ -1525,6 +1525,189 @@ test(`backspace does not remove items when minSelect would be violated`, () => {
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red`)
 })
 
+describe(`arrow key navigation between selected items`, () => {
+  const options = [`Red`, `Green`, `Blue`]
+  const press = (key: string) => new KeyboardEvent(`keydown`, { key, bubbles: true })
+  const highlighted = () => document.querySelectorAll(`ul.selected > li.highlighted`)
+  const selected_items = () => document.querySelectorAll(`ul.selected > li`)
+  const is_highlighted = (idx: number) =>
+    selected_items()[idx]?.classList.contains(`highlighted`)
+
+  function setup(
+    selected = [`Red`, `Green`, `Blue`],
+    extra_props: Record<string, unknown> = {},
+  ) {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options, selected, ...extra_props },
+    })
+    return doc_query<HTMLInputElement>(`input[autocomplete]`)
+  }
+
+  test(`ArrowLeft highlights last selected item`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(is_highlighted(2)).toBe(true)
+  })
+
+  test(`repeated ArrowLeft moves highlight leftward and stops at 0`, async () => {
+    const input = setup()
+    for (let step = 0; step < 4; step++) input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(is_highlighted(0)).toBe(true)
+    expect(is_highlighted(1)).toBe(false)
+  })
+
+  test(`ArrowRight moves highlight rightward, then clears`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowLeft`)) // idx 2
+    input.dispatchEvent(press(`ArrowLeft`)) // idx 1
+    input.dispatchEvent(press(`ArrowRight`)) // idx 2
+    await tick()
+    expect(is_highlighted(2)).toBe(true)
+    input.dispatchEvent(press(`ArrowRight`)) // clears
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`Backspace removes highlighted item and highlight stays at same index`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowLeft`)) // Blue (idx 2)
+    input.dispatchEvent(press(`ArrowLeft`)) // Green (idx 1)
+    input.dispatchEvent(press(`Backspace`))
+    await tick()
+    expect(selected_items().length).toBe(2)
+    expect(selected_items()[0]?.textContent).toContain(`Red`)
+    expect(selected_items()[1]?.textContent).toContain(`Blue`)
+    // highlight should stay at idx 1 (Blue), not jump to idx 0 (Red)
+    expect(is_highlighted(1)).toBe(true)
+    expect(is_highlighted(0)).toBe(false)
+  })
+
+  test(`ArrowLeft does nothing when input has text`, async () => {
+    const input = setup()
+    input.value = `R`
+    input.dispatchEvent(new Event(`input`, { bubbles: true }))
+    await tick()
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`ArrowLeft is no-op with no selected items`, async () => {
+    const input = setup([])
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`ArrowRight is no-op without prior highlight`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowRight`))
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`Backspace without highlight removes last item`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`Backspace`))
+    await tick()
+    const text = doc_query(`ul.selected`).textContent?.trim()
+    expect(text).toContain(`Red`)
+    expect(text).toContain(`Green`)
+    expect(text).not.toContain(`Blue`)
+  })
+
+  test(`Backspace on highlighted first item keeps highlight in bounds`, async () => {
+    const input = setup()
+    for (let step = 0; step < 3; step++) input.dispatchEvent(press(`ArrowLeft`))
+    input.dispatchEvent(press(`Backspace`))
+    await tick()
+    expect(selected_items().length).toBe(2)
+    expect(is_highlighted(0)).toBe(true)
+    expect(selected_items()[0]?.textContent).toContain(`Green`)
+  })
+
+  test(`Backspace on single highlighted item clears highlight`, async () => {
+    const input = setup([`Red`])
+    input.dispatchEvent(press(`ArrowLeft`))
+    input.dispatchEvent(press(`Backspace`))
+    await tick()
+    expect(selected_items().length).toBe(0)
+    expect(highlighted().length).toBe(0)
+  })
+
+  test.each([`Escape`, `ArrowDown`, `ArrowUp`, `Tab`, `Enter`, `a`])(
+    `%s clears highlight`,
+    async (key) => {
+      const input = setup()
+      input.dispatchEvent(press(`ArrowLeft`))
+      await tick()
+      expect(highlighted().length).toBe(1)
+      input.dispatchEvent(press(key))
+      await tick()
+      expect(highlighted().length).toBe(0)
+    },
+  )
+
+  test(`clicking X button clears highlight`, async () => {
+    const input = setup()
+    // highlight idx 1 (Green) so removing the last item leaves a valid stale index
+    input.dispatchEvent(press(`ArrowLeft`))
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(is_highlighted(1)).toBe(true)
+    // click X on last item (Blue) — selected becomes [Red, Green], stale idx 1 still valid
+    ;[...document.querySelectorAll<HTMLElement>(`ul.selected li button.remove`)]
+      .at(-1)
+      ?.click()
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`remove-all button clears highlight`, async () => {
+    // minSelect=1 so one item survives remove-all, exposing stale highlighted_idx
+    const input = setup([`Red`, `Green`, `Blue`], { minSelect: 1 })
+    // highlight idx 0 (Red) — this item will survive remove-all
+    for (let step = 0; step < 3; step++) input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(is_highlighted(0)).toBe(true)
+    doc_query<HTMLElement>(`button.remove-all`).click()
+    await tick()
+    expect(selected_items().length).toBe(1)
+    expect(highlighted().length).toBe(0)
+  })
+
+  test(`consecutive Backspace removals track highlight correctly`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowLeft`)) // idx 2 (Blue)
+    input.dispatchEvent(press(`ArrowLeft`)) // idx 1 (Green)
+    input.dispatchEvent(press(`ArrowLeft`)) // idx 0 (Red)
+    input.dispatchEvent(press(`Backspace`)) // remove Red, highlight stays at 0
+    await tick()
+    expect(selected_items().length).toBe(2)
+    expect(selected_items()[0]?.textContent).toContain(`Green`)
+    expect(is_highlighted(0)).toBe(true)
+    input.dispatchEvent(press(`Backspace`)) // remove Green, highlight stays at 0
+    await tick()
+    expect(selected_items().length).toBe(1)
+    expect(selected_items()[0]?.textContent).toContain(`Blue`)
+    expect(is_highlighted(0)).toBe(true)
+  })
+
+  test(`re-focusing input clears highlight`, async () => {
+    const input = setup()
+    input.dispatchEvent(press(`ArrowLeft`))
+    await tick()
+    expect(highlighted().length).toBe(1)
+    input.blur()
+    input.focus()
+    await tick()
+    expect(highlighted().length).toBe(0)
+  })
+})
+
 test(`remove all button does not remove items when minSelect constraint would be violated`, async () => {
   // Test that remove all button also respects minSelect
   const options = [`Red`, `Green`, `Yellow`]
