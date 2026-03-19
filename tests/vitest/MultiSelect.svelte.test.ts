@@ -3516,36 +3516,40 @@ describe(`loadOptions feature`, () => {
 // https://github.com/janosh/svelte-multiselect/discussions/401
 test(`createOptionMsg hidden while loadOptions is loading`, async () => {
   vi.useFakeTimers()
-  const resolvers: ((r: { options: string[]; hasMore: boolean }) => void)[] = []
-  const fetch_fn = vi.fn(
-    () => new Promise<{ options: string[]; hasMore: boolean }>((r) => resolvers.push(r)),
-  )
+  try {
+    const resolvers: ((r: { options: string[]; hasMore: boolean }) => void)[] = []
+    const fetch_fn = vi.fn(
+      () =>
+        new Promise<{ options: string[]; hasMore: boolean }>((r) => resolvers.push(r)),
+    )
 
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      loadOptions: { fetch: fetch_fn, debounceMs: 0 },
-      allowUserOptions: true,
-      createOptionMsg: `Create this option`,
-      open: true,
-    },
-  })
-  await vi.runAllTimersAsync()
-  resolvers[0]({ options: [`Existing`], hasMore: false })
-  await vi.runAllTimersAsync()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        allowUserOptions: true,
+        createOptionMsg: `Create this option`,
+        open: true,
+      },
+    })
+    await vi.runAllTimersAsync()
+    resolvers[0]({ options: [`Existing`], hasMore: false })
+    await vi.runAllTimersAsync()
 
-  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-  input.value = `new tag`
-  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
-  await vi.runAllTimersAsync()
-  expect(document.querySelector(`.user-msg`)).toBeNull()
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `new tag`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await vi.runAllTimersAsync()
+    expect(document.querySelector(`.user-msg`)).toBeNull()
 
-  resolvers[1]({ options: [], hasMore: false })
-  await vi.runAllTimersAsync()
-  expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
-    `Create this option`,
-  )
-  vi.useRealTimers()
+    resolvers[1]({ options: [], hasMore: false })
+    await vi.runAllTimersAsync()
+    expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+      `Create this option`,
+    )
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 test(`createOptionMsg shows immediately with static options`, async () => {

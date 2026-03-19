@@ -914,6 +914,7 @@
     // toggle user message when no options match but user can create
     if (
       allowUserOptions &&
+      !load_options_loading &&
       navigable_options.length === 0 &&
       searchText.length > 0
     ) {
