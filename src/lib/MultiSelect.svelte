@@ -815,12 +815,13 @@
   }
 
   // remove an option from selected list
-  function remove(option_to_drop: Option, event: Event) {
+  // at_idx overrides findIndex lookup so duplicates=true removes the correct occurrence
+  function remove(option_to_drop: Option, event: Event, at_idx?: number) {
     event.stopPropagation()
     if (selected.length === 0) return
     highlighted_idx = null
 
-    const idx = selected.findIndex((opt) => key(opt) === key(option_to_drop))
+    const idx = at_idx ?? selected.findIndex((opt) => key(opt) === key(option_to_drop))
     let option_removed = selected[idx]
 
     if (option_removed === undefined && allowUserOptions) {
@@ -1052,8 +1053,9 @@
       event.stopPropagation()
       if (can_remove) {
         const prev_highlighted = highlighted_idx
-        const target = prev_highlighted === null ? selected.at(-1) : selected[prev_highlighted]
-        if (target) remove(target, event)
+        const target_idx = prev_highlighted ?? selected.length - 1
+        const target = selected[target_idx]
+        if (target !== undefined) remove(target, event, target_idx)
         if (prev_highlighted !== null) {
           highlighted_idx = selected.length === 0 ? null : Math.min(prev_highlighted, selected.length - 1)
         }

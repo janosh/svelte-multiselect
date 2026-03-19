@@ -1696,6 +1696,19 @@ describe(`arrow key navigation between selected items`, () => {
     expect(is_highlighted(0)).toBe(true)
   })
 
+  test(`Backspace with duplicates removes correct occurrence`, async () => {
+    // with duplicates=true, selected can have repeated values
+    // backspace on highlighted idx 2 (second "Red") must remove idx 2, not idx 0
+    const input = setup([`Red`, `Blue`, `Red`], { duplicates: true })
+    input.dispatchEvent(press(`ArrowLeft`)) // idx 2 (second Red)
+    input.dispatchEvent(press(`Backspace`))
+    await tick()
+    expect(selected_items().length).toBe(2)
+    // first Red (idx 0) should survive, Blue (idx 1) should survive
+    expect(selected_items()[0]?.textContent).toContain(`Red`)
+    expect(selected_items()[1]?.textContent).toContain(`Blue`)
+  })
+
   test(`re-focusing input clears highlight`, async () => {
     const input = setup()
     input.dispatchEvent(press(`ArrowLeft`))
