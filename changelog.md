@@ -1,89 +1,102 @@
 # Changelog
 
+## [v11.6.4](https://github.com/janosh/svelte-multiselect/compare/v11.6.3...v11.6.4)
+
+> 19 March 2026
+
+- Suppress user messages during async loading [`#403`](https://github.com/janosh/svelte-multiselect/pull/403)
+- Add left/right arrow key navigation between selected items [`#402`](https://github.com/janosh/svelte-multiselect/pull/402)
+- Replace pre-commit/prek with vp staged, enable pedantic linting category [`6317a47`](https://github.com/janosh/svelte-multiselect/commit/6317a47)
+- Enable type-aware linting and fix all 168 errors [`3fd9b2c`](https://github.com/janosh/svelte-multiselect/commit/3fd9b2c)
+- Migrate project tooling to vite-plus and align CI/test commands [`9bfac33`](https://github.com/janosh/svelte-multiselect/commit/9bfac33)
+- Fix spurious onopen/onclose events and vite plugin HMR reload [`0ad83f8`](https://github.com/janosh/svelte-multiselect/commit/0ad83f8)
+- Add theme toggle and demo overview navigation pages [`351baf9`](https://github.com/janosh/svelte-multiselect/commit/351baf9)
+- Replace svelte-preprocess with acorn, update deps, harden test assertions [`6fe18c2`](https://github.com/janosh/svelte-multiselect/commit/6fe18c2)
+
 ## [v11.6.3](https://github.com/janosh/svelte-multiselect/compare/v11.6.2...v11.6.3)
 
 > 8 March 2026
 
-- Tooltip: suppress native title, auto-flip placement, sync arrow by @janosh in https://github.com/janosh/svelte-multiselect/pull/398
-- Fix live example CSS resolution during SSR by @janosh in https://github.com/janosh/svelte-multiselect/pull/399
-- Enrich snippet props and event callback payloads by @janosh in https://github.com/janosh/svelte-multiselect/pull/400
+- Tooltip: suppress native title, auto-flip placement, sync arrow [`#398`](https://github.com/janosh/svelte-multiselect/pull/398)
+- Fix live example CSS resolution during SSR [`#399`](https://github.com/janosh/svelte-multiselect/pull/399)
+- Enrich snippet props and event callback payloads [`#400`](https://github.com/janosh/svelte-multiselect/pull/400)
 
 ## [v11.6.2](https://github.com/janosh/svelte-multiselect/compare/v11.6.1...v11.6.2)
 
 > 19 February 2026
 
-- add `CopyButton` disabled/reset/callback support with demo page by @janosh in https://github.com/janosh/svelte-multiselect/pull/397
-- fix hidden dropdown scroll height and dynamic `createOptionMsg` support by @janosh in https://github.com/janosh/svelte-multiselect/pull/396
+- add `CopyButton` disabled/reset/callback support with demo page [`#397`](https://github.com/janosh/svelte-multiselect/pull/397)
+- fix hidden dropdown scroll height and dynamic `createOptionMsg` support [`#396`](https://github.com/janosh/svelte-multiselect/pull/396)
 
 ## [v11.6.1](https://github.com/janosh/svelte-multiselect/compare/v11.6.0...v11.6.1)
 
 > 3 February 2026
 
-- fix: use value field for key function to prevent case-variant crashes by @davidamacey in https://github.com/janosh/svelte-multiselect/pull/392
-- Add dropdown cooldown and CSS custom properties to Nav by @janosh in https://github.com/janosh/svelte-multiselect/pull/393
-- Add tooltip shrink-to-fit algorithm and fix reactive content updates by @janosh in https://github.com/janosh/svelte-multiselect/pull/394
-- Simplify syntax highlighting with starry-night common bundle by @janosh in https://github.com/janosh/svelte-multiselect/pull/395
+- fix: use value field for key function to prevent case-variant crashes [`#392`](https://github.com/janosh/svelte-multiselect/pull/392)
+- Add dropdown cooldown and CSS custom properties to Nav [`#393`](https://github.com/janosh/svelte-multiselect/pull/393)
+- Add tooltip shrink-to-fit algorithm and fix reactive content updates [`#394`](https://github.com/janosh/svelte-multiselect/pull/394)
+- Simplify syntax highlighting with starry-night common bundle [`#395`](https://github.com/janosh/svelte-multiselect/pull/395)
 
 ## New Contributors
 
-- @davidamacey made their first contribution in https://github.com/janosh/svelte-multiselect/pull/392
+- @davidamacey made their first contribution in [`#392`](https://github.com/janosh/svelte-multiselect/pull/392)
 
 ## [v11.6.0](https://github.com/janosh/svelte-multiselect/compare/v11.5.2...v11.6.0)
 
 > 25 January 2026
 
-- Add fallback for crypto.randomUUID to prevent crash in non-secure contexts by @AlessioBugetti in https://github.com/janosh/svelte-multiselect/pull/386
-- Add pinned dropdown feature to Nav component by @janosh in https://github.com/janosh/svelte-multiselect/pull/387
-- Add selection history with undo/redo support by @janosh in https://github.com/janosh/svelte-multiselect/pull/388
-- Reduce live-examples dependencies by 4 packages by @janosh in https://github.com/janosh/svelte-multiselect/pull/390
+- Add fallback for crypto.randomUUID to prevent crash in non-secure contexts [`#386`](https://github.com/janosh/svelte-multiselect/pull/386)
+- Add pinned dropdown feature to Nav component [`#387`](https://github.com/janosh/svelte-multiselect/pull/387)
+- Add selection history with undo/redo support [`#388`](https://github.com/janosh/svelte-multiselect/pull/388)
+- Reduce live-examples dependencies by 4 packages [`#390`](https://github.com/janosh/svelte-multiselect/pull/390)
 
 ## New Contributors
 
-- @AlessioBugetti made their first contribution in https://github.com/janosh/svelte-multiselect/pull/386
+- @AlessioBugetti made their first contribution in [`#386`](https://github.com/janosh/svelte-multiselect/pull/386)
 
 ## [v11.5.2](https://github.com/janosh/svelte-multiselect/compare/v11.5.0...v11.5.2)
 
 > 18 January 2026
 
-- Enhance tooltip attachment with new options and accessibility by @janosh in https://github.com/janosh/svelte-multiselect/pull/378
-- Use :where() for user-overridable CSS selectors by @janosh in https://github.com/janosh/svelte-multiselect/pull/381
-- Add heading-anchors module for SSR-compatible heading links by @janosh in https://github.com/janosh/svelte-multiselect/pull/382
-- Add 4 new event callbacks for user feedback and analytics by @janosh in https://github.com/janosh/svelte-multiselect/pull/383
-- Enhance Nav component with extended route configuration by @janosh in https://github.com/janosh/svelte-multiselect/pull/384
+- Enhance tooltip attachment with new options and accessibility [`#378`](https://github.com/janosh/svelte-multiselect/pull/378)
+- Use :where() for user-overridable CSS selectors [`#381`](https://github.com/janosh/svelte-multiselect/pull/381)
+- Add heading-anchors module for SSR-compatible heading links [`#382`](https://github.com/janosh/svelte-multiselect/pull/382)
+- Add 4 new event callbacks for user feedback and analytics [`#383`](https://github.com/janosh/svelte-multiselect/pull/383)
+- Enhance Nav component with extended route configuration [`#384`](https://github.com/janosh/svelte-multiselect/pull/384)
 
 ## [v11.5.0](https://github.com/janosh/svelte-multiselect/compare/v11.4.0...v11.5.0)
 
 > 4 January 2026
 
-- Add `MultiSelect` `onreorder` event and fire `onchange` event on drag-drop reordering by @janosh in https://github.com/janosh/svelte-multiselect/pull/373
-- fix: prevent extra binding updates on init and selection by @janosh in https://github.com/janosh/svelte-multiselect/pull/374
-- Option grouping with collapsible headers and per-group select all by @janosh in https://github.com/janosh/svelte-multiselect/pull/375
-- `resizable` attachment + `MultiSelect` keyboard shortcuts + more test coverage by @janosh in https://github.com/janosh/svelte-multiselect/pull/376
-- ARIA 1.2 combobox pattern for VoiceOver accessibility by @janosh in https://github.com/janosh/svelte-multiselect/pull/377
+- Add `MultiSelect` `onreorder` event and fire `onchange` event on drag-drop reordering [`#373`](https://github.com/janosh/svelte-multiselect/pull/373)
+- fix: prevent extra binding updates on init and selection [`#374`](https://github.com/janosh/svelte-multiselect/pull/374)
+- Option grouping with collapsible headers and per-group select all [`#375`](https://github.com/janosh/svelte-multiselect/pull/375)
+- `resizable` attachment + `MultiSelect` keyboard shortcuts + more test coverage [`#376`](https://github.com/janosh/svelte-multiselect/pull/376)
+- ARIA 1.2 combobox pattern for VoiceOver accessibility [`#377`](https://github.com/janosh/svelte-multiselect/pull/377)
 
 ## [v11.4.0](https://github.com/janosh/svelte-multiselect/compare/v11.3.0...v11.4.0)
 
 > 25 December 2025
 
-- Add prop `selectAllOption: boolean = false` to `MultiSelect` by @janosh in https://github.com/janosh/svelte-multiselect/pull/345
-- Change `closeDropdownOnSelect` default from `'if-mobile'` to `false` by @janosh in https://github.com/janosh/svelte-multiselect/pull/349
-- Don't open dropdown when clicking on selected options by @janosh in https://github.com/janosh/svelte-multiselect/pull/355
-- Add `MultiSelect` prop `selectedFlipParams` for customizable flip animation by @janosh in https://github.com/janosh/svelte-multiselect/pull/358
-- Prevent mouse hover during scroll from overriding `MultiSelect` arrow key navigation by @janosh in https://github.com/janosh/svelte-multiselect/pull/359
-- Overload `placeholder` prop to support `object | string` with `persistent` option by @janosh in https://github.com/janosh/svelte-multiselect/pull/360
-- fix: `resetFilterOnAdd` for Enter/selectAll, add `can_remove`/`is_object` helpers, prevent spurious `removeAll` events by @janosh in https://github.com/janosh/svelte-multiselect/pull/361
-- Fix enter key deselection now preserves `searchText` (matching mouse behavior) by @janosh in https://github.com/janosh/svelte-multiselect/pull/363
-- fix: prevent infinite loops with array-cloning reactive wrappers (stores, Superforms) by @janosh in https://github.com/janosh/svelte-multiselect/pull/365
-- fix: don't render message `<li>` when duplicateOptionMsg/noMatchingOptionsMsg/createOptionMsg is empty by @janosh in https://github.com/janosh/svelte-multiselect/pull/366
-- v11.4.0 + fix Svelte Playground links and npm package compatibility by @janosh in https://github.com/janosh/svelte-multiselect/pull/368
+- Add prop `selectAllOption: boolean = false` to `MultiSelect` [`#345`](https://github.com/janosh/svelte-multiselect/pull/345)
+- Change `closeDropdownOnSelect` default from `'if-mobile'` to `false` [`#349`](https://github.com/janosh/svelte-multiselect/pull/349)
+- Don't open dropdown when clicking on selected options [`#355`](https://github.com/janosh/svelte-multiselect/pull/355)
+- Add `MultiSelect` prop `selectedFlipParams` for customizable flip animation [`#358`](https://github.com/janosh/svelte-multiselect/pull/358)
+- Prevent mouse hover during scroll from overriding `MultiSelect` arrow key navigation [`#359`](https://github.com/janosh/svelte-multiselect/pull/359)
+- Overload `placeholder` prop to support `object | string` with `persistent` option [`#360`](https://github.com/janosh/svelte-multiselect/pull/360)
+- fix: `resetFilterOnAdd` for Enter/selectAll, add `can_remove`/`is_object` helpers, prevent spurious `removeAll` events [`#361`](https://github.com/janosh/svelte-multiselect/pull/361)
+- Fix enter key deselection now preserves `searchText` (matching mouse behavior) [`#363`](https://github.com/janosh/svelte-multiselect/pull/363)
+- fix: prevent infinite loops with array-cloning reactive wrappers (stores, Superforms) [`#365`](https://github.com/janosh/svelte-multiselect/pull/365)
+- fix: don't render message `<li>` when duplicateOptionMsg/noMatchingOptionsMsg/createOptionMsg is empty [`#366`](https://github.com/janosh/svelte-multiselect/pull/366)
+- v11.4.0 + fix Svelte Playground links and npm package compatibility [`#368`](https://github.com/janosh/svelte-multiselect/pull/368)
 
 ## [v11.3.0](https://github.com/janosh/svelte-multiselect/compare/v11.2.4...v11.3.0)
 
 > 9 November 2025
 
-- Allow initializing `selected` from `value` prop by @janosh in https://github.com/janosh/svelte-multiselect/pull/338
-- Fix generic type inference in `MultiSelect` by @janosh in https://github.com/janosh/svelte-multiselect/pull/340
-- Better `Nav.svelte` with dropdown menus and a burger button for mobile views by @janosh in https://github.com/janosh/svelte-multiselect/pull/341
+- Allow initializing `selected` from `value` prop [`#338`](https://github.com/janosh/svelte-multiselect/pull/338)
+- Fix generic type inference in `MultiSelect` [`#340`](https://github.com/janosh/svelte-multiselect/pull/340)
+- Better `Nav.svelte` with dropdown menus and a burger button for mobile views [`#341`](https://github.com/janosh/svelte-multiselect/pull/341)
 
 ## [v11.2.4](https://github.com/janosh/svelte-multiselect/compare/v11.2.3...v11.2.4)
 
@@ -97,16 +110,16 @@
 
 > 13 August 2025
 
-- Items can no longer be removed via backspace when that would violate minSelect by @janosh in https://github.com/janosh/svelte-multiselect/pull/328
-- Add `/events` demo page by @janosh in https://github.com/janosh/svelte-multiselect/pull/329
-- Add MultiSelect prop `keepSelectedInDropdown: false | 'plain' | 'checkboxes'` by @janosh in https://github.com/janosh/svelte-multiselect/pull/331
-- Add /attachments demo page + add arrow to tooltip by @janosh in https://github.com/janosh/svelte-multiselect/pull/332
+- Items can no longer be removed via backspace when that would violate minSelect [`#328`](https://github.com/janosh/svelte-multiselect/pull/328)
+- Add `/events` demo page [`#329`](https://github.com/janosh/svelte-multiselect/pull/329)
+- Add MultiSelect prop `keepSelectedInDropdown: false | 'plain' | 'checkboxes'` [`#331`](https://github.com/janosh/svelte-multiselect/pull/331)
+- Add /attachments demo page + add arrow to tooltip [`#332`](https://github.com/janosh/svelte-multiselect/pull/332)
 
 ## [v11.2.2](https://github.com/janosh/svelte-multiselect/compare/v11.2.1...v11.2.2)
 
 > 12 July 2025
 
-- Add Svelte attachments: `draggable`, `sortable`, `tooltip`, `highlight_matches`, `click_outside` by @janosh in https://github.com/janosh/svelte-multiselect/pull/325
+- Add Svelte attachments: `draggable`, `sortable`, `tooltip`, `highlight_matches`, `click_outside` [`#325`](https://github.com/janosh/svelte-multiselect/pull/325)
 
 **Full Changelog**: https://github.com/janosh/svelte-multiselect/compare/v11.2.1...v11.2.2
 
@@ -116,7 +129,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 11 July 2025
 
-- Drop accidental `highlight.js` dependency by @janosh in https://github.com/janosh/svelte-multiselect/pull/324
+- Drop accidental `highlight.js` dependency [`#324`](https://github.com/janosh/svelte-multiselect/pull/324)
 
 **Full Changelog**: https://github.com/janosh/svelte-multiselect/compare/v11.2.0...v11.2.1
 
@@ -124,14 +137,14 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 11 July 2025
 
-- Better getting started docs by @janosh in https://github.com/janosh/svelte-multiselect/pull/312
-- `removeAll` event timing: clear `selected` before events fire by @janosh in https://github.com/janosh/svelte-multiselect/pull/313
-- Open dropdown on programmatic focus and close it on blur by @janosh in https://github.com/janosh/svelte-multiselect/pull/314
-- Fix `<input>` adding unwanted width when options selected by @janosh in https://github.com/janosh/svelte-multiselect/pull/315
-- MultiSelect fire `oncreate` event for all user-created options by @janosh in https://github.com/janosh/svelte-multiselect/pull/316
-- Add new value `'retain-focus'` for prop `closeDropdownOnSelect` by @janosh in https://github.com/janosh/svelte-multiselect/pull/318
-- Swap `node` for `deno` by @janosh in https://github.com/janosh/svelte-multiselect/pull/319
-- migrate useful Svelte components: `CodeExample`, `CopyButton`, `FileDetails`, `GitHubCorner`, `Icon`, `PrevNext`, `RadioButtons`, `Toggle` by @janosh in https://github.com/janosh/svelte-multiselect/pull/323
+- Better getting started docs [`#312`](https://github.com/janosh/svelte-multiselect/pull/312)
+- `removeAll` event timing: clear `selected` before events fire [`#313`](https://github.com/janosh/svelte-multiselect/pull/313)
+- Open dropdown on programmatic focus and close it on blur [`#314`](https://github.com/janosh/svelte-multiselect/pull/314)
+- Fix `<input>` adding unwanted width when options selected [`#315`](https://github.com/janosh/svelte-multiselect/pull/315)
+- MultiSelect fire `oncreate` event for all user-created options [`#316`](https://github.com/janosh/svelte-multiselect/pull/316)
+- Add new value `'retain-focus'` for prop `closeDropdownOnSelect` [`#318`](https://github.com/janosh/svelte-multiselect/pull/318)
+- Swap `node` for `deno` [`#319`](https://github.com/janosh/svelte-multiselect/pull/319)
+- migrate useful Svelte components: `CodeExample`, `CopyButton`, `FileDetails`, `GitHubCorner`, `Icon`, `PrevNext`, `RadioButtons`, `Toggle` [`#323`](https://github.com/janosh/svelte-multiselect/pull/323)
 
 **Full Changelog**: https://github.com/janosh/svelte-multiselect/compare/v11.1.1...v11.2.0
 
