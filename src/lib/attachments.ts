@@ -742,7 +742,7 @@ export const tooltip =
             // Get min-content (longest word) as lower bound
             Object.assign(style, {
               maxWidth: `none`,
-              wordWrap: `normal`,
+              overflowWrap: `normal`,
               width: `min-content`,
             })
             const min_width = tooltip_el.offsetWidth
@@ -858,7 +858,7 @@ export const tooltip =
           position: absolute; z-index: 9999; opacity: 0; display: inline-block;
           background: var(--tooltip-bg, light-dark(#f5f5f7, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, none);
           padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 5pt); font-size: var(--tooltip-font-size, 0.8rem); line-height: 1.4;
-          max-width: var(--tooltip-max-width, 280px); word-wrap: break-word; text-wrap: balance; pointer-events: none;
+          max-width: var(--tooltip-max-width, 280px); overflow-wrap: break-word; text-wrap: balance; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
         `
 

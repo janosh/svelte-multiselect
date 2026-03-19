@@ -176,7 +176,7 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
     font-size: 0.8em;
     margin: 0;
     white-space: pre-wrap;
-    word-break: break-word;
+    overflow-wrap: anywhere;
   }
   .no-events {
     color: light-dark(#666, #a0aec0);
