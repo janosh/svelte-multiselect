@@ -889,6 +889,7 @@
   // Check if a user message (create option, duplicate warning, no match) is visible
   const has_user_msg = $derived(
     searchText.length > 0 &&
+      !load_options_loading &&
       Boolean(
         (allowUserOptions && resolved_create_msg) ||
           (duplicates !== true && is_label_selected(searchText)) ||
@@ -1783,9 +1784,9 @@
       {/each}
       {#if searchText}
         {@const is_dupe = duplicates !== true && is_label_selected(searchText) && `dupe`}
-        {@const can_create = Boolean(allowUserOptions && resolved_create_msg) && `create`}
+        {@const can_create = Boolean(allowUserOptions && resolved_create_msg && !load_options_loading) && `create`}
         {@const no_match =
-        Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg) &&
+        Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg && !load_options_loading) &&
         `no-match`}
         {@const msgType = is_dupe || can_create || no_match}
         {@const msg = msgType && {

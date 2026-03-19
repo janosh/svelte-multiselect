@@ -276,15 +276,16 @@ describe(`pending_hmr_file lifecycle`, () => {
     const ctx = create_mock_context()
     const id = `/path/to/file.md`
     const hot_send = vi.fn()
-    plugin.configureServer?.(create_mock_server(hot_send))
-    return { plugin, ctx, id, hot_send }
+    const server = create_mock_server(hot_send)
+    plugin.configureServer?.(server)
+    return { plugin, ctx, id, hot_send, server }
   }
 
   test(`stale flag cleared after no-change transform — no spurious reload`, () => {
-    const { plugin, ctx, id, hot_send } = setup_hmr()
+    const { plugin, ctx, id, hot_send, server } = setup_hmr()
 
     plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
-    plugin.handleHotUpdate?.({ file: id, server: {}, modules: [] })
+    plugin.handleHotUpdate?.({ file: id, server, modules: [] })
 
     // re-transform with identical examples — fix clears pending_hmr_file
     plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
@@ -298,10 +299,10 @@ describe(`pending_hmr_file lifecycle`, () => {
   })
 
   test(`triggers full-reload when examples actually change during HMR`, () => {
-    const { plugin, ctx, id, hot_send } = setup_hmr()
+    const { plugin, ctx, id, hot_send, server } = setup_hmr()
 
     plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
-    plugin.handleHotUpdate?.({ file: id, server: {}, modules: [] })
+    plugin.handleHotUpdate?.({ file: id, server, modules: [] })
     plugin.transform?.call(ctx, make_code(`<div>V2</div>`), id)
     vi.advanceTimersByTime(500)
 

@@ -3513,6 +3513,61 @@ describe(`loadOptions feature`, () => {
   })
 })
 
+// https://github.com/janosh/svelte-multiselect/discussions/401
+test(`createOptionMsg hidden while loadOptions is loading`, async () => {
+  vi.useFakeTimers()
+  const resolvers: ((r: { options: string[]; hasMore: boolean }) => void)[] = []
+  const fetch_fn = vi.fn(
+    () => new Promise<{ options: string[]; hasMore: boolean }>((r) => resolvers.push(r)),
+  )
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+      allowUserOptions: true,
+      createOptionMsg: `Create this option`,
+      open: true,
+    },
+  })
+  await vi.runAllTimersAsync()
+  resolvers[0]({ options: [`Existing`], hasMore: false })
+  await vi.runAllTimersAsync()
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `new tag`
+  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  await vi.runAllTimersAsync()
+  expect(document.querySelector(`.user-msg`)).toBeNull()
+
+  resolvers[1]({ options: [], hasMore: false })
+  await vi.runAllTimersAsync()
+  expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+    `Create this option`,
+  )
+  vi.useRealTimers()
+})
+
+test(`createOptionMsg shows immediately with static options`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [`Apple`, `Banana`],
+      allowUserOptions: true,
+      createOptionMsg: `Create this option`,
+      open: true,
+    },
+  })
+  await tick()
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `Cherry`
+  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  await tick()
+  expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+    `Create this option`,
+  )
+})
+
 // https://github.com/janosh/svelte-multiselect/issues/369
 describe(`binding update event count`, () => {
   test(`onchange fires 0 times on init and exactly once per selection`, async () => {
