@@ -3745,6 +3745,47 @@ describe(`load_options_pending`, () => {
     await tick()
     expect(oncreate_spy).toHaveBeenCalledTimes(1)
   })
+
+  test(`late fetch response after close does not corrupt next open`, async () => {
+    const { fetch_fn, fetch_resolvers } = create_deferred_fetch()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        open: true,
+      },
+    })
+    await vi.runAllTimersAsync()
+    fetch_resolvers[0]({ options: [`Apple`], hasMore: false })
+    await vi.runAllTimersAsync()
+    expect(fetch_fn).toHaveBeenCalledTimes(1)
+
+    // Type to trigger a second fetch, then close before it resolves
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Rust`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await vi.runAllTimersAsync()
+    expect(fetch_fn).toHaveBeenCalledTimes(2)
+
+    // Close dropdown while fetch is in-flight
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+
+    // Late fetch resolves after close
+    fetch_resolvers[1]({ options: [`Rust Lang`], hasMore: false })
+    await vi.runAllTimersAsync()
+
+    // Reopen — should trigger fresh load immediately (is_first_load path)
+    // not a debounced stale-search-change load
+    doc_query(`div.multiselect`).dispatchEvent(
+      new MouseEvent(`mouseup`, { bubbles: true }),
+    )
+    await tick()
+    // Fresh load fires immediately; stale path would debounce (not yet called)
+    expect(fetch_fn).toHaveBeenCalledTimes(3)
+    expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
+  })
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/369

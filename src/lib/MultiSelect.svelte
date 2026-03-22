@@ -1364,7 +1364,7 @@
     } catch (error) {
       console.error(`MultiSelect: loadOptions error:`, error)
     } finally {
-      load_options_last_search = search
+      if (open) load_options_last_search = search
       load_options_loading = false
     }
   }
