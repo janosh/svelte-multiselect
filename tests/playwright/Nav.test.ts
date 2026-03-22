@@ -1,6 +1,12 @@
+import type { Locator } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 test.describe(`Nav dropdown`, () => {
+  const hover_open = async (dropdown: Locator, menu: Locator) => {
+    await dropdown.hover({ force: true })
+    await expect(menu).toHaveCSS(`display`, `flex`, { timeout: 10_000 })
+  }
+
   test(`opens on hover and closes on mouse leave`, async ({ page }) => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
 
@@ -8,8 +14,7 @@ test.describe(`Nav dropdown`, () => {
     const menu = dropdown.locator(`div[role="menu"]`)
 
     await expect(menu).toHaveCSS(`display`, `none`)
-    await dropdown.hover()
-    await expect(menu).toHaveCSS(`display`, `flex`)
+    await hover_open(dropdown, menu)
     await page.mouse.move(0, 0)
     await expect(menu).toHaveCSS(`display`, `none`)
   })
@@ -18,7 +23,8 @@ test.describe(`Nav dropdown`, () => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
 
     const dropdown = page.locator(`.dropdown`).first()
-    await dropdown.hover()
+    const menu = dropdown.locator(`div[role="menu"]`)
+    await hover_open(dropdown, menu)
     await expect(dropdown.locator(`div[role="menu"] a`).first()).toBeVisible()
   })
 

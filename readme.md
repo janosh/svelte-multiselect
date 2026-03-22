@@ -34,9 +34,9 @@
 
 ## 🧪 &thinsp; Coverage
 
-| Statements                                                                            | Branches                                                                          | Lines                                                                       |
-| ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| ![Statements](https://img.shields.io/badge/statements-85.65%25-yellow.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-82.47%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-85.51%25-yellow.svg?style=flat) |
+| Statements                                                                         | Branches                                                                       | Lines                                                                    |
+| ---------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ | ------------------------------------------------------------------------ |
+| ![Statements](https://img.shields.io/badge/statements-93%25-yellow.svg?style=flat) | ![Branches](https://img.shields.io/badge/branches-87%25-yellow.svg?style=flat) | ![Lines](https://img.shields.io/badge/lines-94%25-yellow.svg?style=flat) |
 
 ## 🔨 &thinsp; Installation
 
@@ -1070,7 +1070,7 @@ Minimal example that changes the background color of the options dropdown:
   - `border: var(--sms-options-border)`
   - `border-width: var(--sms-options-border-width)`
   - `border-radius: var(--sms-options-border-radius, 1ex)`
-  - `padding: var(--sms-options-padding)`
+  - `padding: var(--sms-options-padding, 0)`
   - `margin: var(--sms-options-margin, 6pt 0 0 0)`
 - `div.multiselect > ul.options > li`
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.

@@ -408,6 +408,15 @@
   let load_options_loading = $state(false)
   let load_options_last_search: string | null = $state(null)
   let debounce_timer: ReturnType<typeof setTimeout> | null = null
+  let load_options_session = 0 // incremented on close to invalidate in-flight fetches
+
+  // True when loadOptions is configured and results for the current search haven't
+  // arrived yet (either debouncing or actively fetching). Prevents premature user
+  // messages and option creation while search is pending.
+  let load_options_pending = $derived(
+    Boolean(load_options_config) &&
+      (load_options_loading || (open && (load_options_last_search ?? ``) !== searchText)),
+  )
 
   let effective_options = $derived(
     loadOptions ? loaded_options : (options ?? []),
@@ -886,14 +895,19 @@
     } else input?.focus()
   }
 
+  const can_show_create_msg = $derived(
+    !!allowUserOptions && !!resolved_create_msg && !load_options_pending,
+  )
+  const can_show_no_match_msg = $derived(
+    navigable_options.length === 0 && !!noMatchingOptionsMsg && !load_options_pending,
+  )
+
   // Check if a user message (create option, duplicate warning, no match) is visible
   const has_user_msg = $derived(
     searchText.length > 0 &&
-      Boolean(
-        (allowUserOptions && resolved_create_msg && !load_options_loading) ||
-          (duplicates !== true && is_label_selected(searchText)) ||
-          (navigable_options.length === 0 && noMatchingOptionsMsg && !load_options_loading),
-      ),
+      (can_show_create_msg ||
+        (duplicates !== true && is_label_selected(searchText)) ||
+        can_show_no_match_msg),
   )
 
   // Handle arrow key navigation through options (uses navigable_options to skip collapsed groups)
@@ -912,8 +926,7 @@
 
     // toggle user message when no options match but user can create
     if (
-      allowUserOptions &&
-      !load_options_loading &&
+      can_show_create_msg &&
       navigable_options.length === 0 &&
       searchText.length > 0
     ) {
@@ -1025,7 +1038,7 @@
         if (selected_keys_set.has(key(activeOption))) {
           if (can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
-      } else if (allowUserOptions && searchText.length > 0) {
+      } else if (allowUserOptions && searchText.length > 0 && !load_options_pending) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
       } else {
@@ -1340,19 +1353,20 @@
     ) {
       return
     }
-    // Capture search term at call time to avoid race with user typing during fetch
     const search = searchText
     const offset = reset ? 0 : loaded_options.length
+    const session = load_options_session
     load_options_loading = true
     try {
       const limit = load_options_config.batch_size
       const result = await load_options_config.fetch({ search, offset, limit })
+      if (session !== load_options_session) return // dropdown closed during fetch, discard
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
-      load_options_last_search = search
     } catch (error) {
       console.error(`MultiSelect: loadOptions error:`, error)
     } finally {
+      if (session === load_options_session) load_options_last_search = search
       load_options_loading = false
     }
   }
@@ -1363,6 +1377,7 @@
 
     // Reset state when dropdown closes so next open triggers fresh load
     if (!open) {
+      load_options_session++
       load_options_last_search = null
       loaded_options = []
       load_options_has_more = true
@@ -1536,7 +1551,7 @@
       aria-expanded={open}
       aria-controls={listbox_id}
       aria-activedescendant={active_option_id}
-      aria-busy={loading || load_options_loading || null}
+      aria-busy={loading || load_options_pending || null}
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
       onmouseup={open_dropdown}
@@ -1783,11 +1798,9 @@
         {/if}
       {/each}
       {#if searchText}
-        {@const is_dupe = duplicates !== true && is_label_selected(searchText) && `dupe`}
-        {@const can_create = Boolean(allowUserOptions && resolved_create_msg && !load_options_loading) && `create`}
-        {@const no_match =
-        Boolean(navigable_options?.length === 0 && noMatchingOptionsMsg && !load_options_loading) &&
-        `no-match`}
+        {@const is_dupe = duplicates !== true && is_label_selected(searchText) ? `dupe` : false}
+        {@const can_create = can_show_create_msg ? `create` : false}
+        {@const no_match = can_show_no_match_msg ? `no-match` : false}
         {@const msgType = is_dupe || can_create || no_match}
         {@const msg = msgType && {
         dupe: duplicateOptionMsg,
@@ -2040,7 +2053,7 @@
     border: var(--sms-options-border, 1px solid light-dark(lightgray, #555));
     border-width: var(--sms-options-border-width);
     border-radius: var(--sms-options-border-radius, 1ex);
-    padding: var(--sms-options-padding);
+    padding: var(--sms-options-padding, 0);
     margin: var(--sms-options-margin, 6pt 0 0 0);
   }
   :where(ul.options.hidden) {
