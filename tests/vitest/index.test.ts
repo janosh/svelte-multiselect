@@ -4,7 +4,7 @@ import DefaultExport, {
   scroll_into_view_if_needed_polyfill,
 } from '$lib'
 import MultiSelect from '$lib/MultiSelect.svelte'
-import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
+import { describe, expect, test, vi } from 'vite-plus/test'
 
 test(`default export from index.ts is same as component file`, () => {
   expect(DefaultExport).toBe(MultiSelect)
@@ -59,11 +59,6 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
     }
     vi.stubGlobal(`IntersectionObserver`, MockObserver)
   }
-
-  afterEach(() => {
-    mock = { callback: null, disconnect: vi.fn(), observe: vi.fn(), instance: undefined }
-    vi.unstubAllGlobals()
-  })
 
   test(`creates observer and observes element`, () => {
     create_mock_observer()

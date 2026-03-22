@@ -7,7 +7,7 @@ import {
   sortable,
   tooltip,
 } from '$lib/attachments'
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
@@ -404,7 +404,6 @@ describe(`tooltip`, () => {
   describe(`Reactive Content and Scroll Behavior`, () => {
     // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
     beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
 
     it(`tracks tooltip ownership via _owner property`, () => {
       const element = create_element()
@@ -488,7 +487,6 @@ describe(`tooltip`, () => {
 
   describe(`New Features`, () => {
     beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
 
     it.each([
       {

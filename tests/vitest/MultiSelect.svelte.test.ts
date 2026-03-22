@@ -1,7 +1,7 @@
 // deno-lint-ignore-file no-await-in-loop
 import { readFileSync } from 'node:fs'
 import { mount, tick } from 'svelte'
-import { describe, expect, test, vi } from 'vite-plus/test'
+import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
@@ -3610,6 +3610,182 @@ test(`createOptionMsg shows immediately with static options`, async () => {
   expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
     `Create this option`,
   )
+})
+
+// https://github.com/janosh/svelte-multiselect/pull/403#issuecomment-4106385445
+describe(`load_options_pending`, () => {
+  type load_options_result = { options: string[]; hasMore: boolean }
+
+  function create_deferred_fetch() {
+    const fetch_resolvers: ((result: load_options_result) => void)[] = []
+    const fetch_fn = vi.fn(
+      () =>
+        new Promise<load_options_result>((resolve_fetch) =>
+          fetch_resolvers.push(resolve_fetch),
+        ),
+    )
+    return { fetch_fn, fetch_resolvers }
+  }
+
+  beforeEach(() => vi.useFakeTimers())
+
+  test(`Enter during debounce does not create unwanted option`, async () => {
+    const { fetch_fn, fetch_resolvers } = create_deferred_fetch()
+    const oncreate_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 300 },
+        allowUserOptions: true,
+        createOptionMsg: `Create this option`,
+        open: true,
+        oncreate: oncreate_spy,
+      },
+    })
+    await vi.runAllTimersAsync()
+    fetch_resolvers[0]({ options: [`Apple`, `Banana`], hasMore: false })
+    await vi.runAllTimersAsync()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Cherry`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await tick()
+
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    // Enter during debounce window should NOT create an option
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+    expect(oncreate_spy).not.toHaveBeenCalled()
+    expect(document.querySelector(`.user-msg`)).toBeNull()
+
+    // Let debounce fire and fetch complete
+    await vi.runAllTimersAsync()
+    fetch_resolvers[1]({ options: [], hasMore: false })
+    await vi.runAllTimersAsync()
+
+    expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+      `Create this option`,
+    )
+
+    // Now Enter should create the option
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+    expect(oncreate_spy).toHaveBeenCalledTimes(1)
+  })
+
+  test(`fetch failure unblocks pending state`, async () => {
+    const fetch_fn = vi
+      .fn()
+      .mockResolvedValueOnce({ options: [`Apple`], hasMore: false })
+      .mockRejectedValue(new Error(`network error`))
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        allowUserOptions: true,
+        createOptionMsg: `Create this option`,
+        open: true,
+      },
+    })
+    await vi.runAllTimersAsync()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `NewThing`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await vi.runAllTimersAsync()
+
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+    expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
+      `Create this option`,
+    )
+  })
+
+  test(`onOpen: false — idle until user types, busy during debounce`, async () => {
+    const { fetch_fn, fetch_resolvers } = create_deferred_fetch()
+    const oncreate_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, onOpen: false, debounceMs: 200 },
+        allowUserOptions: true,
+        createOptionMsg: `Create this option`,
+        open: true,
+        oncreate: oncreate_spy,
+      },
+    })
+    await vi.runAllTimersAsync()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(fetch_fn).not.toHaveBeenCalled()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    // Type triggers debounce — should become busy
+    input.value = `Rust`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    // Enter during debounce should NOT create option
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+    expect(oncreate_spy).not.toHaveBeenCalled()
+
+    // After debounce + fetch resolves, Enter works
+    await vi.runAllTimersAsync()
+    fetch_resolvers[0]({ options: [], hasMore: false })
+    await vi.runAllTimersAsync()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+    expect(oncreate_spy).toHaveBeenCalledTimes(1)
+  })
+
+  test(`late fetch response after close does not corrupt next open`, async () => {
+    const { fetch_fn, fetch_resolvers } = create_deferred_fetch()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        open: true,
+      },
+    })
+    await vi.runAllTimersAsync()
+    fetch_resolvers[0]({ options: [`Apple`], hasMore: false })
+    await vi.runAllTimersAsync()
+    expect(fetch_fn).toHaveBeenCalledTimes(1)
+
+    // Type to trigger a second fetch, then close before it resolves
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Rust`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await vi.runAllTimersAsync()
+    expect(fetch_fn).toHaveBeenCalledTimes(2)
+
+    // Close dropdown while fetch is in-flight
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+
+    // Late fetch resolves after close — stale results must be discarded
+    fetch_resolvers[1]({ options: [`Rust Lang`], hasMore: false })
+    await vi.runAllTimersAsync()
+
+    // Reopen — should trigger fresh load immediately (is_first_load path)
+    doc_query(`div.multiselect`).dispatchEvent(
+      new MouseEvent(`mouseup`, { bubbles: true }),
+    )
+    await tick()
+    // Fresh load fires immediately; stale path would debounce (not yet called)
+    expect(fetch_fn).toHaveBeenCalledTimes(3)
+    expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
+    // Stale "Rust Lang" result must not leak into the reopened session
+    expect(document.querySelector(`ul.options`)?.textContent).not.toContain(`Rust Lang`)
+  })
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/369

@@ -120,7 +120,7 @@
   }
 
   function open_dropdown(href: string, from_mouse = false) {
-    if (from_mouse && is_touch_device) return
+    if (from_mouse && is_touch_device && is_mobile) return
     if (hide_timeout) clearTimeout(hide_timeout)
     if (pinned_dropdown && pinned_dropdown !== href) pinned_dropdown = null
     hovered_dropdown = href
