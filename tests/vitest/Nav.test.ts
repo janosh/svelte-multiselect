@@ -1225,7 +1225,6 @@ describe(`Nav`, () => {
   // Regression: dropdown panel mouseleave should not close when mouse moves to trigger
   describe(`dropdown panel mouseleave relatedTarget`, () => {
     beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
 
     // Open dropdown and enter the panel, returning elements for assertions
     const open_and_enter_panel = async () => {

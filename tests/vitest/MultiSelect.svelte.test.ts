@@ -1,7 +1,7 @@
 // deno-lint-ignore-file no-await-in-loop
 import { readFileSync } from 'node:fs'
 import { mount, tick } from 'svelte'
-import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
+import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
@@ -3628,7 +3628,6 @@ describe(`load_options_pending`, () => {
   }
 
   beforeEach(() => vi.useFakeTimers())
-  afterEach(() => vi.useRealTimers())
 
   test(`Enter during debounce does not create unwanted option`, async () => {
     const { fetch_fn, fetch_resolvers } = create_deferred_fetch()
