@@ -203,6 +203,51 @@ describe(`tooltip`, () => {
     }
   }
 
+  // Intercepts cssText assignments and setProperty calls at the prototype level.
+  // Needed because happy-dom strips var()/light-dark() from parsed style values.
+  const capture_style_writes = () => {
+    const css_texts: string[] = []
+    const set_prop_values: string[] = []
+    const orig_css_desc = Object.getOwnPropertyDescriptor(
+      CSSStyleDeclaration.prototype,
+      `cssText`,
+    )
+    Object.defineProperty(CSSStyleDeclaration.prototype, `cssText`, {
+      configurable: true,
+      enumerable: orig_css_desc?.enumerable,
+      get() {
+        return orig_css_desc?.get?.call(this) ?? ``
+      },
+      set(value: string) {
+        css_texts.push(value)
+        orig_css_desc?.set?.call(this, value)
+      },
+    })
+    // eslint-disable-next-line @typescript-eslint/unbound-method -- storing for prototype swap, called with .call(this)
+    const orig_set_prop = CSSStyleDeclaration.prototype.setProperty
+    CSSStyleDeclaration.prototype.setProperty = function (
+      prop: string,
+      val: string | null,
+      priority?: string,
+    ) {
+      if (val) set_prop_values.push(`${prop}: ${val}`)
+      return orig_set_prop.call(this, prop, val, priority)
+    }
+    return {
+      css_texts,
+      set_prop_values,
+      restore: () => {
+        CSSStyleDeclaration.prototype.setProperty = orig_set_prop
+        if (orig_css_desc) {
+          Object.defineProperty(CSSStyleDeclaration.prototype, `cssText`, orig_css_desc)
+        }
+      },
+    }
+  }
+
+  const find_tooltip_css = (css_texts: string[]) =>
+    css_texts.find((text) => text.includes(`z-index`) && text.includes(`9999`))
+
   // Shared helper for triggering tooltip display (requires vi.useFakeTimers())
   const trigger_tooltip = (element: HTMLElement) => {
     element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
@@ -744,6 +789,59 @@ describe(`tooltip`, () => {
       const content_span = tooltip_el?.querySelector(`.tooltip-content`)
       expect(content_span?.tagName).toBe(`SPAN`)
       expect(content_span?.textContent).toBe(`Test`)
+    })
+
+    it(`tooltip uses theme-aware light-dark() defaults`, () => {
+      // Regression test for commit 9bfac33: tooltip must not set color-scheme (would
+      // override page theme). Asserts via raw cssText/setProperty spies because
+      // happy-dom strips var()/light-dark() from parsed style values.
+      const { css_texts, set_prop_values, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `bg test`
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      const tooltip_css = find_tooltip_css(css_texts)
+      expect(tooltip_css).toBeDefined()
+      expect(tooltip_css).not.toContain(`color-scheme`)
+      expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#f5f5f7,\s*#2a2a2e/)
+      expect(tooltip_css).toMatch(/\bcolor:.*light-dark\(\s*#222,\s*#eee/)
+
+      const arrow_borders = set_prop_values.filter(
+        (entry) =>
+          entry.startsWith(`border-`) &&
+          entry.includes(`solid`) &&
+          !entry.includes(`transparent`),
+      )
+      expect(arrow_borders.length).toBeGreaterThan(0)
+      for (const entry of arrow_borders) {
+        expect(entry).toMatch(/light-dark\(\s*#f5f5f7,\s*#2a2a2e/)
+      }
+    })
+
+    it(`custom --tooltip-bg overrides default background`, () => {
+      const { css_texts, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `custom bg`
+        element.style.setProperty(`--tooltip-bg`, `red`)
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
+      expect(tooltip_el).toBeInstanceOf(HTMLElement)
+      expect(tooltip_el?.style.getPropertyValue(`--tooltip-bg`)).toBe(`red`)
+      const tooltip_css = find_tooltip_css(css_texts)
+      expect(tooltip_css).toContain(`var(--tooltip-bg,`)
     })
   })
 })
