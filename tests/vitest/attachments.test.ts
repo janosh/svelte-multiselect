@@ -203,6 +203,62 @@ describe(`tooltip`, () => {
     }
   }
 
+  // Intercepts all cssText assignments and setProperty calls on new elements.
+  // Needed because happy-dom drops var()/light-dark() from parsed style values.
+  const capture_style_writes = () => {
+    const css_texts: string[] = []
+    const set_prop_values: string[] = []
+    const orig_css = Object.getOwnPropertyDescriptor(
+      CSSStyleDeclaration.prototype,
+      `cssText`,
+    )
+    Object.defineProperty(CSSStyleDeclaration.prototype, `cssText`, {
+      configurable: true,
+      enumerable: orig_css?.enumerable,
+      get() {
+        return orig_css?.get?.call(this) ?? ``
+      },
+      set(value: string) {
+        css_texts.push(value)
+        orig_css?.set?.call(this, value)
+      },
+    })
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- wrapping DOM method for test interception
+    const real_create = Reflect.get(document, `createElement`) as (
+      ...args: unknown[]
+    ) => HTMLElement
+    const patched_styles: {
+      el: HTMLElement
+      orig: CSSStyleDeclaration[`setProperty`]
+    }[] = []
+    Reflect.set(document, `createElement`, (...args: unknown[]) => {
+      const el = real_create.apply(document, args)
+      const orig_set = el.style.setProperty.bind(el.style)
+      patched_styles.push({ el, orig: orig_set })
+      el.style.setProperty = (prop: string, val: string | null, priority?: string) => {
+        if (val) set_prop_values.push(`${prop}: ${val}`)
+        return orig_set(prop, val, priority)
+      }
+      return el
+    })
+    return {
+      css_texts,
+      set_prop_values,
+      restore: () => {
+        for (const { el, orig } of patched_styles) el.style.setProperty = orig
+        Reflect.set(document, `createElement`, real_create)
+        if (orig_css) {
+          Object.defineProperty(CSSStyleDeclaration.prototype, `cssText`, orig_css)
+        } else {
+          Reflect.deleteProperty(CSSStyleDeclaration.prototype, `cssText`)
+        }
+      },
+    }
+  }
+
+  const find_tooltip_css = (css_texts: string[]) =>
+    css_texts.find((text) => text.includes(`z-index`) && text.includes(`9999`))
+
   // Shared helper for triggering tooltip display (requires vi.useFakeTimers())
   const trigger_tooltip = (element: HTMLElement) => {
     element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
@@ -744,6 +800,65 @@ describe(`tooltip`, () => {
       const content_span = tooltip_el?.querySelector(`.tooltip-content`)
       expect(content_span?.tagName).toBe(`SPAN`)
       expect(content_span?.textContent).toBe(`Test`)
+    })
+
+    it(`tooltip uses theme-aware light-dark() defaults`, () => {
+      // Regression: commit 9bfac33 broke tooltip bg by using light-dark() on a page
+      // without color-scheme. The tooltip must NOT set color-scheme itself (that would
+      // override the page's theme); instead it inherits the page's value so
+      // light-dark(#f5f5f7, #2a2a2e) resolves to light bg (#f5f5f7) in light mode
+      // and dark bg (#2a2a2e) in dark mode — standard polarity matching the page.
+      // We check via css_texts (cssText spy) and set_prop_values (setProperty spy)
+      // because happy-dom strips var()/light-dark() from parsed style values.
+      const { css_texts, set_prop_values, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `bg test`
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      const tooltip_css = find_tooltip_css(css_texts)
+      expect(tooltip_css).toBeDefined()
+      expect(tooltip_css).not.toContain(`color-scheme`)
+      expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#f5f5f7,\s*#2a2a2e/)
+      expect(tooltip_css).toMatch(/\bcolor:.*light-dark\(\s*#222,\s*#eee/)
+
+      // Arrow border color must use matching light-dark() values
+      const arrow_borders = set_prop_values.filter(
+        (entry) =>
+          entry.startsWith(`border-`) &&
+          entry.includes(`solid`) &&
+          !entry.includes(`transparent`),
+      )
+      expect(arrow_borders.length).toBeGreaterThan(0)
+      for (const entry of arrow_borders) {
+        expect(entry).toMatch(/light-dark\(\s*#f5f5f7,\s*#2a2a2e/)
+      }
+    })
+
+    it(`custom --tooltip-bg overrides default background`, () => {
+      const { css_texts, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `custom bg`
+        element.style.setProperty(`--tooltip-bg`, `red`)
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
+      expect(tooltip_el).toBeInstanceOf(HTMLElement)
+      expect(tooltip_el?.style.getPropertyValue(`--tooltip-bg`)).toBe(`red`)
+      // background-color must consume the var, not be hard-coded
+      const tooltip_css = find_tooltip_css(css_texts)
+      expect(tooltip_css).toContain(`var(--tooltip-bg,`)
     })
   })
 })
