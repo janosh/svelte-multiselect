@@ -426,7 +426,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   }
 
   // iterate over all text nodes and find matches
-  const ranges = text_nodes.map((el) => {
+  const find_ranges = (el: Node): Range[] => {
     const text = el.textContent?.toLowerCase()
     if (!text) return []
 
@@ -477,7 +477,8 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       range.setEnd(el, index + search.length)
       return range
     })
-  })
+  }
+  const ranges = text_nodes.map(find_ranges)
 
   // create Highlight object from ranges and add to registry
   CSS.highlights.set(css_class, new Highlight(...ranges.flat()))
@@ -853,10 +854,10 @@ export const tooltip =
           tooltip_el.id = tooltip_id
           tooltip_el.setAttribute(`role`, `tooltip`)
           element.setAttribute(`aria-describedby`, tooltip_id)
-          // Apply base styles
+          // light-dark() inherits the page's color-scheme (defaults to light if unset)
           tooltip_el.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0; display: inline-block;
-          background: var(--tooltip-bg, light-dark(#f5f5f7, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, none);
+          background-color: var(--tooltip-bg, light-dark(#f5f5f7, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, none);
           padding: var(--tooltip-padding, 6px 10px); border-radius: var(--tooltip-radius, 5pt); font-size: var(--tooltip-font-size, 0.8rem); line-height: 1.4;
           max-width: var(--tooltip-max-width, 280px); overflow-wrap: break-word; text-wrap: balance; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
