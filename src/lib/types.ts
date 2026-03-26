@@ -30,7 +30,7 @@ export type PlaceholderConfig = {
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
   onadd?: (data: { option: T; selected: T[] }) => unknown
-  oncreate?: (data: { option: T }) => unknown // fires when users entered custom text from which new option is created
+  oncreate?: (data: { option: T }) => unknown // return false to reject the option before it's added
   onremove?: (data: { option: T; selected: T[] }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
   onselectAll?: (data: { options: T[] }) => unknown // fires when select all is triggered

@@ -800,8 +800,8 @@
             option_to_add = label_text as Option
           }
         }
-        // Fire oncreate event for all user-created options, regardless of type
-        oncreate?.({ option: option_to_add })
+        // Fire oncreate event — return false to reject the option
+        if (oncreate?.({ option: option_to_add }) === false) return
         if (allowUserOptions === `append`) {
           if (loadOptions) loaded_options = [...loaded_options, option_to_add]
           else options = [...(options ?? []), option_to_add]
@@ -2015,13 +2015,13 @@
     overflow: hidden;
   }
   :is(div.multiselect button.remove-all) {
-    margin: 0 3pt;
-    padding: 1pt;
+    margin: 0 2pt;
+    padding: 0;
   }
   :is(div.multiselect button.remove-all:not(.default-icon)) {
     border-radius: 3pt;
     aspect-ratio: auto;
-    padding: 1pt 2pt;
+    padding: 0 2pt;
   }
   :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-btn-hover-color, inherit);
@@ -2096,6 +2096,14 @@
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding, 0);
     margin: var(--sms-options-margin, 6pt 0 0 0);
+  }
+  :where(ul.options:not(:has(li))) {
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    border: none;
   }
   :where(ul.options.hidden) {
     visibility: hidden;

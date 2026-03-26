@@ -2149,6 +2149,60 @@ test.each([
   },
 )
 
+test.each<[string, boolean | `append`]>([
+  [`allowUserOptions=true`, true],
+  [`allowUserOptions=append`, `append`],
+])(`oncreate returning false rejects option (%s)`, async (_label, mode) => {
+  const onadd_spy = vi.fn()
+  const initial_options = [`a`, `b`]
+  const props = $state<MultiSelectProps>({
+    options: [...initial_options],
+    selected: [],
+    allowUserOptions: mode,
+    oncreate: () => false,
+    onadd: onadd_spy,
+  })
+  mount(MultiSelect, { target: document.body, props })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `rejected`
+  input.dispatchEvent(input_event)
+  await tick()
+  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  await tick()
+
+  expect(onadd_spy).not.toHaveBeenCalled()
+  expect(props.selected).toEqual([])
+  if (mode === `append`) expect(props.options).toEqual(initial_options)
+})
+
+test.each([
+  [`undefined`, undefined],
+  [`true`, true],
+  [`null`, null],
+  [`empty string`, ``],
+])(`oncreate returning %s does not reject`, async (_label, return_val) => {
+  const onadd_spy = vi.fn()
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [`a`, `b`],
+      allowUserOptions: true,
+      oncreate: () => return_val,
+      onadd: onadd_spy,
+    },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `new-opt`
+  input.dispatchEvent(input_event)
+  await tick()
+  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  await tick()
+
+  expect(onadd_spy).toHaveBeenCalledTimes(1)
+})
+
 test(`onadd selected accumulates and onremove selected reflects removal`, async () => {
   const [onadd_spy, onremove_spy] = [vi.fn(), vi.fn()]
 
@@ -4024,7 +4078,7 @@ describe(`CSS static analysis`, () => {
     expect(custom_remove_all).toBeTruthy()
     expect(custom_remove_all).toMatch(/border-radius:\s*3pt/)
     expect(custom_remove_all).toMatch(/aspect-ratio:\s*auto/)
-    expect(custom_remove_all).toMatch(/padding:\s*1pt 2pt/)
+    expect(custom_remove_all).toMatch(/padding:\s*0 2pt/)
   })
 })
 
@@ -5148,14 +5202,17 @@ describe(`keyboard shortcuts`, () => {
     expect(props.selected).toEqual([`a`, `b`, `c`])
   })
 
-  test(`select_all defaults to null so ctrl+a is not swallowed`, async () => {
+  test.each([
+    [`default (null)`, {}],
+    [`explicitly null`, { shortcuts: { select_all: null } }],
+  ])(`select_all %s: ctrl+a not swallowed`, async (_label, extra_props) => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
       selectAllOption: true,
       selected: [],
       open: true,
+      ...extra_props,
     })
-
     mount(MultiSelect, { target: document.body, props })
     await tick()
 
@@ -5174,87 +5231,48 @@ describe(`keyboard shortcuts`, () => {
     expect(event.defaultPrevented).toBe(false)
   })
 
-  test(`null shortcut disables the action`, async () => {
+  test.each([
+    [
+      `select_all respects maxSelect`,
+      {
+        selected: [],
+        selectAllOption: true,
+        shortcuts: { select_all: `ctrl+a` },
+        maxSelect: 2,
+      },
+      { key: `a`, ctrlKey: true },
+      2,
+    ],
+    [
+      `clear_all respects minSelect`,
+      { selected: [`a`, `b`, `c`], minSelect: 1 },
+      { key: `Backspace`, ctrlKey: true },
+      1,
+    ],
+  ])(`%s`, async (_label, extra_props, key_event, expected_length) => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: null },
       open: true,
+      ...extra_props,
     })
-
     mount(MultiSelect, { target: document.body, props })
     await tick()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
-    )
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { ...key_event, bubbles: true }))
     await tick()
 
-    // Should NOT select all since shortcut is disabled
-    expect(props.selected).toEqual([])
+    expect(props.selected).toHaveLength(expected_length)
   })
 
-  test(`select_all shortcut respects maxSelect constraint`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: `ctrl+a` },
-      maxSelect: 2,
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
-    )
-    await tick()
-
-    // Should only select up to maxSelect
-    expect(props.selected).toHaveLength(2)
-  })
-
-  test(`clear_all shortcut respects minSelect constraint`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selected: [`a`, `b`, `c`],
-      minSelect: 1,
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, {
-        key: `Backspace`,
-        ctrlKey: true,
-        bubbles: true,
-      }),
-    )
-    await tick()
-
-    // Should keep minSelect items
-    expect(props.selected).toHaveLength(1)
-  })
-
-  test(`clear_all shortcut skipped when searchText is non-empty to preserve native word-delete`, async () => {
+  test(`clear_all skipped when searchText is non-empty`, async () => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
       selected: [`a`, `b`],
       searchText: `xyz`,
       open: true,
     })
-
     mount(MultiSelect, { target: document.body, props })
     await tick()
 
@@ -6654,13 +6672,40 @@ describe(`duplicates prop variants`, () => {
   })
 })
 
+test(`dropdown has no li children when all user-created options are selected`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      allowUserOptions: `append`,
+      noMatchingOptionsMsg: ``,
+      createOptionMsg: null,
+    },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `tag1`
+  input.dispatchEvent(input_event)
+  input.dispatchEvent(enter)
+  await tick()
+
+  input.value = `tag2`
+  input.dispatchEvent(input_event)
+  input.dispatchEvent(enter)
+  await tick()
+
+  input.focus()
+  await tick()
+  const items = document.querySelectorAll(`ul.options > li`)
+  expect(items).toHaveLength(0)
+})
+
 // === parse_paste ===
 
 function make_paste_event(text: string): ClipboardEvent {
-  const event = new ClipboardEvent(`paste`, { bubbles: true, cancelable: true })
   const data_transfer = new DataTransfer()
   data_transfer.setData(`text/plain`, text)
-  Object.defineProperty(event, `clipboardData`, { value: data_transfer })
+  const event = new ClipboardEvent(`paste`, { bubbles: true, cancelable: true })
+  Object.assign(event, { clipboardData: data_transfer })
   return event
 }
 
@@ -6837,5 +6882,19 @@ describe(`parse_paste`, () => {
     expect(oncreate).toHaveBeenCalledTimes(1)
     expect(oncreate).toHaveBeenCalledWith({ option: `brand_new` })
     expect(props.selected).toEqual([`existing1`, `brand_new`, `existing2`])
+  })
+
+  test(`oncreate returning false during paste skips only rejected options`, async () => {
+    const oncreate_spy = vi.fn(({ option }: { option: Option }) => {
+      const label = typeof option === `object` ? option.label : option
+      return `${label}`.length >= 3 ? undefined : false
+    })
+    const { onadd, props } = await paste_into(
+      { options: [], selected: [], allowUserOptions: `append`, oncreate: oncreate_spy },
+      `ab,valid,x,also_ok`,
+    )
+    expect(oncreate_spy).toHaveBeenCalledTimes(4)
+    expect(onadd).toHaveBeenCalledTimes(2)
+    expect(props.selected).toEqual([`valid`, `also_ok`])
   })
 })
