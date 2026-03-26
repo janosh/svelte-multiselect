@@ -98,7 +98,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
 
 ## Paste Multiple Values
 
-`parse_paste` lets users paste comma/space/newline-separated text and split it into multiple options at once. Useful for email lists, tags, or any bulk input. Click a snippet below to copy, then paste into the input.
+`parse_paste` lets users paste comma or newline-separated text and split it into multiple options at once. Useful for email lists, tags, or any bulk input. Click a snippet below to copy, then paste into the input.
 
 ```svelte example id="parse-paste"
 <script lang="ts">
@@ -109,9 +109,9 @@ You can start with no options and let users populate MultiSelect from scratch. I
 
   const snippets = [
     { label: `Comma-separated emails`, text: `alice@example.com, bob@test.org, carol@mail.net` },
-    { label: `Space-separated tags`, text: `svelte typescript javascript rust` },
+    { label: `Multi-word values`, text: `New York, Los Angeles, San Francisco` },
     { label: `Newline-separated`, text: `Red\nGreen\nBlue\nYellow` },
-    { label: `Mixed separators`, text: `one, two three\nfour` },
+    { label: `Mixed commas & newlines`, text: `one, two\nthree, four` },
   ]
 </script>
 
@@ -120,7 +120,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
     <div style="display: flex; align-items: center; gap: 0.5em">
       <CopyButton
         content={text}
-        style="padding: 0.3em 0.7em; border-radius: 4px; border: 1px solid var(--sms-border, lightgray); background: var(--sms-options-bg, white); cursor: pointer; font-size: 0.85em; white-space: nowrap"
+        style="padding: 0.3em 0.7em; border-radius: 4px; border: 1px solid var(--sms-border, light-dark(lightgray, #555)); background: var(--sms-options-bg, light-dark(white, #333)); cursor: pointer; font-size: 0.85em; white-space: nowrap"
         labels={{
           ready: { icon: `Copy`, text: label },
           success: { icon: `Check`, text: `Copied!` },
@@ -137,8 +137,14 @@ You can start with no options and let users populate MultiSelect from scratch. I
   bind:selected
   noMatchingOptionsMsg=""
   createOptionMsg={null}
-  parse_paste={(text) => text.split(/[,\s]+/).filter(Boolean)}
-  oncreate={({ option }) => log = [...log, `+ ${option}`]}
+  parse_paste={(text) => text.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean)}
+  oncreate={({ option }) => {
+    if (String(option).length < 3) {
+      log = [...log, `✗ rejected "${option}" (too short)`]
+      return false
+    }
+    log = [...log, `+ ${option}`]
+  }}
   onremove={({ option }) => log = [...log, `- ${option}`]}
 />
 

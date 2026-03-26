@@ -123,6 +123,7 @@
     portal: portal_params = {},
     // Select all feature
     selectAllOption = false,
+    selectAllDisabledTitle,
     liSelectAllClass = ``,
     // Dynamic options loading
     loadOptions,
@@ -147,6 +148,7 @@
     onsearch,
     onmaxreached,
     onduplicate,
+    onparsed_paste,
     onactivate,
     collapseAllGroups = $bindable(),
     expandAllGroups = $bindable(),
@@ -800,8 +802,18 @@
             option_to_add = label_text as Option
           }
         }
-        // Fire oncreate event for all user-created options, regardless of type
-        oncreate?.({ option: option_to_add })
+        // Fire oncreate — return false to reject, return Option to transform
+        const oncreate_result = oncreate?.({ option: option_to_add })
+        if (oncreate_result === false) return
+        if (oncreate_result instanceof Promise) {
+          console.error(`MultiSelect: oncreate must be synchronous, got a Promise`)
+          return
+        }
+        const result_type = typeof oncreate_result
+        if (result_type === `string` ? (oncreate_result as string).length > 0
+          : result_type === `number` || (result_type === `object` && oncreate_result !== null)) {
+          option_to_add = oncreate_result as Option
+        }
         if (allowUserOptions === `append`) {
           if (loadOptions) loaded_options = [...loaded_options, option_to_add]
           else options = [...(options ?? []), option_to_add]
@@ -1301,16 +1313,28 @@
     const parsed = parse_paste(text)
     if (parsed.length === 0) return
     event.preventDefault()
-    for (const option of parsed) {
+    const added: Option[] = []
+    const rejected: Option[] = []
+    const overflow: Option[] = []
+    for (let idx = 0; idx < parsed.length; idx++) {
+      const option = parsed[idx] as Option
       if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
+        overflow.push(option, ...parsed.slice(idx + 1) as Option[])
         wiggle = true
         onmaxreached?.({ selected, maxSelect, attemptedOption: option })
         break
       }
+      const before = selected.length
       add(option, event, true)
-      if (maxSelect === 1) break
+      if (selected.length > before) added.push(option)
+      else rejected.push(option)
+      if (maxSelect === 1) {
+        overflow.push(...parsed.slice(idx + 1) as Option[])
+        break
+      }
     }
     if (resetFilterOnAdd) searchText = ``
+    onparsed_paste?.({ added, rejected, overflow, raw_text: text })
   }
 
   // reset form validation when required prop changes
@@ -1687,9 +1711,13 @@
         {@const max_reached = maxSelect !== null && selected.length >= maxSelect}
         {@const all_selectable_selected = selectable.every((opt) => selected_keys_set.has(key(opt)))}
         {@const all_selected = max_reached || all_selectable_selected}
-        {@const disabled_title = max_reached && !all_selectable_selected
+        {@const default_title = max_reached && !all_selectable_selected
           ? `Maximum of ${maxSelect} options selected`
           : `All options already selected`}
+        {@const disabled_title = selectAllDisabledTitle === null ? ``
+          : typeof selectAllDisabledTitle === `function`
+            ? selectAllDisabledTitle({ max_reached, maxSelect, selected_count: selected.length })
+            : selectAllDisabledTitle ?? default_title}
         <li
           class="select-all {liSelectAllClass}"
           class:disabled={all_selected}
@@ -2015,13 +2043,13 @@
     overflow: hidden;
   }
   :is(div.multiselect button.remove-all) {
-    margin: 0 3pt;
-    padding: 1pt;
+    margin: 0 2pt;
+    padding: 0;
   }
   :is(div.multiselect button.remove-all:not(.default-icon)) {
     border-radius: 3pt;
     aspect-ratio: auto;
-    padding: 1pt 2pt;
+    padding: 0 2pt;
   }
   :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-btn-hover-color, inherit);
@@ -2096,6 +2124,14 @@
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding, 0);
     margin: var(--sms-options-margin, 6pt 0 0 0);
+  }
+  :where(ul.options:not(:has(li))) {
+    visibility: hidden;
+    height: 0;
+    overflow: hidden;
+    padding: 0;
+    margin: 0;
+    border: none;
   }
   :where(ul.options.hidden) {
     visibility: hidden;
