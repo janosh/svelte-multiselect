@@ -745,7 +745,9 @@
   }
 
   // add an option to selected list
-  function add(option_to_add: Option, event: Event) {
+  // from_paste: when true, skip option reconstruction so parse_paste() objects
+  // are preserved as-is (extra fields like value/group/metadata aren't stripped)
+  function add(option_to_add: Option, event: Event, from_paste = false) {
     event.stopPropagation()
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
@@ -781,21 +783,22 @@
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
-        searchText.length > 0
+        (searchText.length > 0 || from_paste)
       ) {
-        // user entered text but no options match, so if allowUserOptions = true | 'append', we create
-        // a new option from the user-entered text
-        if (typeof effective_options[0] === `object`) {
-          // if 1st option is an object, we create new option as object to keep type homogeneity
-          option_to_add = { label: searchText } as Option
-        } else if (
-          [`number`, `undefined`].includes(typeof effective_options[0]) &&
-          !isNaN(Number(searchText))
-        ) {
-          // create new option as number if it parses to a number and 1st option is also number or missing
-          option_to_add = Number(searchText) as Option
-        } else {
-          option_to_add = searchText as Option // else create custom option as string
+        // Reconstruct option for type homogeneity, but preserve object options
+        // from parse_paste as-is so extra fields (value/group/metadata) aren't stripped
+        if (!(from_paste && typeof option_to_add === `object`)) {
+          const label_text = from_paste ? `${utils.get_label(option_to_add)}` : searchText
+          if (typeof effective_options[0] === `object`) {
+            option_to_add = { label: label_text } as Option
+          } else if (
+            [`number`, `undefined`].includes(typeof effective_options[0]) &&
+            !isNaN(Number(label_text))
+          ) {
+            option_to_add = Number(label_text) as Option
+          } else {
+            option_to_add = label_text as Option
+          }
         }
         // Fire oncreate event for all user-created options, regardless of type
         oncreate?.({ option: option_to_add })
@@ -984,7 +987,7 @@
       },
       {
         key: `clear_all`,
-        condition: () => selected.length > 0,
+        condition: () => selected.length > 0 && !searchText,
         action: () => remove_all(event),
       },
       {
@@ -1304,12 +1307,10 @@
         onmaxreached?.({ selected, maxSelect, attemptedOption: option })
         break
       }
-      // set searchText so add() can enter the user-creation branch when allowUserOptions is truthy
-      searchText = `${utils.get_label(option)}`
-      add(option, event)
+      add(option, event, true)
       if (maxSelect === 1) break
     }
-    searchText = ``
+    if (resetFilterOnAdd) searchText = ``
   }
 
   // reset form validation when required prop changes
@@ -1682,10 +1683,13 @@
       {#if selectAllOption && effective_options.length > 0 &&
         (maxSelect === null || maxSelect > 1)}
         {@const label = typeof selectAllOption === `string` ? selectAllOption : `Select all`}
-        {@const selectable = navigable_options.filter((opt) => !is_disabled(opt))}
+        {@const selectable = get_selectable_opts(navigable_options)}
         {@const max_reached = maxSelect !== null && selected.length >= maxSelect}
         {@const all_selectable_selected = selectable.every((opt) => selected_keys_set.has(key(opt)))}
         {@const all_selected = max_reached || all_selectable_selected}
+        {@const disabled_title = max_reached && !all_selectable_selected
+          ? `Maximum of ${maxSelect} options selected`
+          : `All options already selected`}
         <li
           class="select-all {liSelectAllClass}"
           class:disabled={all_selected}
@@ -1694,7 +1698,7 @@
           role="option"
           aria-selected="false"
           aria-disabled={all_selected || undefined}
-          title={all_selected ? (max_reached && !all_selectable_selected ? `Maximum of ${maxSelect} options selected` : `All options already selected`) : null}
+          title={all_selected ? disabled_title : null}
           tabindex={all_selected ? -1 : 0}
         >
           {label}
@@ -1738,12 +1742,13 @@
                 {/if}
               </span>
               {#if groupSelectAll && (maxSelect === null || maxSelect > 1)}
-                {@const group_max_blocked = !all_selected && maxSelect !== null && selected.length >= maxSelect}
+                {@const group_selectable = get_selectable_opts(group_opts, collapsed)}
+                {@const group_blocked = (!all_selected && maxSelect !== null && selected.length >= maxSelect) || (!all_selected && group_selectable.length === 0)}
                 <button
                   type="button"
                   class="group-select-all"
                   class:deselect={all_selected}
-                  disabled={group_max_blocked}
+                  disabled={group_blocked}
                   onclick={handle_group_select}
                   onkeydown={if_enter_or_space(handle_group_select)}
                 >

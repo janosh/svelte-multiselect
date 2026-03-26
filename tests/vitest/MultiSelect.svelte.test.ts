@@ -3135,7 +3135,9 @@ describe(`selectAllOption feature`, () => {
         onchange: onchange_spy,
       },
     })
-    doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.click()
+    await tick()
     doc_query<HTMLElement>(`ul.options > li.select-all`).click()
     await tick()
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
@@ -4289,6 +4291,56 @@ describe(`option grouping feature`, () => {
     )
   })
 
+  test(`group select-all shows deselect when all selectable options in group already selected`, async () => {
+    const genre_opts = grouped_options.filter(
+      (opt) => typeof opt === `object` && opt.group === `Genre`,
+    )
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        groupSelectAll: true,
+        keepSelectedInDropdown: `plain`,
+        selected: genre_opts,
+        open: true,
+      },
+    })
+    await tick()
+
+    const genre_btn = find_group_header(`Genre`).querySelector<HTMLButtonElement>(
+      `button.group-select-all`,
+    )
+    expect(genre_btn?.textContent?.trim()).toBe(`Deselect all`)
+    expect(genre_btn?.disabled).toBe(false)
+  })
+
+  test(`group select-all disabled when all group options are disabled`, async () => {
+    const all_disabled_options = [
+      { label: `X`, group: `AllDisabled`, disabled: true },
+      { label: `Y`, group: `AllDisabled`, disabled: true },
+      { label: `Z`, group: `HasEnabled` },
+    ]
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: all_disabled_options,
+        groupSelectAll: true,
+        open: true,
+      },
+    })
+    await tick()
+
+    const disabled_btn = find_group_header(
+      `AllDisabled`,
+    ).querySelector<HTMLButtonElement>(`button.group-select-all`)
+    expect(disabled_btn?.disabled).toBe(true)
+
+    const enabled_btn = find_group_header(`HasEnabled`).querySelector<HTMLButtonElement>(
+      `button.group-select-all`,
+    )
+    expect(enabled_btn?.disabled).toBe(false)
+  })
+
   test.each([
     [
       `liGroupHeaderClass`,
@@ -5041,29 +5093,39 @@ describe(`keyboard shortcuts`, () => {
     expect(prevent_default_spy).toHaveBeenCalled()
   })
 
-  test(`ctrl+backspace clears all selected options`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selected: [`a`, `b`],
-      open: true,
-    })
+  test.each([
+    [`ctrl+backspace (default)`, {}, { ctrlKey: true }],
+    [`meta+backspace (explicit)`, { clear_all: `meta+backspace` }, { metaKey: true }],
+  ])(
+    `%s clears all selected options and prevents default`,
+    async (_label, shortcut_override, modifiers) => {
+      const props = $state<MultiSelectProps>({
+        options: [`a`, `b`, `c`],
+        selected: [`a`, `b`],
+        open: true,
+        ...(Object.keys(shortcut_override).length > 0
+          ? { shortcuts: shortcut_override }
+          : {}),
+      })
 
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
+      mount(MultiSelect, { target: document.body, props })
+      await tick()
 
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, {
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      const event = new KeyboardEvent(`keydown`, {
         key: `Backspace`,
-        ctrlKey: true,
+        ...modifiers,
         bubbles: true,
-      }),
-    )
-    await tick()
+        cancelable: true,
+      })
+      input.dispatchEvent(event)
+      await tick()
 
-    expect(props.selected).toEqual([])
-  })
+      expect(props.selected).toEqual([])
+      expect(event.defaultPrevented).toBe(true)
+    },
+  )
 
   test(`custom shortcuts override defaults`, async () => {
     const props = $state<MultiSelectProps>({
@@ -5192,6 +5254,32 @@ describe(`keyboard shortcuts`, () => {
 
     // Should keep minSelect items
     expect(props.selected).toHaveLength(1)
+  })
+
+  test(`clear_all shortcut skipped when searchText is non-empty to preserve native word-delete`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [`a`, `b`, `c`],
+      selected: [`a`, `b`],
+      searchText: `xyz`,
+      open: true,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    const event = new KeyboardEvent(`keydown`, {
+      key: `Backspace`,
+      ctrlKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    input.dispatchEvent(event)
+    await tick()
+
+    expect(props.selected).toEqual([`a`, `b`])
+    expect(event.defaultPrevented).toBe(false)
   })
 
   test.each([`meta+a`, `cmd+a`])(`%s shortcut works for Mac users`, async (shortcut) => {
@@ -6588,12 +6676,14 @@ function make_paste_event(text: string): ClipboardEvent {
 describe(`parse_paste`, () => {
   test(`splits pasted text into multiple selected options`, async () => {
     const onadd_spy = vi.fn()
+    const onchange_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
         options: [`alpha`, `beta`, `gamma`],
         parse_paste: (text: string) => text.split(`,`).map((str) => str.trim()),
         onadd: onadd_spy,
+        onchange: onchange_spy,
       },
     })
 
@@ -6606,11 +6696,19 @@ describe(`parse_paste`, () => {
     expect(onadd_spy).toHaveBeenCalledTimes(2)
     expect(onadd_spy).toHaveBeenCalledWith(expect.objectContaining({ option: `alpha` }))
     expect(onadd_spy).toHaveBeenCalledWith(expect.objectContaining({ option: `beta` }))
+    expect(onchange_spy).toHaveBeenCalledTimes(2)
+    expect(onchange_spy).toHaveBeenCalledWith(
+      expect.objectContaining({ option: `alpha`, type: `add` }),
+    )
+    expect(onchange_spy).toHaveBeenCalledWith(
+      expect.objectContaining({ option: `beta`, type: `add` }),
+    )
   })
 
   test(`fires oncreate for each created option with allowUserOptions`, async () => {
     const oncreate_spy = vi.fn()
     const onadd_spy = vi.fn()
+    const onchange_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
@@ -6619,6 +6717,7 @@ describe(`parse_paste`, () => {
         parse_paste: (text: string) => text.split(/[,\s]+/).filter(Boolean),
         oncreate: oncreate_spy,
         onadd: onadd_spy,
+        onchange: onchange_spy,
       },
     })
 
@@ -6628,6 +6727,7 @@ describe(`parse_paste`, () => {
 
     expect(oncreate_spy).toHaveBeenCalledTimes(3)
     expect(onadd_spy).toHaveBeenCalledTimes(3)
+    expect(onchange_spy).toHaveBeenCalledTimes(3)
   })
 
   test.each([
@@ -6670,6 +6770,32 @@ describe(`parse_paste`, () => {
     expect(oncreate_spy).toHaveBeenCalledWith({ option: { label: `bar` } })
   })
 
+  test(`parse_paste object options preserve extra fields with allowUserOptions`, async () => {
+    const oncreate_spy = vi.fn()
+    const props = $state<MultiSelectProps>({
+      options: [{ label: `existing`, value: 0 }],
+      selected: [],
+      allowUserOptions: `append`,
+      parse_paste: (text: string) =>
+        text.split(`,`).map((str, idx) => ({ label: str.trim(), value: idx + 1 })),
+      oncreate: oncreate_spy,
+    })
+
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.dispatchEvent(make_paste_event(`alpha,beta`))
+    await tick()
+
+    expect(oncreate_spy).toHaveBeenCalledTimes(2)
+    expect(oncreate_spy).toHaveBeenCalledWith({ option: { label: `alpha`, value: 1 } })
+    expect(oncreate_spy).toHaveBeenCalledWith({ option: { label: `beta`, value: 2 } })
+    expect(props.selected).toEqual([
+      { label: `alpha`, value: 1 },
+      { label: `beta`, value: 2 },
+    ])
+  })
+
   test(`clears searchText after paste even when maxSelect blocks some options`, async () => {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`, `d`],
@@ -6692,6 +6818,7 @@ describe(`parse_paste`, () => {
   test(`paste when already at maxSelect fires onmaxreached immediately`, async () => {
     const onmaxreached_spy = vi.fn()
     const onadd_spy = vi.fn()
+    const onchange_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
@@ -6701,6 +6828,7 @@ describe(`parse_paste`, () => {
         parse_paste: (text: string) => text.split(`,`),
         onmaxreached: onmaxreached_spy,
         onadd: onadd_spy,
+        onchange: onchange_spy,
       },
     })
 
@@ -6709,6 +6837,7 @@ describe(`parse_paste`, () => {
     await tick()
 
     expect(onadd_spy).not.toHaveBeenCalled()
+    expect(onchange_spy).not.toHaveBeenCalled()
     expect(onmaxreached_spy).toHaveBeenCalledTimes(1)
     expect(onmaxreached_spy).toHaveBeenCalledWith(
       expect.objectContaining({ maxSelect: 2, attemptedOption: `c` }),
@@ -6722,12 +6851,14 @@ describe(`parse_paste`, () => {
     `with maxSelect=1 and %s, only first parsed option is selected`,
     async (_label, initial, first_expected, expected_selected) => {
       const onadd_spy = vi.fn()
+      const onchange_spy = vi.fn()
       const props = $state<MultiSelectProps>({
         options: [`a`, `b`, `c`, `x`],
         selected: initial,
         maxSelect: 1,
         parse_paste: (text: string) => text.split(`,`),
         onadd: onadd_spy,
+        onchange: onchange_spy,
       })
 
       mount(MultiSelect, { target: document.body, props })
@@ -6739,6 +6870,10 @@ describe(`parse_paste`, () => {
       expect(onadd_spy).toHaveBeenCalledTimes(1)
       expect(onadd_spy).toHaveBeenCalledWith(
         expect.objectContaining({ option: first_expected }),
+      )
+      expect(onchange_spy).toHaveBeenCalledTimes(1)
+      expect(onchange_spy).toHaveBeenCalledWith(
+        expect.objectContaining({ option: first_expected, type: `add` }),
       )
       expect(props.selected).toEqual(expected_selected)
     },
@@ -6752,12 +6887,14 @@ describe(`parse_paste`, () => {
     async (_label, initial, paste_text, expected_adds, expected_selected) => {
       const onadd_spy = vi.fn()
       const onduplicate_spy = vi.fn()
+      const onchange_spy = vi.fn()
       const props = $state<MultiSelectProps>({
         options: [`a`, `b`, `c`, `d`],
         selected: initial,
         parse_paste: (text: string) => text.split(`,`),
         onadd: onadd_spy,
         onduplicate: onduplicate_spy,
+        onchange: onchange_spy,
       })
 
       mount(MultiSelect, { target: document.body, props })
@@ -6767,6 +6904,7 @@ describe(`parse_paste`, () => {
       await tick()
 
       expect(onadd_spy).toHaveBeenCalledTimes(expected_adds)
+      expect(onchange_spy).toHaveBeenCalledTimes(expected_adds)
       expect(onduplicate_spy).toHaveBeenCalledTimes(1)
       expect(onduplicate_spy).toHaveBeenCalledWith(
         expect.objectContaining({ option: `a` }),
@@ -6779,6 +6917,7 @@ describe(`parse_paste`, () => {
   test(`paste with allowUserOptions selects existing and creates new`, async () => {
     const onadd_spy = vi.fn()
     const oncreate_spy = vi.fn()
+    const onchange_spy = vi.fn()
     const props = $state<MultiSelectProps>({
       options: [`existing1`, `existing2`],
       selected: [],
@@ -6786,6 +6925,7 @@ describe(`parse_paste`, () => {
       parse_paste: (text: string) => text.split(`,`),
       onadd: onadd_spy,
       oncreate: oncreate_spy,
+      onchange: onchange_spy,
     })
 
     mount(MultiSelect, { target: document.body, props })
@@ -6795,6 +6935,7 @@ describe(`parse_paste`, () => {
     await tick()
 
     expect(onadd_spy).toHaveBeenCalledTimes(3)
+    expect(onchange_spy).toHaveBeenCalledTimes(3)
     expect(oncreate_spy).toHaveBeenCalledTimes(1)
     expect(oncreate_spy).toHaveBeenCalledWith({ option: `brand_new` })
     expect(props.selected).toEqual([`existing1`, `brand_new`, `existing2`])
@@ -6803,6 +6944,7 @@ describe(`parse_paste`, () => {
   test(`fires onmaxreached exactly once when paste exceeds maxSelect`, async () => {
     const onmaxreached_spy = vi.fn()
     const onadd_spy = vi.fn()
+    const onchange_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
@@ -6812,6 +6954,7 @@ describe(`parse_paste`, () => {
         parse_paste: (text: string) => text.split(`,`),
         onmaxreached: onmaxreached_spy,
         onadd: onadd_spy,
+        onchange: onchange_spy,
       },
     })
 
@@ -6821,6 +6964,10 @@ describe(`parse_paste`, () => {
 
     expect(onadd_spy).toHaveBeenCalledTimes(1)
     expect(onadd_spy).toHaveBeenCalledWith(expect.objectContaining({ option: `c` }))
+    expect(onchange_spy).toHaveBeenCalledTimes(1)
+    expect(onchange_spy).toHaveBeenCalledWith(
+      expect.objectContaining({ option: `c`, type: `add` }),
+    )
     expect(onmaxreached_spy).toHaveBeenCalledTimes(1)
     expect(onmaxreached_spy).toHaveBeenCalledWith(
       expect.objectContaining({ maxSelect: 3, attemptedOption: `d` }),
