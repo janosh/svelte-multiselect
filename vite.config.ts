@@ -30,6 +30,7 @@ export default defineConfig({
         { argsIgnorePattern: `^_`, varsIgnorePattern: `^_` },
       ],
       'no-console': [`error`, { allow: [`warn`, `error`] }],
+      eqeqeq: `error`,
       // Svelte: oxlint can't see template usage or reactive patterns
       'no-self-assign': `off`, // reactive `x = x`
       'no-await-in-loop': `off`, // sequential await tick() in tests

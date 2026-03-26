@@ -46,7 +46,7 @@
       { cond: repl, href: repl, icon: `Svelte` },
       {
         cond: github && repo,
-        href: file ? `${repo}/blob/-/${github == true ? file : github}` : repo,
+        href: file ? `${repo}/blob/-/${github === true ? file : github}` : repo,
         icon: `GitHub`,
       },
     ] as const as
