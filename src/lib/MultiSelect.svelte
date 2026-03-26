@@ -1744,8 +1744,8 @@
                   class="group-select-all"
                   class:deselect={all_selected}
                   disabled={group_max_blocked}
-                  onclick={group_max_blocked ? undefined : handle_group_select}
-                  onkeydown={group_max_blocked ? undefined : if_enter_or_space(handle_group_select)}
+                  onclick={handle_group_select}
+                  onkeydown={if_enter_or_space(handle_group_select)}
                 >
                   {all_selected ? `Deselect all` : `Select all`}
                 </button>
@@ -2247,7 +2247,7 @@
     border-radius: 3pt;
     aspect-ratio: auto; /* override global button aspect-ratio: 1 */
   }
-  :is(ul.options > li.group-header button.group-select-all:hover) {
+  :is(ul.options > li.group-header button.group-select-all:hover:not(:disabled)) {
     background: var(
       --sms-group-select-all-hover-bg,
       light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1))
