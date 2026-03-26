@@ -1299,8 +1299,8 @@
     const text = event.clipboardData?.getData(`text/plain`)
     if (!text) return
     const parsed = parse_paste(text)
-    if (parsed.length === 0) return
     event.preventDefault()
+    if (parsed.length === 0) return
     for (const option of parsed) {
       if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
         wiggle = true
@@ -2251,6 +2251,10 @@
     margin-left: 8pt;
     border-radius: 3pt;
     aspect-ratio: auto; /* override global button aspect-ratio: 1 */
+  }
+  :is(ul.options > li.group-header button.group-select-all:disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
   }
   :is(ul.options > li.group-header button.group-select-all:hover:not(:disabled)) {
     background: var(

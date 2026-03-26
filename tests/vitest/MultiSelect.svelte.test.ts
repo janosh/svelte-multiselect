@@ -6730,14 +6730,11 @@ describe(`parse_paste`, () => {
     expect(onchange_spy).toHaveBeenCalledTimes(3)
   })
 
-  test.each([
-    [`without parse_paste`, {}],
-    [`parse_paste returns empty array`, { parse_paste: () => [] }],
-  ])(`%s: paste is not intercepted`, async (_label, extra_props) => {
+  test(`without parse_paste: paste is not intercepted`, async () => {
     const onadd_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [`a`, `b`, `c`], onadd: onadd_spy, ...extra_props },
+      props: { options: [`a`, `b`, `c`], onadd: onadd_spy },
     })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -6747,6 +6744,22 @@ describe(`parse_paste`, () => {
 
     expect(onadd_spy).not.toHaveBeenCalled()
     expect(event.defaultPrevented).toBe(false)
+  })
+
+  test(`parse_paste returns empty array: native paste blocked, no options added`, async () => {
+    const onadd_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`a`, `b`, `c`], onadd: onadd_spy, parse_paste: () => [] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    const event = make_paste_event(`a,b`)
+    input.dispatchEvent(event)
+    await tick()
+
+    expect(onadd_spy).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true)
   })
 
   test(`works with object options via allowUserOptions`, async () => {
