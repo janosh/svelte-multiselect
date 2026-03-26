@@ -71,6 +71,7 @@
     minSelect = null,
     required = false,
     resetFilterOnAdd = true,
+    parse_paste,
     searchText = $bindable(``),
     value = $bindable(null),
     selected = $bindable(
@@ -207,8 +208,8 @@
 
   // Default shortcuts
   const default_shortcuts: KeyboardShortcuts = {
-    select_all: `${mod_key}+a`,
-    clear_all: `${mod_key}+shift+a`,
+    select_all: null,
+    clear_all: `${mod_key}+backspace`,
     open: null,
     close: null,
     undo: `${mod_key}+z`,
@@ -1125,18 +1126,22 @@
   // Batch-add options to selection with all side effects (used by select_all and group select)
   function batch_add_options(options_to_add: Option[], event: Event) {
     const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
-    const to_add = options_to_add
-      .filter((opt) => !selected_keys_set.has(key(opt)))
-      .slice(0, remaining)
+    const unselected = options_to_add.filter((opt) => !selected_keys_set.has(key(opt)))
+    const to_add = unselected.slice(0, remaining)
 
-    if (to_add.length === 0) return
+    if (to_add.length > 0) {
+      selected = sort_selected([...selected, ...to_add])
+      if (resetFilterOnAdd) searchText = ``
+      clear_validity()
+      handle_dropdown_after_select(event)
+      onselectAll?.({ options: to_add })
+      onchange?.({ options: selected, type: `selectAll` })
+    }
 
-    selected = sort_selected([...selected, ...to_add])
-    if (resetFilterOnAdd) searchText = ``
-    clear_validity()
-    handle_dropdown_after_select(event)
-    onselectAll?.({ options: to_add })
-    onchange?.({ options: selected, type: `selectAll` })
+    if (to_add.length < unselected.length && maxSelect !== null) {
+      wiggle = true
+      onmaxreached?.({ selected, maxSelect, attemptedOption: unselected[to_add.length] })
+    }
   }
 
   // Batch-add options for top-level "Select all" (only visible/navigable options)
@@ -1284,6 +1289,27 @@
     if (!outerDiv?.contains(event.relatedTarget as Node)) close_dropdown(event)
 
     onblur?.(event) // Call original handler (if any passed as component prop)
+  }
+
+  function handle_paste(event: ClipboardEvent) {
+    if (!parse_paste) return
+    const text = event.clipboardData?.getData(`text/plain`)
+    if (!text) return
+    const parsed = parse_paste(text)
+    if (parsed.length === 0) return
+    event.preventDefault()
+    for (const option of parsed) {
+      if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
+        wiggle = true
+        onmaxreached?.({ selected, maxSelect, attemptedOption: option })
+        break
+      }
+      // set searchText so add() can enter the user-creation branch when allowUserOptions is truthy
+      searchText = `${utils.get_label(option)}`
+      add(option, event)
+      if (maxSelect === 1) break
+    }
+    searchText = ``
   }
 
   // reset form validation when required prop changes
@@ -1554,6 +1580,7 @@
       aria-busy={loading || load_options_pending || null}
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
+      onpaste={handle_paste}
       onmouseup={open_dropdown}
       onkeydown={handle_input_keydown}
       onfocus={handle_input_focus}
@@ -1655,13 +1682,20 @@
       {#if selectAllOption && effective_options.length > 0 &&
         (maxSelect === null || maxSelect > 1)}
         {@const label = typeof selectAllOption === `string` ? selectAllOption : `Select all`}
+        {@const selectable = navigable_options.filter((opt) => !is_disabled(opt))}
+        {@const max_reached = maxSelect !== null && selected.length >= maxSelect}
+        {@const all_selectable_selected = selectable.every((opt) => selected_keys_set.has(key(opt)))}
+        {@const all_selected = max_reached || all_selectable_selected}
         <li
           class="select-all {liSelectAllClass}"
-          onclick={select_all}
-          onkeydown={if_enter_or_space(select_all)}
+          class:disabled={all_selected}
+          onclick={all_selected ? undefined : select_all}
+          onkeydown={all_selected ? undefined : if_enter_or_space(select_all)}
           role="option"
           aria-selected="false"
-          tabindex="0"
+          aria-disabled={all_selected || undefined}
+          title={all_selected ? (max_reached && !all_selectable_selected ? `Maximum of ${maxSelect} options selected` : `All options already selected`) : null}
+          tabindex={all_selected ? -1 : 0}
         >
           {label}
         </li>
@@ -1704,12 +1738,14 @@
                 {/if}
               </span>
               {#if groupSelectAll && (maxSelect === null || maxSelect > 1)}
+                {@const group_max_blocked = !all_selected && maxSelect !== null && selected.length >= maxSelect}
                 <button
                   type="button"
                   class="group-select-all"
                   class:deselect={all_selected}
-                  onclick={handle_group_select}
-                  onkeydown={if_enter_or_space(handle_group_select)}
+                  disabled={group_max_blocked}
+                  onclick={group_max_blocked ? undefined : handle_group_select}
+                  onkeydown={group_max_blocked ? undefined : if_enter_or_space(handle_group_select)}
                 >
                   {all_selected ? `Deselect all` : `Select all`}
                 </button>
@@ -2118,7 +2154,11 @@
     background: var(--sms-select-all-bg, transparent);
     margin-bottom: var(--sms-select-all-margin-bottom, 2pt);
   }
-  :where(ul.options > li.select-all:hover) {
+  :where(ul.options > li.select-all.disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  :where(ul.options > li.select-all:hover:not(.disabled)) {
     background: var(
       --sms-select-all-hover-bg,
       var(

@@ -95,3 +95,61 @@ You can start with no options and let users populate MultiSelect from scratch. I
   createOptionMsg={null}
 />
 ```
+
+## Paste Multiple Values
+
+`parse_paste` lets users paste comma/space/newline-separated text and split it into multiple options at once. Useful for email lists, tags, or any bulk input. Click a snippet below to copy, then paste into the input.
+
+```svelte example id="parse-paste"
+<script lang="ts">
+  import MultiSelect, { CopyButton } from '$lib'
+
+  let selected: string[] = $state([])
+  let log: string[] = $state([])
+
+  const snippets = [
+    { label: `Comma-separated emails`, text: `alice@example.com, bob@test.org, carol@mail.net` },
+    { label: `Space-separated tags`, text: `svelte typescript javascript rust` },
+    { label: `Newline-separated`, text: `Red\nGreen\nBlue\nYellow` },
+    { label: `Mixed separators`, text: `one, two three\nfour` },
+  ]
+</script>
+
+<div style="display: flex; flex-direction: column; gap: 0.4em; margin-bottom: 1em">
+  {#each snippets as { label, text }}
+    <div style="display: flex; align-items: center; gap: 0.5em">
+      <CopyButton
+        content={text}
+        style="padding: 0.3em 0.7em; border-radius: 4px; border: 1px solid var(--sms-border, lightgray); background: var(--sms-options-bg, white); cursor: pointer; font-size: 0.85em; white-space: nowrap"
+        labels={{
+          ready: { icon: `Copy`, text: label },
+          success: { icon: `Check`, text: `Copied!` },
+          error: { icon: `Alert`, text: `Failed` },
+        }}
+      />
+      <code style="font-size: 0.85em; opacity: 0.7">{text}</code>
+    </div>
+  {/each}
+</div>
+
+<MultiSelect
+  allowUserOptions="append"
+  bind:selected
+  noMatchingOptionsMsg=""
+  createOptionMsg={null}
+  parse_paste={(text) => text.split(/[,\s]+/).filter(Boolean)}
+  oncreate={({ option }) => log = [...log, `+ ${option}`]}
+  onremove={({ option }) => log = [...log, `- ${option}`]}
+/>
+
+<p style="margin-top: 0.5em">
+  Selected ({selected.length}): {selected.join(', ') || 'none'}
+</p>
+
+{#if log.length > 0}
+  <details open style="margin-top: 0.5em">
+    <summary>Event log ({log.length})</summary>
+    <pre style="max-height: 8em; overflow: auto; font-size: 0.85em"><code>{log.join('\n')}</code></pre>
+  </details>
+{/if}
+```
