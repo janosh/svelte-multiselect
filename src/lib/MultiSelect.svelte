@@ -1299,8 +1299,8 @@
     const text = event.clipboardData?.getData(`text/plain`)
     if (!text) return
     const parsed = parse_paste(text)
-    event.preventDefault()
     if (parsed.length === 0) return
+    event.preventDefault()
     for (const option of parsed) {
       if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
         wiggle = true
