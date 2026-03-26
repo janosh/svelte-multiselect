@@ -71,6 +71,7 @@
     minSelect = null,
     required = false,
     resetFilterOnAdd = true,
+    parse_paste,
     searchText = $bindable(``),
     value = $bindable(null),
     selected = $bindable(
@@ -207,8 +208,8 @@
 
   // Default shortcuts
   const default_shortcuts: KeyboardShortcuts = {
-    select_all: `${mod_key}+a`,
-    clear_all: `${mod_key}+shift+a`,
+    select_all: null,
+    clear_all: `${mod_key}+backspace`,
     open: null,
     close: null,
     undo: `${mod_key}+z`,
@@ -744,7 +745,9 @@
   }
 
   // add an option to selected list
-  function add(option_to_add: Option, event: Event) {
+  // from_paste: when true, skip option reconstruction so parse_paste() objects
+  // are preserved as-is (extra fields like value/group/metadata aren't stripped)
+  function add(option_to_add: Option, event: Event, from_paste = false) {
     event.stopPropagation()
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
@@ -780,21 +783,22 @@
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
-        searchText.length > 0
+        (searchText.length > 0 || from_paste)
       ) {
-        // user entered text but no options match, so if allowUserOptions = true | 'append', we create
-        // a new option from the user-entered text
-        if (typeof effective_options[0] === `object`) {
-          // if 1st option is an object, we create new option as object to keep type homogeneity
-          option_to_add = { label: searchText } as Option
-        } else if (
-          [`number`, `undefined`].includes(typeof effective_options[0]) &&
-          !isNaN(Number(searchText))
-        ) {
-          // create new option as number if it parses to a number and 1st option is also number or missing
-          option_to_add = Number(searchText) as Option
-        } else {
-          option_to_add = searchText as Option // else create custom option as string
+        // Reconstruct option for type homogeneity, but preserve object options
+        // from parse_paste as-is so extra fields (value/group/metadata) aren't stripped
+        if (!(from_paste && typeof option_to_add === `object`)) {
+          const label_text = from_paste ? `${utils.get_label(option_to_add)}` : searchText
+          if (typeof effective_options[0] === `object`) {
+            option_to_add = { label: label_text } as Option
+          } else if (
+            [`number`, `undefined`].includes(typeof effective_options[0]) &&
+            !isNaN(Number(label_text))
+          ) {
+            option_to_add = Number(label_text) as Option
+          } else {
+            option_to_add = label_text as Option
+          }
         }
         // Fire oncreate event for all user-created options, regardless of type
         oncreate?.({ option: option_to_add })
@@ -983,7 +987,7 @@
       },
       {
         key: `clear_all`,
-        condition: () => selected.length > 0,
+        condition: () => selected.length > 0 && !searchText,
         action: () => remove_all(event),
       },
       {
@@ -1125,18 +1129,22 @@
   // Batch-add options to selection with all side effects (used by select_all and group select)
   function batch_add_options(options_to_add: Option[], event: Event) {
     const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
-    const to_add = options_to_add
-      .filter((opt) => !selected_keys_set.has(key(opt)))
-      .slice(0, remaining)
+    const unselected = options_to_add.filter((opt) => !selected_keys_set.has(key(opt)))
+    const to_add = unselected.slice(0, remaining)
 
-    if (to_add.length === 0) return
+    if (to_add.length > 0) {
+      selected = sort_selected([...selected, ...to_add])
+      if (resetFilterOnAdd) searchText = ``
+      clear_validity()
+      handle_dropdown_after_select(event)
+      onselectAll?.({ options: to_add })
+      onchange?.({ options: selected, type: `selectAll` })
+    }
 
-    selected = sort_selected([...selected, ...to_add])
-    if (resetFilterOnAdd) searchText = ``
-    clear_validity()
-    handle_dropdown_after_select(event)
-    onselectAll?.({ options: to_add })
-    onchange?.({ options: selected, type: `selectAll` })
+    if (to_add.length < unselected.length && maxSelect !== null) {
+      wiggle = true
+      onmaxreached?.({ selected, maxSelect, attemptedOption: unselected[to_add.length] })
+    }
   }
 
   // Batch-add options for top-level "Select all" (only visible/navigable options)
@@ -1284,6 +1292,25 @@
     if (!outerDiv?.contains(event.relatedTarget as Node)) close_dropdown(event)
 
     onblur?.(event) // Call original handler (if any passed as component prop)
+  }
+
+  function handle_paste(event: ClipboardEvent) {
+    if (!parse_paste) return
+    const text = event.clipboardData?.getData(`text/plain`)
+    if (!text) return
+    const parsed = parse_paste(text)
+    if (parsed.length === 0) return
+    event.preventDefault()
+    for (const option of parsed) {
+      if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
+        wiggle = true
+        onmaxreached?.({ selected, maxSelect, attemptedOption: option })
+        break
+      }
+      add(option, event, true)
+      if (maxSelect === 1) break
+    }
+    if (resetFilterOnAdd) searchText = ``
   }
 
   // reset form validation when required prop changes
@@ -1554,6 +1581,7 @@
       aria-busy={loading || load_options_pending || null}
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
+      onpaste={handle_paste}
       onmouseup={open_dropdown}
       onkeydown={handle_input_keydown}
       onfocus={handle_input_focus}
@@ -1655,13 +1683,23 @@
       {#if selectAllOption && effective_options.length > 0 &&
         (maxSelect === null || maxSelect > 1)}
         {@const label = typeof selectAllOption === `string` ? selectAllOption : `Select all`}
+        {@const selectable = get_selectable_opts(navigable_options)}
+        {@const max_reached = maxSelect !== null && selected.length >= maxSelect}
+        {@const all_selectable_selected = selectable.every((opt) => selected_keys_set.has(key(opt)))}
+        {@const all_selected = max_reached || all_selectable_selected}
+        {@const disabled_title = max_reached && !all_selectable_selected
+          ? `Maximum of ${maxSelect} options selected`
+          : `All options already selected`}
         <li
           class="select-all {liSelectAllClass}"
-          onclick={select_all}
-          onkeydown={if_enter_or_space(select_all)}
+          class:disabled={all_selected}
+          onclick={all_selected ? undefined : select_all}
+          onkeydown={all_selected ? undefined : if_enter_or_space(select_all)}
           role="option"
           aria-selected="false"
-          tabindex="0"
+          aria-disabled={all_selected || undefined}
+          title={all_selected ? disabled_title : null}
+          tabindex={all_selected ? -1 : 0}
         >
           {label}
         </li>
@@ -1704,10 +1742,13 @@
                 {/if}
               </span>
               {#if groupSelectAll && (maxSelect === null || maxSelect > 1)}
+                {@const group_selectable = get_selectable_opts(group_opts, collapsed)}
+                {@const group_blocked = (!all_selected && maxSelect !== null && selected.length >= maxSelect) || (!all_selected && group_selectable.length === 0)}
                 <button
                   type="button"
                   class="group-select-all"
                   class:deselect={all_selected}
+                  disabled={group_blocked}
                   onclick={handle_group_select}
                   onkeydown={if_enter_or_space(handle_group_select)}
                 >
@@ -2118,7 +2159,11 @@
     background: var(--sms-select-all-bg, transparent);
     margin-bottom: var(--sms-select-all-margin-bottom, 2pt);
   }
-  :where(ul.options > li.select-all:hover) {
+  :where(ul.options > li.select-all.disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  :where(ul.options > li.select-all:hover:not(.disabled)) {
     background: var(
       --sms-select-all-hover-bg,
       var(
@@ -2207,7 +2252,11 @@
     border-radius: 3pt;
     aspect-ratio: auto; /* override global button aspect-ratio: 1 */
   }
-  :is(ul.options > li.group-header button.group-select-all:hover) {
+  :is(ul.options > li.group-header button.group-select-all:disabled) {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  :is(ul.options > li.group-header button.group-select-all:hover:not(:disabled)) {
     background: var(
       --sms-group-select-all-hover-bg,
       light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.1))
