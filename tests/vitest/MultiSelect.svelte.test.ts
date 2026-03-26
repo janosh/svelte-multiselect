@@ -2203,6 +2203,52 @@ test.each([
   expect(onadd_spy).toHaveBeenCalledTimes(1)
 })
 
+test(`oncreate returning a string transforms the option`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [`a`, `b`],
+    selected: [],
+    allowUserOptions: `append`,
+    oncreate: ({ option }) =>
+      (typeof option === `object` ? option.label : option).toString().toUpperCase(),
+  })
+  mount(MultiSelect, { target: document.body, props })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `hello`
+  input.dispatchEvent(input_event)
+  await tick()
+  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  await tick()
+
+  expect(props.selected).toEqual([`HELLO`])
+})
+
+test(`oncreate returning an object transforms the option with extra fields`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [{ label: `existing`, value: 1 }],
+    selected: [],
+    allowUserOptions: `append`,
+    oncreate: ({ option }) => ({
+      ...(typeof option === `object` && option),
+      label: typeof option === `object` ? option.label : option,
+      validated: true,
+    }),
+  })
+  mount(MultiSelect, { target: document.body, props })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `new-item`
+  input.dispatchEvent(input_event)
+  await tick()
+  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  await tick()
+
+  expect(props.selected).toHaveLength(1)
+  expect(props.selected?.[0]).toEqual(
+    expect.objectContaining({ label: `new-item`, validated: true }),
+  )
+})
+
 test(`onadd selected accumulates and onremove selected reflects removal`, async () => {
   const [onadd_spy, onremove_spy] = [vi.fn(), vi.fn()]
 
@@ -3271,6 +3317,31 @@ describe(`selectAllOption feature`, () => {
       maxSelect: 3,
       attemptedOption: `d`,
     })
+  })
+
+  test.each([
+    [`custom string`, `Tout est selectionne`, `Tout est selectionne`],
+    [
+      `function`,
+      (state: { selected_count: number }) => `${state.selected_count} ausgewahlt`,
+      `4 ausgewahlt`,
+    ],
+    [`null suppresses`, null, ``],
+  ])(`selectAllDisabledTitle %s`, async (_label, title_prop, expected_title) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options,
+        selected: [...options],
+        selectAllOption: true,
+        selectAllDisabledTitle: title_prop,
+      },
+    })
+    doc_query<HTMLInputElement>(`input[autocomplete]`).click()
+    await tick()
+    expect(doc_query<HTMLElement>(`ul.options > li.select-all`).title).toBe(
+      expected_title,
+    )
   })
 
   test.each([
@@ -6717,6 +6788,7 @@ async function paste_into(extra_props: Partial<MultiSelectProps>, paste_text: st
     onchange: vi.fn(),
     onmaxreached: vi.fn(),
     onduplicate: vi.fn(),
+    onparsed_paste: vi.fn(),
   }
   const props = $state<MultiSelectProps>({
     parse_paste: (text: string) => text.split(`,`),
@@ -6896,5 +6968,36 @@ describe(`parse_paste`, () => {
     expect(oncreate_spy).toHaveBeenCalledTimes(4)
     expect(onadd).toHaveBeenCalledTimes(2)
     expect(props.selected).toEqual([`valid`, `also_ok`])
+  })
+
+  test(`onparsed_paste fires with added/rejected/overflow summary`, async () => {
+    const { onparsed_paste } = await paste_into(
+      { options: [`a`, `b`, `c`, `d`, `e`], selected: [`a`], maxSelect: 3 },
+      `b,c,d,e`,
+    )
+    expect(onparsed_paste).toHaveBeenCalledTimes(1)
+    const payload = onparsed_paste.mock.calls[0][0]
+    expect(payload.added).toEqual([`b`, `c`])
+    expect(payload.overflow).toEqual([`d`, `e`])
+    expect(payload.raw_text).toBe(`b,c,d,e`)
+  })
+
+  test(`onparsed_paste reports rejected options from oncreate`, async () => {
+    const { onparsed_paste } = await paste_into(
+      {
+        options: [],
+        selected: [],
+        allowUserOptions: `append`,
+        oncreate: ({ option }) =>
+          `${typeof option === `object` ? option.label : option}`.length >= 3
+            ? undefined
+            : false,
+      },
+      `ab,valid,x`,
+    )
+    const payload = onparsed_paste.mock.calls[0][0]
+    expect(payload.added).toEqual([`valid`])
+    expect(payload.rejected).toEqual([`ab`, `x`])
+    expect(payload.overflow).toEqual([])
   })
 })

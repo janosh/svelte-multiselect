@@ -30,7 +30,7 @@ export type PlaceholderConfig = {
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
   onadd?: (data: { option: T; selected: T[] }) => unknown
-  oncreate?: (data: { option: T }) => unknown // return false to reject the option before it's added
+  oncreate?: (data: { option: T }) => unknown // return false to reject, return T to transform, void to accept as-is
   onremove?: (data: { option: T; selected: T[] }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
   onselectAll?: (data: { options: T[] }) => unknown // fires when select all is triggered
@@ -53,6 +53,12 @@ export interface MultiSelectEvents<T extends Option = Option> {
     attemptedOption: T
   }) => unknown // fires when user tries to exceed maxSelect
   onduplicate?: (data: { option: T }) => unknown // fires when user tries to add duplicate (when duplicates=false)
+  onparsed_paste?: (data: {
+    added: T[]
+    rejected: T[]
+    overflow: T[]
+    raw_text: string
+  }) => unknown
   onactivate?: (data: { option: T | null; index: number | null }) => unknown // fires on keyboard navigation through options
   // History/undo-redo events
   onundo?: (data: { previous: T[]; current: T[] }) => unknown // fires when undo is triggered
@@ -226,6 +232,14 @@ export interface MultiSelectProps<T extends Option = Option>
   portal?: PortalParams
   // Select all feature
   selectAllOption?: boolean | string // enable select all; if string, use as label
+  selectAllDisabledTitle?:
+    | string
+    | ((state: {
+        max_reached: boolean
+        maxSelect: number | null
+        selected_count: number
+      }) => string)
+    | null
   liSelectAllClass?: string // CSS class for the select all <li>
   // Dynamic options loading for large datasets (https://github.com/janosh/svelte-multiselect/discussions/342)
   // Pass a function for simple usage, or an object with config for advanced usage

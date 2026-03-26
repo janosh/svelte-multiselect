@@ -123,6 +123,7 @@
     portal: portal_params = {},
     // Select all feature
     selectAllOption = false,
+    selectAllDisabledTitle,
     liSelectAllClass = ``,
     // Dynamic options loading
     loadOptions,
@@ -147,6 +148,7 @@
     onsearch,
     onmaxreached,
     onduplicate,
+    onparsed_paste,
     onactivate,
     collapseAllGroups = $bindable(),
     expandAllGroups = $bindable(),
@@ -800,8 +802,12 @@
             option_to_add = label_text as Option
           }
         }
-        // Fire oncreate event — return false to reject the option
-        if (oncreate?.({ option: option_to_add }) === false) return
+        // Fire oncreate — return false to reject, return Option to transform
+        const oncreate_result = oncreate?.({ option: option_to_add })
+        if (oncreate_result === false) return
+        const is_option = typeof oncreate_result === `string` ? oncreate_result.length > 0
+          : typeof oncreate_result === `number` || (typeof oncreate_result === `object` && oncreate_result !== null)
+        if (is_option) option_to_add = oncreate_result as Option
         if (allowUserOptions === `append`) {
           if (loadOptions) loaded_options = [...loaded_options, option_to_add]
           else options = [...(options ?? []), option_to_add]
@@ -1301,16 +1307,30 @@
     const parsed = parse_paste(text)
     if (parsed.length === 0) return
     event.preventDefault()
-    for (const option of parsed) {
+    const added: Option[] = []
+    const rejected: Option[] = []
+    const overflow: Option[] = []
+    for (let idx = 0; idx < parsed.length; idx++) {
+      const option = parsed[idx] as Option
       if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
-        wiggle = true
-        onmaxreached?.({ selected, maxSelect, attemptedOption: option })
+        overflow.push(option, ...parsed.slice(idx + 1) as Option[])
+        if (overflow.length === parsed.length - idx) {
+          wiggle = true
+          onmaxreached?.({ selected, maxSelect, attemptedOption: option })
+        }
         break
       }
+      const before = selected.length
       add(option, event, true)
-      if (maxSelect === 1) break
+      if (selected.length > before) added.push(option)
+      else rejected.push(option)
+      if (maxSelect === 1) {
+        overflow.push(...parsed.slice(idx + 1) as Option[])
+        break
+      }
     }
     if (resetFilterOnAdd) searchText = ``
+    onparsed_paste?.({ added, rejected, overflow, raw_text: text })
   }
 
   // reset form validation when required prop changes
@@ -1687,9 +1707,13 @@
         {@const max_reached = maxSelect !== null && selected.length >= maxSelect}
         {@const all_selectable_selected = selectable.every((opt) => selected_keys_set.has(key(opt)))}
         {@const all_selected = max_reached || all_selectable_selected}
-        {@const disabled_title = max_reached && !all_selectable_selected
+        {@const default_title = max_reached && !all_selectable_selected
           ? `Maximum of ${maxSelect} options selected`
           : `All options already selected`}
+        {@const disabled_title = selectAllDisabledTitle === null ? ``
+          : typeof selectAllDisabledTitle === `function`
+            ? selectAllDisabledTitle({ max_reached, maxSelect, selected_count: selected.length })
+            : selectAllDisabledTitle ?? default_title}
         <li
           class="select-all {liSelectAllClass}"
           class:disabled={all_selected}
