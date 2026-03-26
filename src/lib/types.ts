@@ -212,6 +212,7 @@ export interface MultiSelectProps<T extends Option = Option>
   minSelect?: number | null // null means there is no lower limit for selected.length
   required?: boolean | number
   resetFilterOnAdd?: boolean
+  parse_paste?: (text: string) => T[]
   searchText?: string
   selected?: T[] // don't allow more than maxSelect preselected options
   sortSelected?: boolean | ((op1: T, op2: T) => number)
@@ -268,8 +269,8 @@ export interface MultiSelectProps<T extends Option = Option>
 // ArrowUp/Down, Backspace). This means if you set shortcuts={{ open: 'enter' }}, the Enter
 // key will open the dropdown instead of selecting the active option (intentional to allow full customization).
 export interface KeyboardShortcuts {
-  select_all?: string | null // default: 'ctrl+a'
-  clear_all?: string | null // default: 'ctrl+shift+a'
+  select_all?: string | null // default: null (opt-in, e.g. 'ctrl+a')
+  clear_all?: string | null // default: 'ctrl+backspace' (meta+backspace on Mac)
   open?: string | null // default: null (use existing behavior)
   close?: string | null // default: null (Escape already works)
   undo?: string | null // default: platform-aware (meta+z on Mac, ctrl+z elsewhere)

@@ -97,7 +97,7 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
 
 ## Select All Option
 
-Use `selectAllOption` to add a "Select all" button at the top of the dropdown. It respects `maxSelect` (only selects up to the limit) and skips disabled options.
+Use `selectAllOption` to add a "Select all" button at the top of the dropdown. It respects `maxSelect` (only selects up to the limit) and skips disabled options. Optionally set `shortcuts={{ select_all: 'ctrl+a' }}` to enable the keyboard shortcut (disabled by default to avoid hijacking the browser's native Ctrl+A).
 
 ```svelte example
 <script lang="ts">
@@ -119,6 +119,7 @@ Use `selectAllOption` to add a "Select all" button at the top of the dropdown. I
   options={fruits}
   bind:selected
   selectAllOption
+  shortcuts={{ select_all: `ctrl+a` }}
   maxSelect={5}
   placeholder="Pick your favorite fruits"
 />
