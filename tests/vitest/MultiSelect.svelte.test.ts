@@ -1490,6 +1490,85 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
 })
 
+// https://github.com/janosh/svelte-multiselect/issues/409
+// whitespace-only input must never be added as an option (was converted to 0 via Number("  "))
+test.each([
+  [`spaces with string options`, `    `, { options: [`a`, `b`], allowUserOptions: true }],
+  [`tabs with string options`, `\t\t`, { options: [`a`, `b`], allowUserOptions: true }],
+  [`newline`, `\n`, { options: [`a`, `b`], allowUserOptions: true }],
+  [`mixed whitespace`, ` \t\n `, { options: [`a`, `b`], allowUserOptions: true }],
+  [`spaces with numeric options`, `    `, { options: [1, 2, 3], allowUserOptions: true }],
+  [`append mode`, `    `, { options: [`a`, `b`], allowUserOptions: `append` as const }],
+] as const)(
+  `whitespace-only input rejected: %s`,
+  async (_label, whitespace, extra_props) => {
+    const onadd_spy = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: { ...extra_props, onadd: onadd_spy, open: true },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.value = whitespace
+    input.dispatchEvent(input_event)
+    await tick()
+
+    input.dispatchEvent(enter)
+    await tick()
+
+    expect(onadd_spy).not.toHaveBeenCalled()
+    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+  },
+)
+
+// https://github.com/janosh/svelte-multiselect/issues/409
+// with loadOptions returning [], effective_options[0] is undefined which triggered Number coercion
+test(`whitespace-only input rejected with loadOptions (root cause path)`, async () => {
+  vi.useFakeTimers()
+  try {
+    const onadd_spy = vi.fn()
+    const oncreate_spy = vi.fn()
+    const fetch_fn = vi.fn().mockResolvedValue({ options: [], hasMore: false })
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        allowUserOptions: true,
+        onadd: onadd_spy,
+        oncreate: oncreate_spy,
+        open: true,
+      },
+    })
+    await vi.runAllTimersAsync()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.value = `    `
+    input.dispatchEvent(input_event)
+    await vi.runAllTimersAsync()
+
+    // first Enter — must not add 0
+    input.dispatchEvent(enter)
+    await vi.runAllTimersAsync()
+
+    expect(onadd_spy).not.toHaveBeenCalled()
+    expect(oncreate_spy).not.toHaveBeenCalled()
+    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+
+    // second Enter — previously caused each_key_duplicate since both resolved to key 0
+    input.dispatchEvent(enter)
+    await vi.runAllTimersAsync()
+
+    expect(onadd_spy).not.toHaveBeenCalled()
+    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
   `does not render remove buttons if selected.length <= minSelect`,
   (selected) => {

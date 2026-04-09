@@ -754,6 +754,7 @@
     if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
       !isNaN(Number(option_to_add)) &&
+      (typeof option_to_add !== `string` || option_to_add.trim().length > 0) &&
       typeof selected_labels[0] === `number`
     ) {
       option_to_add = Number(option_to_add) as Option // convert to number if possible
@@ -785,7 +786,7 @@
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
-        (searchText.length > 0 || from_paste)
+        (searchText.trim().length > 0 || from_paste)
       ) {
         // Reconstruct option for type homogeneity, but preserve object options
         // from parse_paste as-is so extra fields (value/group/metadata) aren't stripped
@@ -795,6 +796,7 @@
             option_to_add = { label: label_text } as Option
           } else if (
             [`number`, `undefined`].includes(typeof effective_options[0]) &&
+            label_text.trim().length > 0 &&
             !isNaN(Number(label_text))
           ) {
             option_to_add = Number(label_text) as Option
@@ -920,7 +922,7 @@
 
   // Check if a user message (create option, duplicate warning, no match) is visible
   const has_user_msg = $derived(
-    searchText.length > 0 &&
+    searchText.trim().length > 0 &&
       (can_show_create_msg ||
         (duplicates !== true && is_label_selected(searchText)) ||
         can_show_no_match_msg),
@@ -944,7 +946,7 @@
     if (
       can_show_create_msg &&
       navigable_options.length === 0 &&
-      searchText.length > 0
+      searchText.trim().length > 0
     ) {
       option_msg_is_active = !option_msg_is_active
       return
@@ -1866,7 +1868,7 @@
           {/each}
         {/if}
       {/each}
-      {#if searchText}
+      {#if searchText.trim()}
         {@const is_dupe = duplicates !== true && is_label_selected(searchText) ? `dupe` : false}
         {@const can_create = can_show_create_msg ? `create` : false}
         {@const no_match = can_show_no_match_msg ? `no-match` : false}
