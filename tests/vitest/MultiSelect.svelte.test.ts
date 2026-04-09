@@ -6716,7 +6716,7 @@ describe(`duplicates prop variants`, () => {
     },
   ])(`duplicates=$desc`, async ({ duplicates, typed, expect_blocked }) => {
     const onduplicate_spy = vi.fn()
-    let selected = $state<string[]>([`Apple`])
+    let selected = $state([`Apple`])
 
     mount(MultiSelect, {
       target: document.body,
