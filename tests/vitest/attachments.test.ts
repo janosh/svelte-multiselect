@@ -1465,6 +1465,25 @@ describe(`sortable`, () => {
 
     expect(header.style.color).toBe(`blue`)
   })
+
+  it.each([
+    [`whitespace-only cells as empty`, [`   `, `5`, `1`], [`1`, `5`, ``]],
+    [
+      `mixed numeric and text cells`,
+      [`foo`, `10`, `bar`, `2`],
+      [`2`, `10`, `bar`, `foo`],
+    ],
+  ])(`should sort %s correctly`, (_desc, cells, expected) => {
+    const table = document.createElement(`table`)
+    const rows = cells.map((val: string) => `<tr><td>${val}</td></tr>`).join(``)
+    table.innerHTML = `<thead><tr><th>Col</th></tr></thead><tbody>${rows}</tbody>`
+    document.body.append(table)
+
+    sortable()(table)
+    get_required_header(table).dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+
+    expect(get_column_values(table, 0).map((val) => val?.trim())).toEqual(expected)
+  })
 })
 
 describe(`resizable`, () => {

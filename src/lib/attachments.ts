@@ -355,16 +355,20 @@ export const sortable =
           const val_1 = get_html_sort_value(cell_1)
           const val_2 = get_html_sort_value(cell_2)
 
-          if (val_1 === val_2) return 0
-          if (val_1 === ``) return 1 // treat empty string as lower than any value
-          if (val_2 === ``) return -1 // any value is considered higher than empty string
-
-          const num_1 = Number(val_1)
-          const num_2 = Number(val_2)
-
+          const [trimmed_1, trimmed_2] = [val_1.trim(), val_2.trim()]
+          if (trimmed_1 === trimmed_2) return 0
+          if (trimmed_1 === ``) return 1 // treat empty/whitespace as lower than any value
+          if (trimmed_2 === ``) return -1
+          const num_1 = Number(trimmed_1)
+          const num_2 = Number(trimmed_2)
           if (isNaN(num_1) && isNaN(num_2)) {
-            return sort_dir * val_1.localeCompare(val_2, undefined, { numeric: true })
+            return (
+              sort_dir * trimmed_1.localeCompare(trimmed_2, undefined, { numeric: true })
+            )
           }
+          // sort non-numeric values after numeric ones
+          if (isNaN(num_1)) return sort_dir
+          if (isNaN(num_2)) return -sort_dir
           return sort_dir * (num_1 - num_2)
         })
 

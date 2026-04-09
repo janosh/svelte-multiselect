@@ -367,10 +367,10 @@
           onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
           onfocusin={() => open_dropdown(parsed_route.href)}
           onfocusout={(event: FocusEvent) => {
-            const next = event.relatedTarget as Node | null
-            if (!next || !(event.currentTarget as HTMLElement).contains(next)) {
-              if (!is_pinned) hovered_dropdown = null
-            }
+            if (event.relatedTarget instanceof Node &&
+              event.currentTarget instanceof HTMLElement &&
+              event.currentTarget.contains(event.relatedTarget)) return
+            if (!is_pinned) hovered_dropdown = null
           }}
         >
           <div>
@@ -426,11 +426,9 @@
             onmouseenter={() => open_dropdown(parsed_route.href, true)}
             onmouseleave={(event: MouseEvent) => {
               // Don't schedule hide if mouse moved to sibling element within same dropdown
-              const related = event.relatedTarget as Node | null
-              const dropdown_el = (event.currentTarget as Element).closest(
-                `.dropdown`,
-              )
-              if (related && dropdown_el?.contains(related)) return
+              if (event.relatedTarget instanceof Node &&
+                event.currentTarget instanceof Element &&
+                event.currentTarget.closest(`.dropdown`)?.contains(event.relatedTarget)) return
               schedule_hide(parsed_route.href, is_pinned)
             }}
           >
