@@ -425,6 +425,8 @@
     loadOptions ? loaded_options : (options ?? []),
   )
 
+  let has_search_text = $derived(searchText.trim().length > 0)
+
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))
   let selected_labels = $derived(selected.map(utils.get_label))
@@ -786,7 +788,7 @@
         // this has the side-effect of not allowing to user to add the same
         // custom option twice in append mode
         [true, `append`].includes(allowUserOptions) &&
-        (searchText.trim().length > 0 || from_paste)
+        (has_search_text || from_paste)
       ) {
         // Reconstruct option for type homogeneity, but preserve object options
         // from parse_paste as-is so extra fields (value/group/metadata) aren't stripped
@@ -922,7 +924,7 @@
 
   // Check if a user message (create option, duplicate warning, no match) is visible
   const has_user_msg = $derived(
-    searchText.trim().length > 0 &&
+    has_search_text &&
       (can_show_create_msg ||
         (duplicates !== true && is_label_selected(searchText)) ||
         can_show_no_match_msg),
@@ -946,7 +948,7 @@
     if (
       can_show_create_msg &&
       navigable_options.length === 0 &&
-      searchText.trim().length > 0
+      has_search_text
     ) {
       option_msg_is_active = !option_msg_is_active
       return
@@ -1056,7 +1058,7 @@
         if (selected_keys_set.has(key(activeOption))) {
           if (can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
-      } else if (allowUserOptions && searchText.length > 0 && !load_options_pending) {
+      } else if (allowUserOptions && has_search_text && !load_options_pending) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
       } else {
@@ -1868,7 +1870,7 @@
           {/each}
         {/if}
       {/each}
-      {#if searchText.trim()}
+      {#if has_search_text}
         {@const is_dupe = duplicates !== true && is_label_selected(searchText) ? `dupe` : false}
         {@const can_create = can_show_create_msg ? `create` : false}
         {@const no_match = can_show_no_match_msg ? `no-match` : false}
