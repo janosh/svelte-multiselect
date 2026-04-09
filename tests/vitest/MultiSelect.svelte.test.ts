@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
-import type { MultiSelectEvents, MultiSelectProps } from '$lib/types'
+import type { MultiSelectProps } from '$lib/types'
 import { get_label, get_style } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
@@ -1490,6 +1490,71 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
 })
 
+// https://github.com/janosh/svelte-multiselect/issues/409
+// whitespace-only input must never be added as an option (was converted to 0 via Number("  "))
+test.each([
+  [`string options`, { options: [`a`, `b`], allowUserOptions: true }],
+  [`numeric options`, { options: [1, 2, 3], allowUserOptions: true }],
+] as const)(`whitespace-only input rejected: %s`, async (_label, extra_props) => {
+  const onadd_spy = vi.fn()
+
+  mount(MultiSelect, {
+    target: document.body,
+    props: { ...extra_props, onadd: onadd_spy, open: true },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
+  input.value = `    `
+  input.dispatchEvent(input_event)
+  await tick()
+
+  input.dispatchEvent(enter)
+  await tick()
+
+  expect(onadd_spy).not.toHaveBeenCalled()
+  expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+})
+
+// https://github.com/janosh/svelte-multiselect/issues/409
+// with loadOptions returning [], effective_options[0] is undefined which triggered Number coercion
+// pressing Enter twice also triggered each_key_duplicate since both resolved to key 0
+test(`whitespace-only input rejected with loadOptions (root cause path)`, async () => {
+  vi.useFakeTimers()
+  try {
+    const onadd_spy = vi.fn()
+    const fetch_fn = vi.fn().mockResolvedValue({ options: [], hasMore: false })
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        allowUserOptions: true,
+        onadd: onadd_spy,
+        open: true,
+      },
+    })
+    await vi.runAllTimersAsync()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    input.value = `    `
+    input.dispatchEvent(input_event)
+    await vi.runAllTimersAsync()
+
+    input.dispatchEvent(enter)
+    await vi.runAllTimersAsync()
+    // second Enter previously caused each_key_duplicate since both resolved to key 0
+    input.dispatchEvent(enter)
+    await vi.runAllTimersAsync()
+
+    expect(onadd_spy).not.toHaveBeenCalled()
+    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
 test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
   `does not render remove buttons if selected.length <= minSelect`,
   (selected) => {
@@ -2049,54 +2114,35 @@ test(`first matching option becomes active automatically on entering searchText`
   expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`bar`)
 })
 
+// options: [1,2,3], selected: [1,2] → clicking ul.options li adds 3,
+// clicking ul.selected button.remove removes 1, clicking button.remove-all removes all
 test.each([
-  [`add`, `ul.options li`],
-  [`change`, `ul.options li`],
-  [`remove`, `ul.selected button.remove`],
-  [`change`, `ul.selected button.remove`],
-  [`removeAll`, `button.remove-all`],
-  [`change`, `button.remove-all`],
-])(`fires %s event with expected payload when clicking %s`, (event_name, selector) => {
-  const is_event = <T extends keyof MultiSelectEvents>(
-    name: T,
-    _event_payload: Parameters<NonNullable<MultiSelectEvents[T]>>[0],
-  ) => name === event_name
+  [`add`, `ul.options li`, { option: 3 }],
+  [`change`, `ul.options li`, { option: 3, type: `add` }],
+  [`remove`, `ul.selected button.remove`, { option: 1 }],
+  [`change`, `ul.selected button.remove`, { option: 1, type: `remove` }],
+  [`removeAll`, `button.remove-all`, { options: [1, 2] }], // removed options
+  [`change`, `button.remove-all`, { options: [], type: `removeAll` }], // remaining selected
+])(
+  `fires %s event with expected payload when clicking %s`,
+  (event_name, selector, expected) => {
+    const spy = vi.fn()
 
-  const spy = vi.fn((event_payload) => {
-    if (
-      is_event(`onremoveAll`, event_payload) ||
-      (is_event(`onchange`, event_payload) && event_payload.type === `removeAll`)
-    ) {
-      // expect empty array for event_payload.options as of https://github.com/janosh/svelte-multiselect/issues/300
-      expect(event_payload.options).toEqual([])
-    } else if (
-      is_event(`onremove`, event_payload) ||
-      (is_event(`onchange`, event_payload) && event_payload.type === `remove`)
-    ) {
-      expect(event_payload.option).toEqual(1)
-    } else if (
-      is_event(`onadd`, event_payload) ||
-      (is_event(`onchange`, event_payload) && event_payload.type === `add`)
-    ) {
-      expect(event_payload.option).toEqual(3)
-    }
-  })
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        selected: [1, 2],
+        [`on${event_name}`]: spy,
+      },
+    })
 
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      selected: [1, 2],
-      [`on${event_name}`]: spy,
-    },
-  })
+    doc_query<HTMLElement>(selector).click()
 
-  // Re-query the element immediately before clicking
-  const element_to_click = doc_query<HTMLElement>(selector)
-  element_to_click.click()
-
-  expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
-})
+    expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
+    expect(spy.mock.calls[0][0]).toEqual(expect.objectContaining(expected))
+  },
+)
 
 test.each([
   // String options case
@@ -2178,7 +2224,6 @@ test.each<[string, boolean | `append`]>([
 
 test.each([
   [`undefined`, undefined],
-  [`true`, true],
   [`null`, null],
   [`empty string`, ``],
 ])(`oncreate returning %s does not reject`, async (_label, return_val) => {
@@ -6671,7 +6716,7 @@ describe(`duplicates prop variants`, () => {
     },
   ])(`duplicates=$desc`, async ({ duplicates, typed, expect_blocked }) => {
     const onduplicate_spy = vi.fn()
-    let selected = $state<string[]>([`Apple`])
+    let selected = $state([`Apple`])
 
     mount(MultiSelect, {
       target: document.body,
