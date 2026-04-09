@@ -330,6 +330,23 @@ test.each([[null], [1]])(`2-way binding of value updates selected`, async (maxSe
   }
 })
 
+// falsy but valid option values (0, "") must survive the value→selected sync
+test.each([
+  [0, [0, 1, 2]],
+  [``, [``, `a`, `b`]],
+])(`maxSelect=1 preserves falsy value %j`, async (falsy_val, opts) => {
+  const select = mount(Test2WayBind, {
+    target: document.body,
+    props: { options: opts, maxSelect: 1 },
+  })
+
+  select.value = falsy_val
+  await tick()
+
+  expect(select.value).toEqual(falsy_val)
+  expect(select.selected).toEqual([falsy_val])
+})
+
 // Bug: value/selected should update when maxSelect changes at runtime
 test.each([
   {
@@ -1156,22 +1173,32 @@ test.each([
   expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(expect_open)
 })
 
-test(`closes dropdown on tab out`, async () => {
-  mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
+test(`closes dropdown on tab out and blur to external element`, async () => {
+  const onclose = vi.fn()
+  mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3], onclose } })
   // starts with closed dropdown
   expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
 
   // opens dropdown on focus
-  doc_query<HTMLInputElement>(`input[autocomplete]`).focus()
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.focus()
   await tick()
   expect(document.querySelector(`ul.options.hidden`)).toBeNull()
 
   // closes dropdown again on tab out
-  doc_query<HTMLInputElement>(`input[autocomplete]`).dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `Tab`, bubbles: true }),
-  )
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Tab`, bubbles: true }))
   await tick()
   expect(doc_query(`ul.options.hidden`)).toBeInstanceOf(HTMLUListElement)
+  expect(onclose).toHaveBeenCalledTimes(1)
+
+  // reopen, then blur to an element outside the component
+  input.focus()
+  await tick()
+  const external = document.createElement(`button`)
+  document.body.append(external)
+  input.dispatchEvent(new FocusEvent(`blur`, { bubbles: true, relatedTarget: external }))
+  await tick()
+  expect(onclose).toHaveBeenCalledTimes(2)
 })
 
 describe.each([
@@ -1553,6 +1580,21 @@ test(`whitespace-only input rejected with loadOptions (root cause path)`, async 
   } finally {
     vi.useRealTimers()
   }
+})
+
+// whitespace-only input should not mount the options dropdown when there are no options
+test(`whitespace-only input does not mount options dropdown`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [], allowUserOptions: true, open: true },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = ` `
+  input.dispatchEvent(input_event)
+  await tick()
+
+  expect(document.querySelector(`ul.options`)).toBeNull()
 })
 
 test.each([[[1]], [[1, 2]], [[1, 2, 3]], [[1, 2, 3, 4]]])(
@@ -3635,8 +3677,8 @@ describe(`loadOptions feature`, () => {
       target: document.body,
       props: { loadOptions: load_options, open: true },
     })
-    await tick()
-    await tick()
+    await tick() // effect starts async fetch
+    await tick() // fetch resolves, results applied
 
     const options_ul = doc_query(`ul.options`)
     expect(options_ul.textContent).toContain(`Apple`)
@@ -4125,12 +4167,10 @@ describe(`binding update event count`, () => {
         props: { options: [1, 2, 3], maxSelect, onSelectedChanged: spy },
       })
       await tick()
-      await tick()
       expect(spy.mock.calls.length).toBeLessThanOrEqual(1) // init: at most 1 call
 
       spy.mockClear()
       doc_query<HTMLElement>(`ul.options li`).click()
-      await tick()
       await tick()
       expect(spy).toHaveBeenCalledTimes(1) // selection: exactly 1 call
     },
@@ -4147,7 +4187,6 @@ describe(`binding update event count`, () => {
         target: document.body,
         props: { options: [1, 2, 3], maxSelect, onValueChanged: spy },
       })
-      await tick()
       await tick()
 
       // The effect in Test2WayBind fires at least once on mount with initial value
@@ -4317,7 +4356,6 @@ describe(`option grouping feature`, () => {
     // Navigate down - first active should be first option, not group header
     input.dispatchEvent(arrow_down)
     await tick()
-    await tick() // extra tick for reactive effects
 
     const active_option = document.querySelector(`ul.options > li.active`)
     // Check that it's not a group header if an active element exists
@@ -4998,11 +5036,35 @@ describe(`option grouping feature`, () => {
     input.value = `Rock`
     input.dispatchEvent(input_event)
     await tick()
-    await tick() // extra tick for effect
 
     // Genre group should now be expanded because "Rock" matches
     // ongroupToggle should have been called
     expect(ongroupToggle_spy).toHaveBeenCalledWith({ group: `Genre`, collapsed: false })
+  })
+
+  test(`searchExpandsCollapsedGroups ignores whitespace-only input`, async () => {
+    // "C Major" and "D Minor" contain spaces, so a single space fuzzy-matches them.
+    // Without the has_search_text guard, the Key group would expand on whitespace input.
+    const ongroupToggle_spy = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: grouped_options,
+        collapsibleGroups: true,
+        collapsedGroups: new Set([`Genre`, `Key`]),
+        searchExpandsCollapsedGroups: true,
+        ongroupToggle: ongroupToggle_spy,
+        open: true,
+      },
+    })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = ` `
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(ongroupToggle_spy).not.toHaveBeenCalled()
   })
 
   test.each([
@@ -5104,7 +5166,6 @@ describe(`option grouping feature`, () => {
     const genre_header = find_group_header(`Genre`)
     genre_header.click()
     await tick()
-    await tick()
 
     // Genre is collapsed, so its options should be hidden
     const visible_options = document.querySelectorAll(
@@ -5119,8 +5180,6 @@ describe(`option grouping feature`, () => {
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-    await tick()
-    await tick()
     await tick()
 
     // Genre group should now be expanded (Rock should be visible)
@@ -7052,6 +7111,18 @@ describe(`parse_paste`, () => {
     expect(payload.added).toEqual([`b`, `c`])
     expect(payload.overflow).toEqual([`d`, `e`])
     expect(payload.raw_text).toBe(`b,c,d,e`)
+  })
+
+  test(`onparsed_paste with maxSelect=1 reports replaced option as added`, async () => {
+    const { onparsed_paste, props } = await paste_into(
+      { options: [`a`, `b`, `c`], selected: [`a`], maxSelect: 1 },
+      `b,c`,
+    )
+    expect(onparsed_paste).toHaveBeenCalledTimes(1)
+    const payload = onparsed_paste.mock.calls[0][0]
+    expect(payload.added).toEqual([`b`])
+    expect(payload.overflow).toEqual([`c`])
+    expect(props.selected).toEqual([`b`])
   })
 
   test(`onparsed_paste reports rejected options from oncreate`, async () => {

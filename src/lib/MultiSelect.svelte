@@ -265,7 +265,7 @@
   })
   $effect.pre(() => {
     const new_selected = maxSelect === 1
-      ? (value ? [value as Option] : [])
+      ? (value === null || value === undefined ? [] : [value as Option])
       : (Array.isArray(value) ? value : [])
     if (
       !values_equal(
@@ -426,18 +426,17 @@
   )
 
   let has_search_text = $derived(searchText.trim().length > 0)
-
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))
   let selected_labels = $derived(selected.map(utils.get_label))
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
   // String-normalized for consistent comparison (numeric labels like 123 match "123")
-  let selected_labels_set = $derived(new Set(selected_labels.map((lbl) => `${lbl}`)))
+  let selected_labels_set = $derived(new Set(selected_labels.map((label) => `${label}`)))
   // Lowercase labels set for case-insensitive duplicate detection
   let selected_labels_lower_set = $derived(
     duplicates === `case-insensitive`
-      ? new Set(selected_labels.map((lbl) => `${lbl}`.toLowerCase()))
+      ? new Set(selected_labels.map((label) => `${label}`.toLowerCase()))
       : null,
   )
   // Helper to check if a label is already selected (respects case-insensitive mode)
@@ -591,7 +590,7 @@
 
   // Auto-expand collapsed groups when search matches their options
   $effect(() => {
-    if (searchExpandsCollapsedGroups && searchText && collapsibleGroups) {
+    if (searchExpandsCollapsedGroups && has_search_text && collapsibleGroups) {
       expand_groups(get_collapsed_with_matches())
     }
   })
@@ -813,9 +812,8 @@
           console.error(`MultiSelect: oncreate must be synchronous, got a Promise`)
           return
         }
-        const result_type = typeof oncreate_result
-        if (result_type === `string` ? (oncreate_result as string).length > 0
-          : result_type === `number` || (result_type === `object` && oncreate_result !== null)) {
+        if (oncreate_result !== undefined && oncreate_result !== null &&
+          oncreate_result !== ``) {
           option_to_add = oncreate_result as Option
         }
         if (allowUserOptions === `append`) {
@@ -825,7 +823,7 @@
       }
 
       if (resetFilterOnAdd) searchText = `` // reset search string on selection
-      if ([``, undefined, null].includes(option_to_add as string | null)) {
+      if (option_to_add === `` || option_to_add === undefined || option_to_add === null) {
         console.error(`MultiSelect: encountered falsy option`, option_to_add)
         return
       }
@@ -1217,14 +1215,11 @@
   }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
-    if (!outerDiv) return
-    const target = event.target as Node
+    if (!outerDiv || !(event.target instanceof Node)) return
     // Check if click is inside the main component
-    if (outerDiv.contains(target)) return
+    if (outerDiv.contains(event.target)) return
     // If portal is active, also check if click is inside the portalled options dropdown
-    if (portal_params?.active && ul_options && ul_options.contains(target)) {
-      return
-    }
+    if (portal_params?.active && ul_options?.contains(event.target)) return
     // Click is outside both the main component and any portalled dropdown
     close_dropdown(event)
   }
@@ -1305,7 +1300,8 @@
     }
 
     // For non-portalled dropdowns, close when focus moves outside the component
-    if (!outerDiv?.contains(event.relatedTarget as Node)) close_dropdown(event)
+    if (!(event.relatedTarget instanceof Node) || !outerDiv?.contains(event.relatedTarget))
+      close_dropdown(event)
 
     onblur?.(event) // Call original handler (if any passed as component prop)
   }
@@ -1321,19 +1317,21 @@
     const rejected: Option[] = []
     const overflow: Option[] = []
     for (let idx = 0; idx < parsed.length; idx++) {
-      const option = parsed[idx] as Option
+      const option = parsed[idx]
       if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
-        overflow.push(option, ...parsed.slice(idx + 1) as Option[])
+        overflow.push(option, ...parsed.slice(idx + 1))
         wiggle = true
         onmaxreached?.({ selected, maxSelect, attemptedOption: option })
         break
       }
       const before = selected.length
+      const before_first = maxSelect === 1 ? selected[0] : undefined
       add(option, event, true)
-      if (selected.length > before) added.push(option)
-      else rejected.push(option)
+      if (selected.length > before || (maxSelect === 1 && selected[0] !== before_first)) {
+        added.push(option)
+      } else rejected.push(option)
       if (maxSelect === 1) {
-        overflow.push(...parsed.slice(idx + 1) as Option[])
+        overflow.push(...parsed.slice(idx + 1))
         break
       }
     }
@@ -1472,10 +1470,9 @@
   })
 
   function handle_options_scroll(event: Event) {
-    if (!load_options_config || load_options_loading || !load_options_has_more) {
-      return
-    }
-    const { scrollTop, scrollHeight, clientHeight } = event.target as HTMLElement
+    if (!load_options_config || load_options_loading || !load_options_has_more ||
+      !(event.target instanceof HTMLElement)) return
+    const { scrollTop, scrollHeight, clientHeight } = event.target
     if (scrollHeight - scrollTop - clientHeight <= 100) {
       load_dynamic_options(false)
     }
@@ -1681,7 +1678,7 @@
   {/if}
 
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
-  {#if (searchText && noMatchingOptionsMsg) || effective_options.length > 0 ||
+  {#if (has_search_text && noMatchingOptionsMsg) || effective_options.length > 0 ||
       loadOptions}
     <ul
       use:portal={{ target_node: outerDiv, ...portal_params }}

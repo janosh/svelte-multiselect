@@ -20,8 +20,7 @@
     onkeydown?.(event)
     if (event.key === `Enter`) {
       event.preventDefault()
-      const target = event.target as HTMLInputElement
-      target.click() // simulate real user toggle so 'change' is dispatched
+      if (event.target instanceof HTMLInputElement) event.target.click() // simulate real user toggle so 'change' is dispatched
     }
   }
 </script>
