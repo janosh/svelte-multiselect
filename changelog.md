@@ -1,5 +1,16 @@
 # Changelog
 
+## [v11.7.0](https://github.com/janosh/svelte-multiselect/compare/v11.6.4...v11.7.0)
+
+> 9 April 2026
+
+- Add `parse_paste` prop, fix shortcut defaults and select-all UX [`#407`](https://github.com/janosh/svelte-multiselect/pull/407)
+- Add `oncreate` reject/transform, `onparsed_paste` event, `selectAllDisabledTitle` i18n [`#408`](https://github.com/janosh/svelte-multiselect/pull/408)
+- Reject whitespace-only input in `allowUserOptions` mode [`#410`](https://github.com/janosh/svelte-multiselect/pull/410)
+- Fix whitespace guards, falsy value sync, paste reporting, sortable bugs, and type safety [`#411`](https://github.com/janosh/svelte-multiselect/pull/411)
+- Block option creation during `loadOptions` debounce window [`#404`](https://github.com/janosh/svelte-multiselect/pull/404)
+- Fix tooltip background not inheriting page theme [`#405`](https://github.com/janosh/svelte-multiselect/pull/405)
+
 ## [v11.6.4](https://github.com/janosh/svelte-multiselect/compare/v11.6.3...v11.6.4)
 
 > 19 March 2026
@@ -616,7 +627,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 3 February 2022
 
-- apply id prop to &lt;input&gt; insted of outer div (closes #25) [`#25`](https://github.com/janosh/svelte-multiselect/issues/25)
+- apply id prop to &lt;input&gt; instead of outer div (closes #25) [`#25`](https://github.com/janosh/svelte-multiselect/issues/25)
 - add eslint commit hook + update deps [`6ad44b8`](https://github.com/janosh/svelte-multiselect/commit/6ad44b85057aef71eae19293de80f9d42f91f87b)
 - v.3.2.0 [`71ff2d1`](https://github.com/janosh/svelte-multiselect/commit/71ff2d192caccacbe41f83949c14d7d4ca87d590)
 - add readme badge to document minimum svelte version (for #24) [`7d9fe5a`](https://github.com/janosh/svelte-multiselect/commit/7d9fe5a977b56dab95069b64321f0718e0d61f08)
@@ -777,7 +788,7 @@ All notable changes to this project will be documented in this file. Dates are d
 > 9 May 2021
 
 - import readme on demo site instead of duplication [`c0e4924`](https://github.com/janosh/svelte-multiselect/commit/c0e49246e76a81600bb35931fd7d30f6f6aeb550)
-- remove ununsed example.svx [`2138caa`](https://github.com/janosh/svelte-multiselect/commit/2138caa171f20a2f80c2e75d0dffd066caf17a83)
+- remove unused example.svx [`2138caa`](https://github.com/janosh/svelte-multiselect/commit/2138caa171f20a2f80c2e75d0dffd066caf17a83)
 - rename package dir, improve readme [`0150378`](https://github.com/janosh/svelte-multiselect/commit/015037848f666a76b24b93603764084b41611740)
 
 ## [v1.0.1](https://github.com/janosh/svelte-multiselect/compare/v1.0.0...v1.0.1)
