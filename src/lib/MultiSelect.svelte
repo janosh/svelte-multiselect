@@ -1,5 +1,6 @@
 <!-- eslint-disable-next-line @stylistic/quotes -- TS generics require string literals -->
 <script lang="ts" generics="Option extends import('./types').Option">
+  // === Imports ===
   import { tick, untrack } from 'svelte'
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler, KeyboardEventHandler } from 'svelte/elements'
@@ -11,6 +12,7 @@
   import * as utils from './utils'
   import Wiggle from './Wiggle.svelte'
 
+  // === Props ===
   let {
     activeIndex = $bindable(null),
     activeOption = $bindable(null),
@@ -165,43 +167,11 @@
     ...rest
   }: MultiSelectProps<Option> = $props()
 
+  // === Config normalization ===
   // Generate unique IDs for ARIA associations (combobox pattern)
   // Uses provided id prop or generates a random one using crypto API
   const internal_id = $derived(id ?? `sms-${utils.get_uuid().slice(0, 8)}`)
   const listbox_id = $derived(`${internal_id}-listbox`)
-
-  // Parse shortcut string into modifier+key parts
-  function parse_shortcut(shortcut: string): {
-    key: string
-    ctrl: boolean
-    shift: boolean
-    alt: boolean
-    meta: boolean
-  } {
-    const parts = shortcut.toLowerCase().split(`+`).map((part) => part.trim())
-    const key = parts.pop() ?? ``
-    const ctrl = parts.includes(`ctrl`)
-    const shift = parts.includes(`shift`)
-    const alt = parts.includes(`alt`)
-    const meta = parts.includes(`meta`) || parts.includes(`cmd`)
-    return { key, ctrl, shift, alt, meta }
-  }
-
-  function matches_shortcut(
-    event: KeyboardEvent,
-    shortcut: string | null | undefined,
-  ): boolean {
-    if (!shortcut) return false
-    const parsed = parse_shortcut(shortcut)
-    // Require non-empty key to prevent "ctrl+" from matching any key with ctrl pressed
-    if (!parsed.key) return false
-    const key_matches = event.key.toLowerCase() === parsed.key
-    const ctrl_matches = event.ctrlKey === parsed.ctrl
-    const shift_matches = event.shiftKey === parsed.shift
-    const alt_matches = event.altKey === parsed.alt
-    const meta_matches = event.metaKey === parsed.meta
-    return key_matches && ctrl_matches && shift_matches && alt_matches && meta_matches
-  }
 
   // Platform detection for keyboard shortcuts (Mac uses Cmd, others use Ctrl)
   const is_mac = typeof navigator !== `undefined` &&
@@ -231,31 +201,14 @@
     }
   })
 
-  // Helper to compare arrays/values for equality to avoid unnecessary updates.
-  // Prevents infinite loops when value/selected are bound to reactive wrappers
-  // that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
-  // Treats null/undefined/[] as equivalent empty states to prevent extra updates on init (#369).
-  function values_equal(val1: unknown, val2: unknown): boolean {
-    if (val1 === val2) return true
-    const empty1 = val1 === null || val1 === undefined || (Array.isArray(val1) && val1.length === 0)
-    const empty2 = val2 === null || val2 === undefined || (Array.isArray(val2) && val2.length === 0)
-    if (empty1 && empty2) return true
-    if (Array.isArray(val1) && Array.isArray(val2)) {
-      return (
-        val1.length === val2.length &&
-        val1.every((item, idx) => item === val2[idx])
-      )
-    }
-    return false
-  }
-
+  // === Selection and value sync ===
   // Sync selected ↔ value bidirectionally. Use untrack to prevent each effect from
-  // reacting to changes in the "destination" value, and values_equal to prevent
+  // reacting to changes in the "destination" value, and utils.values_equal to prevent
   // infinite loops with reactive wrappers that clone arrays. See issue #309.
   $effect.pre(() => {
     const new_value = maxSelect === 1 ? (selected[0] ?? null) : selected
     if (
-      !values_equal(
+      !utils.values_equal(
         untrack(() => value),
         new_value,
       )
@@ -268,7 +221,7 @@
       ? (value === null || value === undefined ? [] : [value as Option])
       : (Array.isArray(value) ? value : [])
     if (
-      !values_equal(
+      !utils.values_equal(
         untrack(() => selected),
         new_selected,
       )
@@ -331,7 +284,7 @@
       return
     }
     // Check if actually changed (avoid duplicates from reactive updates)
-    if (values_equal(selected, prev_selected)) return
+    if (utils.values_equal(selected, prev_selected)) return
 
     // On first change, push initial state first
     if (history_stack.length === 0) {
@@ -422,6 +375,7 @@
         && (load_options_last_search ?? ``) !== searchText)),
   )
 
+  // === Derived collections and indexing ===
   let effective_options = $derived(
     loadOptions ? loaded_options : (options ?? []),
   )
@@ -537,6 +491,7 @@
     return state
   })
 
+  // === Grouping ===
   // Update collapsedGroups state: 'add' adds groups, 'delete' removes groups, 'set' replaces all
   function update_collapsed_groups(
     action: `add` | `delete` | `set`,
@@ -739,6 +694,25 @@
     minSelect === null || selected.length > minSelect,
   )
 
+  function get_option_view(option_item: Option) {
+    const flat_idx = navigable_index_map.get(option_item) ?? -1
+    const {
+      label,
+      disabled = null,
+      title = null,
+      selectedTitle = null,
+      disabledTitle = defaultDisabledTitle,
+    } = utils.is_object(option_item) ? option_item : { label: option_item }
+    return {
+      flat_idx, label, disabled, title, selectedTitle, disabledTitle,
+      active: activeIndex === flat_idx && flat_idx >= 0,
+      selected: is_selected(label),
+      style: [utils.get_style(option_item, `option`), liOptionStyle]
+        .filter(Boolean).join(` `) || null,
+    }
+  }
+
+  // === Selection mutations ===
   // toggle an option between selected and unselected states (for keepSelectedInDropdown mode)
   function toggle_option(option_to_toggle: Option, event: Event) {
     const is_currently_selected = selected_keys_set.has(key(option_to_toggle))
@@ -930,6 +904,7 @@
         can_show_no_match_msg),
   )
 
+  // === Keyboard and pointer handlers ===
   // Handle arrow key navigation through options (uses navigable_options to skip collapsed groups)
   async function handle_arrow_navigation(direction: 1 | -1) {
     ignore_hover = true
@@ -1032,7 +1007,7 @@
     ]
 
     for (const { key, condition, action } of shortcut_actions) {
-      if (matches_shortcut(event, effective_shortcuts[key]) && condition()) {
+      if (utils.matches_shortcut(event, effective_shortcuts[key]) && condition()) {
         event.preventDefault()
         event.stopPropagation()
         action()
@@ -1226,6 +1201,7 @@
     close_dropdown(event)
   }
 
+  // === Drag, input, and paste handlers ===
   let drag_idx: number | null = $state(null)
   // event handlers enable dragging to reorder selected options
   const drop = (target_idx: number) => (event: DragEvent) => {
@@ -1347,6 +1323,7 @@
     form_input?.setCustomValidity(``)
   })
 
+  // === DOM, portal, and focus ===
   // Portal action: use: directive instead of @attach because portalling requires
   // synchronous DOM manipulation during element creation and in-place updates
   // (the action's update method avoids teardown/re-creation when outerDiv changes).
@@ -1398,6 +1375,7 @@
     }
   }
 
+  // === Async loadOptions ===
   // Dynamic options loading - captures search at call time to avoid race conditions.
   // reset=true bypasses the loading mutex so search changes can start a new fetch
   // even while a previous one is in-flight (the request_id discards stale results).
@@ -1495,6 +1473,16 @@
   }
 </script>
 
+{#snippet render_label(opt: Option, idx: number, type: `selected` | `option`)}
+  {#if children}
+    {@render children({ option: opt, idx, type })}
+  {:else if parseLabelsAsHtml}
+    {@html utils.get_label(opt)}
+  {:else}
+    {utils.get_label(opt)}
+  {/if}
+{/snippet}
+
 <svelte:window
   onclick={on_click_outside}
   ontouchstart={on_click_outside}
@@ -1578,12 +1566,8 @@
       >
         {#if selectedItem}
           {@render selectedItem({ option, idx })}
-        {:else if children}
-          {@render children({ option, idx, type: `selected` })}
-        {:else if parseLabelsAsHtml}
-          {@html utils.get_label(option)}
         {:else}
-          {utils.get_label(option)}
+          {@render render_label(option, idx, `selected`)}
         {/if}
         {#if !disabled && can_remove}
           <button
@@ -1817,48 +1801,36 @@
         ? `${key(option_item)}-${group_idx}-${local_idx}`
         : key(option_item))
           }
-            {@const flat_idx = navigable_index_map.get(option_item) ?? -1}
-            {@const {
-        label,
-        disabled = null,
-        title = null,
-        selectedTitle = null,
-        disabledTitle = defaultDisabledTitle,
-      } = utils.is_object(option_item) ? option_item : { label: option_item }}
-            {@const active = activeIndex === flat_idx && flat_idx >= 0}
-            {@const selected = is_selected(label)}
-            {@const optionStyle = [utils.get_style(option_item, `option`), liOptionStyle]
-        .filter(Boolean)
-        .join(` `) || null}
-            {#if is_option_visible(flat_idx)}
+            {@const view = get_option_view(option_item)}
+            {#if is_option_visible(view.flat_idx)}
               <li
-                id="{internal_id}-opt-{flat_idx}"
-                onclick={(event) => handle_option_interact(option_item, disabled, event)}
-                title={disabled ? disabledTitle : (selected && selectedTitle) || title}
-                class:selected
-                class:active
-                class:disabled
-                class="{liOptionClass} {active ? liActiveOptionClass : ``}"
+                id="{internal_id}-opt-{view.flat_idx}"
+                onclick={(event) => handle_option_interact(option_item, view.disabled, event)}
+                title={view.disabled ? view.disabledTitle : (view.selected && view.selectedTitle) || view.title}
+                class:selected={view.selected}
+                class:active={view.active}
+                class:disabled={view.disabled}
+                class="{liOptionClass} {view.active ? liActiveOptionClass : ``}"
                 onmouseover={() => {
-                  if (!disabled && !ignore_hover) activeIndex = flat_idx
+                  if (!view.disabled && !ignore_hover) activeIndex = view.flat_idx
                 }}
                 onfocus={() => {
-                  if (!disabled) activeIndex = flat_idx
+                  if (!view.disabled) activeIndex = view.flat_idx
                 }}
                 role="option"
-                aria-selected={selected ? `true` : `false`}
-                aria-posinset={flat_idx + 1}
+                aria-selected={view.selected ? `true` : `false`}
+                aria-posinset={view.flat_idx + 1}
                 aria-setsize={navigable_options.length}
-                style={optionStyle}
+                style={view.style}
                 onkeydown={if_enter_or_space((event) =>
-                  handle_option_interact(option_item, disabled, event)
+                  handle_option_interact(option_item, view.disabled, event)
                 )}
               >
                 {#if keepSelectedInDropdown === `checkboxes`}
                   <input
                     type="checkbox"
                     class="option-checkbox"
-                    checked={selected}
+                    checked={view.selected}
                     aria-label="Toggle {utils.get_label(option_item)}"
                     tabindex="-1"
                   />
@@ -1866,17 +1838,13 @@
                 {#if option}
                   {@render option({
           option: option_item,
-          idx: flat_idx,
-          selected,
-          active,
-          disabled: disabled ?? false,
+          idx: view.flat_idx,
+          selected: view.selected,
+          active: view.active,
+          disabled: view.disabled ?? false,
         })}
-                {:else if children}
-                  {@render children({ option: option_item, idx: flat_idx, type: `option` })}
-                {:else if parseLabelsAsHtml}
-                  {@html utils.get_label(option_item)}
                 {:else}
-                  {utils.get_label(option_item)}
+                  {@render render_label(option_item, view.flat_idx, `option`)}
                 {/if}
               </li>
             {/if}
