@@ -411,14 +411,15 @@
   let load_options_loading = $state(false)
   let load_options_last_search: string | null = $state(null)
   let debounce_timer: ReturnType<typeof setTimeout> | null = null
-  let load_options_session = 0 // incremented on close to invalidate in-flight fetches
+  let load_request_id = 0 // monotonic counter to invalidate stale in-flight fetches
+  let auto_fill_count = 0
+  const MAX_AUTO_FILL_ROUNDS = 20
 
-  // True when loadOptions is configured and results for the current search haven't
-  // arrived yet (either debouncing or actively fetching). Prevents premature user
-  // messages and option creation while search is pending.
+  // has_more check: errors (has_more=false) clear pending state
   let load_options_pending = $derived(
     Boolean(load_options_config) &&
-      (load_options_loading || (open && (load_options_last_search ?? ``) !== searchText)),
+      (load_options_loading || (open && load_options_has_more
+        && (load_options_last_search ?? ``) !== searchText)),
   )
 
   let effective_options = $derived(
@@ -1262,8 +1263,7 @@
     event,
   ) => {
     handle_keydown(event) // Restore internal logic
-    // Call original forwarded handler
-    onkeydown?.(event)
+    onkeydown?.(event) // Call original forwarded handler
   }
 
   const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
@@ -1398,30 +1398,43 @@
     }
   }
 
-  // Dynamic options loading - captures search at call time to avoid race conditions
+  // Dynamic options loading - captures search at call time to avoid race conditions.
+  // reset=true bypasses the loading mutex so search changes can start a new fetch
+  // even while a previous one is in-flight (the request_id discards stale results).
   async function load_dynamic_options(reset: boolean) {
-    if (
-      !load_options_config ||
-      load_options_loading ||
-      (!reset && !load_options_has_more)
-    ) {
+    if (!load_options_config || (!reset && (load_options_loading || !load_options_has_more))) {
       return
     }
+    if (reset) auto_fill_count = 0
     const search = searchText
     const offset = reset ? 0 : loaded_options.length
-    const session = load_options_session
+    const request_id = ++load_request_id
     load_options_loading = true
     try {
       const limit = load_options_config.batch_size
       const result = await load_options_config.fetch({ search, offset, limit })
-      if (session !== load_options_session) return // dropdown closed during fetch, discard
+      if (request_id !== load_request_id) return // stale request, discard
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
+      load_options_last_search = search
     } catch (error) {
       console.error(`MultiSelect: loadOptions error:`, error)
+      if (request_id === load_request_id) load_options_has_more = false
     } finally {
-      if (session === load_options_session) load_options_last_search = search
-      load_options_loading = false
+      // Only clear loading if this is still the active request — a newer
+      // reset call may have started while this one was in-flight
+      if (request_id === load_request_id) load_options_loading = false
+    }
+    // Auto-fill: if the loaded batch doesn't overflow the dropdown, the scrollbar
+    // won't appear and onscroll can never fire. Keep loading until scrollable or done.
+    if (request_id === load_request_id && load_options_has_more
+      && open && ul_options && auto_fill_count < MAX_AUTO_FILL_ROUNDS) {
+      await tick()
+      if (open && ul_options && ul_options.clientHeight > 0
+        && ul_options.scrollHeight <= ul_options.clientHeight) {
+        auto_fill_count++
+        load_dynamic_options(false)
+      }
     }
   }
 
@@ -1431,10 +1444,11 @@
 
     // Reset state when dropdown closes so next open triggers fresh load
     if (!open) {
-      load_options_session++
+      load_request_id++
       load_options_last_search = null
       loaded_options = []
       load_options_has_more = true
+      load_options_loading = false
       return
     }
 
@@ -1473,6 +1487,7 @@
   function handle_options_scroll(event: Event) {
     if (!load_options_config || load_options_loading || !load_options_has_more ||
       !(event.target instanceof HTMLElement)) return
+    auto_fill_count = 0
     const { scrollTop, scrollHeight, clientHeight } = event.target
     if (scrollHeight - scrollTop - clientHeight <= 100) {
       load_dynamic_options(false)
