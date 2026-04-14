@@ -3615,6 +3615,31 @@ describe.each([[1], [2], [null]])(
 // Dynamic options loading tests (https://github.com/janosh/svelte-multiselect/discussions/342)
 describe(`loadOptions feature`, () => {
   const mock_data = Array.from({ length: 100 }, (_, idx) => `Option ${idx + 1}`)
+  type LoadResult = { options: string[]; hasMore: boolean }
+
+  function deferred_load() {
+    const resolvers: Array<(val: LoadResult) => void> = []
+    const rejectors: Array<(err: Error) => void> = []
+    const fn = vi.fn(
+      () =>
+        new Promise<LoadResult>((resolve, reject) => {
+          resolvers.push(resolve)
+          rejectors.push(reject)
+        }),
+    )
+    return { fn, resolvers, rejectors }
+  }
+
+  async function flush_ticks(count = 4) {
+    for (let idx = 0; idx < count; idx++) await tick()
+  }
+
+  function mock_scroll_near_bottom(ul: Element) {
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(200)
+    vi.spyOn(ul, `scrollTop`, `get`).mockReturnValue(250) // 500-250-200=50 < 100 threshold
+    ul.dispatchEvent(new Event(`scroll`))
+  }
 
   test(`loadOptions is called when dropdown opens`, async () => {
     const load_options = vi.fn(() =>
@@ -3689,88 +3714,21 @@ describe(`loadOptions feature`, () => {
   })
 
   test(`loadOptions shows loading indicator while loading`, async () => {
-    let resolve_load: (() => void) | undefined
-    const load_options = vi.fn(
-      () =>
-        new Promise<{ options: string[]; hasMore: boolean }>((resolve) => {
-          resolve_load = () => resolve({ options: [`Test`], hasMore: false })
-        }),
-    )
-
+    const { fn: load_options, resolvers } = deferred_load()
     mount(MultiSelect, {
       target: document.body,
       props: { loadOptions: load_options, open: true },
     })
-    await tick() // Wait for effect to start loading
-
-    // Loading indicator should be visible while loading
-    const loading_li = document.querySelector(`ul.options > li.loading-more`)
-    expect(loading_li).toBeInstanceOf(HTMLLIElement)
-
-    // Resolve the load
-    if (resolve_load) resolve_load()
     await tick()
 
-    // Loading indicator should be gone
+    expect(document.querySelector(`ul.options > li.loading-more`)).toBeInstanceOf(
+      HTMLLIElement,
+    )
+
+    resolvers[0]({ options: [`Test`], hasMore: false })
+    await tick()
+
     expect(document.querySelector(`ul.options > li.loading-more`)).toBeNull()
-  })
-
-  test(`static options work without loadOptions`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [`A`, `B`, `C`], open: true },
-    })
-    await tick()
-
-    const options_ul = doc_query(`ul.options`)
-    expect(options_ul.textContent).toContain(`A`)
-    expect(options_ul.textContent).toContain(`B`)
-    expect(options_ul.textContent).toContain(`C`)
-  })
-
-  test(`dropdown renders when loadOptions is provided but not yet loaded`, async () => {
-    const load_options = vi.fn(() =>
-      Promise.resolve({ options: [`Test`], hasMore: false }),
-    )
-    mount(MultiSelect, {
-      target: document.body,
-      props: { loadOptions: load_options, open: true },
-    })
-    await tick()
-
-    // Dropdown should exist even before options are loaded
-    const options_ul = document.querySelector(`ul.options`)
-    expect(options_ul).not.toBeNull()
-  })
-
-  test(`loadOptions handles errors gracefully`, async () => {
-    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
-    let reject_fn: ((reason: Error) => void) | undefined
-    const load_options = vi.fn(
-      () =>
-        new Promise<{ options: string[]; hasMore: boolean }>((_, reject) => {
-          reject_fn = reject
-        }),
-    )
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: { loadOptions: load_options, open: true },
-    })
-    await tick()
-
-    // Reject the promise
-    if (reject_fn) reject_fn(new Error(`Network error`))
-    await tick()
-
-    // Error should be logged
-    expect(console_error).toHaveBeenCalledWith(
-      `MultiSelect: loadOptions error:`,
-      expect.any(Error),
-    )
-    // Component should still function (dropdown visible)
-    expect(document.querySelector(`ul.options`)).not.toBeNull()
-    console_error.mockRestore()
   })
 
   test(`scroll triggers pagination when hasMore=true`, async () => {
@@ -3784,19 +3742,14 @@ describe(`loadOptions feature`, () => {
       props: { loadOptions: load_options, open: true },
     })
     await tick()
+    await tick()
 
     expect(load_options).toHaveBeenCalledTimes(1)
 
-    // Simulate scroll event - the handler checks scroll position
     const ul = doc_query(`ul.options`)
-    // Mock the scroll position properties for the scroll handler
-    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
-    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(200)
-    vi.spyOn(ul, `scrollTop`, `get`).mockReturnValue(250) // 500-250-200=50 < 100 threshold
-    ul.dispatchEvent(new Event(`scroll`))
+    mock_scroll_near_bottom(ul)
     await tick()
 
-    // Should have loaded second batch
     expect(load_options).toHaveBeenCalledTimes(2)
     expect(load_options).toHaveBeenLastCalledWith({
       search: ``,
@@ -3815,53 +3768,444 @@ describe(`loadOptions feature`, () => {
       props: { loadOptions: load_options, open: true },
     })
     await tick()
+    await tick()
 
     expect(load_options).toHaveBeenCalledTimes(1)
 
-    // Simulate scroll event
     const ul = doc_query(`ul.options`)
-    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
-    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(200)
-    vi.spyOn(ul, `scrollTop`, `get`).mockReturnValue(250)
-    ul.dispatchEvent(new Event(`scroll`))
+    mock_scroll_near_bottom(ul)
     await tick()
 
-    // Should NOT have loaded again since hasMore=false
     expect(load_options).toHaveBeenCalledTimes(1)
   })
 
-  test(`typing during pending request clears stale results and triggers new load`, async () => {
-    vi.useFakeTimers()
-    type LoadResult = { options: string[]; hasMore: boolean }
-    const resolvers: Array<(val: LoadResult) => void> = []
-    const load_options = vi.fn(
-      () => new Promise<LoadResult>((res) => resolvers.push(res)),
-    )
-
+  // https://github.com/janosh/svelte-multiselect/issues/412
+  test(`auto-fills when small batchSize doesn't overflow dropdown`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
     mount(MultiSelect, {
       target: document.body,
-      props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      props: { loadOptions: { fetch: load_options, batchSize: 5 }, open: true },
     })
-    await vi.runAllTimersAsync()
-    expect(load_options).toHaveBeenCalledWith({ search: ``, offset: 0, limit: 50 })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
 
-    // Type while first request pending
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.value = `foo`
-    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    // Mock a rendered but non-overflowing list
+    const ul = doc_query(`ul.options`)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(400)
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(100)
 
-    // Resolve stale request, verify new request is made for current search
-    resolvers[0]({ options: [`Stale A`, `Stale B`], hasMore: false })
-    await vi.runAllTimersAsync()
+    resolvers[0]({ options: mock_data.slice(0, 5), hasMore: true })
+    await flush_ticks()
     expect(load_options).toHaveBeenCalledTimes(2)
-    expect(load_options).toHaveBeenLastCalledWith({ search: `foo`, offset: 0, limit: 50 })
 
-    // Stale results should be cleared, new results shown after resolve
-    const options_ul = doc_query(`ul.options`)
-    expect(options_ul.textContent).not.toContain(`Stale`)
-    resolvers[1]({ options: [`Foo Result`], hasMore: false })
-    await vi.runAllTimersAsync()
-    expect(options_ul.textContent).toContain(`Foo Result`)
+    resolvers[1]({ options: mock_data.slice(5, 10), hasMore: true })
+    await flush_ticks()
+    expect(load_options).toHaveBeenCalledTimes(3)
+
+    resolvers[2]({ options: mock_data.slice(10, 15), hasMore: false })
+    await flush_ticks()
+    expect(load_options).toHaveBeenCalledTimes(3)
+  })
+
+  test(`auto-fill stops when list becomes scrollable`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: { fetch: load_options, batchSize: 5 }, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    // Mock overflow BEFORE resolving so auto-fill sees the list as scrollable
+    const ul = doc_query(`ul.options`)
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(400)
+
+    resolvers[0]({ options: mock_data.slice(0, 5), hasMore: true })
+    await flush_ticks()
+    expect(load_options).toHaveBeenCalledTimes(1)
+  })
+
+  test(`stale fetch result discarded when search changes during load`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(1)
+
+      // Type new search while first fetch is pending
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = `xyz`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+      expect(load_options).toHaveBeenLastCalledWith({
+        search: `xyz`,
+        offset: 0,
+        limit: 50,
+      })
+
+      // Resolve the STALE first request after the new one was initiated
+      resolvers[0]({ options: [`Stale Result`], hasMore: false })
+      await vi.runAllTimersAsync()
+
+      const ul = doc_query(`ul.options`)
+      expect(ul.textContent).not.toContain(`Stale Result`)
+
+      // Resolve the current request
+      resolvers[1]({ options: [`Fresh Result`], hasMore: false })
+      await vi.runAllTimersAsync()
+      expect(ul.textContent).toContain(`Fresh Result`)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  test(`error stops further pagination`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, resolvers, rejectors } = deferred_load()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    resolvers[0]({ options: mock_data.slice(0, 50), hasMore: true })
+    await tick()
+
+    const ul = doc_query(`ul.options`)
+    mock_scroll_near_bottom(ul)
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(2)
+
+    rejectors[1](new Error(`Server error`))
+    await tick()
+    expect(console_error).toHaveBeenCalledWith(
+      `MultiSelect: loadOptions error:`,
+      expect.any(Error),
+    )
+
+    mock_scroll_near_bottom(ul)
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(2)
+    console_error.mockRestore()
+  })
+
+  test(`close during fetch clears loading state`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    // Close dropdown via Escape while fetch is still pending
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+
+    // aria-busy should clear immediately on close
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    // Stale fetch resolves after close — should not corrupt state
+    resolvers[0]({ options: [`Result`], hasMore: false })
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    // Reopen — should trigger fresh load, not be stuck
+    doc_query(`div.multiselect`).dispatchEvent(
+      new MouseEvent(`mouseup`, { bubbles: true }),
+    )
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(2)
+  })
+
+  test(`rapid search changes only apply final result`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(1)
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      // Type "a", debounce, then "ab" before first completes
+      input.value = `a`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+
+      input.value = `ab`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(3)
+
+      // Resolve all three in reverse order (worst-case network jitter)
+      resolvers[2]({ options: [`AB Result`], hasMore: false })
+      resolvers[1]({ options: [`A Result`], hasMore: false })
+      resolvers[0]({ options: [`Initial`], hasMore: false })
+      await vi.runAllTimersAsync()
+
+      const ul = doc_query(`ul.options`)
+      expect(ul.textContent).toContain(`AB Result`)
+      expect(ul.textContent).not.toContain(`A Result`)
+      expect(ul.textContent).not.toContain(`Initial`)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  test(`scroll after auto-fill cap resets counter and allows more loading`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: { fetch: load_options, batchSize: 5 }, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    const ul = doc_query(`ul.options`)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(400)
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(100)
+
+    // Resolve batches until auto-fill cap is reached (20 rounds + 1 initial)
+    for (let idx = 0; idx < 20; idx++) {
+      resolvers[idx]({ options: [`Item ${idx}`], hasMore: true })
+      await flush_ticks()
+    }
+    const capped_count = load_options.mock.calls.length
+    // Auto-fill should have stopped at the cap
+    resolvers[capped_count - 1]({ options: [`Capped`], hasMore: true })
+    await flush_ticks()
+    expect(load_options).toHaveBeenCalledTimes(capped_count)
+
+    // Simulate user scroll — should reset counter and allow more loading
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(500)
+    vi.spyOn(ul, `scrollTop`, `get`).mockReturnValue(250)
+    ul.dispatchEvent(new Event(`scroll`))
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(capped_count + 1)
+
+    // After scroll-triggered load resolves, auto-fill should resume
+    // (list still doesn't overflow) — this verifies counter was actually reset
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(100)
+    resolvers[capped_count]({ options: [`Post-scroll`], hasMore: true })
+    await flush_ticks()
+    expect(load_options).toHaveBeenCalledTimes(capped_count + 2)
+  })
+
+  test(`error clears pending state via has_more`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, resolvers, rejectors } = deferred_load()
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        loadOptions: load_options,
+        noMatchingOptionsMsg: `No matches`,
+        open: true,
+      },
+    })
+    await tick()
+
+    // First load succeeds
+    resolvers[0]({ options: [`Apple`], hasMore: true })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    const ul = doc_query(`ul.options`)
+    mock_scroll_near_bottom(ul)
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    // Fetch fails
+    rejectors[1](new Error(`Server error`))
+    await tick()
+
+    // After error: aria-busy should clear (has_more=false clears pending)
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+    console_error.mockRestore()
+  })
+
+  test(`reopen before stale fetch resolves triggers fresh load`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+    // Close while first fetch is still pending (NOT resolved)
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    // Reopen BEFORE old fetch resolves — this is the critical timing
+    doc_query(`div.multiselect`).dispatchEvent(
+      new MouseEvent(`mouseup`, { bubbles: true }),
+    )
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(2)
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    // Old fetch resolves late — must be discarded, not corrupt new session
+    resolvers[0]({ options: [`Stale`], hasMore: false })
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+    expect(doc_query(`ul.options`).textContent).not.toContain(`Stale`)
+
+    // New fetch resolves — applied normally
+    resolvers[1]({ options: [`Fresh`], hasMore: false })
+    await tick()
+    expect(doc_query(`ul.options`).textContent).toContain(`Fresh`)
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+  })
+
+  test(`stale error does not affect current request state`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, resolvers, rejectors } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(1)
+
+      // Type to trigger a new search while first fetch is pending
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = `test`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+
+      // New fetch succeeds FIRST with hasMore=true
+      resolvers[1]({ options: [`Result A`], hasMore: true })
+      await vi.runAllTimersAsync()
+
+      const ul = doc_query(`ul.options`)
+      expect(ul.textContent).toContain(`Result A`)
+
+      // Old (stale) fetch ERRORS AFTER success — must not corrupt hasMore
+      rejectors[0](new Error(`Stale network error`))
+      await vi.runAllTimersAsync()
+
+      // Scroll should trigger pagination (hasMore was NOT corrupted by stale error)
+      mock_scroll_near_bottom(ul)
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(3)
+    } finally {
+      vi.useRealTimers()
+      console_error.mockRestore()
+    }
+  })
+
+  test(`failed initial load retries on close+reopen`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, resolvers, rejectors } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      // Use onOpen=false so retry requires typing, exposing has_more via pending
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          loadOptions: { fetch: load_options, onOpen: false, debounceMs: 10 },
+          open: true,
+        },
+      })
+
+      // Type to trigger initial load (onOpen=false requires user input)
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = `q`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(1)
+
+      rejectors[0](new Error(`Server down`))
+      await vi.runAllTimersAsync()
+
+      // Close and reopen
+      input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+      await vi.runAllTimersAsync()
+      doc_query(`div.multiselect`).dispatchEvent(
+        new MouseEvent(`mouseup`, { bubbles: true }),
+      )
+      await vi.runAllTimersAsync()
+
+      // Type to trigger load again (onOpen=false)
+      input.value = `q`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      // During debounce: aria-busy must be true (has_more was reset on close)
+      await tick()
+      expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+
+      resolvers[1]({ options: [`Recovered`], hasMore: false })
+      await vi.runAllTimersAsync()
+      expect(doc_query(`ul.options`).textContent).toContain(`Recovered`)
+      expect(input.getAttribute(`aria-busy`)).toBeNull()
+    } finally {
+      vi.useRealTimers()
+      console_error.mockRestore()
+    }
+  })
+
+  test(`failed search retryable via input change`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, resolvers, rejectors } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 0 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+      // Initial load succeeds
+      resolvers[0]({ options: [`Apple`], hasMore: false })
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(1)
+
+      // Search "x" triggers load, which fails
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = `x`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+      rejectors[1](new Error(`fail`))
+      await vi.runAllTimersAsync()
+
+      // Clear and retype same search — should trigger a new load for "x"
+      // because last_search was NOT updated on failure (still "")
+      input.value = ``
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+      input.value = `x`
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await vi.runAllTimersAsync()
+
+      expect(load_options).toHaveBeenLastCalledWith({ search: `x`, offset: 0, limit: 50 })
+    } finally {
+      vi.useRealTimers()
+      console_error.mockRestore()
+    }
   })
 })
 
@@ -6841,11 +7185,7 @@ describe(`duplicates prop variants`, () => {
   test(`dropdown options with same label but different values remain selectable`, async () => {
     // Issue: label check was blocking dropdown options even when values differ
     // The is_from_options check should skip label-based duplicate detection for dropdown items
-    const options = [
-      { label: `apple`, value: 1 },
-      { label: `apple`, value: 2 },
-      { label: `apple`, value: 3 },
-    ]
+    const options = [1, 2, 3].map((value) => ({ label: `apple`, value }))
 
     const onadd_spy = vi.fn()
     const onduplicate_spy = vi.fn()

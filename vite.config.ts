@@ -99,4 +99,9 @@ export default defineConfig({
   preview: {
     port: 3000,
   },
+
+  build: {
+    // Default cssTarget is chrome111 which doesn't support light-dark(),
+    cssTarget: `esnext`, // causing LightningCSS to polyfill it with broken space toggles
+  },
 })

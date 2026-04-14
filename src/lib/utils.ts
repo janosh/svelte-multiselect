@@ -62,6 +62,58 @@ export function get_style(
   return css_str
 }
 
+// Parse shortcut string into modifier+key parts
+export function parse_shortcut(shortcut: string): {
+  key: string
+  ctrl: boolean
+  shift: boolean
+  alt: boolean
+  meta: boolean
+} {
+  const parts = shortcut
+    .toLowerCase()
+    .split(`+`)
+    .map((part) => part.trim())
+  const key = parts.pop() ?? ``
+  const ctrl = parts.includes(`ctrl`)
+  const shift = parts.includes(`shift`)
+  const alt = parts.includes(`alt`)
+  const meta = parts.includes(`meta`) || parts.includes(`cmd`)
+  return { key, ctrl, shift, alt, meta }
+}
+
+export function matches_shortcut(
+  event: KeyboardEvent,
+  shortcut: string | null | undefined,
+): boolean {
+  if (!shortcut) return false
+  const { key, ctrl, shift, alt, meta } = parse_shortcut(shortcut)
+  // Require non-empty key to prevent "ctrl+" from matching any key with ctrl pressed
+  if (!key) return false
+  return (
+    event.key.toLowerCase() === key &&
+    event.ctrlKey === ctrl &&
+    event.shiftKey === shift &&
+    event.altKey === alt &&
+    event.metaKey === meta
+  )
+}
+
+// Compare arrays/values for equality to avoid unnecessary updates.
+// Prevents infinite loops when value/selected are bound to reactive wrappers
+// that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
+// Treats null/undefined/[] as equivalent empty states to prevent extra updates on init (#369).
+export function values_equal(val1: unknown, val2: unknown): boolean {
+  if (val1 === val2) return true
+  const is_empty = (val: unknown) =>
+    val === null || val === undefined || (Array.isArray(val) && val.length === 0)
+  if (is_empty(val1) && is_empty(val2)) return true
+  if (Array.isArray(val1) && Array.isArray(val2)) {
+    return val1.length === val2.length && val1.every((item, idx) => item === val2[idx])
+  }
+  return false
+}
+
 // Fuzzy string matching function
 // Returns true if the search string can be found as a subsequence in the target string
 // e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
