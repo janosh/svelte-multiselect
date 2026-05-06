@@ -1,4 +1,5 @@
 import * as lib from '$lib'
+import * as attachments from '$lib/attachments'
 import DefaultExport, {
   MultiSelect as NamedExport,
   scroll_into_view_if_needed_polyfill,
@@ -9,6 +10,13 @@ import { describe, expect, test, vi } from 'vite-plus/test'
 test(`default export from index.ts is same as component file`, () => {
   expect(DefaultExport).toBe(MultiSelect)
   expect(NamedExport).toBe(MultiSelect)
+})
+
+test(`src/lib/index.ts does not re-export attachments`, () => {
+  for (const export_name of Object.keys(attachments)) {
+    if (export_name === `get_uuid`) continue // also public via $lib/utils
+    expect(export_name in lib).toBe(false)
+  }
 })
 
 test(`src/lib/index.ts re-exports all Svelte components`, () => {
@@ -23,21 +31,19 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
     callback:
       | ((entries: IntersectionObserverEntry[], obs: IntersectionObserver) => void)
       | null
-    disconnect: ReturnType<typeof vi.fn>
-    observe: ReturnType<typeof vi.fn>
-    instance: unknown
+    disconnect: ReturnType<typeof vi.fn<() => void>>
+    observe: ReturnType<typeof vi.fn<(element: Element) => void>>
   }
 
   let mock: MockState = {
     callback: null,
     disconnect: vi.fn(),
     observe: vi.fn(),
-    instance: null,
   }
 
   const create_mock_observer = () => {
-    mock.disconnect = vi.fn()
-    mock.observe = vi.fn()
+    mock.disconnect = vi.fn<() => void>()
+    mock.observe = vi.fn<(element: Element) => void>()
 
     class MockObserver {
       constructor(
@@ -47,12 +53,17 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
         ) => void,
       ) {
         mock.callback = callback
-        mock.instance = this
       }
-      disconnect = mock.disconnect
-      observe = mock.observe
-      takeRecords = vi.fn()
-      unobserve = vi.fn()
+      disconnect(): void {
+        mock.disconnect()
+      }
+      observe(element: Element): void {
+        mock.observe(element)
+      }
+      takeRecords(): IntersectionObserverEntry[] {
+        return []
+      }
+      unobserve(): void {}
       root = null
       rootMargin = ``
       thresholds = []
@@ -69,35 +80,26 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
   })
 
   test.each([
-    // [ratio, centerIfNeeded, expectedBlock, shouldScroll]
-    [0, true, `center`, true],
-    [0, false, `nearest`, true],
-    [0.5, true, `nearest`, true],
-    [0.5, false, `nearest`, true],
-    [1, true, null, false],
-    [1, false, null, false],
+    // [ratio, centerIfNeeded, expectedScrollCalls]
+    [0, true, [{ block: `center`, inline: `center` }]],
+    [0, false, [{ block: `nearest`, inline: `nearest` }]],
+    [0.5, true, [{ block: `nearest`, inline: `nearest` }]],
+    [0.5, false, [{ block: `nearest`, inline: `nearest` }]],
+    [1, true, []],
+    [1, false, []],
   ] as const)(
-    `ratio=%d centerIfNeeded=%s scrolls to %s (shouldScroll=%s)`,
-    (ratio, center_if_needed, expected_block, should_scroll) => {
+    `ratio=%d centerIfNeeded=%s has scroll calls %o`,
+    (ratio, center_if_needed, expected_scroll_calls) => {
       create_mock_observer()
       const element = document.createElement(`div`)
-      element.scrollIntoView = vi.fn()
-
-      const scroll_spy = vi.fn()
+      const scroll_spy = vi.fn<(arg?: boolean | ScrollIntoViewOptions) => void>()
       element.scrollIntoView = scroll_spy
 
-      scroll_into_view_if_needed_polyfill(element, center_if_needed)
-      // @ts-expect-error partial IntersectionObserverEntry mock + unknown instance
-      mock.callback?.([{ intersectionRatio: ratio }], mock.instance)
+      const observer = scroll_into_view_if_needed_polyfill(element, center_if_needed)
+      // @ts-expect-error partial IntersectionObserverEntry mock
+      mock.callback?.([{ intersectionRatio: ratio }], observer)
 
-      if (should_scroll) {
-        expect(scroll_spy).toHaveBeenCalledWith({
-          block: expected_block,
-          inline: expected_block,
-        })
-      } else {
-        expect(scroll_spy).not.toHaveBeenCalled()
-      }
+      expect(scroll_spy.mock.calls).toEqual(expected_scroll_calls.map((call) => [call]))
       expect(mock.disconnect).toHaveBeenCalled()
     },
   )

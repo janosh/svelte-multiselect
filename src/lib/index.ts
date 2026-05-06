@@ -1,4 +1,3 @@
-export * from './attachments'
 export * from './heading-anchors'
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CmdPalette } from './CmdPalette.svelte'
@@ -25,7 +24,7 @@ export { default as Wiggle } from './Wiggle.svelte'
 export function scroll_into_view_if_needed_polyfill(
   element: Element,
   centerIfNeeded: boolean = true,
-) {
+): IntersectionObserver {
   const observer = new IntersectionObserver(([entry], obs) => {
     const ratio = entry.intersectionRatio
     if (ratio < 1) {

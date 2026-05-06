@@ -282,7 +282,7 @@ describe(`bubbles <input> node DOM events`, () => {
   })
 })
 
-describe.each([[null], [1]])(`value is `, (maxSelect) => {
+describe.each([[null], [1]])(`value is`, (maxSelect) => {
   test.each([[[1, 2, 3]], [[`a`, `b`, `c`]]])(
     `${maxSelect === 1 ? `single` : `multiple`} options when maxSelect=${maxSelect}`,
     (options) => {

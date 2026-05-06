@@ -2131,7 +2131,7 @@
     padding: 3pt 1ex;
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
-    border-left: 3px solid transparent;
+    border-left: 1px solid transparent;
   }
   :where(ul.options .user-msg) {
     /* block needed so vertical padding applies to span */
@@ -2145,7 +2145,7 @@
     );
     border-left: var(
       --sms-li-selected-plain-border,
-      3px solid var(--sms-active-color, cornflowerblue)
+      1px solid var(--sms-active-color, cornflowerblue)
     );
   }
   :where(ul.options > li.active) {

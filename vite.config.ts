@@ -38,6 +38,9 @@ export default defineConfig({
       'prefer-const': `off`, // `let` needed for $state/$derived/$bindable
       '@typescript-eslint/no-unnecessary-condition': `off`, // reactive narrowing false positives
       '@typescript-eslint/consistent-type-imports': `off`, // template component import false positives
+      '@typescript-eslint/consistent-return': `off`, // callbacks/actions intentionally mix cleanup returns
+      '@typescript-eslint/prefer-readonly-parameter-types': `off`, // noisy for DOM callbacks
+      '@typescript-eslint/strict-void-return': `off`, // vi.fn() and Svelte handlers return values
       'eslint-plugin-unicorn/consistent-function-scoping': `off`, // Svelte reactive closures
       // DOM/any propagation — oxlint lacks DOM type stubs
       '@typescript-eslint/no-unsafe-argument': `off`,
@@ -55,7 +58,9 @@ export default defineConfig({
       'max-depth': `off`,
       'max-classes-per-file': `off`,
       'sort-vars': `off`,
+      'eslint-plugin-jest/no-conditional-expect': `off`, // parameterized tests use conditionals
       'eslint-plugin-jest/no-conditional-in-test': `off`, // parameterized tests use conditionals
+      'eslint-plugin-jest/valid-expect': `off`, // Vitest supports expect messages
       'eslint-plugin-unicorn/no-array-callback-reference': `off`,
       'eslint-plugin-unicorn/no-useless-undefined': `off`,
       'eslint-plugin-unicorn/no-object-as-default-parameter': `off`,
