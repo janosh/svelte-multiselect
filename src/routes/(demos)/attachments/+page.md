@@ -12,7 +12,7 @@ Exported from `svelte-multiselect/attachments`:
 
 ```svelte example id="attachments-tooltip"
 <script lang="ts">
-  import { tooltip } from '$lib'
+  import { tooltip } from '$lib/attachments'
 
   let custom_delay = $state(0)
 </script>
@@ -188,7 +188,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 
 ```svelte example id="attachments-tooltip-reactive"
 <script lang="ts">
-  import { tooltip } from '$lib'
+  import { tooltip } from '$lib/attachments'
   let text = $state(`Edit me!`)
 </script>
 
@@ -200,7 +200,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 
 ```svelte example id="attachments-draggable"
 <script lang="ts">
-  import { draggable } from '$lib'
+  import { draggable } from '$lib/attachments'
 
   let last_drag: string = $state('')
 </script>
@@ -260,7 +260,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 
 ```svelte example id="attachments-highlight"
 <script lang="ts">
-  import { highlight_matches } from '$lib'
+  import { highlight_matches } from '$lib/attachments'
 
   let search_text = $state('')
   let disabled = $state(false)
@@ -316,7 +316,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 
 ```svelte example id="attachments-click-outside"
 <script lang="ts">
-  import { click_outside, tooltip } from '$lib'
+  import { click_outside, tooltip } from '$lib/attachments'
 
   let open_menu = $state(false)
 </script>
@@ -378,7 +378,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 
 ```svelte example id="attachments-sortable"
 <script lang="ts">
-  import { sortable } from '$lib'
+  import { sortable } from '$lib/attachments'
 </script>
 
 <table {@attach sortable()} class="demo-table">

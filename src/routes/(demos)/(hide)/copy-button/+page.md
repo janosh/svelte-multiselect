@@ -6,7 +6,8 @@ guard, and reset timing.
 
 ```svelte example
 <script lang="ts">
-  import { CopyButton, tooltip } from '$lib'
+  import { tooltip } from '$lib/attachments'
+  import { CopyButton } from '$lib'
 
   type Copy_state = `ready` | `success` | `error`
 
