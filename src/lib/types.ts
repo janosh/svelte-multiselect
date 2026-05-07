@@ -143,6 +143,9 @@ export interface PortalParams {
   active?: boolean
 }
 
+type InputEventProp = Extract<keyof HTMLInputAttributes, `on${string}`>
+export type InputProps = Omit<HTMLInputAttributes, InputEventProp>
+
 export interface MultiSelectProps<T extends Option = Option>
   extends
     MultiSelectEvents<T>,
@@ -188,7 +191,7 @@ export interface MultiSelectProps<T extends Option = Option>
   id?: string | null
   input?: HTMLInputElement | null
   inputClass?: string
-  inputProps?: HTMLInputAttributes
+  inputProps?: InputProps
   inputStyle?: string | null
   inputmode?: HTMLInputAttributes[`inputmode`] | null
   invalid?: boolean

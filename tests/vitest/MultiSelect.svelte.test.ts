@@ -387,7 +387,8 @@ test(`selected is array of first two options when maxSelect=2`, () => {
 })
 
 describe(`selectedDisplay=input`, () => {
-  const press = (key: string) => new KeyboardEvent(`keydown`, { key, bubbles: true })
+  const press = (key: string) =>
+    new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true })
 
   function set_input_value(input: HTMLInputElement, value: string): void {
     input.value = value
@@ -469,7 +470,7 @@ describe(`selectedDisplay=input`, () => {
     expect(select.value).toBe(null)
   })
 
-  test(`programmatic value update syncs to visible input text`, async () => {
+  test(`programmatic value update and clear syncs visible input text`, async () => {
     const options = [
       { label: `Red`, value: `#f00` },
       { label: `Green`, value: `#0f0` },
@@ -486,6 +487,13 @@ describe(`selectedDisplay=input`, () => {
     expect(input.value).toBe(`Green`)
     expect(select.searchText).toBe(`Green`)
     expect(select.selected).toEqual([options[1]])
+
+    select.value = null
+    await tick()
+
+    expect(input.value).toBe(``)
+    expect(select.searchText).toBe(``)
+    expect(select.selected).toEqual([])
   })
 
   test(`keyboard selection keeps aria-activedescendant valid and Escape preserves text`, async () => {
@@ -531,11 +539,17 @@ describe(`selectedDisplay=input`, () => {
     await tick()
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-    input.dispatchEvent(press(`Backspace`))
+    const backspace = press(`Backspace`)
+    input.dispatchEvent(backspace)
+    expect(backspace.defaultPrevented).toBe(false)
+
+    set_input_value(input, `Re`)
     await tick()
 
-    expect(select.selected).toEqual([`Red`])
-    expect(select.value).toBe(`Red`)
+    expect(input.value).toBe(`Re`)
+    expect(select.searchText).toBe(`Re`)
+    expect(select.selected).toEqual([])
+    expect(select.value).toBe(null)
     expect(document.querySelectorAll(`ul.selected > li.highlighted`)).toHaveLength(0)
     expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
   })
@@ -596,7 +610,13 @@ describe(`selectedDisplay=input`, () => {
         options: [`Red`],
         maxSelect: 1,
         selectedDisplay: `input`,
-        inputProps: { maxlength: 5, readonly: true, [`aria-label`]: `Color input` },
+        inputProps: {
+          maxlength: 5,
+          readonly: true,
+          [`aria-label`]: `Color input`,
+          [`aria-expanded`]: `true`,
+          role: `textbox`,
+        },
       },
     })
 
@@ -605,6 +625,7 @@ describe(`selectedDisplay=input`, () => {
     expect(input.readOnly).toBe(true)
     expect(input.getAttribute(`aria-label`)).toBe(`Color input`)
     expect(input.getAttribute(`role`)).toBe(`combobox`)
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
   })
 
   test(`quiet datalist mode commits custom text without create or no-match messages`, async () => {

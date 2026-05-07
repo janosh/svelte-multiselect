@@ -399,11 +399,20 @@
     if (input_display) return has_search_text ? searchText : null
     return selected.length >= Number(required) ? JSON.stringify(selected) : null
   })
+  let prev_input_committed_label: string | null = null
   // Mirror the committed option label into the visible input (e.g. when value is set programmatically).
   $effect.pre(() => {
     if (input_committed_label !== null && searchText !== input_committed_label) {
       searchText = input_committed_label
+    } else if (
+      input_display &&
+      input_committed_label === null &&
+      prev_input_committed_label !== null &&
+      searchText === prev_input_committed_label
+    ) {
+      searchText = ``
     }
+    prev_input_committed_label = input_committed_label
   })
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
