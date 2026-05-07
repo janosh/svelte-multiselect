@@ -191,6 +191,74 @@ test.describe(`input`, () => {
   })
 })
 
+test.describe(`input dropdown display`, () => {
+  test.beforeEach(async ({ page }) => {
+    await page.goto(`/input-dropdown`, { waitUntil: `networkidle` })
+  })
+
+  test(`mouse selection fills editable input and hides selected chips`, async ({
+    page,
+  }) => {
+    const input = page.locator(`#input-dropdown input[autocomplete]`)
+    await input.fill(`Gr`)
+
+    const options = page.locator(`#input-dropdown ul.options`)
+    await expect(options.locator(`li:has-text("Green")`)).toBeVisible()
+    await expect(options.locator(`li:has-text("Red")`)).toBeHidden()
+
+    await options.locator(`li:has-text("Green")`).click()
+    await expect(input).toHaveValue(`Green`)
+    await expect(page.locator(`#input-dropdown ul.selected > li`)).toHaveCount(0)
+    await expect(page.locator(`#input-dropdown-state`)).toContainText(`selected: Green`)
+  })
+
+  test(`editing after selection clears committed option but keeps draft text`, async ({
+    page,
+  }) => {
+    const input = page.locator(`#input-dropdown input[autocomplete]`)
+    await input.click()
+    await page.locator(`#input-dropdown ul.options li:has-text("Red")`).click()
+    await expect(page.locator(`#input-dropdown-state`)).toContainText(`selected: Red`)
+
+    await input.fill(`Reddish`)
+
+    await expect(input).toHaveValue(`Reddish`)
+    await expect(page.locator(`#input-dropdown-state`)).toContainText(`Typed: Reddish`)
+    await expect(page.locator(`#input-dropdown-state`)).toContainText(`selected: none`)
+  })
+
+  test(`keyboard navigation keeps aria-activedescendant valid`, async ({ page }) => {
+    const input = page.locator(`#input-dropdown input[autocomplete]`)
+    await input.click()
+
+    await page.keyboard.press(`ArrowDown`)
+    const active_id = await input.getAttribute(`aria-activedescendant`)
+    expect(active_id).toBeTruthy()
+    expect(
+      await page.locator(`#input-dropdown ul.options > li#${active_id}`).count(),
+    ).toBe(1)
+
+    await page.keyboard.press(`Enter`)
+    await expect(input).toHaveValue(`Red`)
+
+    await page.keyboard.press(`Escape`)
+    await expect(input).toHaveValue(`Red`)
+    await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+  })
+
+  test(`quiet datalist accepts free text without messages or chips`, async ({ page }) => {
+    const input = page.locator(`#quiet-datalist input[autocomplete]`)
+    await input.fill(`bespoke tag`)
+
+    await expect(page.locator(`#quiet-datalist ul.options li.user-msg`)).toHaveCount(0)
+    await page.keyboard.press(`Enter`)
+
+    await expect(input).toHaveValue(`bespoke tag`)
+    await expect(page.locator(`#quiet-datalist ul.selected > li`)).toHaveCount(0)
+    await expect(page.locator(`#quiet-datalist-state`)).toContainText(`bespoke tag`)
+  })
+})
+
 test.describe(`remove single button`, () => {
   test(`should remove 1 option`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })

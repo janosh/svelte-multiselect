@@ -13,6 +13,7 @@ export type Test2WayBindProps = MultiSelectProps & {
   onActiveIndexChanged?: (data: MultiSelectProps[`activeIndex`]) => unknown
   onActiveOptionChanged?: (data: MultiSelectProps[`activeOption`]) => unknown
   onOptionsChanged?: (data: MultiSelectProps[`options`]) => unknown
+  onSearchTextChanged?: (data: MultiSelectProps[`searchText`]) => unknown
   onSelectedChanged?: (data: MultiSelectProps[`selected`]) => unknown
   onValueChanged?: (data: MultiSelectProps[`value`]) => unknown
 }

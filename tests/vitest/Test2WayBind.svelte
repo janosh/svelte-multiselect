@@ -12,12 +12,14 @@
         ?.filter((opt) => opt instanceof Object && opt?.preselected)
         .slice(0, maxSelect ?? undefined) ?? [],
     ),
+    searchText = $bindable(``),
     value = $bindable(null),
     breakpoint = $bindable(800),
     open = $bindable(false),
     onActiveIndexChanged,
     onActiveOptionChanged,
     onOptionsChanged,
+    onSearchTextChanged,
     onSelectedChanged,
     onValueChanged,
     ...rest
@@ -33,13 +35,16 @@
     onOptionsChanged?.(options)
   })
   $effect.pre(() => {
+    onSearchTextChanged?.(searchText)
+  })
+  $effect.pre(() => {
     onSelectedChanged?.(selected)
   })
   $effect.pre(() => {
     onValueChanged?.(value)
   })
 
-  export { breakpoint, maxSelect, selected, value }
+  export { breakpoint, maxSelect, searchText, selected, value }
 </script>
 
 <MultiSelect
@@ -47,6 +52,7 @@
   bind:activeIndex
   bind:activeOption
   bind:options
+  bind:searchText
   bind:selected
   bind:value
   bind:open

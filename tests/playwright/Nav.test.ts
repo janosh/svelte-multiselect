@@ -1,8 +1,10 @@
-import type { Locator } from '@playwright/test'
+import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 test.describe(`Nav dropdown`, () => {
-  const hover_open = async (dropdown: Locator, menu: Locator) => {
+  // Move the cursor out first so hover() crosses the dropdown boundary.
+  const hover_open = async (page: Page, dropdown: Locator, menu: Locator) => {
+    await page.mouse.move(0, 0)
     await dropdown.hover({ force: true })
     await expect(menu).toHaveCSS(`display`, `flex`, { timeout: 10_000 })
   }
@@ -14,7 +16,7 @@ test.describe(`Nav dropdown`, () => {
     const menu = dropdown.locator(`div[role="menu"]`)
 
     await expect(menu).toHaveCSS(`display`, `none`)
-    await hover_open(dropdown, menu)
+    await hover_open(page, dropdown, menu)
     await page.mouse.move(0, 0)
     await expect(menu).toHaveCSS(`display`, `none`)
   })
@@ -24,7 +26,7 @@ test.describe(`Nav dropdown`, () => {
 
     const dropdown = page.locator(`.dropdown`).first()
     const menu = dropdown.locator(`div[role="menu"]`)
-    await hover_open(dropdown, menu)
+    await hover_open(page, dropdown, menu)
     await expect(dropdown.locator(`div[role="menu"] a`).first()).toBeVisible()
   })
 

@@ -84,7 +84,7 @@ code {
   padding: 0.1em 0.3em;
   border-radius: 3pt;
   background: var(--surface);
-  font-size: 0.9em;
+  font-size: 1.1em;
 }
 pre {
   position: relative;

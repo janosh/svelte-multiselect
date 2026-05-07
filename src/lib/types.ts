@@ -143,6 +143,9 @@ export interface PortalParams {
   active?: boolean
 }
 
+type InputEventProp = Extract<keyof HTMLInputAttributes, `on${string}`>
+export type InputProps = Omit<HTMLInputAttributes, InputEventProp>
+
 export interface MultiSelectProps<T extends Option = Option>
   extends
     MultiSelectEvents<T>,
@@ -188,6 +191,7 @@ export interface MultiSelectProps<T extends Option = Option>
   id?: string | null
   input?: HTMLInputElement | null
   inputClass?: string
+  inputProps?: InputProps
   inputStyle?: string | null
   inputmode?: HTMLInputAttributes[`inputmode`] | null
   invalid?: boolean
@@ -221,6 +225,9 @@ export interface MultiSelectProps<T extends Option = Option>
   parse_paste?: (text: string) => T[]
   searchText?: string
   selected?: T[] // don't allow more than maxSelect preselected options
+  // 'chips' renders selected options as tags. 'input' is for maxSelect=1 autocomplete fields:
+  // the visible input text is editable and selected/value track only committed options.
+  selectedDisplay?: `chips` | `input`
   sortSelected?: boolean | ((op1: T, op2: T) => number)
   selectedOptionsDraggable?: boolean
   style?: string | null

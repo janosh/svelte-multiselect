@@ -1068,7 +1068,7 @@ Minimal example that changes the background color of the options dropdown:
   - `z-index: var(--sms-options-z-index, 3)`: Z-index for the dropdown options list.
   - `box-shadow: var(--sms-options-shadow, light-dark(0 0 14pt -8pt black, 0 0 14pt -4pt rgba(0, 0, 0, 0.8)))`: Box shadow of dropdown list.
   - `border: var(--sms-options-border)`
-  - `border-width: var(--sms-options-border-width)`
+  - `border-width: var(--sms-options-border-width, 1px)`
   - `border-radius: var(--sms-options-border-radius, 1ex)`
   - `padding: var(--sms-options-padding, 0)`
   - `margin: var(--sms-options-margin, 6pt 0 0 0)`
@@ -1076,7 +1076,7 @@ Minimal example that changes the background color of the options dropdown:
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
   - `background: var(--sms-li-selected-plain-bg, light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2)))`: Background of selected list items in options pane.
-  - `border-left: var(--sms-li-selected-plain-border, 3px solid var(--sms-active-color, cornflowerblue))`: Left border of selected list items in options pane.
+  - `border-left: var(--sms-li-selected-plain-border, 1px solid var(--sms-active-color, cornflowerblue))`: Left border of selected list items in options pane.
 - `div.multiselect > ul.options > li.active`
   - `background: var(--sms-li-active-bg, var(--sms-active-color, light-dark(rgba(0, 0, 0, 0.15), rgba(255, 255, 255, 0.15))))`: Background of active options. Options in the dropdown list become active either by mouseover or by navigating to them with arrow keys. Selected options become active when `selectedOptionsDraggable=true` and an option is being dragged to a new position. Note the active option in that case is not the dragged option but the option under it whose place it will take on drag end.
 - `div.multiselect > ul.options > li.disabled`
