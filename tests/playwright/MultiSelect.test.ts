@@ -193,7 +193,7 @@ test.describe(`input`, () => {
 
 test.describe(`input dropdown display`, () => {
   test.beforeEach(async ({ page }) => {
-    await page.goto(`/min-max-select`, { waitUntil: `networkidle` })
+    await page.goto(`/input-dropdown`, { waitUntil: `networkidle` })
   })
 
   test(`mouse selection fills editable input and hides selected chips`, async ({
