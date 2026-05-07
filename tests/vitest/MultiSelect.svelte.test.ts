@@ -386,6 +386,304 @@ test(`selected is array of first two options when maxSelect=2`, () => {
   expect(select.selected).toEqual(options.slice(0, 2))
 })
 
+describe(`selectedDisplay=input`, () => {
+  const press = (key: string) => new KeyboardEvent(`keydown`, { key, bubbles: true })
+
+  function set_input_value(input: HTMLInputElement, value: string): void {
+    input.value = value
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  }
+
+  test.each([
+    { options: [`Red`, `Green`], expected: `Red`, expected_value: `Red` },
+    { options: [1, 2], expected: `1`, expected_value: 1 },
+    {
+      options: [
+        { label: `Red`, value: `#f00` },
+        { label: `Green`, value: `#0f0` },
+      ],
+      expected: `Red`,
+      expected_value: { label: `Red`, value: `#f00` },
+    },
+  ])(
+    `commits $expected to the editable input without rendering chips`,
+    async ({ options, expected, expected_value }) => {
+      const select = mount(Test2WayBind, {
+        target: document.body,
+        props: {
+          options,
+          maxSelect: 1,
+          selectedDisplay: `input`,
+          closeDropdownOnSelect: false,
+        },
+      })
+
+      doc_query<HTMLElement>(`ul.options > li`).click()
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      expect(input.value).toBe(expected)
+      expect(select.searchText).toBe(expected)
+      expect(select.value).toEqual(expected_value)
+      expect(select.selected).toEqual([expected_value])
+      expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(0)
+      expect(document.querySelector(`ul.options li.user-msg`)).toBeNull()
+    },
+  )
+
+  test(`editing committed text clears selected and value while preserving draft text`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        options: [`Red`, `Green`],
+        maxSelect: 1,
+        selected: [`Red`],
+        selectedDisplay: `input`,
+      },
+    })
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.value).toBe(`Red`)
+
+    set_input_value(input, `Reddish`)
+    await tick()
+
+    expect(input.value).toBe(`Reddish`)
+    expect(select.searchText).toBe(`Reddish`)
+    expect(select.selected).toEqual([])
+    expect(select.value).toBe(null)
+  })
+
+  test(`typing exact option label does not auto-select without explicit commit`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: { options: [`Red`, `Green`], maxSelect: 1, selectedDisplay: `input` },
+    })
+
+    set_input_value(doc_query<HTMLInputElement>(`input[autocomplete]`), `Red`)
+    await tick()
+
+    expect(select.searchText).toBe(`Red`)
+    expect(select.selected).toEqual([])
+    expect(select.value).toBe(null)
+  })
+
+  test(`programmatic value update syncs to visible input text`, async () => {
+    const options = [
+      { label: `Red`, value: `#f00` },
+      { label: `Green`, value: `#0f0` },
+    ]
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: { options, maxSelect: 1, selectedDisplay: `input` },
+    })
+
+    select.value = options[1]
+    await tick()
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.value).toBe(`Green`)
+    expect(select.searchText).toBe(`Green`)
+    expect(select.selected).toEqual([options[1]])
+  })
+
+  test(`keyboard selection keeps aria-activedescendant valid and Escape preserves text`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        options: [`Red`, `Green`],
+        maxSelect: 1,
+        selectedDisplay: `input`,
+        open: true,
+      },
+    })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+    input.dispatchEvent(press(`ArrowDown`))
+    await tick()
+    const active_id = input.getAttribute(`aria-activedescendant`)
+    expect(active_id).toBeTypeOf(`string`)
+    expect(document.querySelector(`#${active_id}`)).toBeInstanceOf(HTMLLIElement)
+
+    input.dispatchEvent(press(`Enter`))
+    await tick()
+    expect(input.value).toBe(`Red`)
+    expect(select.value).toBe(`Red`)
+    expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(0)
+
+    input.dispatchEvent(press(`Escape`))
+    await tick()
+    expect(input.value).toBe(`Red`)
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+  })
+
+  test(`Backspace edits text normally instead of removing hidden chips`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        options: [`Red`, `Green`],
+        maxSelect: 1,
+        selected: [`Red`],
+        selectedDisplay: `input`,
+      },
+    })
+    await tick()
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+    input.dispatchEvent(press(`Backspace`))
+    await tick()
+
+    expect(select.selected).toEqual([`Red`])
+    expect(select.value).toBe(`Red`)
+    expect(document.querySelectorAll(`ul.selected > li.highlighted`)).toHaveLength(0)
+    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+  })
+
+  test(`invalid maxSelect combination reports config error`, async () => {
+    console.error = vi.fn()
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`Red`], selectedDisplay: `input` },
+    })
+    await tick()
+
+    expect(console.error).toHaveBeenCalledWith(
+      expect.stringContaining(`selectedDisplay="input" requires maxSelect={1}`),
+    )
+  })
+
+  test(`form submits visible text for draft and object-option values`, async () => {
+    const form = document.createElement(`form`)
+    form.addEventListener(`submit`, (event) => event.preventDefault())
+    document.body.append(form)
+    const field_name = `color`
+    const options = [
+      { label: `Red`, value: `#f00` },
+      { label: `Green`, value: `#0f0` },
+    ]
+
+    mount(MultiSelect, {
+      target: form,
+      props: {
+        options,
+        maxSelect: 1,
+        selectedDisplay: `input`,
+        name: field_name,
+        required: true,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(form.checkValidity()).toBe(false)
+
+    set_input_value(input, `custom color`)
+    await tick()
+    expect(form.checkValidity()).toBe(true)
+    expect(new FormData(form).get(field_name)).toBe(`custom color`)
+
+    set_input_value(input, ``)
+    await tick()
+    doc_query<HTMLElement>(`ul.options > li`).click()
+    await tick()
+    expect(new FormData(form).get(field_name)).toBe(`Red`)
+  })
+
+  test(`inputProps forwards text-input attributes without overriding managed ARIA`, () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`Red`],
+        maxSelect: 1,
+        selectedDisplay: `input`,
+        inputProps: { maxlength: 5, readonly: true, [`aria-label`]: `Color input` },
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    expect(input.maxLength).toBe(5)
+    expect(input.readOnly).toBe(true)
+    expect(input.getAttribute(`aria-label`)).toBe(`Color input`)
+    expect(input.getAttribute(`role`)).toBe(`combobox`)
+  })
+
+  test(`quiet datalist mode commits custom text without create or no-match messages`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        options: [],
+        maxSelect: 1,
+        selectedDisplay: `input`,
+        allowUserOptions: true,
+        createOptionMsg: null,
+        noMatchingOptionsMsg: ``,
+      },
+    })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+    set_input_value(input, `Durian`)
+    await tick()
+    expect(document.querySelector(`ul.options li.user-msg`)).toBeNull()
+
+    input.dispatchEvent(press(`Enter`))
+    await tick()
+
+    expect(input.value).toBe(`Durian`)
+    expect(select.value).toBe(`Durian`)
+    expect(select.selected).toEqual([`Durian`])
+    expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(0)
+  })
+
+  test(`keepSelectedInDropdown does not toggle away committed input selection`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        options: [`Red`, `Green`],
+        maxSelect: 1,
+        selectedDisplay: `input`,
+        keepSelectedInDropdown: `plain`,
+        selected: [`Red`],
+        open: true,
+      },
+    })
+    await tick()
+
+    doc_query<HTMLElement>(`ul.options > li.selected`).click()
+    await tick()
+
+    expect(select.value).toBe(`Red`)
+    expect(select.selected).toEqual([`Red`])
+    expect(doc_query<HTMLInputElement>(`input[autocomplete]`).value).toBe(`Red`)
+  })
+
+  test(`loadOptions uses input-mode search text for dynamic suggestions`, async () => {
+    vi.useFakeTimers()
+    try {
+      const fetch_fn = vi.fn(() =>
+        Promise.resolve({ options: [`Alpha`], hasMore: false }),
+      )
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          maxSelect: 1,
+          selectedDisplay: `input`,
+          loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+          open: true,
+        },
+      })
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+      set_input_value(input, `Al`)
+      await vi.runAllTimersAsync()
+      await tick()
+
+      expect(fetch_fn).toHaveBeenCalledWith({ search: `Al`, offset: 0, limit: 50 })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+})
+
 describe.each([
   [false, []],
   [true, []],
