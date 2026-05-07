@@ -20,6 +20,7 @@
       children: [
         `/selection`,
         `/min-max-select`,
+        `/input-dropdown`,
         `/duplicates`,
         `/sort-selected`,
         `/keep-selected`,
@@ -73,6 +74,7 @@
     '/kit-form-actions': `Form Actions`,
     '/cmd-palette': `CmdPalette`,
     '/min-max-select': `Min/Max`,
+    '/input-dropdown': `Input Dropdown`,
     '/allow-user-options': `User Options`,
     '/sort-selected': `Sort Selected`,
     '/keep-selected': `Keep Selected`,

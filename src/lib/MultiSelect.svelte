@@ -43,6 +43,7 @@
     id = null,
     input = $bindable(null),
     inputClass = ``,
+    inputProps = {},
     inputStyle = null,
     inputmode = null,
     invalid = $bindable(false),
@@ -87,6 +88,7 @@
     ),
     sortSelected = false,
     selectedOptionsDraggable = !sortSelected,
+    selectedDisplay: selected_display = `chips`,
     style = null,
     ulOptionsClass = ``,
     ulSelectedClass = ``,
@@ -104,6 +106,7 @@
     onblur,
     onclick,
     onfocus,
+    oninput,
     onkeydown,
     onkeyup,
     onmousedown,
@@ -172,6 +175,7 @@
   // Uses provided id prop or generates a random one using crypto API
   const internal_id = $derived(id ?? `sms-${utils.get_uuid().slice(0, 8)}`)
   const listbox_id = $derived(`${internal_id}-listbox`)
+  const input_display = $derived(selected_display === `input` && maxSelect === 1)
 
   // Platform detection for keyboard shortcuts (Mac uses Cmd, others use Ctrl)
   const is_mac = typeof navigator !== `undefined` &&
@@ -384,6 +388,32 @@
   // Cache selected keys and labels to avoid repeated .map() calls
   let selected_keys = $derived(selected.map(key))
   let selected_labels = $derived(selected.map(utils.get_label))
+  let input_committed_label = $derived(
+    input_display && selected[0] !== undefined ? `${utils.get_label(selected[0])}` : null,
+  )
+  // In non-input mode, input_committed_label is always null so this reduces to has_search_text.
+  let show_input_user_msg = $derived(
+    has_search_text && searchText !== input_committed_label,
+  )
+  let form_value = $derived.by(() => {
+    if (input_display) return has_search_text ? searchText : null
+    return selected.length >= Number(required) ? JSON.stringify(selected) : null
+  })
+  let prev_input_committed_label: string | null = null
+  // Mirror the committed option label into the visible input (e.g. when value is set programmatically).
+  $effect.pre(() => {
+    if (input_committed_label !== null && searchText !== input_committed_label) {
+      searchText = input_committed_label
+    } else if (
+      input_display &&
+      input_committed_label === null &&
+      prev_input_committed_label !== null &&
+      searchText === prev_input_committed_label
+    ) {
+      searchText = ``
+    }
+    prev_input_committed_label = input_committed_label
+  })
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
   // String-normalized for consistent comparison (numeric labels like 123 match "123")
@@ -609,6 +639,12 @@
           `user re-orderings of selected options will be undone by sortSelected on component re-renders.`,
       )
     }
+    if (selected_display === `input` && maxSelect !== 1) {
+      console.error(
+        `MultiSelect: selectedDisplay="input" requires maxSelect={1}, got maxSelect=${maxSelect}. ` +
+          `Falling back to chip display.`,
+      )
+    }
     if (allowUserOptions && !createOptionMsg && createOptionMsg !== null) {
       console.error(
         `MultiSelect: allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
@@ -682,7 +718,7 @@
   // Compute the ID of the currently active element for aria-activedescendant
   // (highlighted selected pill takes priority, then active dropdown option)
   const active_option_id = $derived(
-    highlighted_idx === null
+    highlighted_idx === null || input_display
       ? activeIndex !== null && activeIndex < navigable_options.length
         ? `${internal_id}-opt-${activeIndex}`
         : undefined
@@ -798,11 +834,12 @@
         }
       }
 
-      if (resetFilterOnAdd) searchText = `` // reset search string on selection
       if (option_to_add === `` || option_to_add === undefined || option_to_add === null) {
         console.error(`MultiSelect: encountered falsy option`, option_to_add)
         return
       }
+      if (input_display) searchText = `${utils.get_label(option_to_add)}`
+      else if (resetFilterOnAdd) searchText = `` // reset search string on selection
       // for maxSelect = 1 we always replace current option with new one
       if (maxSelect === 1) selected = [option_to_add]
       else {
@@ -890,15 +927,17 @@
   }
 
   const can_show_create_msg = $derived(
-    !!allowUserOptions && !!resolved_create_msg && !load_options_pending,
+    show_input_user_msg && !!allowUserOptions && !!resolved_create_msg &&
+      !load_options_pending,
   )
   const can_show_no_match_msg = $derived(
-    navigable_options.length === 0 && !!noMatchingOptionsMsg && !load_options_pending,
+    show_input_user_msg && navigable_options.length === 0 && !!noMatchingOptionsMsg &&
+      !load_options_pending,
   )
 
   // Check if a user message (create option, duplicate warning, no match) is visible
   const has_user_msg = $derived(
-    has_search_text &&
+    show_input_user_msg &&
       (can_show_create_msg ||
         (duplicates !== true && is_label_selected(searchText)) ||
         can_show_no_match_msg),
@@ -978,7 +1017,7 @@
       },
       {
         key: `clear_all`,
-        condition: () => selected.length > 0 && !searchText,
+        condition: () => !input_display && selected.length > 0 && !searchText,
         action: () => remove_all(event),
       },
       {
@@ -991,7 +1030,7 @@
         condition: () => open,
         action: () => {
           close_dropdown(event)
-          searchText = ``
+          if (!input_display) searchText = ``
         },
       },
       {
@@ -1023,7 +1062,7 @@
     if (event.key === `Escape` || event.key === `Tab`) {
       event.stopPropagation()
       close_dropdown(event)
-      searchText = ``
+      if (!input_display) searchText = ``
     } // on enter key: toggle active option
     else if (event.key === `Enter`) {
       event.stopPropagation()
@@ -1031,7 +1070,7 @@
 
       if (activeOption) {
         if (selected_keys_set.has(key(activeOption))) {
-          if (can_remove) remove(activeOption, event)
+          if (!input_display && can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
       } else if (allowUserOptions && has_search_text && !load_options_pending) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
@@ -1042,7 +1081,7 @@
         open_dropdown(event)
       }
     } // on left/right arrow keys: navigate between selected items
-    else if (event.key === `ArrowLeft` && selected.length > 0 && !searchText) {
+    else if (event.key === `ArrowLeft` && !input_display && selected.length > 0 && !searchText) {
       event.preventDefault()
       highlighted_idx = highlighted_idx === null
         ? selected.length - 1
@@ -1058,7 +1097,7 @@
       event.preventDefault()
       await handle_arrow_navigation(event.key === `ArrowUp` ? -1 : 1)
     } // on backspace key: remove highlighted or last selected option
-    else if (event.key === `Backspace` && selected.length > 0 && !searchText) {
+    else if (event.key === `Backspace` && !input_display && selected.length > 0 && !searchText) {
       event.stopPropagation()
       if (can_remove) {
         const prev_highlighted = highlighted_idx
@@ -1187,7 +1226,7 @@
     event: Event,
   ) => {
     if (opt_disabled) return
-    if (keepSelectedInDropdown) toggle_option(opt, event)
+    if (keepSelectedInDropdown && !input_display) toggle_option(opt, event)
     else add(opt, event)
   }
 
@@ -1240,6 +1279,33 @@
   ) => {
     handle_keydown(event) // Restore internal logic
     onkeydown?.(event) // Call original forwarded handler
+  }
+
+  // Clear the committed input-mode selection while preserving searchText as a draft
+  function clear_input_committed_selection() {
+    const option_removed = selected[0]
+    if (option_removed === undefined) return
+    selected = []
+    clear_validity()
+    last_action = { type: `remove`, label: `${utils.get_label(option_removed)}` }
+    onremove?.({ option: option_removed, selected })
+    onchange?.({ option: option_removed, type: `remove` })
+  }
+
+  // Clear committed selection BEFORE the value change so the
+  // input_committed_label → searchText sync effect can't clobber the user's
+  // draft on the same tick (ordering matters in real browsers).
+  const handle_input_beforeinput = () => {
+    if (input_committed_label !== null) clear_input_committed_selection()
+  }
+
+  const handle_input_input = (event: Event) => {
+    // Fallback for input events fired without beforeinput (e.g. some
+    // programmatic value setters); bind:value has already synced searchText.
+    if (input_committed_label !== null && searchText !== input_committed_label) {
+      clear_input_committed_selection()
+    }
+    oninput?.(event as Parameters<NonNullable<typeof oninput>>[0])
   }
 
   const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
@@ -1312,7 +1378,7 @@
         break
       }
     }
-    if (resetFilterOnAdd) searchText = ``
+    if (!input_display && resetFilterOnAdd) searchText = ``
     onparsed_paste?.({ added, rejected, overflow, raw_text: text })
   }
 
@@ -1495,6 +1561,7 @@
   class:single={maxSelect === 1}
   class:open
   class:invalid
+  class:input-display={input_display}
   class="multiselect {outerDivClass} {rest.class ?? ``}"
   onmouseup={open_dropdown}
   title={disabled ? disabledInputTitle : null}
@@ -1503,12 +1570,12 @@
   tabindex="-1"
   {style}
 >
-  <!-- form control input invisible to the user, only purpose is to abort form submission if this component fails data validation -->
-  <!-- bind:value={selected} prevents form submission if required prop is true and no options are selected -->
+  <!-- form control input invisible to the user, used for validation and form submission -->
+  <!-- value mirrors selected options in chip mode and visible text in input mode -->
   <input
     {name}
     required={Boolean(required)}
-    value={selected.length >= Number(required) ? JSON.stringify(selected) : null}
+    value={form_value}
     tabindex="-1"
     aria-hidden="true"
     aria-label="ignore this, used only to prevent form submission if select is required but empty"
@@ -1542,52 +1609,56 @@
     aria-label="selected options"
     style={ulSelectedStyle}
   >
-    {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
-      {@const selectedOptionStyle = [utils.get_style(option, `selected`), liSelectedStyle]
+    {#if !input_display}
+      {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
+        {@const selectedOptionStyle = [utils.get_style(option, `selected`), liSelectedStyle]
         .filter(Boolean)
         .join(` `) || null}
-      <li
-        id="{internal_id}-selected-{idx}"
-        class={liSelectedClass}
-        class:highlighted={highlighted_idx === idx}
-        role="option"
-        aria-selected="true"
-        animate:flip={selectedFlipParams}
-        draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
-        ondragstart={dragstart(idx)}
-        ondragover={(event) => {
-          event.preventDefault() // needed for ondrop to fire
-        }}
-        ondrop={drop(idx)}
-        ondragenter={() => (drag_idx = idx)}
-        class:active={drag_idx === idx}
-        style={selectedOptionStyle}
-        onmouseup={can_remove && !disabled ? (event) => event.stopPropagation() : undefined}
-      >
-        {#if selectedItem}
-          {@render selectedItem({ option, idx })}
-        {:else}
-          {@render render_label(option, idx, `selected`)}
-        {/if}
-        {#if !disabled && can_remove}
-          <button
-            onclick={(event) => remove(option, event)}
-            onkeydown={if_enter_or_space((event) => remove(option, event))}
-            type="button"
-            title="{removeBtnTitle} {utils.get_label(option)}"
-            class="remove"
-            class:default-icon={!removeIcon}
-          >
-            {#if removeIcon}
-              {@render removeIcon({ option, isRemoveAll: false })}
-            {:else}
-              <Icon icon="Cross" style="width: 15px" />
-            {/if}
-          </button>
-        {/if}
-      </li>
-    {/each}
+        <li
+          id="{internal_id}-selected-{idx}"
+          class={liSelectedClass}
+          class:highlighted={highlighted_idx === idx}
+          role="option"
+          aria-selected="true"
+          animate:flip={selectedFlipParams}
+          draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
+          ondragstart={dragstart(idx)}
+          ondragover={(event) => {
+            event.preventDefault() // needed for ondrop to fire
+          }}
+          ondrop={drop(idx)}
+          ondragenter={() => (drag_idx = idx)}
+          class:active={drag_idx === idx}
+          style={selectedOptionStyle}
+          onmouseup={can_remove && !disabled ? (event) => event.stopPropagation() : undefined}
+        >
+          {#if selectedItem}
+            {@render selectedItem({ option, idx })}
+          {:else}
+            {@render render_label(option, idx, `selected`)}
+          {/if}
+          {#if !disabled && can_remove}
+            <button
+              onclick={(event) => remove(option, event)}
+              onkeydown={if_enter_or_space((event) => remove(option, event))}
+              type="button"
+              title="{removeBtnTitle} {utils.get_label(option)}"
+              class="remove"
+              class:default-icon={!removeIcon}
+            >
+              {#if removeIcon}
+                {@render removeIcon({ option, isRemoveAll: false })}
+              {:else}
+                <Icon icon="Cross" style="width: 15px" />
+              {/if}
+            </button>
+          {/if}
+        </li>
+      {/each}
+    {/if}
     <input
+      {...rest}
+      {...inputProps}
       class={inputClass}
       style={inputStyle}
       bind:this={input}
@@ -1597,7 +1668,9 @@
       {autocomplete}
       {inputmode}
       {pattern}
-      placeholder={selected.length === 0 || placeholder_persistent ? placeholder_text : null}
+      placeholder={selected.length === 0 || input_display || placeholder_persistent
+        ? placeholder_text
+        : null}
       role="combobox"
       aria-haspopup="listbox"
       aria-expanded={open}
@@ -1607,6 +1680,8 @@
       aria-invalid={invalid ? `true` : null}
       ondrop={() => false}
       onpaste={handle_paste}
+      onbeforeinput={handle_input_beforeinput}
+      oninput={handle_input_input}
       onmouseup={open_dropdown}
       onkeydown={handle_input_keydown}
       onfocus={handle_input_focus}
@@ -1620,7 +1695,6 @@
       {ontouchend}
       {ontouchmove}
       {ontouchstart}
-      {...rest}
     />
     {@render afterInput?.({
         selected,
@@ -1651,7 +1725,7 @@
         aria-disabled="true"
       />
     {/if}
-  {:else if selected.length > 0}
+  {:else if !input_display && selected.length > 0}
     {#if maxSelect && (maxSelect > 1 || maxSelectMsg)}
       <Wiggle bind:wiggle angle={20}>
         <span class="max-select-msg {maxSelectMsgClass}">
@@ -1852,7 +1926,8 @@
         {/if}
       {/each}
       {#if has_search_text}
-        {@const is_dupe = duplicates !== true && is_label_selected(searchText) ? `dupe` : false}
+        {@const is_dupe = duplicates !== true && show_input_user_msg &&
+          is_label_selected(searchText) ? `dupe` : false}
         {@const can_create = can_show_create_msg ? `create` : false}
         {@const no_match = can_show_no_match_msg ? `no-match` : false}
         {@const msgType = is_dupe || can_create || no_match}
@@ -1978,6 +2053,9 @@
     margin: 0;
     flex-wrap: wrap;
   }
+  :where(div.multiselect.input-display > ul.selected) {
+    flex-wrap: nowrap;
+  }
   :where(div.multiselect > ul.selected > li) {
     align-items: center;
     border-radius: 3pt;
@@ -2060,9 +2138,13 @@
     cursor: inherit; /* needed for disabled state */
     border-radius: 0; /* reset ul.selected > li */
   }
+  :where(div.multiselect.input-display > ul.selected > input) {
+    width: 100%;
+    min-width: 0;
+  }
 
   /* When options are selected, placeholder is hidden in which case we minimize input width to avoid adding unnecessary width to div.multiselect */
-  :where(div.multiselect > ul.selected > input:not(:placeholder-shown)) {
+  :where(div.multiselect:not(.input-display) > ul.selected > input:not(:placeholder-shown)) {
     min-width: 1px; /* Minimal width to remain interactive */
   }
 
@@ -2105,7 +2187,7 @@
       light-dark(0 0 14pt -3pt rgba(0, 0, 0, 0.2), 0 0 14pt -4pt rgba(0, 0, 0, 0.8))
     );
     border: var(--sms-options-border, 1px solid light-dark(lightgray, #555));
-    border-width: var(--sms-options-border-width);
+    border-width: var(--sms-options-border-width, 1px);
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding, 0);
     margin: var(--sms-options-margin, 6pt 0 0 0);
