@@ -4848,6 +4848,7 @@ describe(`CSS static analysis`, () => {
     readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`).match(
       /<style>([\s\S]*?)<\/style>/,
     )?.[1] ?? ``
+  const options_block = css.match(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/)?.[1]
 
   const props = [
     `--sms-border`,
@@ -4888,11 +4889,14 @@ describe(`CSS static analysis`, () => {
   })
 
   test(`options dropdown has border with light-dark default`, () => {
-    expect(css).toMatch(/--sms-options-border,\s*1px solid light-dark\(/)
+    expect(options_block).toBeTruthy()
+    expect(options_block).toMatch(/--sms-options-border,\s*1px solid light-dark\(/)
+    expect(options_block).toMatch(
+      /border-width:\s*var\(--sms-options-border-width,\s*1px\)/,
+    )
   })
 
   test(`options dropdown bg contrasts with typical page bg`, () => {
-    const options_block = css.match(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/)?.[1]
     expect(options_block).toBeTruthy()
     expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/)
   })

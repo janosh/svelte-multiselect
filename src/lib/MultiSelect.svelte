@@ -2178,7 +2178,7 @@
       light-dark(0 0 14pt -3pt rgba(0, 0, 0, 0.2), 0 0 14pt -4pt rgba(0, 0, 0, 0.8))
     );
     border: var(--sms-options-border, 1px solid light-dark(lightgray, #555));
-    border-width: var(--sms-options-border-width);
+    border-width: var(--sms-options-border-width, 1px);
     border-radius: var(--sms-options-border-radius, 1ex);
     padding: var(--sms-options-padding, 0);
     margin: var(--sms-options-margin, 6pt 0 0 0);
