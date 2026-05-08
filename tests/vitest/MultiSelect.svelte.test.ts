@@ -387,12 +387,34 @@ test(`selected is array of first two options when maxSelect=2`, () => {
 })
 
 describe(`selectedDisplay=input`, () => {
+  const color_options = [`Red`, `Green`, `Blue`]
+  const input_display_props = { maxSelect: 1, selectedDisplay: `input` } as const
   const press = (key: string) =>
     new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true })
 
   function set_input_value(input: HTMLInputElement, value: string): void {
     input.value = value
     input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  }
+
+  const option_items = (): HTMLLIElement[] => [
+    ...document.querySelectorAll<HTMLLIElement>(`ul.options > li:not(.user-msg)`),
+  ]
+
+  const option_labels = (): string[] =>
+    option_items().map((option_item) => option_item.textContent?.trim() ?? ``)
+
+  function option_by_label(label: string): HTMLLIElement {
+    const option_item = option_items().find((item) => item.textContent?.trim() === label)
+    if (!option_item) throw new Error(`Option "${label}" not found`)
+    return option_item
+  }
+
+  async function click_expand_icon(): Promise<void> {
+    doc_query<HTMLElement>(`.expand-icon`).dispatchEvent(
+      new MouseEvent(`mouseup`, { bubbles: true }),
+    )
+    await tick()
   }
 
   test.each([
@@ -412,9 +434,8 @@ describe(`selectedDisplay=input`, () => {
       const select = mount(Test2WayBind, {
         target: document.body,
         props: {
+          ...input_display_props,
           options,
-          maxSelect: 1,
-          selectedDisplay: `input`,
           closeDropdownOnSelect: false,
         },
       })
@@ -436,10 +457,9 @@ describe(`selectedDisplay=input`, () => {
     const select = mount(Test2WayBind, {
       target: document.body,
       props: {
+        ...input_display_props,
         options: [`Red`, `Green`],
-        maxSelect: 1,
         selected: [`Red`],
-        selectedDisplay: `input`,
       },
     })
     await tick()
@@ -459,7 +479,7 @@ describe(`selectedDisplay=input`, () => {
   test(`typing exact option label does not auto-select without explicit commit`, async () => {
     const select = mount(Test2WayBind, {
       target: document.body,
-      props: { options: [`Red`, `Green`], maxSelect: 1, selectedDisplay: `input` },
+      props: { ...input_display_props, options: [`Red`, `Green`] },
     })
 
     set_input_value(doc_query<HTMLInputElement>(`input[autocomplete]`), `Red`)
@@ -477,7 +497,7 @@ describe(`selectedDisplay=input`, () => {
     ]
     const select = mount(Test2WayBind, {
       target: document.body,
-      props: { options, maxSelect: 1, selectedDisplay: `input` },
+      props: { ...input_display_props, options },
     })
 
     select.value = options[1]
@@ -496,13 +516,172 @@ describe(`selectedDisplay=input`, () => {
     expect(select.selected).toEqual([])
   })
 
+  const reopen_cases: Array<[string, (input: HTMLInputElement) => Promise<void>]> = [
+    [`caret click`, click_expand_icon],
+    [
+      `input focus`,
+      async (input: HTMLInputElement) => {
+        input.focus()
+        await tick()
+      },
+    ],
+    [
+      `ArrowDown`,
+      async (input: HTMLInputElement) => {
+        input.focus()
+        input.dispatchEvent(press(`ArrowDown`))
+        await tick()
+      },
+    ],
+  ]
+
+  test.each(reopen_cases)(
+    `reopening after commit via %s shows all options with selected option marked`,
+    async (_, reopen) => {
+      mount(Test2WayBind, {
+        target: document.body,
+        props: {
+          ...input_display_props,
+          options: color_options,
+        },
+      })
+
+      option_by_label(`Red`).click()
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      expect(input.value).toBe(`Red`)
+
+      await reopen(input)
+
+      expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
+      expect(option_labels()).toEqual(color_options)
+
+      const selected_option = option_by_label(`Red`)
+      expect(selected_option.classList.contains(`selected`)).toBe(true)
+      expect(selected_option.getAttribute(`aria-selected`)).toBe(`true`)
+    },
+  )
+
+  test(`selecting from reopened committed list replaces value and remains form-valid`, async () => {
+    const form = document.createElement(`form`)
+    form.addEventListener(`submit`, (event) => event.preventDefault())
+    document.body.append(form)
+    try {
+      const field_name = `color`
+      const select = mount(Test2WayBind, {
+        target: form,
+        props: {
+          ...input_display_props,
+          options: color_options,
+          selected: [`Red`],
+          name: field_name,
+          required: true,
+          open: true,
+        },
+      })
+      await tick()
+
+      option_by_label(`Green`).click()
+      await tick()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      expect(input.value).toBe(`Green`)
+      expect(select.value).toBe(`Green`)
+      expect(select.selected).toEqual([`Green`])
+      expect(form.checkValidity()).toBe(true)
+      expect(new FormData(form).get(field_name)).toBe(`Green`)
+    } finally {
+      form.remove()
+    }
+  })
+
+  test(`typing after committed input text returns dropdown to filtered results`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        ...input_display_props,
+        options: color_options,
+        selected: [`Red`],
+        open: true,
+      },
+    })
+    await tick()
+
+    expect(option_labels()).toEqual(color_options)
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    set_input_value(input, `Bl`)
+    await tick()
+
+    expect(option_labels()).toEqual([`Blue`])
+    expect(document.querySelector(`ul.options > li.selected`)).toBeNull()
+    expect(select.searchText).toBe(`Bl`)
+    expect(select.selected).toEqual([])
+    expect(select.value).toBe(null)
+
+    await click_expand_icon()
+
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+
+    await click_expand_icon()
+
+    expect(option_labels()).toEqual(color_options)
+  })
+
+  test(`caret click after custom draft shows all options and toggles closed`, async () => {
+    const select = mount(Test2WayBind, {
+      target: document.body,
+      props: {
+        ...input_display_props,
+        options: color_options,
+      },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
+    await tick()
+    set_input_value(input, `Purple`)
+    await tick()
+
+    expect(option_labels()).toEqual([])
+    expect(document.querySelector(`ul.options li.user-msg`)?.textContent).toContain(
+      `No matching options`,
+    )
+
+    await click_expand_icon()
+
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+
+    await click_expand_icon()
+
+    expect(input.value).toBe(`Purple`)
+    expect(option_labels()).toEqual(color_options)
+    expect(document.querySelector(`ul.options li.user-msg`)).toBeNull()
+    expect(select.selected).toEqual([])
+    expect(select.value).toBe(null)
+
+    await click_expand_icon()
+
+    expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+
+    await click_expand_icon()
+
+    option_by_label(`Green`).click()
+    await tick()
+
+    expect(input.value).toBe(`Green`)
+    expect(select.searchText).toBe(`Green`)
+    expect(select.selected).toEqual([`Green`])
+    expect(select.value).toBe(`Green`)
+  })
+
   test(`keyboard selection keeps aria-activedescendant valid and Escape preserves text`, async () => {
     const select = mount(Test2WayBind, {
       target: document.body,
       props: {
+        ...input_display_props,
         options: [`Red`, `Green`],
-        maxSelect: 1,
-        selectedDisplay: `input`,
         open: true,
       },
     })
@@ -530,10 +709,9 @@ describe(`selectedDisplay=input`, () => {
     const select = mount(Test2WayBind, {
       target: document.body,
       props: {
+        ...input_display_props,
         options: [`Red`, `Green`],
-        maxSelect: 1,
         selected: [`Red`],
-        selectedDisplay: `input`,
       },
     })
     await tick()
@@ -580,9 +758,8 @@ describe(`selectedDisplay=input`, () => {
     mount(MultiSelect, {
       target: form,
       props: {
+        ...input_display_props,
         options,
-        maxSelect: 1,
-        selectedDisplay: `input`,
         name: field_name,
         required: true,
       },
@@ -607,9 +784,8 @@ describe(`selectedDisplay=input`, () => {
     mount(MultiSelect, {
       target: document.body,
       props: {
+        ...input_display_props,
         options: [`Red`],
-        maxSelect: 1,
-        selectedDisplay: `input`,
         inputProps: {
           maxlength: 5,
           readonly: true,
@@ -632,9 +808,8 @@ describe(`selectedDisplay=input`, () => {
     const select = mount(Test2WayBind, {
       target: document.body,
       props: {
+        ...input_display_props,
         options: [],
-        maxSelect: 1,
-        selectedDisplay: `input`,
         allowUserOptions: true,
         createOptionMsg: null,
         noMatchingOptionsMsg: ``,
@@ -659,9 +834,8 @@ describe(`selectedDisplay=input`, () => {
     const select = mount(Test2WayBind, {
       target: document.body,
       props: {
+        ...input_display_props,
         options: [`Red`, `Green`],
-        maxSelect: 1,
-        selectedDisplay: `input`,
         keepSelectedInDropdown: `plain`,
         selected: [`Red`],
         open: true,
@@ -686,8 +860,7 @@ describe(`selectedDisplay=input`, () => {
       mount(MultiSelect, {
         target: document.body,
         props: {
-          maxSelect: 1,
-          selectedDisplay: `input`,
+          ...input_display_props,
           loadOptions: { fetch: fetch_fn, debounceMs: 0 },
           open: true,
         },
@@ -699,6 +872,33 @@ describe(`selectedDisplay=input`, () => {
       await tick()
 
       expect(fetch_fn).toHaveBeenCalledWith({ search: `Al`, offset: 0, limit: 50 })
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  test(`loadOptions uses empty search after reopening committed input text`, async () => {
+    vi.useFakeTimers()
+    try {
+      const fetch_fn = vi.fn(() =>
+        Promise.resolve({ options: [`Alpha`, `Beta`], hasMore: false }),
+      )
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          ...input_display_props,
+          selected: [`Alpha`],
+          loadOptions: { fetch: fetch_fn, debounceMs: 0 },
+        },
+      })
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+      input.focus()
+      await vi.runAllTimersAsync()
+      await tick()
+
+      expect(fetch_fn).toHaveBeenCalledTimes(1)
+      expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
     } finally {
       vi.useRealTimers()
     }
@@ -4865,10 +5065,8 @@ describe(`binding update event count`, () => {
 })
 
 describe(`CSS static analysis`, () => {
-  const css =
-    readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`).match(
-      /<style>([\s\S]*?)<\/style>/,
-    )?.[1] ?? ``
+  const component_source = readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`)
+  const css = component_source.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? ``
   const options_block = css.match(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/)?.[1]
 
   const props = [
@@ -4892,6 +5090,12 @@ describe(`CSS static analysis`, () => {
 
   test(`::highlight uses light-dark()`, () => {
     expect(css).toMatch(/::highlight\(sms-search-matches\)[\s\S]*?light-dark\(/)
+  })
+
+  test(`dropdown highlight query uses effective filter text`, () => {
+    expect(component_source).toMatch(
+      /highlight_matches\(\{\s*query:\s*effective_filter_text,/,
+    )
   })
 
   test(`--sms-active-color fallbacks use light-dark()`, () => {
