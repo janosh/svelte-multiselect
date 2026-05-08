@@ -227,6 +227,56 @@ test.describe(`input dropdown display`, () => {
     await expect(page.locator(`#input-dropdown-state`)).toContainText(`selected: none`)
   })
 
+  test(`caret click shows full list and toggles closed in input mode`, async ({
+    page,
+  }) => {
+    const input = page.locator(`#input-dropdown input[autocomplete]`)
+    const expand_icon = page.locator(`#input-dropdown .expand-icon`)
+    const options = page.locator(`#input-dropdown ul.options`)
+    await input.click()
+    await options.locator(`li:has-text("Red")`).click()
+    await expect(input).toHaveValue(`Red`)
+
+    await expand_icon.click()
+
+    for (const color of [`Red`, `Green`, `Blue`]) {
+      await expect(options.locator(`li:has-text("${color}")`)).toBeVisible()
+    }
+    const red_option = options.locator(`li:has-text("Red")`)
+    await expect(red_option).toHaveAttribute(`aria-selected`, `true`)
+    await expect(red_option).toHaveClass(/selected/)
+
+    await options.locator(`li:has-text("Green")`).click()
+    await expect(input).toHaveValue(`Green`)
+    await expect(page.locator(`#input-dropdown-state`)).toContainText(`selected: Green`)
+
+    await input.fill(`Gr`)
+    await expand_icon.click()
+    await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+
+    await expand_icon.click()
+    await expect(options.locator(`li:has-text("Green")`)).toBeVisible()
+    await expect(options.locator(`li:has-text("Red")`)).toBeVisible()
+
+    await input.fill(`Purple`)
+    await expect(options.locator(`li.user-msg`)).toContainText(`No matching options`)
+
+    await expand_icon.click()
+    await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+
+    await expand_icon.click()
+
+    await expect(input).toHaveValue(`Purple`)
+    for (const color of [`Red`, `Green`, `Blue`]) {
+      await expect(options.locator(`li:has-text("${color}")`)).toBeVisible()
+    }
+    await expect(options.locator(`li.user-msg`)).toHaveCount(0)
+
+    await options.locator(`li:has-text("Blue")`).click()
+    await expect(input).toHaveValue(`Blue`)
+    await expect(page.locator(`#input-dropdown-state`)).toContainText(`selected: Blue`)
+  })
+
   test(`keyboard navigation keeps aria-activedescendant valid`, async ({ page }) => {
     const input = page.locator(`#input-dropdown input[autocomplete]`)
     await input.click()

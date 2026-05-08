@@ -9,6 +9,9 @@ committed (clicked or activated via `Enter`). Editing the text after a commit
 clears `value` but keeps the draft in `searchText`. Forward extra `<input>`
 attributes via `inputProps` (e.g. `maxlength`, `autocapitalize`,
 `aria-describedby`).
+Click the caret after selecting an option or typing custom text to show the full
+list, then click it again to close the dropdown. Committed options are marked
+with `aria-selected="true"`.
 
 ```svelte example id="input-dropdown"
 <script lang="ts">

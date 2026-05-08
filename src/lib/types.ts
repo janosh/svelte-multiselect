@@ -225,8 +225,9 @@ export interface MultiSelectProps<T extends Option = Option>
   parse_paste?: (text: string) => T[]
   searchText?: string
   selected?: T[] // don't allow more than maxSelect preselected options
-  // 'chips' renders selected options as tags. 'input' is for maxSelect=1 autocomplete fields:
-  // the visible input text is editable and selected/value track only committed options.
+  // Defaults to 'chips', which renders selected options as tags. 'input' is only
+  // valid with maxSelect === 1; other maxSelect values are unsupported and fall
+  // back to chip display at runtime.
   selectedDisplay?: `chips` | `input`
   sortSelected?: boolean | ((op1: T, op2: T) => number)
   selectedOptionsDraggable?: boolean

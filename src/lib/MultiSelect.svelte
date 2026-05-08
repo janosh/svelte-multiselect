@@ -372,13 +372,6 @@
   let auto_fill_count = 0
   const MAX_AUTO_FILL_ROUNDS = 20
 
-  // has_more check: errors (has_more=false) clear pending state
-  let load_options_pending = $derived(
-    Boolean(load_options_config) &&
-      (load_options_loading || (open && load_options_has_more
-        && (load_options_last_search ?? ``) !== searchText)),
-  )
-
   // === Derived collections and indexing ===
   let effective_options = $derived(
     loadOptions ? loaded_options : (options ?? []),
@@ -391,16 +384,25 @@
   let input_committed_label = $derived(
     input_display && selected[0] !== undefined ? `${utils.get_label(selected[0])}` : null,
   )
-  // In non-input mode, input_committed_label is always null so this reduces to has_search_text.
-  let show_input_user_msg = $derived(
-    has_search_text && searchText !== input_committed_label,
+  let input_text_is_committed = $derived(
+    input_display && searchText === input_committed_label,
+  )
+  let show_all_input_options = $state(false)
+  let input_is_showing_all_options = $derived(
+    input_text_is_committed || show_all_input_options,
+  )
+  let show_input_user_msg = $derived(has_search_text && !input_is_showing_all_options)
+  let effective_filter_text = $derived(
+    input_is_showing_all_options ? `` : searchText,
   )
   let form_value = $derived.by(() => {
     if (input_display) return has_search_text ? searchText : null
     return selected.length >= Number(required) ? JSON.stringify(selected) : null
   })
   let prev_input_committed_label: string | null = null
-  // Mirror the committed option label into the visible input (e.g. when value is set programmatically).
+  // Keep searchText in sync with committed selections, including external value changes.
+  // onbeforeinput calls clear_input_committed_selection(), which clears input_committed_label
+  // before browser text mutation so this pre-effect only resets stale committed text.
   $effect.pre(() => {
     if (input_committed_label !== null && searchText !== input_committed_label) {
       searchText = input_committed_label
@@ -414,6 +416,12 @@
     }
     prev_input_committed_label = input_committed_label
   })
+  // has_more check: errors (has_more=false) clear pending state
+  let load_options_pending = $derived(
+    Boolean(load_options_config) &&
+      (load_options_loading || (open && load_options_has_more
+        && (load_options_last_search ?? ``) !== effective_filter_text)),
+  )
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
   let selected_keys_set = $derived(new Set(selected_keys))
   // String-normalized for consistent comparison (numeric labels like 123 match "123")
@@ -695,11 +703,12 @@
       // Check if option is already selected and should be excluded
       const keep_in_list = !selected_keys_set.has(key(opt)) ||
         duplicates ||
-        keepSelectedInDropdown
+        keepSelectedInDropdown ||
+        input_text_is_committed
       if (!keep_in_list) return false
 
       // When using loadOptions, server handles filtering; otherwise check search match
-      return loadOptions || matches_search(opt, searchText)
+      return loadOptions || matches_search(opt, effective_filter_text)
     })
   })
 
@@ -892,7 +901,14 @@
   function open_dropdown(event: Event) {
     event.stopPropagation()
 
-    if (disabled || open) return
+    if (disabled) return
+    const clicked_expand_icon = event.target instanceof Element &&
+      event.target.closest(`.expand-icon`)
+    if (clicked_expand_icon && input_display) {
+      if (open) return close_dropdown(event)
+      show_all_input_options = true
+    }
+    if (open) return
     open = true
     if (!(event instanceof FocusEvent)) {
       // avoid double-focussing input when event that opened dropdown was already input FocusEvent
@@ -904,6 +920,7 @@
   function close_dropdown(event: Event, retain_focus = false) {
     if (!open) return
     open = false
+    show_all_input_options = false
     if (!retain_focus) input?.blur()
     activeIndex = null
     onclose?.({ event })
@@ -1108,8 +1125,8 @@
           highlighted_idx = selected.length === 0 ? null : Math.min(prev_highlighted, selected.length - 1)
         }
       }
-    } // make first matching option active on any keypress (if none of the above special cases match)
-    else if (navigable_options.length > 0 && activeIndex === null) {
+    } // make first matching option active on any keypress while open (if no special case matched)
+    else if (open && navigable_options.length > 0 && activeIndex === null) {
       // Don't stop propagation or prevent default here, allow normal character input
       activeIndex = 0
     }
@@ -1296,10 +1313,12 @@
   // input_committed_label → searchText sync effect can't clobber the user's
   // draft on the same tick (ordering matters in real browsers).
   const handle_input_beforeinput = () => {
+    show_all_input_options = false
     if (input_committed_label !== null) clear_input_committed_selection()
   }
 
   const handle_input_input = (event: Event) => {
+    show_all_input_options = false
     // Fallback for input events fired without beforeinput (e.g. some
     // programmatic value setters); bind:value has already synced searchText.
     if (input_committed_label !== null && searchText !== input_committed_label) {
@@ -1450,7 +1469,7 @@
       return
     }
     if (reset) auto_fill_count = 0
-    const search = searchText
+    const search = effective_filter_text
     const offset = reset ? 0 : loaded_options.length
     const request_id = ++load_request_id
     load_options_loading = true
@@ -1498,7 +1517,7 @@
 
     if (debounce_timer) clearTimeout(debounce_timer)
 
-    const search = searchText
+    const search = effective_filter_text
     const is_first_load = load_options_last_search === null
 
     if (is_first_load) {
@@ -1757,7 +1776,7 @@
     <ul
       use:portal={{ target_node: outerDiv, ...portal_params }}
       {@attach highlight_matches({
-        query: searchText,
+        query: effective_filter_text,
         disabled: !highlightMatches,
         fuzzy,
         css_class: `sms-search-matches`,
