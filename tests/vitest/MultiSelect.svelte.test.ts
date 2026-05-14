@@ -1025,6 +1025,34 @@ test.each([
   expect(JSON.parse(submitted_value)).toEqual(options)
 })
 
+test(`formSerialize customizes chip-mode form values`, async () => {
+  const form = document.createElement(`form`)
+  form.addEventListener(`submit`, (event) => event.preventDefault())
+  document.body.append(form)
+
+  try {
+    const field_name = `serialized choices`
+    const options = [`Red`, `Green`]
+    mount(MultiSelect, {
+      target: form,
+      props: {
+        options,
+        name: field_name,
+        formSerialize: (selected: Option[]) => selected.map(String).join(`|`),
+      },
+    })
+
+    for (const _ of options) {
+      doc_query<HTMLElement>(`ul.options li`).click()
+      await tick()
+    }
+
+    expect(new FormData(form).get(field_name)).toBe(`Red|Green`)
+  } finally {
+    form.remove()
+  }
+})
+
 test(`toggling required after invalid form submission allows submitting`, async () => {
   // https://github.com/janosh/svelte-multiselect/issues/285
   const form = document.createElement(`form`)
@@ -1173,7 +1201,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
 
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
     await tick()
-    expect(input.getAttribute(`aria-activedescendant`)).toMatch(/^my-select-opt-/)
+    expect(input.getAttribute(`aria-activedescendant`)).toMatch(/^my-select-opt-/u)
   })
 
   test(`aria-label can be passed via rest props for accessible name`, () => {
@@ -2380,26 +2408,26 @@ describe(`arrow key navigation between selected items`, () => {
     expect(highlighted().length).toBe(0)
   })
 
-  test(`highlighted pill gets aria-activedescendant on input`, async () => {
+  test(`highlighted pill does not set aria-activedescendant`, async () => {
     const input = setup()
     expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    const active_id = input.getAttribute(`aria-activedescendant`)
-    expect(active_id).toBeTruthy()
-    // the id should match the highlighted <li>'s id
     const highlighted_li = document.querySelector(`ul.selected > li.highlighted`)
-    expect(highlighted_li?.id).toBe(active_id)
+    expect(highlighted_li).toBeInstanceOf(HTMLLIElement)
+    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
   })
 
-  test(`aria-activedescendant clears when highlight clears`, async () => {
+  test(`aria-activedescendant remains clear when highlight clears`, async () => {
     const input = setup()
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    expect(input.getAttribute(`aria-activedescendant`)).toBeTruthy()
+    expect(highlighted().length).toBe(1)
+    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
     input.dispatchEvent(press(`Escape`))
     await tick()
     // should revert to null/undefined (no active dropdown option either since dropdown closed)
+    expect(highlighted().length).toBe(0)
     expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
   })
 
@@ -2407,7 +2435,7 @@ describe(`arrow key navigation between selected items`, () => {
     setup()
     const items = selected_items()
     for (let idx = 0; idx < items.length; idx++) {
-      expect(items[idx]?.id).toMatch(/-selected-\d+$/)
+      expect(items[idx]?.id).toMatch(/-selected-\d+$/u)
     }
     // ids should be unique
     const ids = [...items].map((li) => li.id)
@@ -5066,8 +5094,8 @@ describe(`binding update event count`, () => {
 
 describe(`CSS static analysis`, () => {
   const component_source = readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`)
-  const css = component_source.match(/<style>([\s\S]*?)<\/style>/)?.[1] ?? ``
-  const options_block = css.match(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/)?.[1]
+  const css = component_source.match(/<style>([\s\S]*?)<\/style>/u)?.[1] ?? ``
+  const options_block = css.match(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/u)?.[1]
 
   const props = [
     `--sms-border`,
@@ -5085,55 +5113,57 @@ describe(`CSS static analysis`, () => {
   ]
 
   test.each(props)(`%s uses light-dark()`, (prop) => {
-    expect(css).toMatch(new RegExp(`${prop.replaceAll(`-`, `[-]`)}[^;]*light-dark\\(`))
+    expect(css).toMatch(
+      new RegExp(`${prop.replaceAll(`-`, `[-]`)}[^;]*light-dark\\(`, `u`),
+    )
   })
 
   test(`::highlight uses light-dark()`, () => {
-    expect(css).toMatch(/::highlight\(sms-search-matches\)[\s\S]*?light-dark\(/)
+    expect(css).toMatch(/::highlight\(sms-search-matches\)[\s\S]*?light-dark\(/u)
   })
 
   test(`dropdown highlight query uses effective filter text`, () => {
     expect(component_source).toMatch(
-      /highlight_matches\(\{\s*query:\s*effective_filter_text,/,
+      /highlight_matches\(\{\s*query:\s*effective_filter_text,/u,
     )
   })
 
   test(`--sms-active-color fallbacks use light-dark()`, () => {
     expect(
-      css.match(/--sms-active-color,\s*light-dark\(/g)?.length,
+      css.match(/--sms-active-color,\s*light-dark\(/gu)?.length,
     ).toBeGreaterThanOrEqual(2)
   })
 
   test(`default-icon buttons enforce circle via min-height: 0 + overflow: hidden`, () => {
     const default_icon_block = css.match(
-      /:is\(div\.multiselect button\.default-icon\)\s*\{([\s\S]*?)\}/,
+      /:is\(div\.multiselect button\.default-icon\)\s*\{([\s\S]*?)\}/u,
     )?.[1]
     expect(default_icon_block).toBeTruthy()
-    expect(default_icon_block).toMatch(/min-height:\s*0/)
-    expect(default_icon_block).toMatch(/overflow:\s*hidden/)
+    expect(default_icon_block).toMatch(/min-height:\s*0/u)
+    expect(default_icon_block).toMatch(/overflow:\s*hidden/u)
   })
 
   test(`options dropdown has border with light-dark default`, () => {
     expect(options_block).toBeTruthy()
-    expect(options_block).toMatch(/--sms-options-border,\s*1px solid light-dark\(/)
+    expect(options_block).toMatch(/--sms-options-border,\s*1px solid light-dark\(/u)
     expect(options_block).toMatch(
-      /border-width:\s*var\(--sms-options-border-width,\s*1px\)/,
+      /border-width:\s*var\(--sms-options-border-width,\s*1px\)/u,
     )
   })
 
   test(`options dropdown bg contrasts with typical page bg`, () => {
     expect(options_block).toBeTruthy()
-    expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/)
+    expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/u)
   })
 
   test(`custom-snippet remove-all overrides circular defaults`, () => {
     const custom_remove_all = css.match(
-      /:is\(div\.multiselect button\.remove-all:not\(\.default-icon\)\)\s*\{([\s\S]*?)\}/,
+      /:is\(div\.multiselect button\.remove-all:not\(\.default-icon\)\)\s*\{([\s\S]*?)\}/u,
     )?.[1]
     expect(custom_remove_all).toBeTruthy()
-    expect(custom_remove_all).toMatch(/border-radius:\s*3pt/)
-    expect(custom_remove_all).toMatch(/aspect-ratio:\s*auto/)
-    expect(custom_remove_all).toMatch(/padding:\s*0 2pt/)
+    expect(custom_remove_all).toMatch(/border-radius:\s*3pt/u)
+    expect(custom_remove_all).toMatch(/aspect-ratio:\s*auto/u)
+    expect(custom_remove_all).toMatch(/padding:\s*0 2pt/u)
   })
 })
 
@@ -5754,7 +5784,7 @@ describe(`option grouping feature`, () => {
         expect(header.getAttribute(`role`)).toBe(expected_role)
         expect(header.getAttribute(`tabindex`)).toBe(expected_tabindex)
         expect(header.hasAttribute(`aria-expanded`)).toBe(has_aria_expanded)
-        expect(header.getAttribute(`aria-label`)).toMatch(/^Group: /)
+        expect(header.getAttribute(`aria-label`)).toMatch(/^Group: /u)
       })
 
       // For collapsible, also verify aria-expanded toggles on click
@@ -7820,7 +7850,7 @@ describe(`parse_paste`, () => {
       {
         options: [`existing`],
         allowUserOptions: true,
-        parse_paste: (text: string) => text.split(/[,\s]+/).filter(Boolean),
+        parse_paste: (text: string) => text.split(/[,\s]+/u).filter(Boolean),
       },
       `new1,new2,new3`,
     )

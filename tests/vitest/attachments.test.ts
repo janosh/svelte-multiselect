@@ -450,7 +450,7 @@ describe(`tooltip`, () => {
     // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
     beforeEach(() => vi.useFakeTimers())
 
-    it(`tracks tooltip ownership via _owner property`, () => {
+    it(`tracks tooltip ownership via owner_element property`, () => {
       const element = create_element()
       element.title = `test`
       mock_bounds(element)
@@ -459,7 +459,7 @@ describe(`tooltip`, () => {
 
       const tooltip_el = document.querySelector(`.custom-tooltip`)
       expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(Reflect.get(tooltip_el ?? {}, `_owner`)).toBe(element)
+      expect(Reflect.get(tooltip_el ?? {}, `owner_element`)).toBe(element)
     })
 
     it.each([
@@ -715,7 +715,7 @@ describe(`tooltip`, () => {
       trigger_tooltip(element)
       const tooltip_el = document.querySelector(`.custom-tooltip`)
       expect(tooltip_el?.getAttribute(`role`)).toBe(`tooltip`)
-      expect(tooltip_el?.id).toMatch(/^tooltip-/)
+      expect(tooltip_el?.id).toMatch(/^tooltip-/u)
       expect(element.getAttribute(`aria-describedby`)).toBe(tooltip_el?.id)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
@@ -742,10 +742,10 @@ describe(`tooltip`, () => {
       [`allow_html: false uses textContent`, false, `<b>bold</b>`, `<b>bold</b>`],
       [`allow_html: true uses innerHTML`, true, `<b>bold</b>`, `bold`],
       [
-        `allow_html: undefined (default) uses innerHTML`,
+        `allow_html: undefined (default) uses textContent`,
         undefined,
         `<b>bold</b>`,
-        `bold`,
+        `<b>bold</b>`,
       ],
     ])(`%s`, (_desc, allow_html, content, expected_text) => {
       const element = create_element()
@@ -764,7 +764,7 @@ describe(`tooltip`, () => {
       [`skipped when allow_html: false`, false, `Plain`, 0, `Plain`],
     ])(`sanitize_html %s`, (_desc, allow_html, title, call_count, expected_text) => {
       const sanitizer = vi.fn((html: string) =>
-        html.replaceAll(/<script[^>]*>.*?<\/script>/gi, ``),
+        html.replaceAll(/<script[^>]*>.*?<\/script>/giu, ``),
       )
       const element = create_element()
       element.title = title
@@ -809,8 +809,8 @@ describe(`tooltip`, () => {
       const tooltip_css = find_tooltip_css(css_texts)
       expect(tooltip_css).toBeDefined()
       expect(tooltip_css).not.toContain(`color-scheme`)
-      expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#f5f5f7,\s*#2a2a2e/)
-      expect(tooltip_css).toMatch(/\bcolor:.*light-dark\(\s*#222,\s*#eee/)
+      expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#f5f5f7,\s*#2a2a2e/u)
+      expect(tooltip_css).toMatch(/\bcolor:.*light-dark\(\s*#222,\s*#eee/u)
 
       const arrow_borders = set_prop_values.filter(
         (entry) =>
@@ -820,7 +820,7 @@ describe(`tooltip`, () => {
       )
       expect(arrow_borders.length).toBeGreaterThan(0)
       for (const entry of arrow_borders) {
-        expect(entry).toMatch(/light-dark\(\s*#f5f5f7,\s*#2a2a2e/)
+        expect(entry).toMatch(/light-dark\(\s*#f5f5f7,\s*#2a2a2e/u)
       }
     })
 

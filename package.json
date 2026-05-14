@@ -52,35 +52,30 @@
     "access": "public"
   },
   "scripts": {
-    "dev": "vp dev",
-    "build": "vp build",
-    "preview": "vp preview",
     "test": "vp test --run && playwright test",
-    "check": "vp check",
-    "lint": "vp lint",
-    "fmt": "vp fmt --write",
-    "package": "svelte-package && find dist -name '*.js' -o -name '*.d.ts' | xargs sed -i '' -E \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\"",
+    "test:package": "npm run package && npm pack --dry-run && vp build --config tests/package-smoke/vite.config.ts",
+    "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\" {} +",
     "prepublishOnly": "npm run package",
     "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.59.1",
+    "@playwright/test": "^1.60.0",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.59.1",
+    "@sveltejs/kit": "^2.60.1",
     "@sveltejs/package": "2.5.7",
-    "@sveltejs/vite-plugin-svelte": "^7.1.1",
-    "@types/node": "^25.6.0",
-    "@vitest/coverage-v8": "^4.1.5",
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "@types/node": "^25.8.0",
+    "@vitest/coverage-v8": "4.1.5",
     "@wooorm/starry-night": "^3.9.0",
     "acorn": "^8.16.0",
     "happy-dom": "^20.9.0",
     "mdsvex": "^0.12.7",
-    "svelte": "^5.55.5",
+    "svelte": "^5.55.7",
     "svelte-toc": "^0.6.3",
     "typescript": "6.0.3",
-    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.20",
-    "vite-plus": "latest",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.20"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.21",
+    "vite-plus": "0.1.21",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.21"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",
@@ -97,7 +92,7 @@
   },
   "overrides": {
     "svelte": "$svelte",
-    "vite": "npm:@voidzero-dev/vite-plus-core@^0.1.20",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@^0.1.20"
+    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.21",
+    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.21"
   }
 }

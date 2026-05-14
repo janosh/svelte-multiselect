@@ -13,7 +13,7 @@ export const frontend_libs: FrontendLib[] = [
   [`Laravel`, `PHP`, `laravel/laravel`],
   [`Django`, `Python`, `django/django`],
   [`Express`, `JavaScript`, `expressjs/express`],
-  [`Spring`, `JavaScript`, `spring-projects/spring-framework`],
+  [`Spring`, `Java`, `spring-projects/spring-framework`],
   [`jQuery`, `JavaScript`, `jquery/jquery`],
   [`Flask`, `Python`, `pallets/flask`],
   [`Flutter`, `Dart`, `flutter/flutter`],

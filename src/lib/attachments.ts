@@ -340,7 +340,7 @@ export const sortable =
         }
         header.classList.add(sort_dir > 0 ? asc_class : desc_class)
         Object.assign(header.style, sorted_style)
-        header.textContent = `${header.textContent?.replace(/ ↑| ↓/, ``)} ${
+        header.textContent = `${header.textContent?.replace(/ ↑| ↓/u, ``)} ${
           sort_dir > 0 ? `↑` : `↓`
         }`
 
@@ -492,7 +492,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
-let current_tooltip: (HTMLElement & { _owner?: HTMLElement }) | null = null
+let current_tooltip: (HTMLElement & { owner_element?: HTMLElement }) | null = null
 let show_timeout: ReturnType<typeof setTimeout> | undefined
 let hide_timeout: ReturnType<typeof setTimeout> | undefined
 
@@ -501,7 +501,7 @@ function clear_tooltip() {
   if (hide_timeout) clearTimeout(hide_timeout)
   if (current_tooltip) {
     // Remove aria-describedby from the trigger element
-    current_tooltip._owner?.removeAttribute(`aria-describedby`)
+    current_tooltip.owner_element?.removeAttribute(`aria-describedby`)
     current_tooltip.remove()
     current_tooltip = null
   }
@@ -517,9 +517,7 @@ export interface TooltipOptions {
   style?: string
   show_arrow?: boolean // Whether to show the arrow pointer (default: true)
   offset?: number // Distance from trigger element in pixels (default: 12)
-  // Security: When true (default), content is rendered as HTML. If allowing user-provided
-  // content via `title`, `aria-label`, or `data-title` attributes, you MUST sanitize to
-  // prevent XSS. Set to false to render content as plain text.
+  // Security: HTML rendering is opt-in. Set to true only for trusted or sanitized content.
   allow_html?: boolean
   // Optional sanitizer for HTML content - called before setting innerHTML when allow_html is true
   sanitize_html?: (html: string) => string
@@ -530,7 +528,7 @@ function render_tooltip_content(
   content: string,
   options: TooltipOptions,
 ) {
-  if (options.allow_html === false) {
+  if (options.allow_html !== true) {
     content_el.textContent = content
     return
   }
@@ -606,7 +604,7 @@ export const tooltip =
           if (!new_content) continue
           content = new_content
           // Only update tooltip if this element owns it
-          if (current_tooltip?._owner === element) {
+          if (current_tooltip?.owner_element === element) {
             const content_el =
               current_tooltip.querySelector<HTMLElement>(`.tooltip-content`)
             if (content_el) {
@@ -670,7 +668,7 @@ export const tooltip =
         const is_transparent =
           !border_color ||
           border_color === `transparent` ||
-          /rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0\s*\)/.test(border_color)
+          /rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0\s*\)/u.test(border_color)
         const has_border = !is_transparent && border_width_num > 0
         if (!has_border) {
           border_arrow.remove()
@@ -880,7 +878,7 @@ export const tooltip =
           // Wrap content in a span for reactive content updates
           const content_span = document.createElement(`span`)
           content_span.className = `tooltip-content`
-          // Security: allow_html defaults to true; set to false for plain text rendering
+          // Security: content renders as plain text unless allow_html is explicitly true.
           render_tooltip_content(content_span, content ?? ``, options)
           tooltip_el.append(content_span)
 
@@ -917,12 +915,14 @@ export const tooltip =
 
           resize_and_position_tooltip(tooltip_el, element)
 
-          current_tooltip = Object.assign(tooltip_el, { _owner: element })
+          current_tooltip = Object.assign(tooltip_el, { owner_element: element })
         }, options.delay ?? 100)
       }
 
       function handle_keydown(event: KeyboardEvent) {
-        if (event.key === `Escape` && current_tooltip?._owner === element) clear_tooltip()
+        if (event.key === `Escape` && current_tooltip?.owner_element === element) {
+          clear_tooltip()
+        }
       }
 
       function hide_tooltip() {
@@ -960,7 +960,7 @@ export const tooltip =
               node === element || (node instanceof Element && node.contains(element)),
           ),
         )
-        if (was_removed && current_tooltip?._owner === element) clear_tooltip()
+        if (was_removed && current_tooltip?.owner_element === element) clear_tooltip()
       })
       if (element.parentElement) {
         removal_observer.observe(element.parentElement, {
@@ -977,7 +977,7 @@ export const tooltip =
         document.removeEventListener(`keydown`, handle_keydown)
 
         // Clear tooltip if this element owns it (also removes aria-describedby)
-        if (current_tooltip?._owner === element) clear_tooltip()
+        if (current_tooltip?.owner_element === element) clear_tooltip()
 
         if (element.hasAttribute(`data-original-title`)) {
           element.setAttribute(`title`, element.getAttribute(`data-original-title`) ?? ``)

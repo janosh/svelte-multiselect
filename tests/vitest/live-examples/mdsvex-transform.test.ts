@@ -247,7 +247,7 @@ describe(`script block injection`, () => {
   test(`creates new script block when none exists`, () => {
     const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, `example`)])
     remark()(tree, create_file())
-    expect(find_script_node(tree)).toMatch(/<script>[\s\S]*<\/script>/)
+    expect(find_script_node(tree)).toMatch(/<script>[\s\S]*<\/script>/u)
   })
 
   test(`adds imports to existing script block`, () => {

@@ -4,6 +4,7 @@ import type { Actions } from './$types'
 // Form actions require a server and cannot work on static sites.
 // The underscore prefix disables this export during static build.
 // To test locally with `npm run dev`, rename `_actions` to `actions`.
+// eslint-disable-next-line no-underscore-dangle -- intentionally disabled for static builds
 export const _actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()

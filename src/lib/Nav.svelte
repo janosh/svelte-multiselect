@@ -112,7 +112,7 @@
       setTimeout(() => {
         document
           .querySelector<HTMLElement>(
-            `.dropdown[data-href="${CSS.escape(href)}"] [role="menuitem"]`,
+            `.dropdown[data-href="${CSS.escape(href)}"] [data-submenu] a`,
           )
           ?.focus()
       }, 0)
@@ -163,7 +163,7 @@
       )
       document
         .querySelectorAll<HTMLElement>(
-          `.dropdown[data-href="${CSS.escape(href)}"] [role="menuitem"]`,
+          `.dropdown[data-href="${CSS.escape(href)}"] [data-submenu] a`,
         )
         ?.[focused_item_index]?.focus()
     }
@@ -181,7 +181,7 @@
       close_menus()
       document
         .querySelector<HTMLButtonElement>(
-          `.dropdown[data-href="${href}"] [data-dropdown-toggle]`,
+          `.dropdown[data-href="${CSS.escape(href)}"] [data-dropdown-toggle]`,
         )
         ?.focus()
     }
@@ -207,7 +207,7 @@
     if (custom_label) return { label: custom_label, style: `` }
 
     if (remove_parent) text = text.split(`/`).findLast(Boolean) ?? text
-    let label = text.replace(/^\//, ``).replaceAll(`-`, ` `)
+    let label = text.replace(/^\//u, ``).replaceAll(`-`, ` `)
     // Handle root path '/' which becomes empty after stripping
     if (!label && text === `/`) label = `Home`
     return { label, style: label ? `text-transform: capitalize` : `` }
@@ -320,8 +320,6 @@
     id={panel_id}
     class="menu"
     class:open={is_open}
-    tabindex="0"
-    role="menu"
     {onkeydown}
     {...menu_props}
   >
@@ -356,13 +354,12 @@
       )}
         {@const is_pinned = pinned_dropdown === parsed_route.href}
         {@const dropdown_open = hovered_dropdown === parsed_route.href || is_pinned}
+        <!-- svelte-ignore a11y_no_static_element_interactions -- native navigation links keep semantics; mouse handlers only control hover disclosure -->
         <div
           class="dropdown"
           class:active={child_is_active}
           class:align-right={is_right}
           data-href={parsed_route.href}
-          role="group"
-          aria-current={child_is_active ? `true` : undefined}
           onmouseenter={() => open_dropdown(parsed_route.href, true)}
           onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
           onfocusin={() => open_dropdown(parsed_route.href)}
@@ -419,9 +416,10 @@
               <Icon icon="ChevronDown" style="width: 0.7em; height: 0.7em" />
             </button>
           </div>
+          <!-- svelte-ignore a11y_no_static_element_interactions -- hover keeps the native-link submenu open while traversing it -->
           <div
             class:visible={dropdown_open}
-            role="menu"
+            data-submenu
             tabindex="-1"
             onmouseenter={() => open_dropdown(parsed_route.href, true)}
             onmouseleave={(event: MouseEvent) => {
@@ -444,7 +442,6 @@
               {:else}
                 <a
                   href={child_href}
-                  role="menuitem"
                   aria-current={is_current(child_href)}
                   onclick={(event: MouseEvent) =>
                   handle_link_click(event, { href: child_href })}
@@ -685,7 +682,7 @@
     height: 0.18rem;
     background-color: var(--text);
     border-radius: 8pt;
-    transition: all 0.2s linear;
+    transition: opacity 0.2s linear, transform 0.2s linear;
     transform-origin: center;
   }
   .burger[aria-expanded='true'] span:first-child {
@@ -710,7 +707,7 @@
     box-shadow: var(--nav-surface-shadow);
     opacity: 0;
     visibility: hidden;
-    transition: all 0.3s ease;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
     z-index: var(--nav-mobile-z-index, 2);
     flex-direction: column;
     align-items: stretch;

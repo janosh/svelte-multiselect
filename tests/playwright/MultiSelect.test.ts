@@ -22,7 +22,7 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
 
   // Also verify count directly for robustness
   const count_text = await status.textContent()
-  const count = parseInt(count_text?.match(/\d+/)?.[0] ?? `0`, 10)
+  const count = parseInt(count_text?.match(/\d+/u)?.[0] ?? `0`, 10)
   expect(count).toBeLessThan(10)
 })
 
@@ -129,12 +129,12 @@ test.describe(`input`, () => {
   test(`opens dropdown on focus`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const dropdown = page.locator(`#foods ul.options`)
-    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(dropdown).toHaveClass(/hidden/u)
     await expect(page.locator(`#foods.open`)).toHaveCount(0)
 
     await page.click(`#foods input[autocomplete]`)
 
-    await expect(dropdown).not.toHaveClass(/hidden/)
+    await expect(dropdown).not.toHaveClass(/hidden/u)
     await expect(dropdown).toBeVisible()
   })
 
@@ -143,14 +143,14 @@ test.describe(`input`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const dropdown = page.locator(`#foods div.multiselect > ul.options`)
     // confirm initial state
-    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(dropdown).toHaveClass(/hidden/u)
     await expect(dropdown).toBeHidden()
 
     await page.evaluate(() => {
       const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
       input?.focus()
     })
-    await expect(dropdown).not.toHaveClass(/hidden/)
+    await expect(dropdown).not.toHaveClass(/hidden/u)
     await expect(dropdown).toBeVisible()
 
     // also test that input.blur() closes dropdown
@@ -158,7 +158,7 @@ test.describe(`input`, () => {
       const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
       input?.blur()
     })
-    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(dropdown).toHaveClass(/hidden/u)
     await expect(dropdown).toBeHidden()
   })
 
@@ -244,7 +244,7 @@ test.describe(`input dropdown display`, () => {
     }
     const red_option = options.locator(`li:has-text("Red")`)
     await expect(red_option).toHaveAttribute(`aria-selected`, `true`)
-    await expect(red_option).toHaveClass(/selected/)
+    await expect(red_option).toHaveClass(/selected/u)
 
     await options.locator(`li:has-text("Green")`).click()
     await expect(input).toHaveValue(`Green`)
@@ -253,23 +253,29 @@ test.describe(`input dropdown display`, () => {
     await input.fill(`Gr`)
     await expand_icon.click()
     await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+    await expect(options).toBeHidden()
 
     await expand_icon.click()
-    await expect(options.locator(`li:has-text("Green")`)).toBeVisible()
-    await expect(options.locator(`li:has-text("Red")`)).toBeVisible()
+    await expect(input).toHaveAttribute(`aria-expanded`, `true`)
+    await expect(options).toBeVisible()
+    await expect(options).toContainText(`Green`)
+    await expect(options).toContainText(`Red`)
 
     await input.fill(`Purple`)
     await expect(options.locator(`li.user-msg`)).toContainText(`No matching options`)
 
     await expand_icon.click()
     await expect(input).toHaveAttribute(`aria-expanded`, `false`)
+    await expect(options).toBeHidden()
 
     await expand_icon.click()
 
+    await expect(input).toHaveAttribute(`aria-expanded`, `true`)
+    await expect(options).toBeVisible()
     await expect(input).toHaveValue(`Purple`)
-    for (const color of [`Red`, `Green`, `Blue`]) {
-      await expect(options.locator(`li:has-text("${color}")`)).toBeVisible()
-    }
+    await expect(options).toContainText(`Green`)
+    await expect(options).toContainText(`Red`)
+    await expect(options).toContainText(`Blue`)
     await expect(options.locator(`li.user-msg`)).toHaveCount(0)
 
     await options.locator(`li:has-text("Blue")`).click()
@@ -528,7 +534,7 @@ test.describe(`accessibility`, () => {
     expect(after).toBe(`true`)
   })
 
-  test(`options have aria-selected='false' and selected items have aria-selected='true'`, async ({
+  test(`dropdown options expose ARIA selection while selected chips stay plain list items`, async ({
     page,
   }) => {
     await page.click(`#foods input[autocomplete]`)
@@ -538,11 +544,12 @@ test.describe(`accessibility`, () => {
     await dropdown.locator(`li`).first().click()
     const aria_option = await page.getAttribute(`#foods ul.options > li`, `aria-selected`)
     expect(aria_option).toBe(`false`)
-    const aria_selected = await page.getAttribute(
-      `#foods ul.selected > li`,
-      `aria-selected`,
-    )
-    expect(aria_selected).toBe(`true`)
+    await expect(page.locator(`#foods ul.selected > li[role="option"]`)).toHaveCount(0)
+    await expect(page.locator(`#foods ul.selected > li[aria-selected]`)).toHaveCount(0)
+  })
+
+  test(`wrapper does not duplicate the input combobox role`, async ({ page }) => {
+    await expect(page.locator(`#foods`)).not.toHaveAttribute(`role`, `combobox`)
   })
 
   test(`invisible input.form-control is aria-hidden`, async ({ page }) => {
@@ -615,19 +622,19 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
 
     // Live region announces option count
     await expect(live_region).toHaveAttribute(`aria-atomic`, `true`)
-    await expect(live_region).toContainText(/\d+ options? available/)
+    await expect(live_region).toContainText(/\d+ options? available/u)
 
     // Get first option and select it - should announce with label
     const first_option = page.locator(`#foods ul.options > li[role="option"]:first-child`)
 
     // Select option - should announce with label
     await first_option.click()
-    await expect(live_region).toContainText(/selected/)
+    await expect(live_region).toContainText(/selected/u)
 
     // Remove option - should announce removal
     const remove_btn = page.locator(`#foods ul.selected button.remove`).first()
     await remove_btn.click()
-    await expect(live_region).toContainText(/removed/)
+    await expect(live_region).toContainText(/removed/u)
   })
 
   test(`keyboard navigation with aria-activedescendant is fully accessible`, async ({
@@ -652,7 +659,7 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     // Verify referenced element exists and is active
     const active_option = page.locator(`#${first_active_id}`)
     await expect(active_option).toHaveAttribute(`role`, `option`)
-    await expect(active_option).toHaveClass(/active/)
+    await expect(active_option).toHaveClass(/active/u)
 
     // Navigate again - activedescendant should change
     await page.keyboard.press(`ArrowDown`)
@@ -663,7 +670,7 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     await page.keyboard.press(`Enter`)
 
     // Verify selection was made
-    const selected = page.locator(`#foods ul.selected > li[aria-selected="true"]`)
+    const selected = page.locator(`#foods ul.selected > li`)
     await expect(selected).toHaveCount(1)
 
     // Escape should close dropdown
@@ -683,7 +690,7 @@ test.describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     for (let idx = 0; idx < count; idx++) {
       const header = group_headers.nth(idx)
       const aria_label = await header.getAttribute(`aria-label`)
-      expect(aria_label).toMatch(/^Group: /)
+      expect(aria_label).toMatch(/^Group: /u)
     }
   })
 })
@@ -767,9 +774,6 @@ test.describe(`multiselect`, () => {
     }
     const active_option = page.locator(`#foods ul.options > li.active`)
     await expect(active_option).toHaveText(foods[2]) // Watermelon
-
-    // Wait for any async scroll operations to complete from arrow navigation
-    await page.waitForTimeout(100)
 
     // Simulate scroll-triggered mouseover (no actual mouse movement)
     await page.evaluate(() => {
@@ -993,7 +997,7 @@ test.describe(`minSelect pill click behavior`, () => {
     page,
   }) => {
     // JavaScript is preselected with minSelect=1, so can_remove is false
-    const selected_li = page.locator(`#languages ul.selected > li[aria-selected="true"]`)
+    const selected_li = page.locator(`#languages ul.selected > li`)
     await expect(selected_li).toHaveCount(1)
     await expect(selected_li).toContainText(`JavaScript`)
 
@@ -1016,9 +1020,7 @@ test.describe(`minSelect pill click behavior`, () => {
     await expect(dropdown).toBeVisible()
     await dropdown.locator(`li`).first().click()
 
-    const selected_items = page.locator(
-      `#languages ul.selected > li[aria-selected="true"]`,
-    )
+    const selected_items = page.locator(`#languages ul.selected > li`)
     await expect(selected_items).toHaveCount(2)
 
     // Close dropdown
@@ -1054,14 +1056,13 @@ test.describe(`maxSelect`, () => {
     const dropdown = page.locator(`#languages ul.options`)
 
     await expect(dropdown).toBeHidden()
-    await expect(dropdown).toHaveClass(/hidden/)
+    await expect(dropdown).toHaveClass(/hidden/u)
   })
 
   test(`no more options can be added after reaching maxSelect items`, async ({
     page,
   }) => {
-    // query for li[aria-selected=true] to avoid matching the ul.selected > li containing the <input/>
-    const selected_items = page.locator(`#languages ul.selected > li[aria-selected=true]`)
+    const selected_items = page.locator(`#languages ul.selected > li`)
     await expect(selected_items).toHaveCount(max_select)
 
     // Try to add another option - should not work
@@ -1291,6 +1292,83 @@ test.describe(`portal feature`, () => {
     await page.getByRole(`button`, { name: `Close Modal 2` }).click() // Name from svelte file
     await expect(modal_content).toBeHidden()
   })
+
+  test(`portalled dropdown tracks trigger after nested scroll and resize`, async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 900, height: 700 })
+    await page.goto(`/portal`, { waitUntil: `networkidle` })
+    await page.getByRole(`button`, { name: `Open Modal` }).click()
+
+    const modal_content = page.locator(`div.modal-content.modal`)
+    const languages_input_selector = `div.multiselect input[placeholder='Choose languages...']`
+    const languages_input = modal_content.locator(languages_input_selector)
+
+    await page.evaluate(() => {
+      const modal = document.querySelector<HTMLElement>(`div.modal-content.modal`)
+      const first_multiselect = modal?.querySelector(`div.multiselect`)
+      if (!modal || !first_multiselect) throw new Error(`portal modal setup missing`)
+
+      modal.style.maxHeight = `220px`
+      modal.style.overflowY = `auto`
+      const spacer = document.createElement(`div`)
+      spacer.style.height = `120px`
+      spacer.textContent = `scroll spacer`
+      first_multiselect.before(spacer)
+    })
+
+    await languages_input.click()
+    const portalled_languages_options = page.locator(
+      `body > ul.options[aria-expanded="true"]:has(li:has-text("${languages[0]}"))`,
+    )
+    await expect(portalled_languages_options).toBeVisible()
+
+    const assert_aligned = async () => {
+      const metrics_handle = await page.waitForFunction((input_selector) => {
+        const input = document.querySelector<HTMLInputElement>(
+          `div.modal-content.modal ${input_selector}`,
+        )
+        const wrapper = input?.closest<HTMLElement>(`div.multiselect`)
+        const dropdown = document.querySelector<HTMLElement>(
+          `body > ul.options[aria-expanded="true"]`,
+        )
+        if (!wrapper || !dropdown) return false
+
+        const wrapper_rect = wrapper.getBoundingClientRect()
+        const dropdown_rect = dropdown.getBoundingClientRect()
+        const left_delta = Math.abs(dropdown_rect.left - wrapper_rect.left)
+        const top_delta = Math.abs(dropdown_rect.top - wrapper_rect.bottom)
+        const width_delta = Math.abs(dropdown_rect.width - wrapper_rect.width)
+        const aligned =
+          left_delta <= 2 &&
+          top_delta <= 10 &&
+          width_delta <= 2 &&
+          dropdown_rect.top >= 0 &&
+          dropdown_rect.right <= globalThis.innerWidth + 1
+        return aligned ? [left_delta, top_delta, width_delta] : false
+      }, languages_input_selector)
+      const metrics = await metrics_handle.jsonValue()
+      if (metrics === false) throw new Error(`portal dropdown alignment timed out`)
+      const [left_delta, top_delta, width_delta] = metrics
+
+      expect(left_delta).toBeLessThanOrEqual(2)
+      expect(top_delta).toBeLessThanOrEqual(10)
+      expect(width_delta).toBeLessThanOrEqual(2)
+    }
+
+    await assert_aligned()
+
+    await page.evaluate(() => {
+      const modal = document.querySelector<HTMLElement>(`div.modal-content.modal`)
+      if (!modal) throw new Error(`portal modal missing`)
+      modal.scrollTop = 80
+      modal.dispatchEvent(new Event(`scroll`, { bubbles: true }))
+    })
+    await assert_aligned()
+
+    await page.setViewportSize({ width: 760, height: 620 })
+    await assert_aligned()
+  })
 })
 
 test(`input width minimizes when options are selected`, async ({ page }) => {
@@ -1439,6 +1517,9 @@ test.describe(`option grouping`, () => {
     // Re-open dropdown (might have closed) and click Expand All
     await page.click(`#collapsible-groups input[autocomplete]`)
     await page.click(`#collapsible-groups button:has-text("Expand All")`)
+    if (!(await options_list.isVisible())) {
+      await page.click(`#collapsible-groups input[autocomplete]`)
+    }
 
     // All options should be visible
     await expect(apple_option).toBeVisible()
@@ -1765,7 +1846,7 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
               const sel = rule.selectorText
               // Check div.multiselect uses :where() (not just any selector containing it)
               if (
-                /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/.test(
+                /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/u.test(
                   sel,
                 )
               ) {

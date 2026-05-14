@@ -107,10 +107,10 @@ Complete reference of all props. Props are organized by importance - **Essential
 These are the core props you'll use in most cases:
 
 1. ```ts
-   options: Option[]  // REQUIRED
+   options?: Option[]  // required unless loadOptions is provided
    ```
 
-   **The only required prop.** Array of strings, numbers, or objects that users can select from. Objects must have a `label` property that will be displayed in the dropdown.
+   Array of strings, numbers, or objects that users can select from. Objects must have a `label` property that will be displayed in the dropdown. Omit this when using `loadOptions` as the source of dynamic options.
 
    ```svelte
    <!-- Simple options -->
@@ -455,7 +455,13 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    name: string | null = null
    ```
 
-   Form field name for form submission.
+   Form field name for form submission. When selected options are displayed as chips (the default display mode), they submit as `JSON.stringify(selected)`. Prefer stable object `value` fields for server processing, or customize serialization with `formSerialize`.
+
+1. ```ts
+   formSerialize: (selected: Option[]) => string | null = JSON.stringify
+   ```
+
+   Customizes the submitted value in chip mode. For object options, use `formSerialize={(selected) => selected.map(({ value }) => value).join(',')}`. For primitive options, use `formSerialize={(selected) => selected.join(',')}`.
 
 1. ```ts
    autocomplete: string = 'off'
@@ -984,6 +990,7 @@ import {
   LoadOptionsFn,
   LoadOptionsParams,
   LoadOptionsResult,
+  FormSerialize, // Type signature for custom form serialization
   MultiSelectEvents,
   MultiSelectSnippets,
   ObjectOption,

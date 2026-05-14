@@ -66,7 +66,7 @@
 
   // Infer language from title (may contain HTML like <code>foo.ts</code>)
   function lang_from_title(title: string): string | undefined {
-    const ext = title.replaceAll(/<[^>]*>/g, ``).match(/\.(\w+)$/)?.[1]?.toLowerCase()
+    const ext = title.replaceAll(/<[^>]*>/gu, ``).match(/\.(\w+)$/u)?.[1]?.toLowerCase()
     return ext ? ext_to_lang[ext] ?? ext : undefined
   }
 

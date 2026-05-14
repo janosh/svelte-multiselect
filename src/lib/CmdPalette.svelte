@@ -16,6 +16,7 @@
     open = $bindable(false),
     dialog = $bindable(null),
     input = $bindable(null),
+    aria_label = `Command palette`,
     placeholder = `Filter actions...`,
     dialog_props,
     ...rest
@@ -28,9 +29,20 @@
     open?: boolean
     dialog?: HTMLDialogElement | null
     input?: HTMLInputElement | null
+    aria_label?: string
     placeholder?: string
     dialog_props?: HTMLAttributes<HTMLDialogElement>
   } = $props()
+
+  $effect(() => {
+    if (!dialog || !open || dialog.open) return
+    try {
+      if (typeof dialog.showModal === `function`) dialog.showModal()
+      else dialog.setAttribute(`open`, ``)
+    } catch {
+      dialog.setAttribute(`open`, ``)
+    }
+  })
 
   $effect(() => {
     if (open && input && document.activeElement !== input) input.focus()
@@ -62,10 +74,11 @@
 
 {#if open}
   <dialog
-    open
     bind:this={dialog}
     transition:fade={{ duration: fade_duration }}
     style={dialog_style}
+    aria-label={aria_label}
+    onclose={() => (open = false)}
     {...dialog_props}
   >
     <MultiSelect

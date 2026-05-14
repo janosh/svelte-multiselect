@@ -39,6 +39,7 @@
     fuzzy = true,
     closeDropdownOnSelect = false,
     form_input = $bindable(null),
+    formSerialize: form_serialize = (selected) => JSON.stringify(selected),
     highlightMatches = true,
     id = null,
     input = $bindable(null),
@@ -179,7 +180,7 @@
 
   // Platform detection for keyboard shortcuts (Mac uses Cmd, others use Ctrl)
   const is_mac = typeof navigator !== `undefined` &&
-    /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)
+    /Mac|iPhone|iPad|iPod/u.test(navigator.userAgent)
   const mod_key = is_mac ? `meta` : `ctrl`
 
   // Default shortcuts
@@ -397,7 +398,7 @@
   )
   let form_value = $derived.by(() => {
     if (input_display) return has_search_text ? searchText : null
-    return selected.length >= Number(required) ? JSON.stringify(selected) : null
+    return selected.length >= Number(required) ? form_serialize(selected) : null
   })
   let prev_input_committed_label: string | null = null
   // Keep searchText in sync with committed selections, including external value changes.
@@ -423,13 +424,13 @@
         && (load_options_last_search ?? ``) !== effective_filter_text)),
   )
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
-  let selected_keys_set = $derived(new Set(selected_keys))
+  let selected_keys_set = $derived(new SvelteSet(selected_keys))
   // String-normalized for consistent comparison (numeric labels like 123 match "123")
-  let selected_labels_set = $derived(new Set(selected_labels.map((label) => `${label}`)))
+  let selected_labels_set = $derived(new SvelteSet(selected_labels.map((label) => `${label}`)))
   // Lowercase labels set for case-insensitive duplicate detection
   let selected_labels_lower_set = $derived(
     duplicates === `case-insensitive`
-      ? new Set(selected_labels.map((label) => `${label}`.toLowerCase()))
+      ? new SvelteSet(selected_labels.map((label) => `${label}`.toLowerCase()))
       : null,
   )
   // Helper to check if a label is already selected (respects case-insensitive mode)
@@ -440,7 +441,7 @@
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
   let disabled_option_keys = $derived(
-    new Set(
+    new SvelteSet(
       effective_options
         .filter((opt) => utils.is_object(opt) && opt.disabled)
         .map(key),
@@ -450,9 +451,22 @@
   // Check if an option is disabled (uses memoized Set for O(1) lookup)
   const is_disabled = (opt: Option) => disabled_option_keys.has(key(opt))
 
+  // Check if option index is within maxOptions visibility limit
+  const is_option_visible = (idx: number) =>
+    idx >= 0 && (maxOptions === null || maxOptions === undefined || idx < maxOptions)
+
+  // Get non-disabled, selectable options from a list
+  // For collapsed groups: returns all non-disabled options (user explicitly wants this group)
+  // For expanded groups/top-level: respects maxOptions rendering limit
+  function get_selectable_opts(opts: Option[], skip_visibility_check = false) {
+    return opts.filter((opt) => {
+      if (is_disabled(opt)) return false
+      if (skip_visibility_check) return true
+      return is_option_visible(navigable_index_map.get(opt) ?? -1)
+    })
+  }
+
   // Group matching options by their `group` key
-  // Note: SvelteMap used here to satisfy eslint svelte/prefer-svelte-reactivity rule,
-  // though a plain Map would work since this is recreated fresh on each derivation
   let grouped_options = $derived.by((): GroupedOptions<Option>[] => {
     const groups_map = new SvelteMap<string, Option[]>()
     const ungrouped: Option[] = []
@@ -473,7 +487,6 @@
       collapsed: collapsedGroups.has(group),
     }))
 
-    // Apply group sorting if specified
     if (groupSortOrder && groupSortOrder !== `none`) {
       grouped = grouped.toSorted((group_a, group_b) => {
         if (typeof groupSortOrder === `function`) {
@@ -505,7 +518,7 @@
 
   // Pre-computed Map for O(1) index lookups (avoids O(n²) in template)
   let navigable_index_map = $derived(
-    new Map(navigable_options.map((opt, idx) => [opt, idx])),
+    new SvelteMap(navigable_options.map((opt, idx) => [opt, idx])),
   )
 
   // Pre-computed group header state (avoids repeated calculations in template)
@@ -517,7 +530,6 @@
       const selectable = get_selectable_opts(opts, collapsed)
       const all_selected = selectable.length > 0 &&
         selectable.every((opt) => selected_keys_set.has(key(opt)))
-      // Count selected options (only needed when keepSelectedInDropdown is enabled)
       let selected_count = 0
       if (keepSelectedInDropdown) {
         for (const opt of opts) {
@@ -724,14 +736,12 @@
     activeOption = navigable_options[activeIndex ?? -1] ?? null
   })
 
-  // Compute the ID of the currently active element for aria-activedescendant
-  // (highlighted selected pill takes priority, then active dropdown option)
+  // Compute the ID of the currently active dropdown option for aria-activedescendant.
+  // Selected chips are plain list items, so left/right chip highlighting stays visual.
   const active_option_id = $derived(
-    highlighted_idx === null || input_display
-      ? activeIndex !== null && activeIndex < navigable_options.length
-        ? `${internal_id}-opt-${activeIndex}`
-        : undefined
-      : `${internal_id}-selected-${highlighted_idx}`,
+    activeIndex !== null && activeIndex < navigable_options.length
+      ? `${internal_id}-opt-${activeIndex}`
+      : undefined,
   )
 
   // Helper to check if removing an option would violate minSelect constraint
@@ -1159,20 +1169,6 @@
     }
   }
 
-  // Check if option index is within maxOptions visibility limit
-  const is_option_visible = (idx: number) =>
-    idx >= 0 && (maxOptions === null || maxOptions === undefined || idx < maxOptions)
-
-  // Get non-disabled, selectable options from a list
-  // For collapsed groups: returns all non-disabled options (user explicitly wants this group)
-  // For expanded groups/top-level: respects maxOptions rendering limit
-  const get_selectable_opts = (opts: Option[], skip_visibility_check = false) =>
-    opts.filter((opt) => {
-      if (is_disabled(opt)) return false
-      if (skip_visibility_check) return true
-      return is_option_visible(navigable_index_map.get(opt) ?? -1)
-    })
-
   // Batch-add options to selection with all side effects (used by select_all and group select)
   function batch_add_options(options_to_add: Option[], event: Event) {
     const remaining = Math.max(0, (maxSelect ?? Infinity) - selected.length)
@@ -1574,6 +1570,7 @@
   bind:innerWidth={window_width}
 />
 
+<!-- svelte-ignore a11y_no_static_element_interactions -- the nested combobox input owns the interactive ARIA semantics -->
 <div
   bind:this={outerDiv}
   class:disabled
@@ -1585,7 +1582,6 @@
   onmouseup={open_dropdown}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
-  role="searchbox"
   tabindex="-1"
   {style}
 >
@@ -1597,7 +1593,6 @@
     value={form_value}
     tabindex="-1"
     aria-hidden="true"
-    aria-label="ignore this, used only to prevent form submission if select is required but empty"
     class="form-control"
     bind:this={form_input}
     oninvalid={() => {
@@ -1633,12 +1628,11 @@
         {@const selectedOptionStyle = [utils.get_style(option, `selected`), liSelectedStyle]
         .filter(Boolean)
         .join(` `) || null}
+        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -- selected chips stay plain list items; nested buttons handle removal -->
         <li
           id="{internal_id}-selected-{idx}"
           class={liSelectedClass}
           class:highlighted={highlighted_idx === idx}
-          role="option"
-          aria-selected="true"
           animate:flip={selectedFlipParams}
           draggable={selectedOptionsDraggable && !disabled && selected.length > 1}
           ondragstart={dragstart(idx)}
@@ -2196,7 +2190,7 @@
     /* Default z-index if not portaled/overridden by portal */
     z-index: var(--sms-options-z-index, 3);
     overflow: auto;
-    transition: all 0.2s; /* is this transition is desirable with portal positioning? */
+    transition: opacity 0.2s, transform 0.2s, visibility 0.2s;
     box-sizing: border-box;
     background: var(--sms-options-bg, light-dark(#fcfcfc, #222226));
     max-height: var(--sms-options-max-height, 50vh);
