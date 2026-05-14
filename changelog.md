@@ -1,5 +1,15 @@
 # Changelog
 
+## [v11.7.1](https://github.com/janosh/svelte-multiselect/compare/v11.7.0...v11.7.1)
+
+> 14 May 2026
+
+- Add editable input dropdown mode [`#416`](https://github.com/janosh/svelte-multiselect/pull/416)
+- Fix `loadOptions` scrollbar absence with small `batchSize` [`#413`](https://github.com/janosh/svelte-multiselect/pull/413)
+- Improve `MultiSelect`, `CmdPalette`, and `Nav` accessibility; add package smoke coverage in CI [`#417`](https://github.com/janosh/svelte-multiselect/pull/417)
+- **Breaking:** Remove attachments from the main package export. Import them from `svelte-multiselect/attachments` instead [`c50fb7f`](https://github.com/janosh/svelte-multiselect/commit/c50fb7f)
+- **Breaking:** Make tooltip HTML rendering opt-in via `allow_html: true` and treat tooltip content as plain text by default [`#417`](https://github.com/janosh/svelte-multiselect/pull/417)
+
 ## [v11.7.0](https://github.com/janosh/svelte-multiselect/compare/v11.6.4...v11.7.0)
 
 > 9 April 2026
