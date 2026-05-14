@@ -16,7 +16,7 @@ describe(`Nav`, () => {
   }
   const query_dropdown_elements = () => {
     const dropdown = doc_query(`.dropdown`)
-    const dropdown_menu = dropdown.querySelector<HTMLElement>(`div:last-child`)
+    const dropdown_menu = dropdown.querySelector<HTMLElement>(`[data-submenu]`)
     return { dropdown, dropdown_menu }
   }
 
@@ -71,8 +71,8 @@ describe(`Nav`, () => {
     expect(panel_id).toBeTypeOf(`string`)
     expect(menu.id).toBe(panel_id)
     expect(panel_id?.startsWith(`nav-menu-`)).toBe(true)
-    expect(menu.getAttribute(`role`)).toBe(`menu`)
-    expect(menu.getAttribute(`tabindex`)).toBe(`0`)
+    expect(menu.getAttribute(`role`)).toBeNull()
+    expect(menu.getAttribute(`tabindex`)).toBeNull()
 
     await click(button)
     expect(button.getAttribute(`aria-expanded`)).toBe(`true`)
@@ -211,8 +211,7 @@ describe(`Nav`, () => {
     expect(toggle?.getAttribute(`aria-expanded`)).toBe(`false`)
     expect(toggle?.getAttribute(`aria-haspopup`)).toBe(`true`)
 
-    // Dropdown menu is the last div inside .dropdown
-    const dropdown_menu = dropdown.querySelector(`div:last-child`)
+    const dropdown_menu = dropdown.querySelector(`[data-submenu]`)
     const hrefs = Array.from(dropdown_menu?.querySelectorAll(`a`) ?? []).map((link) =>
       link.getAttribute(`href`),
     )
@@ -326,7 +325,7 @@ describe(`Nav`, () => {
     expect(trigger?.getAttribute(`href`)).toBe(href)
     expect(trigger?.textContent?.trim()).toBe(label)
     const menu_links = Array.from(
-      dropdown.querySelector(`div:last-child`)?.querySelectorAll(`a`) ?? [],
+      dropdown.querySelector(`[data-submenu]`)?.querySelectorAll(`a`) ?? [],
     ).map((link) => link.getAttribute(`href`))
     expect(menu_links).toEqual(children)
   })
@@ -346,7 +345,7 @@ describe(`Nav`, () => {
     })
 
     const [dropdown1, dropdown2] = Array.from(document.querySelectorAll(`.dropdown`))
-    const menu1 = dropdown1.querySelector<HTMLElement>(`div:last-child`)
+    const menu1 = dropdown1.querySelector<HTMLElement>(`[data-submenu]`)
     const toggle1 = dropdown1.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
 
     // aria-expanded toggles correctly on toggle button
@@ -364,7 +363,7 @@ describe(`Nav`, () => {
     // Multiple dropdowns work independently
     const toggle2 = dropdown2.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
     await click(toggle1)
-    const menu2 = dropdown2.querySelector<HTMLElement>(`div:last-child`)
+    const menu2 = dropdown2.querySelector<HTMLElement>(`[data-submenu]`)
     expect(menu1?.classList.contains(`visible`)).toBe(true)
     expect(menu2?.classList.contains(`visible`)).toBe(false)
 
@@ -488,27 +487,25 @@ describe(`Nav`, () => {
     expect(links[2].getAttribute(`href`)).toBe(`/contact`)
   })
 
-  test(`dropdown accessibility: role and aria-label attributes`, () => {
+  test(`dropdown accessibility uses native navigation links and labelled toggles`, () => {
     mount(Nav, {
       target: document.body,
       props: { routes: [[`/docs`, [`/docs`, `/docs/intro`]]] },
     })
 
     const dropdown = doc_query(`.dropdown`)
-    // Check dropdown menu (last div) has role="menu"
     const dropdown_menu = dropdown.querySelector(`div:last-child`)
-    expect(dropdown_menu?.getAttribute(`role`)).toBe(`menu`)
+    expect(dropdown.getAttribute(`role`)).toBeNull()
+    expect(dropdown_menu?.getAttribute(`role`)).toBeNull()
 
-    // Check dropdown links have role="menuitem"
     const dropdown_links = Array.from(dropdown_menu?.querySelectorAll(`a`) ?? [])
     for (const link of dropdown_links) {
-      expect(link.getAttribute(`role`)).toBe(`menuitem`)
+      expect(link.getAttribute(`role`)).toBeNull()
     }
 
-    // Check toggle button has aria-label
     const toggle_button = doc_query(`[data-dropdown-toggle]`)
     const aria_label = toggle_button.getAttribute(`aria-label`)
-    expect(aria_label).toMatch(/Toggle.*submenu/)
+    expect(aria_label).toMatch(/Toggle.*submenu/u)
   })
 
   // NavRouteObject format (unique tests only; separators, disabled, align covered by dedicated describes)

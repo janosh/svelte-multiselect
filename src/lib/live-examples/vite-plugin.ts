@@ -100,7 +100,7 @@ export default function live_examples_plugin(
 
         // Skip derived module requests (CSS, scripts) - let vite-plugin-svelte handle them.
         // Must check BEFORE virtual_files lookup to avoid returning Svelte source for CSS.
-        if (/type=(style|script|module)/.test(query)) return
+        if (/type=(style|script|module)/u.test(query)) return
 
         const src = virtual_files.get(base_id)
         if (src) return src
@@ -198,7 +198,7 @@ export default function live_examples_plugin(
           if (typeof prop.start === `number` && typeof prop.end === `number`) {
             let end = prop.end
             const max_end = Math.min(prop.end + TRAILING_CLEANUP_BOUND, code.length)
-            while (end < max_end && /[\s,]/.test(code[end])) end++
+            while (end < max_end && /[\s,]/u.test(code[end])) end++
             edits.push({ start: prop.start, end, content: `` })
           }
         }
@@ -215,7 +215,7 @@ export default function live_examples_plugin(
         for (const import_node of imports) {
           const source = import_node.source
           if (!is_record(source) || typeof source.value !== `string`) continue
-          const match = source.value.match(/___live_example___(\d+)\.svelte/)
+          const match = source.value.match(/___live_example___(\d+)\.svelte/u)
           if (
             match &&
             typeof source.start === `number` &&

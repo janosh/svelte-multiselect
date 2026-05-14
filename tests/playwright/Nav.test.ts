@@ -4,16 +4,20 @@ import { expect, test } from '@playwright/test'
 test.describe(`Nav dropdown`, () => {
   // Move the cursor out first so hover() crosses the dropdown boundary.
   const hover_open = async (page: Page, dropdown: Locator, menu: Locator) => {
-    await page.mouse.move(0, 0)
-    await dropdown.hover({ force: true })
-    await expect(menu).toHaveCSS(`display`, `flex`, { timeout: 10_000 })
+    const trigger = dropdown.locator(`:scope > div`).first()
+    await expect(trigger).toBeVisible()
+    await expect(async () => {
+      await page.mouse.move(0, 0)
+      await trigger.hover()
+      await expect(menu).toHaveCSS(`display`, `flex`, { timeout: 500 })
+    }).toPass({ timeout: 10_000 })
   }
 
   test(`opens on hover and closes on mouse leave`, async ({ page }) => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
 
     const dropdown = page.locator(`.dropdown`).first()
-    const menu = dropdown.locator(`div[role="menu"]`)
+    const menu = dropdown.locator(`[data-submenu]`)
 
     await expect(menu).toHaveCSS(`display`, `none`)
     await hover_open(page, dropdown, menu)
@@ -25,9 +29,9 @@ test.describe(`Nav dropdown`, () => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
 
     const dropdown = page.locator(`.dropdown`).first()
-    const menu = dropdown.locator(`div[role="menu"]`)
+    const menu = dropdown.locator(`[data-submenu]`)
     await hover_open(page, dropdown, menu)
-    await expect(dropdown.locator(`div[role="menu"] a`).first()).toBeVisible()
+    await expect(menu.locator(`a`).first()).toBeVisible()
   })
 
   test(`click pins dropdown: stays open on mouse leave, closes on click outside/Escape/toggle`, async ({
@@ -36,7 +40,7 @@ test.describe(`Nav dropdown`, () => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
 
     const dropdown = page.locator(`.dropdown`).first()
-    const menu = dropdown.locator(`div[role="menu"]`)
+    const menu = dropdown.locator(`[data-submenu]`)
     const toggle = dropdown.locator(`[data-dropdown-toggle]`)
 
     // Click pins open, mouse leave doesn't close

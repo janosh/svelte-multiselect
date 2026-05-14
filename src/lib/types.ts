@@ -92,6 +92,8 @@ export type LoadOptions<T extends Option = Option> =
   | LoadOptionsFn<T>
   | LoadOptionsConfig<T>
 
+export type FormSerialize<T extends Option = Option> = (selected: T[]) => string | null
+
 type AfterInputProps = Pick<
   MultiSelectProps,
   | `selected`
@@ -187,6 +189,7 @@ export interface MultiSelectProps<T extends Option = Option>
   fuzzy?: boolean // whether to use fuzzy matching (default: true) or substring matching (false)
   closeDropdownOnSelect?: boolean | `if-mobile` | `retain-focus`
   form_input?: HTMLInputElement | null
+  formSerialize?: FormSerialize<T>
   highlightMatches?: boolean
   id?: string | null
   input?: HTMLInputElement | null
