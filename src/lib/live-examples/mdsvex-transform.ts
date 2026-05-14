@@ -14,13 +14,13 @@ const encode_escapes = (src: string) =>
 // Note: These patterns handle common cases but may have edge cases with nested
 // comments containing </script> strings or complex attribute syntax
 const RE_SCRIPT_START =
-  /<script(?:\s+?[a-zA-Z]+(=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/
-const RE_SCRIPT_BLOCK = /(<script[\s\S]*?>)([\s\S]*?)(<\/script>)/g
-const RE_STYLE_BLOCK = /(<style[\s\S]*?>)([\s\S]*?)(<\/style>)/g
+  /<script(?:\s+?[a-zA-Z]+(=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/u
+const RE_SCRIPT_BLOCK = /(<script[\s\S]*?>)([\s\S]*?)(<\/script>)/gu
+const RE_STYLE_BLOCK = /(<style[\s\S]*?>)([\s\S]*?)(<\/style>)/gu
 
 // Parses key=value pairs from a string. Supports strings (with escaped quotes),
 // numbers, booleans, and arrays. Note: nested structures in arrays are not supported.
-const RE_PARSE_META = /(\w+=\d+|\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+)/g
+const RE_PARSE_META = /(\w+=\d+|\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+)/gu
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`

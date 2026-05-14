@@ -38,7 +38,7 @@ Any new features should come with corresponding tests. If you fix a bug, please 
 This repo has 3 required CI checks that have to pass for every PR before merging:
 
 - tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/test.yml))
-- linting: handled by [prek](https://github.com/j178/prek) pre-commit hooks
+- linting: handled by `vp lint`
 - docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/gh-pages.yml) through GitHub Pages
 
 ## 🆕 New release
@@ -53,12 +53,6 @@ Now run the `changelog` script from `package.json` to update `changelog.md`.
 
 ```sh
 npm run changelog
-```
-
-If there have been significant code changes since the last release, it's good to update the coverage badges in the readme.
-
-```sh
-npm run update-coverage
 ```
 
 Then commit `package.json`, `changelog.md` and `readme.md` files to the `main` branch using the new version number prefixed by `'v'` as commit message and tag:

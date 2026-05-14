@@ -166,6 +166,68 @@ test.each([
   expect(document.activeElement).toBe(doc_query(`dialog input[autocomplete]`))
 })
 
+function restore_show_modal(original_show_modal: PropertyDescriptor | undefined): void {
+  if (original_show_modal) {
+    Object.defineProperty(HTMLDialogElement.prototype, `showModal`, original_show_modal)
+  } else Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
+}
+
+test(`opens a labelled modal dialog`, async () => {
+  const original_show_modal = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    `showModal`,
+  )
+  const show_modal = vi.fn(function showModal(this: HTMLDialogElement) {
+    this.setAttribute(`open`, ``)
+  })
+  HTMLDialogElement.prototype.showModal = show_modal
+  const props = $state({
+    actions: mock_actions,
+    aria_label: `Run command`,
+    open: true,
+    fade_duration: 0,
+  })
+
+  try {
+    mount(CmdPalette, { target: document.body, props })
+    await tick()
+
+    const dialog = doc_query<HTMLDialogElement>(`dialog`)
+    expect(dialog.getAttribute(`aria-label`)).toBe(`Run command`)
+    expect(show_modal).toHaveBeenCalledTimes(1)
+  } finally {
+    restore_show_modal(original_show_modal)
+  }
+})
+
+test.each([`throws`, `unavailable`] as const)(
+  `falls back to open attribute when showModal is %s`,
+  async (show_modal_state) => {
+    const original_show_modal = Object.getOwnPropertyDescriptor(
+      HTMLDialogElement.prototype,
+      `showModal`,
+    )
+    if (show_modal_state === `throws`) {
+      HTMLDialogElement.prototype.showModal = vi.fn(() => {
+        throw new Error(`showModal failed`)
+      })
+    } else {
+      Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
+    }
+    const props = $state({ actions: mock_actions, open: true, fade_duration: 0 })
+
+    try {
+      mount(CmdPalette, { target: document.body, props })
+      await tick()
+
+      const dialog = doc_query<HTMLDialogElement>(`dialog`)
+      expect(dialog.hasAttribute(`open`)).toBe(true)
+    } finally {
+      restore_show_modal(original_show_modal)
+    }
+  },
+)
+
 test(`handles action selection and execution`, () => {
   const actions_with_spies = mock_actions.map(({ label }) => ({
     label,
@@ -679,7 +741,7 @@ test(`mixed grouped and ungrouped actions render correctly`, async () => {
   // Should have one group header for File group (header includes count like "File (2)")
   const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
   expect(group_headers.length).toBe(1)
-  expect(group_headers[0].textContent?.trim()).toMatch(/^File/)
+  expect(group_headers[0].textContent?.trim()).toMatch(/^File/u)
 
   // All 4 actions should be rendered
   const action_items = document.querySelectorAll(

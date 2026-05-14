@@ -140,11 +140,11 @@ describe(`starry_night_highlighter`, () => {
     [`md`, `# Hello`],
   ])(`highlights %s code`, (lang, code) => {
     const result = starry_night_highlighter(code, lang)
-    const escaped_lang = lang.replaceAll(/[+]/g, `\\$&`)
+    const escaped_lang = lang.replaceAll(/[+]/gu, `\\$&`)
     expect(result).toMatch(
       new RegExp(
         `^<pre class="highlight highlight-${escaped_lang}"><code>.*</code></pre>$`,
-        `s`,
+        `su`,
       ),
     )
     // Verify actual syntax highlighting produces spans (not just wrapper)
@@ -156,7 +156,7 @@ describe(`starry_night_highlighter`, () => {
       `normalizes %s to lowercase`,
       (lang) => {
         const result = starry_night_highlighter(`const x = 1`, lang)
-        expect(result).toMatch(/^<pre class="highlight highlight-[a-z]+"><code>/)
+        expect(result).toMatch(/^<pre class="highlight highlight-[a-z]+"><code>/u)
         expect(result).not.toContain(lang) // Should use lowercase version
       },
     )
