@@ -11,7 +11,7 @@ beforeAll(() => {
 
 Object.defineProperty(globalThis, `matchMedia`, {
   writable: true,
-  value: vi.fn().mockImplementation((query) => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     media: query,
     matches: false,
     addEventListener: vi.fn(),

@@ -50,7 +50,7 @@
     dropdown_cooldown?: number // ms delay before hiding dropdown after mouse leaves (ignored when pinned)
     onnavigate?: (
       data: { href: string; event: MouseEvent; route: NavRouteObject },
-    ) => void | false
+    ) => false | undefined
     onopen?: () => void
     onclose?: () => void
   } & Omit<HTMLAttributes<HTMLElementTagNameMap[`nav`]>, `children`> = $props()
@@ -152,9 +152,9 @@
     }
 
     // Check if dropdown is open (either via hover or pinned)
-    const is_open = hovered_dropdown === href || pinned_dropdown === href
+    const dropdown_is_open = hovered_dropdown === href || pinned_dropdown === href
     // Arrow key navigation within open dropdown
-    if (is_open && (key === `ArrowDown` || key === `ArrowUp`)) {
+    if (dropdown_is_open && (key === `ArrowDown` || key === `ArrowUp`)) {
       event.preventDefault()
       const direction = key === `ArrowDown` ? 1 : -1
       focused_item_index = Math.max(
@@ -169,7 +169,7 @@
     }
 
     // Open dropdown with ArrowDown when closed
-    if (!is_open && key === `ArrowDown`) {
+    if (!dropdown_is_open && key === `ArrowDown`) {
       event.preventDefault()
       toggle_dropdown(href, true)
     }

@@ -115,16 +115,16 @@ describe(`load`, () => {
   })
 
   test(`returns undefined for CSS query even when virtual file exists`, () => {
-    const plugin = get_plugin()
-    const ctx = create_mock_context()
+    const css_plugin = get_plugin()
+    const css_ctx = create_mock_context()
     const id = `/path/to/file.md`
 
     const code = `const props = { __live_example_src: "${to_base64(`<div>Test</div>`)}" }`
-    plugin.transform?.call(ctx, code, id)
+    css_plugin.transform?.call(css_ctx, code, id)
 
     const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
     expect(
-      plugin.load?.call(ctx, `${virtual_id}?inline&svelte&type=style&lang.css`),
+      css_plugin.load?.call(css_ctx, `${virtual_id}?inline&svelte&type=style&lang.css`),
     ).toBeUndefined()
   })
 })
@@ -205,24 +205,26 @@ describe(`transform`, () => {
   test(`correctly decodes base64 with unicode`, () => {
     const original = `<div>Hello 世界 🌍</div>`
     const code = `const props = { __live_example_src: "${to_base64(original)}" }`
-    const plugin = get_plugin()
-    const ctx = create_mock_context()
+    const unicode_plugin = get_plugin()
+    const unicode_ctx = create_mock_context()
     const id = `/path/to/file.md`
-    plugin.transform?.call(ctx, code, id)
-    expect(plugin.load?.call(ctx, `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)).toBe(original)
+    unicode_plugin.transform?.call(unicode_ctx, code, id)
+    expect(
+      unicode_plugin.load?.call(unicode_ctx, `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`),
+    ).toBe(original)
   })
 
   test(`updates cached virtual file on re-transform`, () => {
-    const plugin = get_plugin()
-    const ctx = create_mock_context()
+    const cache_plugin = get_plugin()
+    const cache_ctx = create_mock_context()
     const id = `/path/to/file.md`
     const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
 
-    plugin.transform?.call(ctx, make_code(`<div>First</div>`), id)
-    expect(plugin.load?.call(ctx, virtual_id)).toBe(`<div>First</div>`)
+    cache_plugin.transform?.call(cache_ctx, make_code(`<div>First</div>`), id)
+    expect(cache_plugin.load?.call(cache_ctx, virtual_id)).toBe(`<div>First</div>`)
 
-    plugin.transform?.call(ctx, make_code(`<div>Second</div>`), id)
-    expect(plugin.load?.call(ctx, virtual_id)).toBe(`<div>Second</div>`)
+    cache_plugin.transform?.call(cache_ctx, make_code(`<div>Second</div>`), id)
+    expect(cache_plugin.load?.call(cache_ctx, virtual_id)).toBe(`<div>Second</div>`)
   })
 
   // Note: The remark transform always generates sequential indices (0, 1, 2...) for live
@@ -230,8 +232,8 @@ describe(`transform`, () => {
   // or imports, so they don't create gaps. The vite plugin's enumeration index matches
   // the import path index because both are sequential.
   test(`props and imports have matching indices and virtual files are loadable`, () => {
-    const plugin = get_plugin()
-    const ctx = create_mock_context()
+    const index_plugin = get_plugin()
+    const index_ctx = create_mock_context()
     const id = `/path/to/file.md`
 
     const content0 = `<div>First</div>`
@@ -242,7 +244,7 @@ describe(`transform`, () => {
       const props0 = { __live_example_src: "${to_base64(content0)}" };
       const props1 = { __live_example_src: "${to_base64(content1)}" };
     `
-    const result_code = transform_code(plugin, ctx, code, id)
+    const result_code = transform_code(index_plugin, index_ctx, code, id)
 
     const virtual_id0 = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
     const virtual_id1 = `${id}${EXAMPLE_MODULE_PREFIX}1.svelte`
@@ -250,8 +252,8 @@ describe(`transform`, () => {
     expect(result_code).toContain(virtual_id1)
     expect(result_code).not.toContain(`__live_example_src`)
 
-    expect(plugin.load?.call(ctx, virtual_id0)).toBe(content0)
-    expect(plugin.load?.call(ctx, virtual_id1)).toBe(content1)
+    expect(index_plugin.load?.call(index_ctx, virtual_id0)).toBe(content0)
+    expect(index_plugin.load?.call(index_ctx, virtual_id1)).toBe(content1)
   })
 })
 

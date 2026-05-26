@@ -19,7 +19,7 @@ const mount_copy_button = (props: Partial<ComponentProps<typeof CopyButton>> = {
     target: document.body,
     props: { content: `test`, as: `div`, labels: default_labels, ...props },
   })
-  const copy_button = doc_query<HTMLElement>(`[data-sms-copy]`)
+  const copy_button = doc_query(`[data-sms-copy]`)
   return { copy_button_component, copy_button }
 }
 
@@ -147,7 +147,7 @@ test.each([true, false])(
       target: document.body,
       props: { content: `test`, disabled },
     })
-    const copy_button = doc_query<HTMLElement>(`[data-sms-copy]`)
+    const copy_button = doc_query(`[data-sms-copy]`)
     expect(copy_button.querySelector(`svg`)).toBeNull()
     const snippet = copy_button.querySelector<HTMLElement>(`.copy-snippet`)
     expect(snippet?.dataset.disabled).toBe(`${disabled}`)
@@ -182,7 +182,7 @@ test(`calls on_copy_success with copied content`, async () => {
 test(`calls on_copy_error with error and content`, async () => {
   const copy_error = new Error(`clipboard failed`)
   const on_copy_error = vi.fn()
-  const console_error_spy = vi.spyOn(console, `error`).mockImplementation(() => {})
+  const console_error_spy = vi.spyOn(console, `error`).mockImplementation(() => void 0)
   mock_write_text.mockRejectedValue(copy_error)
 
   const { copy_button } = mount_copy_button({ content: `error text`, on_copy_error })

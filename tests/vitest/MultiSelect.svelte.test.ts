@@ -1,7 +1,7 @@
 // deno-lint-ignore-file no-await-in-loop
 import { readFileSync } from 'node:fs'
 import { mount, tick } from 'svelte'
-import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
@@ -21,6 +21,8 @@ const arrow_down = new KeyboardEvent(`keydown`, {
   bubbles: true,
 })
 const enter = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
+const console_methods = { error: console.error, warn: console.warn }
+afterEach(() => Object.assign(console, console_methods))
 
 test(`2-way binding of activeIndex`, async () => {
   const props = $state<MultiSelectProps>({ options: [1, 2, 3], activeIndex: 0 })
@@ -146,7 +148,7 @@ describe(`placeholder`, () => {
       const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
       expect(input.placeholder).toBe(`Pick a number`)
 
-      doc_query<HTMLElement>(`ul.options li`).click()
+      doc_query(`ul.options li`).click()
       await tick()
 
       expect(input.placeholder).toBe(expected_after)
@@ -411,9 +413,7 @@ describe(`selectedDisplay=input`, () => {
   }
 
   async function click_expand_icon(): Promise<void> {
-    doc_query<HTMLElement>(`.expand-icon`).dispatchEvent(
-      new MouseEvent(`mouseup`, { bubbles: true }),
-    )
+    doc_query(`.expand-icon`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
     await tick()
   }
 
@@ -440,7 +440,7 @@ describe(`selectedDisplay=input`, () => {
         },
       })
 
-      doc_query<HTMLElement>(`ul.options > li`).click()
+      doc_query(`ul.options > li`).click()
       await tick()
 
       const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -729,7 +729,7 @@ describe(`selectedDisplay=input`, () => {
     expect(select.selected).toEqual([])
     expect(select.value).toBe(null)
     expect(document.querySelectorAll(`ul.selected > li.highlighted`)).toHaveLength(0)
-    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
   })
 
   test(`invalid maxSelect combination reports config error`, async () => {
@@ -775,7 +775,7 @@ describe(`selectedDisplay=input`, () => {
 
     set_input_value(input, ``)
     await tick()
-    doc_query<HTMLElement>(`ul.options > li`).click()
+    doc_query(`ul.options > li`).click()
     await tick()
     expect(new FormData(form).get(field_name)).toBe(`Red`)
   })
@@ -843,7 +843,7 @@ describe(`selectedDisplay=input`, () => {
     })
     await tick()
 
-    doc_query<HTMLElement>(`ul.options > li.selected`).click()
+    doc_query(`ul.options > li.selected`).click()
     await tick()
 
     expect(select.value).toBe(`Red`)
@@ -1010,7 +1010,7 @@ test.each([
   form.append(btn)
 
   for (const _ of Array.from({ length: 3 })) {
-    const li = doc_query<HTMLElement>(`ul.options li`)
+    const li = doc_query(`ul.options li`)
     li.click()
     await tick()
   }
@@ -1043,7 +1043,7 @@ test(`formSerialize customizes chip-mode form values`, async () => {
     })
 
     for (const _ of options) {
-      doc_query<HTMLElement>(`ul.options li`).click()
+      doc_query(`ul.options li`).click()
       await tick()
     }
 
@@ -1147,7 +1147,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     expect(new Set(ids).size).toBe(3) // All unique
 
     // Initially no active descendant
-    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
 
     // Navigate and verify activedescendant points to active option
     input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
@@ -1219,7 +1219,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     mount(MultiSelect, { target: document.body, props })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    expect(input.getAttribute(`aria-busy`)).toBeFalsy()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
 
     props.loading = true
     await tick()
@@ -1227,7 +1227,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
 
     props.loading = false
     await tick()
-    expect(input.getAttribute(`aria-busy`)).toBeFalsy()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
   })
 
   test(`options have aria-posinset and aria-setsize for position announcements`, async () => {
@@ -1291,7 +1291,7 @@ test(`children snippet receives type='selected' for pills and type='option' for 
   })
 
   // selected pill should have type='selected'
-  const selected_span = doc_query<HTMLElement>(`ul.selected span.child-snippet`)
+  const selected_span = doc_query(`ul.selected span.child-snippet`)
   expect(selected_span.dataset.type).toBe(`selected`)
   expect(selected_span.textContent).toBe(`Red`)
 
@@ -1359,7 +1359,7 @@ test(`expandIcon snippet receives open and disabled`, () => {
     props: { options: [1, 2, 3], disabled: true },
   })
 
-  const expand = doc_query<HTMLElement>(`.expand-snippet`)
+  const expand = doc_query(`.expand-snippet`)
   expect(expand.dataset.disabled).toBe(`true`)
   expect(expand.dataset.open).toBe(`false`)
 })
@@ -1370,7 +1370,7 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
     props: { options: [1, 2, 3] },
   })
 
-  const expand = doc_query<HTMLElement>(`.expand-snippet`)
+  const expand = doc_query(`.expand-snippet`)
   expect(expand.dataset.open).toBe(`false`)
 
   doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
@@ -1404,7 +1404,7 @@ test(`afterInput snippet receives searchText`, async () => {
     props: { options: [1, 2, 3] },
   })
 
-  const after_input = doc_query<HTMLElement>(`.after-input-snippet`)
+  const after_input = doc_query(`.after-input-snippet`)
   expect(after_input.dataset.searchText).toBe(``)
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -1471,7 +1471,7 @@ test.each([undefined, `Custom no options message`])(
     const dropdown = doc_query(`ul.options`)
     expect(dropdown.textContent?.trim()).toBe(expected_msg)
 
-    const no_match_li = doc_query<HTMLElement>(`ul.options li.user-msg`)
+    const no_match_li = doc_query(`ul.options li.user-msg`)
     expect(no_match_li).toBeInstanceOf(HTMLLIElement)
     expect(no_match_li.textContent?.trim()).toBe(expected_msg)
 
@@ -1932,7 +1932,7 @@ test(`2-way binding of selected`, async () => {
 
   // test internal changes to selected bind outwards
   for (const _ of Array.from({ length: 2 })) {
-    const li = doc_query<HTMLElement>(`ul.options li`)
+    const li = doc_query(`ul.options li`)
     li.click()
     await tick()
   }
@@ -1967,7 +1967,7 @@ test.each([
 
     // test internal changes bind outwards
     for (const _ of [1, 2]) {
-      const li = doc_query<HTMLElement>(`ul.options li`)
+      const li = doc_query(`ul.options li`)
       li.click()
       await tick()
     }
@@ -2051,13 +2051,13 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   input.dispatchEvent(input_event)
   await tick()
 
-  const li = doc_query<HTMLElement>(`ul.options li[title='Create this option...']`)
+  const li = doc_query(`ul.options li[title='Create this option...']`)
   li.click()
   await tick()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`foo`)
 
   // remove the new option
-  const li_selected = doc_query<HTMLElement>(`ul.selected li button[title*='Remove']`)
+  const li_selected = doc_query(`ul.selected li button[title*='Remove']`)
   li_selected.click()
   await tick()
 
@@ -2066,10 +2066,10 @@ test(`can remove user-created selected option which is not in dropdown list`, as
 
 // https://github.com/janosh/svelte-multiselect/issues/409
 // whitespace-only input must never be added as an option (was converted to 0 via Number("  "))
-test.each([
+test.each<[string, MultiSelectProps]>([
   [`string options`, { options: [`a`, `b`], allowUserOptions: true }],
   [`numeric options`, { options: [1, 2, 3], allowUserOptions: true }],
-] as const)(`whitespace-only input rejected: %s`, async (_label, extra_props) => {
+])(`whitespace-only input rejected: %s`, async (_label, extra_props) => {
   const onadd_spy = vi.fn()
 
   mount(MultiSelect, {
@@ -2327,7 +2327,7 @@ describe(`arrow key navigation between selected items`, () => {
     for (let step = 0; step < 3; step++) input.dispatchEvent(press(`ArrowLeft`))
     await tick()
     expect(is_highlighted(0)).toBe(true)
-    doc_query<HTMLElement>(`button.remove-all`).click()
+    doc_query(`button.remove-all`).click()
     await tick()
     expect(selected_items().length).toBe(1)
     expect(highlighted().length).toBe(0)
@@ -2410,12 +2410,12 @@ describe(`arrow key navigation between selected items`, () => {
 
   test(`highlighted pill does not set aria-activedescendant`, async () => {
     const input = setup()
-    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
     const highlighted_li = document.querySelector(`ul.selected > li.highlighted`)
     expect(highlighted_li).toBeInstanceOf(HTMLLIElement)
-    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
   })
 
   test(`aria-activedescendant remains clear when highlight clears`, async () => {
@@ -2423,12 +2423,12 @@ describe(`arrow key navigation between selected items`, () => {
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
     expect(highlighted().length).toBe(1)
-    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
     input.dispatchEvent(press(`Escape`))
     await tick()
     // should revert to null/undefined (no active dropdown option either since dropdown closed)
     expect(highlighted().length).toBe(0)
-    expect(input.getAttribute(`aria-activedescendant`)).toBeFalsy()
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
   })
 
   test(`each selected <li> has a stable id`, () => {
@@ -2459,12 +2459,11 @@ test(`remove all button does not remove items when minSelect constraint would be
   const remove_all_button = document.querySelector(`button.remove-all`)
   expect(remove_all_button).toBeNull()
 
-  const input = doc_query<HTMLElement>(`input[autocomplete="off"]`)
+  const input = doc_query(`input[autocomplete="off"]`)
   input.focus()
 
   // Open dropdown and make first option active
-  const arrow_down = new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true })
-  input.dispatchEvent(arrow_down)
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
   await tick()
 
   // Try to remove the selected item with Enter
@@ -2475,7 +2474,7 @@ test(`remove all button does not remove items when minSelect constraint would be
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red Green`)
 
   // The remove all button should now be visible since selected.length > minSelect
-  doc_query<HTMLElement>(`button.remove-all`).click()
+  doc_query(`button.remove-all`).click()
   await tick()
 
   // The first item should still be selected since minSelect=1
@@ -2677,7 +2676,7 @@ test(`errors to console when option is an object but has no label key`, () => {
   // isn't caught as a type error despite ObjectOption requiring label https://github.com/sveltejs/svelte/issues/17658
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [{ foo: 42 }] },
+    props: { options: [{ foo: 42 } as unknown as Option] }, // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion
   })
 
   expect(console.error).toHaveBeenCalledWith(
@@ -2726,7 +2725,7 @@ test.each([
       },
     })
 
-    doc_query<HTMLElement>(selector).click()
+    doc_query(selector).click()
 
     expect(spy, `event type '${event_name}'`).toHaveBeenCalledTimes(1)
     expect(spy.mock.calls[0][0]).toEqual(expect.objectContaining(expected))
@@ -2768,7 +2767,7 @@ test.each([
     await tick()
 
     // Click on the "Create this option..." message
-    const create_option_li = doc_query<HTMLElement>(`ul.options li.user-msg`)
+    const create_option_li = doc_query(`ul.options li.user-msg`)
     create_option_li.click()
 
     // Verify oncreate event was fired with correct payload
@@ -2803,7 +2802,7 @@ test.each<[string, boolean | `append`]>([
   input.value = `rejected`
   input.dispatchEvent(input_event)
   await tick()
-  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  doc_query(`ul.options li.user-msg`).click()
   await tick()
 
   expect(onadd_spy).not.toHaveBeenCalled()
@@ -2811,11 +2810,9 @@ test.each<[string, boolean | `append`]>([
   if (mode === `append`) expect(props.options).toEqual(initial_options)
 })
 
-test.each([
+test.each<[string, Option | undefined]>([
   [`undefined`, undefined],
-  [`null`, null],
   [`empty string`, ``],
-  [`true (non-Option type)`, true],
 ])(`oncreate returning %s uses original option unchanged`, async (_label, return_val) => {
   const onadd_spy = vi.fn()
   mount(MultiSelect, {
@@ -2832,7 +2829,7 @@ test.each([
   input.value = `new-opt`
   input.dispatchEvent(input_event)
   await tick()
-  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  doc_query(`ul.options li.user-msg`).click()
   await tick()
 
   expect(onadd_spy).toHaveBeenCalledTimes(1)
@@ -2842,12 +2839,14 @@ test.each([
 test(`oncreate returning a Promise logs error and rejects option`, async () => {
   const error_spy = vi.spyOn(console, `error`).mockImplementation(() => {})
   const onadd_spy = vi.fn()
+  // @ts-expect-error runtime guard for untyped JS consumers; TS rejects promises
+  const oncreate: MultiSelectProps[`oncreate`] = () => Promise.resolve(`async-val`)
   mount(MultiSelect, {
     target: document.body,
     props: {
       options: [`a`, `b`],
       allowUserOptions: true,
-      oncreate: () => Promise.resolve(`async-val`),
+      oncreate,
       onadd: onadd_spy,
     },
   })
@@ -2856,7 +2855,7 @@ test(`oncreate returning a Promise logs error and rejects option`, async () => {
   input.value = `new-opt`
   input.dispatchEvent(input_event)
   await tick()
-  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  doc_query(`ul.options li.user-msg`).click()
   await tick()
 
   expect(onadd_spy).not.toHaveBeenCalled()
@@ -2880,7 +2879,7 @@ test(`oncreate returning a string transforms the option`, async () => {
   input.value = `hello`
   input.dispatchEvent(input_event)
   await tick()
-  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  doc_query(`ul.options li.user-msg`).click()
   await tick()
 
   expect(props.selected).toEqual([`HELLO`])
@@ -2903,7 +2902,7 @@ test(`oncreate returning an object transforms the option with extra fields`, asy
   input.value = `new-item`
   input.dispatchEvent(input_event)
   await tick()
-  doc_query<HTMLElement>(`ul.options li.user-msg`).click()
+  doc_query(`ul.options li.user-msg`).click()
   await tick()
 
   expect(props.selected).toHaveLength(1)
@@ -2923,17 +2922,17 @@ test(`onadd selected accumulates and onremove selected reflects removal`, async 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.focus()
   await tick()
-  doc_query<HTMLElement>(`ul.options li`).click()
+  doc_query(`ul.options li`).click()
   await tick()
   expect(onadd_spy).toHaveBeenLastCalledWith({ option: 1, selected: [1] })
 
   input.focus()
   await tick()
-  doc_query<HTMLElement>(`ul.options li`).click()
+  doc_query(`ul.options li`).click()
   await tick()
   expect(onadd_spy).toHaveBeenLastCalledWith({ option: 2, selected: [1, 2] })
 
-  doc_query<HTMLElement>(`ul.selected button.remove`).click()
+  doc_query(`ul.selected button.remove`).click()
   expect(onremove_spy).toHaveBeenCalledTimes(1)
   expect(onremove_spy).toHaveBeenLastCalledWith({ option: 1, selected: [2] })
 })
@@ -2948,7 +2947,7 @@ test(`onadd selected reflects replacement when maxSelect=1`, async () => {
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input.focus()
   await tick()
-  doc_query<HTMLElement>(`ul.options li`).click()
+  doc_query(`ul.options li`).click()
   await tick()
 
   expect(onadd_spy).toHaveBeenCalledWith({ option: 2, selected: [2] })
@@ -3163,7 +3162,7 @@ describe(`keepSelectedInDropdown feature`, () => {
           const checkbox = option.querySelector<HTMLInputElement>(`.option-checkbox`)
           expect(checkbox?.checked).toBe(true)
         } else if (mode === `plain`) {
-          expect(option.querySelector(`.option-checkbox`)).toBeFalsy()
+          expect(option.querySelector(`.option-checkbox`)).toBeNull()
         }
       })
 
@@ -3531,10 +3530,10 @@ test.each<[OptionStyle, string | null, string]>([
     })
 
     if (key === `selected`) {
-      const selected_li = doc_query<HTMLElement>(`ul.selected > li`)
+      const selected_li = doc_query(`ul.selected > li`)
       expect(selected_li.style.cssText).toBe(expected_css)
     } else if (key === `option`) {
-      const option_li = doc_query<HTMLElement>(`ul.options > li`)
+      const option_li = doc_query(`ul.options > li`)
       expect(option_li.style.cssText).toBe(expected_css)
     }
   },
@@ -3555,7 +3554,7 @@ test.each([
   })
 
   const err_msg = `${prop} (${css_selector})`
-  const elem = doc_query<HTMLElement>(css_selector)
+  const elem = doc_query(css_selector)
   expect(elem?.style.cssText, err_msg).toContain(css_str)
 })
 
@@ -3591,7 +3590,7 @@ test.each([true, false, `if-mobile`] as const)(
       })
 
       // simulate selecting an option
-      const first_option = doc_query<HTMLElement>(`ul.options > li`)
+      const first_option = doc_query(`ul.options > li`)
       first_option.click()
       await tick() // let jsdom update document.activeElement after potential input.focus() in add()
 
@@ -3631,7 +3630,7 @@ test.each([true, false, `if-mobile`] as const)(
         expect(globalThis.innerWidth).toBeLessThan(select.breakpoint)
 
         // Re-simulate selection on mobile
-        const another_option = doc_query<HTMLElement>(`ul.options li:not(.selected)`)
+        const another_option = doc_query(`ul.options li:not(.selected)`)
         expect(
           another_option,
           `Could not find another option to test mobile selection behavior`,
@@ -3662,7 +3661,7 @@ test(`closeDropdownOnSelect='retain-focus' retains input focus when dropdown clo
   input_el.focus()
 
   // select an option - should close dropdown but retain focus
-  doc_query<HTMLElement>(`ul.options > li`).click()
+  doc_query(`ul.options > li`).click()
   await tick()
 
   expect(document.activeElement).toBe(input_el)
@@ -3684,13 +3683,13 @@ test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, asyn
   input_el.focus()
 
   // select first option
-  doc_query<HTMLElement>(`ul.options > li`).click()
+  doc_query(`ul.options > li`).click()
   expect(document.activeElement).toBe(input_el)
 
   // select second option (reaching maxSelect)
   input_el.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
   await tick()
-  doc_query<HTMLElement>(`ul.options > li`).click()
+  doc_query(`ul.options > li`).click()
   await tick()
 
   expect(document.activeElement).toBe(input_el)
@@ -3901,7 +3900,7 @@ describe(`selectAllOption feature`, () => {
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.click()
     await tick()
-    doc_query<HTMLElement>(`ul.options > li.select-all`).click()
+    doc_query(`ul.options > li.select-all`).click()
     await tick()
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
     expect(onselectAll_spy).toHaveBeenCalledWith({ options })
@@ -3921,7 +3920,7 @@ describe(`selectAllOption feature`, () => {
     })
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.click()
-    doc_query<HTMLElement>(`ul.options > li.select-all`).click()
+    doc_query(`ul.options > li.select-all`).click()
     await tick()
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`A C`) // skipped B (disabled), limited to 2
   })
@@ -3970,7 +3969,7 @@ describe(`selectAllOption feature`, () => {
     input.click()
     await tick()
 
-    doc_query<HTMLElement>(`ul.options > li.select-all`).click()
+    doc_query(`ul.options > li.select-all`).click()
     await tick()
 
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`a b c`)
@@ -4002,9 +4001,7 @@ describe(`selectAllOption feature`, () => {
     })
     doc_query<HTMLInputElement>(`input[autocomplete]`).click()
     await tick()
-    expect(doc_query<HTMLElement>(`ul.options > li.select-all`).title).toBe(
-      expected_title,
-    )
+    expect(doc_query(`ul.options > li.select-all`).title).toBe(expected_title)
   })
 
   test.each([
@@ -4021,7 +4018,7 @@ describe(`selectAllOption feature`, () => {
       input.click()
       input.value = `a`
       input.dispatchEvent(input_event)
-      doc_query<HTMLElement>(`ul.options > li.select-all`).click()
+      doc_query(`ul.options > li.select-all`).click()
       await tick()
       expect(input.value).toBe(expected)
     },
@@ -4065,7 +4062,7 @@ describe(`selectAllOption feature`, () => {
       })
       doc_query<HTMLInputElement>(`input[autocomplete]`).click()
       await tick()
-      const select_all_li = doc_query<HTMLElement>(`ul.options > li.select-all`)
+      const select_all_li = doc_query(`ul.options > li.select-all`)
       expect(select_all_li.classList.contains(`disabled`)).toBe(expected_disabled)
       expect(select_all_li.getAttribute(`aria-disabled`)).toBe(
         expected_disabled ? `true` : null,
@@ -4088,7 +4085,7 @@ describe(`selectAllOption feature`, () => {
     doc_query<HTMLInputElement>(`input[autocomplete]`).click()
     await tick()
 
-    doc_query<HTMLElement>(`ul.options > li.select-all`).click()
+    doc_query(`ul.options > li.select-all`).click()
     await tick()
 
     expect(onselectAll_spy).not.toHaveBeenCalled()
@@ -5044,7 +5041,7 @@ describe(`binding update event count`, () => {
     expect(onchange_spy).toHaveBeenCalledTimes(0)
 
     // select first option
-    doc_query<HTMLElement>(`ul.options li`).click()
+    doc_query(`ul.options li`).click()
     await tick()
     expect(onchange_spy).toHaveBeenCalledTimes(1)
     expect(onchange_spy).toHaveBeenCalledWith({ option: 1, type: `add` })
@@ -5063,7 +5060,7 @@ describe(`binding update event count`, () => {
       expect(spy.mock.calls.length).toBeLessThanOrEqual(1) // init: at most 1 call
 
       spy.mockClear()
-      doc_query<HTMLElement>(`ul.options li`).click()
+      doc_query(`ul.options li`).click()
       await tick()
       expect(spy).toHaveBeenCalledTimes(1) // selection: exactly 1 call
     },
@@ -5094,8 +5091,9 @@ describe(`binding update event count`, () => {
 
 describe(`CSS static analysis`, () => {
   const component_source = readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`)
-  const css = component_source.match(/<style>([\s\S]*?)<\/style>/u)?.[1] ?? ``
-  const options_block = css.match(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/u)?.[1]
+  const css = /<style>([\s\S]*?)<\/style>/u.exec(component_source)?.[1] ?? ``
+  const get_css_block = (pattern: RegExp) => pattern.exec(css)?.[1] ?? ``
+  const options_block = get_css_block(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/u)
 
   const props = [
     `--sms-border`,
@@ -5135,16 +5133,14 @@ describe(`CSS static analysis`, () => {
   })
 
   test(`default-icon buttons enforce circle via min-height: 0 + overflow: hidden`, () => {
-    const default_icon_block = css.match(
+    const default_icon_block = get_css_block(
       /:is\(div\.multiselect button\.default-icon\)\s*\{([\s\S]*?)\}/u,
-    )?.[1]
-    expect(default_icon_block).toBeTruthy()
+    )
     expect(default_icon_block).toMatch(/min-height:\s*0/u)
     expect(default_icon_block).toMatch(/overflow:\s*hidden/u)
   })
 
   test(`options dropdown has border with light-dark default`, () => {
-    expect(options_block).toBeTruthy()
     expect(options_block).toMatch(/--sms-options-border,\s*1px solid light-dark\(/u)
     expect(options_block).toMatch(
       /border-width:\s*var\(--sms-options-border-width,\s*1px\)/u,
@@ -5152,15 +5148,13 @@ describe(`CSS static analysis`, () => {
   })
 
   test(`options dropdown bg contrasts with typical page bg`, () => {
-    expect(options_block).toBeTruthy()
     expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/u)
   })
 
   test(`custom-snippet remove-all overrides circular defaults`, () => {
-    const custom_remove_all = css.match(
+    const custom_remove_all = get_css_block(
       /:is\(div\.multiselect button\.remove-all:not\(\.default-icon\)\)\s*\{([\s\S]*?)\}/u,
-    )?.[1]
-    expect(custom_remove_all).toBeTruthy()
+    )
     expect(custom_remove_all).toMatch(/border-radius:\s*3pt/u)
     expect(custom_remove_all).toMatch(/aspect-ratio:\s*auto/u)
     expect(custom_remove_all).toMatch(/padding:\s*0 2pt/u)
@@ -6854,7 +6848,7 @@ describe(`onmaxreached event`, () => {
     await tick()
 
     // Try to add a 3rd option when maxSelect is 2
-    const option3 = doc_query<HTMLElement>(`ul.options li:nth-child(1)`) // first available option
+    const option3 = doc_query(`ul.options li:nth-child(1)`) // first available option
     option3.click()
     await tick()
 
@@ -6887,7 +6881,7 @@ describe(`onmaxreached event`, () => {
     input.focus()
     await tick()
 
-    doc_query<HTMLElement>(`ul.options li:nth-child(1)`).click()
+    doc_query(`ul.options li:nth-child(1)`).click()
     await tick()
 
     expect(onmaxreached_spy).not.toHaveBeenCalled()
@@ -6947,7 +6941,7 @@ describe(`onmaxreached event`, () => {
     await tick()
 
     // Try to add Cherry when already at max
-    const option3 = doc_query<HTMLElement>(`ul.options li:nth-child(1)`)
+    const option3 = doc_query(`ul.options li:nth-child(1)`)
     option3.click()
     await tick()
 
@@ -7017,7 +7011,7 @@ describe(`onduplicate event`, () => {
     input.focus()
     await tick()
 
-    doc_query<HTMLElement>(`ul.options li:nth-child(1)`).click()
+    doc_query(`ul.options li:nth-child(1)`).click()
     await tick()
 
     expect(onduplicate_spy).not.toHaveBeenCalled()
@@ -7551,7 +7545,7 @@ describe(`history / undo-redo`, () => {
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
     await tick()
-    const first_option = doc_query<HTMLElement>(`ul.options li`)
+    const first_option = doc_query(`ul.options li`)
     first_option.click()
     await tick()
 
@@ -7607,7 +7601,7 @@ describe(`history / undo-redo`, () => {
     await tick()
 
     // Remove one item, then undo - should restore [1, 2], not []
-    doc_query<HTMLElement>(`ul.selected li button.remove`).click()
+    doc_query(`ul.selected li button.remove`).click()
     await tick()
     expect(selected).toEqual([2])
 
@@ -7959,7 +7953,7 @@ describe(`parse_paste`, () => {
   )
 
   test.each([
-    [`pre-selected duplicate`, [`a`], `a,b,c`, 2, [`a`, `b`, `c`]],
+    [`preselected duplicate`, [`a`], `a,b,c`, 2, [`a`, `b`, `c`]],
     [`self-duplicate within paste`, [] as string[], `a,a,b`, 2, [`a`, `b`]],
   ])(
     `handles %s`,

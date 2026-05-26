@@ -380,8 +380,8 @@
 
   let has_search_text = $derived(searchText.trim().length > 0)
   // Cache selected keys and labels to avoid repeated .map() calls
-  let selected_keys = $derived(selected.map(key))
-  let selected_labels = $derived(selected.map(utils.get_label))
+  let selected_keys = $derived(selected.map((opt) => key(opt)))
+  let selected_labels = $derived(selected.map((opt) => utils.get_label(opt)))
   let input_committed_label = $derived(
     input_display && selected[0] !== undefined ? `${utils.get_label(selected[0])}` : null,
   )
@@ -444,7 +444,7 @@
     new SvelteSet(
       effective_options
         .filter((opt) => utils.is_object(opt) && opt.disabled)
-        .map(key),
+        .map((opt) => key(opt)),
     ),
   )
 
@@ -481,9 +481,9 @@
       }
     }
 
-    let grouped = [...groups_map.entries()].map(([group, options]) => ({
+    let grouped = [...groups_map.entries()].map(([group, group_options]) => ({
       group,
-      options,
+      options: group_options,
       collapsed: collapsedGroups.has(group),
     }))
 
@@ -753,13 +753,13 @@
     const flat_idx = navigable_index_map.get(option_item) ?? -1
     const {
       label,
-      disabled = null,
+      disabled: option_disabled = null,
       title = null,
       selectedTitle = null,
       disabledTitle = defaultDisabledTitle,
     } = utils.is_object(option_item) ? option_item : { label: option_item }
     return {
-      flat_idx, label, disabled, title, selectedTitle, disabledTitle,
+      flat_idx, label, disabled: option_disabled, title, selectedTitle, disabledTitle,
       active: activeIndex === flat_idx && flat_idx >= 0,
       selected: is_selected(label),
       style: [utils.get_style(option_item, `option`), liOptionStyle]
@@ -1036,22 +1036,13 @@
       condition: () => boolean
       action: () => void
     }> = [
-      {
-        key: `select_all`,
-        condition: () =>
-          !!selectAllOption && navigable_options.length > 0 && maxSelect !== 1,
-        action: () => select_all(event),
-      },
-      {
-        key: `clear_all`,
-        condition: () => !input_display && selected.length > 0 && !searchText,
-        action: () => remove_all(event),
-      },
-      {
-        key: `open`,
-        condition: () => !open,
-        action: () => open_dropdown(event),
-      },
+      { key: `select_all`, condition: () =>
+        !!selectAllOption && navigable_options.length > 0 && maxSelect !== 1,
+        action: () => select_all(event) },
+      { key: `clear_all`, condition: () =>
+        !input_display && selected.length > 0 && !searchText,
+        action: () => remove_all(event) },
+      { key: `open`, condition: () => !open, action: () => open_dropdown(event) },
       {
         key: `close`,
         condition: () => open,
@@ -1060,20 +1051,12 @@
           if (!input_display) searchText = ``
         },
       },
-      {
-        key: `undo`,
-        condition: () => !!canUndo,
-        action: () => undo?.(),
-      },
-      {
-        key: `redo`,
-        condition: () => !!canRedo,
-        action: () => redo?.(),
-      },
+      { key: `undo`, condition: () => !!canUndo, action: () => undo?.() },
+      { key: `redo`, condition: () => !!canRedo, action: () => redo?.() },
     ]
 
-    for (const { key, condition, action } of shortcut_actions) {
-      if (utils.matches_shortcut(event, effective_shortcuts[key]) && condition()) {
+    for (const { key: shortcut_key, condition, action } of shortcut_actions) {
+      if (utils.matches_shortcut(event, effective_shortcuts[shortcut_key]) && condition()) {
         event.preventDefault()
         event.stopPropagation()
         action()
@@ -1208,7 +1191,7 @@
     const selectable = get_selectable_opts(group_opts, group_collapsed)
     if (all_selected) {
       // Deselect all options in this group
-      const keys_to_remove = new Set(selectable.map(key))
+      const keys_to_remove = new Set(selectable.map((opt) => key(opt)))
       const removed = selected.filter((opt) => keys_to_remove.has(key(opt)))
       selected = selected.filter((opt) => !keys_to_remove.has(key(opt)))
       if (removed.length > 0) {
@@ -1336,8 +1319,8 @@
 
     const orig_focus = input.focus.bind(input)
 
-    input.focus = (options?: FocusOptions) => {
-      orig_focus(options)
+    input.focus = (focus_options?: FocusOptions) => {
+      orig_focus(focus_options)
       if (!disabled && !open) {
         open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
       }
@@ -1375,19 +1358,19 @@
     const rejected: Option[] = []
     const overflow: Option[] = []
     for (let idx = 0; idx < parsed.length; idx++) {
-      const option = parsed[idx]
+      const parsed_option = parsed[idx]
       if (maxSelect !== null && maxSelect !== 1 && selected.length >= maxSelect) {
-        overflow.push(option, ...parsed.slice(idx + 1))
+        overflow.push(parsed_option, ...parsed.slice(idx + 1))
         wiggle = true
-        onmaxreached?.({ selected, maxSelect, attemptedOption: option })
+        onmaxreached?.({ selected, maxSelect, attemptedOption: parsed_option })
         break
       }
       const before = selected.length
       const before_first = maxSelect === 1 ? selected[0] : undefined
-      add(option, event, true)
+      add(parsed_option, event, true)
       if (selected.length > before || (maxSelect === 1 && selected[0] !== before_first)) {
-        added.push(option)
-      } else rejected.push(option)
+        added.push(parsed_option)
+      } else rejected.push(parsed_option)
       if (maxSelect === 1) {
         overflow.push(...parsed.slice(idx + 1))
         break
@@ -1400,8 +1383,7 @@
   // reset form validation when required prop changes
   // https://github.com/janosh/svelte-multiselect/issues/285
   $effect.pre(() => {
-    required = required // trigger effect when required changes
-    form_input?.setCustomValidity(``)
+    form_input?.setCustomValidity(required ? `` : ``)
   })
 
   // === DOM, portal, and focus ===
@@ -1439,8 +1421,8 @@
       })
 
       return {
-        update(params: PortalParams) {
-          target_node = params.target_node
+        update(next_params: PortalParams) {
+          target_node = next_params.target_node
           render_in_place = typeof globalThis.document === `undefined` ||
             !document.body.contains(node)
           if (open && !render_in_place && target_node) {

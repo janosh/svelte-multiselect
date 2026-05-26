@@ -7,6 +7,7 @@
   import { DemoNav, Footer } from '$site'
   import type { Snippet } from 'svelte'
   import { Toc } from 'svelte-toc'
+  // eslint-disable-next-line import/no-unassigned-import -- global route styles
   import '../app.css'
   import { routes } from './(demos)'
 

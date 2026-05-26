@@ -11,7 +11,7 @@ export default defineConfig({
     printWidth: 90,
   },
   lint: {
-    plugins: [`oxc`, `typescript`, `unicorn`, `import`, `jest`],
+    plugins: [`oxc`, `typescript`, `unicorn`, `import`, `vitest`],
     options: {
       typeAware: true,
       typeCheck: true,
@@ -19,54 +19,89 @@ export default defineConfig({
     categories: {
       correctness: `error`,
       suspicious: `error`,
-      pedantic: `error`,
       perf: `error`,
     },
     ignorePatterns: [`build/`, `.svelte-kit/`, `package/`, `dist/`],
     rules: {
-      'no-unused-vars': `off`, // superseded by type-aware version below
+      // Extra rules not in the enabled categories
+      'no-console': [`error`, { allow: [`info`, `warn`, `error`] }],
+      'no-template-curly-in-string': `error`,
+      'no-constructor-return': `error`,
+      'default-param-last': `error`,
+      'guard-for-in': `error`,
+      'eslint-plugin-unicorn/prefer-array-find': `error`,
+      'eslint-plugin-unicorn/no-typeof-undefined': `error`,
+      'eslint-plugin-unicorn/prefer-optional-catch-binding': `error`,
+      'eslint-plugin-unicorn/no-length-as-slice-end': `error`,
+      'eslint-plugin-unicorn/prefer-node-protocol': `error`,
+      'eslint-plugin-unicorn/throw-new-error': `error`,
+      'eslint-plugin-unicorn/prefer-type-error': `error`,
+      'eslint-plugin-unicorn/prefer-date-now': `error`,
+      'eslint-plugin-unicorn/require-number-to-fixed-digits-argument': `error`,
+      'eslint-plugin-unicorn/no-useless-promise-resolve-reject': `error`,
+      'eslint-plugin-unicorn/custom-error-definition': `error`,
+      'eslint-plugin-import/no-duplicates': `error`,
+      '@typescript-eslint/no-non-null-assertion': `error`,
+      '@typescript-eslint/prefer-string-starts-ends-with': `error`,
+      '@typescript-eslint/prefer-readonly': `error`,
+      '@typescript-eslint/prefer-regexp-exec': `error`,
+      '@typescript-eslint/prefer-find': `error`,
+      '@typescript-eslint/no-deprecated': `error`,
+      '@typescript-eslint/no-misused-promises': `error`,
+      '@typescript-eslint/restrict-plus-operands': `error`,
+      '@typescript-eslint/no-dynamic-delete': `error`,
+      '@typescript-eslint/no-empty-object-type': `error`,
+      '@typescript-eslint/no-explicit-any': `error`,
+      '@typescript-eslint/no-import-type-side-effects': `error`,
+      '@typescript-eslint/no-invalid-void-type': `error`,
+      '@typescript-eslint/no-mixed-enums': `error`,
+      '@typescript-eslint/no-require-imports': `error`,
+      '@typescript-eslint/only-throw-error': `error`,
+      '@typescript-eslint/ban-ts-comment': `error`,
+      '@typescript-eslint/consistent-type-imports': `error`,
+      '@typescript-eslint/prefer-function-type': `error`,
+      '@typescript-eslint/prefer-includes': `error`,
+      '@typescript-eslint/prefer-optional-chain': `error`,
+      '@typescript-eslint/prefer-reduce-type-parameter': `error`,
+      '@typescript-eslint/prefer-ts-expect-error': `error`,
+      '@typescript-eslint/return-await': `error`,
+      '@typescript-eslint/switch-exhaustiveness-check': `error`,
+      '@typescript-eslint/unified-signatures': `error`,
+      'array-callback-return': `error`,
+      'prefer-object-has-own': `error`,
+      'eslint-plugin-promise/no-multiple-resolved': `error`,
+      'eslint-plugin-promise/no-return-in-finally': `error`,
+      'eslint-plugin-promise/param-names': `error`,
+      'eslint-plugin-promise/valid-params': `error`,
+      '@typescript-eslint/consistent-type-exports': `error`,
+      'eslint-plugin-unicorn/require-array-join-separator': `error`,
+      'no-useless-computed-key': `error`,
+      'eslint-plugin-vitest/prefer-strict-boolean-matchers': `error`,
+      'eslint-plugin-vitest/prefer-each': `error`,
+      'eslint-plugin-vitest/prefer-called-exactly-once-with': `error`,
+      'eslint-plugin-vitest/require-awaited-expect-poll': `error`,
+
       '@typescript-eslint/no-unused-vars': [
         `error`,
         { argsIgnorePattern: `^_`, varsIgnorePattern: `^_` },
       ],
-      'no-console': [`error`, { allow: [`warn`, `error`] }],
-      eqeqeq: `error`,
+      'eslint-plugin-vitest/require-mock-type-parameters': `off`, // noisy without manual type annotations
       // Svelte: oxlint can't see template usage or reactive patterns
-      'no-self-assign': `off`, // reactive `x = x`
       'no-await-in-loop': `off`, // sequential await tick() in tests
-      'no-shadow': `off`, // closures intentionally shadow
       'prefer-const': `off`, // `let` needed for $state/$derived/$bindable
       '@typescript-eslint/no-unnecessary-condition': `off`, // reactive narrowing false positives
-      '@typescript-eslint/consistent-type-imports': `off`, // template component import false positives
-      '@typescript-eslint/consistent-return': `off`, // callbacks/actions intentionally mix cleanup returns
       '@typescript-eslint/prefer-readonly-parameter-types': `off`, // noisy for DOM callbacks
-      '@typescript-eslint/strict-void-return': `off`, // vi.fn() and Svelte handlers return values
       'eslint-plugin-unicorn/consistent-function-scoping': `off`, // Svelte reactive closures
       // DOM/any propagation — oxlint lacks DOM type stubs
-      '@typescript-eslint/no-unsafe-argument': `off`,
-      '@typescript-eslint/no-unsafe-assignment': `off`,
-      '@typescript-eslint/no-unsafe-call': `off`,
-      '@typescript-eslint/no-unsafe-member-access': `off`,
-      '@typescript-eslint/no-unsafe-return': `off`,
       // Pedantic rules too noisy for this codebase
       'no-inline-comments': `off`,
       'no-confusing-void-expression': `off`,
-      'no-promise-executor-return': `off`,
       'strict-boolean-expressions': `off`, // truthiness checks are idiomatic
       'max-lines-per-function': `off`,
       'max-lines': `off`,
-      'max-depth': `off`,
-      'max-classes-per-file': `off`,
-      'sort-vars': `off`,
-      'eslint-plugin-jest/no-conditional-expect': `off`, // parameterized tests use conditionals
-      'eslint-plugin-jest/no-conditional-in-test': `off`, // parameterized tests use conditionals
-      'eslint-plugin-jest/valid-expect': `off`, // Vitest supports expect messages
-      'eslint-plugin-unicorn/no-array-callback-reference': `off`,
-      'eslint-plugin-unicorn/no-useless-undefined': `off`,
-      'eslint-plugin-unicorn/no-object-as-default-parameter': `off`,
-      'eslint-plugin-import/no-self-import': `off`, // CopyButton self-mounts in global mode
-      'eslint-plugin-import/no-unassigned-import': `off`, // CSS side-effect imports
-      'eslint-plugin-import/max-dependencies': `off`,
+      'eslint-plugin-vitest/no-conditional-expect': `off`, // parameterized tests use conditionals
+      'eslint-plugin-vitest/no-conditional-in-test': `off`, // parameterized tests use conditionals
+      'eslint-plugin-vitest/valid-expect': [`error`, { maxArgs: 2 }], // Vitest supports expect messages
     },
   },
   staged: {

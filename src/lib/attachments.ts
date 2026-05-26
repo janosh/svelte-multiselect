@@ -45,10 +45,10 @@ export interface ResizableOptions {
 // @returns Attachment function that sets up dragging on an element
 export const draggable =
   (options: DraggableOptions = {}): Attachment =>
-  (element: Element) => {
-    if (options.disabled) return
+  (element: Element): (() => void) | undefined => {
+    if (options.disabled) return undefined
 
-    if (!(element instanceof HTMLElement)) return
+    if (!(element instanceof HTMLElement)) return undefined
     const node = element
 
     // Use simple variables for maximum performance
@@ -64,7 +64,7 @@ export const draggable =
       console.warn(
         `Draggable: handle not found with selector "${options.handle_selector}"`,
       )
-      return
+      return undefined
     }
 
     function handle_mousedown(event: MouseEvent) {
@@ -145,10 +145,10 @@ export const draggable =
 // to enable proper positioning during resize. This may affect existing layouts.
 export const resizable =
   (options: ResizableOptions = {}): Attachment =>
-  (element: Element) => {
-    if (options.disabled) return
+  (element: Element): (() => void) | undefined => {
+    if (options.disabled) return undefined
 
-    if (!(element instanceof HTMLElement)) return
+    if (!(element instanceof HTMLElement)) return undefined
     const node = element
     const {
       edges = [`right`, `bottom`],
@@ -166,7 +166,7 @@ export const resizable =
       console.warn(
         `resizable: min dimensions exceed max dimensions (min_width=${min_width}, max_width=${max_width}, min_height=${min_height}, max_height=${max_height})`,
       )
-      return // Invalid config would cause clamp() to produce inconsistent results
+      return undefined // Invalid config would cause clamp() to produce inconsistent results
     }
 
     let active_edge: string | null = null
@@ -297,7 +297,7 @@ export const sortable =
       disabled = false,
     } = options
 
-    if (disabled) return
+    if (disabled) return undefined
 
     // This action can be applied to standard HTML tables to make them sortable by
     // clicking on column headers (and clicking again to toggle sorting direction)
@@ -307,13 +307,20 @@ export const sortable =
     let sort_col_idx: number
     let sort_dir = 1 // 1 = asc, -1 = desc
 
-    // Store original state for cleanup
-    const header_state: {
+    type HeaderState = {
       header: HTMLTableCellElement
       handler: () => void
       original_text: string
       original_style: string
-    }[] = []
+    }
+    // Store original state for cleanup
+    const header_state: HeaderState[] = []
+    const restore_header = ({ header, original_text, original_style }: HeaderState) => {
+      header.textContent = original_text
+      header.classList.remove(asc_class, desc_class)
+      if (original_style) header.setAttribute(`style`, original_style)
+      else header.removeAttribute(`style`)
+    }
 
     headers.forEach((header, idx) => {
       const original_text = header.textContent ?? ``
@@ -322,15 +329,9 @@ export const sortable =
 
       const click_handler = () => {
         // reset all headers to unsorted state
-        for (const { header: hdr, original_text, original_style } of header_state) {
-          hdr.textContent = original_text
-          hdr.classList.remove(asc_class, desc_class)
-          if (original_style) {
-            hdr.setAttribute(`style`, original_style)
-          } else {
-            hdr.removeAttribute(`style`)
-          }
-          hdr.style.cursor = `pointer`
+        for (const state of header_state) {
+          restore_header(state)
+          state.header.style.cursor = `pointer`
         }
         if (idx === sort_col_idx) {
           sort_dir *= -1 // reverse sort direction
@@ -381,15 +382,9 @@ export const sortable =
 
     // Return cleanup function that fully restores original state
     return () => {
-      for (const { header, handler, original_text, original_style } of header_state) {
-        header.removeEventListener(`click`, handler)
-        header.textContent = original_text
-        header.classList.remove(asc_class, desc_class)
-        if (original_style) {
-          header.setAttribute(`style`, original_style)
-        } else {
-          header.removeAttribute(`style`)
-        }
+      for (const state of header_state) {
+        state.header.removeEventListener(`click`, state.handler)
+        restore_header(state)
       }
     }
   }
@@ -412,11 +407,11 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   } = ops
 
   // abort if CSS highlight API not supported
-  if (typeof CSS === `undefined` || !CSS.highlights) return
+  if (typeof CSS === `undefined` || !CSS.highlights) return undefined
   // always clear our own highlight first
   CSS.highlights.delete(css_class)
   // if disabled or empty query, stop after cleanup
-  if (!query || disabled) return
+  if (!query || disabled) return undefined
 
   const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
     acceptNode: node_filter,
@@ -482,13 +477,15 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       return range
     })
   }
-  const ranges = text_nodes.map(find_ranges)
+  const ranges = text_nodes.map((text_node) => find_ranges(text_node))
 
   // create Highlight object from ranges and add to registry
   CSS.highlights.set(css_class, new Highlight(...ranges.flat()))
 
   // Return cleanup function
-  return () => CSS.highlights.delete(css_class)
+  return () => {
+    CSS.highlights.delete(css_class)
+  }
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
@@ -540,14 +537,15 @@ function render_tooltip_content(
 
 export const tooltip =
   (options: TooltipOptions = {}): Attachment =>
-  (node: Element) => {
+  (node: Element): (() => void) | undefined => {
     // SSR guard + element validation
-    if (typeof document === `undefined` || !(node instanceof HTMLElement)) return
+    if (typeof document === `undefined` || !(node instanceof HTMLElement))
+      return undefined
 
     const cleanup_functions: (() => void)[] = []
 
     // Handle disabled option
-    if (options.disabled === true) return
+    if (options.disabled === true) return undefined
 
     // Track current input method for 'touch-devices' option (runtime detection, not capability sniffing)
     // This allows tooltips on hybrid devices (Surface, iPad with mouse) when using mouse/stylus
@@ -562,13 +560,13 @@ export const tooltip =
       )
     }
 
-    function setup_tooltip(element: HTMLElement) {
+    function setup_tooltip(element: HTMLElement): (() => void) | undefined {
       const tooltip_attrs = [`title`, `aria-label`, `data-title`]
       // eslint-disable-next-line @typescript-eslint/prefer-nullish-coalescing -- empty string should fall through
       let content =
         ((options.content ?? element.title) || element.getAttribute(`aria-label`)) ??
         element.getAttribute(`data-title`)
-      if (!content) return
+      if (!content) return undefined
 
       // Store original title and remove it to prevent native browser tooltip.
       // This must happen even when options.content is provided, otherwise both
@@ -761,9 +759,7 @@ export const tooltip =
             } else {
               // Binary search for minimum width that maintains baseline height
               // Work in offsetWidth units, convert to style.width only when setting
-              let low = min_width,
-                high = initial_width,
-                best = initial_width
+              let [best, high, low] = [initial_width, initial_width, min_width]
               while (high - low > 1) {
                 const mid = Math.floor((low + high) / 2)
                 style.width = `${mid - box_adjust}px`
@@ -956,8 +952,9 @@ export const tooltip =
       const removal_observer = new MutationObserver((mutations) => {
         const was_removed = mutations.some((mut) =>
           Array.from(mut.removedNodes).some(
-            (node) =>
-              node === element || (node instanceof Element && node.contains(element)),
+            (removed_node) =>
+              removed_node === element ||
+              (removed_node instanceof Element && removed_node.contains(element)),
           ),
         )
         if (was_removed && current_tooltip?.owner_element === element) clear_tooltip()
@@ -996,7 +993,7 @@ export const tooltip =
       if (child_cleanup) cleanup_functions.push(child_cleanup)
     })
 
-    if (cleanup_functions.length === 0) return
+    if (cleanup_functions.length === 0) return undefined
 
     return () => {
       cleanup_functions.forEach((cleanup) => cleanup())
@@ -1012,10 +1009,10 @@ export type ClickOutsideConfig<T extends HTMLElement> = {
 
 export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) =>
-  (node: T) => {
+  (node: T): (() => void) | undefined => {
     const { callback, enabled = true, exclude = [] } = config
 
-    if (!enabled) return // Early return avoids registering unused listener
+    if (!enabled) return undefined // Early return avoids registering unused listener
 
     function handle_click(event: MouseEvent) {
       const { target } = event
@@ -1037,5 +1034,7 @@ export const click_outside =
 
     document.addEventListener(`click`, handle_click, true)
 
-    return () => document.removeEventListener(`click`, handle_click, true)
+    return () => {
+      document.removeEventListener(`click`, handle_click, true)
+    }
   }

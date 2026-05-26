@@ -247,8 +247,7 @@ test(`handles action selection and execution`, () => {
   )
   input_el.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
 
-  expect(actions_with_spies[1].action).toHaveBeenCalledOnce()
-  expect(actions_with_spies[1].action).toHaveBeenCalledWith(`action 2`)
+  expect(actions_with_spies[1].action).toHaveBeenCalledExactlyOnceWith(`action 2`)
   expect(actions_with_spies[0].action).not.toHaveBeenCalled()
   expect(actions_with_spies[2].action).not.toHaveBeenCalled()
   expect(props.open).toBe(false)
