@@ -59,7 +59,7 @@ describe(`get_label`, () => {
     [0, `0`, false],
     [{ value: 42, name: `Test` }, undefined, true],
   ])(`handles option %j correctly`, (input, expected, should_log_error) => {
-    console.error = vi.fn()
+    console.error = vi.fn<typeof console.error>()
     // @ts-expect-error testing runtime behavior with non-Option types
     const result = get_label(input)
     expect(result).toBe(expected)
@@ -105,7 +105,7 @@ describe(`get_style`, () => {
 
   test(`logs error for invalid style object without requested key`, () => {
     const option_obj = { style: { invalid_key: `some-style` } }
-    console.error = vi.fn()
+    console.error = vi.fn<typeof console.error>()
     // @ts-expect-error invalid key
     get_style(option_obj, `selected`)
     expect(console.error).toHaveBeenCalledWith(
@@ -115,13 +115,13 @@ describe(`get_style`, () => {
   })
 
   test.each([undefined, null])(`no error for style object when key is %s`, (key) => {
-    console.error = vi.fn()
+    console.error = vi.fn<typeof console.error>()
     get_style({ label: `test`, style: option_style }, key)
     expect(console.error).not.toHaveBeenCalled()
   })
 
   test(`logs error for invalid key parameter`, () => {
-    console.error = vi.fn()
+    console.error = vi.fn<typeof console.error>()
     // @ts-expect-error invalid key
     get_style({ style: `color: red;` }, `invalid_key`)
     expect(console.error).toHaveBeenCalledWith(
@@ -210,7 +210,7 @@ describe(`has_group`, () => {
 })
 
 describe(`get_option_key`, () => {
-  test.each([
+  test.each<[Option, unknown]>([
     // Object options with value - returns value directly (preserves identity)
     [{ label: `Apple`, value: 1 }, 1],
     [{ label: `Apple`, value: `uuid-123` }, `uuid-123`],
@@ -230,7 +230,7 @@ describe(`get_option_key`, () => {
     [123, 123],
     [0, 0],
   ])(`get_option_key(%j) returns %j`, (input, expected) => {
-    expect(get_option_key(input as Option)).toBe(expected)
+    expect(get_option_key(input)).toBe(expected)
   })
 
   test(`preserves object value identity`, () => {
@@ -248,7 +248,7 @@ describe(`get_option_key`, () => {
     const keys = [
       { label: `pd`, value: `shared` },
       { label: `PD`, value: `shared` },
-    ].map(get_option_key)
+    ].map((option) => get_option_key(option))
     expect(new Set(keys).size).toBe(1)
   })
 })

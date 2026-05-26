@@ -103,8 +103,8 @@ test.describe(`fuzzy matching`, () => {
     const highlighted_elements = await page.evaluate(() => {
       try {
         const highlights = globalThis.CSS?.highlights?.get?.(`sms-search-matches`)
-        // @ts-expect-error - Highlight.ranges will exist in browser
-        return highlights ? highlights.ranges.length : 0
+        // @ts-expect-error Highlight.ranges exists in browsers but is missing from TS DOM libs
+        return Number(highlights?.ranges?.length ?? 0) // eslint-disable-line @typescript-eslint/no-unsafe-member-access -- browser-only Highlight.ranges
       } catch {
         return 0
       }
@@ -1838,33 +1838,25 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
       }
 
       const stylesheets = Array.from(document.styleSheets)
+      const div_multiselect_where =
+        /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/u
+      const mark_selector = (sel: string) => {
+        // Check div.multiselect uses :where() (not just any selector containing it)
+        if (div_multiselect_where.test(sel)) {
+          results.div_multiselect = true
+        }
+        // Check ul.selected > li uses :where()
+        if (sel.includes(`:where(`) && sel.includes(`selected`) && sel.includes(`> li`)) {
+          results.ul_selected_li = true
+        }
+        // Check ul.options uses :where()
+        if (sel.includes(`:where(ul.options`)) results.ul_options = true
+      }
       for (const sheet of stylesheets) {
         try {
           const rules = Array.from(sheet.cssRules || [])
           for (const rule of rules) {
-            if (rule instanceof CSSStyleRule) {
-              const sel = rule.selectorText
-              // Check div.multiselect uses :where() (not just any selector containing it)
-              if (
-                /:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)\s*\{?$|:where\(div\.multiselect\.[a-zA-Z0-9_-]+\)$/u.test(
-                  sel,
-                )
-              ) {
-                results.div_multiselect = true
-              }
-              // Check ul.selected > li uses :where()
-              if (
-                sel.includes(`:where(`) &&
-                sel.includes(`selected`) &&
-                sel.includes(`> li`)
-              ) {
-                results.ul_selected_li = true
-              }
-              // Check ul.options uses :where()
-              if (sel.includes(`:where(ul.options`)) {
-                results.ul_options = true
-              }
-            }
+            if (rule instanceof CSSStyleRule) mark_selector(rule.selectorText)
           }
         } catch {
           // Cross-origin stylesheets will throw, ignore them

@@ -8,6 +8,14 @@ export { EXAMPLE_MODULE_PREFIX }
 
 // Edit operation: replace text at [start, end) with content
 type Edit = { start: number; end: number; content: string }
+type TransformResult = {
+  code: string
+  map: { mappings: string }
+}
+const with_empty_map = (code: string): TransformResult => ({
+  code,
+  map: { mappings: `` },
+})
 
 // Max chars to scan after property end for trailing comma/whitespace cleanup
 const TRAILING_CLEANUP_BOUND = 50 // Generous bound - typical trailing content is ", " (2 chars)
@@ -80,10 +88,8 @@ export default function live_examples_plugin(
   const resolve_plugin: Plugin = {
     name: `live-examples-resolve`,
     enforce: `pre`,
-    resolveId(id: string) {
-      if (id.includes(EXAMPLE_MODULE_PREFIX)) {
-        return to_absolute(id, cwd)
-      }
+    resolveId(id: string): string | undefined {
+      return id.includes(EXAMPLE_MODULE_PREFIX) ? to_absolute(id, cwd) : undefined
     },
   }
 
@@ -94,42 +100,42 @@ export default function live_examples_plugin(
       vite_server = server
     },
 
-    load(id: string) {
-      if (id.includes(EXAMPLE_MODULE_PREFIX)) {
-        const [base_id, query = ``] = id.split(`?`)
+    load(id: string): string | undefined {
+      if (!id.includes(EXAMPLE_MODULE_PREFIX)) return undefined
 
-        // Skip derived module requests (CSS, scripts) - let vite-plugin-svelte handle them.
-        // Must check BEFORE virtual_files lookup to avoid returning Svelte source for CSS.
-        if (/type=(style|script|module)/u.test(query)) return
+      const [base_id, query = ``] = id.split(`?`)
 
-        const src = virtual_files.get(base_id)
-        if (src) return src
+      // Skip derived module requests (CSS, scripts) - let vite-plugin-svelte handle them.
+      // Must check BEFORE virtual_files lookup to avoid returning Svelte source for CSS.
+      if (/type=(style|script|module)/u.test(query)) return undefined
 
-        // For main component requests in production, fail the build
-        const msg = `Example src not found for ${id}`
-        if (process.env.NODE_ENV === `production`) {
-          throw new Error(msg)
-        }
-        // In dev, warn and return error component to surface issue visibly
-        this.warn(msg)
-        return `<script>console.error(${JSON.stringify(
-          msg,
-        )})</script><p style="color:red">${msg}</p>`
+      const src = virtual_files.get(base_id)
+      if (src !== undefined) return src
+
+      // For main component requests in production, fail the build
+      const msg = `Example src not found for ${id}`
+      if (process.env.NODE_ENV === `production`) {
+        throw new Error(msg)
       }
+      // In dev, warn and return error component to surface issue visibly
+      this.warn(msg)
+      return `<script>console.error(${JSON.stringify(
+        msg,
+      )})</script><p style="color:red">${msg}</p>`
     },
 
-    transform(code: string, id: string) {
+    transform(code: string, id: string): TransformResult | undefined {
       // Strip query params for extension check (Vite adds ?query for HMR, styles, etc.)
       const base_id = id.split(`?`)[0]
 
       // Skip non-matching files
       const is_example_module = id.includes(EXAMPLE_MODULE_PREFIX)
       const is_markdown = extensions.some((ext) => base_id.endsWith(ext))
-      if (!is_example_module && !is_markdown) return
+      if (!is_example_module && !is_markdown) return undefined
 
       // Skip derived modules (styles, etc.) - only process the main markdown file.
       // Match both ?svelte&type= and ?inline&svelte&type= (SSR adds ?inline prefix)
-      if (id.includes(`svelte&type=`)) return { code, map: { mappings: `` } }
+      if (id.includes(`svelte&type=`)) return with_empty_map(code)
 
       if (is_markdown) {
         // Use AST for precise node location, collect edits to apply at end
@@ -143,7 +149,7 @@ export default function live_examples_plugin(
         } catch {
           // Code may contain Svelte syntax that the JS parser can't handle
           // (e.g., template blocks, special directives). Skip transformation.
-          return { code, map: { mappings: `` } }
+          return with_empty_map(code)
         }
         const edits: Edit[] = []
 
@@ -152,6 +158,27 @@ export default function live_examples_plugin(
           type: `Property`,
           key: { name: `__live_example_src` },
         })
+        const invalidate_virtual_modules = (virtual_id: string) => {
+          const server = vite_server
+          if (!server) return
+          for (const module_id of [
+            virtual_id,
+            base_id,
+            `${virtual_id}?svelte&type=style&lang.css`,
+          ]) {
+            const mod = server.moduleGraph.getModuleById(module_id)
+            if (mod) server.moduleGraph.invalidateModule(mod)
+          }
+
+          // Trigger full-reload only during HMR (not initial page load).
+          // reloadModule alone doesn't work because vite-plugin-svelte's hot-update
+          // handler skips CSS-only changes when the JS output is identical.
+          if (pending_hmr_file !== base_id) return
+          pending_hmr_file = null
+          setTimeout(() => {
+            server.hot.send({ type: `full-reload`, path: `*` })
+          }, 200)
+        }
 
         for (const [idx, prop] of src_props.entries()) {
           // Read the property value directly instead of recursively searching nested literals.
@@ -167,31 +194,9 @@ export default function live_examples_plugin(
 
           if (src !== virtual_files.get(virtual_id)) {
             virtual_files.set(virtual_id, src)
-
             // Invalidate virtual modules and schedule a deferred reload so
             // load() returns fresh content from virtual_files (which was just updated).
-            if (vite_server) {
-              const mod = vite_server.moduleGraph.getModuleById(virtual_id)
-              const parent_mod = vite_server.moduleGraph.getModuleById(base_id)
-              if (mod) vite_server.moduleGraph.invalidateModule(mod)
-              if (parent_mod) vite_server.moduleGraph.invalidateModule(parent_mod)
-
-              // Also invalidate CSS derived modules so stale CSS cache is cleared
-              const css_id = `${virtual_id}?svelte&type=style&lang.css`
-              const css_mod = vite_server.moduleGraph.getModuleById(css_id)
-              if (css_mod) vite_server.moduleGraph.invalidateModule(css_mod)
-
-              // Trigger full-reload only during HMR (not initial page load).
-              // reloadModule alone doesn't work because vite-plugin-svelte's hot-update
-              // handler skips CSS-only changes when the JS output is identical.
-              if (pending_hmr_file === base_id) {
-                pending_hmr_file = null
-                const server_ref = vite_server
-                setTimeout(() => {
-                  server_ref?.hot.send({ type: `full-reload`, path: `*` })
-                }, 200)
-              }
-            }
+            invalidate_virtual_modules(virtual_id)
           }
 
           // Remove the property (including trailing comma/whitespace)
@@ -215,7 +220,7 @@ export default function live_examples_plugin(
         for (const import_node of imports) {
           const source = import_node.source
           if (!is_record(source) || typeof source.value !== `string`) continue
-          const match = source.value.match(/___live_example___(\d+)\.svelte/u)
+          const match = /___live_example___(\d+)\.svelte/u.exec(source.value)
           if (
             match &&
             typeof source.start === `number` &&
@@ -230,13 +235,10 @@ export default function live_examples_plugin(
           }
         }
 
-        return {
-          code: apply_edits(code, edits),
-          map: { mappings: `` },
-        }
+        return with_empty_map(apply_edits(code, edits))
       }
 
-      return { code, map: { mappings: `` } }
+      return with_empty_map(code)
     },
 
     handleHotUpdate(ctx: HmrContext) {

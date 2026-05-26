@@ -1306,7 +1306,7 @@ describe(`Nav`, () => {
         target: document.body,
         props: { routes: single_dropdown_route, style },
       })
-      expect(doc_query<HTMLElement>(`nav`).style.getPropertyValue(css_var)).toBe(expected)
+      expect(doc_query(`nav`).style.getPropertyValue(css_var)).toBe(expected)
     })
   })
 })

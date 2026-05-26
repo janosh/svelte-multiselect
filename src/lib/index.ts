@@ -12,7 +12,7 @@ export { default as PrevNext } from './PrevNext.svelte'
 export { default as SubpageGrid } from './SubpageGrid.svelte'
 export { default as Toggle } from './Toggle.svelte'
 export { default as ThemeToggle } from './ThemeToggle.svelte'
-export * from './types'
+export type * from './types'
 export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'
 

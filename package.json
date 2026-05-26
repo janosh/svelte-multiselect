@@ -61,21 +61,21 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.60.1",
+    "@sveltejs/kit": "^2.61.1",
     "@sveltejs/package": "2.5.7",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@types/node": "^25.8.0",
-    "@vitest/coverage-v8": "4.1.5",
+    "@types/node": "^25.9.1",
+    "@vitest/coverage-v8": "^4.1.7",
     "@wooorm/starry-night": "^3.9.0",
     "acorn": "^8.16.0",
     "happy-dom": "^20.9.0",
     "mdsvex": "^0.12.7",
-    "svelte": "^5.55.7",
+    "svelte": "^5.55.9",
     "svelte-toc": "^0.6.3",
     "typescript": "6.0.3",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.21",
-    "vite-plus": "0.1.21",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.21"
+    "vite": "^8.0.14",
+    "vite-plus": "0.1.22",
+    "vitest": "^4.1.7"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",
@@ -91,8 +91,6 @@
     }
   },
   "overrides": {
-    "svelte": "$svelte",
-    "vite": "npm:@voidzero-dev/vite-plus-core@0.1.21",
-    "vitest": "npm:@voidzero-dev/vite-plus-test@0.1.21"
+    "svelte": "$svelte"
   }
 }

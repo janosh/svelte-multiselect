@@ -8,6 +8,7 @@ import {
   tooltip,
 } from '$lib/attachments'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { doc_query } from './index'
 
 describe(`get_html_sort_value`, () => {
   const create_element = (tag = `div`) => document.createElement(tag)
@@ -457,9 +458,7 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0 })
       trigger_tooltip(element)
 
-      const tooltip_el = document.querySelector(`.custom-tooltip`)
-      expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(Reflect.get(tooltip_el ?? {}, `owner_element`)).toBe(element)
+      expect(Reflect.get(doc_query(`.custom-tooltip`), `owner_element`)).toBe(element)
     })
 
     it.each([
@@ -473,7 +472,7 @@ describe(`tooltip`, () => {
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: get_target() })
@@ -495,7 +494,7 @@ describe(`tooltip`, () => {
       Object.defineProperty(scroll_event, `target`, { value: ancestor })
       globalThis.dispatchEvent(scroll_event)
 
-      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
       ancestor.remove()
     })
 
@@ -512,7 +511,7 @@ describe(`tooltip`, () => {
       trigger_tooltip(el2)
 
       expect(document.querySelectorAll(`.custom-tooltip`).length).toBe(1)
-      expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(`tooltip2`)
+      expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip2`)
     })
 
     it(`shows/hides on focus/blur for accessibility`, () => {
@@ -523,10 +522,10 @@ describe(`tooltip`, () => {
 
       element.dispatchEvent(new FocusEvent(`focus`, { bubbles: true }))
       vi.runAllTimers()
-      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
-      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
   })
 
@@ -610,11 +609,9 @@ describe(`tooltip`, () => {
           setup_tooltip(element, { delay: 0, placement: requested_placement ?? `bottom` })
 
           trigger_tooltip(element)
-          const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
-          expect(tooltip_el).toBeInstanceOf(HTMLElement)
-          expect(tooltip_el?.getAttribute(`data-placement`)).toBe(expected_placement)
-          const arrow = tooltip_el?.querySelector<HTMLElement>(`.custom-tooltip-arrow`)
-          expect(arrow).toBeInstanceOf(HTMLElement)
+          const tooltip_el = doc_query(`.custom-tooltip`)
+          expect(tooltip_el.getAttribute(`data-placement`)).toBe(expected_placement)
+          const arrow = doc_query(`.custom-tooltip-arrow`)
 
           const [set_side, empty_side] = arrow_offset_side[expected_placement]
           expect(arrow?.style.getPropertyValue(set_side)).toContain(`-`)
@@ -634,14 +631,14 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0, ...options })
 
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
       expect(!!document.querySelector(`.custom-tooltip`)).toBe(visible_after_leave)
 
       if (delay_ms > 0) {
         vi.advanceTimersByTime(delay_ms)
-        expect(document.querySelector(`.custom-tooltip`)).toBeFalsy()
+        expect(document.querySelector(`.custom-tooltip`)).toBeNull()
       }
     })
 
@@ -660,14 +657,14 @@ describe(`tooltip`, () => {
         new PointerEvent(`pointerdown`, { pointerType: `touch`, bubbles: true }),
       )
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeFalsy() // No tooltip on touch
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull() // No tooltip on touch
 
       // Simulate mouse input, then show tooltip
       document.dispatchEvent(
         new PointerEvent(`pointerdown`, { pointerType: `mouse`, bubbles: true }),
       )
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement) // Tooltip works with mouse
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement) // Tooltip works with mouse
 
       cleanup?.()
     })
@@ -682,7 +679,7 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0 })
 
       trigger_tooltip(element)
-      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       document.dispatchEvent(new KeyboardEvent(`keydown`, { key }))
       expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_remain)
@@ -699,9 +696,8 @@ describe(`tooltip`, () => {
 
       trigger_tooltip(element)
 
-      const tooltip_el = document.querySelector(`.custom-tooltip`)
-      expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(!!tooltip_el?.querySelector(`.custom-tooltip-arrow`)).toBe(expect_arrow)
+      const tooltip_el = doc_query(`.custom-tooltip`)
+      expect(!!tooltip_el.querySelector(`.custom-tooltip-arrow`)).toBe(expect_arrow)
     })
 
     it(`manages aria-describedby on show/hide`, () => {
@@ -713,10 +709,10 @@ describe(`tooltip`, () => {
       expect(element.hasAttribute(`aria-describedby`)).toBe(false)
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector(`.custom-tooltip`)
-      expect(tooltip_el?.getAttribute(`role`)).toBe(`tooltip`)
-      expect(tooltip_el?.id).toMatch(/^tooltip-/u)
-      expect(element.getAttribute(`aria-describedby`)).toBe(tooltip_el?.id)
+      const tooltip_el = doc_query(`.custom-tooltip`)
+      expect(tooltip_el.getAttribute(`role`)).toBe(`tooltip`)
+      expect(tooltip_el.id).toMatch(/^tooltip-/u)
+      expect(element.getAttribute(`aria-describedby`)).toBe(tooltip_el.id)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
       expect(element.hasAttribute(`aria-describedby`)).toBe(false)
@@ -733,9 +729,7 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0, offset, placement: `bottom` })
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
-      expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(tooltip_el?.style.top).toBe(`${expected_top}px`)
+      expect(doc_query(`.custom-tooltip`).style.top).toBe(`${expected_top}px`)
     })
 
     it.each([
@@ -754,9 +748,7 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0, allow_html })
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
-      expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(tooltip_el?.textContent).toBe(expected_text)
+      expect(doc_query(`.custom-tooltip`).textContent).toBe(expected_text)
     })
 
     it.each([
@@ -773,8 +765,7 @@ describe(`tooltip`, () => {
 
       trigger_tooltip(element)
       expect(sanitizer).toHaveBeenCalledTimes(call_count)
-      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
-      expect(tooltip_el?.textContent).toBe(expected_text)
+      expect(doc_query(`.custom-tooltip`).textContent).toBe(expected_text)
     })
 
     it(`tooltip structure: .tooltip-content span and display: inline-block`, () => {
@@ -784,9 +775,9 @@ describe(`tooltip`, () => {
       setup_tooltip(element, { delay: 0 })
 
       trigger_tooltip(element)
-      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
-      expect(tooltip_el?.style.display).toBe(`inline-block`)
-      const content_span = tooltip_el?.querySelector(`.tooltip-content`)
+      const tooltip_el = doc_query(`.custom-tooltip`)
+      expect(tooltip_el.style.display).toBe(`inline-block`)
+      const content_span = tooltip_el.querySelector(`.tooltip-content`)
       expect(content_span?.tagName).toBe(`SPAN`)
       expect(content_span?.textContent).toBe(`Test`)
     })
@@ -837,9 +828,9 @@ describe(`tooltip`, () => {
         restore()
       }
 
-      const tooltip_el = document.querySelector<HTMLElement>(`.custom-tooltip`)
-      expect(tooltip_el).toBeInstanceOf(HTMLElement)
-      expect(tooltip_el?.style.getPropertyValue(`--tooltip-bg`)).toBe(`red`)
+      expect(doc_query(`.custom-tooltip`).style.getPropertyValue(`--tooltip-bg`)).toBe(
+        `red`,
+      )
       const tooltip_css = find_tooltip_css(css_texts)
       expect(tooltip_css).toContain(`var(--tooltip-bg,`)
     })

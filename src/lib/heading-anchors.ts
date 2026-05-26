@@ -55,12 +55,11 @@ export function heading_ids() {
         seen_ids.set(base_id, count + 1)
         return count ? `${base_id}-${count}` : base_id
       }
-
       // Pass 1: Match headings at start of line (for .svelte files)
       result = result.replace(
         heading_regex_line_start,
         (match, indent, tag, attrs, inner) => {
-          const id = process_heading(attrs, inner)
+          const id = process_heading(String(attrs), String(inner))
           return id ? `${indent}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
         },
       )
@@ -69,7 +68,7 @@ export function heading_ids() {
       result = result.replace(
         heading_regex_after_tag,
         (match, gt, space, tag, attrs, inner) => {
-          const id = process_heading(attrs, inner)
+          const id = process_heading(String(attrs), String(inner))
           return id ? `${gt}${space}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
         },
       )
@@ -129,8 +128,8 @@ const get_default_headings = (node: Element): Element[] => {
 // Uses MutationObserver to handle dynamically added headings
 export const heading_anchors =
   (options: HeadingAnchorsOptions = {}) =>
-  (node: Element) => {
-    if (typeof document === `undefined`) return
+  (node: Element): (() => void) | undefined => {
+    if (typeof document === `undefined`) return undefined
 
     const icon_svg = options.icon_svg ?? link_svg
     const selector = options.selector

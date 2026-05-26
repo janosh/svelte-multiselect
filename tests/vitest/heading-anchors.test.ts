@@ -210,7 +210,7 @@ describe(`heading_anchors attachment`, () => {
     it(`skips headings with no usable text`, () => {
       const container = create_container(`<h2></h2>`)
       heading_anchors()(container)
-      expect(container.querySelector(`h2 a`)).toBeFalsy()
+      expect(container.querySelector(`h2 a`)).toBeNull()
     })
   })
 
@@ -278,7 +278,7 @@ describe(`heading_anchors attachment`, () => {
       heading.id = `after`
       container.append(heading)
       await tick()
-      expect(heading.querySelector(anchor_selector)).toBeFalsy()
+      expect(heading.querySelector(anchor_selector)).toBeNull()
     })
   })
 

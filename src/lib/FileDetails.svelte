@@ -89,10 +89,11 @@
     str.replaceAll(`&`, `&amp;`).replaceAll(`<`, `&lt;`).replaceAll(`>`, `&gt;`)
   const hast_to_html = (node: HastNode): string => {
     if (node.type === `text`) return escape_html(node.value ?? ``)
-    if (node.type === `root`) return (node.children ?? []).map(hast_to_html).join(``)
+    if (node.type === `root`)
+      return (node.children ?? []).map((child) => hast_to_html(child)).join(``)
     const cls = node.properties?.className?.join(` `)
     const attrs = cls ? ` class="${cls}"` : ``
-    const inner = (node.children ?? []).map(hast_to_html).join(``)
+    const inner = (node.children ?? []).map((child) => hast_to_html(child)).join(``)
     return `<${node.tagName}${attrs}>${inner}</${node.tagName}>`
   }
   async function highlight(code: string, lang: string): Promise<string> {

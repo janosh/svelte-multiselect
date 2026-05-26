@@ -2,7 +2,8 @@
   import type { Snippet } from 'svelte'
   import { mount, onDestroy, unmount } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import CopyButton from './CopyButton.svelte'
+  // eslint-disable-next-line import/no-self-import -- global mode mounts this component onto external code blocks
+  import Self from './CopyButton.svelte'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
 
@@ -73,15 +74,14 @@
         // If a stale button from a previous effect pass still exists, remove it synchronously
         // so this pass can mount a fresh button with updated props/callbacks.
         if (!already_mounted) pre.querySelector(`[data-sms-copy]`)?.remove()
-        const content = code.textContent ?? ``
         if (
           !pre.querySelector(`[data-sms-copy]`) &&
           !(skip_sel && pre.querySelector(skip_sel))
         ) {
-          const mounted_copy_button = mount(CopyButton, {
+          const mounted_copy_button = mount(Self, {
             target: pre,
             props: {
-              content,
+              content: code.textContent ?? ``,
               as,
               labels,
               disabled,

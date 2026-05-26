@@ -18,12 +18,13 @@ const escape_html_text = (str: string): string =>
 // Convert HAST to HTML string (simplified - only handles what starry-night outputs)
 export const hast_to_html = (node: HastNode): string => {
   if (node.type === `text`) return escape_html_text(node.value ?? ``)
-  if (node.type === `root`) return (node.children ?? []).map(hast_to_html).join(``)
+  if (node.type === `root`)
+    return (node.children ?? []).map((child) => hast_to_html(child)).join(``)
   const { tagName, properties, children } = node
   const cls_val = properties?.className
   const cls = Array.isArray(cls_val) ? cls_val.join(` `) : undefined
   const attrs = cls ? ` class="${cls}"` : ``
-  const inner = children?.map(hast_to_html).join(``) ?? ``
+  const inner = children?.map((child) => hast_to_html(child)).join(``) ?? ``
   return `<${tagName}${attrs}>${inner}</${tagName}>`
 }
 
