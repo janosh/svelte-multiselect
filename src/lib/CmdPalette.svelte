@@ -102,10 +102,16 @@
   :where(dialog) {
     position: fixed;
     top: 30%;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    margin: 0 auto;
     border: none;
     padding: 0;
     background-color: transparent;
     display: flex;
+    /* Let command results/popovers escape the dialog; default clipping hides suggestions. */
+    overflow: visible;
     color: light-dark(#222, #eee);
     z-index: var(--cmd-palette-z-index, 10);
     font-size: 2.4ex;
