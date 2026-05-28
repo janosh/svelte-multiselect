@@ -432,6 +432,30 @@ test(`dialog remains functional when open`, () => {
   expect(doc_query(`dialog div.multiselect`)).toBeInstanceOf(HTMLDivElement)
 })
 
+test(`lets command palette dropdown overflow dialog box`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: mock_actions, fade_duration: 0 },
+  })
+  await tick()
+
+  const dialog = doc_query<HTMLDialogElement>(`dialog`)
+  const dialog_style = getComputedStyle(dialog)
+  expect(dialog_style.position).toBe(`fixed`)
+  expect(dialog_style.left).toBe(`0px`)
+  expect(dialog_style.right).toBe(`0px`)
+  expect(dialog_style.overflow).toBe(`visible`)
+
+  const options_list = doc_query<HTMLUListElement>(`dialog ul.options`)
+  expect(dialog.contains(options_list)).toBe(true)
+  expect(options_list.classList.contains(`hidden`)).toBe(false)
+  expect(options_list.getAttribute(`role`)).toBe(`listbox`)
+  expect(options_list.getAttribute(`aria-expanded`)).toBe(`true`)
+  expect(options_list.querySelectorAll(`li[role="option"]`)).toHaveLength(
+    mock_actions.length,
+  )
+})
+
 test.each([
   {
     fuzzy: true,

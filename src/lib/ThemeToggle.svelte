@@ -85,11 +85,13 @@
     display: inline-flex;
     place-items: center;
     place-content: center;
-    line-height: 1;
-    background: transparent;
-    border: none;
-    padding: 4pt;
-    border-radius: 50%;
+    width: var(--theme-toggle-size, 1.8em);
+    height: var(--theme-toggle-size, 1.8em);
+    line-height: var(--theme-toggle-line-height, 1);
+    background: var(--theme-toggle-background, transparent);
+    border: var(--theme-toggle-border, none);
+    box-sizing: border-box;
+    border-radius: var(--theme-toggle-border-radius, 50%);
     cursor: pointer;
   }
   button:hover {
