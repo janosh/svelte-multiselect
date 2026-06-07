@@ -1,5 +1,5 @@
 import type { Attachment } from 'svelte/attachments'
-import { get_uuid } from './utils'
+import { fuzzy_match_indices, get_uuid } from './utils'
 
 // Re-export get_uuid for backwards compatibility
 export { get_uuid }
@@ -432,32 +432,15 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     const search = query.toLowerCase()
 
     if (fuzzy) {
-      // Fuzzy highlighting: highlight individual characters that match in order
-      const matching_indices: number[] = []
-
-      let search_idx = 0
-      let target_idx = 0
-
-      // Find matching character indices
-      while (search_idx < search.length && target_idx < text.length) {
-        if (search[search_idx] === text[target_idx]) {
-          matching_indices.push(target_idx)
-          search_idx++
-        }
-        target_idx++
-      }
-
-      // Only create ranges if we found all characters in order
-      if (search_idx === search.length) {
-        return matching_indices.map((index) => {
-          const range = new Range()
-          range.setStart(el, index)
-          range.setEnd(el, index + 1) // highlight single character
-          return range
-        })
-      }
-
-      return []
+      // Fuzzy highlighting: highlight individual characters that match in order.
+      // null means not all characters matched, so highlight nothing.
+      const matching_indices = fuzzy_match_indices(search, text)
+      return (matching_indices ?? []).map((index) => {
+        const range = new Range()
+        range.setStart(el, index)
+        range.setEnd(el, index + 1) // highlight single character
+        return range
+      })
     }
     // Substring highlighting: highlight consecutive substrings
     const indices = []
