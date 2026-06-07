@@ -1,6 +1,8 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes, HTMLDetailsAttributes } from 'svelte/elements'
+  import type { HastNode } from './live-examples/hast'
+  import { escape_html_text, hast_to_html } from './live-examples/hast'
 
   type File = {
     title: string
@@ -42,15 +44,21 @@
     }
   })
 
-  // Check if any nodes are open (for button text)
-  const any_open = $derived(node_refs.some((node) => node?.open))
+  // Whether any <details> is open (for button text). The DOM `open` property is
+  // not reactive, so this is $state synced from the native toggle event (which
+  // fires for both user clicks and programmatic changes) plus toggle_all below.
+  let any_open = $state(false)
+  const sync_any_open = () => {
+    any_open = node_refs.some((node) => node?.open)
+  }
 
-  function toggle_all() { // Read current DOM state fresh (can't use $derived any_open here - it may be stale)
+  function toggle_all() {
     const should_close = node_refs.some((node) => node?.open)
     for (const node of node_refs) {
       if (!node) continue
       node.open = !should_close
     }
+    sync_any_open()
   }
 
   // Map file extensions that differ from their starry-night language flag
@@ -73,29 +81,13 @@
   const resolve_lang = (file: File): string =>
     file.language ?? lang_from_title(file.title) ?? default_lang
 
-  // Lazy-loaded syntax highlighter using starry-night (CSS already loaded in app.css)
-  interface HastNode {
-    type: string
-    value?: string
-    tagName?: string
-    properties?: { className?: string[] }
-    children?: HastNode[]
-  }
+  // Lazy-loaded syntax highlighter using starry-night (CSS already loaded in app.css).
+  // Deliberately does NOT import from ./live-examples/highlighter.ts, which
+  // eagerly initializes starry-night with all grammars at module load.
   let highlighter: {
     highlight: (code: string, scope: string) => HastNode
     flagToScope: (flag: string) => string | undefined
   } | undefined
-  const escape_html = (str: string): string =>
-    str.replaceAll(`&`, `&amp;`).replaceAll(`<`, `&lt;`).replaceAll(`>`, `&gt;`)
-  const hast_to_html = (node: HastNode): string => {
-    if (node.type === `text`) return escape_html(node.value ?? ``)
-    if (node.type === `root`)
-      return (node.children ?? []).map((child) => hast_to_html(child)).join(``)
-    const cls = node.properties?.className?.join(` `)
-    const attrs = cls ? ` class="${cls}"` : ``
-    const inner = (node.children ?? []).map((child) => hast_to_html(child)).join(``)
-    return `<${node.tagName}${attrs}>${inner}</${node.tagName}>`
-  }
   async function highlight(code: string, lang: string): Promise<string> {
     if (!highlighter) {
       const { createStarryNight, common } = await import(`@wooorm/starry-night`)
@@ -104,7 +96,7 @@
       highlighter = await createStarryNight([...common, source_svelte])
     }
     const scope = highlighter.flagToScope(lang)
-    if (!scope) return escape_html(code)
+    if (!scope) return escape_html_text(code)
     return hast_to_html(highlighter.highlight(code, scope))
   }
 
@@ -138,7 +130,14 @@
     {@const language = resolve_lang(file)}
     {@const cache_key = `${language}:${content}`}
     <li>
-      <details bind:this={node_refs[idx]} {...details_props}>
+      <details
+        bind:this={node_refs[idx]}
+        {...details_props}
+        ontoggle={(event) => {
+          sync_any_open()
+          details_props?.ontoggle?.(event)
+        }}
+      >
         {#if title || title_snippet}
           <summary>
             {#if title_snippet}
@@ -168,5 +167,18 @@
   pre {
     position: relative;
     background: var(--pre-bg, light-dark(#f3f5f8, rgba(0, 0, 0, 0.3)));
+  }
+  /* the label is emitted inline before <code>; pre is white-space: pre, so it
+  must be taken out of flow or it indents the first code line */
+  .lang-label {
+    position: absolute;
+    bottom: 2px;
+    right: 6px;
+    font-size: 0.65rem;
+    opacity: 0.35;
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
   }
 </style>
