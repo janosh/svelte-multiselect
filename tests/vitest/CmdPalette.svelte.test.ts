@@ -450,7 +450,8 @@ test(`lets command palette dropdown overflow dialog box`, async () => {
   expect(dialog.contains(options_list)).toBe(true)
   expect(options_list.classList.contains(`hidden`)).toBe(false)
   expect(options_list.getAttribute(`role`)).toBe(`listbox`)
-  expect(options_list.getAttribute(`aria-expanded`)).toBe(`true`)
+  // aria-expanded belongs on the combobox input, not the listbox (invalid ARIA there)
+  expect(options_list.hasAttribute(`aria-expanded`)).toBe(false)
   expect(options_list.querySelectorAll(`li[role="option"]`)).toHaveLength(
     mock_actions.length,
   )
