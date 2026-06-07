@@ -1,5 +1,5 @@
 import { CmdPalette } from '$lib'
-import { mount, tick } from 'svelte'
+import { flushSync, mount, tick } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
@@ -450,7 +450,8 @@ test(`lets command palette dropdown overflow dialog box`, async () => {
   expect(dialog.contains(options_list)).toBe(true)
   expect(options_list.classList.contains(`hidden`)).toBe(false)
   expect(options_list.getAttribute(`role`)).toBe(`listbox`)
-  expect(options_list.getAttribute(`aria-expanded`)).toBe(`true`)
+  // aria-expanded belongs on the combobox input, not the listbox (invalid ARIA there)
+  expect(options_list.hasAttribute(`aria-expanded`)).toBe(false)
   expect(options_list.querySelectorAll(`li[role="option"]`)).toHaveLength(
     mock_actions.length,
   )
@@ -793,3 +794,205 @@ test(`collapsedGroups prop controls which groups start collapsed`, async () => {
   )
   expect(visible_options.length).toBe(2)
 })
+
+// dropdown option labels in display order (used by shortcut/recents tests below)
+const option_labels = () =>
+  Array.from(document.querySelectorAll(`li[role='option']`), (li) =>
+    li.textContent?.trim(),
+  )
+
+const press_ctrl_shift = (key: string) =>
+  globalThis.dispatchEvent(
+    new KeyboardEvent(`keydown`, { key, ctrlKey: true, shiftKey: true }),
+  )
+
+test(`renders shortcut kbd hints and descriptions in options`, async () => {
+  const actions = [
+    {
+      label: `save file`,
+      action: vi.fn(),
+      shortcut: `ctrl+shift+s`,
+      description: `Write buffer to disk`,
+    },
+    { label: `quit`, action: vi.fn() },
+  ]
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions, fade_duration: 0 },
+  })
+  await tick()
+
+  const kbd_parts = Array.from(
+    document.querySelectorAll(`li[role='option'] .cmd-shortcut kbd`),
+    (kbd) => kbd.textContent,
+  )
+  expect(kbd_parts).toEqual([`Ctrl`, `⇧`, `S`])
+  expect(doc_query(`.cmd-description`).textContent).toBe(`Write buffer to disk`)
+  // action without shortcut renders no kbd
+  const quit_li = Array.from(document.querySelectorAll(`li[role='option']`)).find((li) =>
+    li.textContent?.includes(`quit`),
+  )
+  expect(quit_li?.querySelector(`kbd`)).toBeNull()
+})
+
+test(`plain actions without shortcut/description use default option rendering`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: { open: true, actions: mock_actions, fade_duration: 0 },
+  })
+  await tick()
+  expect(document.querySelector(`.cmd-action`)).toBeNull()
+})
+
+test.each([
+  { desc: `fires when closed`, open: false, global_shortcuts: true, calls: 1 },
+  { desc: `disabled via prop`, open: false, global_shortcuts: false, calls: 0 },
+  { desc: `inactive while open`, open: true, global_shortcuts: true, calls: 0 },
+  {
+    desc: `ignores wrong modifiers`,
+    open: false,
+    global_shortcuts: true,
+    calls: 0,
+    shift: false,
+  },
+])(
+  `global action shortcuts: $desc`,
+  async ({ open, global_shortcuts, calls, shift = true }) => {
+    const spy = vi.fn()
+    const actions = [{ label: `save`, action: spy, shortcut: `ctrl+shift+s` }]
+    mount(CmdPalette, {
+      target: document.body,
+      props: { actions, open, global_shortcuts, fade_duration: 0 },
+    })
+    await tick()
+
+    globalThis.dispatchEvent(
+      new KeyboardEvent(`keydown`, {
+        key: `s`,
+        ctrlKey: true,
+        shiftKey: shift,
+        cancelable: true,
+      }),
+    )
+    await tick()
+
+    expect(spy).toHaveBeenCalledTimes(calls)
+    if (calls > 0) expect(spy).toHaveBeenCalledWith(`save`)
+  },
+)
+
+test(`recent_actions_key ranks recently triggered actions first and persists them`, async () => {
+  const storage_key = `test-cmd-recents`
+  const actions = [`alpha`, `beta`, `gamma`].map((label) => ({
+    label,
+    action: vi.fn(),
+  }))
+  const props = $state({
+    open: true,
+    actions,
+    recent_actions_key: storage_key,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  // no recents yet: original order
+  expect(option_labels()).toEqual([`alpha`, `beta`, `gamma`])
+
+  // trigger gamma via keyboard (ArrowDown x3 + Enter)
+  const input_el = doc_query(`dialog div.multiselect input[autocomplete]`)
+  for (let idx = 0; idx < 3; idx++) {
+    input_el.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+    )
+  }
+  input_el.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+
+  expect(actions[2].action).toHaveBeenCalledExactlyOnceWith(`gamma`)
+  expect(props.open).toBe(false) // palette closed after trigger
+  expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`gamma`])
+
+  // reopen: gamma now ranks first, rest keep original order
+  props.open = true
+  await tick()
+  expect(option_labels()).toEqual([`gamma`, `alpha`, `beta`])
+  localStorage.removeItem(storage_key)
+})
+
+// pre-existing recents-storage contents -> dropdown order on initial open
+test.each([
+  [
+    `valid recents rank first`,
+    JSON.stringify([`beta`, `gamma`]),
+    [`beta`, `gamma`, `alpha`],
+  ],
+  [`unparsable JSON is ignored`, `not valid json{{{`, [`alpha`, `beta`, `gamma`]],
+  [`non-array JSON is ignored`, `{"not":"an array"}`, [`alpha`, `beta`, `gamma`]],
+  [`non-string entries are ignored`, `[1,2,3]`, [`alpha`, `beta`, `gamma`]],
+])(`recents storage on initial open: %s`, async (_desc, stored, expected_order) => {
+  const storage_key = `test-cmd-stored-recents`
+  localStorage.setItem(storage_key, stored)
+  const actions = [`alpha`, `beta`, `gamma`].map((label) => ({
+    label,
+    action: vi.fn(),
+  }))
+  // flushSync so render errors from bad storage data fail this test, not the suite
+  flushSync(() => {
+    mount(CmdPalette, {
+      target: document.body,
+      props: { open: true, actions, recent_actions_key: storage_key, fade_duration: 0 },
+    })
+  })
+  await tick()
+
+  expect(option_labels()).toEqual(expected_order)
+  localStorage.removeItem(storage_key)
+})
+
+// global shortcut presses (while closed) persist the triggered action to recents
+// (that the action also fires is covered by `global action shortcuts: fires when closed`)
+test.each([
+  {
+    desc: `records the triggered action`,
+    actions: [
+      { label: `alpha`, action: vi.fn() },
+      { label: `hotkeyed`, action: vi.fn(), shortcut: `ctrl+shift+h` },
+    ],
+    max_recent: undefined as number | undefined,
+    keys: [`h`],
+    expected: [`hotkeyed`],
+  },
+  {
+    desc: `max_recent caps recents at the most-recently triggered`,
+    actions: [
+      { label: `first`, action: vi.fn(), shortcut: `ctrl+shift+1` },
+      { label: `second`, action: vi.fn(), shortcut: `ctrl+shift+2` },
+    ],
+    max_recent: 1,
+    keys: [`1`, `2`],
+    expected: [`second`],
+  },
+])(
+  `global shortcut recents persistence: $desc`,
+  async ({ actions, max_recent, keys, expected }) => {
+    const storage_key = `test-cmd-recents-${expected.join(`-`)}`
+    mount(CmdPalette, {
+      target: document.body,
+      props: {
+        actions,
+        open: false,
+        recent_actions_key: storage_key,
+        max_recent,
+        fade_duration: 0,
+      },
+    })
+    await tick()
+
+    for (const key of keys) press_ctrl_shift(key)
+    await tick()
+
+    expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual(expected)
+    localStorage.removeItem(storage_key)
+  },
+)

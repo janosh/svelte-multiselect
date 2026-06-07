@@ -2,9 +2,11 @@
 import { parse } from 'acorn'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
-import type { HmrContext, Plugin, ViteDevServer } from 'vite-plus'
+import type { HmrContext, Plugin, ViteDevServer } from 'vite'
 import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
-export { EXAMPLE_MODULE_PREFIX }
+
+// Matches import paths emitted by mdsvex-transform, e.g. ___live_example___0.svelte
+const RE_EXAMPLE_IMPORT = new RegExp(`${EXAMPLE_MODULE_PREFIX}(\\d+)\\.svelte`, `u`)
 
 // Edit operation: replace text at [start, end) with content
 type Edit = { start: number; end: number; content: string }
@@ -220,7 +222,7 @@ export default function live_examples_plugin(
         for (const import_node of imports) {
           const source = import_node.source
           if (!is_record(source) || typeof source.value !== `string`) continue
-          const match = /___live_example___(\d+)\.svelte/u.exec(source.value)
+          const match = RE_EXAMPLE_IMPORT.exec(source.value)
           if (
             match &&
             typeof source.start === `number` &&

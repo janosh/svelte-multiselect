@@ -38,7 +38,11 @@
   })
 
   $effect.pre(() => {
-    if (wiggle) setTimeout(() => (wiggle = false), duration)
+    if (!wiggle) return
+    const timer = setTimeout(() => (wiggle = false), duration)
+    // cancel pending timer on re-trigger or unmount so an old timer can't cut
+    // a new wiggle short or write to state after destroy
+    return () => clearTimeout(timer)
   })
 </script>
 

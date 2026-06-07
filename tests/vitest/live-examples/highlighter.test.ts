@@ -77,6 +77,14 @@ describe(`hast_to_html`, () => {
     }
     expect(hast_to_html(node)).toBe(expected)
   })
+
+  test.each([
+    [{ type: `comment`, value: `a comment` }, ``],
+    [{ type: `doctype` }, ``],
+    [{ type: `raw`, value: `<b>raw</b>` }, ``],
+  ])(`skips non-element node %j instead of emitting <undefined>`, (node, expected) => {
+    expect(hast_to_html(node)).toBe(expected)
+  })
 })
 
 describe(`starry_night_highlighter`, () => {

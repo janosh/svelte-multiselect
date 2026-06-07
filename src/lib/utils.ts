@@ -44,12 +44,12 @@ export const get_option_key = (opt: Option): unknown =>
 // If the style is a string, it will be returned as is
 export function get_style(
   option: Option,
-  key: `selected` | `option` | null | undefined = null,
+  key: `selected` | `option` | null | undefined = null, // undefined falls back to null via default
 ) {
-  if (key === undefined) key = null
   let css_str = ``
-  const valid_key = key === null || key === `selected` || key === `option`
-  if (!valid_key) console.error(`MultiSelect: Invalid key=${key} for get_style`)
+  if (key !== null && key !== `selected` && key !== `option`) {
+    console.error(`MultiSelect: Invalid key=${String(key)} for get_style`)
+  }
   if (typeof option === `object` && option.style) {
     if (typeof option.style === `string`) css_str = option.style
     if (typeof option.style === `object`) {
@@ -58,7 +58,8 @@ export function get_style(
     }
   }
   // ensure css_str ends with a semicolon
-  if (css_str.trim() && !css_str.trim().endsWith(`;`)) css_str += `;`
+  const trimmed = css_str.trim()
+  if (trimmed && !trimmed.endsWith(`;`)) css_str += `;`
   return css_str
 }
 
@@ -114,6 +115,28 @@ export function values_equal(val1: unknown, val2: unknown): boolean {
   return false
 }
 
+// Case-insensitive subsequence match: returns the indices in target_text where
+// the characters of search_text appear in order, or null if not all characters
+// can be matched. An empty search matches with no indices.
+export function fuzzy_match_indices(
+  search_text: string,
+  target_text: string,
+): number[] | null {
+  const [search, target] = [search_text.toLowerCase(), target_text.toLowerCase()]
+  const indices: number[] = []
+  let [search_idx, target_idx] = [0, 0]
+
+  while (search_idx < search.length && target_idx < target.length) {
+    if (search[search_idx] === target[target_idx]) {
+      indices.push(target_idx)
+      search_idx++
+    }
+    target_idx++
+  }
+
+  return search_idx === search.length ? indices : null
+}
+
 // Fuzzy string matching function
 // Returns true if the search string can be found as a subsequence in the target string
 // e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
@@ -127,17 +150,7 @@ export function fuzzy_match(search_text: string, target_text: string): boolean {
   )
     return false
 
-  if (!search_text) return true
-  if (!target_text) return false
-
-  const [search, target] = [search_text.toLowerCase(), target_text.toLowerCase()]
-
-  let [search_idx, target_idx] = [0, 0]
-
-  while (search_idx < search.length && target_idx < target.length) {
-    if (search[search_idx] === target[target_idx]) search_idx++
-    target_idx++
-  }
-
-  return search_idx === search.length
+  // empty search matches everything, empty target matches nothing - both already
+  // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
+  return fuzzy_match_indices(search_text, target_text) !== null
 }

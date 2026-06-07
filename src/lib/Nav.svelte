@@ -64,8 +64,9 @@
   let hide_timeout: ReturnType<typeof setTimeout> | null = null
   const panel_id = `nav-menu-${get_uuid()}`
 
-  // Track previous is_open state for callbacks
-  let prev_is_open = $state(false)
+  // Track previous is_open state for callbacks. Deliberately not $state: it's
+  // written inside the $effect below, which would re-trigger the effect if reactive.
+  let prev_is_open = false
 
   // Detect touch device and handle responsive breakpoint
   $effect(() => {
@@ -470,13 +471,15 @@
           {/snippet}
           <span class:align-right={is_right}>
             {@render item({
-          route: parsed_route,
-          href: parsed_route.href,
-          label: formatted.label,
-          is_active,
-          is_dropdown,
-          render_default: render_default_snippet,
-        })}
+              route: parsed_route,
+              href: parsed_route.href,
+              label: formatted.label,
+              is_active,
+              is_dropdown,
+              // svelte2tsx types inline snippets as `() => ReturnType<Snippet>`, whose
+              // brand doesn't unify with Snippet (svelte#13670); plain assertion suffices
+              render_default: render_default_snippet as Snippet,
+            })}
           </span>
         {:else}
           <span class:align-right={is_right}>

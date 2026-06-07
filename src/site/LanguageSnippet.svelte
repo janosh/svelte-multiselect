@@ -26,7 +26,8 @@
   {#if idx !== undefined}
     <strong>{idx + 1}</strong>
   {/if}
-  <img {src} {height} alt={option} {hidden} onerror={() => (hidden = true)} />
+  <!-- style:height since the HTML height attribute only allows integers, not CSS lengths like 20px -->
+  <img {src} style:height alt={option} {hidden} onerror={() => (hidden = true)} />
   {option}
 </span>
 

@@ -1,6 +1,6 @@
 import { Wiggle } from '$lib'
 import type { ComponentProps } from 'svelte'
-import { mount } from 'svelte'
+import { mount, unmount } from 'svelte'
 import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`Wiggle`, () => {
@@ -69,6 +69,15 @@ describe(`Wiggle`, () => {
 
     vi.advanceTimersByTime(500)
     expect(get_value()).toBe(false)
+  })
+
+  test(`clears pending reset timer on unmount instead of writing to destroyed state`, () => {
+    const { props, get_value } = create_bindable_wiggle(true, { duration: 200 })
+    const component = mount(Wiggle, { target: document.body, props })
+
+    void unmount(component)
+    vi.advanceTimersByTime(500)
+    expect(get_value()).toBe(true) // timer was cancelled, no write-after-destroy
   })
 
   test(`resets wiggle immediately with duration=0`, () => {

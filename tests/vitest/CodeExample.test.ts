@@ -72,6 +72,25 @@ test(`collapsed pre has no padding or margin to avoid layout space leak`, () => 
   expect(style.overflow).toBe(`hidden`)
 })
 
+test.each([`typescript`, `css`, `python`])(
+  `lang-label renders %s out of flow so it can't indent the first code line`,
+  (lang) => {
+    mount(CodeExample, { target: document.body, props: { src, meta: { lang } } })
+
+    const label = doc_query<HTMLSpanElement>(`.lang-label`)
+    expect(label.textContent).toBe(lang)
+    // pre is white-space: pre, so an in-flow label shifts the first code line right.
+    // absolute positioning takes it out of flow (regression guard, see CodeExample.svelte)
+    expect(getComputedStyle(label).position).toBe(`absolute`)
+  },
+)
+
+test(`lang-label is omitted when meta.lang is unset`, () => {
+  mount(CodeExample, { target: document.body, props: { src } })
+
+  expect(document.querySelector(`.lang-label`)).toBeNull()
+})
+
 test(`dynamically added pre > code elements get copy buttons applied`, async () => {
   // Mount a CopyButton with global enabled to activate MutationObserver
   const copy_button_component = mount_global_copy_button()

@@ -47,12 +47,26 @@ test.each([
   // no extension falls back to default_lang
   { file: { title: `Makefile`, content: `all:` }, expected_lang: `svelte` },
 ])(
-  `pre element gets language-$expected_lang class for "$file.title"`,
+  `pre gets language-$expected_lang class and lang-label for "$file.title"`,
   ({ file, expected_lang }) => {
     mount(FileDetails, { target: document.body, props: { files: [file] } })
     expect(doc_query(`pre`).className).toContain(`language-${expected_lang}`)
+    // the label must surface the resolved language, not the raw extension
+    expect(doc_query(`.lang-label`).textContent).toBe(expected_lang)
   },
 )
+
+test(`lang-label is positioned out of flow so it can't indent code`, () => {
+  mount(FileDetails, {
+    target: document.body,
+    props: { files: [{ title: `util.ts`, content: `const x = 1` }] },
+  })
+
+  const label = doc_query<HTMLSpanElement>(`.lang-label`)
+  // pre is white-space: pre, so an in-flow label shifts the first code line right.
+  // absolute positioning takes it out of flow (regression guard, see FileDetails.svelte)
+  expect(getComputedStyle(label).position).toBe(`absolute`)
+})
 
 test(`content with HTML characters is escaped before highlighting loads`, () => {
   const html_content = `<div class="foo">&amp; bar</div>`
@@ -129,6 +143,51 @@ test(`toggle all button opens, closes, and handles partial open state`, async ()
   details[0].open = details[1].open = true
   btn.click()
   expect(all_closed()).toBe(true)
+})
+
+test(`toggle all button label tracks open state from clicks and native toggles`, async () => {
+  const files = [
+    { title: `file1`, content: `content1` },
+    { title: `file2`, content: `content2` },
+  ]
+  mount(FileDetails, { target: document.body, props: { files } })
+  await tick()
+
+  const btn = doc_query(`button[title='Toggle all']`)
+  expect(btn.textContent).toContain(`Open all`)
+
+  btn.click()
+  flushSync()
+  expect(btn.textContent).toContain(`Close all`)
+
+  btn.click()
+  flushSync()
+  expect(btn.textContent).toContain(`Open all`)
+
+  // user opens a single <details> directly - the DOM open property is not
+  // reactive, so the label must update via the native toggle event
+  const details = doc_query<HTMLDetailsElement>(`details`)
+  details.open = true
+  details.dispatchEvent(new Event(`toggle`))
+  flushSync()
+  expect(btn.textContent).toContain(`Close all`)
+})
+
+test(`toggle all label reflects pre-opened details on mount`, async () => {
+  const files = [
+    { title: `file1`, content: `content1` },
+    { title: `file2`, content: `content2` },
+  ]
+  // details render open from the start - the toggle event never fires on mount,
+  // so the label must be initialized from node_refs in the sync $effect
+  mount(FileDetails, {
+    target: document.body,
+    props: { files, details_props: { open: true } },
+  })
+  await tick()
+
+  expect(doc_query<HTMLDetailsElement>(`details`).open).toBe(true)
+  expect(doc_query(`button[title='Toggle all']`).textContent).toContain(`Close all`)
 })
 
 test(`node refs are trimmed when files are removed to prevent memory leaks`, async () => {

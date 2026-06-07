@@ -86,6 +86,13 @@ describe(`code block detection`, () => {
       const value = get_example_value(tree)
       expect(value).toContain(`highlight-${lang}`)
       expect(value).not.toContain(EXAMPLE_COMPONENT_PREFIX)
+      // code-only output is raw HTML with no component scope, so the lang-label
+      // must be positioned out of flow inline or it indents the first code line
+      // (pre is white-space: pre)
+      expect(value).toMatch(/<span class="lang-label" style="[^"]*position:absolute/)
+      expect(value).toContain(
+        `<pre class="highlight highlight-${lang}" style="position:relative">`,
+      )
     },
   )
 
@@ -100,6 +107,8 @@ describe(`meta parsing`, () => {
   test.each([
     [`example id="my-example"`, `"id":"my-example"`],
     [`example count=42`, `"count":42`],
+    [`example count=-1.5`, `"count":-1.5`],
+    [`example collapsible=true`, `"collapsible":true`],
     [`example tags=[1,2,3]`, `"tags":[1,2,3]`],
     [`example title="say \\"hello\\""`, `say`],
   ])(`parses meta %s containing %s`, (meta, expected) => {
@@ -108,12 +117,21 @@ describe(`meta parsing`, () => {
     expect(get_example_value(tree)).toContain(expected)
   })
 
-  test(`throws on invalid meta value`, () => {
+  test(`example=false disables transformation instead of misparsing as two bare keys`, () => {
     const tree = create_tree([
-      create_code_node(`svelte`, `<div>Test</div>`, `example invalid=[not,valid,json]`),
+      create_code_node(`svelte`, `<div>Test</div>`, `example=false`),
     ])
-    expect(() => remark()(tree, create_file())).toThrow(`Unable to parse meta`)
+    remark({ defaults: { example: true } })(tree, create_file())
+    expect(tree.children[0]).toMatchObject({ type: `code`, lang: `svelte` })
   })
+
+  test.each([`example invalid=[not,valid,json]`, `example bad=word`])(
+    `throws on invalid meta value in %s`,
+    (meta) => {
+      const tree = create_tree([create_code_node(`svelte`, `<div>Test</div>`, meta)])
+      expect(() => remark()(tree, create_file())).toThrow(`Unable to parse meta`)
+    },
+  )
 })
 
 describe(`wrapper component handling`, () => {
@@ -260,6 +278,26 @@ describe(`script block injection`, () => {
     expect(script).toContain(`import Example_0`)
     expect(script).toContain(`const existing`)
   })
+
+  test(`skips html nodes merely containing <script> mid-content`, () => {
+    const decoy = `<pre>{@html \`<script>evil</script>\`}</pre>`
+    const tree = create_tree([
+      { type: `html`, value: decoy },
+      create_code_node(`svelte`, `<div>Test</div>`, `example`),
+    ])
+    remark()(tree, create_file())
+    // imports must NOT be injected into the decoy node...
+    expect(tree.children[0].value).toBe(decoy)
+    // ...but into a freshly created script block
+    const script = tree.children.find((node) => node.value?.startsWith(`<script>`))
+    expect(script?.value).toContain(`import Example_0`)
+  })
+
+  test(`leaves tree untouched when file contains no examples`, () => {
+    const tree = create_tree([{ type: `html`, value: `<p>No examples here</p>` }])
+    remark()(tree, create_file())
+    expect(tree.children).toHaveLength(1) // no empty <script> block appended
+  })
 })
 
 describe(`multiple examples`, () => {
@@ -332,5 +370,18 @@ describe(`output handling`, () => {
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])
     remark()(tree, create_file())
     expect(tree.children[0]).toMatchObject({ type: `paragraph` })
+  })
+
+  test.each([
+    `const fn = () => \`hello \${1 + 1}\``,
+    `<div>plain</div>`,
+    `let s = "double \\" quote"`,
+  ])(`src prop round-trips %s without double-escaping`, (code) => {
+    const tree = create_tree([create_code_node(`svelte`, code, `example`)])
+    remark()(tree, create_file())
+    // extract the src={...} JS string literal and parse it as Svelte's compiler would
+    const match = /\n\s+src=\{(".*?[^\\]")\}/su.exec(get_example_value(tree))
+    expect(match).not.toBeNull()
+    expect(JSON.parse(match?.[1] ?? ``)).toBe(code)
   })
 })

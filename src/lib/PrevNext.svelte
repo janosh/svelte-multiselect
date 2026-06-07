@@ -72,7 +72,7 @@
 
   function handle_keyup(event: KeyboardEvent) {
     if (!onkeyup) return
-    if ((items_arr?.length ?? 0) < min_items) return
+    if (items_arr.length < min_items) return
     if (!prev || !next) return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]

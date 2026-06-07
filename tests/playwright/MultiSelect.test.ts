@@ -519,19 +519,18 @@ test.describe(`accessibility`, () => {
     expect(invalid).toBe(`true`)
   })
 
-  test(`has aria-expanded='false' when closed`, async ({ page }) => {
-    const before = await page.getAttribute(`#foods ul.options`, `aria-expanded`, {
-      strict: true,
-    })
-    expect(before).toBe(`false`)
+  test(`listbox is hidden when closed and omits invalid aria-expanded`, async ({
+    page,
+  }) => {
+    const options_list = page.locator(`#foods ul.options`)
+    await expect(options_list).toHaveClass(/hidden/)
+    // aria-expanded belongs on the combobox input, not the listbox role
+    await expect(options_list).not.toHaveAttribute(`aria-expanded`)
   })
 
-  test(`has aria-expanded='true' when open`, async ({ page }) => {
+  test(`listbox unhides when open`, async ({ page }) => {
     await page.click(`#foods input[autocomplete]`)
-    const after = await page.getAttribute(`#foods ul.options`, `aria-expanded`, {
-      strict: true,
-    })
-    expect(after).toBe(`true`)
+    await expect(page.locator(`#foods ul.options`)).not.toHaveClass(/hidden/)
   })
 
   test(`dropdown options expose ARIA selection while selected chips stay plain list items`, async ({
@@ -1152,12 +1151,12 @@ test.describe(`portal feature`, () => {
     // Options list should be a child of the multiselect wrapper and visible
     const foods_options_in_component = foods_multiselect.locator(`ul.options`)
     await expect(foods_options_in_component).toBeVisible()
-    await expect(foods_options_in_component).toHaveAttribute(`aria-expanded`, `true`)
+    await expect(foods_options_in_component).not.toHaveClass(/hidden/)
 
     // Options list should NOT be portalled to the body
     const portalled_foods_options = page.locator(
       // More specific selector to avoid accidental matches if body > ul.options exists for other reasons
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${foods[0]}"))`,
+      `body > ul.options:not(.hidden):has(li:has-text("${foods[0]}"))`,
     )
     await expect(portalled_foods_options).not.toBeAttached()
   })
@@ -1175,7 +1174,7 @@ test.describe(`portal feature`, () => {
     await languages_input.click()
 
     const portalled_languages_options = page.locator(
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${languages[0]}"))`,
+      `body > ul.options:not(.hidden):has(li:has-text("${languages[0]}"))`,
     )
     await expect(portalled_languages_options).toBeVisible()
 
@@ -1194,7 +1193,7 @@ test.describe(`portal feature`, () => {
       Object.defineProperty(click_event, `target`, { value: portalled_option })
       globalThis.dispatchEvent(click_event)
 
-      return dropdown.getAttribute(`aria-expanded`) === `true`
+      return !dropdown.classList.contains(`hidden`)
     })
 
     // Without fix: dropdown closes, test times out. With fix: dropdown stays open, test passes.
@@ -1225,7 +1224,7 @@ test.describe(`portal feature`, () => {
     await languages_input.click() // Open languages dropdown
 
     const portalled_languages_options = page.locator(
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${languages[0]}"))`,
+      `body > ul.options:not(.hidden):has(li:has-text("${languages[0]}"))`,
     )
     await expect(portalled_languages_options).toBeVisible()
 
@@ -1260,7 +1259,7 @@ test.describe(`portal feature`, () => {
     await octicons_input.click() // Open octicons dropdown
 
     const portalled_octicons_options = page.locator(
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${octicons[0]}"))`,
+      `body > ul.options:not(.hidden):has(li:has-text("${octicons[0]}"))`,
     )
     await expect(portalled_octicons_options).toBeVisible()
 
@@ -1289,7 +1288,7 @@ test.describe(`portal feature`, () => {
     ).toBeVisible()
 
     await page.keyboard.press(`Escape`) // Close any remaining popups/dropdowns
-    await page.getByRole(`button`, { name: `Close Modal 2` }).click() // Name from svelte file
+    await page.getByRole(`button`, { name: `Close Modal` }).click() // Name from svelte file
     await expect(modal_content).toBeHidden()
   })
 
@@ -1319,7 +1318,7 @@ test.describe(`portal feature`, () => {
 
     await languages_input.click()
     const portalled_languages_options = page.locator(
-      `body > ul.options[aria-expanded="true"]:has(li:has-text("${languages[0]}"))`,
+      `body > ul.options:not(.hidden):has(li:has-text("${languages[0]}"))`,
     )
     await expect(portalled_languages_options).toBeVisible()
 
@@ -1330,7 +1329,7 @@ test.describe(`portal feature`, () => {
         )
         const wrapper = input?.closest<HTMLElement>(`div.multiselect`)
         const dropdown = document.querySelector<HTMLElement>(
-          `body > ul.options[aria-expanded="true"]`,
+          `body > ul.options:not(.hidden)`,
         )
         if (!wrapper || !dropdown) return false
 

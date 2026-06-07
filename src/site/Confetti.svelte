@@ -30,10 +30,9 @@
     frame_id = requestAnimationFrame(loop)
     is_running = true
 
-    confetti = confetti.map((emoji) => {
-      emoji.y += speed * emoji.r
-      if (emoji.y > 120) emoji.y = -20
-      return emoji
+    confetti = confetti.map(({ emoji, x, r, y }) => {
+      const new_y = y + speed * r
+      return { emoji, x, r, y: new_y > 120 ? -20 : new_y }
     })
   }
 
@@ -61,7 +60,9 @@
 </script>
 
 <div transition:fade {...rest}>
-  {#each confetti as con (JSON.stringify(con))}
+  <!-- key by index, not content: x/y change every frame, so a content-based key
+  would destroy and recreate every span on each animation frame -->
+  {#each confetti as con, idx (idx)}
     <span style:left="{con.x}%" style:top="{con.y}%" style:transform="scale({con.r})">
       {con.emoji}
     </span>
