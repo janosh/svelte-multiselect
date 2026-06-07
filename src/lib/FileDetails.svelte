@@ -33,6 +33,15 @@
   // Use reactive state for node refs to avoid binding_property_non_reactive warning
   let node_refs = $state<(HTMLDetailsElement | null)[]>([])
 
+  // Whether any <details> is open (for button text). The DOM `open` property is
+  // not reactive, so this is $state synced from the native toggle event (which
+  // fires for user clicks and programmatic changes), toggle_all, and the
+  // node_refs $effect below (the toggle event doesn't fire for pre-opened details).
+  let any_open = $state(false)
+  const sync_any_open = () => {
+    any_open = node_refs.some((node) => node?.open)
+  }
+
   // Trim stale refs when files shrink and sync node_refs back to files.node for external access
   $effect(() => {
     // Trim stale references when files array shrinks to prevent memory leaks
@@ -42,15 +51,9 @@
     for (const [idx, node] of node_refs.entries()) {
       if (files[idx]) files[idx].node = node
     }
+    // initialize label for pre-opened <details> (their toggle event doesn't fire on mount)
+    sync_any_open()
   })
-
-  // Whether any <details> is open (for button text). The DOM `open` property is
-  // not reactive, so this is $state synced from the native toggle event (which
-  // fires for both user clicks and programmatic changes) plus toggle_all below.
-  let any_open = $state(false)
-  const sync_any_open = () => {
-    any_open = node_refs.some((node) => node?.open)
-  }
 
   function toggle_all() {
     const should_close = node_refs.some((node) => node?.open)

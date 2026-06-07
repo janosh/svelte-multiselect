@@ -173,6 +173,23 @@ test(`toggle all button label tracks open state from clicks and native toggles`,
   expect(btn.textContent).toContain(`Close all`)
 })
 
+test(`toggle all label reflects pre-opened details on mount`, async () => {
+  const files = [
+    { title: `file1`, content: `content1` },
+    { title: `file2`, content: `content2` },
+  ]
+  // details render open from the start - the toggle event never fires on mount,
+  // so the label must be initialized from node_refs in the sync $effect
+  mount(FileDetails, {
+    target: document.body,
+    props: { files, details_props: { open: true } },
+  })
+  await tick()
+
+  expect(doc_query<HTMLDetailsElement>(`details`).open).toBe(true)
+  expect(doc_query(`button[title='Toggle all']`).textContent).toContain(`Close all`)
+})
+
 test(`node refs are trimmed when files are removed to prevent memory leaks`, async () => {
   type FileWithNode = { title: string; content: string; node?: HTMLDetailsElement | null }
   const reactive_files: FileWithNode[] = $state([
