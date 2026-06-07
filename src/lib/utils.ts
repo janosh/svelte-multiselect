@@ -150,8 +150,7 @@ export function fuzzy_match(search_text: string, target_text: string): boolean {
   )
     return false
 
-  if (!search_text) return true
-  if (!target_text) return false
-
+  // empty search matches everything, empty target matches nothing - both already
+  // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
   return fuzzy_match_indices(search_text, target_text) !== null
 }
