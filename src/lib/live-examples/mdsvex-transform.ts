@@ -20,13 +20,20 @@ const RE_STYLE_BLOCK = /(<style[\s\S]*?>)([\s\S]*?)(<\/style>)/gu
 
 // Parses key=value pairs from a string. Supports strings (with escaped quotes),
 // numbers, booleans, and arrays. Note: nested structures in arrays are not supported.
-const RE_PARSE_META = /(\w+=\d+|\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+)/gu
+// Bare values (key=foo, key=true, key=-1.5) are captured greedily so invalid JSON
+// throws a parse error instead of silently splitting into two bare-word keys.
+const RE_PARSE_META = /(\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+=[^\s"[\]]+|\w+)/gu
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
 
 // Languages that render as live Svelte components (O(1) lookup)
 const LIVE_LANGUAGES = new Set([`svelte`, `html`])
+
+// Inline lang-label style for code-only examples, which are raw HTML with no
+// component scope (pre is white-space: pre; an in-flow label would indent the
+// first code line). Components emit the same label but style it via scoped CSS.
+const LABEL_STYLE = `position:absolute;bottom:2px;right:6px;font-size:0.65rem;opacity:0.35;text-transform:uppercase;pointer-events:none;user-select:none;line-height:1`
 
 interface RemarkMeta {
   Wrapper?: string | [string, string]
@@ -160,10 +167,17 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       }
     }
 
-    // Try to inject imports into existing script block
+    // Nothing to inject when the file contains no live examples
+    if (!scripts) return
+
+    // Try to inject imports into existing script block. Only consider nodes that
+    // *start* with <script> — raw HTML nodes merely containing a <script> tag
+    // mid-content (e.g. inside {@html `...`}) must not receive the imports.
     let injected = false
     visit(tree, `html`, (node) => {
-      if (!injected && node.value && RE_SCRIPT_START.test(node.value)) {
+      if (injected || !node.value) return
+      const trimmed = node.value.trimStart()
+      if (trimmed.startsWith(`<script`) && RE_SCRIPT_START.test(trimmed)) {
         node.value = node.value.replace(
           RE_SCRIPT_START,
           (opening_tag) => `${opening_tag}\n${scripts}`,
@@ -219,15 +233,18 @@ function create_example_component(
   // Code-only examples (ts, js, css, etc.) - just render highlighted code block
   if (!is_live) {
     // Close and reopen <p> to avoid block-in-inline HTML nesting issues
-    return `</p><pre class="highlight highlight-${lang}"><span class="lang-label">${lang}</span><code>{@html ${JSON.stringify(
+    return `</p><pre class="highlight highlight-${lang}" style="position:relative"><span class="lang-label" style="${LABEL_STYLE}">${lang}</span><code>{@html ${JSON.stringify(
       highlighted,
     )}}</code></pre><p>`
   }
 
-  // Live examples (svelte, html) - render with CodeExample wrapper
+  // Live examples (svelte, html) - render with CodeExample wrapper.
+  // JSON.stringify alone produces a valid double-quoted JS string literal for the
+  // src={...} expression — escaping backticks/`${` on top of it would double-escape
+  // and inject literal backslashes into the runtime src prop.
   const component = `${EXAMPLE_COMPONENT_PREFIX}${index}`
   const base64_src = to_base64(value)
-  const escaped_src = JSON.stringify(encode_escapes(code))
+  const escaped_src = JSON.stringify(code)
   const escaped_meta = encode_escapes(JSON.stringify({ ...meta, lang }))
 
   // Close and reopen <p> to avoid block-in-inline HTML nesting issues

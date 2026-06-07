@@ -1,32 +1,9 @@
 // Starry-night highlighter for mdsvex
 import { common, createStarryNight } from '@wooorm/starry-night'
 import source_svelte from '@wooorm/starry-night/source.svelte'
+import { escape_html_text, hast_to_html } from './hast.ts'
 
-// Structural type compatible with hast Root/Element/Text from starry-night
-interface HastNode {
-  type: string
-  value?: string
-  tagName?: string
-  properties?: Record<string, unknown>
-  children?: HastNode[]
-}
-
-// Escape HTML special characters in text content (not for attribute values)
-const escape_html_text = (str: string): string =>
-  str.replaceAll(`&`, `&amp;`).replaceAll(`<`, `&lt;`).replaceAll(`>`, `&gt;`)
-
-// Convert HAST to HTML string (simplified - only handles what starry-night outputs)
-export const hast_to_html = (node: HastNode): string => {
-  if (node.type === `text`) return escape_html_text(node.value ?? ``)
-  if (node.type === `root`)
-    return (node.children ?? []).map((child) => hast_to_html(child)).join(``)
-  const { tagName, properties, children } = node
-  const cls_val = properties?.className
-  const cls = Array.isArray(cls_val) ? cls_val.join(` `) : undefined
-  const attrs = cls ? ` class="${cls}"` : ``
-  const inner = children?.map((child) => hast_to_html(child)).join(``) ?? ``
-  return `<${tagName}${attrs}>${inner}</${tagName}>`
-}
+export { hast_to_html }
 
 // Escape characters that would be interpreted as Svelte template syntax
 const escape_svelte = (html: string): string =>
