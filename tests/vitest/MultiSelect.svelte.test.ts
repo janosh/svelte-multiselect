@@ -2527,6 +2527,21 @@ test(`dragging selected options across each other changes their order`, async ()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
 
+test(`cancelled drag clears the active drop-target highlight`, async () => {
+  const options = [1, 2, 3]
+  mount(MultiSelect, { target: document.body, props: { options, selected: options } })
+
+  const li = doc_query(`ul.selected li`)
+  li.dispatchEvent(new DragEvent(`dragenter`, {}))
+  await tick()
+  expect(li.classList.contains(`active`)).toBe(true)
+
+  // user cancels the drag (Escape / drop outside list) -> dragend fires without drop
+  li.dispatchEvent(new DragEvent(`dragend`, {}))
+  await tick()
+  expect(li.classList.contains(`active`)).toBe(false)
+})
+
 // https://github.com/janosh/svelte-multiselect/issues/371
 test(`drag-drop reordering fires onreorder and onchange events`, async () => {
   const options = [1, 2, 3]
