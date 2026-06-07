@@ -471,15 +471,15 @@
           {/snippet}
           <span class:align-right={is_right}>
             {@render item({
-          route: parsed_route,
-          href: parsed_route.href,
-          label: formatted.label,
-          is_active,
-          is_dropdown,
-          // svelte2tsx types inline snippets as `() => ReturnType<Snippet>`, whose
-          // brand doesn't unify with Snippet (svelte#13670); plain assertion suffices
-          render_default: render_default_snippet as Snippet,
-        })}
+              route: parsed_route,
+              href: parsed_route.href,
+              label: formatted.label,
+              is_active,
+              is_dropdown,
+              // svelte2tsx types inline snippets as `() => ReturnType<Snippet>`, whose
+              // brand doesn't unify with Snippet (svelte#13670); plain assertion suffices
+              render_default: render_default_snippet as Snippet,
+            })}
           </span>
         {:else}
           <span class:align-right={is_right}>
