@@ -121,4 +121,17 @@
   .code-above > pre.open {
     margin: var(--code-example-pre-margin, 0 0 1em 0);
   }
+  /* the label is emitted inline before <code>; pre is white-space: pre, so it
+  must be taken out of flow or it indents the first code line */
+  .lang-label {
+    position: absolute;
+    bottom: 2px;
+    right: 6px;
+    font-size: 0.65rem;
+    opacity: 0.35;
+    text-transform: uppercase;
+    pointer-events: none;
+    user-select: none;
+    line-height: 1;
+  }
 </style>
