@@ -476,7 +476,9 @@
           label: formatted.label,
           is_active,
           is_dropdown,
-          render_default: render_default_snippet,
+          // svelte2tsx types inline snippets as `() => ReturnType<Snippet>`, whose
+          // brand doesn't unify with Snippet (svelte#13670); plain assertion suffices
+          render_default: render_default_snippet as Snippet,
         })}
           </span>
         {:else}

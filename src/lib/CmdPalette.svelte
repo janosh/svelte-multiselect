@@ -6,7 +6,12 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
+  import type { MultiSelectProps } from './types'
   import { matches_shortcut } from './utils'
+
+  // MultiSelect's option snippet type and its param (option + idx/selected/active/disabled)
+  type OptionSnippet = NonNullable<MultiSelectProps<Action>[`option`]>
+  type OptionSnippetParams = Parameters<OptionSnippet>[0]
 
   let {
     actions,
@@ -103,8 +108,9 @@
   const format_shortcut = (shortcut: string): string[] =>
     shortcut.split(`+`).map((part) => {
       const seg = part.trim().toLowerCase()
+      // title-case unknown multi-char segments, upper-case single chars (empty stays empty)
       return KEY_SYMBOLS[seg] ??
-        (seg.length === 1 ? seg.toUpperCase() : seg[0].toUpperCase() + seg.slice(1))
+        (seg.length > 1 ? seg[0].toUpperCase() + seg.slice(1) : seg.toUpperCase())
     })
 
   // only swap in the custom option snippet when an action actually uses shortcut/description
@@ -137,9 +143,7 @@
     toggle(event)
     // run action hotkeys globally while the palette is closed
     if (open || !global_shortcuts) return
-    const action = actions.find((act) =>
-      act.shortcut && matches_shortcut(event, act.shortcut)
-    )
+    const action = actions.find((act) => matches_shortcut(event, act.shortcut))
     if (action) {
       event.preventDefault()
       record_recent(action.label)
@@ -165,7 +169,7 @@
 
 <svelte:window onkeydown={handle_window_keydown} onclick={close_if_outside} />
 
-{#snippet action_item({ option }: { option: Action })}
+{#snippet action_item({ option }: OptionSnippetParams)}
   <span class="cmd-action">
     <span class="cmd-label">
       {option.label}
@@ -196,7 +200,12 @@
       {placeholder}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
-      option={has_action_meta ? action_item : undefined}
+      option={has_action_meta
+        // svelte2tsx types inline snippets as `() => ReturnType<Snippet>`, whose
+        // unique-symbol brand doesn't unify with Snippet<[...]> (svelte#13670). A
+        // plain assertion suffices since the shapes are otherwise identical.
+        ? action_item as OptionSnippet
+        : undefined}
       {...rest}
       --sms-bg="var(--sms-options-bg)"
       --sms-width="min(20em, 90vw)"
