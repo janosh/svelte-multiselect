@@ -1,9 +1,3 @@
-<script lang="ts">
-  import MultiSelect from '$lib'
-  import { foods, languages } from '$site/options'
-  import { LanguageSnippet } from '$site'
-</script>
-
 ## Allow Custom User Input
 
 `allowUserOptions={true}` means users can enter custom options by entering text and hitting enter.

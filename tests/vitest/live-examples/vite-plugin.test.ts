@@ -1,5 +1,6 @@
 // Tests for vite-plugin.ts - the Vite plugin for virtual module resolution
-import vite_plugin, { EXAMPLE_MODULE_PREFIX } from '$lib/live-examples/vite-plugin'
+import { EXAMPLE_MODULE_PREFIX } from '$lib/live-examples/mdsvex-transform'
+import vite_plugin from '$lib/live-examples/vite-plugin'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
 import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'

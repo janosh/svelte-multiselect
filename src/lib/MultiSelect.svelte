@@ -8,7 +8,12 @@
   import { highlight_matches } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
-  import type { GroupedOptions, KeyboardShortcuts, MultiSelectProps } from './types'
+  import type {
+    GroupedOptions,
+    KeyboardShortcuts,
+    MultiSelectProps,
+    PortalParams,
+  } from './types'
   import * as utils from './utils'
   import Wiggle from './Wiggle.svelte'
 
@@ -273,9 +278,8 @@
 
   // Track changes to selected via $effect (catches internal + external changes)
   $effect(() => {
-    // Disabled when max_history is 0 (handles false, 0, negative, non-finite inputs)
-    const history_disabled = !(max_history > 0)
-    if (history_disabled) {
+    // Disabled unless max_history > 0 (handles false, 0, negative, non-finite inputs)
+    if (!(max_history > 0)) {
       // Clear history when disabled so re-enabling starts fresh
       history_stack = []
       history_index = -1
@@ -782,7 +786,6 @@
   // are preserved as-is (extra fields like value/group/metadata aren't stripped)
   function add(option_to_add: Option, event: Event, from_paste = false) {
     event.stopPropagation()
-    if (maxSelect !== null && selected.length >= maxSelect) wiggle = true
     if (
       !isNaN(Number(option_to_add)) &&
       (typeof option_to_add !== `string` || option_to_add.trim().length > 0) &&
@@ -800,10 +803,13 @@
     const check_label = duplicates === `case-insensitive` || !is_from_options
     const is_duplicate = selected_keys_set.has(key(option_to_add)) ||
       (check_label && is_label_selected(`${utils.get_label(option_to_add)}`))
+    // maxSelect = 1 replaces the current option instead of blocking, so no
+    // wiggle and no onmaxreached there
     const max_reached = maxSelect !== null && maxSelect !== 1 &&
       selected.length >= maxSelect
     // Fire events for blocked add attempts
     if (max_reached) {
+      wiggle = true
       onmaxreached?.({ selected, maxSelect, attemptedOption: option_to_add })
     }
     if (is_duplicate && duplicates !== true) onduplicate?.({ option: option_to_add })
@@ -1051,8 +1057,8 @@
           if (!input_display) searchText = ``
         },
       },
-      { key: `undo`, condition: () => !!canUndo, action: () => undo?.() },
-      { key: `redo`, condition: () => !!canRedo, action: () => redo?.() },
+      { key: `undo`, condition: () => canUndo, action: () => undo?.() },
+      { key: `redo`, condition: () => canRedo, action: () => redo?.() },
     ]
 
     for (const { key: shortcut_key, condition, action } of shortcut_actions) {
@@ -1383,14 +1389,14 @@
   // reset form validation when required prop changes
   // https://github.com/janosh/svelte-multiselect/issues/285
   $effect.pre(() => {
-    form_input?.setCustomValidity(required ? `` : ``)
+    void required // register as dependency so validity resets when it changes
+    form_input?.setCustomValidity(``)
   })
 
   // === DOM, portal, and focus ===
   // Portal action: use: directive instead of @attach because portalling requires
   // synchronous DOM manipulation during element creation and in-place updates
   // (the action's update method avoids teardown/re-creation when outerDiv changes).
-  type PortalParams = { target_node: HTMLElement | null; active?: boolean }
   function portal(node: HTMLElement, params: PortalParams) {
     let { target_node, active } = params
     if (!active) return
@@ -1623,6 +1629,7 @@
           }}
           ondrop={drop(idx)}
           ondragenter={() => (drag_idx = idx)}
+          ondragend={() => (drag_idx = null)}
           class:active={drag_idx === idx}
           style={selectedOptionStyle}
           onmouseup={can_remove && !disabled ? (event) => event.stopPropagation() : undefined}
@@ -1767,7 +1774,6 @@
       class="options {ulOptionsClass}"
       role="listbox"
       aria-multiselectable={maxSelect === null || maxSelect > 1}
-      aria-expanded={open}
       aria-disabled={disabled ? `true` : null}
       bind:this={ul_options}
       style={ulOptionsStyle}
@@ -1981,9 +1987,7 @@
     {#if last_action}
       {#if last_action.type === `add`}
         {last_action.label} selected
-      {:else if last_action.type === `remove`}
-        {last_action.label} removed
-      {:else if last_action.type === `removeAll`}
+      {:else}
         {last_action.label} removed
       {/if}
     {:else if open}

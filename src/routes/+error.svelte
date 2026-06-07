@@ -2,7 +2,9 @@
   import { page } from '$app/state'
   import { homepage, name } from '$root/package.json'
 
-  let online: boolean = $state(false)
+  // undefined until hydration reads navigator.onLine - starting with false would
+  // flash the "you're offline" message at online users in the prerendered HTML
+  let online: boolean | undefined = $state()
 </script>
 
 <svelte:head>

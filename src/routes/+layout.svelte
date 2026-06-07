@@ -38,7 +38,7 @@
   <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}
 
-<CmdPalette {actions} placeholder="Go to..." />
+<CmdPalette {actions} placeholder="Go to..." recent_actions_key="nav-palette-recents" />
 
 <GitHubCorner href={repository} />
 
@@ -51,10 +51,12 @@
     headingSelector="main > :where(h2, h3)"
     breakpoint={1500}
     bind:desktop={toc_desktop}
-    asideStyle={toc_desktop
-    ? `position: fixed; right: 2em; font-size: 0.7rem; max-width: 17rem;`
-    : ``}
-    openButtonStyle="display: flex; padding: 3px;"
+    asideProps={{
+      style: toc_desktop
+        ? `position: fixed; right: 2em; font-size: 0.7rem; max-width: 17rem;`
+        : ``,
+    }}
+    openButtonProps={{ style: `display: flex; padding: 3px;` }}
     --toc-mobile-bg="light-dark(#fff, #222226)"
     --toc-padding="1em 0 1em 1em"
     --toc-active-color="var(--accent)"
