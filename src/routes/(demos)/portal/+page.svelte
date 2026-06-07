@@ -21,16 +21,13 @@
 </button>
 
 {#if open_modal}
+  <!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -- backdrop click-outside is a pointer convenience; Escape (svelte:window) covers keyboard users. role=button here would invalidly nest the dialog inside an interactive widget -->
   <div
     class="modal-backdrop"
     onclick={(event) => {
       if (event.target === event.currentTarget) open_modal = false
     }}
-    onkeydown={(event) => {
-      if (event.key === `Enter` || event.key === ` `) open_modal = false
-    }}
-    role="button"
-    tabindex="0"
+    role="presentation"
   >
     <div
       class="modal-content modal"
@@ -41,6 +38,7 @@
       aria-modal="true"
       aria-labelledby="modal-title"
       tabindex="-1"
+      {@attach (node) => node.focus()}
     >
       <h2 id="modal-title">Modal: Languages & Octicons</h2>
       <MultiSelect
@@ -58,7 +56,7 @@
       />
       <p>Selected Languages: {selected_languages.map(get_label).join(`, `) || `None`}</p>
       <p>Selected Octicons: {selected_octicons.map(get_label).join(`, `) || `None`}</p>
-      <button onclick={() => (open_modal = false)}>Close Modal 2</button>
+      <button onclick={() => (open_modal = false)}>Close Modal</button>
     </div>
   </div>
 {/if}

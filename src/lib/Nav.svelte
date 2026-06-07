@@ -64,8 +64,9 @@
   let hide_timeout: ReturnType<typeof setTimeout> | null = null
   const panel_id = `nav-menu-${get_uuid()}`
 
-  // Track previous is_open state for callbacks
-  let prev_is_open = $state(false)
+  // Track previous is_open state for callbacks. Deliberately not $state: it's
+  // written inside the $effect below, which would re-trigger the effect if reactive.
+  let prev_is_open = false
 
   // Detect touch device and handle responsive breakpoint
   $effect(() => {

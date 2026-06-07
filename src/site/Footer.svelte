@@ -11,7 +11,7 @@
     <svg><use href="#carbon-edit" /></svg>
     Edit this page
   </a>
-  <small title="For keyboad-only site navigation">
+  <small title="For keyboard-only site navigation">
     <kbd>cmd+k</kbd> to open nav palette.
   </small>
 </footer>
