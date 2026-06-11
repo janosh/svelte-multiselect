@@ -94,7 +94,7 @@ export type LoadOptions<T extends Option = Option> =
 
 export type FormSerialize<T extends Option = Option> = (selected: T[]) => string | null
 
-// props passed to the beforeInput and afterInput snippets
+// passed to beforeInput+afterInput snippets
 type InputSnippetProps<T extends Option = Option> = Pick<
   MultiSelectProps<T>,
   `selected` | `disabled` | `invalid` | `id` | `open` | `required` | `searchText`

@@ -1278,8 +1278,7 @@
 
   let ul_options = $state<HTMLUListElement>()
 
-  // shared props for the beforeInput/afterInput snippets
-  const input_snippet_props = $derived({
+  const input_snippet_props = $derived({ // shared props for beforeInput/afterInput
     selected,
     disabled,
     invalid,

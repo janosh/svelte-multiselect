@@ -21,11 +21,6 @@ const arrow_down = new KeyboardEvent(`keydown`, {
   bubbles: true,
 })
 const enter = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
-const node_precedes = (first_element: Element, second_element: Element) =>
-  Boolean(
-    first_element.compareDocumentPosition(second_element) &
-    Node.DOCUMENT_POSITION_FOLLOWING,
-  )
 const console_methods = { error: console.error, warn: console.warn }
 afterEach(() => Object.assign(console, console_methods))
 
@@ -1383,36 +1378,30 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
   expect(expand.dataset.open).toBe(`true`)
 })
 
-test.each([
-  [undefined, true],
-  [`left`, true],
-  [`right`, false],
-] as const)(
-  `expandIconPosition=%s places expand icon before selected list: %s`,
-  (position, icon_before_selected_list) => {
+test.each([undefined, `left`, `right`] as const)(
+  `expandIconPosition=%s places expand icon around selected list`,
+  (position) => {
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], expandIconPosition: position },
     })
     const expand_icon = doc_query(`.expand-icon`)
     const selected_list = doc_query(`ul.selected`)
-    expect(node_precedes(expand_icon, selected_list)).toBe(icon_before_selected_list)
+    if (position === `right`) expect(selected_list.nextElementSibling).toBe(expand_icon)
+    else expect(expand_icon.nextElementSibling).toBe(selected_list)
   },
 )
 
-test(`expandIconPosition=none removes default expand icon from DOM`, () => {
+test(`expandIconPosition=none suppresses default and custom expand icons`, () => {
   mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], expandIconPosition: `none` },
   })
-  expect(document.querySelector(`.expand-icon`)).toBeNull()
-})
-
-test(`expandIconPosition=none suppresses custom expandIcon snippet`, () => {
   mount(TestMultiSelectSnippets, {
     target: document.body,
     props: { options: [1, 2, 3], expandIconPosition: `none` },
   })
+  expect(document.querySelector(`.expand-icon`)).toBeNull()
   expect(document.querySelector(`.expand-snippet`)).toBeNull()
 })
 
@@ -1425,14 +1414,10 @@ test(`expand icon click toggles dropdown in chips mode`, async () => {
   }
   const input = doc_query(`input[autocomplete]`)
 
-  await click_expand()
-  expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
-
-  await click_expand()
-  expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
-
-  // clicking elsewhere in the component while open should NOT close the dropdown
-  await click_expand()
+  for (const expanded of [`true`, `false`, `true`]) {
+    await click_expand()
+    expect(input.getAttribute(`aria-expanded`)).toBe(expanded)
+  }
   doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
   await tick()
   expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
@@ -1470,9 +1455,8 @@ test(`beforeInput and afterInput snippets receive searchText and flank the input
   expect(after_input.dataset.searchText).toBe(``)
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-  // beforeInput renders before the search input, afterInput after it
-  expect(node_precedes(before_input, input)).toBe(true)
-  expect(node_precedes(input, after_input)).toBe(true)
+  expect(before_input.nextElementSibling).toBe(input)
+  expect(input.nextElementSibling).toBe(after_input)
 
   input.value = `test`
   input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
