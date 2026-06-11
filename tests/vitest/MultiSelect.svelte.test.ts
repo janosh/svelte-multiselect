@@ -1378,6 +1378,51 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
   expect(expand.dataset.open).toBe(`true`)
 })
 
+test.each([undefined, `left`, `right`] as const)(
+  `expandIconPosition=%s places expand icon around selected list`,
+  (position) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], expandIconPosition: position },
+    })
+    const expand_icon = doc_query(`.expand-icon`)
+    const selected_list = doc_query(`ul.selected`)
+    if (position === `right`) expect(selected_list.nextElementSibling).toBe(expand_icon)
+    else expect(expand_icon.nextElementSibling).toBe(selected_list)
+  },
+)
+
+test(`expandIconPosition=none suppresses default and custom expand icons`, () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], expandIconPosition: `none` },
+  })
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3], expandIconPosition: `none` },
+  })
+  expect(document.querySelector(`.expand-icon`)).toBeNull()
+  expect(document.querySelector(`.expand-snippet`)).toBeNull()
+})
+
+test(`expand icon click toggles dropdown in chips mode`, async () => {
+  mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
+
+  const click_expand = async () => {
+    doc_query(`.expand-icon`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    await tick()
+  }
+  const input = doc_query(`input[autocomplete]`)
+
+  for (const expanded of [`true`, `false`, `true`]) {
+    await click_expand()
+    expect(input.getAttribute(`aria-expanded`)).toBe(expanded)
+  }
+  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  await tick()
+  expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
+})
+
 test(`removeIcon snippet receives option for per-item and isRemoveAll flag`, async () => {
   mount(TestMultiSelectSnippets, {
     target: document.body,
@@ -1398,21 +1443,29 @@ test(`removeIcon snippet receives option for per-item and isRemoveAll flag`, asy
   expect(remove_spans[2].dataset.option).toBeUndefined()
 })
 
-test(`afterInput snippet receives searchText`, async () => {
+test(`beforeInput and afterInput snippets receive searchText and flank the input`, async () => {
   mount(TestMultiSelectSnippets, {
     target: document.body,
     props: { options: [1, 2, 3] },
   })
 
+  const before_input = doc_query(`.before-input-snippet`)
   const after_input = doc_query(`.after-input-snippet`)
+  expect(before_input.dataset.searchText).toBe(``)
   expect(after_input.dataset.searchText).toBe(``)
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  expect(before_input.nextElementSibling).toBe(input)
+  expect(input.nextElementSibling).toBe(after_input)
+
   input.value = `test`
   input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
   await tick()
 
-  expect(after_input.dataset.searchText).toBe(`test`)
+  const before_input_after = doc_query(`.before-input-snippet`)
+  const after_input_after = doc_query(`.after-input-snippet`)
+  expect(before_input_after.dataset.searchText).toBe(`test`)
+  expect(after_input_after.dataset.searchText).toBe(`test`)
 })
 
 test(`filters dropdown to show only matching options when entering text`, async () => {

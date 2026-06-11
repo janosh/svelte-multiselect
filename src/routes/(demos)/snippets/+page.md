@@ -40,6 +40,8 @@
 
 ### Simple HTML tag as `"removeIcon"` snippet
 
+This example also moves the expand icon to the right side of the input via `expandIconPosition="right"`.
+
 ```svelte example id="languages-2"
 <script lang="ts">
   import MultiSelect, { Icon } from '$lib'
@@ -55,6 +57,7 @@
   maxSelect={5}
   placeholder="What languages do you know?"
   selected={[`Python`, `TypeScript`, `Julia`]}
+  expandIconPosition="right"
   bind:open
 >
   {#snippet selectedItem({ option })}
@@ -64,7 +67,7 @@
     <LanguageSnippet {option} style={selected ? `opacity: 0.6` : ``} />
   {/snippet}
   {#snippet expandIcon({ open: expandOpen, disabled })}
-    <button {disabled}>
+    <button type="button" {disabled}>
       <Icon icon={expandOpen ? `Collapse` : `Expand`} />
     </button>
   {/snippet}
