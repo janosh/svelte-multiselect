@@ -1378,6 +1378,51 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
   expect(expand.dataset.open).toBe(`true`)
 })
 
+test.each([
+  [undefined, ``],
+  [`left`, ``],
+  [`right`, `1`],
+] as const)(
+  `expandIconPosition=%s renders expand icon with flex order '%s'`,
+  (position, expected_order) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [1, 2, 3], expandIconPosition: position },
+    })
+    expect(doc_query(`.expand-icon`).style.order).toBe(expected_order)
+  },
+)
+
+test(`expandIconPosition=none removes expand icon from DOM`, () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [1, 2, 3], expandIconPosition: `none` },
+  })
+  expect(document.querySelector(`.expand-icon`)).toBeNull()
+})
+
+test(`expand icon click toggles dropdown in chips mode`, async () => {
+  mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
+
+  const click_expand = async () => {
+    doc_query(`.expand-icon`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    await tick()
+  }
+  const input = doc_query(`input[autocomplete]`)
+
+  await click_expand()
+  expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
+
+  await click_expand()
+  expect(input.getAttribute(`aria-expanded`)).toBe(`false`)
+
+  // clicking elsewhere in the component while open should NOT close the dropdown
+  await click_expand()
+  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  await tick()
+  expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
+})
+
 test(`removeIcon snippet receives option for per-item and isRemoveAll flag`, async () => {
   mount(TestMultiSelectSnippets, {
     target: document.body,
@@ -1398,20 +1443,29 @@ test(`removeIcon snippet receives option for per-item and isRemoveAll flag`, asy
   expect(remove_spans[2].dataset.option).toBeUndefined()
 })
 
-test(`afterInput snippet receives searchText`, async () => {
+test(`beforeInput and afterInput snippets receive searchText and flank the input`, async () => {
   mount(TestMultiSelectSnippets, {
     target: document.body,
     props: { options: [1, 2, 3] },
   })
 
+  const before_input = doc_query(`.before-input-snippet`)
   const after_input = doc_query(`.after-input-snippet`)
+  expect(before_input.dataset.searchText).toBe(``)
   expect(after_input.dataset.searchText).toBe(``)
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  // beforeInput renders before the search input, afterInput after it
+  const precedes = (el_1: Element, el_2: Element) =>
+    Boolean(el_1.compareDocumentPosition(el_2) & Node.DOCUMENT_POSITION_FOLLOWING)
+  expect(precedes(before_input, input)).toBe(true)
+  expect(precedes(input, after_input)).toBe(true)
+
   input.value = `test`
   input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
   await tick()
 
+  expect(before_input.dataset.searchText).toBe(`test`)
   expect(after_input.dataset.searchText).toBe(`test`)
 })
 

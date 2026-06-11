@@ -101,9 +101,11 @@
     ulSelectedStyle = null,
     ulOptionsStyle = null,
     expandIcon,
+    expandIconPosition = `left`,
     selectedItem,
     children,
     removeIcon,
+    beforeInput,
     afterInput,
     spinner,
     disabledIcon,
@@ -920,9 +922,9 @@
     if (disabled) return
     const clicked_expand_icon = event.target instanceof Element &&
       event.target.closest(`.expand-icon`)
-    if (clicked_expand_icon && input_display) {
-      if (open) return close_dropdown(event)
-      show_all_input_options = true
+    if (clicked_expand_icon) {
+      if (open) return close_dropdown(event) // expand icon toggles the dropdown
+      if (input_display) show_all_input_options = true
     }
     if (open) return
     open = true
@@ -1276,6 +1278,18 @@
 
   let ul_options = $state<HTMLUListElement>()
 
+  // shared props for the beforeInput/afterInput snippets
+  const input_snippet_props = $derived({
+    selected,
+    disabled,
+    invalid,
+    id,
+    placeholder: placeholder_text,
+    open,
+    required,
+    searchText,
+  })
+
   const handle_input_keydown: KeyboardEventHandler<HTMLInputElement> = (
     event,
   ) => {
@@ -1596,21 +1610,29 @@
       form_input?.setCustomValidity(msg)
     }}
   />
-  <span class="expand-icon" style="display: flex; align-items: center">
-    {#if expandIcon}
-      {@render expandIcon({ open, disabled })}
-    {:else}
-      <Icon
-        icon="ChevronExpand"
-        style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
-      />
-    {/if}
-  </span>
+  {#if expandIconPosition !== `none`}
+    <!-- order: 1 pushes icon past all other flex children (chips, input, remove-all) to the far right -->
+    <span
+      class="expand-icon"
+      style="display: flex; align-items: center"
+      style:order={expandIconPosition === `right` ? 1 : null}
+    >
+      {#if expandIcon}
+        {@render expandIcon({ open, disabled })}
+      {:else}
+        <Icon
+          icon="ChevronExpand"
+          style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
+        />
+      {/if}
+    </span>
+  {/if}
   <ul
     class="selected {ulSelectedClass}"
     aria-label="selected options"
     style={ulSelectedStyle}
   >
+    {@render beforeInput?.(input_snippet_props)}
     {#if !input_display}
       {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
         {@const selectedOptionStyle = [utils.get_style(option, `selected`), liSelectedStyle]
@@ -1698,16 +1720,7 @@
       {ontouchmove}
       {ontouchstart}
     />
-    {@render afterInput?.({
-        selected,
-        disabled,
-        invalid,
-        id,
-        placeholder: placeholder_text,
-        open,
-        required,
-        searchText,
-      })}
+    {@render afterInput?.(input_snippet_props)}
   </ul>
   {#if loading}
     {#if spinner}

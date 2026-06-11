@@ -94,7 +94,8 @@ export type LoadOptions<T extends Option = Option> =
 
 export type FormSerialize<T extends Option = Option> = (selected: T[]) => string | null
 
-type AfterInputProps = Pick<
+// props passed to the beforeInput and afterInput snippets
+type InputSnippetProps = Pick<
   MultiSelectProps,
   | `selected`
   | `disabled`
@@ -124,13 +125,15 @@ export type GroupedOptions<T extends Option = Option> = {
 }
 
 export interface MultiSelectSnippets<T extends Option = Option> {
+  // custom icon indicating the input is expandable into a dropdown (position controlled by expandIconPosition prop)
   expandIcon?: Snippet<[{ open: boolean; disabled: boolean }]>
   selectedItem?: Snippet<[{ option: T; idx: number }]>
   children?: Snippet<[{ option: T; idx: number; type: `option` | `selected` }]>
   removeIcon?: Snippet<
     [{ option: T; isRemoveAll: false } | { option?: undefined; isRemoveAll: true }]
   >
-  afterInput?: Snippet<[AfterInputProps]>
+  beforeInput?: Snippet<[InputSnippetProps]>
+  afterInput?: Snippet<[InputSnippetProps]>
   spinner?: Snippet
   disabledIcon?: Snippet
   option?: Snippet<
@@ -178,6 +181,9 @@ export interface MultiSelectProps<T extends Option = Option>
   duplicateOptionMsg?: string
   // Controls duplicate detection: false (default, case-sensitive), true (allow all), 'case-insensitive' (block case variants)
   duplicates?: boolean | `case-insensitive`
+  // where to render the expand icon: left (default) or right of the input, or 'none' to hide it
+  // (https://github.com/janosh/svelte-multiselect/issues/419 and /issues/185)
+  expandIconPosition?: `left` | `right` | `none`
   // keepSelectedInDropdown controls whether selected options remain in dropdown: false (default),
   // 'plain' (left border and background color to differentiate selected options),
   // 'checkboxes' (each option is prefixed by a checkbox).
