@@ -13,6 +13,9 @@
     <span class="remove-snippet" data-option={option} data-is-remove-all={isRemoveAll}
     >✕</span>
   {/snippet}
+  {#snippet beforeInput({ searchText })}
+    <span class="before-input-snippet" data-search-text={searchText}>before</span>
+  {/snippet}
   {#snippet afterInput({ searchText })}
     <span class="after-input-snippet" data-search-text={searchText}>after</span>
   {/snippet}

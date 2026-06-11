@@ -94,17 +94,11 @@ export type LoadOptions<T extends Option = Option> =
 
 export type FormSerialize<T extends Option = Option> = (selected: T[]) => string | null
 
-type AfterInputProps = Pick<
-  MultiSelectProps,
-  | `selected`
-  | `disabled`
-  | `invalid`
-  | `id`
-  | `placeholder`
-  | `open`
-  | `required`
-  | `searchText`
->
+// passed to beforeInput+afterInput snippets
+type InputSnippetProps<T extends Option = Option> = Pick<
+  MultiSelectProps<T>,
+  `selected` | `disabled` | `invalid` | `id` | `open` | `required` | `searchText`
+> & { placeholder: string | null }
 type UserMsgProps = {
   searchText: string
   msgType: false | `dupe` | `create` | `no-match`
@@ -124,13 +118,15 @@ export type GroupedOptions<T extends Option = Option> = {
 }
 
 export interface MultiSelectSnippets<T extends Option = Option> {
+  // custom icon indicating the input is expandable into a dropdown (position controlled by expandIconPosition prop)
   expandIcon?: Snippet<[{ open: boolean; disabled: boolean }]>
   selectedItem?: Snippet<[{ option: T; idx: number }]>
   children?: Snippet<[{ option: T; idx: number; type: `option` | `selected` }]>
   removeIcon?: Snippet<
     [{ option: T; isRemoveAll: false } | { option?: undefined; isRemoveAll: true }]
   >
-  afterInput?: Snippet<[AfterInputProps]>
+  beforeInput?: Snippet<[InputSnippetProps<T>]>
+  afterInput?: Snippet<[InputSnippetProps<T>]>
   spinner?: Snippet
   disabledIcon?: Snippet
   option?: Snippet<
@@ -178,6 +174,8 @@ export interface MultiSelectProps<T extends Option = Option>
   duplicateOptionMsg?: string
   // Controls duplicate detection: false (default, case-sensitive), true (allow all), 'case-insensitive' (block case variants)
   duplicates?: boolean | `case-insensitive`
+  // Where to render the expand icon, or 'none' to hide it.
+  expandIconPosition?: `left` | `right` | `none`
   // keepSelectedInDropdown controls whether selected options remain in dropdown: false (default),
   // 'plain' (left border and background color to differentiate selected options),
   // 'checkboxes' (each option is prefixed by a checkbox).
