@@ -1,5 +1,14 @@
 # Changelog
 
+## [v11.7.2](https://github.com/janosh/svelte-multiselect/compare/v11.7.1...v11.7.2)
+
+> 11 June 2026
+
+- Harden components, add CmdPalette frecency feature, and expand test coverage [`#418`](https://github.com/janosh/svelte-multiselect/pull/418)
+- Add `expandIconPosition` prop, `beforeInput` snippet, and expand icon dropdown toggle [`#420`](https://github.com/janosh/svelte-multiselect/pull/420)
+- Fix command palette dialog positioning [`2fa2ade`](https://github.com/janosh/svelte-multiselect/commit/2fa2ade)
+- Tighten lint rules and fix violations [`d081170`](https://github.com/janosh/svelte-multiselect/commit/d081170)
+
 ## [v11.7.1](https://github.com/janosh/svelte-multiselect/compare/v11.7.0...v11.7.1)
 
 > 14 May 2026
