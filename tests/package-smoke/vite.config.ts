@@ -7,6 +7,8 @@ export default defineConfig({
     conditions: [`svelte`, `browser`],
   },
   build: {
+    // Lightning CSS warns on the standard ::highlight() pseudo-element.
+    cssMinify: false, // Package smoke only validates packaging/importability, no need to minify here.
     emptyOutDir: true,
     outDir: `test-results/package-smoke-build`,
     rollupOptions: {

@@ -1,6 +1,6 @@
 {
   "name": "svelte-multiselect",
-  "version": "11.7.1",
+  "version": "11.7.2",
   "description": "Svelte multi-select component",
   "keywords": [
     "form",
@@ -61,16 +61,16 @@
   "devDependencies": {
     "@playwright/test": "^1.60.0",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.63.0",
+    "@sveltejs/kit": "^2.64.0",
     "@sveltejs/package": "2.5.8",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@types/node": "^25.9.2",
     "@vitest/coverage-v8": "^4.1.8",
-    "@wooorm/starry-night": "^3.9.0",
+    "@wooorm/starry-night": "^3.10.0",
     "acorn": "^8.16.0",
-    "happy-dom": "^20.10.1",
+    "happy-dom": "^20.10.2",
     "mdsvex": "^0.12.7",
-    "svelte": "^5.56.2",
+    "svelte": "^5.56.3",
     "svelte-toc": "^0.7.0",
     "typescript": "6.0.3",
     "vite": "^8.0.16",
