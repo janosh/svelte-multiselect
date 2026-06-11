@@ -67,7 +67,7 @@ This example also moves the expand icon to the right side of the input via `expa
     <LanguageSnippet {option} style={selected ? `opacity: 0.6` : ``} />
   {/snippet}
   {#snippet expandIcon({ open: expandOpen, disabled })}
-    <button {disabled}>
+    <button type="button" {disabled}>
       <Icon icon={expandOpen ? `Collapse` : `Expand`} />
     </button>
   {/snippet}

@@ -95,17 +95,10 @@ export type LoadOptions<T extends Option = Option> =
 export type FormSerialize<T extends Option = Option> = (selected: T[]) => string | null
 
 // props passed to the beforeInput and afterInput snippets
-type InputSnippetProps = Pick<
-  MultiSelectProps,
-  | `selected`
-  | `disabled`
-  | `invalid`
-  | `id`
-  | `placeholder`
-  | `open`
-  | `required`
-  | `searchText`
->
+type InputSnippetProps<T extends Option = Option> = Pick<
+  MultiSelectProps<T>,
+  `selected` | `disabled` | `invalid` | `id` | `open` | `required` | `searchText`
+> & { placeholder: string | null }
 type UserMsgProps = {
   searchText: string
   msgType: false | `dupe` | `create` | `no-match`
@@ -132,8 +125,8 @@ export interface MultiSelectSnippets<T extends Option = Option> {
   removeIcon?: Snippet<
     [{ option: T; isRemoveAll: false } | { option?: undefined; isRemoveAll: true }]
   >
-  beforeInput?: Snippet<[InputSnippetProps]>
-  afterInput?: Snippet<[InputSnippetProps]>
+  beforeInput?: Snippet<[InputSnippetProps<T>]>
+  afterInput?: Snippet<[InputSnippetProps<T>]>
   spinner?: Snippet
   disabledIcon?: Snippet
   option?: Snippet<
@@ -181,8 +174,7 @@ export interface MultiSelectProps<T extends Option = Option>
   duplicateOptionMsg?: string
   // Controls duplicate detection: false (default, case-sensitive), true (allow all), 'case-insensitive' (block case variants)
   duplicates?: boolean | `case-insensitive`
-  // where to render the expand icon: left (default) or right of the input, or 'none' to hide it
-  // (https://github.com/janosh/svelte-multiselect/issues/419 and /issues/185)
+  // Where to render the expand icon, or 'none' to hide it.
   expandIconPosition?: `left` | `right` | `none`
   // keepSelectedInDropdown controls whether selected options remain in dropdown: false (default),
   // 'plain' (left border and background color to differentiate selected options),

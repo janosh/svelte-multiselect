@@ -1566,6 +1566,19 @@
   {/if}
 {/snippet}
 
+{#snippet render_expand_icon()}
+  <span class="expand-icon" style="display: flex; align-items: center">
+    {#if expandIcon}
+      {@render expandIcon({ open, disabled })}
+    {:else}
+      <Icon
+        icon="ChevronExpand"
+        style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
+      />
+    {/if}
+  </span>
+{/snippet}
+
 <svelte:window
   onclick={on_click_outside}
   ontouchstart={on_click_outside}
@@ -1610,22 +1623,8 @@
       form_input?.setCustomValidity(msg)
     }}
   />
-  {#if expandIconPosition !== `none`}
-    <!-- order: 1 pushes icon past all other flex children (chips, input, remove-all) to the far right -->
-    <span
-      class="expand-icon"
-      style="display: flex; align-items: center"
-      style:order={expandIconPosition === `right` ? 1 : null}
-    >
-      {#if expandIcon}
-        {@render expandIcon({ open, disabled })}
-      {:else}
-        <Icon
-          icon="ChevronExpand"
-          style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
-        />
-      {/if}
-    </span>
+  {#if expandIconPosition === `left`}
+    {@render render_expand_icon()}
   {/if}
   <ul
     class="selected {ulSelectedClass}"
@@ -1722,6 +1721,9 @@
     />
     {@render afterInput?.(input_snippet_props)}
   </ul>
+  {#if expandIconPosition === `right`}
+    {@render render_expand_icon()}
+  {/if}
   {#if loading}
     {#if spinner}
       {@render spinner()}

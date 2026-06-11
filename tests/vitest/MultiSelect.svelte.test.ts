@@ -21,6 +21,11 @@ const arrow_down = new KeyboardEvent(`keydown`, {
   bubbles: true,
 })
 const enter = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
+const node_precedes = (first_element: Element, second_element: Element) =>
+  Boolean(
+    first_element.compareDocumentPosition(second_element) &
+    Node.DOCUMENT_POSITION_FOLLOWING,
+  )
 const console_methods = { error: console.error, warn: console.warn }
 afterEach(() => Object.assign(console, console_methods))
 
@@ -1379,26 +1384,36 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
 })
 
 test.each([
-  [undefined, ``],
-  [`left`, ``],
-  [`right`, `1`],
+  [undefined, true],
+  [`left`, true],
+  [`right`, false],
 ] as const)(
-  `expandIconPosition=%s renders expand icon with flex order '%s'`,
-  (position, expected_order) => {
+  `expandIconPosition=%s places expand icon before selected list: %s`,
+  (position, icon_before_selected_list) => {
     mount(MultiSelect, {
       target: document.body,
       props: { options: [1, 2, 3], expandIconPosition: position },
     })
-    expect(doc_query(`.expand-icon`).style.order).toBe(expected_order)
+    const expand_icon = doc_query(`.expand-icon`)
+    const selected_list = doc_query(`ul.selected`)
+    expect(node_precedes(expand_icon, selected_list)).toBe(icon_before_selected_list)
   },
 )
 
-test(`expandIconPosition=none removes expand icon from DOM`, () => {
+test(`expandIconPosition=none removes default expand icon from DOM`, () => {
   mount(MultiSelect, {
     target: document.body,
     props: { options: [1, 2, 3], expandIconPosition: `none` },
   })
   expect(document.querySelector(`.expand-icon`)).toBeNull()
+})
+
+test(`expandIconPosition=none suppresses custom expandIcon snippet`, () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3], expandIconPosition: `none` },
+  })
+  expect(document.querySelector(`.expand-snippet`)).toBeNull()
 })
 
 test(`expand icon click toggles dropdown in chips mode`, async () => {
@@ -1456,17 +1471,17 @@ test(`beforeInput and afterInput snippets receive searchText and flank the input
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   // beforeInput renders before the search input, afterInput after it
-  const precedes = (el_1: Element, el_2: Element) =>
-    Boolean(el_1.compareDocumentPosition(el_2) & Node.DOCUMENT_POSITION_FOLLOWING)
-  expect(precedes(before_input, input)).toBe(true)
-  expect(precedes(input, after_input)).toBe(true)
+  expect(node_precedes(before_input, input)).toBe(true)
+  expect(node_precedes(input, after_input)).toBe(true)
 
   input.value = `test`
   input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
   await tick()
 
-  expect(before_input.dataset.searchText).toBe(`test`)
-  expect(after_input.dataset.searchText).toBe(`test`)
+  const before_input_after = doc_query(`.before-input-snippet`)
+  const after_input_after = doc_query(`.after-input-snippet`)
+  expect(before_input_after.dataset.searchText).toBe(`test`)
+  expect(after_input_after.dataset.searchText).toBe(`test`)
 })
 
 test(`filters dropdown to show only matching options when entering text`, async () => {
