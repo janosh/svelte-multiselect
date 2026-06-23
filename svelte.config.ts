@@ -1,4 +1,5 @@
 import adapter from '@sveltejs/adapter-static'
+import type { Config } from '@sveltejs/kit'
 import { mdsvex } from 'mdsvex'
 import pkg from './package.json' with { type: 'json' }
 import { heading_ids } from './src/lib/heading-anchors.ts'
@@ -21,12 +22,12 @@ const remarkPlugins = [
   ],
 ]
 
-import type { Config } from '@sveltejs/kit'
-
 const config: Config = {
   extensions: [`.svelte`, `.md`],
 
   compilerOptions: {
+    // TODO: Remove after bumping past the Svelte 5.48-5.56 regression that emits
+    // state_referenced_locally for valid local bindings.
     warningFilter: (warning) => warning.code !== `state_referenced_locally`,
   },
 

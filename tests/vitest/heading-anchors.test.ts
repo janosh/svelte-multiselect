@@ -191,7 +191,7 @@ describe(`heading_anchors attachment`, () => {
       )
       heading_anchors()(container)
       heading_anchors()(container) // call twice to test duplicate prevention
-      expect(container.querySelectorAll(anchor_selector).length).toBe(3)
+      expect(container.querySelectorAll(anchor_selector)).toHaveLength(3)
     })
   })
 
@@ -227,7 +227,9 @@ describe(`heading_anchors attachment`, () => {
     ])(`%s → matched: %s`, (_desc, html, id_sel, should_match) => {
       const container = create_container(html)
       heading_anchors()(container)
-      expect(!!document.querySelector(`${id_sel} ${anchor_selector}`)).toBe(should_match)
+      const anchor = document.querySelector(`${id_sel} ${anchor_selector}`)
+      if (should_match) expect(anchor).toBeInstanceOf(HTMLAnchorElement)
+      else expect(anchor).toBeNull()
     })
   })
 
@@ -305,8 +307,12 @@ describe(`heading_anchors attachment`, () => {
     ])(`selector %s`, (_desc, selector, html, sel1, match1, sel2, match2) => {
       const container = create_container(html)
       heading_anchors({ selector })(container)
-      expect(!!container.querySelector(`${sel1} ${anchor_selector}`)).toBe(match1)
-      expect(!!container.querySelector(`${sel2} ${anchor_selector}`)).toBe(match2)
+      const anchor1 = container.querySelector(`${sel1} ${anchor_selector}`)
+      const anchor2 = container.querySelector(`${sel2} ${anchor_selector}`)
+      if (match1) expect(anchor1).toBeInstanceOf(HTMLAnchorElement)
+      else expect(anchor1).toBeNull()
+      if (match2) expect(anchor2).toBeInstanceOf(HTMLAnchorElement)
+      else expect(anchor2).toBeNull()
     })
 
     it(`icon_svg customizes icon, default has aria-label`, () => {

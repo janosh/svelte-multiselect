@@ -115,6 +115,7 @@
     opacity: 1;
     max-height: var(--code-example-pre-max-height, 80vh);
     overflow-x: auto;
+    overflow-y: auto;
     padding: var(--code-example-pre-padding, 1ex 1em);
     margin: var(--code-example-pre-margin, 1em 0 0 0);
   }

@@ -1,10 +1,7 @@
 // Tests for starry-night syntax highlighter
-import {
-  hast_to_html,
-  starry_night,
-  starry_night_highlighter,
-} from '$lib/live-examples/highlighter'
-import { describe, expect, test } from 'vite-plus/test'
+import { hast_to_html } from '$lib/live-examples/hast'
+import { starry_night, starry_night_highlighter } from '$lib/live-examples/highlighter'
+import { describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`starry_night.flagToScope`, () => {
   test.each([
@@ -88,6 +85,20 @@ describe(`hast_to_html`, () => {
 })
 
 describe(`starry_night_highlighter`, () => {
+  test(`reports missing optional starry-night peer dependency`, async () => {
+    vi.resetModules()
+    vi.doMock(`@wooorm/starry-night`, () => {
+      throw new Error(`Cannot find package '@wooorm/starry-night'`)
+    })
+
+    await expect(import(`$lib/live-examples/highlighter`)).rejects.toThrow(
+      `svelte-multiselect/live-examples requires optional peer dependency @wooorm/starry-night`,
+    )
+
+    vi.doUnmock(`@wooorm/starry-night`)
+    vi.resetModules()
+  })
+
   // All supported languages in one test.each - covers web, shell, config, programming, etc.
   test.each([
     // Web

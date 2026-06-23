@@ -109,7 +109,7 @@ export default function live_examples_plugin(
 
       // Skip derived module requests (CSS, scripts) - let vite-plugin-svelte handle them.
       // Must check BEFORE virtual_files lookup to avoid returning Svelte source for CSS.
-      if (/type=(style|script|module)/u.test(query)) return undefined
+      if (/type=(?<type>style|script|module)/u.test(query)) return undefined
 
       const src = virtual_files.get(base_id)
       if (src !== undefined) return src

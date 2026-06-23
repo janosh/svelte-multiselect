@@ -59,23 +59,24 @@
     "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.60.0",
+    "@janosh/vite-config": "github:janosh/dotfiles",
+    "@playwright/test": "^1.61.1",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.64.0",
+    "@sveltejs/kit": "^2.68.0",
     "@sveltejs/package": "2.5.8",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
-    "@types/node": "^25.9.2",
-    "@vitest/coverage-v8": "^4.1.8",
+    "@types/node": "^26.0.1",
+    "@vitest/coverage-v8": "^4.1.9",
     "@wooorm/starry-night": "^3.10.0",
-    "acorn": "^8.16.0",
-    "happy-dom": "^20.10.2",
+    "acorn": "^8.17.0",
+    "happy-dom": "^20.10.6",
     "mdsvex": "^0.12.7",
-    "svelte": "^5.56.3",
+    "svelte": "^5.56.4",
     "svelte-toc": "^0.7.0",
     "typescript": "6.0.3",
-    "vite": "^8.0.16",
-    "vite-plus": "0.1.24",
-    "vitest": "^4.1.8"
+    "vite": "^8.1.0",
+    "vite-plus": "0.2.1",
+    "vitest": "^4.1.9"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",
@@ -91,6 +92,7 @@
     }
   },
   "overrides": {
+    "esrap": "2.2.11",
     "svelte": "$svelte"
   }
 }

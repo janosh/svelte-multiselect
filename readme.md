@@ -25,7 +25,7 @@
 
 - **Bindable:** `bind:selected` gives you an array of the currently selected options. Thanks to Svelte's 2-way binding, it can also control the component state externally through assignment `selected = ['foo', 42]`.
 - **Keyboard friendly** for mouse-less form completion
-- **No run-time deps:** needs only Svelte as dev dependency
+- **No run-time deps:** core components need only Svelte as dev dependency
 - **Dropdowns:** scrollable lists for large numbers of options
 - **Searchable:** start typing to filter options
 - **Tagging:** selected options are listed as tags within the input
@@ -1021,6 +1021,8 @@ import { fuzzy_match, get_label } from 'svelte-multiselect/utils'
 import { heading_anchors } from 'svelte-multiselect/heading-anchors'
 ```
 
+See [src/lib/live-examples/readme.md](https://github.com/janosh/svelte-multiselect/blob/-/src/lib/live-examples/readme.md) for optional live-example helpers.
+
 ## ✨ &thinsp; Styling
 
 There are 3 ways to style this component. To understand which options do what, it helps to keep in mind this simplified DOM structure of the component:
@@ -1087,6 +1089,7 @@ Minimal example that changes the background color of the options dropdown:
   - `padding: var(--sms-options-padding, 0)`
   - `margin: var(--sms-options-margin, 6pt 0 0 0)`
 - `div.multiselect > ul.options > li`
+  - `padding: var(--sms-options-li-padding, 3pt 1ex)`: Padding of each option in the dropdown list.
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
   - `background: var(--sms-li-selected-plain-bg, light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2)))`: Background of selected list items in options pane.
