@@ -1,6 +1,7 @@
-import { CodeExample, CopyButton } from '$lib'
 import { mount, tick, unmount } from 'svelte'
 import { expect, test } from 'vite-plus/test'
+import CodeExample from '$lib/CodeExample.svelte'
+import CopyButton from '$lib/CopyButton.svelte'
 import { doc_query } from './index'
 
 const [id, src] = [`uniq-id`, `some code`]
@@ -10,6 +11,15 @@ const mount_global_copy_button = (props: Record<string, unknown> = {}) =>
     target: document.body,
     props: { global: true, ...props },
   })
+
+const append_code_block = (text: string) => {
+  const pre = document.createElement(`pre`)
+  const code = document.createElement(`code`)
+  code.textContent = text
+  pre.append(code)
+  document.body.append(pre)
+  return pre
+}
 
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const meta = { collapsible: true, id }
@@ -21,14 +31,21 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
 
   const toggle_button = doc_query<HTMLButtonElement>(`nav > button`)
   expect(toggle_button.textContent).toContain(`View code`)
-  expect(document.querySelector(`pre.open`)).toBeNull()
+  const pre_closed = doc_query<HTMLPreElement>(`pre`)
+  const closed_style = getComputedStyle(pre_closed)
+  expect(pre_closed.classList.contains(`open`)).toBe(false)
+  expect(closed_style.maxHeight).toBe(`0`)
+  expect(closed_style.overflow).toBe(`hidden`)
 
   toggle_button.click()
   await tick()
 
   const pre = doc_query<HTMLPreElement>(`pre.open`)
+  const open_style = getComputedStyle(pre)
   expect(pre).toBeInstanceOf(HTMLElement)
   expect(doc_query(`pre.open > code`).textContent).toBe(src)
+  expect(open_style.overflowX).toBe(`auto`)
+  expect(open_style.overflowY).toBe(`auto`)
   expect(toggle_button.textContent).toContain(`Close`)
 })
 
@@ -38,38 +55,28 @@ test(`renders a <pre> with the src`, () => {
   expect(doc_query(`pre > code`).textContent).toBe(src)
 })
 
-test(`renders links in nav when repl is provided`, () => {
-  const meta = { collapsible: true, repl: `https://svelte.dev/playground` }
-  mount(CodeExample, { target: document.body, props: { src, meta } })
-
-  const repl_link = document.querySelector(`nav a[href="${meta.repl}"]`)
-  expect(repl_link).toBeInstanceOf(HTMLAnchorElement)
-  expect(repl_link?.getAttribute(`target`)).toBe(`_blank`)
-})
-
-test(`renders GitHub link when github and repo are provided`, () => {
-  const meta = {
-    collapsible: true,
-    github: true,
-    repo: `https://github.com/janosh/svelte-multiselect`,
-    file: `src/lib/CodeExample.svelte`,
-  }
-  mount(CodeExample, { target: document.body, props: { src, meta } })
-
-  const github_link = document.querySelector(`nav a[href*="github.com"]`)
-  expect(github_link).toBeInstanceOf(HTMLAnchorElement)
-  expect(github_link?.getAttribute(`target`)).toBe(`_blank`)
-})
-
-test(`collapsed pre has no padding or margin to avoid layout space leak`, () => {
-  const meta = { collapsible: true, id }
+test.each([
+  [
+    `REPL`,
+    { collapsible: true, repl: `https://svelte.dev/playground` },
+    `nav a[href="https://svelte.dev/playground"]`,
+  ],
+  [
+    `GitHub`,
+    {
+      collapsible: true,
+      github: true,
+      repo: `https://github.com/janosh/svelte-multiselect`,
+      file: `src/lib/CodeExample.svelte`,
+    },
+    `nav a[href*="github.com"]`,
+  ],
+] as const)(`renders %s link in nav`, (_label, meta, selector) => {
   mount(CodeExample, { target: document.body, props: { meta, src } })
 
-  const pre = doc_query<HTMLPreElement>(`pre`)
-  expect(pre.classList.contains(`open`)).toBe(false)
-  const style = getComputedStyle(pre)
-  expect(style.maxHeight).toBe(`0`)
-  expect(style.overflow).toBe(`hidden`)
+  const link = doc_query<HTMLAnchorElement>(selector)
+  expect(link).toBeInstanceOf(HTMLAnchorElement)
+  expect(link.getAttribute(`target`)).toBe(`_blank`)
 })
 
 test.each([`typescript`, `css`, `python`])(
@@ -92,20 +99,10 @@ test(`lang-label is omitted when meta.lang is unset`, () => {
 })
 
 test(`dynamically added pre > code elements get copy buttons applied`, async () => {
-  // Mount a CopyButton with global enabled to activate MutationObserver
   const copy_button_component = mount_global_copy_button()
-
-  // Create a new pre > code element dynamically
-  const new_pre = document.createElement(`pre`)
-  const new_code = document.createElement(`code`)
-  new_code.textContent = `dynamically added code`
-  new_pre.append(new_code)
-
-  // Add it to the DOM
-  document.body.append(new_pre)
+  const new_pre = append_code_block(`dynamically added code`)
   await tick()
 
-  // Verify that a copy button was added to the new pre element
   const copy_button = new_pre.querySelector(`button`)
   expect(copy_button).toBeInstanceOf(HTMLButtonElement)
   expect(copy_button?.style.position).toBe(`absolute`)
@@ -113,26 +110,16 @@ test(`dynamically added pre > code elements get copy buttons applied`, async () 
 })
 
 test(`prevents duplicate copy buttons when as !== button`, async () => {
-  // Mount a CopyButton with global enabled and as='a' to test duplicate prevention
   const copy_button_component = mount_global_copy_button({ as: `a` })
-
-  // Create a pre > code element
-  const pre = document.createElement(`pre`)
-  const code = document.createElement(`code`)
-  code.textContent = `test code`
-  pre.append(code)
-  document.body.append(pre)
+  const pre = append_code_block(`test code`)
   await tick()
 
-  // Verify only one copy button (anchor) was created
   const copy_buttons = pre.querySelectorAll(`a[data-sms-copy]`)
   expect(copy_buttons).toHaveLength(1)
 
-  // Trigger MutationObserver again by modifying the pre element
   pre.setAttribute(`data-test`, `modified`)
   await tick()
 
-  // Verify no duplicate was created
   const copy_buttons_after = pre.querySelectorAll(`a[data-sms-copy]`)
   expect(copy_buttons_after).toHaveLength(1)
   void unmount(copy_button_component)

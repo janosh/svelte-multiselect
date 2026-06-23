@@ -1087,6 +1087,7 @@ Minimal example that changes the background color of the options dropdown:
   - `padding: var(--sms-options-padding, 0)`
   - `margin: var(--sms-options-margin, 6pt 0 0 0)`
 - `div.multiselect > ul.options > li`
+  - `padding: var(--sms-options-li-padding, 3pt 1ex)`: Padding of each option in the dropdown list.
   - `scroll-margin: var(--sms-options-scroll-margin, 100px)`: Top/bottom margin to keep between dropdown list items and top/bottom screen edge when auto-scrolling list to keep items in view.
 - `div.multiselect > ul.options > li.selected`
   - `background: var(--sms-li-selected-plain-bg, light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2)))`: Background of selected list items in options pane.

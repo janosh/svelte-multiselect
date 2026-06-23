@@ -380,7 +380,7 @@ describe(`tooltip`, () => {
         current = child
       }
       setup_tooltip(parent)
-      expect(parent.querySelectorAll(`[data-original-title]`).length).toBe(5)
+      expect(parent.querySelectorAll(`[data-original-title]`)).toHaveLength(5)
     })
 
     it(`should not setup children added after initialization`, () => {
@@ -477,7 +477,9 @@ describe(`tooltip`, () => {
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: get_target() })
       globalThis.dispatchEvent(scroll_event)
-      expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_persist)
+      expect(document.querySelector(`.custom-tooltip`)).toEqual(
+        should_persist ? expect.any(HTMLDivElement) : null,
+      )
     })
 
     it(`scroll from ancestor hides tooltip`, () => {
@@ -510,7 +512,7 @@ describe(`tooltip`, () => {
       trigger_tooltip(el1)
       trigger_tooltip(el2)
 
-      expect(document.querySelectorAll(`.custom-tooltip`).length).toBe(1)
+      expect(document.querySelectorAll(`.custom-tooltip`)).toHaveLength(1)
       expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip2`)
     })
 
@@ -634,7 +636,9 @@ describe(`tooltip`, () => {
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
-      expect(!!document.querySelector(`.custom-tooltip`)).toBe(visible_after_leave)
+      expect(document.querySelector(`.custom-tooltip`)).toEqual(
+        visible_after_leave ? expect.any(HTMLDivElement) : null,
+      )
 
       if (delay_ms > 0) {
         vi.advanceTimersByTime(delay_ms)
@@ -682,7 +686,9 @@ describe(`tooltip`, () => {
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       document.dispatchEvent(new KeyboardEvent(`keydown`, { key }))
-      expect(!!document.querySelector(`.custom-tooltip`)).toBe(should_remain)
+      expect(document.querySelector(`.custom-tooltip`)).toEqual(
+        should_remain ? expect.any(HTMLDivElement) : null,
+      )
     })
 
     it.each([
@@ -697,7 +703,8 @@ describe(`tooltip`, () => {
       trigger_tooltip(element)
 
       const tooltip_el = doc_query(`.custom-tooltip`)
-      expect(!!tooltip_el.querySelector(`.custom-tooltip-arrow`)).toBe(expect_arrow)
+      const arrow = tooltip_el.querySelector(`.custom-tooltip-arrow`)
+      expect(arrow).toEqual(expect_arrow ? expect.any(HTMLDivElement) : null)
     })
 
     it(`manages aria-describedby on show/hide`, () => {

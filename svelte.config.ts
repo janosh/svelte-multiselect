@@ -1,4 +1,5 @@
 import adapter from '@sveltejs/adapter-static'
+import type { Config } from '@sveltejs/kit'
 import { mdsvex } from 'mdsvex'
 import pkg from './package.json' with { type: 'json' }
 import { heading_ids } from './src/lib/heading-anchors.ts'
@@ -20,8 +21,6 @@ const remarkPlugins = [
     },
   ],
 ]
-
-import type { Config } from '@sveltejs/kit'
 
 const config: Config = {
   extensions: [`.svelte`, `.md`],

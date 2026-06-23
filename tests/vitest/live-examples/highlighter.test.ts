@@ -1,9 +1,6 @@
 // Tests for starry-night syntax highlighter
-import {
-  hast_to_html,
-  starry_night,
-  starry_night_highlighter,
-} from '$lib/live-examples/highlighter'
+import { hast_to_html } from '$lib/live-examples/hast'
+import { starry_night, starry_night_highlighter } from '$lib/live-examples/highlighter'
 import { describe, expect, test } from 'vite-plus/test'
 
 describe(`starry_night.flagToScope`, () => {

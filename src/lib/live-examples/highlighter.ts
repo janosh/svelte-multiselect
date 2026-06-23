@@ -3,8 +3,6 @@ import { common, createStarryNight } from '@wooorm/starry-night'
 import source_svelte from '@wooorm/starry-night/source.svelte'
 import { escape_html_text, hast_to_html } from './hast.ts'
 
-export { hast_to_html }
-
 // Escape characters that would be interpreted as Svelte template syntax
 const escape_svelte = (html: string): string =>
   html.replaceAll(`{`, `&#123;`).replaceAll(`}`, `&#125;`)

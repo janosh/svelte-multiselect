@@ -153,8 +153,11 @@
 
   function close_if_outside(event: MouseEvent) {
     const target = event.target
-    if (!target || !(target instanceof HTMLElement)) return
-    if (open && !dialog?.contains(target) && !target.closest(`ul.options`)) {
+    if (!open || !(target instanceof HTMLElement)) return
+    // backdrop clicks on a modal dialog have target === dialog, so close unless the click
+    // is on this palette's MultiSelect (scoped inside the dialog) or its (portalled) options
+    const in_palette = dialog?.contains(target) && target.closest(`div.multiselect`)
+    if (!in_palette && !target.closest(`ul.options`)) {
       open = false
     }
   }
@@ -211,6 +214,7 @@
       --sms-width="min(20em, 90vw)"
       --sms-max-width="none"
       --sms-placeholder-color="lightgray"
+      --sms-padding="3pt"
       --sms-options-margin="1px 0"
       --sms-options-border-radius="0 0 1ex 1ex"
     />
@@ -254,7 +258,7 @@
     bottom: auto;
     margin: 0 auto;
     border: none;
-    padding: 0;
+    padding: var(--cmd-dialog-padding, 6pt);
     background-color: transparent;
     display: flex;
     /* Let command results/popovers escape the dialog; default clipping hides suggestions. */

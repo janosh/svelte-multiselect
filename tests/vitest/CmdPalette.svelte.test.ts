@@ -117,7 +117,9 @@ test.each([
     await tick()
 
     expect(props.open).toBe(should_open)
-    expect(!!document.querySelector(`dialog`)).toBe(should_open)
+    expect(document.querySelector(`dialog`)).toEqual(
+      should_open ? expect.any(HTMLDialogElement) : null,
+    )
 
     if (should_open) {
       expect(document.activeElement).toBe(doc_query(`dialog input[autocomplete]`))
@@ -146,7 +148,9 @@ test.each([
     await tick()
 
     expect(props.open).toBe(!should_close)
-    expect(!!document.querySelector(`dialog`)).toBe(!should_close)
+    expect(document.querySelector(`dialog`)).toEqual(
+      should_close ? null : expect.any(HTMLDialogElement),
+    )
   },
 )
 
@@ -253,63 +257,103 @@ test(`handles action selection and execution`, () => {
   expect(props.open).toBe(false)
 })
 
-test(`handles click outside to close dialog`, async () => {
+test.each([
+  [`page body`, () => document.body],
+  // showModal() backdrop clicks dispatch with the dialog element itself as the target,
+  // so a naive dialog.contains(target) check would wrongly keep the palette open
+  [`modal backdrop (target === dialog)`, () => doc_query<HTMLDialogElement>(`dialog`)],
+])(`closes dialog on outside click: %s`, async (_label, get_target) => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
+  await tick()
 
-  document.body.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  get_target().dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
   await tick()
 
   expect(props.open).toBe(false)
-  expect(document.querySelector(`dialog`)).toBe(null)
+  expect(document.querySelector(`dialog`)).toBeNull()
 })
 
-test(`does not close dialog when clicking on portalled options`, async () => {
+test.each([
+  [`input wrapper`, `dialog div.multiselect`],
+  [`search input`, `dialog div.multiselect input[autocomplete]`],
+  [`options list`, `dialog ul.options`],
+])(`keeps dialog open when clicking palette %s`, async (_label, selector) => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
   await tick()
 
-  // Create a mock portalled options element
-  const portalled_options = document.createElement(`ul`)
-  portalled_options.className = `options`
-  portalled_options.innerHTML = `<li>Option 1</li><li>Option 2</li>`
-  document.body.append(portalled_options)
-
-  // Click on the portalled options
-  const option_li = portalled_options.querySelector(`li`)
-  option_li?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  doc_query(selector).dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
   await tick()
 
-  // Dialog should still be open
   expect(props.open).toBe(true)
-  expect(document.querySelector(`dialog`)).not.toBe(null)
-
-  // Clean up
-  portalled_options.remove()
+  expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
-test(`!target.closest('ul.options') prevents premature closure`, async () => {
+test(`non-modal fallback closes on click of an unrelated page multiselect`, async () => {
+  const original_show_modal = Object.getOwnPropertyDescriptor(
+    HTMLDialogElement.prototype,
+    `showModal`,
+  )
+  // force the non-modal fallback so outside clicks land on real page elements (with a
+  // modal dialog they'd hit the backdrop instead, which is covered above)
+  HTMLDialogElement.prototype.showModal = vi.fn(() => {
+    throw new Error(`showModal unavailable`)
+  })
+  const other_multiselect = document.createElement(`div`)
+  other_multiselect.className = `multiselect`
+  document.body.append(other_multiselect)
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
-  await tick()
 
-  // Create nested ul.options structure to test closest() logic
-  const container = document.createElement(`div`)
-  container.innerHTML = `
-    <ul class="options">
-      <li><span>Nested option</span></li>
-    </ul>
-  `
-  document.body.append(container)
+  try {
+    mount(CmdPalette, { target: document.body, props })
+    await tick()
 
-  // Click on nested span inside ul.options
-  const span = container.querySelector(`span`)
-  span?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-  await tick()
+    other_multiselect.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    await tick()
 
-  // Dialog should remain open due to !target.closest('ul.options') check
-  expect(props.open).toBe(true)
+    expect(props.open).toBe(false)
+  } finally {
+    other_multiselect.remove()
+    restore_show_modal(original_show_modal)
+  }
 })
+
+// clicks on portalled ul.options (rendered outside the dialog) must keep the palette open
+// via the target.closest('ul.options') check, both on a direct <li> and a nested descendant
+test.each([
+  [
+    `direct li child`,
+    `<ul class="options"><li>Option 1</li><li>Option 2</li></ul>`,
+    `li`,
+  ],
+  [
+    `nested element inside li`,
+    `<div><ul class="options"><li><span>Nested option</span></li></ul></div>`,
+    `span`,
+  ],
+])(
+  `keeps dialog open when clicking portalled options: %s`,
+  async (_label, html, click_selector) => {
+    const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+    mount(CmdPalette, { target: document.body, props })
+    await tick()
+
+    const container = document.createElement(`div`)
+    container.innerHTML = html
+    document.body.append(container)
+
+    container
+      .querySelector(click_selector)
+      ?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    await tick()
+
+    expect(props.open).toBe(true)
+    expect(document.querySelector(`dialog`)).not.toBeNull()
+
+    container.remove()
+  },
+)
 
 test(`applies custom styles and props correctly`, async () => {
   const custom_class = `my-custom-class`
@@ -367,20 +411,6 @@ test.each([{ scenario: `empty actions array`, actions: [], should_have_options: 
     }
   },
 )
-
-test(`opens dialog with trigger key when closed`, async () => {
-  const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
-
-  expect(props.open).toBe(false)
-
-  // Trigger key should open dialog when closed
-  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
-  await tick()
-
-  expect(props.open).toBe(true)
-  expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
-})
 
 test(`ignores non-trigger events when dialog is closed`, async () => {
   const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
@@ -600,8 +630,8 @@ test(`handles bindable props correctly`, async () => {
   })
   mount(CmdPalette, { target: document.body, props })
 
-  expect(props.dialog).toBe(null)
-  expect(props.input).toBe(null)
+  expect(props.dialog).toBeNull()
+  expect(props.input).toBeNull()
 
   props.open = true
   await tick()
@@ -625,39 +655,6 @@ test(`handles action execution with different label types`, () => {
   expect(doc_query(`dialog ul.options li`)?.textContent).toContain(`simple action`)
 })
 
-test(`handles custom dialog styles`, () => {
-  const custom_style = `border: 2px solid red; padding: 10px;`
-  mount(CmdPalette, {
-    target: document.body,
-    props: {
-      open: true,
-      actions: mock_actions,
-      dialog_style: custom_style,
-      fade_duration: 0,
-    },
-  })
-
-  const dialog = doc_query<HTMLDialogElement>(`dialog`)
-  expect(dialog.style.border).toBe(`2px solid red`)
-  expect(dialog.style.padding).toBe(`10px`)
-})
-
-test(`handles custom placeholder text`, () => {
-  const custom_placeholder = `Search for actions...`
-  mount(CmdPalette, {
-    target: document.body,
-    props: {
-      open: true,
-      actions: mock_actions,
-      placeholder: custom_placeholder,
-      fade_duration: 0,
-    },
-  })
-
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-  expect(input.placeholder).toBe(custom_placeholder)
-})
-
 // Grouping tests
 const grouped_actions = [
   { label: `New File`, action: vi.fn(), group: `File` },
@@ -675,7 +672,7 @@ test(`renders grouped actions with group headers`, async () => {
 
   // Check that group headers are rendered
   const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers.length).toBe(2)
+  expect(group_headers).toHaveLength(2)
 
   // Check group header text contains group names (headers include count like "File (2)")
   const header_texts = [...group_headers].map((header) => header.textContent?.trim())
@@ -686,7 +683,7 @@ test(`renders grouped actions with group headers`, async () => {
   const action_items = document.querySelectorAll(
     `dialog ul.options li:not(.group-header)`,
   )
-  expect(action_items.length).toBe(4)
+  expect(action_items).toHaveLength(4)
 })
 
 test(`ungrouped actions continue to work without group headers`, async () => {
@@ -698,39 +695,47 @@ test(`ungrouped actions continue to work without group headers`, async () => {
 
   // No group headers should be rendered for ungrouped actions
   const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers.length).toBe(0)
+  expect(group_headers).toHaveLength(0)
 
   // All actions should still be rendered
   const action_items = document.querySelectorAll(`dialog ul.options li`)
-  expect(action_items.length).toBe(mock_actions.length)
+  expect(action_items).toHaveLength(mock_actions.length)
 })
 
-test(`collapsibleGroups prop enables collapse functionality`, async () => {
-  // Start with File group already collapsed to verify prop passthrough
-  mount(CmdPalette, {
-    target: document.body,
-    props: {
-      open: true,
-      actions: grouped_actions,
-      collapsibleGroups: true,
-      collapsedGroups: new Set([`File`]),
-      fade_duration: 0,
-    },
-  })
-  await tick()
+test.each([
+  [`File`, `New File`],
+  [`Edit`, `Copy`],
+])(
+  `collapsedGroups collapses the %s group, hiding its options`,
+  async (collapsed_group, hidden_label) => {
+    mount(CmdPalette, {
+      target: document.body,
+      props: {
+        open: true,
+        actions: grouped_actions,
+        collapsibleGroups: true,
+        collapsedGroups: new Set([collapsed_group]),
+        fade_duration: 0,
+      },
+    })
+    await tick()
 
-  // Check aria-expanded attribute on group header to verify collapsibleGroups works
-  const file_header = [
-    ...document.querySelectorAll(`dialog ul.options li.group-header`),
-  ].find((header) => header.textContent?.includes(`File`))
-  expect(file_header?.getAttribute(`aria-expanded`)).toBe(`false`)
+    // collapsed group's header reports aria-expanded=false
+    const header = [
+      ...document.querySelectorAll(`dialog ul.options li.group-header`),
+    ].find((el) => el.textContent?.includes(collapsed_group))
+    expect(header?.getAttribute(`aria-expanded`)).toBe(`false`)
 
-  // File options should not be rendered when collapsed
-  const new_file_option = [...document.querySelectorAll(`dialog ul.options li`)].find(
-    (li) => li.textContent?.includes(`New File`),
-  )
-  expect(new_file_option).toBeUndefined()
-})
+    // its options are not rendered; only the other group's 2 options remain
+    const hidden_option = [...document.querySelectorAll(`dialog ul.options li`)].find(
+      (li) => li.textContent?.includes(hidden_label),
+    )
+    expect(hidden_option).toBeUndefined()
+    expect(
+      document.querySelectorAll(`dialog ul.options li:not(.group-header)`),
+    ).toHaveLength(2)
+  },
+)
 
 test(`groupSelectAll prop enables group selection in command palette`, async () => {
   mount(CmdPalette, {
@@ -746,7 +751,7 @@ test(`groupSelectAll prop enables group selection in command palette`, async () 
 
   // Group headers should have select-all functionality when enabled
   const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers.length).toBe(2)
+  expect(group_headers).toHaveLength(2)
 })
 
 test(`mixed grouped and ungrouped actions render correctly`, async () => {
@@ -764,35 +769,14 @@ test(`mixed grouped and ungrouped actions render correctly`, async () => {
 
   // Should have one group header for File group (header includes count like "File (2)")
   const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers.length).toBe(1)
+  expect(group_headers).toHaveLength(1)
   expect(group_headers[0].textContent?.trim()).toMatch(/^File/u)
 
   // All 4 actions should be rendered
   const action_items = document.querySelectorAll(
     `dialog ul.options li:not(.group-header)`,
   )
-  expect(action_items.length).toBe(4)
-})
-
-test(`collapsedGroups prop controls which groups start collapsed`, async () => {
-  // Test that Edit group can also be collapsed
-  mount(CmdPalette, {
-    target: document.body,
-    props: {
-      open: true,
-      actions: grouped_actions,
-      collapsibleGroups: true,
-      collapsedGroups: new Set([`Edit`]),
-      fade_duration: 0,
-    },
-  })
-  await tick()
-
-  // Edit group is collapsed, so only File group options (2) should be rendered
-  const visible_options = document.querySelectorAll(
-    `dialog ul.options li:not(.group-header)`,
-  )
-  expect(visible_options.length).toBe(2)
+  expect(action_items).toHaveLength(4)
 })
 
 // dropdown option labels in display order (used by shortcut/recents tests below)

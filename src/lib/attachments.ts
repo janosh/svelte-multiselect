@@ -1,9 +1,6 @@
 import type { Attachment } from 'svelte/attachments'
 import { fuzzy_match_indices, get_uuid } from './utils'
 
-// Re-export get_uuid for backwards compatibility
-export { get_uuid }
-
 // Type definitions for CSS highlight API (experimental)
 declare global {
   interface CSS {

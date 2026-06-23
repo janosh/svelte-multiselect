@@ -1,7 +1,8 @@
 // Remark plugin - transforms ```svelte example code blocks into rendered components
 import { Buffer } from 'node:buffer'
 import path from 'node:path'
-import { hast_to_html, starry_night } from './highlighter.ts'
+import { hast_to_html } from './hast.ts'
+import { starry_night } from './highlighter.ts'
 
 // Base64 encode to prevent preprocessors from modifying the content
 const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
@@ -14,15 +15,15 @@ const encode_escapes = (src: string) =>
 // Note: These patterns handle common cases but may have edge cases with nested
 // comments containing </script> strings or complex attribute syntax
 const RE_SCRIPT_START =
-  /<script(?:\s+?[a-zA-Z]+(=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/u
-const RE_SCRIPT_BLOCK = /(<script[\s\S]*?>)([\s\S]*?)(<\/script>)/gu
-const RE_STYLE_BLOCK = /(<style[\s\S]*?>)([\s\S]*?)(<\/style>)/gu
+  /<script(?:\s+?[a-zA-Z]+(?:=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/u
+const RE_SCRIPT_BLOCK = /<script[\s\S]*?>[\s\S]*?<\/script>/gu
+const RE_STYLE_BLOCK = /<style[\s\S]*?>[\s\S]*?<\/style>/gu
 
 // Parses key=value pairs from a string. Supports strings (with escaped quotes),
 // numbers, booleans, and arrays. Note: nested structures in arrays are not supported.
 // Bare values (key=foo, key=true, key=-1.5) are captured greedily so invalid JSON
 // throws a parse error instead of silently splitting into two bare-word keys.
-const RE_PARSE_META = /(\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+=[^\s"[\]]+|\w+)/gu
+const RE_PARSE_META = /(?:\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+=[^\s"[\]]+|\w+)/gu
 
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
@@ -87,7 +88,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
   const { defaults = {} } = options
 
   return function transformer(tree: RemarkTree, file: RemarkFile): void {
-    const examples: Array<{ csr?: boolean; wrapper_alias: string }> = []
+    const examples: { csr?: boolean; wrapper_alias: string }[] = []
     // Track wrapper imports to avoid duplicates and generate unique aliases
     const wrapper_aliases = new Map<string, string>() // wrapper key -> alias name
 

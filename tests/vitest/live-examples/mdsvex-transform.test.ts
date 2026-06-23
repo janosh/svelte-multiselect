@@ -43,7 +43,7 @@ const find_script_node = (tree: TestTree): string | undefined => {
 
 // Get first example text value
 const get_example_value = (tree: TestTree): string => {
-  const node = tree.children[0] as { children?: Array<{ value?: string }> }
+  const node = tree.children[0] as { children?: { value?: string }[] }
   return node.children?.[0]?.value ?? ``
 }
 
@@ -380,8 +380,8 @@ describe(`output handling`, () => {
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])
     remark()(tree, create_file())
     // extract the src={...} JS string literal and parse it as Svelte's compiler would
-    const match = /\n\s+src=\{(".*?[^\\]")\}/su.exec(get_example_value(tree))
+    const match = /\n\s+src=\{(?<src>".*?[^\\]")\}/su.exec(get_example_value(tree))
     expect(match).not.toBeNull()
-    expect(JSON.parse(match?.[1] ?? ``)).toBe(code)
+    expect(JSON.parse(match?.groups?.src ?? ``)).toBe(code)
   })
 })

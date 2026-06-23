@@ -7,8 +7,10 @@
 // Avoid matching inside src={...} attributes by requiring these specific contexts
 // Note: [^>]* for attributes won't match if an attribute value contains > (e.g., data-foo="a>b")
 // This edge case is rare in practice and would require significantly more complex parsing
-const heading_regex_line_start = /^(\s*)<(h[1-6])([^>]*)>([\s\S]*?)<\/\2>/gimu
-const heading_regex_after_tag = /(>)(\s*)<(h[1-6])([^>]*)>([\s\S]*?)<\/\3>/giu
+const heading_regex_line_start =
+  /^(?<indent>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/gimu
+const heading_regex_after_tag =
+  /(?<gt>>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
 
 // Remove Svelte expressions handling nested braces (e.g., {fn({a: 1})})
 // Treats unmatched } as literal text to avoid dropping content
@@ -42,7 +44,7 @@ export function heading_ids() {
 
       const process_heading = (attrs: string, inner: string): string | null => {
         // Skip if already has an id (use ^|\s to avoid matching data-id, aria-id, etc.)
-        if (/(^|\s)id\s*=/u.test(attrs)) return null
+        if (/(?:^|\s)id\s*=/u.test(attrs)) return null
 
         const text = strip_svelte_expressions(inner.replaceAll(/<[^>]+>/gu, ``)).trim()
         if (!text) return null

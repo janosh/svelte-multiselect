@@ -306,7 +306,7 @@ test(`value is null when maxSelect=1 and no option is preselected`, () => {
     props: { options: [1, 2, 3], maxSelect: 1 },
   })
 
-  expect(select.value).toBe(null)
+  expect(select.value).toBeNull()
 })
 
 test.each([[null], [1]])(`2-way binding of value updates selected`, async (maxSelect) => {
@@ -316,13 +316,13 @@ test.each([[null], [1]])(`2-way binding of value updates selected`, async (maxSe
   })
 
   // On init, value stays null (no unnecessary sync from null to []). See issue #369.
-  expect(select.value).toEqual(null)
+  expect(select.value).toBeNull()
 
   await tick()
   if (maxSelect === 1) {
     select.value = 2
     await tick()
-    expect(select.value).toEqual(2)
+    expect(select.value).toBe(2)
     expect(select.selected).toEqual([2])
   } else {
     select.value = [1, 2]
@@ -473,7 +473,7 @@ describe(`selectedDisplay=input`, () => {
     expect(input.value).toBe(`Reddish`)
     expect(select.searchText).toBe(`Reddish`)
     expect(select.selected).toEqual([])
-    expect(select.value).toBe(null)
+    expect(select.value).toBeNull()
   })
 
   test(`typing exact option label does not auto-select without explicit commit`, async () => {
@@ -487,7 +487,7 @@ describe(`selectedDisplay=input`, () => {
 
     expect(select.searchText).toBe(`Red`)
     expect(select.selected).toEqual([])
-    expect(select.value).toBe(null)
+    expect(select.value).toBeNull()
   })
 
   test(`programmatic value update and clear syncs visible input text`, async () => {
@@ -516,7 +516,7 @@ describe(`selectedDisplay=input`, () => {
     expect(select.selected).toEqual([])
   })
 
-  const reopen_cases: Array<[string, (input: HTMLInputElement) => Promise<void>]> = [
+  const reopen_cases: [string, (input: HTMLInputElement) => Promise<void>][] = [
     [`caret click`, click_expand_icon],
     [
       `input focus`,
@@ -618,7 +618,7 @@ describe(`selectedDisplay=input`, () => {
     expect(document.querySelector(`ul.options > li.selected`)).toBeNull()
     expect(select.searchText).toBe(`Bl`)
     expect(select.selected).toEqual([])
-    expect(select.value).toBe(null)
+    expect(select.value).toBeNull()
 
     await click_expand_icon()
 
@@ -659,7 +659,7 @@ describe(`selectedDisplay=input`, () => {
     expect(option_labels()).toEqual(color_options)
     expect(document.querySelector(`ul.options li.user-msg`)).toBeNull()
     expect(select.selected).toEqual([])
-    expect(select.value).toBe(null)
+    expect(select.value).toBeNull()
 
     await click_expand_icon()
 
@@ -727,7 +727,7 @@ describe(`selectedDisplay=input`, () => {
     expect(input.value).toBe(`Re`)
     expect(select.searchText).toBe(`Re`)
     expect(select.selected).toEqual([])
-    expect(select.value).toBe(null)
+    expect(select.value).toBeNull()
     expect(document.querySelectorAll(`ul.selected > li.highlighted`)).toHaveLength(0)
     expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
   })
@@ -1091,7 +1091,7 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
   option_li.click()
   await tick()
 
-  expect(input.getAttribute(`aria-invalid`)).toBe(null)
+  expect(input.getAttribute(`aria-invalid`)).toBeNull()
 
   // assert div.multiselect no longer has invalid class
   expect(multiselect.classList.contains(`invalid`)).toBe(false)
@@ -1243,7 +1243,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     const options = document.querySelectorAll<HTMLLIElement>(
       `ul.options > li[role="option"]`,
     )
-    expect(options.length).toBe(3)
+    expect(options).toHaveLength(3)
 
     options.forEach((option, idx) => {
       expect(option.getAttribute(`aria-posinset`)).toBe(`${idx + 1}`)
@@ -1621,7 +1621,7 @@ test(`remove all button removes all selected options and is visible only if more
     props: { options: [1, 2, 3], selected: [1, 2, 3] },
   })
   let selected_ul = doc_query(`ul.selected`)
-  expect(selected_ul.textContent?.trim()).toEqual(`1 2 3`)
+  expect(selected_ul.textContent?.trim()).toBe(`1 2 3`)
 
   const remove_all_btn_selector = `button[title='Remove all']`
   let remove_all_btn = document.querySelector<HTMLButtonElement>(remove_all_btn_selector)
@@ -1636,7 +1636,7 @@ test(`remove all button removes all selected options and is visible only if more
   }
 
   selected_ul = doc_query(`ul.selected`)
-  expect(selected_ul.textContent?.trim()).toEqual(``)
+  expect(selected_ul.textContent?.trim()).toBe(``)
   document.body.innerHTML = `` // Clean up for next mount
 
   // Scenario 2: Single item selected, button is not visible
@@ -1710,7 +1710,7 @@ test(`can't select disabled options`, async () => {
 
   const selected_ul = doc_query(`ul.selected`)
 
-  expect(selected_ul.textContent?.trim()).toEqual(`2 3`)
+  expect(selected_ul.textContent?.trim()).toBe(`2 3`)
 })
 
 test.each([2, 5, 10])(
@@ -2275,7 +2275,7 @@ describe(`arrow key navigation between selected items`, () => {
     expect(is_highlighted(2)).toBe(true)
     input.dispatchEvent(press(`ArrowRight`)) // clears
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`Backspace removes highlighted item and highlight stays at same index`, async () => {
@@ -2284,7 +2284,7 @@ describe(`arrow key navigation between selected items`, () => {
     input.dispatchEvent(press(`ArrowLeft`)) // Green (idx 1)
     input.dispatchEvent(press(`Backspace`))
     await tick()
-    expect(selected_items().length).toBe(2)
+    expect(selected_items()).toHaveLength(2)
     expect(selected_items()[0]?.textContent).toContain(`Red`)
     expect(selected_items()[1]?.textContent).toContain(`Blue`)
     // highlight should stay at idx 1 (Blue), not jump to idx 0 (Red)
@@ -2299,21 +2299,21 @@ describe(`arrow key navigation between selected items`, () => {
     await tick()
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`ArrowLeft is no-op with no selected items`, async () => {
     const input = setup([])
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`ArrowRight is no-op without prior highlight`, async () => {
     const input = setup()
     input.dispatchEvent(press(`ArrowRight`))
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`Backspace without highlight removes last item`, async () => {
@@ -2331,7 +2331,7 @@ describe(`arrow key navigation between selected items`, () => {
     for (let step = 0; step < 3; step++) input.dispatchEvent(press(`ArrowLeft`))
     input.dispatchEvent(press(`Backspace`))
     await tick()
-    expect(selected_items().length).toBe(2)
+    expect(selected_items()).toHaveLength(2)
     expect(is_highlighted(0)).toBe(true)
     expect(selected_items()[0]?.textContent).toContain(`Green`)
   })
@@ -2341,8 +2341,8 @@ describe(`arrow key navigation between selected items`, () => {
     input.dispatchEvent(press(`ArrowLeft`))
     input.dispatchEvent(press(`Backspace`))
     await tick()
-    expect(selected_items().length).toBe(0)
-    expect(highlighted().length).toBe(0)
+    expect(selected_items()).toHaveLength(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test.each([`Escape`, `ArrowDown`, `ArrowUp`, `Tab`, `Enter`, `a`])(
@@ -2351,10 +2351,10 @@ describe(`arrow key navigation between selected items`, () => {
       const input = setup()
       input.dispatchEvent(press(`ArrowLeft`))
       await tick()
-      expect(highlighted().length).toBe(1)
+      expect(highlighted()).toHaveLength(1)
       input.dispatchEvent(press(key))
       await tick()
-      expect(highlighted().length).toBe(0)
+      expect(highlighted()).toHaveLength(0)
     },
   )
 
@@ -2370,7 +2370,7 @@ describe(`arrow key navigation between selected items`, () => {
       .at(-1)
       ?.click()
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`remove-all button clears highlight`, async () => {
@@ -2382,8 +2382,8 @@ describe(`arrow key navigation between selected items`, () => {
     expect(is_highlighted(0)).toBe(true)
     doc_query(`button.remove-all`).click()
     await tick()
-    expect(selected_items().length).toBe(1)
-    expect(highlighted().length).toBe(0)
+    expect(selected_items()).toHaveLength(1)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`consecutive Backspace removals track highlight correctly`, async () => {
@@ -2393,12 +2393,12 @@ describe(`arrow key navigation between selected items`, () => {
     input.dispatchEvent(press(`ArrowLeft`)) // idx 0 (Red)
     input.dispatchEvent(press(`Backspace`)) // remove Red, highlight stays at 0
     await tick()
-    expect(selected_items().length).toBe(2)
+    expect(selected_items()).toHaveLength(2)
     expect(selected_items()[0]?.textContent).toContain(`Green`)
     expect(is_highlighted(0)).toBe(true)
     input.dispatchEvent(press(`Backspace`)) // remove Green, highlight stays at 0
     await tick()
-    expect(selected_items().length).toBe(1)
+    expect(selected_items()).toHaveLength(1)
     expect(selected_items()[0]?.textContent).toContain(`Blue`)
     expect(is_highlighted(0)).toBe(true)
   })
@@ -2410,7 +2410,7 @@ describe(`arrow key navigation between selected items`, () => {
     input.dispatchEvent(press(`ArrowLeft`)) // idx 2 (second Red)
     input.dispatchEvent(press(`Backspace`))
     await tick()
-    expect(selected_items().length).toBe(2)
+    expect(selected_items()).toHaveLength(2)
     // first Red (idx 0) should survive, Blue (idx 1) should survive
     expect(selected_items()[0]?.textContent).toContain(`Red`)
     expect(selected_items()[1]?.textContent).toContain(`Blue`)
@@ -2420,11 +2420,11 @@ describe(`arrow key navigation between selected items`, () => {
     const input = setup()
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    expect(highlighted().length).toBe(1)
+    expect(highlighted()).toHaveLength(1)
     input.blur()
     input.focus()
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`external selected shrink clamps highlighted_idx`, async () => {
@@ -2441,7 +2441,7 @@ describe(`arrow key navigation between selected items`, () => {
     // externally shrink to 2 items — idx 2 is out of bounds
     props.selected = [`Red`, `Green`]
     await tick()
-    expect(selected_items().length).toBe(2)
+    expect(selected_items()).toHaveLength(2)
     // $effect should clamp to last valid index (1)
     expect(is_highlighted(1)).toBe(true)
   })
@@ -2455,10 +2455,10 @@ describe(`arrow key navigation between selected items`, () => {
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    expect(highlighted().length).toBe(1)
+    expect(highlighted()).toHaveLength(1)
     props.selected = []
     await tick()
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
   })
 
   test(`highlighted pill does not set aria-activedescendant`, async () => {
@@ -2475,20 +2475,20 @@ describe(`arrow key navigation between selected items`, () => {
     const input = setup()
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
-    expect(highlighted().length).toBe(1)
+    expect(highlighted()).toHaveLength(1)
     expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
     input.dispatchEvent(press(`Escape`))
     await tick()
     // should revert to null/undefined (no active dropdown option either since dropdown closed)
-    expect(highlighted().length).toBe(0)
+    expect(highlighted()).toHaveLength(0)
     expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
   })
 
   test(`each selected <li> has a stable id`, () => {
     setup()
     const items = selected_items()
-    for (let idx = 0; idx < items.length; idx++) {
-      expect(items[idx]?.id).toMatch(/-selected-\d+$/u)
+    for (const item of items) {
+      expect(item.id).toMatch(/-selected-\d+$/u)
     }
     // ids should be unique
     const ids = [...items].map((li) => li.id)
@@ -3684,11 +3684,9 @@ test.each([true, false, `if-mobile`] as const)(
       expect(dropdown.classList.contains(`hidden`), state).toBe(should_be_closed)
       // focus tracking is reliable only for the close path in happy-dom
       if (should_be_closed) {
-        expect(document.activeElement === input_el).toBe(false)
+        expect(document.activeElement).not.toBe(input_el)
       } else {
-        expect(
-          document.activeElement === input_el || document.activeElement === document.body,
-        ).toBe(true)
+        expect([input_el, document.body]).toContain(document.activeElement)
       }
 
       if (closeDropdownOnSelect === `if-mobile`) {
@@ -3707,7 +3705,7 @@ test.each([true, false, `if-mobile`] as const)(
         await tick()
         // On mobile (when closeDropdownOnSelect = 'if-mobile'), dropdown should close, input should lose focus
         expect(dropdown.classList).toContain(`hidden`) // Now it should be closed
-        expect(document.activeElement === input_el).toBe(false)
+        expect(document.activeElement).not.toBe(input_el)
       }
     } finally {
       globalThis.innerWidth = original_inner_width
@@ -4230,8 +4228,8 @@ describe(`loadOptions feature`, () => {
   type LoadResult = { options: string[]; hasMore: boolean }
 
   function deferred_load() {
-    const resolvers: Array<(val: LoadResult) => void> = []
-    const rejectors: Array<(err: Error) => void> = []
+    const resolvers: ((val: LoadResult) => void)[] = []
+    const rejectors: ((err: Error) => void)[] = []
     const fn = vi.fn(
       () =>
         new Promise<LoadResult>((resolve, reject) => {
@@ -5159,9 +5157,10 @@ describe(`binding update event count`, () => {
 
 describe(`CSS static analysis`, () => {
   const component_source = readFileSync(`src/lib/MultiSelect.svelte`, `utf-8`)
-  const css = /<style>([\s\S]*?)<\/style>/u.exec(component_source)?.[1] ?? ``
-  const get_css_block = (pattern: RegExp) => pattern.exec(css)?.[1] ?? ``
-  const options_block = get_css_block(/:where\(ul\.options\)\s*\{([\s\S]*?)\}/u)
+  const css =
+    /<style>(?<style>[\s\S]*?)<\/style>/u.exec(component_source)?.groups?.style ?? ``
+  const get_css_block = (pattern: RegExp) => pattern.exec(css)?.groups?.block ?? ``
+  const options_block = get_css_block(/:where\(ul\.options\)\s*\{(?<block>[\s\S]*?)\}/u)
 
   const props = [
     `--sms-border`,
@@ -5202,7 +5201,7 @@ describe(`CSS static analysis`, () => {
 
   test(`default-icon buttons enforce circle via min-height: 0 + overflow: hidden`, () => {
     const default_icon_block = get_css_block(
-      /:is\(div\.multiselect button\.default-icon\)\s*\{([\s\S]*?)\}/u,
+      /:is\(div\.multiselect button\.default-icon\)\s*\{(?<block>[\s\S]*?)\}/u,
     )
     expect(default_icon_block).toMatch(/min-height:\s*0/u)
     expect(default_icon_block).toMatch(/overflow:\s*hidden/u)
@@ -5221,7 +5220,7 @@ describe(`CSS static analysis`, () => {
 
   test(`custom-snippet remove-all overrides circular defaults`, () => {
     const custom_remove_all = get_css_block(
-      /:is\(div\.multiselect button\.remove-all:not\(\.default-icon\)\)\s*\{([\s\S]*?)\}/u,
+      /:is\(div\.multiselect button\.remove-all:not\(\.default-icon\)\)\s*\{(?<block>[\s\S]*?)\}/u,
     )
     expect(custom_remove_all).toMatch(/border-radius:\s*3pt/u)
     expect(custom_remove_all).toMatch(/aspect-ratio:\s*auto/u)
@@ -5368,7 +5367,7 @@ describe(`option grouping feature`, () => {
     const after_expand_options = document.querySelectorAll(
       `ul.options > li:not(.group-header)`,
     )
-    expect(after_expand_options.length).toBe(initial_count)
+    expect(after_expand_options).toHaveLength(initial_count)
   })
 
   test(`groupSelectAll adds select all button to group headers`, async () => {
@@ -5648,12 +5647,12 @@ describe(`option grouping feature`, () => {
     [
       `Genre`,
       undefined,
-      (opts: Array<{ group?: string }>) => opts.every((o) => o.group !== `Genre`),
+      (opts: { group?: string }[]) => opts.every((o) => o.group !== `Genre`),
     ],
     [
       `Key`,
       2,
-      (opts: Array<{ group?: string }>) =>
+      (opts: { group?: string }[]) =>
         opts.length === 2 && opts.every((o) => o.group !== `Key`),
     ],
   ] as const)(
@@ -5718,7 +5717,7 @@ describe(`option grouping feature`, () => {
     await tick()
 
     const after_space = document.querySelectorAll(`ul.options > li:not(.group-header)`)
-    expect(after_space.length).toBe(initial_count)
+    expect(after_space).toHaveLength(initial_count)
   })
 
   test(`groupSelectAll skips disabled options`, async () => {
@@ -7449,7 +7448,7 @@ describe(`history / undo-redo`, () => {
     await tick() // Select first option so there's something to undo
     document.querySelector<HTMLElement>(`ul.options > li`)?.click()
     await tick()
-    expect(selected.length).toBe(1)
+    expect(selected).toHaveLength(1)
 
     // Use autocomplete input (the interactive one), not the hidden form-control
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -7459,7 +7458,7 @@ describe(`history / undo-redo`, () => {
     )
     await tick()
 
-    expect(selected.length).toBe(should_undo ? 0 : 1)
+    expect(selected).toHaveLength(should_undo ? 0 : 1)
   })
 
   test.each([
@@ -7695,7 +7694,7 @@ describe(`case-variant labels (issue #391)`, () => {
   ])(`renders all $desc with case-variant labels`, ({ options }) => {
     mount(MultiSelect, { target: document.body, props: { options } })
     const items = document.querySelectorAll(`ul.options > li`)
-    expect(items.length).toBe(3)
+    expect(items).toHaveLength(3)
   })
 
   test(`can select multiple case-variant options`, async () => {
@@ -7719,7 +7718,7 @@ describe(`case-variant labels (issue #391)`, () => {
       await tick()
     }
 
-    expect(selected.length).toBe(3)
+    expect(selected).toHaveLength(3)
     expect(selected.map((opt) => opt.label)).toEqual([`pd`, `PD`, `Pd`])
   })
 })
@@ -7825,7 +7824,7 @@ describe(`duplicates prop variants`, () => {
 
     // Should show 2 remaining options (same label, different values)
     const visible_options = document.querySelectorAll(`ul.options > li`)
-    expect(visible_options.length).toBe(2) // Click second option - should work since it has different value
+    expect(visible_options).toHaveLength(2) // Click second option - should work since it has different value
     if (visible_options[0] instanceof HTMLElement) visible_options[0].click()
     await tick()
 

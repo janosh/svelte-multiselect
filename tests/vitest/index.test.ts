@@ -14,7 +14,6 @@ test(`default export from index.ts is same as component file`, () => {
 
 test(`src/lib/index.ts does not re-export attachments`, () => {
   for (const export_name of Object.keys(attachments)) {
-    if (export_name === `get_uuid`) continue // also public via $lib/utils
     expect(export_name in lib).toBe(false)
   }
 })
