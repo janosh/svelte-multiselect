@@ -268,15 +268,22 @@ describe(`script block injection`, () => {
     expect(find_script_node(tree)).toMatch(/<script>[\s\S]*<\/script>/u)
   })
 
-  test(`adds imports to existing script block`, () => {
+  test.each([
+    [`plain script`, `<script>const existing = true</script>`],
+    [
+      `common attributes`,
+      `<script lang="ts" context="module" data-url=/api/foo-bar_1.2:run>const existing = true</script>`,
+    ],
+  ])(`adds imports to existing script block: %s`, (_label, script_block) => {
     const tree = create_tree([
-      { type: `html`, value: `<script>const existing = true</script>` },
+      { type: `html`, value: script_block },
       create_code_node(`svelte`, `<div>Test</div>`, `example`),
     ])
     remark()(tree, create_file())
-    const script = tree.children.find((n) => n.value?.includes(`const existing`))?.value
-    expect(script).toContain(`import Example_0`)
-    expect(script).toContain(`const existing`)
+    const script_nodes = tree.children.filter((node) => node.value?.startsWith(`<script`))
+    expect(script_nodes).toHaveLength(1)
+    expect(script_nodes[0].value).toContain(`import Example_0`)
+    expect(script_nodes[0].value).toContain(`const existing`)
   })
 
   test(`skips html nodes merely containing <script> mid-content`, () => {

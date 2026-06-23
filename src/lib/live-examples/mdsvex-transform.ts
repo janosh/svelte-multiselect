@@ -14,8 +14,7 @@ const encode_escapes = (src: string) =>
 // Regex to find <script> block in svelte
 // Note: These patterns handle common cases but may have edge cases with nested
 // comments containing </script> strings or complex attribute syntax
-const RE_SCRIPT_START =
-  /<script(?:\s+?[a-zA-Z]+(?:=(?:["']){0,1}[a-zA-Z0-9]+(?:["']){0,1}){0,1})*\s*?>/u
+const RE_SCRIPT_START = /<script\b(?:[^<>"']|"[^"]*"|'[^']*')*>/u
 const RE_SCRIPT_BLOCK = /<script[\s\S]*?>[\s\S]*?<\/script>/gu
 const RE_STYLE_BLOCK = /<style[\s\S]*?>[\s\S]*?<\/style>/gu
 

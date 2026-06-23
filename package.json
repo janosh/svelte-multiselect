@@ -92,6 +92,7 @@
     }
   },
   "overrides": {
+    "esrap": "2.2.11",
     "svelte": "$svelte"
   }
 }

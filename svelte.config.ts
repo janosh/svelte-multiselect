@@ -26,6 +26,8 @@ const config: Config = {
   extensions: [`.svelte`, `.md`],
 
   compilerOptions: {
+    // TODO: Remove after bumping past the Svelte 5.48-5.56 regression that emits
+    // state_referenced_locally for valid local bindings.
     warningFilter: (warning) => warning.code !== `state_referenced_locally`,
   },
 

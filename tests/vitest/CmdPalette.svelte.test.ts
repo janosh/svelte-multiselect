@@ -319,19 +319,11 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
   }
 })
 
-// clicks on portalled ul.options (rendered outside the dialog) must keep the palette open
-// via the target.closest('ul.options') check, both on a direct <li> and a nested descendant
+// clicks on this palette's portalled ul.options (rendered outside the dialog)
+// must keep the palette open, both on a direct <li> and a nested descendant
 test.each([
-  [
-    `direct li child`,
-    `<ul class="options"><li>Option 1</li><li>Option 2</li></ul>`,
-    `li`,
-  ],
-  [
-    `nested element inside li`,
-    `<div><ul class="options"><li><span>Nested option</span></li></ul></div>`,
-    `span`,
-  ],
+  [`direct li child`, `<li>Option 1</li><li>Option 2</li>`, `li`],
+  [`nested element inside li`, `<li><span>Nested option</span></li>`, `span`],
 ])(
   `keeps dialog open when clicking portalled options: %s`,
   async (_label, html, click_selector) => {
@@ -339,13 +331,19 @@ test.each([
     mount(CmdPalette, { target: document.body, props })
     await tick()
 
+    const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+    const real_listbox_id = input.getAttribute(`aria-controls`)
+    if (!real_listbox_id) throw new Error(`Palette input has no aria-controls listbox id`)
+    const listbox_id = `${real_listbox_id}-portalled`
+    input.setAttribute(`aria-controls`, listbox_id)
+
     const container = document.createElement(`div`)
-    container.innerHTML = html
+    container.innerHTML = `<ul class="options" id="${listbox_id}">${html}</ul>`
     document.body.append(container)
 
-    container
-      .querySelector(click_selector)
-      ?.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    doc_query(`#${listbox_id} ${click_selector}`).dispatchEvent(
+      new MouseEvent(`click`, { bubbles: true }),
+    )
     await tick()
 
     expect(props.open).toBe(true)
@@ -354,6 +352,30 @@ test.each([
     container.remove()
   },
 )
+
+test(`closes dialog when clicking an unrelated portalled options list`, async () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  const other_options = document.createElement(`ul`)
+  other_options.id = `unrelated-options`
+  other_options.className = `options`
+  other_options.innerHTML = `<li>Other option</li>`
+  document.body.append(other_options)
+
+  try {
+    doc_query(`#unrelated-options li`).dispatchEvent(
+      new MouseEvent(`click`, { bubbles: true }),
+    )
+    await tick()
+
+    expect(props.open).toBe(false)
+    expect(document.querySelector(`dialog`)).toBeNull()
+  } finally {
+    other_options.remove()
+  }
+})
 
 test(`applies custom styles and props correctly`, async () => {
   const custom_class = `my-custom-class`
