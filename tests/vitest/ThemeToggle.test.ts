@@ -4,7 +4,6 @@ import { beforeEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index.ts'
 
 beforeEach(() => {
-  vi.restoreAllMocks()
   localStorage.clear()
   document.documentElement.style.colorScheme = ``
   delete document.documentElement.dataset.theme
@@ -45,10 +44,10 @@ test.each([
 )
 
 test(`gracefully degrades when localStorage throws`, async () => {
-  vi.spyOn(localStorage, `getItem`).mockImplementation(() => {
+  vi.spyOn(Storage.prototype, `getItem`).mockImplementation(() => {
     throw new DOMException(`storage disabled`)
   })
-  vi.spyOn(localStorage, `setItem`).mockImplementation(() => {
+  vi.spyOn(Storage.prototype, `setItem`).mockImplementation(() => {
     throw new DOMException(`storage disabled`)
   })
 
