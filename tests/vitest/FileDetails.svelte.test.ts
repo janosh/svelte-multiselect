@@ -11,9 +11,9 @@ test(`FileDetails renders files in ordered list with titles and contents`, () =>
   mount(FileDetails, { target: document.body, props: { files } })
 
   // Check structure: ordered list with details elements
-  expect(doc_query(`ol`).children.length).toBe(2)
-  expect(document.querySelectorAll(`li > details`).length).toBe(2)
-  expect(document.querySelectorAll(`summary`).length).toBe(2)
+  expect(doc_query(`ol`).children).toHaveLength(2)
+  expect(document.querySelectorAll(`li > details`)).toHaveLength(2)
+  expect(document.querySelectorAll(`summary`)).toHaveLength(2)
 
   // Check titles and contents
   const summaries = document.querySelectorAll(`summary`)
@@ -140,7 +140,8 @@ test(`toggle all button opens, closes, and handles partial open state`, async ()
   expect(all_closed()).toBe(true) // closed all
 
   // partial open state: clicking closes all
-  details[0].open = details[1].open = true
+  details[0].open = true
+  details[1].open = true
   btn.click()
   expect(all_closed()).toBe(true)
 })
@@ -212,7 +213,7 @@ test(`node refs are trimmed when files are removed to prevent memory leaks`, asy
   await tick()
 
   // All 3 files should have node refs
-  expect(document.querySelectorAll(`details`).length).toBe(3)
+  expect(document.querySelectorAll(`details`)).toHaveLength(3)
   for (const file of reactive_files) {
     expect(file.node).toBeInstanceOf(HTMLDetailsElement)
   }
@@ -227,8 +228,8 @@ test(`node refs are trimmed when files are removed to prevent memory leaks`, asy
   await tick()
 
   // Only 2 files should remain with valid node refs
-  expect(document.querySelectorAll(`details`).length).toBe(2)
-  expect(reactive_files.length).toBe(2)
+  expect(document.querySelectorAll(`details`)).toHaveLength(2)
+  expect(reactive_files).toHaveLength(2)
   for (const file of reactive_files) {
     expect(file.node).toBeInstanceOf(HTMLDetailsElement)
   }

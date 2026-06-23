@@ -1,12 +1,13 @@
 import { beforeAll, beforeEach, vi } from 'vite-plus/test'
 
-beforeEach(() => {
-  document.body.innerHTML = ``
-})
-
 beforeAll(() => {
   Element.prototype.animate = vi.fn().mockReturnValue({})
   Element.prototype.getAnimations = vi.fn().mockReturnValue([{}])
+})
+
+beforeEach(() => {
+  vi.restoreAllMocks()
+  document.body.innerHTML = ``
 })
 
 Object.defineProperty(globalThis, `matchMedia`, {

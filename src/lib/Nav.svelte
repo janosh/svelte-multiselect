@@ -195,7 +195,7 @@
     // e.g. /tc-periodic-v2 should not match /tc-periodic
     const pathname = page?.url.pathname
     const exact_match = pathname === path
-    const prefix_match = pathname?.startsWith(path + `/`)
+    const prefix_match = pathname?.startsWith(`${path}/`)
     return exact_match || prefix_match ? `page` : undefined
   }
 

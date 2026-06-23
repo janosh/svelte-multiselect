@@ -962,12 +962,12 @@
   }
 
   const can_show_create_msg = $derived(
-    show_input_user_msg && !!allowUserOptions && !!resolved_create_msg &&
+    show_input_user_msg && Boolean(allowUserOptions) && Boolean(resolved_create_msg) &&
       !load_options_pending,
   )
   const can_show_no_match_msg = $derived(
-    show_input_user_msg && navigable_options.length === 0 && !!noMatchingOptionsMsg &&
-      !load_options_pending,
+    show_input_user_msg && navigable_options.length === 0 &&
+      Boolean(noMatchingOptionsMsg) && !load_options_pending,
   )
 
   // Check if a user message (create option, duplicate warning, no match) is visible
@@ -1039,13 +1039,14 @@
     if (disabled) return // Block all keyboard handling when disabled
 
     // Check keyboard shortcuts first (before other key handling)
-    const shortcut_actions: Array<{
+    const shortcut_actions: {
       key: keyof typeof effective_shortcuts
       condition: () => boolean
       action: () => void
-    }> = [
+    }[] = [
       { key: `select_all`, condition: () =>
-        !!selectAllOption && navigable_options.length > 0 && maxSelect !== 1,
+        selectAllOption !== false && selectAllOption !== `` &&
+          navigable_options.length > 0 && maxSelect !== 1,
         action: () => select_all(event) },
       { key: `clear_all`, condition: () =>
         !input_display && selected.length > 0 && !searchText,
@@ -2223,7 +2224,7 @@
     position: fixed;
   }
   :where(ul.options > li) {
-    padding: 3pt 1ex;
+    padding: var(--sms-options-li-padding, 3pt 1ex);
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
     border-left: 1px solid transparent;

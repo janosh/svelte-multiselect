@@ -9,7 +9,13 @@ let uuid_counter = 0
 export function get_uuid(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   const hex = (Date.now().toString(16) + (uuid_counter++).toString(16)).padStart(32, `0`)
-  return hex.replace(/(.{8})(.{4})(.{4})(.{4})(.{12})/u, `$1-$2-$3-$4-$5`)
+  return [
+    hex.slice(0, 8),
+    hex.slice(8, 12),
+    hex.slice(12, 16),
+    hex.slice(16, 20),
+    hex.slice(20, 32),
+  ].join(`-`)
 }
 
 // Type guard for checking if a value is a non-null object

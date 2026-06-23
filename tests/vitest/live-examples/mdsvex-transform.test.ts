@@ -43,7 +43,7 @@ const find_script_node = (tree: TestTree): string | undefined => {
 
 // Get first example text value
 const get_example_value = (tree: TestTree): string => {
-  const node = tree.children[0] as { children?: Array<{ value?: string }> }
+  const node = tree.children[0] as { children?: { value?: string }[] }
   return node.children?.[0]?.value ?? ``
 }
 
@@ -268,15 +268,22 @@ describe(`script block injection`, () => {
     expect(find_script_node(tree)).toMatch(/<script>[\s\S]*<\/script>/u)
   })
 
-  test(`adds imports to existing script block`, () => {
+  test.each([
+    [`plain script`, `<script>const existing = true</script>`],
+    [
+      `common attributes`,
+      `<script lang="ts" context="module" data-url=/api/foo-bar_1.2:run>const existing = true</script>`,
+    ],
+  ])(`adds imports to existing script block: %s`, (_label, script_block) => {
     const tree = create_tree([
-      { type: `html`, value: `<script>const existing = true</script>` },
+      { type: `html`, value: script_block },
       create_code_node(`svelte`, `<div>Test</div>`, `example`),
     ])
     remark()(tree, create_file())
-    const script = tree.children.find((n) => n.value?.includes(`const existing`))?.value
-    expect(script).toContain(`import Example_0`)
-    expect(script).toContain(`const existing`)
+    const script_nodes = tree.children.filter((node) => node.value?.startsWith(`<script`))
+    expect(script_nodes).toHaveLength(1)
+    expect(script_nodes[0].value).toContain(`import Example_0`)
+    expect(script_nodes[0].value).toContain(`const existing`)
   })
 
   test(`skips html nodes merely containing <script> mid-content`, () => {
@@ -380,8 +387,8 @@ describe(`output handling`, () => {
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])
     remark()(tree, create_file())
     // extract the src={...} JS string literal and parse it as Svelte's compiler would
-    const match = /\n\s+src=\{(".*?[^\\]")\}/su.exec(get_example_value(tree))
+    const match = /\n\s+src=\{(?<src>".*?[^\\]")\}/su.exec(get_example_value(tree))
     expect(match).not.toBeNull()
-    expect(JSON.parse(match?.[1] ?? ``)).toBe(code)
+    expect(JSON.parse(match?.groups?.src ?? ``)).toBe(code)
   })
 })
