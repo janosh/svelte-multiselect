@@ -54,38 +54,46 @@
 
   // Validation and logging
   $effect.pre(() => {
-    if (log !== `silent`) {
-      if (items_arr.length < min_items && log === `verbose`) {
-        console.warn(
-          `PrevNext received ${items_arr.length} items - minimum of ${min_items} expected`,
-        )
-      }
-
-      if (idx < 0 && log === `errors`) {
-        const valid = items_arr.map(([key]) => key)
-        console.error(
-          `PrevNext received invalid current=${current}, expected one of ${valid}`,
-        )
-      }
+    if (log === `silent`) return
+    if (items_arr.length < min_items && log === `verbose`) {
+      console.warn(
+        `PrevNext received ${items_arr.length} items - minimum of ${min_items} expected`,
+      )
+    }
+    if (idx < 0 && log === `errors`) {
+      const valid = items_arr.map(([key]) => key)
+      console.error(
+        `PrevNext received invalid current=${current}, expected one of ${valid}`,
+      )
     }
   })
 
+  const is_editable_event_target = (target: EventTarget | null): boolean =>
+    target instanceof Element &&
+    target.closest(
+      `input, textarea, select, [contenteditable]:not([contenteditable="false"])`,
+    ) !== null
+
   function handle_keyup(event: KeyboardEvent) {
-    if (!onkeyup) return
-    if (items_arr.length < min_items) return
-    if (!prev || !next) return
+    if (
+      !onkeyup ||
+      is_editable_event_target(event.target) ||
+      items_arr.length < min_items ||
+      !prev ||
+      !next
+    ) return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]
-    if (to !== undefined) {
-      const { replace_state, no_scroll } = nav_options
-      const [scroll_x, scroll_y] = no_scroll
-        ? [globalThis.scrollX, globalThis.scrollY]
-        : [0, 0]
-      const goto = globalThis.history[replace_state ? `replaceState` : `pushState`]
-      goto.call(globalThis.history, {}, ``, to) // Navigate using appropriate history method
+    if (to === undefined) return
 
-      if (no_scroll) globalThis.scrollTo(scroll_x, scroll_y) // Restore scroll position if needed
-    }
+    const { replace_state, no_scroll } = nav_options
+    const [scroll_x, scroll_y] = no_scroll
+      ? [globalThis.scrollX, globalThis.scrollY]
+      : [0, 0]
+    const goto = globalThis.history[replace_state ? `replaceState` : `pushState`]
+    goto.call(globalThis.history, {}, ``, to) // Navigate using appropriate history method
+
+    if (no_scroll) globalThis.scrollTo(scroll_x, scroll_y) // Restore scroll position if needed
   }
 </script>
 

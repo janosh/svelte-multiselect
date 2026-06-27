@@ -21,17 +21,9 @@ test.describe(`Nav dropdown`, () => {
 
     await expect(menu).toHaveCSS(`display`, `none`)
     await hover_open(page, dropdown, menu)
+    await expect(menu.locator(`a`).first()).toBeVisible()
     await page.mouse.move(0, 0)
     await expect(menu).toHaveCSS(`display`, `none`)
-  })
-
-  test(`child links visible when open`, async ({ page }) => {
-    await page.goto(`/nav`, { waitUntil: `networkidle` })
-
-    const dropdown = page.locator(`.dropdown`).first()
-    const menu = dropdown.locator(`[data-submenu]`)
-    await hover_open(page, dropdown, menu)
-    await expect(menu.locator(`a`).first()).toBeVisible()
   })
 
   test(`click pins dropdown: stays open on mouse leave, closes on click outside/Escape/toggle`, async ({

@@ -3,27 +3,6 @@ import { flushSync, mount, tick } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
-test(`FileDetails renders files in ordered list with titles and contents`, () => {
-  const files = [
-    { title: `file1`, content: `content1` },
-    { title: `file2`, content: `content2` },
-  ]
-  mount(FileDetails, { target: document.body, props: { files } })
-
-  // Check structure: ordered list with details elements
-  expect(doc_query(`ol`).children).toHaveLength(2)
-  expect(document.querySelectorAll(`li > details`)).toHaveLength(2)
-  expect(document.querySelectorAll(`summary`)).toHaveLength(2)
-
-  // Check titles and contents
-  const summaries = document.querySelectorAll(`summary`)
-  const contents = document.querySelectorAll(`pre > code`)
-  files.forEach((file, idx) => {
-    expect(summaries[idx].textContent).toBe(file.title)
-    expect(contents[idx].textContent).toBe(file.content)
-  })
-})
-
 test.each([
   // inferred from title extension
   { file: { title: `comp.svelte`, content: `<p>hi</p>` }, expected_lang: `svelte` },

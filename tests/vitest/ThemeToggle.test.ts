@@ -15,10 +15,10 @@ const mount_theme_toggle = async () => {
   return doc_query<HTMLButtonElement>(`button`)
 }
 
-const expectAppliedTheme = (effective: `light` | `dark`) => {
-  expect(document.documentElement.style.colorScheme).toBe(effective)
-  expect(document.documentElement.dataset.theme).toBe(effective)
-}
+const applied_theme = () => [
+  document.documentElement.style.colorScheme,
+  document.documentElement.dataset.theme,
+]
 
 test(`initial render stays hidden until hydration`, () => {
   localStorage.setItem(`theme`, `light`)
@@ -29,57 +29,82 @@ test(`initial render stays hidden until hydration`, () => {
 })
 
 test.each([
-  { storage_key: `theme`, stored: `light`, effective: `light` },
-  { storage_key: `theme`, stored: `dark`, effective: `dark` },
-  { storage_key: `theme`, stored: `system`, effective: `light` },
-  { storage_key: `theme_mode`, stored: `light`, effective: `light` },
-  { storage_key: `theme_mode`, stored: `dark`, effective: `dark` },
-] as const)(
-  `mount applies $storage_key=$stored`,
-  async ({ storage_key, stored, effective }) => {
-    localStorage.setItem(storage_key, stored)
-    await mount_theme_toggle()
-    expectAppliedTheme(effective)
-  },
-)
+  [`theme`, `light`, `light`],
+  [`theme`, `dark`, `dark`],
+  [`theme`, `system`, `light`],
+  [`theme_mode`, `light`, `light`],
+  [`theme_mode`, `dark`, `dark`],
+] as const)(`mount applies %s=%s`, async (storage_key, stored, effective) => {
+  localStorage.setItem(storage_key, stored)
+  await mount_theme_toggle()
+  expect(applied_theme()).toEqual([effective, effective])
+})
 
 test(`gracefully degrades when localStorage throws`, async () => {
-  vi.spyOn(Storage.prototype, `getItem`).mockImplementation(() => {
-    throw new DOMException(`storage disabled`)
-  })
-  vi.spyOn(Storage.prototype, `setItem`).mockImplementation(() => {
-    throw new DOMException(`storage disabled`)
-  })
+  for (const method of [`getItem`, `setItem`] as const) {
+    vi.spyOn(Storage.prototype, method).mockImplementation(() => {
+      throw new DOMException(`storage disabled`)
+    })
+  }
 
   const button = await mount_theme_toggle()
   expect(button.style.visibility).toBe(`visible`)
-  expectAppliedTheme(`light`)
+  expect(applied_theme()).toEqual([`light`, `light`])
 
   button.click()
   await tick()
-  expectAppliedTheme(`dark`)
+  expect(applied_theme()).toEqual([`dark`, `dark`])
 })
 
 test(`click cycles through light -> system -> dark -> light`, async () => {
   localStorage.setItem(`theme`, `light`)
   const button = await mount_theme_toggle()
-  expectAppliedTheme(`light`)
+  expect(applied_theme()).toEqual([`light`, `light`])
 
-  // light -> system (resolves to light via mock with matches: false)
-  button.click()
-  await tick()
-  expect(localStorage.getItem(`theme`)).toBe(`system`)
-  expectAppliedTheme(`light`)
+  for (const [stored, effective] of [
+    [`system`, `light`],
+    [`dark`, `dark`],
+    [`light`, `light`],
+  ] as const) {
+    button.click()
+    await tick()
+    expect(localStorage.getItem(`theme`)).toBe(stored)
+    expect(applied_theme()).toEqual([effective, effective])
+  }
+})
 
-  // system -> dark
-  button.click()
-  await tick()
-  expect(localStorage.getItem(`theme`)).toBe(`dark`)
-  expectAppliedTheme(`dark`)
+test(`system mode reapplies theme when media query changes`, async () => {
+  let matches = false
+  let change_handler: (() => void) | undefined
+  Object.defineProperty(globalThis, `matchMedia`, {
+    writable: true,
+    value: vi.fn().mockImplementation((query: string) => ({
+      media: query,
+      get matches() {
+        return matches
+      },
+      addEventListener: vi.fn((_event_name: string, handler: () => void) => {
+        change_handler = handler
+      }),
+      removeEventListener: vi.fn(),
+    })),
+  })
+  localStorage.setItem(`theme`, `system`)
+  await mount_theme_toggle()
+  expect(applied_theme()).toEqual([`light`, `light`])
 
-  // dark -> light
-  button.click()
+  matches = true
+  change_handler?.()
   await tick()
-  expect(localStorage.getItem(`theme`)).toBe(`light`)
-  expectAppliedTheme(`light`)
+
+  expect(applied_theme()).toEqual([`dark`, `dark`])
+})
+
+test(`tooltip=false disables tooltip attachment`, async () => {
+  mount(ThemeToggle, { target: document.body, props: { tooltip: false } })
+  await tick()
+  const button = doc_query<HTMLButtonElement>(`button`)
+
+  expect(button.getAttribute(`data-original-title`)).toBeNull()
+  expect(button.title).toContain(`Switch to`)
 })

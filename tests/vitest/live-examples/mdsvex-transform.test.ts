@@ -54,16 +54,6 @@ describe(`exports`, () => {
   })
 })
 
-describe(`remark plugin initialization`, () => {
-  test.each([
-    { opts: undefined, desc: `no options` },
-    { opts: {}, desc: `empty options` },
-    { opts: { defaults: { hide_style: true } }, desc: `with defaults` },
-  ])(`returns transformer function with $desc`, ({ opts }) => {
-    expect(typeof remark(opts)).toBe(`function`)
-  })
-})
-
 describe(`code block detection`, () => {
   test(`ignores code blocks without example meta`, () => {
     const tree = create_tree([create_code_node(`svelte`, `<div>Hello</div>`)])
@@ -371,17 +361,10 @@ describe(`output handling`, () => {
   })
 
   test.each([
-    [`<div>{$\`template\`}</div>`, `backticks`],
-    [`<script>const x = $\{value}</script>`, `template literal syntax`],
-  ])(`handles %s without error`, (code) => {
-    const tree = create_tree([create_code_node(`svelte`, code, `example`)])
-    remark()(tree, create_file())
-    expect(tree.children[0]).toMatchObject({ type: `paragraph` })
-  })
-
-  test.each([
     `const fn = () => \`hello \${1 + 1}\``,
     `<div>plain</div>`,
+    `<div>{$\`template\`}</div>`,
+    `<script>const x = $\{value}</script>`,
     `let s = "double \\" quote"`,
   ])(`src prop round-trips %s without double-escaping`, (code) => {
     const tree = create_tree([create_code_node(`svelte`, code, `example`)])

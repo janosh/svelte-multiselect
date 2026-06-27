@@ -132,15 +132,23 @@
     if (open && input && document.activeElement !== input) input.focus()
   })
 
-  function toggle(event: KeyboardEvent) {
+  function toggle(event: KeyboardEvent): boolean {
     const is_trigger = triggers.includes(event.key) &&
       (event.metaKey || event.ctrlKey)
-    if (is_trigger && !open) open = true
-    else if (close_keys.includes(event.key) && open) open = false
+    if (is_trigger && !open) {
+      event.preventDefault()
+      open = true
+      return true
+    } else if (close_keys.includes(event.key) && open) {
+      event.preventDefault()
+      open = false
+      return true
+    }
+    return false
   }
 
   function handle_window_keydown(event: KeyboardEvent) {
-    toggle(event)
+    if (toggle(event)) return
     // run action hotkeys globally while the palette is closed
     if (open || !global_shortcuts) return
     const action = actions.find((act) => matches_shortcut(event, act.shortcut))

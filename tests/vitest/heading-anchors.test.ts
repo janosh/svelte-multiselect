@@ -155,7 +155,7 @@ describe(`heading_ids preprocessor`, () => {
   it(`returns preprocessor with correct name`, () => {
     const preprocessor = heading_ids()
     expect(preprocessor.name).toBe(`heading-ids`)
-    expect(typeof preprocessor.markup({ content: `` }).code).toBe(`string`)
+    expect(preprocessor.markup({ content: `` }).code).toBe(``)
   })
 })
 

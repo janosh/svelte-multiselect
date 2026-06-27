@@ -1,24 +1,27 @@
 import { Toggle } from '$lib'
 import { mount, tick } from 'svelte'
 import { describe, expect, test, vi } from 'vite-plus/test'
-import TestToggleSnippet from './TestToggleSnippet.svelte'
+import { doc_query } from './index'
+import TestSnippetHarness from './TestSnippetHarness.svelte'
 
 describe(`Toggle`, () => {
-  const get_input = () =>
-    document.body.querySelector<HTMLInputElement>(`input[type="checkbox"]`)
+  const get_input = () => doc_query<HTMLInputElement>(`input[type="checkbox"]`)
+  const create_keydown = (key: string, init: KeyboardEventInit = {}) =>
+    new KeyboardEvent(`keydown`, { key, bubbles: true, ...init })
+  const keydown = (key: string) => get_input().dispatchEvent(create_keydown(key))
 
   test.each([false, true])(`renders with checked=%s`, (checked) => {
     mount(Toggle, { target: document.body, props: { checked } })
-    expect(get_input()?.checked).toBe(checked)
+    expect(get_input().checked).toBe(checked)
   })
 
   test(`toggles on click`, () => {
     mount(Toggle, { target: document.body })
     const input = get_input()
-    input?.click()
-    expect(input?.checked).toBe(true)
-    input?.click()
-    expect(input?.checked).toBe(false)
+    input.click()
+    expect(input.checked).toBe(true)
+    input.click()
+    expect(input.checked).toBe(false)
   })
 
   test(`toggles on Enter key and fires change event`, () => {
@@ -26,18 +29,18 @@ describe(`Toggle`, () => {
     mount(Toggle, { target: document.body, props: { input_props: { onchange } } })
     const input = get_input()
 
-    input?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    expect(input?.checked).toBe(true)
+    keydown(`Enter`)
+    expect(input.checked).toBe(true)
     expect(onchange).toHaveBeenCalledWith(expect.any(Event))
 
-    input?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    expect(input?.checked).toBe(false)
+    keydown(`Enter`)
+    expect(input.checked).toBe(false)
   })
 
   test.each([`A`, `Escape`, `Tab`, `Space`])(`doesn't toggle on %s key`, (key) => {
     mount(Toggle, { target: document.body })
-    get_input()?.dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true }))
-    expect(get_input()?.checked).toBe(false)
+    keydown(key)
+    expect(get_input().checked).toBe(false)
   })
 
   test(`Enter key prevents default and calls onkeydown first`, () => {
@@ -48,13 +51,9 @@ describe(`Toggle`, () => {
       props: { onkeydown, input_props: { onclick: () => call_order.push(`click`) } },
     })
 
-    const event = new KeyboardEvent(`keydown`, {
-      key: `Enter`,
-      bubbles: true,
-      cancelable: true,
-    })
+    const event = create_keydown(`Enter`, { cancelable: true })
     const prevent_default_spy = vi.spyOn(event, `preventDefault`)
-    get_input()?.dispatchEvent(event)
+    get_input().dispatchEvent(event)
 
     expect(prevent_default_spy).toHaveBeenCalled()
     expect(onkeydown).toHaveBeenCalledWith(expect.any(KeyboardEvent))
@@ -70,15 +69,9 @@ describe(`Toggle`, () => {
         input_props: { style: `width: 20px;` },
       },
     })
-    expect(document.body.querySelector(`label`)?.classList.contains(`custom-class`)).toBe(
-      true,
-    )
-    expect(document.body.querySelector(`label`)?.getAttribute(`style`)).toBe(
-      `margin: 10px;`,
-    )
-    expect(document.body.querySelector(`input`)?.getAttribute(`style`)).toBe(
-      `width: 20px;`,
-    )
+    expect(doc_query(`label`).classList.contains(`custom-class`)).toBe(true)
+    expect(doc_query(`label`).getAttribute(`style`)).toBe(`margin: 10px;`)
+    expect(doc_query(`input`).getAttribute(`style`)).toBe(`width: 20px;`)
   })
 
   test.each([
@@ -92,53 +85,26 @@ describe(`Toggle`, () => {
       props: { input_props: { [handler_prop]: handler } },
     })
     const input = get_input()
-    if (create_event) input?.dispatchEvent(create_event())
-    else input?.click()
+    if (create_event) input.dispatchEvent(create_event())
+    else input.click()
     expect(handler).toHaveBeenCalledOnce()
   })
 
-  test(`renders with proper structure`, () => {
-    mount(Toggle, { target: document.body })
-    expect(document.body.querySelector(`label`)).toBeInstanceOf(HTMLLabelElement)
-    expect(document.body.querySelector(`input[type="checkbox"]`)).toBeInstanceOf(
-      HTMLInputElement,
-    )
-    expect(document.body.querySelector(`span`)).toBeInstanceOf(HTMLSpanElement)
-  })
-
   test(`children snippet receives checked state and updates on toggle`, async () => {
-    mount(TestToggleSnippet, { target: document.body, props: { checked: false } })
-
-    const snippet = document.body.querySelector<HTMLElement>(`.toggle-snippet`)
-    expect(snippet?.dataset.checked).toBe(`false`)
-
-    get_input()?.click()
-    await tick()
-    expect(snippet?.dataset.checked).toBe(`true`)
-
-    get_input()?.click()
-    await tick()
-    expect(snippet?.dataset.checked).toBe(`false`)
-  })
-
-  test(`two-way binding works`, () => {
-    let checked = false
-    mount(Toggle, {
+    mount(TestSnippetHarness, {
       target: document.body,
-      props: {
-        checked,
-        input_props: {
-          onchange: (event: Event) => {
-            if (event.target instanceof HTMLInputElement) checked = event.target.checked
-          },
-        },
-      },
+      props: { component: `toggle`, checked: false },
     })
 
-    const input = get_input()
-    input?.click()
-    input?.dispatchEvent(new Event(`change`))
-    expect(input?.checked).toBe(true)
-    expect(checked).toBe(true)
+    const snippet = doc_query(`[data-testid="toggle-snippet"]`)
+    expect(snippet.dataset.checked).toBe(`false`)
+
+    get_input().click()
+    await tick()
+    expect(snippet.dataset.checked).toBe(`true`)
+
+    get_input().click()
+    await tick()
+    expect(snippet.dataset.checked).toBe(`false`)
   })
 })

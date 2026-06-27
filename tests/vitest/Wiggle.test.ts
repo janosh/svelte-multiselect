@@ -2,13 +2,13 @@ import { Wiggle } from '$lib'
 import type { ComponentProps } from 'svelte'
 import { mount, unmount } from 'svelte'
 import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
+import { doc_query } from './index'
 
 describe(`Wiggle`, () => {
   beforeEach(vi.useFakeTimers)
 
-  const get_span = () => document.body.querySelector<HTMLSpanElement>(`span`)
+  const get_span = () => doc_query<HTMLSpanElement>(`span`)
 
-  // Helper to create bindable wiggle props
   const create_bindable_wiggle = (
     initial: boolean,
     extra_props: Partial<ComponentProps<typeof Wiggle>> = {},
@@ -18,8 +18,8 @@ describe(`Wiggle`, () => {
       get wiggle() {
         return wiggle_value
       },
-      set wiggle(val: boolean) {
-        wiggle_value = val
+      set wiggle(value: boolean) {
+        wiggle_value = value
       },
       ...extra_props,
     }
@@ -30,9 +30,9 @@ describe(`Wiggle`, () => {
     mount(Wiggle, { target: document.body })
     const span = get_span()
     expect(span).toBeInstanceOf(HTMLSpanElement)
-    expect(span?.style.transform).toContain(`rotate`)
-    expect(span?.style.transform).toContain(`scale`)
-    expect(span?.style.transform).toContain(`translate`)
+    expect(span.style.transform).toContain(`rotate`)
+    expect(span.style.transform).toContain(`scale`)
+    expect(span.style.transform).toContain(`translate`)
   })
 
   test.each([200, 500])(`resets wiggle to false after duration=%dms`, (duration) => {
@@ -57,10 +57,8 @@ describe(`Wiggle`, () => {
         spring_options: { stiffness: 0.08, damping: 0.15 },
       },
     })
-    const transform = get_span()?.style.transform
-    expect(transform).toContain(`rotate`)
-    expect(transform).toContain(`scale`)
-    expect(transform).toContain(`translate`)
+    const transform = get_span().style.transform.replaceAll(/\s+/gu, ` `).trim()
+    expect(transform).toBe(`rotate(15deg) scale(1.1) translate(5px, 3px)`)
   })
 
   test(`does not reset wiggle when starting false`, () => {

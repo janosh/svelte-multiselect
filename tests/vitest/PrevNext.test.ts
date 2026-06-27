@@ -1,7 +1,7 @@
 import { PrevNext } from '$lib'
-import { mount } from 'svelte'
+import { mount, type ComponentProps } from 'svelte'
 import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
-import TestPrevNextSnippet from './TestPrevNextSnippet.svelte'
+import TestSnippetHarness from './TestSnippetHarness.svelte'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
 
@@ -10,6 +10,17 @@ describe(`PrevNext`, () => {
   let replaceStateSpy: ReturnType<typeof vi.fn>
   let pushStateSpy: ReturnType<typeof vi.fn>
   let scrollToSpy: ReturnType<typeof vi.fn>
+  const link_hrefs = () =>
+    [...target.querySelectorAll(`a`)].map((link) => link.getAttribute(`href`))
+  const keyup = (key: string, event_target: EventTarget = globalThis) =>
+    event_target.dispatchEvent(new KeyboardEvent(`keyup`, { key, bubbles: true }))
+  const mount_prev_next = (props: ComponentProps<typeof PrevNext>) =>
+    mount(PrevNext, { target, props })
+  const mount_snippet_harness = (props: ComponentProps<typeof TestSnippetHarness>) =>
+    mount(TestSnippetHarness, { target, props })
+  const child_snippets = () => [
+    ...target.querySelectorAll<HTMLElement>(`[data-testid="prevnext-child"]`),
+  ]
 
   beforeEach(() => {
     target = document.body
@@ -26,84 +37,124 @@ describe(`PrevNext`, () => {
   })
 
   test(`renders nothing with less than min_items`, () => {
-    mount(PrevNext, { target, props: { items: [`page1`, `page2`], current: `page1` } })
+    mount_prev_next({ items: [`page1`, `page2`], current: `page1` })
     expect(target.querySelector(`nav`)).toBeNull()
   })
 
   test.each([
-    { current: `page2`, prev_href: `page1`, next_href: `page3`, desc: `middle item` },
-    {
-      current: `page1`,
-      prev_href: `page4`,
-      next_href: `page2`,
-      desc: `first item wraps`,
-    },
-    { current: `page4`, prev_href: `page3`, next_href: `page1`, desc: `last item wraps` },
-  ])(`prev/next links for $desc`, ({ current, prev_href, next_href }) => {
-    mount(PrevNext, { target, props: { items, current } })
-    const links = target.querySelectorAll(`a`)
-    expect(links).toHaveLength(2)
-    expect(links[0].getAttribute(`href`)).toBe(prev_href)
-    expect(links[1].getAttribute(`href`)).toBe(next_href)
+    [`middle item`, `page2`, [`page1`, `page3`]],
+    [`first item wraps`, `page1`, [`page4`, `page2`]],
+    [`last item wraps`, `page4`, [`page3`, `page1`]],
+  ] as const)(`prev/next links for %s`, (_desc, current, expected_hrefs) => {
+    mount_prev_next({ items, current })
+    expect(link_hrefs()).toEqual(expected_hrefs)
   })
 
-  test(`custom titles`, () => {
-    mount(PrevNext, {
-      target,
-      props: { items, current: `page2`, titles: { prev: `Back`, next: `Forward` } },
-    })
-    const spans = target.querySelectorAll(`span`)
-    expect(spans[0].textContent).toBe(`Back`)
-    expect(spans[1].textContent).toBe(`Forward`)
+  test.each([
+    [`custom`, { prev: `Back`, next: `Forward` }, [`Back`, `Forward`]],
+    [`empty`, { prev: ``, next: `` }, []],
+  ] as const)(`%s titles`, (_label, titles, expected_labels) => {
+    mount_prev_next({ items, current: `page2`, titles })
+    expect([...target.querySelectorAll(`span`)].map((span) => span.textContent)).toEqual(
+      expected_labels,
+    )
+    expect(target.querySelectorAll(`a`)).toHaveLength(2)
   })
 
   test(`keyboard navigation with default options`, () => {
-    mount(PrevNext, { target, props: { items, current: `page2` } })
+    mount_prev_next({ items, current: `page2` })
 
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowLeft` }))
+    keyup(`ArrowLeft`)
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page1`)
     expect(scrollToSpy).toHaveBeenCalledWith(100, 200)
 
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowRight` }))
+    keyup(`ArrowRight`)
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
   })
 
+  test.each([
+    [`onkeyup=null`, { items, current: `page2`, onkeyup: null }, `Home`],
+    [`too few items`, { items: [`page1`, `page2`], current: `page1` }, `Home`],
+    [`unmapped key`, { items, current: `page2` }, `Home`],
+  ])(`keyboard navigation ignores %s`, (_label, props, key) => {
+    mount_prev_next(props)
+
+    keyup(key)
+
+    for (const spy of [replaceStateSpy, pushStateSpy, scrollToSpy]) {
+      expect(spy).not.toHaveBeenCalled()
+    }
+  })
+
+  test.each([
+    [`no_scroll=false`, { replace_state: true, no_scroll: false }, `replace`, `NoScroll`],
+    [`replace_state=false`, { replace_state: false, no_scroll: false }, `push`, `Push`],
+  ] as const)(`nav_options: %s`, (_label, nav_options, history_method, key) => {
+    mount_prev_next({
+      items,
+      current: `page2`,
+      nav_options,
+      onkeyup: ({ prev }: { prev: [string, unknown] }) => ({ [key]: prev[0] }),
+    })
+
+    keyup(key)
+
+    const history_spy = history_method === `replace` ? replaceStateSpy : pushStateSpy
+    expect(history_spy).toHaveBeenCalledWith({}, ``, `page1`)
+    expect(scrollToSpy).not.toHaveBeenCalled()
+  })
+
+  test.each([
+    [`input`, () => document.createElement(`input`)],
+    [`textarea`, () => document.createElement(`textarea`)],
+    [`select`, () => document.createElement(`select`)],
+    [
+      `contenteditable`,
+      () => Object.assign(document.createElement(`div`), { contentEditable: `true` }),
+    ],
+  ])(`keyboard navigation ignores events from %s`, (_label, create_target) => {
+    mount_prev_next({ items, current: `page2` })
+    const editable_target = create_target()
+    target.append(editable_target)
+
+    keyup(`ArrowLeft`, editable_target)
+
+    expect(replaceStateSpy).not.toHaveBeenCalled()
+    expect(pushStateSpy).not.toHaveBeenCalled()
+  })
+
   test(`custom node element`, () => {
-    mount(PrevNext, { target, props: { items, current: `page2`, node: `div` } })
+    mount_prev_next({ items, current: `page2`, node: `div` })
     expect(target.querySelector(`div.prev-next`)).toBeInstanceOf(HTMLDivElement)
     expect(target.querySelector(`nav`)).toBeNull()
   })
 
   test.each([
-    {
-      test_items: [
+    [
+      `p2`,
+      [
         [`p1`, `L1`],
         [`p2`, `L2`],
         [`p3`, `L3`],
         [`p4`, `L4`],
-      ] as [string, string][],
-      current: `p2`,
-      prev: `p1`,
-      next: `p3`,
-    },
-    {
-      test_items: [
+      ],
+      [`p1`, `p3`],
+    ],
+    [
+      `/page/2`,
+      [
         [`/page/1`, `P1`],
         [`/page/2`, `P2`],
         [`/page/3`, `P3`],
         [`/page/4`, `P4`],
-      ] as [string, string][],
-      current: `/page/2`,
-      prev: `/page/1`,
-      next: `/page/3`,
-    },
-  ])(
-    `uses first tuple element as href (current=$current)`,
-    ({ test_items, current, prev, next }) => {
-      mount(PrevNext, { target, props: { items: test_items, current } })
-      const links = target.querySelectorAll(`a`)
-      expect(links[0].getAttribute(`href`)).toBe(prev)
-      expect(links[1].getAttribute(`href`)).toBe(next)
+      ],
+      [`/page/1`, `/page/3`],
+    ],
+  ] satisfies [string, [string, string][], string[]][])(
+    `uses first tuple element as href (current=%s)`,
+    (current, test_items, expected_hrefs) => {
+      mount_prev_next({ items: test_items, current })
+      expect(link_hrefs()).toEqual(expected_hrefs)
     },
   )
 
@@ -112,10 +163,10 @@ describe(`PrevNext`, () => {
     [`errors` as const, [`page1`, `page2`, `page3`], `error`],
     [`silent` as const, [`page1`], null],
   ])(`log=%s mode shows %s`, (log, test_items, level) => {
-    const warn = vi.spyOn(console, `warn`)
-    const error = vi.spyOn(console, `error`)
+    const warn = vi.spyOn(console, `warn`).mockImplementation(() => {})
+    const error = vi.spyOn(console, `error`).mockImplementation(() => {})
 
-    mount(PrevNext, { target, props: { items: test_items, current: `invalid`, log } })
+    mount_prev_next({ items: test_items, current: `invalid`, log })
 
     if (level === `warn`) {
       expect(warn).toHaveBeenCalledWith(
@@ -134,57 +185,63 @@ describe(`PrevNext`, () => {
     error.mockRestore()
   })
 
-  test(`nav_options: replace_state=false uses pushState`, () => {
-    mount(PrevNext, {
-      target,
-      props: {
-        items,
-        current: `page2`,
-        nav_options: { replace_state: false, no_scroll: false },
-      },
-    })
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `ArrowLeft` }))
-    expect(pushStateSpy).toHaveBeenCalledWith({}, ``, `page1`)
-  })
-
   test(`custom keyup handler`, () => {
     const onkeyup = vi.fn(({ prev, next }) => ({ PageUp: prev[0], PageDown: next[0] }))
-    mount(PrevNext, { target, props: { items, current: `page2`, onkeyup } })
+    mount_prev_next({ items, current: `page2`, onkeyup })
 
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `PageUp` }))
-    expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page1`)
-
-    globalThis.dispatchEvent(new KeyboardEvent(`keyup`, { key: `PageDown` }))
-    expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
+    for (const [key, href] of [
+      [`PageUp`, `page1`],
+      [`PageDown`, `page3`],
+    ] as const) {
+      keyup(key)
+      expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, href)
+    }
   })
 
   test(`children snippet receives index and total`, () => {
-    mount(TestPrevNextSnippet, {
-      target,
-      props: { items, current: `page2` },
-    })
+    mount_snippet_harness({ component: `prev-next-children`, items, current: `page2` })
 
-    const snippets = [...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`)]
-    expect(snippets).toHaveLength(2)
+    expect(
+      child_snippets().map((snippet) => [
+        snippet.dataset.kind,
+        snippet.dataset.index,
+        snippet.dataset.total,
+      ]),
+    ).toEqual([
+      [`prev`, `1`, `4`],
+      [`next`, `1`, `4`],
+    ])
+  })
 
-    // prev snippet gets current page index and total count
-    expect(snippets[0].dataset.kind).toBe(`prev`)
-    expect(snippets[0].dataset.index).toBe(`1`)
-    expect(snippets[0].dataset.total).toBe(`4`)
+  test(`named prev, between, and next snippets render`, () => {
+    mount_snippet_harness({ component: `prev-next-named`, items, current: `page2` })
 
-    // next snippet gets same index/total (it's the current page position)
-    expect(snippets[1].dataset.kind).toBe(`next`)
-    expect(snippets[1].dataset.index).toBe(`1`)
-    expect(snippets[1].dataset.total).toBe(`4`)
+    const prev = target.querySelector<HTMLElement>(`[data-testid="prevnext-prev"]`)
+    const next = target.querySelector<HTMLElement>(`[data-testid="prevnext-next"]`)
+    expect(
+      [prev, next].map((snippet) => [
+        snippet?.getAttribute(`href`),
+        snippet?.dataset.index,
+        snippet?.dataset.total,
+      ]),
+    ).toEqual([
+      [`page1`, `1`, `4`],
+      [`page3`, `1`, `4`],
+    ])
+    expect(target.querySelector(`[data-testid="prevnext-between"]`)?.textContent).toBe(
+      `between`,
+    )
   })
 
   test(`children snippet passes index=undefined when current is invalid`, () => {
-    mount(TestPrevNextSnippet, {
-      target,
-      props: { items, current: `nonexistent`, log: `silent` },
+    mount_snippet_harness({
+      component: `prev-next-children`,
+      items,
+      current: `nonexistent`,
+      log: `silent`,
     })
 
-    const snippets = [...target.querySelectorAll<HTMLElement>(`.prevnext-snippet`)]
+    const snippets = child_snippets()
     expect(snippets).toHaveLength(2)
     expect(snippets[0].dataset.index).toBeUndefined()
     expect(snippets[1].dataset.index).toBeUndefined()
@@ -197,7 +254,7 @@ describe(`PrevNext`, () => {
       'data-testid': `nav-link`,
       target: `_blank`,
     }
-    mount(PrevNext, { target, props: { items, current: `page2`, link_props } })
+    mount_prev_next({ items, current: `page2`, link_props })
 
     const links = target.querySelectorAll(`a`)
     expect(links).toHaveLength(2)

@@ -618,8 +618,8 @@
   // Helper to sort selected options (used by add() and select_all())
   function sort_selected(items: Option[]): Option[] {
     if (sortSelected === true) {
-      return items.toSorted((op1, op2) =>
-        `${utils.get_label(op1)}`.localeCompare(`${utils.get_label(op2)}`)
+      return items.toSorted((opt_1, opt_2) =>
+        `${utils.get_label(opt_1)}`.localeCompare(`${utils.get_label(opt_2)}`)
       )
     } else if (typeof sortSelected === `function`) {
       return items.toSorted(sortSelected)
@@ -744,8 +744,11 @@
 
   // Compute the ID of the currently active dropdown option for aria-activedescendant.
   // Selected chips are plain list items, so left/right chip highlighting stays visual.
+  const user_msg_id = $derived(`${internal_id}-user-msg`)
   const active_option_id = $derived(
-    activeIndex !== null && activeIndex < navigable_options.length
+    option_msg_is_active
+      ? user_msg_id
+      : activeIndex !== null && activeIndex < navigable_options.length
       ? `${internal_id}-opt-${activeIndex}`
       : undefined,
   )
@@ -1025,9 +1028,7 @@
 
     if (autoScroll) {
       await tick()
-      document
-        .querySelector(`ul.options > li.active`)
-        ?.scrollIntoViewIfNeeded?.()
+      ul_options?.querySelector(`li.active`)?.scrollIntoViewIfNeeded?.()
     }
 
     // Fire onactivate for keyboard navigation only (not mouse hover)
@@ -1088,6 +1089,7 @@
       event.preventDefault() // prevent enter key from triggering form submission
 
       if (activeOption) {
+        if (is_disabled(activeOption)) return
         if (selected_keys_set.has(key(activeOption))) {
           if (!input_display && can_remove) remove(activeOption, event)
         } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
@@ -1546,10 +1548,10 @@
   })
 
   function handle_options_scroll(event: Event) {
-    if (!load_options_config || load_options_loading || !load_options_has_more ||
-      !(event.target instanceof HTMLElement)) return
-    auto_fill_count = 0
+    if (!(event.target instanceof HTMLElement)) return
+    if (!load_options_config || load_options_loading || !load_options_has_more) return
     const { scrollTop, scrollHeight, clientHeight } = event.target
+    auto_fill_count = 0
     if (scrollHeight - scrollTop - clientHeight <= 100) {
       load_dynamic_options(false)
     }
@@ -1909,6 +1911,7 @@
                 }}
                 role="option"
                 aria-selected={view.selected ? `true` : `false`}
+                aria-disabled={view.disabled ? `true` : undefined}
                 aria-posinset={view.flat_idx + 1}
                 aria-setsize={navigable_options.length}
                 style={view.style}
@@ -1957,6 +1960,7 @@
         can_add_user_option && add(searchText as Option, event)}
         {#if msg}
           <li
+            id={user_msg_id}
             onclick={handle_create}
             onkeydown={can_add_user_option ? if_enter_or_space(handle_create) : undefined}
             title={msgType !== `no-match` ? msg : ``}

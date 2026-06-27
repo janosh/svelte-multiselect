@@ -19,8 +19,8 @@ jobs:
 
       - run: npm install
 
-      - name: Unit tests
-        run: npx vp test --run
+      - name: Unit tests with coverage
+        run: npm run test:coverage
 
       - name: Package smoke test
         run: npm run test:package

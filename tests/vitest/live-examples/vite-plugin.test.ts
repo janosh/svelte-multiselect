@@ -40,6 +40,17 @@ const transform_code = (
   code: string,
   id: string,
 ) => plugin.transform?.call(ctx, code, id)?.code ?? ``
+const transform = (
+  plugin: TestPlugin,
+  ctx: ReturnType<typeof create_mock_context>,
+  code: string,
+  id: string,
+) => plugin.transform?.call(ctx, code, id)
+const load = (
+  plugin: TestPlugin,
+  ctx: ReturnType<typeof create_mock_context>,
+  id: string,
+) => plugin.load?.call(ctx, id)
 
 const create_mock_context = () => ({ warn: vi.fn(), error: vi.fn() })
 const create_mock_server = (hot_send = vi.fn()) => ({
@@ -52,11 +63,9 @@ const create_mock_server = (hot_send = vi.fn()) => ({
 
 describe(`plugin initialization`, () => {
   test(`returns two plugins: resolve (pre) and main`, () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- testing plugin shape
-    const [resolve, main] = vite_plugin() as unknown as TestPlugin[]
-    expect(resolve.name).toBe(`live-examples-resolve`)
-    expect(resolve.enforce).toBe(`pre`)
-    expect(main.name).toBe(`live-examples-plugin`)
+    const plugin = get_plugin()
+    expect(plugin.name).toBe(`live-examples-plugin`)
+    expect(plugin.enforce).toBe(`pre`)
   })
 })
 
@@ -89,30 +98,37 @@ describe(`load`, () => {
   const base_id = `/path/to/file.md${EXAMPLE_MODULE_PREFIX}0.svelte`
 
   test.each([
-    [`style`, `?inline&svelte&type=style&lang.css`],
-    [`script`, `?svelte&type=script`],
-    [`module`, `?type=module`],
-  ])(
-    `returns undefined for %s derived module requests (defers to vite-plugin-svelte)`,
-    (_, query) => {
-      const ctx = create_mock_context()
-      expect(plugin.load?.call(ctx, `${base_id}${query}`)).toBeUndefined()
-      expect(ctx.warn).not.toHaveBeenCalled()
-    },
-  )
-
-  test(`returns error component for main component requests when file not found`, () => {
+    [`style derived module`, `${base_id}?inline&svelte&type=style&lang.css`],
+    [`script derived module`, `${base_id}?svelte&type=script`],
+    [`module derived module`, `${base_id}?type=module`],
+    [`non-example module`, `/path/to/regular.md`],
+  ])(`returns undefined for %s requests`, (_, id) => {
     const ctx = create_mock_context()
-    const result = plugin.load?.call(ctx, base_id)
-    expect(result).toContain(`<script>console.error`)
-    expect(result).toContain(`Example src not found`)
-    expect(ctx.warn).toHaveBeenCalled()
+    expect(load(plugin, ctx, id)).toBeUndefined()
+    expect(ctx.warn).not.toHaveBeenCalled()
   })
 
-  test(`returns undefined for non-example modules`, () => {
-    expect(
-      plugin.load?.call(create_mock_context(), `/path/to/regular.md`),
-    ).toBeUndefined()
+  test.each([
+    [`development`, undefined, `warns and returns error component`],
+    [`production`, `production`, `throws`],
+  ] as const)(`%s missing main component request %s`, (_mode, node_env, _desc) => {
+    const ctx = create_mock_context()
+    const previous_env = process.env.NODE_ENV
+    if (node_env) process.env.NODE_ENV = node_env
+    else delete process.env.NODE_ENV
+    try {
+      if (node_env === `production`) {
+        expect(() => load(plugin, ctx, base_id)).toThrow(`Example src not found`)
+        expect(ctx.warn).not.toHaveBeenCalled()
+      } else {
+        const result = load(plugin, ctx, base_id)
+        expect(result).toContain(`<script>console.error`)
+        expect(result).toContain(`Example src not found`)
+        expect(ctx.warn).toHaveBeenCalled()
+      }
+    } finally {
+      process.env.NODE_ENV = previous_env
+    }
   })
 
   test(`returns undefined for CSS query even when virtual file exists`, () => {
@@ -121,11 +137,11 @@ describe(`load`, () => {
     const id = `/path/to/file.md`
 
     const code = `const props = { __live_example_src: "${to_base64(`<div>Test</div>`)}" }`
-    css_plugin.transform?.call(css_ctx, code, id)
+    transform(css_plugin, css_ctx, code, id)
 
     const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
     expect(
-      css_plugin.load?.call(css_ctx, `${virtual_id}?inline&svelte&type=style&lang.css`),
+      load(css_plugin, css_ctx, `${virtual_id}?inline&svelte&type=style&lang.css`),
     ).toBeUndefined()
   })
 })
@@ -142,42 +158,47 @@ describe(`transform`, () => {
     expect(transform_code(plugin, ctx, code, `/file.md${query}`)).toBe(code)
   })
 
-  test(`returns original code when AST parsing fails`, () => {
-    const code = `{#if condition}<div>test</div>{/if}`
-    const result = plugin.transform?.call(ctx, code, `/file.md`)
-    expect(result).toEqual({ code, map: { mappings: `` } })
+  test.each([
+    [`AST parsing fails`, `{#if condition}<div>test</div>{/if}`, `/file.md`],
+    [
+      `example module is not markdown`,
+      `<script>export let name</script><p>{name}</p>`,
+      `/file${EXAMPLE_MODULE_PREFIX}0.svelte`,
+    ],
+    [`empty code without markers`, ``, `/file.md`],
+    [`code without markers`, `const x = 1;`, `/file.md`],
+  ])(`returns unchanged when %s`, (_desc, code, id) => {
+    expect(transform(plugin, ctx, code, id)).toEqual({
+      code,
+      map: { mappings: `` },
+    })
   })
 
-  test(`extracts __live_example_src from code`, () => {
-    const code = `const props = { __live_example_src: "${to_base64(
-      `<div>Hello</div>`,
-    )}", other: "value" }`
+  test(`ignores non-string __live_example_src properties`, () => {
+    const code = `const props = { __live_example_src: 123, other: "value" }`
     const result_code = transform_code(plugin, ctx, code, `/file.md`)
-    expect(result_code).not.toContain(`__live_example_src`)
+    expect(result_code).toContain(`__live_example_src: 123`)
     expect(result_code).toContain(`other`)
   })
 
-  test.each([
-    [`static import`, `import Component from "${EXAMPLE_MODULE_PREFIX}0.svelte";`],
-    [
-      `dynamic import`,
-      `const module = await import("${EXAMPLE_MODULE_PREFIX}0.svelte");`,
-    ],
-  ])(`updates %s paths to absolute virtual file IDs`, (_, code) => {
-    const id = `/path/to/file.md`
-    const result_code = transform_code(plugin, ctx, code, id)
-    expect(result_code).toContain(`${id}${EXAMPLE_MODULE_PREFIX}0.svelte`)
+  test(`extracts __live_example_src while preserving other properties`, () => {
+    const code = `const props = { __live_example_src: "${to_base64(`<div>Hello</div>`)}", other: "value" }`
+    const result_code = transform_code(plugin, ctx, code, `/file.md`)
+    expect(result_code).not.toContain(`__live_example_src`)
+    expect(result_code).toContain(`other`)
   })
 
   test(`applies multiple edits in correct order`, () => {
     const code = `
       const a = { __live_example_src: "${to_base64(`<div>First</div>`)}", x: 1 };
       const b = { __live_example_src: "${to_base64(`<div>Second</div>`)}", y: 2 };
+      const c = { other: "value" };
     `
     const result_code = transform_code(plugin, ctx, code, `/file.md`)
     expect(result_code).not.toContain(`__live_example_src`)
     expect(result_code).toContain(`x: 1`)
     expect(result_code).toContain(`y: 2`)
+    expect(result_code).toContain(`other`)
   })
 
   test(`handles multiple static and dynamic imports`, () => {
@@ -193,41 +214,6 @@ describe(`transform`, () => {
     }
   })
 
-  test.each([``, `const x = 1;`])(
-    `returns unchanged for code without markers: %s`,
-    (code) => {
-      expect(plugin.transform?.call(ctx, code, `/file.md`)).toEqual({
-        code,
-        map: { mappings: `` },
-      })
-    },
-  )
-
-  test(`correctly decodes base64 with unicode`, () => {
-    const original = `<div>Hello 世界 🌍</div>`
-    const code = `const props = { __live_example_src: "${to_base64(original)}" }`
-    const unicode_plugin = get_plugin()
-    const unicode_ctx = create_mock_context()
-    const id = `/path/to/file.md`
-    unicode_plugin.transform?.call(unicode_ctx, code, id)
-    expect(
-      unicode_plugin.load?.call(unicode_ctx, `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`),
-    ).toBe(original)
-  })
-
-  test(`updates cached virtual file on re-transform`, () => {
-    const cache_plugin = get_plugin()
-    const cache_ctx = create_mock_context()
-    const id = `/path/to/file.md`
-    const virtual_id = `${id}${EXAMPLE_MODULE_PREFIX}0.svelte`
-
-    cache_plugin.transform?.call(cache_ctx, make_code(`<div>First</div>`), id)
-    expect(cache_plugin.load?.call(cache_ctx, virtual_id)).toBe(`<div>First</div>`)
-
-    cache_plugin.transform?.call(cache_ctx, make_code(`<div>Second</div>`), id)
-    expect(cache_plugin.load?.call(cache_ctx, virtual_id)).toBe(`<div>Second</div>`)
-  })
-
   // Note: The remark transform always generates sequential indices (0, 1, 2...) for live
   // examples. Non-live examples (TypeScript, etc.) don't generate __live_example_src props
   // or imports, so they don't create gaps. The vite plugin's enumeration index matches
@@ -237,7 +223,7 @@ describe(`transform`, () => {
     const index_ctx = create_mock_context()
     const id = `/path/to/file.md`
 
-    const content0 = `<div>First</div>`
+    const content0 = `<div>Hello 世界 🌍</div>`
     const content1 = `<div>Second</div>`
     const code = `
       import A from "${EXAMPLE_MODULE_PREFIX}0.svelte";
@@ -253,21 +239,12 @@ describe(`transform`, () => {
     expect(result_code).toContain(virtual_id1)
     expect(result_code).not.toContain(`__live_example_src`)
 
-    expect(index_plugin.load?.call(index_ctx, virtual_id0)).toBe(content0)
-    expect(index_plugin.load?.call(index_ctx, virtual_id1)).toBe(content1)
-  })
-})
+    expect(load(index_plugin, index_ctx, virtual_id0)).toBe(content0)
+    expect(load(index_plugin, index_ctx, virtual_id1)).toBe(content1)
 
-describe(`vite-specific hooks`, () => {
-  test.each([[`/path/to/file.md`], [`/path/to/file.ts`]])(
-    `handleHotUpdate for %s returns only ctx.modules`,
-    (file) => {
-      const plugin = get_plugin()
-      const ctx = { file, server: create_mock_server(), modules: [{ id: `existing` }] }
-      const result = plugin.handleHotUpdate?.(ctx)
-      expect(result).toEqual(ctx.modules)
-    },
-  )
+    transform(index_plugin, index_ctx, make_code(`<div>Updated</div>`), id)
+    expect(load(index_plugin, index_ctx, virtual_id0)).toBe(`<div>Updated</div>`)
+  })
 })
 
 describe(`pending_hmr_file lifecycle`, () => {
@@ -283,18 +260,31 @@ describe(`pending_hmr_file lifecycle`, () => {
     return { plugin, ctx, id, hot_send, server }
   }
 
+  test(`non-markdown hot update returns modules without arming reload`, () => {
+    const { plugin, ctx, id, hot_send, server } = setup_hmr()
+    transform(plugin, ctx, make_code(`<div>V1</div>`), id)
+    const modules = [{ id: `existing` }]
+
+    const result = plugin.handleHotUpdate?.({ file: `/path/to/file.ts`, server, modules })
+    transform(plugin, ctx, make_code(`<div>V2</div>`), id)
+    vi.advanceTimersByTime(500)
+
+    expect(result).toEqual(modules)
+    expect(hot_send).not.toHaveBeenCalled()
+  })
+
   test(`stale flag cleared after no-change transform — no spurious reload`, () => {
     const { plugin, ctx, id, hot_send, server } = setup_hmr()
 
-    plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
+    transform(plugin, ctx, make_code(`<div>V1</div>`), id)
     plugin.handleHotUpdate?.({ file: id, server, modules: [] })
 
     // re-transform with identical examples — fix clears pending_hmr_file
-    plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
+    transform(plugin, ctx, make_code(`<div>V1</div>`), id)
 
     // later: examples change WITHOUT a preceding handleHotUpdate.
     // Without the fix, stale pending_hmr_file causes spurious full-reload.
-    plugin.transform?.call(ctx, make_code(`<div>V2</div>`), id)
+    transform(plugin, ctx, make_code(`<div>V2</div>`), id)
     vi.advanceTimersByTime(500)
 
     expect(hot_send).not.toHaveBeenCalled()
@@ -303,11 +293,21 @@ describe(`pending_hmr_file lifecycle`, () => {
   test(`triggers full-reload when examples actually change during HMR`, () => {
     const { plugin, ctx, id, hot_send, server } = setup_hmr()
 
-    plugin.transform?.call(ctx, make_code(`<div>V1</div>`), id)
+    transform(plugin, ctx, make_code(`<div>V1</div>`), id)
     plugin.handleHotUpdate?.({ file: id, server, modules: [] })
-    plugin.transform?.call(ctx, make_code(`<div>V2</div>`), id)
+    transform(plugin, ctx, make_code(`<div>V2</div>`), id)
     vi.advanceTimersByTime(500)
 
     expect(hot_send).toHaveBeenCalledWith({ type: `full-reload`, path: `*` })
+  })
+
+  test(`invalidates virtual modules found in the Vite module graph`, () => {
+    const { plugin, ctx, id, server } = setup_hmr()
+    const module_record = { id: `module` }
+    server.moduleGraph.getModuleById = vi.fn().mockReturnValue(module_record)
+
+    transform(plugin, ctx, make_code(`<div>V1</div>`), id)
+
+    expect(server.moduleGraph.invalidateModule).toHaveBeenCalledWith(module_record)
   })
 })
