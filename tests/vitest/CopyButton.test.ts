@@ -4,7 +4,7 @@ import { mount, tick, unmount } from 'svelte'
 import { beforeEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 import TestCopyButtonGlobalUpdate from './TestCopyButtonGlobalUpdate.svelte'
-import TestCopyButtonSnippet from './TestCopyButtonSnippet.svelte'
+import TestSnippetHarness from './TestSnippetHarness.svelte'
 
 const mock_write_text = vi.fn()
 vi.stubGlobal(`navigator`, { clipboard: { writeText: mock_write_text } })
@@ -83,43 +83,25 @@ test.each([`Escape`, `Tab`, `ArrowUp`, `a`, `1`])(`%s key is ignored`, (key: str
 })
 
 test.each([
-  {
-    as: `div`,
-    disabled: false,
-    expected_tabindex: `0`,
-    expected_aria: null,
-    is_native: false,
-  },
-  {
-    as: `div`,
-    disabled: true,
-    expected_tabindex: `-1`,
-    expected_aria: `true`,
-    is_native: false,
-  },
-  {
-    as: `button`,
-    disabled: true,
-    expected_tabindex: `-1`,
-    expected_aria: `true`,
-    is_native: true,
-  },
+  [`div`, false, `0`, null],
+  [`div`, true, `-1`, `true`],
+  [`button`, true, `-1`, `true`],
+  [`button`, false, `0`, null],
 ] as const)(
-  `accessibility attrs for as=$as disabled=$disabled`,
-  ({ as, disabled, expected_tabindex, expected_aria, is_native }) => {
+  `accessibility attrs for as=%s disabled=%s`,
+  (as, disabled, expected_tabindex, expected_aria) => {
     const { copy_button } = mount_copy_button({ as, disabled })
     expect(copy_button.getAttribute(`role`)).toBe(`button`)
     expect(copy_button.getAttribute(`tabindex`)).toBe(expected_tabindex)
     expect(copy_button.getAttribute(`aria-disabled`)).toBe(expected_aria)
-    if (is_native && copy_button instanceof HTMLButtonElement)
-      expect(copy_button.disabled).toBe(true)
+    if (copy_button instanceof HTMLButtonElement)
+      expect(copy_button.disabled).toBe(disabled)
   },
 )
 
 test(`renders default icon and ready label`, () => {
   const { copy_button } = mount_copy_button()
-  const icon = copy_button.querySelector(`svg`)
-  expect(icon).toBeInstanceOf(SVGElement)
+  expect(copy_button.querySelector(`svg`)).toBeInstanceOf(SVGElement)
   expect(copy_button.textContent).toContain(`ready`)
 })
 
@@ -143,30 +125,23 @@ test.each([
 test.each([true, false])(
   `custom children snippet renders and receives disabled=%s`,
   (disabled) => {
-    mount(TestCopyButtonSnippet, {
+    mount(TestSnippetHarness, {
       target: document.body,
-      props: { content: `test`, disabled },
+      props: { component: `copy-button`, content: `test`, disabled },
     })
     const copy_button = doc_query(`[data-sms-copy]`)
     expect(copy_button.querySelector(`svg`)).toBeNull()
-    const snippet = copy_button.querySelector<HTMLElement>(`.copy-snippet`)
+    const snippet = copy_button.querySelector<HTMLElement>(`[data-testid="copy-snippet"]`)
     expect(snippet?.dataset.disabled).toBe(`${disabled}`)
     expect(snippet?.dataset.state).toBe(`ready`)
   },
 )
 
-test(`disabled=true blocks copy and preserves ready state`, async () => {
-  const { copy_button } = mount_copy_button({
-    disabled: true,
-    content: `disabled content`,
-  })
-  await click_copy_button(copy_button)
-  expect(mock_write_text).not.toHaveBeenCalled()
-  expect(copy_button.textContent).toContain(`ready`)
-})
-
-test(`empty content is blocked`, async () => {
-  const { copy_button } = mount_copy_button({ content: `` })
+test.each([
+  [`disabled=true`, { disabled: true, content: `disabled content` }],
+  [`empty content`, { content: `` }],
+] as const)(`%s blocks copy and preserves ready state`, async (_label, props) => {
+  const { copy_button } = mount_copy_button(props)
   await click_copy_button(copy_button)
   expect(mock_write_text).not.toHaveBeenCalled()
   expect(copy_button.textContent).toContain(`ready`)
@@ -306,8 +281,7 @@ test(`global_selector updates mounted button props when callbacks change`, async
   expect(on_copy_success_initial).toHaveBeenCalledTimes(1)
   expect(on_copy_success_next).not.toHaveBeenCalled()
 
-  const toggle_callback = doc_query<HTMLButtonElement>(`[data-test-use-next-callback]`)
-  toggle_callback.click()
+  doc_query<HTMLButtonElement>(`[data-test-use-next-callback]`).click()
   await tick()
 
   await click_copy_button(get_single_mounted_button(pre))
@@ -315,10 +289,7 @@ test(`global_selector updates mounted button props when callbacks change`, async
   expect(on_copy_success_next).toHaveBeenCalledTimes(1)
   expect(on_copy_success_initial).toHaveBeenCalledTimes(1)
 
-  const toggle_disabled = doc_query<HTMLButtonElement>(
-    `[data-test-toggle-global-disabled]`,
-  )
-  toggle_disabled.click()
+  doc_query<HTMLButtonElement>(`[data-test-toggle-global-disabled]`).click()
   await tick()
 
   await click_copy_button(get_single_mounted_button(pre))
@@ -332,14 +303,11 @@ test(`global_selector remount uses latest callback after parent remount`, async 
   const on_copy_success_initial = vi.fn()
   const on_copy_success_next = vi.fn()
   const { pre } = create_pre_with_code(`selector content`, `copy-target`)
+  const global_props = { global_selector: `.copy-target`, reset_sec: 1 } as const
 
   const initial_component = mount(CopyButton, {
     target: document.body,
-    props: {
-      global_selector: `.copy-target`,
-      on_copy_success: on_copy_success_initial,
-      reset_sec: 1,
-    },
+    props: { ...global_props, on_copy_success: on_copy_success_initial },
   })
   await tick()
 
@@ -350,11 +318,7 @@ test(`global_selector remount uses latest callback after parent remount`, async 
   void unmount(initial_component)
   const remounted_component = mount(CopyButton, {
     target: document.body,
-    props: {
-      global_selector: `.copy-target`,
-      on_copy_success: on_copy_success_next,
-      reset_sec: 1,
-    },
+    props: { ...global_props, on_copy_success: on_copy_success_next },
   })
   await tick()
 
@@ -363,4 +327,64 @@ test(`global_selector remount uses latest callback after parent remount`, async 
   expect(on_copy_success_next).toHaveBeenCalledTimes(1)
 
   void unmount(remounted_component)
+})
+
+test.each([
+  [`different element type`, `a`],
+  [`same element type`, `button`],
+] as const)(`global mode replaces stale %s copy marker`, async (_label, tag) => {
+  const { pre } = create_pre_with_code(`stale content`)
+  const stale_marker = document.createElement(tag)
+  stale_marker.setAttribute(`data-sms-copy`, ``)
+  stale_marker.textContent = `stale`
+  pre.append(stale_marker)
+
+  const copy_button_component = mount(CopyButton, {
+    target: document.body,
+    props: { global: true, as: `button` },
+  })
+  await tick()
+
+  expect(stale_marker.isConnected).toBe(false)
+  expect(pre.querySelectorAll(`[data-sms-copy]`)).toHaveLength(1)
+  expect(get_single_mounted_button(pre).textContent).not.toContain(`stale`)
+
+  void unmount(copy_button_component)
+})
+
+test(`global mode custom skip_selector mounts beside existing code buttons`, async () => {
+  const { pre } = create_pre_with_code(`copy even with button`)
+  const existing_button = document.createElement(`button`)
+  existing_button.textContent = `existing`
+  pre.append(existing_button)
+
+  const copy_button_component = mount(CopyButton, {
+    target: document.body,
+    props: { global: true, skip_selector: `.never-skip` },
+  })
+  await tick()
+
+  expect(pre.querySelectorAll(`button`)).toHaveLength(2)
+  expect(get_single_mounted_button(pre)).toBeInstanceOf(HTMLButtonElement)
+
+  void unmount(copy_button_component)
+})
+
+test(`global mode skip_selector=null falls back to rendered tag`, async () => {
+  const { pre } = create_pre_with_code(`skip existing anchor`)
+  const existing_anchor = document.createElement(`a`)
+  existing_anchor.href = `#existing`
+  existing_anchor.textContent = `existing`
+  pre.append(existing_anchor)
+
+  const copy_button_component = mount(CopyButton, {
+    target: document.body,
+    props: { as: `a`, global: true, skip_selector: null },
+  })
+  await tick()
+
+  expect(pre.querySelectorAll(`a`)).toHaveLength(1)
+  expect(pre.querySelector(`[data-sms-copy]`)).toBeNull()
+
+  void unmount(copy_button_component)
 })

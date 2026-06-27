@@ -53,6 +53,7 @@
   },
   "scripts": {
     "test": "vp test --run && playwright test",
+    "test:coverage": "vp test --run --coverage",
     "test:package": "npm run package && npm pack --dry-run && vp build --config tests/package-smoke/vite.config.ts",
     "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\" {} +",
     "prepublishOnly": "npm run package",

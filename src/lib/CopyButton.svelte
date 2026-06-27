@@ -45,6 +45,7 @@
   } = $props()
 
   let reset_timeout: ReturnType<typeof setTimeout> | null = null
+  const copy_button_selector = `[data-sms-copy]`
   const clear_reset_timeout = (): void => {
     if (reset_timeout === null) return
     clearTimeout(reset_timeout)
@@ -56,45 +57,44 @@
     if (!global && !global_selector) return
 
     type MountedCopyButton = Parameters<typeof unmount>[0]
-    const mounted_copy_buttons: { pre: HTMLElement; component: MountedCopyButton }[] =
-      []
+    const mounted_copy_buttons: { pre: HTMLElement; component: MountedCopyButton }[] = []
     const apply_copy_buttons = () => {
       const style = `position: absolute; top: 6pt; right: 6pt; ${rest.style ?? ``}`
       const skip_sel = skip_selector ?? as
       for (const code of document.querySelectorAll(global_selector ?? `pre > code`)) {
         const pre = code.parentElement
         if (!pre) continue
-        const existing_copy_button = pre.querySelector(`[data-sms-copy]`)
-        if (existing_copy_button && existing_copy_button.localName !== as) {
-          existing_copy_button.remove()
-        }
+        const existing_copy_button = pre.querySelector(copy_button_selector)
         const already_mounted = mounted_copy_buttons.some((entry) =>
           entry.pre === pre
         )
         // If a stale button from a previous effect pass still exists, remove it synchronously
         // so this pass can mount a fresh button with updated props/callbacks.
-        if (!already_mounted) pre.querySelector(`[data-sms-copy]`)?.remove()
         if (
-          !pre.querySelector(`[data-sms-copy]`) &&
-          !(skip_sel && pre.querySelector(skip_sel))
+          existing_copy_button &&
+          (!already_mounted || existing_copy_button.localName !== as)
         ) {
-          const mounted_copy_button = mount(Self, {
-            target: pre,
-            props: {
-              content: code.textContent ?? ``,
-              as,
-              labels,
-              disabled,
-              reset_sec,
-              on_copy_success,
-              on_copy_error,
-              ...rest,
-              style,
-              'data-sms-copy': ``,
-            },
-          }) as MountedCopyButton
-          mounted_copy_buttons.push({ pre, component: mounted_copy_button })
+          existing_copy_button.remove()
         }
+        if (existing_copy_button?.isConnected) continue
+        if (skip_sel && pre.querySelector(skip_sel)) continue
+
+        const mounted_copy_button = mount(Self, {
+          target: pre,
+          props: {
+            content: code.textContent ?? ``,
+            as,
+            labels,
+            disabled,
+            reset_sec,
+            on_copy_success,
+            on_copy_error,
+            ...rest,
+            style,
+            'data-sms-copy': ``,
+          },
+        }) as MountedCopyButton
+        mounted_copy_buttons.push({ pre, component: mounted_copy_button })
       }
     }
 
@@ -105,7 +105,7 @@
       observer.disconnect()
       for (const { pre, component } of mounted_copy_buttons) {
         // unmount() is async; remove marker node now to avoid blocking remount on next effect run.
-        pre.querySelector(`[data-sms-copy]`)?.remove()
+        pre.querySelector(copy_button_selector)?.remove()
         void unmount(component)
       }
     }
@@ -123,12 +123,11 @@
       state = `error`
       on_copy_error(error, content)
     }
-    if (reset_sec > 0) {
-      reset_timeout = setTimeout(() => {
-        state = `ready`
-        reset_timeout = null
-      }, reset_sec * 1000)
-    }
+    if (reset_sec <= 0) return
+    reset_timeout = setTimeout(() => {
+      state = `ready`
+      reset_timeout = null
+    }, reset_sec * 1000)
   }
 </script>
 
@@ -138,10 +137,9 @@
     this={as}
     onclick={copy}
     onkeydown={(event) => {
-      if (event.key === `Enter` || event.key === ` `) {
-        event.preventDefault()
-        copy()
-      }
+      if (event.key !== `Enter` && event.key !== ` `) return
+      event.preventDefault()
+      copy()
     }}
     role="button"
     tabindex={disabled ? -1 : 0}

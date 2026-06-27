@@ -107,16 +107,17 @@ test.each([
     })
     mount(CmdPalette, { target: document.body, props })
 
-    globalThis.dispatchEvent(
-      new KeyboardEvent(`keydown`, {
-        key: key_to_press,
-        metaKey: with_meta,
-        ctrlKey: with_ctrl,
-      }),
-    )
+    const event = new KeyboardEvent(`keydown`, {
+      key: key_to_press,
+      metaKey: with_meta,
+      ctrlKey: with_ctrl,
+      cancelable: true,
+    })
+    globalThis.dispatchEvent(event)
     await tick()
 
     expect(props.open).toBe(should_open)
+    if (should_open) expect(event.defaultPrevented).toBe(true)
     expect(document.querySelector(`dialog`)).toEqual(
       should_open ? expect.any(HTMLDialogElement) : null,
     )
@@ -144,10 +145,15 @@ test.each([
     })
     mount(CmdPalette, { target: document.body, props })
 
-    globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: key_to_press }))
+    const event = new KeyboardEvent(`keydown`, {
+      key: key_to_press,
+      cancelable: true,
+    })
+    globalThis.dispatchEvent(event)
     await tick()
 
     expect(props.open).toBe(!should_close)
+    if (should_close) expect(event.defaultPrevented).toBe(true)
     expect(document.querySelector(`dialog`)).toEqual(
       should_close ? null : expect.any(HTMLDialogElement),
     )
@@ -417,22 +423,19 @@ test(`applies custom styles and props correctly`, async () => {
   expect(li_el.style.fontWeight).toBe(`bold`)
 })
 
-test.each([{ scenario: `empty actions array`, actions: [], should_have_options: false }])(
-  `handles edge cases: $scenario`,
-  ({ actions, should_have_options }) => {
-    const props = $state({ open: true, actions, fade_duration: 0 })
+test(`handles empty actions array`, () => {
+  const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+  const props = $state({ open: true, actions: [], fade_duration: 0 })
+  try {
     mount(CmdPalette, { target: document.body, props })
 
-    const dialog = doc_query(`dialog`)
-    expect(dialog).toBeInstanceOf(HTMLDialogElement)
-
-    if (!should_have_options) {
-      // Empty actions should render empty options list
-      const options_list = document.querySelector(`dialog ul.options`)
-      expect(options_list?.children.length ?? 0).toBe(0)
-    }
-  },
-)
+    expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
+    expect(document.querySelector(`dialog ul.options`)?.children.length ?? 0).toBe(0)
+    expect(console_error).toHaveBeenCalledWith(`MultiSelect: received no options`)
+  } finally {
+    console_error.mockRestore()
+  }
+})
 
 test(`ignores non-trigger events when dialog is closed`, async () => {
   const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
@@ -470,18 +473,6 @@ test(`uses default values when props not provided`, () => {
   const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   expect(input.placeholder).toBe(`Filter actions...`)
   expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
-})
-
-test(`dialog remains functional when open`, () => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
-
-  const dialog = doc_query(`dialog`)
-  expect(dialog).toBeInstanceOf(HTMLDialogElement)
-  expect(props.open).toBe(true)
-
-  expect(doc_query(`dialog input[autocomplete]`)).toBeInstanceOf(HTMLInputElement)
-  expect(doc_query(`dialog div.multiselect`)).toBeInstanceOf(HTMLDivElement)
 })
 
 test(`lets command palette dropdown overflow dialog box`, async () => {
@@ -592,39 +583,6 @@ test.each([
   expected.forEach((expected_label, idx) => {
     expect(visible_options[idx].textContent).toContain(expected_label)
   })
-})
-
-test(`handles multiple trigger keys simultaneously`, async () => {
-  const props = $state({
-    open: false,
-    triggers: [`k`, `j`, `l`],
-    actions: mock_actions,
-    fade_duration: 0,
-  })
-  mount(CmdPalette, { target: document.body, props })
-
-  // Test each trigger key
-  props.open = false
-  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
-  await tick()
-  expect(props.open).toBe(true)
-
-  props.open = false
-  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `j`, metaKey: true }))
-  await tick()
-  expect(props.open).toBe(true)
-
-  props.open = false
-  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `l`, metaKey: true }))
-  await tick()
-  expect(props.open).toBe(true)
-})
-
-test(`handles custom fade duration`, () => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 500 })
-  mount(CmdPalette, { target: document.body, props })
-  expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
-  expect(props.fade_duration).toBe(500)
 })
 
 test(`handles empty search text`, async () => {

@@ -20,6 +20,12 @@ export default {
     coverage: {
       reporter: [`text`, `json-summary`],
       include: [`src/lib/**/*.{ts,svelte}`],
+      thresholds: {
+        statements: 95,
+        branches: 89.8,
+        functions: 95,
+        lines: 95,
+      },
     },
     setupFiles: [`tests/vitest/setup.ts`],
   },

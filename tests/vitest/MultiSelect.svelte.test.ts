@@ -10,9 +10,7 @@ import { get_label, get_style } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
 import Test2WayBind from './Test2WayBind.svelte'
-import TestChildrenSnippet from './TestChildrenSnippet.svelte'
 import TestMultiSelectSnippets from './TestMultiSelectSnippets.svelte'
-import TestOptionSnippet from './TestOptionSnippet.svelte'
 
 const mouseover = new MouseEvent(`mouseover`, { bubbles: true })
 const input_event = new InputEvent(`input`, { bubbles: true })
@@ -22,6 +20,8 @@ const arrow_down = new KeyboardEvent(`keydown`, {
 })
 const enter = new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true })
 const console_methods = { error: console.error, warn: console.warn }
+const normalized_text = (element: Element) =>
+  element.textContent?.replaceAll(/\s+/gu, ` `).trim()
 afterEach(() => Object.assign(console, console_methods))
 
 test(`2-way binding of activeIndex`, async () => {
@@ -208,22 +208,30 @@ test(`arrow down makes first option active`, async () => {
 })
 
 // https://github.com/janosh/svelte-multiselect/issues/112
-test(`can select 1st and last option with arrow and enter key`, () => {
-  mount(MultiSelect, { target: document.body, props: { options: [1, 2, 3] } })
+test(`can select 1st and last option with arrow and enter key`, async () => {
+  let selected: Option[] = []
+  mount(Test2WayBind, {
+    target: document.body,
+    props: {
+      open: true,
+      options: [1, 2, 3],
+      onSelectedChanged: (data: Option[] | undefined) => (selected = data ?? []),
+    },
+  })
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  input.dispatchEvent(arrow_down)
-  input.dispatchEvent(enter)
-  const selected = doc_query(`ul.selected`)
-  expect(selected).toBeInstanceOf(HTMLUListElement)
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+  expect(selected).toEqual([1])
 
-  // expect(selected.textContent?.trim()).toBe(`1`) // Failing: Got ''
-
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp` }))
-  input.dispatchEvent(enter)
-
-  // expect(selected.textContent?.trim()).toBe(`1 3`) // Failing: Got ''
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowUp`, bubbles: true }))
+  await tick()
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+  expect(selected).toEqual([1, 3])
 })
 
 describe(`bubbles <input> node DOM events`, () => {
@@ -915,11 +923,19 @@ describe.each([
   test.each([1, 2, null])(`and maxSelect=%s form validation`, async (maxSelect) => {
     const form = document.createElement(`form`)
     document.body.append(form)
+    const expected_error = maxSelect !== null && Number(required) > maxSelect
+    if (expected_error) console.error = vi.fn()
     try {
       mount(MultiSelect, {
         target: form,
         props: { options: [1, 2, 3], required, selected, maxSelect },
       })
+      await tick()
+      if (expected_error) {
+        expect(console.error).toHaveBeenCalledWith(
+          `MultiSelect: maxSelect=${maxSelect} < required=${required}, makes it impossible for users to submit a valid form`,
+        )
+      }
 
       // form should be valid if MultiSelect not required or n_selected >= n_required and <= maxSelect
       const form_valid =
@@ -1285,13 +1301,17 @@ test(`parseLabelsAsHtml renders anchor tags as links`, () => {
 })
 
 test(`children snippet receives type='selected' for pills and type='option' for dropdown items`, async () => {
-  mount(TestChildrenSnippet, {
+  mount(TestMultiSelectSnippets, {
     target: document.body,
-    props: { options: [`Red`, `Green`, `Blue`], selected: [`Red`] },
+    props: {
+      snippet_variant: `children`,
+      options: [`Red`, `Green`, `Blue`],
+      selected: [`Red`],
+    },
   })
 
   // selected pill should have type='selected'
-  const selected_span = doc_query(`ul.selected span.child-snippet`)
+  const selected_span = doc_query(`ul.selected [data-testid="multiselect-child"]`)
   expect(selected_span.dataset.type).toBe(`selected`)
   expect(selected_span.textContent).toBe(`Red`)
 
@@ -1301,7 +1321,7 @@ test(`children snippet receives type='selected' for pills and type='option' for 
 
   // dropdown options should have type='option'
   const option_spans = document.querySelectorAll<HTMLElement>(
-    `ul.options span.child-snippet`,
+    `ul.options [data-testid="multiselect-child"]`,
   )
   expect(option_spans.length).toBeGreaterThan(0)
   for (const span of option_spans) {
@@ -1310,9 +1330,10 @@ test(`children snippet receives type='selected' for pills and type='option' for 
 })
 
 test(`option snippet receives selected, active, and disabled booleans`, async () => {
-  mount(TestOptionSnippet, {
+  mount(TestMultiSelectSnippets, {
     target: document.body,
     props: {
+      snippet_variant: `option`,
       options: [
         { label: `Enabled`, value: 1 },
         { label: `Disabled`, value: 2, disabled: true },
@@ -1327,7 +1348,9 @@ test(`option snippet receives selected, active, and disabled booleans`, async ()
   await tick()
 
   const option_spans = [
-    ...document.querySelectorAll<HTMLElement>(`ul.options span.option-snippet`),
+    ...document.querySelectorAll<HTMLElement>(
+      `ul.options [data-testid="multiselect-option"]`,
+    ),
   ]
   expect(option_spans).toHaveLength(2)
 
@@ -1347,7 +1370,9 @@ test(`option snippet receives selected, active, and disabled booleans`, async ()
   )
   await tick()
   const updated_spans = [
-    ...document.querySelectorAll<HTMLElement>(`ul.options span.option-snippet`),
+    ...document.querySelectorAll<HTMLElement>(
+      `ul.options [data-testid="multiselect-option"]`,
+    ),
   ]
   expect(updated_spans[0].dataset.active).toBe(`true`)
   expect(updated_spans[1].dataset.active).toBe(`false`)
@@ -1468,6 +1493,49 @@ test(`beforeInput and afterInput snippets receive searchText and flank the input
   expect(after_input_after.dataset.searchText).toBe(`test`)
 })
 
+test(`selectedItem snippet receives selected option and index`, async () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [`red`, `blue`], selected: [`red`, `blue`] },
+  })
+  await tick()
+
+  const selected_items = [
+    ...document.querySelectorAll<HTMLElement>(`.selected-item-snippet`),
+  ]
+  expect(selected_items.map((item) => item.textContent)).toEqual([`red`, `blue`])
+  expect(selected_items.map((item) => item.dataset.idx)).toEqual([`0`, `1`])
+})
+
+test(`userMsg snippet receives search text, message type, and message`, async () => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [`red`], allowUserOptions: true, open: true },
+  })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `purple`
+  input.dispatchEvent(input_event)
+  await tick()
+
+  const user_msg = doc_query(`.user-msg-snippet`)
+  expect(user_msg.dataset.searchText).toBe(`purple`)
+  expect(user_msg.dataset.msgType).toBe(`create`)
+  expect(user_msg.textContent).toBe(`Create this option...`)
+})
+
+test.each([
+  [`spinner`, { loading: true }, `.spinner-snippet`, `loading`],
+  [`disabledIcon`, { disabled: true }, `.disabled-icon-snippet`, `disabled`],
+])(`%s snippet replaces default icon`, (_label, props, selector, text) => {
+  mount(TestMultiSelectSnippets, {
+    target: document.body,
+    props: { options: [1, 2, 3], ...props },
+  })
+
+  expect(doc_query(selector).textContent).toBe(text)
+})
+
 test(`filters dropdown to show only matching options when entering text`, async () => {
   const options = [`foo`, `bar`, `baz`]
 
@@ -1482,8 +1550,75 @@ test(`filters dropdown to show only matching options when entering text`, async 
   input.dispatchEvent(input_event)
   await tick()
 
-  const dropdown = doc_query(`ul.options`)
-  expect(dropdown.textContent?.trim()).toBe(`bar baz`)
+  expect(normalized_text(doc_query(`ul.options`))).toBe(`bar baz`)
+})
+
+test(`filterFunc controls rendered options and matchingOptions`, async () => {
+  const options = [`Alpha`, `Beta`, `Algae`]
+  const props = $state<MultiSelectProps>({
+    filterFunc: (opt: Option, search_text: string) =>
+      `${get_label(opt)}`.toLowerCase().startsWith(search_text.toLowerCase()),
+    matchingOptions: [],
+    open: true,
+    options,
+  })
+  mount(MultiSelect, { target: document.body, props })
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `al`
+  input.dispatchEvent(input_event)
+  await tick()
+
+  expect(props.matchingOptions).toEqual([options[0], options[2]])
+  expect(normalized_text(doc_query(`ul.options`))).toBe(`Alpha Algae`)
+})
+
+test(`autoScroll=false skips scrolling active options into view`, async () => {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { autoScroll: false, open: true, options: [`first`, `second`] },
+  })
+
+  const options = [...document.querySelectorAll<HTMLElement>(`ul.options > li`)]
+  for (const option of options) option.scrollIntoViewIfNeeded = vi.fn()
+  doc_query<HTMLInputElement>(`input[autocomplete]`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+  )
+  await tick()
+
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`first`)
+  for (const option of options) {
+    expect(option.scrollIntoViewIfNeeded).not.toHaveBeenCalled()
+  }
+})
+
+test(`highlightMatches=false clears but does not create CSS highlights`, async () => {
+  const previous_css = globalThis.CSS
+  const highlights = { delete: vi.fn(), set: vi.fn() }
+
+  try {
+    Object.defineProperty(globalThis, `CSS`, {
+      configurable: true,
+      value: { highlights },
+    })
+    mount(MultiSelect, {
+      target: document.body,
+      props: { highlightMatches: false, open: true, options: [`Alpha`] },
+    })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `Al`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    expect(highlights.delete).toHaveBeenCalledWith(`sms-search-matches`)
+    expect(highlights.set).not.toHaveBeenCalled()
+  } finally {
+    Object.defineProperty(globalThis, `CSS`, {
+      configurable: true,
+      value: previous_css,
+    })
+  }
 })
 
 // test default case and custom message
@@ -1554,7 +1689,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   const dropdown = doc_query(`ul.options`)
   // Use the known default for createOptionMsg
   const default_create_option_msg = `Create this option...`
-  expect(dropdown.textContent?.trim()).toBe(`bar baz ${default_create_option_msg}`)
+  expect(normalized_text(dropdown)).toBe(`bar baz ${default_create_option_msg}`)
 
   // loop through the dropdown list twice
   input.focus()
@@ -1713,6 +1848,109 @@ test(`can't select disabled options`, async () => {
   expect(selected_ul.textContent?.trim()).toBe(`2 3`)
 })
 
+test(`Enter key can't select disabled active option`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [{ label: `Disabled`, disabled: true }, { label: `Enabled` }],
+    selected: [],
+    open: true,
+  })
+  mount(MultiSelect, { target: document.body, props })
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`Disabled`)
+  expect(doc_query(`ul.options > li.active`).getAttribute(`aria-disabled`)).toBe(`true`)
+
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+  expect(props.selected).toEqual([])
+
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+  await tick()
+  expect(props.selected).toEqual([{ label: `Enabled` }])
+})
+
+test(`autoScroll scopes active option lookup to current instance`, async () => {
+  const [first_target, second_target] = [
+    document.createElement(`div`),
+    document.createElement(`div`),
+  ]
+  document.body.append(first_target, second_target)
+  mount(MultiSelect, {
+    target: first_target,
+    props: { options: [`first`], open: true, activeIndex: 0 },
+  })
+  mount(MultiSelect, {
+    target: second_target,
+    props: { options: [`second`], open: true },
+  })
+  const [first_active, second_option] = [
+    first_target.querySelector<HTMLElement>(`ul.options > li`),
+    second_target.querySelector<HTMLElement>(`ul.options > li`),
+  ]
+  if (!first_active || !second_option) throw new Error(`Expected both option lists`)
+  first_active.scrollIntoViewIfNeeded = vi.fn()
+  second_option.scrollIntoViewIfNeeded = vi.fn()
+
+  second_target
+    .querySelector<HTMLInputElement>(`input[autocomplete]`)
+    ?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+  await tick()
+
+  expect(first_active.scrollIntoViewIfNeeded).not.toHaveBeenCalled()
+  expect(second_option.scrollIntoViewIfNeeded).toHaveBeenCalledOnce()
+})
+
+async function setup_user_message(search_text = `Purple`) {
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [`Red`], allowUserOptions: true, open: true },
+  })
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = search_text
+  input.dispatchEvent(input_event)
+  await tick()
+
+  return { input, user_msg: doc_query(`ul.options li.user-msg`) }
+}
+
+test(`user message exposes active descendant and toggles active class`, async () => {
+  const { input, user_msg } = await setup_user_message()
+
+  for (const [event_name, expected_active] of [
+    [`mouseover`, true],
+    [`mouseout`, false],
+    [`focus`, true],
+    [`blur`, false],
+  ] as const) {
+    user_msg.dispatchEvent(new Event(event_name, { bubbles: true }))
+    await tick()
+    expect(user_msg.classList.contains(`active`)).toBe(expected_active)
+  }
+
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+
+  expect(input.getAttribute(`aria-activedescendant`)).toBe(user_msg.id)
+  expect(user_msg.classList.contains(`active`)).toBe(true)
+})
+
+test(`option row Enter key selects option`, async () => {
+  const props = $state<MultiSelectProps>({ options: [`Red`, `Blue`], selected: [] })
+  mount(MultiSelect, { target: document.body, props })
+
+  doc_query(`ul.options li`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+  )
+  await tick()
+
+  expect(props.selected).toEqual([`Red`])
+})
+
 test.each([2, 5, 10])(
   `can't select more than maxSelect options`,
   async (maxSelect: number) => {
@@ -1834,7 +2072,7 @@ describe.each([
       await tick()
 
       const dropdown = doc_query(`ul.options`)
-      expect(dropdown.textContent?.trim()).toBe(expected_text)
+      expect(normalized_text(dropdown)).toBe(expected_text)
     })
   },
 )
@@ -3433,6 +3671,9 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
         `createOptionMsg='%s'`,
         (createOptionMsg) => {
           test(`no .user-msg node is rendered if in a state where noMatchingOptionsMsg or createOptionMsg would be shown but are falsy`, async () => {
+            const expected_error =
+              allowUserOptions && !createOptionMsg && createOptionMsg !== null
+            if (expected_error) console.error = vi.fn()
             mount(MultiSelect, {
               target: document.body,
               props: {
@@ -3450,6 +3691,12 @@ describe.each([[true], [false]])(`allowUserOptions=%s`, (allowUserOptions) => {
             input.dispatchEvent(input_event)
 
             await tick()
+            if (expected_error) {
+              expect(console.error).toHaveBeenCalledWith(
+                `MultiSelect: allowUserOptions=${allowUserOptions} but createOptionMsg=${createOptionMsg} is falsy. ` +
+                  `This prevents the "Add option" <span> from showing up, resulting in a confusing user experience.`,
+              )
+            }
 
             if (allowUserOptions && createOptionMsg) {
               expect(doc_query(`.user-msg`).textContent?.trim()).toBe(createOptionMsg)
@@ -3591,11 +3838,20 @@ test.each<[OptionStyle, string | null, string]>([
   `MultiSelect applies correct styles to <li> elements for different option and key combinations`,
   (style, key, expected_css) => {
     const options: Option[] = [{ label: `foo`, style }]
+    const expect_invalid_style_error =
+      typeof style === `object` && style !== null && `invalid` in style
+    if (expect_invalid_style_error) console.error = vi.fn()
 
     mount(MultiSelect, {
       target: document.body,
       props: { options, selected: key === `selected` ? options : [] },
     })
+    if (expect_invalid_style_error) {
+      expect(console.error).toHaveBeenCalledWith(
+        `MultiSelect: invalid style object for option`,
+        options[0],
+      )
+    }
 
     if (key === `selected`) {
       const selected_li = doc_query(`ul.selected > li`)
@@ -4982,6 +5238,7 @@ describe(`load_options_pending`, () => {
   })
 
   test(`fetch failure unblocks pending state`, async () => {
+    console.error = vi.fn()
     const fetch_fn = vi
       .fn()
       .mockResolvedValueOnce({ options: [`Apple`], hasMore: false })
@@ -5006,6 +5263,10 @@ describe(`load_options_pending`, () => {
     expect(input.getAttribute(`aria-busy`)).toBeNull()
     expect(document.querySelector(`.user-msg`)?.textContent?.trim()).toBe(
       `Create this option`,
+    )
+    expect(console.error).toHaveBeenCalledWith(
+      `MultiSelect: loadOptions error:`,
+      expect.any(Error),
     )
   })
 
@@ -6086,33 +6347,41 @@ describe(`option grouping feature`, () => {
     },
   )
 
-  test(`searchMatchesGroups shows options when group name matches search`, async () => {
-    const options_with_groups = [
-      { label: `React`, group: `JavaScript` },
-      { label: `Vue`, group: `JavaScript` },
-      { label: `Django`, group: `Python` },
-      { label: `Flask`, group: `Python` },
-    ]
+  test.each([
+    [`group name fuzzy match`, `Python`, {}, [`Django`, `Flask`]],
+    [`substring match with fuzzy=false`, `script`, { fuzzy: false }, [`React`, `Vue`]],
+  ] as const)(
+    `searchMatchesGroups shows options for %s`,
+    async (_desc, search_text, extra_props, expected_labels) => {
+      const options_with_groups = [
+        { label: `React`, group: `JavaScript` },
+        { label: `Vue`, group: `JavaScript` },
+        { label: `Django`, group: `Python` },
+        { label: `Flask`, group: `Python` },
+      ]
 
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: options_with_groups, searchMatchesGroups: true, open: true },
-    })
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: options_with_groups,
+          searchMatchesGroups: true,
+          open: true,
+          ...extra_props,
+        },
+      })
 
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.value = `Python`
-    input.dispatchEvent(input_event)
-    await tick()
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.value = search_text
+      input.dispatchEvent(input_event)
+      await tick()
 
-    // Should show both Python options even though "Python" is in group name, not label
-    const visible_options = document.querySelectorAll(
-      `ul.options > li:not(.group-header):not(.select-all)`,
-    )
-    expect(visible_options).toHaveLength(2)
-    const labels = Array.from(visible_options).map((li) => li.textContent?.trim())
-    expect(labels).toContain(`Django`)
-    expect(labels).toContain(`Flask`)
-  })
+      const visible_options = document.querySelectorAll(
+        `ul.options > li:not(.group-header):not(.select-all)`,
+      )
+      const labels = Array.from(visible_options).map((li) => li.textContent?.trim())
+      expect(labels).toEqual(expected_labels)
+    },
+  )
 
   test(`keyboardExpandsCollapsedGroups expands groups on arrow navigation`, async () => {
     mount(MultiSelect, {

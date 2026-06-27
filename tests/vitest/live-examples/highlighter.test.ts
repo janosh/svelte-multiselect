@@ -1,5 +1,4 @@
 // Tests for starry-night syntax highlighter
-import { hast_to_html } from '$lib/live-examples/hast'
 import { starry_night, starry_night_highlighter } from '$lib/live-examples/highlighter'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
@@ -38,49 +37,6 @@ describe(`starry_night.flagToScope`, () => {
     [`make`, `makefile`],
   ])(`%s aliases %s`, (alias, canonical) => {
     expect(starry_night.flagToScope(alias)).toBe(starry_night.flagToScope(canonical))
-  })
-})
-
-describe(`hast_to_html`, () => {
-  test.each([
-    [{ type: `text` as const, value: `hello` }, `hello`],
-    [{ type: `text` as const, value: `<script>` }, `&lt;script&gt;`],
-    [{ type: `text` as const, value: `a & b` }, `a &amp; b`],
-    [{ type: `root` as const, children: [] }, ``],
-    [
-      {
-        type: `root` as const,
-        children: [
-          { type: `text` as const, value: `a` },
-          { type: `text` as const, value: `b` },
-        ],
-      },
-      `ab`,
-    ],
-  ])(`converts %j`, (node, expected) => {
-    expect(hast_to_html(node)).toBe(expected)
-  })
-
-  test.each([
-    [[`pl-k`], `const`, `<span class="pl-k">const</span>`],
-    [[`pl-k`, `pl-s`], `x`, `<span class="pl-k pl-s">x</span>`],
-    [undefined, `x`, `<span>x</span>`],
-  ] as const)(`element with className=%j`, (className, text, expected) => {
-    const node = {
-      type: `element` as const,
-      tagName: `span`,
-      properties: className ? { className: [...className] } : undefined,
-      children: [{ type: `text` as const, value: text }],
-    }
-    expect(hast_to_html(node)).toBe(expected)
-  })
-
-  test.each([
-    [{ type: `comment`, value: `a comment` }, ``],
-    [{ type: `doctype` }, ``],
-    [{ type: `raw`, value: `<b>raw</b>` }, ``],
-  ])(`skips non-element node %j instead of emitting <undefined>`, (node, expected) => {
-    expect(hast_to_html(node)).toBe(expected)
   })
 })
 

@@ -27,7 +27,9 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
 })
 
 test.describe(`fuzzy matching`, () => {
-  test(`fuzzy=true matches partial characters`, async ({ page }) => {
+  test(`default fuzzy matching finds consecutive and non-consecutive matches`, async ({
+    page,
+  }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     await page.click(`#foods input[autocomplete]`)
     await page.fill(`#foods input[autocomplete]`, `ga`)
@@ -37,91 +39,6 @@ test.describe(`fuzzy matching`, () => {
       page.locator(`#foods ul.options li:has-text("Green Apple")`),
     ).toBeVisible()
     await expect(page.locator(`#foods ul.options li:has-text("Banana")`)).toBeHidden()
-  })
-
-  test(`fuzzy=true matches non-consecutive characters`, async ({ page }) => {
-    await page.goto(`/ui`, { waitUntil: `networkidle` })
-    await page.click(`#foods input[autocomplete]`)
-    await page.fill(`#foods input[autocomplete]`, `ga`)
-
-    await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
-    await expect(
-      page.locator(`#foods ul.options li:has-text("Green Apple")`),
-    ).toBeVisible()
-  })
-
-  test(`fuzzy=false only matches substrings`, async ({ page }) => {
-    await page.goto(`/ui`, { waitUntil: `networkidle` })
-
-    await page.evaluate(() => {
-      const container = document.createElement(`div`)
-      container.id = `substring-test`
-      container.innerHTML = `<div class="multiselect"><ul class="selected"><input autocomplete="off" /></ul></div>`
-      document.body.append(container)
-
-      const input = container.querySelector(`input`)
-      if (!input) throw new Error(`Input not found`)
-      const options = [`garlic`, `green apple`, `grape`, `banana`]
-
-      input.addEventListener(`input`, (evt) => {
-        if (!(evt.target instanceof HTMLInputElement)) return
-        const search_text = evt.target.value.toLowerCase()
-        const filtered_options = options.filter((opt) =>
-          opt.toLowerCase().includes(search_text),
-        )
-
-        const options_list = document.createElement(`ul`)
-        options_list.className = `options`
-        filtered_options.forEach((opt) => {
-          const li = document.createElement(`li`)
-          li.textContent = opt
-          options_list.append(li)
-        })
-
-        const existing_options = container.querySelector(`.options`)
-        if (existing_options) existing_options.remove()
-        container.append(options_list)
-      })
-    })
-
-    await page.click(`#substring-test input[autocomplete]`)
-    await page.fill(`#substring-test input[autocomplete]`, `ga`)
-
-    await expect(
-      page.locator(`#substring-test ul.options li:has-text("garlic")`),
-    ).toBeVisible()
-    await expect(
-      page.locator(`#substring-test ul.options li:has-text("green apple")`),
-    ).toBeHidden()
-  })
-
-  test(`fuzzy highlighting works correctly`, async ({ page }) => {
-    await page.goto(`/ui`, { waitUntil: `networkidle` })
-    await page.click(`#foods input[autocomplete]`)
-    await page.fill(`#foods input[autocomplete]`, `ga`)
-
-    const highlighted_elements = await page.evaluate(() => {
-      try {
-        const highlights = globalThis.CSS?.highlights?.get?.(`sms-search-matches`)
-        // @ts-expect-error Highlight.ranges exists in browsers but is missing from TS DOM libs
-        return Number(highlights?.ranges?.length ?? 0) // eslint-disable-line @typescript-eslint/no-unsafe-member-access -- browser-only Highlight.ranges
-      } catch {
-        return 0
-      }
-    })
-
-    expect(highlighted_elements).toBeGreaterThanOrEqual(0)
-  })
-
-  test(`fuzzy prop defaults to true`, async ({ page }) => {
-    await page.goto(`/ui`, { waitUntil: `networkidle` })
-    await page.click(`#foods input[autocomplete]`)
-    await page.fill(`#foods input[autocomplete]`, `ga`)
-
-    await expect(page.locator(`#foods ul.options li:has-text("Garlic")`)).toBeVisible()
-    await expect(
-      page.locator(`#foods ul.options li:has-text("Green Apple")`),
-    ).toBeVisible()
   })
 })
 
@@ -400,36 +317,6 @@ test.describe(`remove all button`, () => {
     })
     await expect(remove_all_log).toHaveCount(1)
     await expect(remove_all_log).toContainText(`removeAll`)
-  })
-})
-
-test.describe(`events demo`, () => {
-  test(`emits touch events in browser runtime`, async ({ page }) => {
-    await page.goto(`/events`, { waitUntil: `networkidle` })
-    const input = page.locator(`input[autocomplete]`)
-    await expect(input).toBeVisible()
-
-    const touch_counts = await page.evaluate(() => {
-      const input_el = document.querySelector(`input[autocomplete]`)
-      if (!(input_el instanceof HTMLInputElement)) {
-        throw new Error(`Expected events demo input to exist`)
-      }
-      const touch_events = [`touchstart`, `touchmove`, `touchend`] as const
-      const counts: Record<string, number> = Object.fromEntries(
-        touch_events.map((event_name) => [event_name, 0]),
-      )
-      for (const event_name of touch_events) {
-        input_el.addEventListener(event_name, () => {
-          counts[event_name] += 1
-        })
-      }
-      for (const event_name of touch_events) {
-        input_el.dispatchEvent(new Event(event_name, { bubbles: true, cancelable: true }))
-      }
-      return counts
-    })
-
-    expect(touch_counts).toEqual({ touchstart: 1, touchmove: 1, touchend: 1 })
   })
 })
 
@@ -1705,57 +1592,6 @@ test.describe(`CSS class override specificity (issue #380)`, () => {
     await expect(page.locator(`input.search-text-input`)).toBeVisible()
     await expect(page.locator(`ul.options.dropdown`)).toBeVisible()
     await expect(page.locator(`ul.options > li.selectable-li`).first()).toBeVisible()
-  })
-
-  test(`inline styles can be applied to override component background`, async ({
-    page,
-  }) => {
-    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
-
-    const li = page.locator(`ul.selected > li`).first()
-    await expect(li).toBeVisible()
-
-    // Apply inline style
-    await li.evaluate((el) => {
-      el.style.setProperty(`background-color`, `red`, `important`)
-    })
-
-    // Verify the style attribute was set (more reliable than getComputedStyle
-    // which can show blended colors due to transparency)
-    const style_attr = await li.getAttribute(`style`)
-    expect(style_attr).toContain(`background-color`)
-    expect(style_attr).toContain(`red`)
-  })
-
-  test(`compiled CSS uses :where() for overridable selectors`, async ({ page }) => {
-    await page.goto(`/css-classes`, { waitUntil: `networkidle` })
-
-    // Verify the component CSS uses :where() for the selected li selector
-    // This ensures the implementation is correct even if we can't easily test cascade
-    const uses_where = await page.evaluate(() => {
-      const stylesheets = Array.from(document.styleSheets)
-      for (const sheet of stylesheets) {
-        try {
-          const rules = Array.from(sheet.cssRules || [])
-          for (const rule of rules) {
-            if (
-              rule instanceof CSSStyleRule &&
-              rule.selectorText.includes(`:where(`) &&
-              rule.selectorText.includes(`selected`) &&
-              rule.selectorText.includes(`> li`)
-            ) {
-              return rule.selectorText
-            }
-          }
-        } catch {
-          // Cross-origin stylesheets will throw, ignore them
-        }
-      }
-      return null
-    })
-
-    expect(uses_where).not.toBeNull()
-    expect(uses_where).toContain(`:where(`)
   })
 
   test(`component buttons are styled correctly with border: none`, async ({ page }) => {

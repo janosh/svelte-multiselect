@@ -1,28 +1,21 @@
 // Tests for live-examples/index.ts - exports
-import {
-  EXAMPLE_COMPONENT_PREFIX,
-  EXAMPLE_MODULE_PREFIX,
-  starry_night,
-  vite_plugin,
-} from '$lib/live-examples/index'
+import * as hast from '$lib/live-examples/hast'
+import * as highlighter from '$lib/live-examples/highlighter'
+import * as live_examples from '$lib/live-examples/index'
+import mdsvex_transform, * as mdsvex from '$lib/live-examples/mdsvex-transform'
+import vite_plugin from '$lib/live-examples/vite-plugin'
 import { describe, expect, test } from 'vite-plus/test'
 
 describe(`module exports`, () => {
-  test(`prefix constants have expected values`, () => {
-    expect(EXAMPLE_MODULE_PREFIX).toBe(`___live_example___`)
-    expect(EXAMPLE_COMPONENT_PREFIX).toBe(`LiveExample___`)
-  })
-
-  test(`starry_night resolves svelte scope`, () => {
-    expect(starry_night.flagToScope(`svelte`)).toBe(`source.svelte`)
-  })
-})
-
-describe(`vite_plugin`, () => {
-  test(`returns resolve and main plugins`, () => {
-    const plugins = vite_plugin()
-    expect(plugins).toHaveLength(2)
-    expect(plugins[0].name).toBe(`live-examples-resolve`)
-    expect(plugins[1].name).toBe(`live-examples-plugin`)
+  test(`re-exports live-example helpers from their owner modules`, () => {
+    expect(live_examples.EXAMPLE_COMPONENT_PREFIX).toBe(mdsvex.EXAMPLE_COMPONENT_PREFIX)
+    expect(live_examples.EXAMPLE_MODULE_PREFIX).toBe(mdsvex.EXAMPLE_MODULE_PREFIX)
+    expect(live_examples.hast_to_html).toBe(hast.hast_to_html)
+    expect(live_examples.mdsvex_transform).toBe(mdsvex_transform)
+    expect(live_examples.starry_night).toBe(highlighter.starry_night)
+    expect(live_examples.starry_night_highlighter).toBe(
+      highlighter.starry_night_highlighter,
+    )
+    expect(live_examples.vite_plugin).toBe(vite_plugin)
   })
 })
