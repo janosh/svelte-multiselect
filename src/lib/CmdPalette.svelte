@@ -1,5 +1,6 @@
 <script module lang="ts">
   type CmdAction = {
+    id?: string | number
     label: string
     action: (label: string) => void
     group?: string
@@ -58,27 +59,37 @@
   } = $props()
 
   // === Recent actions (frecency ranking) ===
-  let recent_labels = $state<string[]>([])
+  let recent_action_ids = $state<string[]>([])
+
+  const get_action_id = (action: CmdAction): string => `${action.id ?? action.label}`
+  const can_track_recents = $derived(
+    new Set(actions.map(get_action_id)).size === actions.length &&
+      (actions.every((action) => action.id !== undefined) ||
+        new Set(actions.map((action) => action.label)).size === actions.length),
+  )
 
   // load persisted recents (client-only since $effect doesn't run during SSR)
   $effect(() => {
-    if (!recent_actions_key) return
+    if (!recent_actions_key || !can_track_recents) return
     try {
       const stored: unknown = JSON.parse(localStorage.getItem(recent_actions_key) ?? `[]`)
-      recent_labels = Array.isArray(stored)
+      recent_action_ids = Array.isArray(stored)
         ? stored.filter((rec) => typeof rec === `string`)
         : []
     } catch {
-      recent_labels = [] // ignore corrupted storage
+      recent_action_ids = [] // ignore corrupted storage
     }
   })
 
-  function record_recent(label: string) {
-    if (!recent_actions_key) return
-    const is_new_recent = (recent_label: string) => recent_label !== label
-    recent_labels = [label, ...recent_labels.filter(is_new_recent)].slice(0, max_recent)
+  function record_recent(action: Action) {
+    if (!recent_actions_key || !can_track_recents) return
+    const action_id = get_action_id(action)
+    recent_action_ids = [
+      action_id,
+      ...recent_action_ids.filter((recent_id) => recent_id !== action_id),
+    ].slice(0, max_recent)
     try {
-      localStorage.setItem(recent_actions_key, JSON.stringify(recent_labels))
+      localStorage.setItem(recent_actions_key, JSON.stringify(recent_action_ids))
     } catch {
       // storage full or unavailable - recents just won't persist
     }
@@ -86,12 +97,13 @@
 
   // recently triggered actions first (most recent on top), rest keep original order
   const sorted_actions = $derived.by(() => {
-    if (!recent_actions_key || recent_labels.length === 0) return actions
-    const rank = new Map(recent_labels.map((label, idx) => [label, idx]))
-    // actions.length as fallback keeps non-recent actions in original order (stable sort)
-    const get_rank = (action: Action) => rank.get(action.label) ?? actions.length
+    if (!recent_actions_key || !can_track_recents || recent_action_ids.length === 0)
+      return actions
+    const rank = new Map(recent_action_ids.map((action_id, idx) => [action_id, idx]))
     return [...actions].toSorted(
-      (left_action, right_action) => get_rank(left_action) - get_rank(right_action),
+      (left_action, right_action) =>
+        (rank.get(get_action_id(left_action)) ?? actions.length) -
+        (rank.get(get_action_id(right_action)) ?? actions.length),
     )
   })
 
@@ -161,7 +173,7 @@
     )
     if (!action) return
     event.preventDefault()
-    record_recent(action.label)
+    record_recent(action)
     action.action(action.label)
   }
 
@@ -178,7 +190,8 @@
   }
 
   function trigger_action_and_close({ option }: { option: Action }) {
-    record_recent(option.label)
+    if (!option?.action) return
+    record_recent(option)
     option.action(option.label)
     open = false
   }
@@ -217,6 +230,7 @@
       options={sorted_actions}
       bind:input
       {placeholder}
+      key={get_action_id}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       option={has_action_meta ? action_item : undefined}

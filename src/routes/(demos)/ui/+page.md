@@ -9,7 +9,7 @@
 
   function random_color(): string {
     const [r, g, b] = Array.from([1, 2, 3], (_) => Math.floor(Math.random() * 255))
-    return `rgb(${r}, ${g}, ${b}, 0.3)`
+    return `rgba(${r}, ${g}, ${b}, 0.3)`
   }
   let options = $derived(
     foods.map((label) => ({

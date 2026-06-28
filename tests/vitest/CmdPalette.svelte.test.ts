@@ -263,6 +263,31 @@ test(`handles action selection and execution`, () => {
   expect(props.open).toBe(false)
 })
 
+test(`ignores user-created options without action handlers`, async () => {
+  const action = vi.fn()
+  const props = $state({
+    open: true,
+    actions: [{ label: `existing action`, action }],
+    allowUserOptions: true,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  const input_el = doc_query<HTMLInputElement>(
+    `dialog div.multiselect input[autocomplete]`,
+  )
+  input_el.value = `custom command`
+  input_el.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+
+  expect(() => doc_query<HTMLLIElement>(`dialog li.user-msg`).click()).not.toThrow()
+  await tick()
+
+  expect(action).not.toHaveBeenCalled()
+  expect(props.open).toBe(true)
+})
+
 test.each([
   [`page body`, () => document.body],
   // showModal() backdrop clicks dispatch with the dialog element itself as the target,
@@ -881,6 +906,29 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   props.open = true
   await tick()
   expect(option_labels()).toEqual([`gamma`, `alpha`, `beta`])
+  localStorage.removeItem(storage_key)
+})
+
+test(`recent_actions_key uses action ids for duplicate labels`, async () => {
+  const storage_key = `test-cmd-recents-ids`
+  localStorage.setItem(storage_key, JSON.stringify([`second`]))
+  const actions = [
+    { id: `first`, label: `open`, description: `First`, action: vi.fn() },
+    { id: `second`, label: `open`, description: `Second`, action: vi.fn() },
+  ]
+  const props = $state({ open: true, actions, recent_actions_key: storage_key })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  expect(doc_query(`li[role='option'] .cmd-description`).textContent).toBe(`Second`)
+
+  doc_query(`li[role='option']`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+  )
+  await tick()
+
+  expect(actions[1].action).toHaveBeenCalledExactlyOnceWith(`open`)
+  expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`second`])
   localStorage.removeItem(storage_key)
 })
 

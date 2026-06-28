@@ -123,7 +123,7 @@
           <div>
             {#if title}<span>{@html title}</span>{/if}
             <a data-sveltekit-preload-data="hover" {...link_props} href={item[0]}
-              >{item[0]}
+              >{typeof item[1] === `string` ? item[1] : item[0]}
             </a>
           </div>
         {/if}

@@ -24,6 +24,11 @@ const normalized_text = (element: Element) =>
   element.textContent?.replaceAll(/\s+/gu, ` `).trim()
 afterEach(() => Object.assign(console, console_methods))
 
+async function open_multiselect_via_mouseup(): Promise<void> {
+  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+  await tick()
+}
+
 test(`2-way binding of activeIndex`, async () => {
   const props = $state<MultiSelectProps>({ options: [1, 2, 3], activeIndex: 0 })
 
@@ -428,6 +433,11 @@ describe(`selectedDisplay=input`, () => {
     await tick()
   }
 
+  const mount_input_display = (
+    props: Partial<Test2WayBindProps> = {},
+    target: HTMLElement = document.body,
+  ) => mount(Test2WayBind, { target, props: { ...input_display_props, ...props } })
+
   test.each([
     { options: [`Red`, `Green`], expected: `Red`, expected_value: `Red` },
     { options: [1, 2], expected: `1`, expected_value: 1 },
@@ -442,14 +452,7 @@ describe(`selectedDisplay=input`, () => {
   ])(
     `commits $expected to the editable input without rendering chips`,
     async ({ options, expected, expected_value }) => {
-      const select = mount(Test2WayBind, {
-        target: document.body,
-        props: {
-          ...input_display_props,
-          options,
-          closeDropdownOnSelect: false,
-        },
-      })
+      const select = mount_input_display({ options, closeDropdownOnSelect: false })
 
       doc_query(`ul.options > li`).click()
       await tick()
@@ -465,14 +468,7 @@ describe(`selectedDisplay=input`, () => {
   )
 
   test(`editing committed text clears selected and value while preserving draft text`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: [`Red`, `Green`],
-        selected: [`Red`],
-      },
-    })
+    const select = mount_input_display({ options: [`Red`, `Green`], selected: [`Red`] })
     await tick()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
@@ -488,10 +484,7 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`typing exact option label does not auto-select without explicit commit`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: { ...input_display_props, options: [`Red`, `Green`] },
-    })
+    const select = mount_input_display({ options: [`Red`, `Green`] })
 
     set_input_value(doc_query<HTMLInputElement>(`input[autocomplete]`), `Red`)
     await tick()
@@ -506,10 +499,7 @@ describe(`selectedDisplay=input`, () => {
       { label: `Red`, value: `#f00` },
       { label: `Green`, value: `#0f0` },
     ]
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: { ...input_display_props, options },
-    })
+    const select = mount_input_display({ options })
 
     select.value = options[1]
     await tick()
@@ -549,13 +539,7 @@ describe(`selectedDisplay=input`, () => {
   test.each(reopen_cases)(
     `reopening after commit via %s shows all options with selected option marked`,
     async (_, reopen) => {
-      mount(Test2WayBind, {
-        target: document.body,
-        props: {
-          ...input_display_props,
-          options: color_options,
-        },
-      })
+      mount_input_display({ options: color_options })
 
       option_by_label(`Red`).click()
       await tick()
@@ -580,17 +564,16 @@ describe(`selectedDisplay=input`, () => {
     document.body.append(form)
     try {
       const field_name = `color`
-      const select = mount(Test2WayBind, {
-        target: form,
-        props: {
-          ...input_display_props,
+      const select = mount_input_display(
+        {
           options: color_options,
           selected: [`Red`],
           name: field_name,
           required: true,
           open: true,
         },
-      })
+        form,
+      )
       await tick()
 
       option_by_label(`Green`).click()
@@ -608,14 +591,10 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`typing after committed input text returns dropdown to filtered results`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: color_options,
-        selected: [`Red`],
-        open: true,
-      },
+    const select = mount_input_display({
+      options: color_options,
+      selected: [`Red`],
+      open: true,
     })
     await tick()
 
@@ -641,13 +620,7 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`caret click after custom draft shows all options and toggles closed`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: color_options,
-      },
-    })
+    const select = mount_input_display({ options: color_options })
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -688,14 +661,7 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`keyboard selection keeps aria-activedescendant valid and Escape preserves text`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: [`Red`, `Green`],
-        open: true,
-      },
-    })
+    const select = mount_input_display({ options: [`Red`, `Green`], open: true })
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
     input.dispatchEvent(press(`ArrowDown`))
@@ -717,14 +683,7 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`Backspace edits text normally instead of removing hidden chips`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: [`Red`, `Green`],
-        selected: [`Red`],
-      },
-    })
+    const select = mount_input_display({ options: [`Red`, `Green`], selected: [`Red`] })
     await tick()
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
@@ -816,15 +775,11 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`quiet datalist mode commits custom text without create or no-match messages`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: [],
-        allowUserOptions: true,
-        createOptionMsg: null,
-        noMatchingOptionsMsg: ``,
-      },
+    const select = mount_input_display({
+      options: [],
+      allowUserOptions: true,
+      createOptionMsg: null,
+      noMatchingOptionsMsg: ``,
     })
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
@@ -842,15 +797,11 @@ describe(`selectedDisplay=input`, () => {
   })
 
   test(`keepSelectedInDropdown does not toggle away committed input selection`, async () => {
-    const select = mount(Test2WayBind, {
-      target: document.body,
-      props: {
-        ...input_display_props,
-        options: [`Red`, `Green`],
-        keepSelectedInDropdown: `plain`,
-        selected: [`Red`],
-        open: true,
-      },
+    const select = mount_input_display({
+      options: [`Red`, `Green`],
+      keepSelectedInDropdown: `plain`,
+      selected: [`Red`],
+      open: true,
     })
     await tick()
 
@@ -1319,8 +1270,7 @@ test(`children snippet receives type='selected' for pills and type='option' for 
   expect(selected_span.textContent).toBe(`Red`)
 
   // open dropdown to render option items
-  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-  await tick()
+  await open_multiselect_via_mouseup()
 
   // dropdown options should have type='option'
   const option_spans = document.querySelectorAll<HTMLElement>(
@@ -1347,8 +1297,7 @@ test(`option snippet receives selected, active, and disabled booleans`, async ()
   })
 
   // open dropdown
-  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-  await tick()
+  await open_multiselect_via_mouseup()
 
   const option_spans = [
     ...document.querySelectorAll<HTMLElement>(
@@ -1401,8 +1350,7 @@ test(`expandIcon open toggles to true when dropdown opens`, async () => {
   const expand = doc_query(`.expand-snippet`)
   expect(expand.dataset.open).toBe(`false`)
 
-  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-  await tick()
+  await open_multiselect_via_mouseup()
   expect(expand.dataset.open).toBe(`true`)
 })
 
@@ -1446,8 +1394,7 @@ test(`expand icon click toggles dropdown in chips mode`, async () => {
     await click_expand()
     expect(input.getAttribute(`aria-expanded`)).toBe(expanded)
   }
-  doc_query(`div.multiselect`).dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-  await tick()
+  await open_multiselect_via_mouseup()
   expect(input.getAttribute(`aria-expanded`)).toBe(`true`)
 })
 
@@ -1692,7 +1639,7 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
     default_create_option_msg,
     `bar`,
   ].entries()) {
-    input.dispatchEvent(arrow_down)
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
     await tick()
     const li_active = document.querySelector(`ul.options li.active`)
     const is_expected_active = li_active?.textContent?.includes(expected_text) ?? false
@@ -2103,72 +2050,53 @@ test.each([
   },
 )
 
-test(`resetFilterOnAdd=true does NOT reset searchText when maxSelect constraint prevents add`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      selected: [1, 2],
-      maxSelect: 2,
-      resetFilterOnAdd: true,
-      closeDropdownOnSelect: false,
-    },
-  })
+test.each<{
+  case_name: string
+  props: Partial<MultiSelectProps>
+  search_text: string
+  expected_selected_count: number
+}>([
+  {
+    case_name: `maxSelect constraint prevents add`,
+    props: { selected: [1, 2], maxSelect: 2 },
+    search_text: `3`,
+    expected_selected_count: 2,
+  },
+  {
+    case_name: `minSelect constraint prevents remove`,
+    props: { selected: [1], minSelect: 1, keepSelectedInDropdown: `plain` },
+    search_text: `1`,
+    expected_selected_count: 1,
+  },
+])(
+  `resetFilterOnAdd=true preserves searchText when $case_name`,
+  async ({ props, search_text, expected_selected_count }) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        resetFilterOnAdd: true,
+        closeDropdownOnSelect: false,
+        ...props,
+      },
+    })
 
-  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-  input.value = `3`
-  input.dispatchEvent(input_event)
-  await tick()
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = search_text
+    input.dispatchEvent(input_event)
+    await tick()
 
-  // Navigate to the matching option with ArrowDown
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-  await tick()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+    await tick()
+    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
 
-  // Try to select with Enter key (should fail due to maxSelect)
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-  await tick()
-
-  // searchText should NOT be reset since the add operation failed
-  expect(input.value).toBe(`3`)
-
-  // Verify the option was not added
-  const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items).toHaveLength(2)
-})
-
-test(`resetFilterOnAdd=true does NOT reset searchText when minSelect constraint prevents remove`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      selected: [1],
-      minSelect: 1,
-      resetFilterOnAdd: true,
-      closeDropdownOnSelect: false,
-      keepSelectedInDropdown: `plain`, // Allow clicking on selected options to toggle them
-    },
-  })
-
-  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-  input.value = `1`
-  input.dispatchEvent(input_event)
-  await tick()
-
-  // Navigate to the selected option with ArrowDown
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-  await tick()
-
-  // Try to deselect with Enter key (should fail due to minSelect)
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-  await tick()
-
-  // searchText should NOT be reset since the remove operation failed
-  expect(input.value).toBe(`1`)
-
-  // Verify the option was not removed
-  const selected_items = document.querySelectorAll(`ul.selected li`)
-  expect(selected_items).toHaveLength(1)
-})
+    expect(input.value).toBe(search_text)
+    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(
+      expected_selected_count,
+    )
+  },
+)
 
 test(`Enter key deselection preserves searchText (matching mouse behavior)`, async () => {
   // This test verifies that deselecting with Enter key preserves searchText,
@@ -5572,7 +5500,7 @@ describe(`option grouping feature`, () => {
     expect(after_expand_options).toHaveLength(initial_count)
   })
 
-  test(`groupSelectAll adds select all button to group headers`, async () => {
+  test(`groupSelectAll buttons select groups by click and keyboard`, async () => {
     const onselectAll_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
@@ -5605,6 +5533,15 @@ describe(`option grouping feature`, () => {
     expect(
       selected_options.every((opt: { group: string }) => opt.group === `Genre`),
     ).toBe(true)
+
+    const key_header = find_group_header(`Key`)
+    key_header
+      .querySelector<HTMLElement>(`button.group-select-all`)
+      ?.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+    await tick()
+
+    expect(onselectAll_spy).toHaveBeenCalledTimes(2)
+    expect(onselectAll_spy.mock.calls[1][0].options).toHaveLength(2)
   })
 
   test.each([
@@ -7406,7 +7343,7 @@ describe(`onactivate event`, () => {
     expect(onactivate_spy).toHaveBeenCalledWith(expected)
   })
 
-  test(`does not fire on mouse hover`, async () => {
+  test(`pointer and focus activation do not fire onactivate`, async () => {
     const onactivate_spy = vi.fn()
 
     mount(MultiSelect, {
@@ -7418,10 +7355,16 @@ describe(`onactivate event`, () => {
     input.focus()
     await tick()
 
-    // Hover over an option
-    const option1 = doc_query(`ul.options li:nth-child(1)`)
-    option1.dispatchEvent(mouseover)
+    doc_query(`ul.options`).dispatchEvent(new MouseEvent(`mousemove`, { bubbles: true }))
+    const option3 = doc_query(`ul.options li:nth-child(3)`)
+    option3.dispatchEvent(mouseover)
     await tick()
+    expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`3`)
+
+    const option2 = doc_query(`ul.options li:nth-child(2)`)
+    option2.dispatchEvent(new FocusEvent(`focus`, { bubbles: true }))
+    await tick()
+    expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(`2`)
 
     expect(onactivate_spy).not.toHaveBeenCalled()
   })
@@ -8039,6 +7982,7 @@ describe(`duplicates prop variants`, () => {
     // Should show 2 remaining options (same label, different values)
     const visible_options = document.querySelectorAll(`ul.options > li`)
     expect(visible_options).toHaveLength(2) // Click second option - should work since it has different value
+    expect(document.querySelectorAll(`ul.options > li.selected`)).toHaveLength(0)
     if (visible_options[0] instanceof HTMLElement) visible_options[0].click()
     await tick()
 

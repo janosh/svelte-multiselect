@@ -765,7 +765,7 @@
       selectedTitle,
       disabledTitle,
       active: activeIndex === flat_idx && flat_idx >= 0,
-      selected: is_selected(label),
+      selected: selected_keys_set.has(key(option_item)),
       style:
         [utils.get_style(option_item, `option`), liOptionStyle]
           .filter(Boolean)
@@ -1244,8 +1244,6 @@
     batch_add_options(selectable, event)
   }
 
-  // O(1) lookup using pre-computed Set instead of O(n) array.includes()
-  const is_selected = (label: string | number) => selected_labels_set.has(`${label}`)
   const is_non_empty_option = (
     candidate: Option | null | undefined,
   ): candidate is Option =>

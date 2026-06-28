@@ -4,13 +4,14 @@
     MultiSelect as NamedSelect,
   } from 'svelte-multiselect'
   import DirectMultiSelect from 'svelte-multiselect/MultiSelect.svelte'
+  import type { Option } from 'svelte-multiselect'
   import { click_outside } from 'svelte-multiselect/attachments'
   import { get_label } from 'svelte-multiselect/utils'
 
-  const options = [`One`, { label: `Two`, value: 2 }]
+  const options: Option[] = [`One`, { label: `Two`, value: 2 }]
   const direct_export_matches = DirectMultiSelect === NamedSelect
   const utility_export_works = fuzzy_match(`tw`, String(get_label(options[1])))
-  let selected = $state([])
+  let selected = $state<Option[]>([])
 </script>
 
 <main {@attach click_outside({ callback: () => undefined })}>
