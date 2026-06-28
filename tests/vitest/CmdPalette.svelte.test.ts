@@ -911,24 +911,24 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
 
 test(`recent_actions_key uses action ids for duplicate labels`, async () => {
   const storage_key = `test-cmd-recents-ids`
-  localStorage.setItem(storage_key, JSON.stringify([`second`]))
+  localStorage.setItem(storage_key, JSON.stringify([`mixed`]))
   const actions = [
-    { id: `first`, label: `open`, description: `First`, action: vi.fn() },
-    { id: `second`, label: `open`, description: `Second`, action: vi.fn() },
+    { id: `mixed`, label: `save`, description: `Mixed`, action: vi.fn() },
+    { label: `save`, description: `No id`, action: vi.fn() },
   ]
   const props = $state({ open: true, actions, recent_actions_key: storage_key })
   mount(CmdPalette, { target: document.body, props })
   await tick()
 
-  expect(doc_query(`li[role='option'] .cmd-description`).textContent).toBe(`Second`)
+  expect(doc_query(`li[role='option'] .cmd-description`).textContent).toBe(`Mixed`)
 
   doc_query(`li[role='option']`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
   )
   await tick()
 
-  expect(actions[1].action).toHaveBeenCalledExactlyOnceWith(`open`)
-  expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`second`])
+  expect(actions[0].action).toHaveBeenCalledExactlyOnceWith(`save`)
+  expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`mixed`])
   localStorage.removeItem(storage_key)
 })
 

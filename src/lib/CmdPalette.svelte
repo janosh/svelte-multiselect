@@ -63,9 +63,7 @@
 
   const get_action_id = (action: CmdAction): string => `${action.id ?? action.label}`
   const can_track_recents = $derived(
-    new Set(actions.map(get_action_id)).size === actions.length &&
-      (actions.every((action) => action.id !== undefined) ||
-        new Set(actions.map((action) => action.label)).size === actions.length),
+    new Set(actions.map(get_action_id)).size === actions.length,
   )
 
   // load persisted recents (client-only since $effect doesn't run during SSR)
