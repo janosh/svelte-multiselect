@@ -442,6 +442,9 @@
     selected_labels_lower_set
       ? selected_labels_lower_set.has(label.toLowerCase())
       : selected_labels_set.has(label)
+  const is_option_selected = (opt: Option, label: string | number): boolean =>
+    selected_keys_set.has(key(opt)) ||
+    (duplicates === `case-insensitive` && is_label_selected(`${label}`))
 
   // Memoized Set of disabled option keys for O(1) lookups in large option sets
   let disabled_option_keys = $derived(
@@ -765,7 +768,7 @@
       selectedTitle,
       disabledTitle,
       active: activeIndex === flat_idx && flat_idx >= 0,
-      selected: selected_keys_set.has(key(option_item)),
+      selected: is_option_selected(option_item, label),
       style:
         [utils.get_style(option_item, `option`), liOptionStyle]
           .filter(Boolean)
