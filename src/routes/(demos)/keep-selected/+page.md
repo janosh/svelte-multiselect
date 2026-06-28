@@ -7,24 +7,24 @@ Configure how selected options behave in the dropdown. Try different modes:
   import MultiSelect from '$lib'
   import { languages } from '$site/options'
 
-  let selected: string[] = $state(['C', 'Go', 'TypeScript', 'Python'])
-  let keepSelectedInDropdown: false | 'plain' | 'checkboxes' = $state('checkboxes')
-</script>
-
-{#each [
+  const keep_selected_options = [
     [false, 'Default behavior, selected options disappear from dropdown'],
     [
       'plain',
       'Selected options stay visible with left border and background color to differentiate them',
     ],
     ['checkboxes', 'Selected options stay visible and each is prefixed by a checkbox'],
-  ] as
-  [mode, label]
-  (mode)
-}
+  ] as const
+  let selected: string[] = $state(['C', 'Go', 'TypeScript', 'Python'])
+  let keepSelectedInDropdown: false | 'plain' | 'checkboxes' = $state('checkboxes')
+</script>
+
+{#each keep_selected_options as [mode, label] (mode)}
   <label>
     <input type="radio" bind:group={keepSelectedInDropdown} value={mode} /><code
-    >keepSelectedInDropdown = {mode}</code> &nbsp; <span>{label}</span>
+      >keepSelectedInDropdown = {mode}</code
+    >
+    &nbsp; <span>{label}</span>
   </label>
 {/each}
 

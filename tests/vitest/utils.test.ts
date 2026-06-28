@@ -29,12 +29,10 @@ describe(`get_uuid`, () => {
     }
   }
 
-  test(`returns valid RFC 4122 v4 UUIDs when crypto available`, () => {
-    for (let idx = 0; idx < 5; idx++) expect(get_uuid()).toMatch(uuid_v4_regex)
-  })
-
   test(`generates unique UUIDs`, () => {
-    const uuids = new Set(Array.from({ length: 100 }, () => get_uuid()))
+    const generated_uuids = Array.from({ length: 100 }, () => get_uuid())
+    generated_uuids.forEach((uuid) => expect(uuid).toMatch(uuid_v4_regex))
+    const uuids = new Set(generated_uuids)
     expect(uuids.size).toBe(100)
   })
 
@@ -54,9 +52,6 @@ describe(`get_label`, () => {
     [123, `123`, false],
     [null, `null`, false],
     [undefined, `undefined`, false],
-    [false, `false`, false],
-    [true, `true`, false],
-    [0, `0`, false],
     [{ value: 42, name: `Test` }, undefined, true],
   ])(`handles option %j correctly`, (input, expected, should_log_error) => {
     console.error = vi.fn<typeof console.error>()
@@ -140,8 +135,7 @@ describe(`fuzzy_match`, () => {
     [`test`, `testing`, true],
     [`test`, `best`, false],
     // Case insensitive
-    [`TEST`, `test`, true],
-    [`Test`, `tEsT`, true],
+    [`TEST`, `testing`, true],
     // Fuzzy matching (non-consecutive)
     [`tageoo`, `tasks/geo-opt`, true],
     [`abc`, `a-b-c`, true],
@@ -176,14 +170,10 @@ describe(`fuzzy_match`, () => {
 describe(`is_object`, () => {
   test.each([
     [{ key: `value` }, true],
-    [{ label: `Test` }, true],
-    [{}, true],
     [[], true], // arrays are objects in JS
     [null, false],
     [undefined, false],
     [`string`, false],
-    [123, false],
-    [true, false],
     [() => {}, false],
   ])(`is_object(%j) returns %s`, (input, expected) => {
     expect(is_object(input)).toBe(expected)

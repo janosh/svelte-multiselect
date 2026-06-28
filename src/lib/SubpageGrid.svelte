@@ -3,11 +3,11 @@
 
   type Subpage = [title: string, href: string, description: string]
 
-  const { title, subtitle, subpages }: {
-    title: string
-    subtitle: string
-    subpages: Subpage[]
-  } = $props()
+  const {
+    title,
+    subtitle,
+    subpages,
+  }: { title: string; subtitle: string; subpages: Subpage[] } = $props()
 </script>
 
 <h1>{title}</h1>
@@ -52,7 +52,9 @@
     border: 1px solid color-mix(in srgb, currentColor 14%, transparent);
     text-decoration: none;
     color: inherit;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
   }
   .card:hover {
     border-color: color-mix(in srgb, currentColor 28%, transparent);

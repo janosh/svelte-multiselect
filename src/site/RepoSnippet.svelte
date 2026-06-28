@@ -3,9 +3,13 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import type { FrontendLib } from './options'
 
-  let { option, idx, onclick, ...rest }:
-    & HTMLAttributes<HTMLSpanElement>
-    & { option: FrontendLib; idx: number; onclick?: () => void } = $props()
+  type Props = {
+    option: FrontendLib
+    idx: number
+    onclick?: () => void
+  } & HTMLAttributes<HTMLSpanElement>
+  let { option, idx, onclick, ...rest }: Props = $props()
+  let repo = $derived(option.repo.replace(`https://github.com/`, ``))
 </script>
 
 <span {...rest}>
@@ -13,9 +17,7 @@
   <strong>{option.label}</strong>
   <small>
     <a {onclick} href={option.repo} target="_blank" rel="noreferrer">
-      <Icon icon="GitHub" style="width: 14pt" />{
-        option.repo.replace(`https://github.com/`, ``)
-      }
+      <Icon icon="GitHub" style="width: 14pt" />{repo}
     </a>
   </small>
 </span>

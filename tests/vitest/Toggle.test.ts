@@ -10,18 +10,14 @@ describe(`Toggle`, () => {
     new KeyboardEvent(`keydown`, { key, bubbles: true, ...init })
   const keydown = (key: string) => get_input().dispatchEvent(create_keydown(key))
 
-  test.each([false, true])(`renders with checked=%s`, (checked) => {
-    mount(Toggle, { target: document.body, props: { checked } })
-    expect(get_input().checked).toBe(checked)
-  })
-
   test(`toggles on click`, () => {
-    mount(Toggle, { target: document.body })
+    mount(Toggle, { target: document.body, props: { checked: true } })
     const input = get_input()
-    input.click()
     expect(input.checked).toBe(true)
     input.click()
     expect(input.checked).toBe(false)
+    input.click()
+    expect(input.checked).toBe(true)
   })
 
   test(`toggles on Enter key and fires change event`, () => {

@@ -12,13 +12,13 @@
   let contributors = $state<Contributor[]>([])
 
   onMount(() => {
-    fetch(
-      `https://api.github.com/repos/janosh/svelte-multiselect/contributors?per_page=100`,
-    )
+    const url = `https://api.github.com/repos/janosh/svelte-multiselect/contributors?per_page=100`
+    fetch(url)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
-      .then((data: Contributor[]) => {
-        contributors = data.filter((usr) => !usr.login.includes(`[bot]`))
-      })
+      .then(
+        (data: Contributor[]) =>
+          (contributors = data.filter((usr) => !usr.login.includes(`[bot]`))),
+      )
       .catch((error) => console.error(`Failed to fetch contributors:`, error))
   })
 </script>
@@ -42,11 +42,7 @@
         {#each contributors as { login, avatar_url, html_url } (login)}
           <li>
             <a href={html_url} target="_blank" rel="noreferrer">
-              <img
-                src="{avatar_url}&s=100"
-                alt={login}
-                loading="lazy"
-              />
+              <img src="{avatar_url}&s=100" alt={login} loading="lazy" />
               <span style="font-size: 0.75rem; opacity: 0.7">{login}</span>
             </a>
           </li>

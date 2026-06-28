@@ -20,7 +20,7 @@
   {duplicates}
   bind:selected
   createOptionMsg={({ searchText }) => `Add '${searchText}' as custom food`}
-  oncreate={({ option }) => last_created = String(option)}
+  oncreate={({ option }) => (last_created = String(option))}
 />
 
 {#if last_created}
@@ -57,7 +57,7 @@
   allowUserOptions="append"
   bind:selected={selected_append}
   createOptionMsg={({ searchText, options }) =>
-  `Add '${searchText}' (${options.length} languages available)`}
+    `Add '${searchText}' (${options.length} languages available)`}
 >
   {#snippet children({ option })}
     <LanguageSnippet {option} />
@@ -102,7 +102,10 @@ You can start with no options and let users populate MultiSelect from scratch. I
   let log: string[] = $state([])
 
   const snippets = [
-    { label: `Comma-separated emails`, text: `alice@example.com, bob@test.org, carol@mail.net` },
+    {
+      label: `Comma-separated emails`,
+      text: `alice@example.com, bob@test.org, carol@mail.net`,
+    },
     { label: `Multi-word values`, text: `New York, Los Angeles, San Francisco` },
     { label: `Newline-separated`, text: `Red\nGreen\nBlue\nYellow` },
     { label: `Mixed commas & newlines`, text: `one, two\nthree, four` },
@@ -131,7 +134,11 @@ You can start with no options and let users populate MultiSelect from scratch. I
   bind:selected
   noMatchingOptionsMsg=""
   createOptionMsg={null}
-  parse_paste={(text) => text.split(/[,\n]+/).map((s) => s.trim()).filter(Boolean)}
+  parse_paste={(text) =>
+    text
+      .split(/[,\n]+/)
+      .map((s) => s.trim())
+      .filter(Boolean)}
   oncreate={({ option }) => {
     if (String(option).length < 3) {
       log = [...log, `✗ rejected "${option}" (too short)`]
@@ -139,7 +146,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
     }
     log = [...log, `+ ${option}`]
   }}
-  onremove={({ option }) => log = [...log, `- ${option}`]}
+  onremove={({ option }) => (log = [...log, `- ${option}`])}
 />
 
 <p style="margin-top: 0.5em">
@@ -149,7 +156,9 @@ You can start with no options and let users populate MultiSelect from scratch. I
 {#if log.length > 0}
   <details open style="margin-top: 0.5em">
     <summary>Event log ({log.length})</summary>
-    <pre style="max-height: 8em; overflow: auto; font-size: 0.85em"><code>{log.join('\n')}</code></pre>
+    <pre style="max-height: 8em; overflow: auto; font-size: 0.85em"><code
+        >{log.join('\n')}</code
+      ></pre>
   </details>
 {/if}
 ```

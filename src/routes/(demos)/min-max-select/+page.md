@@ -24,7 +24,7 @@
   placeholder="What languages do you know?"
   minSelect={1}
   bind:selected
-  onmaxreached={() => max_msg = `Maximum of 5 reached!`}
+  onmaxreached={() => (max_msg = `Maximum of 5 reached!`)}
 >
   {#snippet children({ option })}
     <LanguageSnippet {option} />
@@ -149,7 +149,12 @@ Pass a string to customize the label:
   let selected: ColorOption[] = $state([])
 </script>
 
-<MultiSelect options={colors} bind:selected selectAllOption="Add all colors" placeholder="Select colors..." />
+<MultiSelect
+  options={colors}
+  bind:selected
+  selectAllOption="Add all colors"
+  placeholder="Select colors..."
+/>
 
 <div style="display: flex; gap: 4px; margin-top: 8px; flex-wrap: wrap;">
   {#each selected as color}
@@ -194,18 +199,19 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'
 
-  const red_pill =
-    `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
-  const blue_pill =
-    `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
-  const options: ObjectOption[] = [{
-    label: red_pill,
-    value: `red pill`,
-    preselected: true,
-  }, {
-    label: blue_pill,
-    value: `blue pill`,
-  }]
+  const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`
+  const blue_pill = `🔵  &ensp; Blue Pill &nbsp; <img height="35px" style="vertical-align: middle;" src="https://upload.wikimedia.org/wikipedia/en/a/ab/Morpheus.jpg" />`
+  const options: ObjectOption[] = [
+    {
+      label: red_pill,
+      value: `red pill`,
+      preselected: true,
+    },
+    {
+      label: blue_pill,
+      value: `blue pill`,
+    },
+  ]
 
   let value: ObjectOption | null = $state(null)
 </script>

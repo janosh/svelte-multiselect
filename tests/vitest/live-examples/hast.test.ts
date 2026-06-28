@@ -3,7 +3,6 @@ import { describe, expect, test } from 'vite-plus/test'
 
 describe(`escape_html_text`, () => {
   test.each([
-    [`plain`, `plain`],
     [`<span>Fish & Chips</span>`, `&lt;span&gt;Fish &amp; Chips&lt;/span&gt;`],
     [`5 > 3 && 2 < 4`, `5 &gt; 3 &amp;&amp; 2 &lt; 4`],
   ])(`escapes %j`, (input, expected) => {

@@ -65,9 +65,7 @@
         const pre = code.parentElement
         if (!pre) continue
         const existing_copy_button = pre.querySelector(copy_button_selector)
-        const already_mounted = mounted_copy_buttons.some((entry) =>
-          entry.pre === pre
-        )
+        const already_mounted = mounted_copy_buttons.some((entry) => entry.pre === pre)
         // If a stale button from a previous effect pass still exists, remove it synchronously
         // so this pass can mount a fresh button with updated props/callbacks.
         if (
@@ -93,7 +91,7 @@
             style,
             'data-sms-copy': ``,
           },
-        }) as MountedCopyButton
+        })
         mounted_copy_buttons.push({ pre, component: mounted_copy_button })
       }
     }
@@ -144,7 +142,7 @@
     role="button"
     tabindex={disabled ? -1 : 0}
     aria-disabled={disabled || undefined}
-    {...(as === `button` ? { disabled } : {})}
+    {...as === `button` ? { disabled } : {}}
     data-sms-copy=""
     {...rest}
   >

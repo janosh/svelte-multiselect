@@ -23,7 +23,8 @@
         data-active={active}
         data-disabled={disabled}
         data-idx={idx}
-      >{option}</span>
+        >{option}
+      </span>
     {/snippet}
   </MultiSelect>
 {:else}
@@ -32,8 +33,9 @@
       <span class="expand-snippet" data-open={open} data-disabled={disabled}>▼</span>
     {/snippet}
     {#snippet removeIcon({ option, isRemoveAll })}
-      <span class="remove-snippet" data-option={option} data-is-remove-all={isRemoveAll}
-      >✕</span>
+      <span class="remove-snippet" data-option={option} data-is-remove-all={isRemoveAll}>
+        ✕
+      </span>
     {/snippet}
     {#snippet beforeInput({ searchText })}
       <span class="before-input-snippet" data-search-text={searchText}>before</span>
@@ -45,11 +47,9 @@
       <span class="selected-item-snippet" data-idx={idx}>{option}</span>
     {/snippet}
     {#snippet userMsg({ searchText, msgType, msg })}
-      <span
-        class="user-msg-snippet"
-        data-search-text={searchText}
-        data-msg-type={msgType}
-      >{msg}</span>
+      <span class="user-msg-snippet" data-search-text={searchText} data-msg-type={msgType}
+        >{msg}
+      </span>
     {/snippet}
     {#snippet spinner()}
       <span class="spinner-snippet">loading</span>
@@ -63,7 +63,8 @@
         data-group={group}
         data-count={options.length}
         data-collapsed={collapsed}
-      >{group}</span>
+        >{group}
+      </span>
     {/snippet}
   </MultiSelect>
 {/if}

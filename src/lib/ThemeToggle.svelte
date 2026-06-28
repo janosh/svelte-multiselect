@@ -6,7 +6,10 @@
 
   type ThemeMode = `light` | `dark` | `system`
 
-  let { tooltip: tooltip_opts = {}, ...rest }: HTMLAttributes<HTMLButtonElement> & {
+  let {
+    tooltip: tooltip_opts = {},
+    ...rest
+  }: HTMLAttributes<HTMLButtonElement> & {
     tooltip?: TooltipOptions | false
   } = $props()
 
@@ -15,8 +18,7 @@
 
   const resolve_theme_mode = (): ThemeMode => {
     try {
-      const saved = localStorage.getItem(`theme`) ??
-        localStorage.getItem(`theme_mode`)
+      const saved = localStorage.getItem(`theme`) ?? localStorage.getItem(`theme_mode`)
       if (saved === `light` || saved === `dark` || saved === `system`) return saved
     } catch {
       console.error(`Failed to get theme mode from localStorage`)
@@ -68,11 +70,12 @@
   {title}
   aria-label={title}
   style:visibility={is_hydrated ? `visible` : `hidden`}
-  {@attach tooltip_opts !== false && tooltip({
-    placement: `bottom`,
-    style: `font-size: 0.7rem; padding: 2pt 4pt;`,
-    ...tooltip_opts,
-  })}
+  {@attach tooltip_opts !== false &&
+    tooltip({
+      placement: `bottom`,
+      style: `font-size: 0.7rem; padding: 2pt 4pt;`,
+      ...tooltip_opts,
+    })}
   {...rest}
 >
   {#if is_hydrated}

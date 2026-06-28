@@ -263,6 +263,31 @@ test(`handles action selection and execution`, () => {
   expect(props.open).toBe(false)
 })
 
+test(`ignores user-created options without action handlers`, async () => {
+  const action = vi.fn()
+  const props = $state({
+    open: true,
+    actions: [{ label: `existing action`, action }],
+    allowUserOptions: true,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  const input_el = doc_query<HTMLInputElement>(
+    `dialog div.multiselect input[autocomplete]`,
+  )
+  input_el.value = `custom command`
+  input_el.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+
+  expect(() => doc_query<HTMLLIElement>(`dialog li.user-msg`).click()).not.toThrow()
+  await tick()
+
+  expect(action).not.toHaveBeenCalled()
+  expect(props.open).toBe(true)
+})
+
 test.each([
   [`page body`, () => document.body],
   // showModal() backdrop clicks dispatch with the dialog element itself as the target,
@@ -884,6 +909,29 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   localStorage.removeItem(storage_key)
 })
 
+test(`recent_actions_key uses action ids for duplicate labels`, async () => {
+  const storage_key = `test-cmd-recents-ids`
+  localStorage.setItem(storage_key, JSON.stringify([`mixed`]))
+  const actions = [
+    { id: `mixed`, label: `save`, description: `Mixed`, action: vi.fn() },
+    { label: `save`, description: `No id`, action: vi.fn() },
+  ]
+  const props = $state({ open: true, actions, recent_actions_key: storage_key })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  expect(doc_query(`li[role='option'] .cmd-description`).textContent).toBe(`Mixed`)
+
+  doc_query(`li[role='option']`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+  )
+  await tick()
+
+  expect(actions[0].action).toHaveBeenCalledExactlyOnceWith(`save`)
+  expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`mixed`])
+  localStorage.removeItem(storage_key)
+})
+
 // pre-existing recents-storage contents -> dropdown order on initial open
 test.each([
   [
@@ -923,7 +971,7 @@ test.each([
       { label: `alpha`, action: vi.fn() },
       { label: `hotkeyed`, action: vi.fn(), shortcut: `ctrl+shift+h` },
     ],
-    max_recent: undefined as number | undefined,
+    max_recent: undefined,
     keys: [`h`],
     expected: [`hotkeyed`],
   },

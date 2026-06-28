@@ -139,6 +139,7 @@ describe(`PrevNext`, () => {
         [`p4`, `L4`],
       ],
       [`p1`, `p3`],
+      [`L1`, `L3`],
     ],
     [
       `/page/2`,
@@ -149,12 +150,16 @@ describe(`PrevNext`, () => {
         [`/page/4`, `P4`],
       ],
       [`/page/1`, `/page/3`],
+      [`P1`, `P3`],
     ],
-  ] satisfies [string, [string, string][], string[]][])(
-    `uses first tuple element as href (current=%s)`,
-    (current, test_items, expected_hrefs) => {
+  ] satisfies [string, [string, string][], string[], string[]][])(
+    `uses tuple href and label (current=%s)`,
+    (current, test_items, expected_hrefs, expected_labels) => {
       mount_prev_next({ items: test_items, current })
       expect(link_hrefs()).toEqual(expected_hrefs)
+      expect(
+        [...target.querySelectorAll(`a`)].map((link) => link.textContent?.trim()),
+      ).toEqual(expected_labels)
     },
   )
 

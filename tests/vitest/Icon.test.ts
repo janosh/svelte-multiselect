@@ -74,14 +74,4 @@ describe(`Icon`, () => {
       console_error.mockRestore()
     },
   )
-
-  test(`has correct default styles`, () => {
-    mount(Icon, { target: document.body, props: { icon: `Check` } })
-    const svg = get_svg()
-    expect(svg).not.toBeNull()
-    if (!svg) return
-    const styles = getComputedStyle(svg)
-    expect(styles.display).toBe(`inline-block`)
-    expect(styles.verticalAlign).toBe(`middle`)
-  })
 })

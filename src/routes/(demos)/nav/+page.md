@@ -154,8 +154,8 @@ Use the `link` snippet to customize how all links render:
     <a
       {href}
       style:font-weight={isActive ? `bold` : `normal`}
-      onclick={(event: MouseEvent) => event.preventDefault()}
-    >🔗 {label}</a>
+      onclick={(event: MouseEvent) => event.preventDefault()}>🔗 {label}</a
+    >
   {/snippet}
 </Nav>
 ```

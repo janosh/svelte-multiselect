@@ -1,7 +1,11 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements'
 
-  let { option, idx = null, ...rest }: {
+  let {
+    option,
+    idx = null,
+    ...rest
+  }: {
     option: string
     idx?: number | null
   } & HTMLAttributes<HTMLDivElement> = $props()

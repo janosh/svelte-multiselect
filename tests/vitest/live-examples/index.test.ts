@@ -1,4 +1,3 @@
-// Tests for live-examples/index.ts - exports
 import * as hast from '$lib/live-examples/hast'
 import * as highlighter from '$lib/live-examples/highlighter'
 import * as live_examples from '$lib/live-examples/index'

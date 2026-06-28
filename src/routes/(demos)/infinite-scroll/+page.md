@@ -12,14 +12,12 @@ Just provide a `loadOptions` function that fetches data:
   import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
   // Simulated large dataset - in practice, this would be a database/API
-  const all_items: string[] = Array.from(
-    { length: 10000 },
-    (_, idx) => `Item ${idx + 1}`,
-  )
+  const all_items: string[] = Array.from({ length: 10000 }, (_, idx) => `Item ${idx + 1}`)
 
   async function load_options(
-    { search, offset, limit }: LoadOptionsParams,
+    params: LoadOptionsParams,
   ): Promise<LoadOptionsResult<string>> {
+    const { search, offset, limit } = params
     // Simulate network delay
     await new Promise((resolve) => setTimeout(resolve, 300))
 
@@ -28,10 +26,9 @@ Just provide a `loadOptions` function that fetches data:
       ? all_items.filter((item) => item.toLowerCase().includes(search.toLowerCase()))
       : all_items
 
-    return {
-      options: filtered.slice(offset, offset + limit),
-      hasMore: offset + limit < filtered.length,
-    }
+    const options = filtered.slice(offset, offset + limit)
+    const hasMore = offset + limit < filtered.length
+    return { options, hasMore }
   }
 </script>
 
@@ -60,9 +57,11 @@ Connect to a real API:
   }
 
   // Simulated API
-  async function fetch_users(
-    { search, offset, limit }: LoadOptionsParams,
-  ): Promise<LoadOptionsResult<User>> {
+  async function fetch_users({
+    search,
+    offset,
+    limit,
+  }: LoadOptionsParams): Promise<LoadOptionsResult<User>> {
     await new Promise((resolve) => setTimeout(resolve, 400))
 
     // Simulated database
@@ -73,10 +72,11 @@ Connect to a real API:
     }))
 
     const filtered = search
-      ? all_users.filter((user) =>
-        user.label.toLowerCase().includes(search.toLowerCase()) ||
-        user.email.toLowerCase().includes(search.toLowerCase())
-      )
+      ? all_users.filter(
+          (user) =>
+            user.label.toLowerCase().includes(search.toLowerCase()) ||
+            user.email.toLowerCase().includes(search.toLowerCase()),
+        )
       : all_users
 
     return {
@@ -86,10 +86,7 @@ Connect to a real API:
   }
 </script>
 
-<MultiSelect
-  loadOptions={fetch_users}
-  placeholder="Search users by name or email..."
->
+<MultiSelect loadOptions={fetch_users} placeholder="Search users by name or email...">
   {#snippet children({ option })}
     <div>
       <strong>{option.label}</strong>
@@ -108,14 +105,12 @@ For advanced control, pass an object with `fetch` function and config:
   import MultiSelect from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
-  const all_items: string[] = Array.from(
-    { length: 500 },
-    (_, idx) => `Option ${idx + 1}`,
-  )
+  const all_items: string[] = Array.from({ length: 500 }, (_, idx) => `Option ${idx + 1}`)
 
   async function load_options(
-    { search, offset, limit }: LoadOptionsParams,
+    params: LoadOptionsParams,
   ): Promise<LoadOptionsResult<string>> {
+    const { search, offset, limit } = params
     await new Promise((resolve) => setTimeout(resolve, 200))
 
     const filtered = search
@@ -162,14 +157,15 @@ Use object options with custom snippets:
   ]
 
   async function load_options(
-    { search, offset, limit }: LoadOptionsParams,
+    params: LoadOptionsParams,
   ): Promise<LoadOptionsResult<Language>> {
+    const { search, offset, limit } = params
     await new Promise((resolve) => setTimeout(resolve, 200))
 
     const filtered = search
       ? all_languages.filter((lang) =>
-        lang.label.toLowerCase().includes(search.toLowerCase())
-      )
+          lang.label.toLowerCase().includes(search.toLowerCase()),
+        )
       : all_languages
 
     return {
@@ -198,8 +194,9 @@ By default, options load when the dropdown opens. Set `onOpen: false` to disable
   const items: string[] = Array.from({ length: 100 }, (_, idx) => `Item ${idx + 1}`)
 
   async function load_options(
-    { search, offset, limit }: LoadOptionsParams,
+    params: LoadOptionsParams,
   ): Promise<LoadOptionsResult<string>> {
+    const { search, offset, limit } = params
     await new Promise((resolve) => setTimeout(resolve, 300))
     const filtered = search
       ? items.filter((item) => item.toLowerCase().includes(search.toLowerCase()))

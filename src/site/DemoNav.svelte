@@ -57,8 +57,7 @@
     },
   ]
 
-  const base_style =
-    `max-width: var(--main-max-width); --nav-item-padding: 2pt 4pt; --nav-link-active-color: var(--accent); `
+  const base_style = `max-width: var(--main-max-width); --nav-item-padding: 2pt 4pt; --nav-link-active-color: var(--accent); `
 </script>
 
 <Nav

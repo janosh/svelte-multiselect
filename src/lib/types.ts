@@ -301,8 +301,7 @@ export interface KeyboardShortcuts {
 }
 
 // Nav component types
-export interface NavRouteObject {
-  href: string
+export type NavRouteObject = {
   label?: string // custom label (default: derived from href)
   children?: string[] // sub-routes for dropdown
   disabled?: boolean | string // true or tooltip message
@@ -313,7 +312,7 @@ export interface NavRouteObject {
   class?: string // custom CSS class
   style?: string // custom inline style
   [key: string]: unknown // allow additional custom properties
-}
+} & ({ href: string } | { separator: true; href?: string })
 
 // NavRoute supports multiple formats for backward compatibility:
 // - string: just a path ("/about")
