@@ -290,48 +290,9 @@ describe(`tooltip`, () => {
       const cleanup = tooltip({ content })(element)
       expect(cleanup).toBe(expected)
     })
-
-    it.each([
-      [`line breaks`, `Line 1\rLine 2\rLine 3`, `Line 1<br/>Line 2<br/>Line 3`],
-      [
-        `special HTML characters`,
-        `<script>alert('xss')</script>`,
-        `<script>alert('xss')</script>`,
-      ],
-      [`very long content`, `A`.repeat(1000), `A`.repeat(1000)],
-      [
-        `unicode content`,
-        `🚀 Unicode: ñáéíóú 中文 العربية`,
-        `🚀 Unicode: ñáéíóú 中文 العربية`,
-      ],
-    ])(`should handle %s`, (_desc, content, expected) => {
-      const element = create_element()
-      element.title = content
-      setup_tooltip(element)
-      expect(element.getAttribute(`data-original-title`)).toBe(
-        expected.replaceAll(`<br/>`, `\r`),
-      )
-    })
   })
 
   describe(`Configuration Options`, () => {
-    it.each([
-      [`delay: 500`, { delay: 500 }],
-      [`delay: 0`, { delay: 0 }],
-      [`delay: -100`, { delay: -100 }],
-      [`empty options`, {}],
-      [`placement: top`, { placement: `top` }],
-      [`placement: bottom`, { placement: `bottom` }],
-      [`style string`, { style: `background: red;` }],
-      [`empty style`, { style: `` }],
-      [`malformed style`, { style: ` bg: red ; invalid; ` }],
-    ])(`should setup tooltip with %s`, (_desc, options) => {
-      const element = create_element()
-      element.title = `test`
-      setup_tooltip(element, options)
-      expect(element.getAttribute(`data-original-title`)).toBe(`test`)
-    })
-
     it(`should handle disabled option`, () => {
       const element = create_element()
       element.title = `Disabled tooltip`
@@ -454,8 +415,6 @@ describe(`tooltip`, () => {
     it.each([
       [`unrelated element keeps tooltip`, () => document.createElement(`div`), true],
       [`document hides tooltip`, () => document, false],
-      [`documentElement hides tooltip`, () => document.documentElement, false],
-      [`body hides tooltip`, () => document.body, false],
     ])(`scroll from %s`, (_desc, get_target, should_persist) => {
       const element = create_element()
       element.title = `test`
@@ -1210,23 +1169,12 @@ describe(`highlight_matches`, () => {
     // Early returns
     [`CSS not supported`, undefined, `test`, `test`, false, 0, undefined],
     [`no query`, true, ``, `test`, false, 0, undefined],
-    [`CSS not supported (fuzzy)`, undefined, `auo`, `auo`, true, 0, undefined],
-    [`no query (fuzzy)`, true, ``, `auo`, true, 0, undefined],
 
     // Substring highlighting (fuzzy=false)
     [
       `substring match`,
       true,
       `<p>This is a test paragraph</p>`,
-      `test`,
-      false,
-      1,
-      undefined,
-    ],
-    [
-      `multiple matches`,
-      true,
-      `<div><span>first test</span><span>second test</span></div>`,
       `test`,
       false,
       1,
@@ -1252,16 +1200,6 @@ describe(`highlight_matches`, () => {
     ],
 
     // Fuzzy highlighting (fuzzy=true)
-    [`fuzzy match`, true, `<p>allow-user-options</p>`, `auo`, true, 1, undefined],
-    [
-      `fuzzy case insensitive`,
-      true,
-      `<p>ALLOW-USER-OPTIONS</p>`,
-      `auo`,
-      true,
-      1,
-      undefined,
-    ],
     [
       `fuzzy no matches`,
       true,

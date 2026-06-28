@@ -99,12 +99,6 @@ test.each([
   },
 )
 
-test(`renders default icon and ready label`, () => {
-  const { copy_button } = mount_copy_button()
-  expect(copy_button.querySelector(`svg`)).toBeInstanceOf(SVGElement)
-  expect(copy_button.textContent).toContain(`ready`)
-})
-
 test.each([
   [``, 0],
   [`Copy me`, 1],

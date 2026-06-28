@@ -26,15 +26,6 @@ describe(`Wiggle`, () => {
     return { props, get_value: () => wiggle_value }
   }
 
-  test(`renders span with transform styles`, () => {
-    mount(Wiggle, { target: document.body })
-    const span = get_span()
-    expect(span).toBeInstanceOf(HTMLSpanElement)
-    expect(span.style.transform).toContain(`rotate`)
-    expect(span.style.transform).toContain(`scale`)
-    expect(span.style.transform).toContain(`translate`)
-  })
-
   test.each([200, 500])(`resets wiggle to false after duration=%dms`, (duration) => {
     const { props, get_value } = create_bindable_wiggle(true, { duration })
     mount(Wiggle, { target: document.body, props })

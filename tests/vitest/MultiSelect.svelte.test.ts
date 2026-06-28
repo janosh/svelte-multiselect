@@ -1238,6 +1238,14 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
 
     const live_region = doc_query(`.sr-only[aria-live="polite"]`)
     expect(live_region.textContent).toContain(`selected`)
+
+    const selected_chip = doc_query(`ul.selected > li`)
+    expect(selected_chip.getAttribute(`role`)).toBeNull()
+    expect(selected_chip.getAttribute(`aria-selected`)).toBeNull()
+
+    doc_query<HTMLButtonElement>(`ul.selected button.remove`).click()
+    await tick()
+    expect(live_region.textContent).toContain(`removed`)
   })
 })
 
@@ -2238,11 +2246,23 @@ test.each([[null], [`custom add option message`]])(
   },
 )
 
-test(`disabled multiselect has disabled icon`, () => {
+test(`disabled multiselect disables input, removal controls, and shows disabled icon`, () => {
+  const disabled_input_title = `Selection unavailable`
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [1, 2, 3], disabled: true },
+    props: {
+      options: [1, 2, 3],
+      selected: [1, 2],
+      disabled: true,
+      disabledInputTitle: disabled_input_title,
+    },
   })
+
+  const wrapper = doc_query(`div.multiselect`)
+  expect(wrapper.classList).toContain(`disabled`)
+  expect(wrapper.getAttribute(`title`)).toBe(disabled_input_title)
+  expect(doc_query<HTMLInputElement>(`input[autocomplete]`).disabled).toBe(true)
+  expect(document.querySelector(`button.remove`)).toBeNull()
 
   const disabled_icon = doc_query(`svg[data-name='disabled-icon']`)
   expect(disabled_icon).toBeInstanceOf(SVGSVGElement)
@@ -3030,6 +3050,35 @@ test.each<[string, boolean | `append`]>([
   expect(onadd_spy).not.toHaveBeenCalled()
   expect(props.selected).toEqual([])
   if (mode === `append`) expect(props.options).toEqual(initial_options)
+})
+
+test(`allowUserOptions=append keeps created options selectable after removal`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [`a`, `b`],
+    selected: [],
+    allowUserOptions: `append`,
+  })
+  mount(MultiSelect, { target: document.body, props })
+
+  await create_user_option(`foobar`)
+
+  expect(props.options).toEqual([`a`, `b`, `foobar`])
+  expect(props.selected).toEqual([`foobar`])
+
+  doc_query<HTMLButtonElement>(`ul.selected button.remove`).click()
+  await tick()
+  expect(props.selected).toEqual([])
+
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  input.value = `foobar`
+  input.dispatchEvent(input_event)
+  await tick()
+
+  const appended_option = doc_query(`ul.options > li:not(.user-msg)`)
+  expect(appended_option.textContent?.trim()).toBe(`foobar`)
+  appended_option.click()
+  await tick()
+  expect(props.selected).toEqual([`foobar`])
 })
 
 test.each<[string, Option | undefined]>([
@@ -7791,6 +7840,81 @@ describe(`history / undo-redo`, () => {
     expect(selected).toEqual([1])
     expect(can_undo).toBe(true)
     expect(can_redo).toBe(false)
+  })
+
+  test(`undo and redo callbacks receive changes and new actions clear redo`, async () => {
+    let selected = $state<number[]>([])
+    let undo_fn: (() => boolean) | undefined
+    let redo_fn: (() => boolean) | undefined
+    let can_redo = false
+    const onundo = vi.fn()
+    const onredo = vi.fn()
+
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        history: true,
+        onundo,
+        onredo,
+        get selected() {
+          return selected
+        },
+        set selected(val) {
+          selected = val
+        },
+        get undo() {
+          return undo_fn
+        },
+        set undo(fn) {
+          undo_fn = fn
+        },
+        get redo() {
+          return redo_fn
+        },
+        set redo(fn) {
+          redo_fn = fn
+        },
+        get canRedo() {
+          return can_redo
+        },
+        set canRedo(val) {
+          can_redo = val
+        },
+      },
+    })
+    await tick()
+
+    const click_option = async (label: string) => {
+      const option_to_click = [
+        ...document.querySelectorAll<HTMLLIElement>(`ul.options > li`),
+      ].find((option) => option.textContent?.trim() === label)
+      if (!option_to_click) throw new Error(`option ${label} not found`)
+      option_to_click.click()
+      await tick()
+    }
+
+    await click_option(`1`)
+    await click_option(`2`)
+    expect(selected).toEqual([1, 2])
+
+    expect(undo_fn?.()).toBe(true)
+    await tick()
+    expect(selected).toEqual([1])
+    expect(can_redo).toBe(true)
+    expect(onundo).toHaveBeenCalledWith({ previous: [1, 2], current: [1] })
+
+    expect(redo_fn?.()).toBe(true)
+    await tick()
+    expect(selected).toEqual([1, 2])
+    expect(onredo).toHaveBeenCalledWith({ previous: [1], current: [1, 2] })
+
+    expect(undo_fn?.()).toBe(true)
+    await tick()
+    await click_option(`3`)
+    expect(selected).toEqual([1, 3])
+    expect(can_redo).toBe(false)
+    expect(redo_fn?.()).toBe(false)
   })
 
   test(`preselected values are correctly tracked as initial state`, async () => {

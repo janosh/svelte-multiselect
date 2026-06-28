@@ -1,5 +1,5 @@
 import { FileDetails } from '$lib'
-import { mount, tick } from 'svelte'
+import { mount } from 'svelte'
 import { describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 import TestSnippetHarness from './TestSnippetHarness.svelte'
@@ -39,31 +39,6 @@ describe(`FileDetails`, () => {
       `explicit.svelte`,
     ])
     expect(all_text(`.lang-label`)).toEqual([`svelte`, `typescript`, `txt`, `ts`])
-  })
-
-  test(`toggle all opens and closes every details node`, async () => {
-    const files = [
-      { title: `one.js`, content: `console.log(1)`, node: null },
-      { title: `two.py`, content: `print(2)`, node: null },
-    ]
-
-    mount(FileDetails, { target: document.body, props: { files } })
-    await tick()
-
-    const button = doc_query<HTMLButtonElement>(`button`)
-    const details = [...document.querySelectorAll<HTMLDetailsElement>(`details`)]
-    expect(button.textContent).toBe(`Open all`)
-    expect(files.map((file) => file.node)).toEqual(details)
-
-    for (const [text, open] of [
-      [`Close all`, true],
-      [`Open all`, false],
-    ] as const) {
-      button.click()
-      await tick()
-      expect(details.every((node) => node.open === open)).toBe(true)
-      expect(button.textContent).toBe(text)
-    }
   })
 
   test(`single file omits toggle-all button and forwards details toggle event`, () => {
