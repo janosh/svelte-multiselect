@@ -4,7 +4,12 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
 
-  let { speed = 0.5, n_items = 50, freeze = false, ...rest }: {
+  let {
+    speed = 0.5,
+    n_items = 50,
+    freeze = false,
+    ...rest
+  }: {
     speed?: number
     n_items?: number
     freeze?: boolean

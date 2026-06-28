@@ -303,7 +303,7 @@ test(`global_selector remount uses latest callback after parent remount`, async 
   const on_copy_success_initial = vi.fn()
   const on_copy_success_next = vi.fn()
   const { pre } = create_pre_with_code(`selector content`, `copy-target`)
-  const global_props = { global_selector: `.copy-target`, reset_sec: 1 } as const
+  const global_props = { global_selector: `.copy-target`, reset_sec: 1 }
 
   const initial_component = mount(CopyButton, {
     target: document.body,

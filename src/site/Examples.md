@@ -162,10 +162,10 @@ value = {JSON.stringify(value) || `null`}
 
   const filter_func = (op: ObjectOption, searchText: string): boolean => {
     if (!searchText) return true
-    const [label, lang, lowerSearch] = [op.label, op.lang, searchText].map((str) =>
-      str.toLowerCase()
-    )
-    return label.includes(lowerSearch) || lang.includes(lowerSearch)
+    const search = searchText.toLowerCase()
+    const label_match = String(op.label).toLowerCase().includes(search)
+    const lang_match = String(op.lang).toLowerCase().includes(search)
+    return label_match || lang_match
   }
 
   let show_confetti: boolean = $state(false)
@@ -254,7 +254,7 @@ value = {JSON.stringify(value) || `null`}
 />
 
 <label>
-  maxOptions <input type="range" min="0" max={30} bind:value={maxOptions}>
+  maxOptions <input type="range" min="0" max={30} bind:value={maxOptions} />
   {maxOptions} <small>(0 means no limit)</small>
 </label>
 ```

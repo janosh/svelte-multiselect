@@ -1,5 +1,4 @@
 <script lang="ts">
-  import type { Page } from '@sveltejs/kit'
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import type { TooltipOptions } from './attachments'
@@ -7,6 +6,8 @@
   import Icon from './Icon.svelte'
   import type { NavRoute, NavRouteObject } from './types'
   import { get_uuid } from './utils'
+
+  type NavLinkRouteObject = NavRouteObject & { href: string }
 
   // Props for the item snippet's render_default function context
   interface ItemSnippetParams {
@@ -42,15 +43,17 @@
     link?: Snippet<[{ href: string; label: string; isActive: boolean }]>
     menu_props?: HTMLAttributes<HTMLDivElement>
     link_props?: HTMLAttributes<HTMLAnchorElement>
-    page?: Page
+    page?: { url: { pathname: string } }
     labels?: Record<string, string>
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
     tooltip_options?: Omit<TooltipOptions, `content`>
     breakpoint?: number
     dropdown_cooldown?: number // ms delay before hiding dropdown after mouse leaves (ignored when pinned)
-    onnavigate?: (
-      data: { href: string; event: MouseEvent; route: NavRouteObject },
-    ) => false | undefined
+    onnavigate?: (data: {
+      href: string
+      event: MouseEvent
+      route: NavRouteObject
+    }) => false | undefined
     onopen?: () => void
     onclose?: () => void
   } & Omit<HTMLAttributes<HTMLElementTagNameMap[`nav`]>, `children`> = $props()
@@ -215,15 +218,17 @@
   }
 
   // Normalize all route formats to NavRouteObject
-  function parse_route(route: NavRoute): NavRouteObject {
+  function parse_route(route: NavRoute): NavLinkRouteObject {
     if (typeof route === `string`) return { href: route }
     if (Array.isArray(route)) {
       const [href, second] = route
-      return Array.isArray(second)
-        ? { href, children: second }
-        : { href, label: second }
+      return Array.isArray(second) ? { href, children: second } : { href, label: second }
     }
-    return route
+    return { ...route, href: route.href ?? `` }
+  }
+
+  function get_route_key(route: NavRoute, route_idx: number): string {
+    return `${route_idx}-${parse_route(route).href || `sep-${route_idx}`}`
   }
 
   function get_tooltip(route: NavRouteObject) {
@@ -231,7 +236,7 @@
     if (typeof route.disabled === `string`) {
       return tooltip({ ...tooltip_options, content: route.disabled })
     }
-    const content = route.tooltip ?? tooltips?.[route.href]
+    const content = route.tooltip ?? (route.href ? tooltips?.[route.href] : undefined)
     if (!content) return
     // Support both string (content only) and object (full options) formats
     const opts = typeof content === `string` ? { content } : content
@@ -239,7 +244,7 @@
   }
 
   // Handle link click with onnavigate callback
-  function handle_link_click(event: MouseEvent, route: NavRouteObject) {
+  function handle_link_click(event: MouseEvent, route: NavLinkRouteObject) {
     if (route.disabled) {
       event.preventDefault()
       return
@@ -265,7 +270,7 @@
 
 <!-- Default item rendering snippet for escape hatch -->
 {#snippet default_item_render(
-  parsed_route: NavRouteObject,
+  parsed_route: NavLinkRouteObject,
   formatted: { label: string; style: string },
   item_tooltip: ReturnType<typeof tooltip> | undefined,
 )}
@@ -275,14 +280,14 @@
       class="disabled {parsed_route.class ?? ``}"
       style={`${formatted.style}; ${parsed_route.style ?? ``}`}
       aria-disabled="true"
-      {@attach item_tooltip}
-    >{@html formatted.label}</span>
+      {@attach item_tooltip}>{@html formatted.label}</span
+    >
   {:else if link}
     {@render link({
-    href: parsed_route.href,
-    label: formatted.label,
-    isActive: is_current(parsed_route.href) === `page`,
-  })}
+      href: parsed_route.href,
+      label: formatted.label,
+      isActive: is_current(parsed_route.href) === `page`,
+    })}
   {:else}
     <a
       href={parsed_route.href}
@@ -317,24 +322,8 @@
     <span aria-hidden="true"></span>
   </button>
 
-  <div
-    id={panel_id}
-    class="menu"
-    class:open={is_open}
-    {onkeydown}
-    {...menu_props}
-  >
-    {#each routes as
-      route,
-      route_idx
-      (`${route_idx}-${
-        typeof route === `string`
-          ? route
-          : Array.isArray(route)
-          ? route[0]
-          : (route.href ?? `sep-${route_idx}`)
-      }`)
-    }
+  <div id={panel_id} class="menu" class:open={is_open} {onkeydown} {...menu_props}>
+    {#each routes as route, route_idx (get_route_key(route, route_idx))}
       {@const parsed_route = parse_route(route)}
       {@const formatted = format_label(parsed_route.label ?? parsed_route.href)}
       {@const sub_routes = parsed_route.children}
@@ -351,8 +340,8 @@
         {@const child_is_active = is_child_current(sub_routes)}
         {@const parent_page_exists = sub_routes.includes(parsed_route.href)}
         {@const filtered_sub_routes = sub_routes.filter(
-        (route) => route !== parsed_route.href,
-      )}
+          (route) => route !== parsed_route.href,
+        )}
         {@const is_pinned = pinned_dropdown === parsed_route.href}
         {@const dropdown_open = hovered_dropdown === parsed_route.href || is_pinned}
         <!-- svelte-ignore a11y_no_static_element_interactions -- native navigation links keep semantics; mouse handlers only control hover disclosure -->
@@ -365,9 +354,12 @@
           onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
           onfocusin={() => open_dropdown(parsed_route.href)}
           onfocusout={(event: FocusEvent) => {
-            if (event.relatedTarget instanceof Node &&
+            if (
+              event.relatedTarget instanceof Node &&
               event.currentTarget instanceof HTMLElement &&
-              event.currentTarget.contains(event.relatedTarget)) return
+              event.currentTarget.contains(event.relatedTarget)
+            )
+              return
             if (!is_pinned) hovered_dropdown = null
           }}
         >
@@ -377,8 +369,8 @@
                 class="disabled {parsed_route.class ?? ``}"
                 style={`${formatted.style}; ${parsed_route.style ?? ``}`}
                 aria-disabled="true"
-                {@attach item_tooltip}
-              >{@html formatted.label}</span>
+                {@attach item_tooltip}>{@html formatted.label}</span
+              >
             {:else if parent_page_exists}
               <a
                 href={parsed_route.href}
@@ -395,8 +387,8 @@
               <span
                 class={parsed_route.class}
                 style={`${formatted.style}; ${parsed_route.style ?? ``}`}
-                {@attach item_tooltip}
-              >{@html formatted.label}</span>
+                {@attach item_tooltip}>{@html formatted.label}</span
+              >
             {/if}
             <button
               type="button"
@@ -408,11 +400,7 @@
               aria-haspopup="true"
               onclick={() => toggle_dropdown(parsed_route.href, false)}
               onkeydown={(event: KeyboardEvent) =>
-              handle_dropdown_keydown(
-                event,
-                parsed_route.href,
-                filtered_sub_routes,
-              )}
+                handle_dropdown_keydown(event, parsed_route.href, filtered_sub_routes)}
             >
               <Icon icon="ChevronDown" style="width: 0.7em; height: 0.7em" />
             </button>
@@ -425,9 +413,12 @@
             onmouseenter={() => open_dropdown(parsed_route.href, true)}
             onmouseleave={(event: MouseEvent) => {
               // Don't schedule hide if mouse moved to sibling element within same dropdown
-              if (event.relatedTarget instanceof Node &&
+              if (
+                event.relatedTarget instanceof Node &&
                 event.currentTarget instanceof Element &&
-                event.currentTarget.closest(`.dropdown`)?.contains(event.relatedTarget)) return
+                event.currentTarget.closest(`.dropdown`)?.contains(event.relatedTarget)
+              )
+                return
               schedule_hide(parsed_route.href, is_pinned)
             }}
           >
@@ -436,18 +427,18 @@
               {@const child_tooltip = get_tooltip({ href: child_href })}
               {#if link}
                 {@render link({
-            href: child_href,
-            label: child_formatted.label,
-            isActive: is_current(child_href) === `page`,
-          })}
+                  href: child_href,
+                  label: child_formatted.label,
+                  isActive: is_current(child_href) === `page`,
+                })}
               {:else}
                 <a
                   href={child_href}
                   aria-current={is_current(child_href)}
                   onclick={(event: MouseEvent) =>
-                  handle_link_click(event, { href: child_href })}
+                    handle_link_click(event, { href: child_href })}
                   onkeydown={(event: KeyboardEvent) =>
-                  handle_dropdown_item_keydown(event, parsed_route.href)}
+                    handle_dropdown_item_keydown(event, parsed_route.href)}
                   {...link_props}
                   style={`${child_formatted.style}; ${link_props?.style ?? ``}`}
                   {@attach child_tooltip}
@@ -503,18 +494,12 @@
     margin: -0.75em auto 1.25em;
     --nav-border-radius: 3pt;
     --nav-surface-bg: light-dark(#fafafa, #222226);
-    --nav-surface-border: light-dark(
-      rgba(128, 128, 128, 0.25),
-      rgba(200, 200, 200, 0.2)
-    );
+    --nav-surface-border: light-dark(rgba(128, 128, 128, 0.25), rgba(200, 200, 200, 0.2));
     --nav-surface-shadow: light-dark(
       0 2px 8px rgba(0, 0, 0, 0.15),
       0 4px 12px rgba(0, 0, 0, 0.5)
     );
-    --nav-link-bg-hover: light-dark(
-      rgba(70, 70, 140, 0.2),
-      rgba(120, 170, 255, 0.2)
-    );
+    --nav-link-bg-hover: light-dark(rgba(70, 70, 140, 0.2), rgba(120, 170, 255, 0.2));
     --nav-dropdown-border-color: color-mix(in srgb, currentColor 30%, transparent 70%);
   }
   .menu {
@@ -551,14 +536,12 @@
     pointer-events: none;
   }
   /* Right-aligned items - only first one gets margin-left: auto */
-  .menu > .align-right,
-  .menu > .dropdown.align-right {
+  .menu > :is(.align-right, .dropdown.align-right) {
     margin-left: auto;
   }
-  .menu > .align-right + .align-right,
-  .menu > .align-right + .dropdown.align-right,
-  .menu > .dropdown.align-right + .align-right,
-  .menu > .dropdown.align-right + .dropdown.align-right {
+  .menu
+    > :is(.align-right, .dropdown.align-right)
+    + :is(.align-right, .dropdown.align-right) {
     margin-left: 0;
   }
   /* Separator */
@@ -573,8 +556,7 @@
   .dropdown {
     position: relative;
   }
-  .dropdown.active > div:first-child a,
-  .dropdown.active > div:first-child span {
+  .dropdown.active > div:first-child :is(a, span) {
     color: var(--nav-link-active-color);
   }
   .dropdown::after {
@@ -595,7 +577,7 @@
   .dropdown > div:first-child:hover {
     background-color: var(--nav-link-bg-hover, rgba(0, 0, 0, 0.1));
   }
-  .dropdown > div:first-child > a, .dropdown > div:first-child > span {
+  .dropdown > div:first-child > :is(a, span) {
     line-height: 1.3;
     padding: var(--nav-item-padding, 1pt 4pt);
     text-decoration: none;
@@ -617,7 +599,9 @@
     border-radius: 0 var(--nav-border-radius) var(--nav-border-radius) 0;
     outline-offset: -1px;
     opacity: 0.6;
-    transition: opacity 0.15s, transform 0.2s ease;
+    transition:
+      opacity 0.15s,
+      transform 0.2s ease;
   }
   .dropdown > div:first-child > button:hover {
     opacity: 1;
@@ -685,7 +669,9 @@
     height: 0.18rem;
     background-color: var(--text);
     border-radius: 8pt;
-    transition: opacity 0.2s linear, transform 0.2s linear;
+    transition:
+      opacity 0.2s linear,
+      transform 0.2s linear;
     transform-origin: center;
   }
   .burger[aria-expanded='true'] span:first-child {
@@ -710,7 +696,9 @@
     box-shadow: var(--nav-surface-shadow);
     opacity: 0;
     visibility: hidden;
-    transition: opacity 0.3s ease, visibility 0.3s ease;
+    transition:
+      opacity 0.3s ease,
+      visibility 0.3s ease;
     z-index: var(--nav-mobile-z-index, 2);
     flex-direction: column;
     align-items: stretch;
@@ -723,9 +711,7 @@
     opacity: 1;
     visibility: visible;
   }
-  nav.mobile .menu > span,
-  nav.mobile .menu > span > a,
-  nav.mobile .dropdown {
+  nav.mobile :is(.menu > span, .menu > span > a, .dropdown) {
     padding: 2pt 8pt;
   }
   /* Mobile separator */
@@ -744,8 +730,7 @@
     align-items: center;
     justify-content: space-between;
   }
-  nav.mobile .dropdown > div:first-child > a,
-  nav.mobile .dropdown > div:first-child > span {
+  nav.mobile .dropdown > div:first-child > :is(a, span) {
     flex: 1;
     border-radius: var(--nav-border-radius);
   }
@@ -771,13 +756,11 @@
     border-left: 2px solid transparent;
     font-size: 0.9em;
   }
-  nav.mobile .dropdown > div:last-child a:hover,
-  nav.mobile .dropdown > div:last-child a[aria-current='page'] {
+  nav.mobile .dropdown > div:last-child a:is(:hover, [aria-current='page']) {
     border-left-color: var(--nav-link-active-color, currentColor);
   }
   /* Mobile right-aligned items stack normally */
-  nav.mobile .menu > .align-right,
-  nav.mobile .menu > .dropdown.align-right {
+  nav.mobile .menu > :is(.align-right, .dropdown.align-right) {
     margin-left: 0;
   }
 </style>

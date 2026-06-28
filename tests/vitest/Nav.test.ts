@@ -1,6 +1,5 @@
 import { Nav } from '$lib'
 import type { NavRoute } from '$lib/types'
-import type { Page } from '@sveltejs/kit'
 import { mount, tick } from 'svelte'
 import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
@@ -91,16 +90,16 @@ describe(`Nav`, () => {
         [`/`, `Home`],
         [`/about`, `About Us`],
         [`/contact`, `Get In Touch`],
-      ] as [string, string][],
+      ] satisfies NavRoute[],
       [`Home`, `About Us`, `Get In Touch`],
     ],
     [
       `mixed routes`,
-      [`/`, [`/about`, `About Page`], `/contact`] as (string | [string, string])[],
+      [`/`, [`/about`, `About Page`], `/contact`] satisfies NavRoute[],
       [`Home`, `About Page`, `contact`],
     ],
     [`empty routes`, [], []],
-    [`HTML labels`, [[`/home`, `<strong>Home</strong>`]] as [string, string][], [`Home`]],
+    [`HTML labels`, [[`/home`, `<strong>Home</strong>`]] satisfies NavRoute[], [`Home`]],
     [
       `special chars`,
       [`/path?query=test`, `/path#anchor`],
@@ -130,8 +129,7 @@ describe(`Nav`, () => {
     [`/some-page`, `/some-page-v2`, null],
     [`/some-page/sub`, `/some-page`, `page`],
   ])(`aria-current: pathname=%s link=%s -> %s`, (pathname, link_href, expected) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-    const mock_page = { url: { pathname } } as Page
+    const mock_page = { url: { pathname } }
     mount(Nav, { target: document.body, props: { routes: [link_href], page: mock_page } })
     expect(doc_query(`a[href="${link_href}"]`).getAttribute(`aria-current`)).toBe(
       expected,
@@ -319,8 +317,7 @@ describe(`Nav`, () => {
   })
 
   test(`dropdown accessibility and state management`, async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-    const mock_page = { url: { pathname: `/parent/child` } } as Page
+    const mock_page = { url: { pathname: `/parent/child` } }
     mount(Nav, {
       target: document.body,
       props: {
@@ -435,8 +432,7 @@ describe(`Nav`, () => {
     [`/parent`, true],
     [`/other`, false],
   ])(`dropdown active state: pathname=%s -> active=%s`, (pathname, is_active) => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-    const mock_page = { url: { pathname } } as Page
+    const mock_page = { url: { pathname } }
     mount(Nav, {
       target: document.body,
       props: {
@@ -456,8 +452,7 @@ describe(`Nav`, () => {
   })
 
   test(`item, link, and children snippets receive route and menu state`, async () => {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-    const mock_page = { url: { pathname: `/about` } } as Page
+    const mock_page = { url: { pathname: `/about` } }
     mount(TestSnippetHarness, {
       target: document.body,
       props: { component: `nav`, routes: [`/`, `/about`, `/contact`], page: mock_page },
@@ -552,7 +547,7 @@ describe(`Nav`, () => {
   })
 
   describe(`disabled routes`, () => {
-    test.each([
+    test.each<[string, NavRoute, string]>([
       [`boolean true`, { href: `/page`, disabled: true }, `page`],
       [`string message`, { href: `/page`, disabled: `Not available` }, `page`],
       [
@@ -566,8 +561,7 @@ describe(`Nav`, () => {
         `my disabled page`,
       ],
     ])(`disabled item with %s`, (_desc, route, expected_text) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-      mount(Nav, { target: document.body, props: { routes: [route as NavRoute] } })
+      mount(Nav, { target: document.body, props: { routes: [route] } })
       const disabled = doc_query(`.disabled`)
       expect(disabled.getAttribute(`aria-disabled`)).toBe(`true`)
       expect(disabled.textContent?.trim()).toBe(expected_text)
@@ -617,7 +611,7 @@ describe(`Nav`, () => {
   })
 
   describe(`separators`, () => {
-    test.each([
+    test.each<[string, NavRoute[], { separators: number; links: number }]>([
       [
         `standalone separators`,
         [
@@ -651,8 +645,7 @@ describe(`Nav`, () => {
         { separators: 2, links: 1 },
       ],
     ])(`%s`, (_desc, routes, expected) => {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-      mount(Nav, { target: document.body, props: { routes: routes as NavRoute[] } })
+      mount(Nav, { target: document.body, props: { routes } })
       const separators = document.querySelectorAll(`.separator`)
       expect(separators).toHaveLength(expected.separators)
       separators.forEach((sep) => expect(sep.getAttribute(`role`)).toBe(`separator`))
@@ -725,8 +718,7 @@ describe(`Nav`, () => {
   describe(`callbacks`, () => {
     test(`onnavigate called with href, event, and route`, async () => {
       const on_navigate = vi.fn()
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-      const routes = [{ href: `/home`, icon: `gear`, count: 42 }] as NavRoute[]
+      const routes = [{ href: `/home`, icon: `gear`, count: 42 }]
       mount(Nav, {
         target: document.body,
         props: { routes, onnavigate: on_navigate },
@@ -849,8 +841,7 @@ describe(`Nav`, () => {
     const routes: NavRoute[] = [
       `/simple`,
       [`/tuple`, `Tuple Label`],
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-      { separator: true } as NavRoute,
+      { separator: true },
       [`/docs`, [`/docs`, `/docs/api`]],
       { href: `/object`, label: `Object Label` },
       { href: `/disabled`, disabled: `Login required` },
@@ -1169,7 +1160,7 @@ describe(`Nav`, () => {
 
   // Regression tests: JSON.stringify crashes on BigInt, functions, circular refs
   describe(`non-serializable route properties`, () => {
-    const circular_route: Record<string, unknown> = { href: `/circular` }
+    const circular_route: NavRoute = { href: `/circular` }
     circular_route.self = circular_route
 
     test.each([
@@ -1177,10 +1168,7 @@ describe(`Nav`, () => {
       [`function`, [{ href: `/a`, on_custom: () => {} }, { href: `/b` }]],
       [`circular reference`, [circular_route, { href: `/b` }]],
     ])(`handles routes with %s properties without crashing`, (_desc, routes) => {
-      expect(() =>
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- partial mock
-        mount(Nav, { target: document.body, props: { routes: routes as NavRoute[] } }),
-      ).not.toThrow()
+      expect(() => mount(Nav, { target: document.body, props: { routes } })).not.toThrow()
       expect(document.querySelectorAll(`a`)).toHaveLength(2)
     })
   })

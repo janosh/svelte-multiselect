@@ -1,7 +1,14 @@
-<script
-  lang="ts"
-  generics="Action extends { label: string; action: (label: string) => void; group?: string; shortcut?: string; description?: string } & Record<string, unknown> = { label: string; action: (label: string) => void; group?: string; shortcut?: string; description?: string }"
->
+<script module lang="ts">
+  type CmdAction = {
+    label: string
+    action: (label: string) => void
+    group?: string
+    shortcut?: string
+    description?: string
+  } & Record<string, unknown>
+</script>
+
+<script lang="ts" generics="Action extends CmdAction = CmdAction">
   import type { ComponentProps } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
@@ -9,9 +16,10 @@
   import type { MultiSelectProps } from './types'
   import { matches_shortcut } from './utils'
 
-  // MultiSelect's option snippet type and its param (option + idx/selected/active/disabled)
-  type OptionSnippet = NonNullable<MultiSelectProps<Action>[`option`]>
-  type OptionSnippetParams = Parameters<OptionSnippet>[0]
+  // MultiSelect's option snippet param (option + idx/selected/active/disabled)
+  type OptionSnippetParams = Parameters<
+    NonNullable<MultiSelectProps<Action>[`option`]>
+  >[0]
 
   let {
     actions,
@@ -56,9 +64,7 @@
   $effect(() => {
     if (!recent_actions_key) return
     try {
-      const stored: unknown = JSON.parse(
-        localStorage.getItem(recent_actions_key) ?? `[]`,
-      )
+      const stored: unknown = JSON.parse(localStorage.getItem(recent_actions_key) ?? `[]`)
       recent_labels = Array.isArray(stored)
         ? stored.filter((rec) => typeof rec === `string`)
         : []
@@ -69,8 +75,8 @@
 
   function record_recent(label: string) {
     if (!recent_actions_key) return
-    recent_labels = [label, ...recent_labels.filter((rec) => rec !== label)]
-      .slice(0, max_recent)
+    const is_new_recent = (recent_label: string) => recent_label !== label
+    recent_labels = [label, ...recent_labels.filter(is_new_recent)].slice(0, max_recent)
     try {
       localStorage.setItem(recent_actions_key, JSON.stringify(recent_labels))
     } catch {
@@ -83,14 +89,15 @@
     if (!recent_actions_key || recent_labels.length === 0) return actions
     const rank = new Map(recent_labels.map((label, idx) => [label, idx]))
     // actions.length as fallback keeps non-recent actions in original order (stable sort)
-    return [...actions].toSorted((act1, act2) =>
-      (rank.get(act1.label) ?? actions.length) - (rank.get(act2.label) ?? actions.length)
+    const get_rank = (action: Action) => rank.get(action.label) ?? actions.length
+    return [...actions].toSorted(
+      (left_action, right_action) => get_rank(left_action) - get_rank(right_action),
     )
   })
 
   // === Shortcut display ===
   // Map shortcut segments to display symbols (deterministic across platforms)
-  const KEY_SYMBOLS: Record<string, string> = {
+  const key_symbols: Record<string, string> = {
     meta: `⌘`,
     cmd: `⌘`,
     shift: `⇧`,
@@ -107,15 +114,18 @@
   }
   const format_shortcut = (shortcut: string): string[] =>
     shortcut.split(`+`).map((part) => {
-      const seg = part.trim().toLowerCase()
+      const key_segment = part.trim().toLowerCase()
       // title-case unknown multi-char segments, upper-case single chars (empty stays empty)
-      return KEY_SYMBOLS[seg] ??
-        (seg.length > 1 ? seg[0].toUpperCase() + seg.slice(1) : seg.toUpperCase())
+      const title_case = key_segment.charAt(0).toUpperCase() + key_segment.slice(1)
+      return (
+        key_symbols[key_segment] ??
+        (key_segment.length > 1 ? title_case : key_segment.toUpperCase())
+      )
     })
 
   // only swap in the custom option snippet when an action actually uses shortcut/description
   const has_action_meta = $derived(
-    actions.some((act) => act.shortcut || act.description),
+    actions.some((action) => action.shortcut || action.description),
   )
 
   $effect(() => {
@@ -133,30 +143,26 @@
   })
 
   function toggle(event: KeyboardEvent): boolean {
-    const is_trigger = triggers.includes(event.key) &&
-      (event.metaKey || event.ctrlKey)
-    if (is_trigger && !open) {
-      event.preventDefault()
-      open = true
-      return true
-    } else if (close_keys.includes(event.key) && open) {
-      event.preventDefault()
-      open = false
-      return true
-    }
-    return false
+    const should_open =
+      !open && triggers.includes(event.key) && (event.metaKey || event.ctrlKey)
+    const should_close = open && close_keys.includes(event.key)
+    if (!should_open && !should_close) return false
+    event.preventDefault()
+    open = should_open
+    return true
   }
 
   function handle_window_keydown(event: KeyboardEvent) {
     if (toggle(event)) return
     // run action hotkeys globally while the palette is closed
     if (open || !global_shortcuts) return
-    const action = actions.find((act) => matches_shortcut(event, act.shortcut))
-    if (action) {
-      event.preventDefault()
-      record_recent(action.label)
-      action.action(action.label)
-    }
+    const action = actions.find((cmd_action) =>
+      matches_shortcut(event, cmd_action.shortcut),
+    )
+    if (!action) return
+    event.preventDefault()
+    record_recent(action.label)
+    action.action(action.label)
   }
 
   function close_if_outside(event: MouseEvent) {
@@ -166,17 +172,12 @@
     // is on this palette's MultiSelect (scoped inside the dialog) or its options list
     if (dialog?.contains(target) && target.closest(`div.multiselect`)) return
     const listbox_id = input?.getAttribute(`aria-controls`)
-    if (
-      listbox_id &&
-      document.querySelector(`#${CSS.escape(listbox_id)}`)?.contains(target)
-    ) {
-      return
-    }
+    const listbox = listbox_id && document.querySelector(`#${CSS.escape(listbox_id)}`)
+    if (listbox && listbox.contains(target)) return
     open = false
   }
 
   function trigger_action_and_close({ option }: { option: Action }) {
-    if (!option?.action) return
     record_recent(option.label)
     option.action(option.label)
     open = false
@@ -195,7 +196,9 @@
     </span>
     {#if option.shortcut}
       <span class="cmd-shortcut" aria-hidden="true">
-        {#each format_shortcut(option.shortcut) as part, idx (idx)}<kbd>{part}</kbd>{/each}
+        {#each format_shortcut(option.shortcut) as part, idx (idx)}
+          <kbd>{part}</kbd>
+        {/each}
       </span>
     {/if}
   </span>
@@ -216,12 +219,7 @@
       {placeholder}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
-      option={has_action_meta
-        // svelte2tsx types inline snippets as `() => ReturnType<Snippet>`, whose
-        // unique-symbol brand doesn't unify with Snippet<[...]> (svelte#13670). A
-        // plain assertion suffices since the shapes are otherwise identical.
-        ? action_item as OptionSnippet
-        : undefined}
+      option={has_action_meta ? action_item : undefined}
       {...rest}
       --sms-bg="var(--sms-options-bg)"
       --sms-width="min(20em, 90vw)"

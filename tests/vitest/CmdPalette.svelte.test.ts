@@ -923,7 +923,7 @@ test.each([
       { label: `alpha`, action: vi.fn() },
       { label: `hotkeyed`, action: vi.fn(), shortcut: `ctrl+shift+h` },
     ],
-    max_recent: undefined as number | undefined,
+    max_recent: undefined,
     keys: [`h`],
     expected: [`hotkeyed`],
   },

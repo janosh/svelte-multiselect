@@ -38,24 +38,16 @@ Exported from `svelte-multiselect/attachments`:
 
 <!-- Placement showcase -->
 <div style="display: flex; gap: 1em; margin: 2em 0">
-  <button {@attach tooltip({ content: `Top`, placement: `top` })}>
-    Top
-  </button>
-  <button {@attach tooltip({ content: `Right`, placement: `right` })}>
-    Right
-  </button>
+  <button {@attach tooltip({ content: `Top`, placement: `top` })}> Top </button>
+  <button {@attach tooltip({ content: `Right`, placement: `right` })}> Right </button>
   <button {@attach tooltip({ content: `Bottom (default)`, placement: `bottom` })}>
     Bottom
   </button>
-  <button {@attach tooltip({ content: `Left`, placement: `left` })}>
-    Left
-  </button>
+  <button {@attach tooltip({ content: `Left`, placement: `left` })}> Left </button>
 </div>
 
 <!-- Style variations via CSS variables to demonstrate customization -->
-<div
-  style="display: flex; gap: 1em; margin: 2em 0"
->
+<div style="display: flex; gap: 1em; margin: 2em 0">
   <button
     style="--tooltip-bg: white; --text-color: #111; --tooltip-border: 1px solid rgba(0, 0, 0, 0.18); --tooltip-font-size: 12px; --tooltip-arrow-size: 5; --tooltip-opacity: 0.95"
     {@attach tooltip({ content: `Light tooltip`, placement: `top` })}
@@ -89,8 +81,7 @@ Exported from `svelte-multiselect/attachments`:
     {@attach tooltip({
       content: `Custom style + border arrow`,
       placement: `top`,
-      style:
-        `box-shadow: 0 10px 25px rgba(66, 153, 225, 0.3); transform: scale(1.05);`,
+      style: `box-shadow: 0 10px 25px rgba(66, 153, 225, 0.3); transform: scale(1.05);`,
     })}
   >
     Custom style
@@ -133,8 +124,7 @@ Exported from `svelte-multiselect/attachments`:
   <button
     style="--tooltip-max-width: 220px"
     {@attach tooltip({
-      content:
-        `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`,
+      content: `Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.`,
       placement: `bottom`,
     })}
   >
@@ -212,7 +202,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
     style="position: absolute; left: 1rem; top: 1rem"
     {@attach draggable({
       on_drag: (event: PointerEvent) =>
-        last_drag = `${event.clientX}, ${event.clientY}`,
+        (last_drag = `${event.clientX}, ${event.clientY}`),
     })}
   >
     Drag me
@@ -225,10 +215,10 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
     style="position: absolute; left: 12rem; top: 8rem; width: 14rem"
     {@attach draggable({
       handle_selector: `.drag-handle`,
-      on_drag_start: () => last_drag = `start`,
+      on_drag_start: () => (last_drag = `start`),
       on_drag: (event: PointerEvent) =>
-        last_drag = `${event.clientX}, ${event.clientY}`,
-      on_drag_end: () => last_drag = `end`,
+        (last_drag = `${event.clientX}, ${event.clientY}`),
+      on_drag_end: () => (last_drag = `end`),
     })}
   >
     <div class="drag-handle">Drag with custom callbacks</div>
@@ -292,9 +282,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
     words like <em>ancient</em>, <strong>giant</strong>, or split-
     <span>word</span> matches.
   </p>
-  <p class="no-hl" style="opacity: 0.7">
-    This line is excluded via node_filter.
-  </p>
+  <p class="no-hl" style="opacity: 0.7">This line is excluded via node_filter.</p>
 </article>
 
 <style>
@@ -324,7 +312,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 <div class="menu">
   <button
     class="toggle"
-    onclick={() => open_menu = !open_menu}
+    onclick={() => (open_menu = !open_menu)}
     {@attach tooltip({ content: 'Toggle menu', placement: 'top' })}
   >
     Menu
@@ -333,7 +321,10 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
   {#if open_menu}
     <div
       class="dropdown"
-      {@attach click_outside({ exclude: ['.toggle'], callback: () => (open_menu = false) })}
+      {@attach click_outside({
+        exclude: ['.toggle'],
+        callback: () => (open_menu = false),
+      })}
     >
       <ul style="list-style: none; padding: 0; margin: 0">
         <li><a href="#one">First</a></li>
@@ -379,6 +370,14 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 ```svelte example id="attachments-sortable"
 <script lang="ts">
   import { sortable } from '$lib/attachments'
+
+  const planets = [
+    { planet: `Mercury`, moons: 0, discovery: `ancient`, notes: `` },
+    { planet: `Venus`, moons: 0, discovery: `ancient`, notes: `Very bright` },
+    { planet: `Earth`, moons: 1, discovery: `ancient`, notes: `Leads with zeros` },
+    { planet: `Mars`, moons: 2, discovery: `1610`, notes: `Phobos/Deimos` },
+    { planet: `Jupiter`, moons: 95, discovery: `1610`, notes: `Gas giant` },
+  ]
 </script>
 
 <table {@attach sortable()} class="demo-table">
@@ -391,20 +390,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
     </tr>
   </thead>
   <tbody>
-    {#each [
-        { planet: `Mercury`, moons: 0, discovery: `ancient`, notes: `` },
-        { planet: `Venus`, moons: 0, discovery: `ancient`, notes: `Very bright` },
-        {
-          planet: `Earth`,
-          moons: 1,
-          discovery: `ancient`,
-          notes: `Leads with zeros`,
-        },
-        { planet: `Mars`, moons: 2, discovery: `1610`, notes: `Phobos/Deimos` },
-        { planet: `Jupiter`, moons: 95, discovery: `1610`, notes: `Gas giant` },
-      ] as
-      { planet, moons, discovery, notes }
-    }
+    {#each planets as { planet, moons, discovery, notes }}
       <tr>
         <td>{planet}</td>
         <td>{moons}</td>
@@ -422,7 +408,7 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
   .demo-table {
     width: 100%;
   }
-  .demo-table th, .demo-table td {
+  .demo-table :is(th, td) {
     padding: 0.4em 0.6em;
     border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   }

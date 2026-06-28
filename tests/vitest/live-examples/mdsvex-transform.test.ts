@@ -43,7 +43,7 @@ const find_script_node = (tree: TestTree): string | undefined => {
 
 // Get first example text value
 const get_example_value = (tree: TestTree): string => {
-  const node = tree.children[0] as { children?: { value?: string }[] }
+  const node = tree.children[0]
   return node.children?.[0]?.value ?? ``
 }
 

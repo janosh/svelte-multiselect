@@ -833,17 +833,16 @@ describe(`tooltip`, () => {
     it(`updates visible tooltip content when tooltip attributes change`, () => {
       const mutation_callbacks: MutationCallback[] = []
       const original_mutation_observer = globalThis.MutationObserver
-      class MockMutationObserver {
-        observe = vi.fn()
-        disconnect = vi.fn()
+      class MockMutationObserver implements MutationObserver {
+        observe = vi.fn((_target: Node, _options?: MutationObserverInit): void => {})
+        disconnect = vi.fn((): void => {})
         takeRecords = vi.fn((): MutationRecord[] => [])
         constructor(callback: MutationCallback) {
           mutation_callbacks.push(callback)
         }
       }
-      globalThis.MutationObserver =
-        MockMutationObserver as unknown as typeof MutationObserver
-      window.MutationObserver = MockMutationObserver as unknown as typeof MutationObserver
+      globalThis.MutationObserver = MockMutationObserver
+      window.MutationObserver = MockMutationObserver
 
       try {
         const element = create_element()
@@ -854,12 +853,20 @@ describe(`tooltip`, () => {
         expect(doc_query(`.tooltip-content`).textContent).toBe(`initial tooltip`)
 
         element.setAttribute(`aria-label`, `updated tooltip`)
+        const empty_nodes = document.querySelectorAll(`.__missing__`)
         mutation_callbacks[0]?.(
           [
             {
               type: `attributes`,
               attributeName: `aria-label`,
-            } as MutationRecord,
+              attributeNamespace: null,
+              oldValue: null,
+              target: element,
+              addedNodes: empty_nodes,
+              removedNodes: empty_nodes,
+              nextSibling: null,
+              previousSibling: null,
+            },
           ],
           new MockMutationObserver(() => {}),
         )
@@ -1689,7 +1696,7 @@ describe(`resizable`, () => {
       globalThis.dispatchEvent(mouse_event(`mousemove`, drag_client_x, drag_client_y))
 
       for (const [property, value] of Object.entries(expected_styles)) {
-        expect(element.style[property as keyof CSSStyleDeclaration]).toBe(value)
+        expect(element.style.getPropertyValue(property)).toBe(value)
       }
 
       globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))

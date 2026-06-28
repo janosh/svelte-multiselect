@@ -2,6 +2,15 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
 
+  type NavItem = Item | [string, string]
+  type SnippetProps = { item: NavItem; index: number | null; total: number }
+  type NavEntry = {
+    kind: `prev` | `next`
+    item: NavItem | undefined
+    snippet: Snippet<[SnippetProps]> | undefined
+    title: string
+  }
+
   let {
     items = [],
     node = `nav`,
@@ -25,23 +34,20 @@
     nav_options?: { replace_state: boolean; no_scroll: boolean }
     titles?: { prev: string; next: string }
     onkeyup?:
-      | ((obj: { prev: Item; next: Item }) => Record<string, string | undefined>)
+      | ((obj: { prev: NavItem; next: NavItem }) => Record<string, string | undefined>)
       | null
-    prev_snippet?: Snippet<[{ item: Item; index: number | null; total: number }]>
-    children?: Snippet<
-      [{ kind: `prev` | `next`; item: Item; index: number | null; total: number }]
-    >
+    prev_snippet?: Snippet<[SnippetProps]>
+    children?: Snippet<[SnippetProps & { kind: `prev` | `next` }]>
     between?: Snippet<[]>
-    next_snippet?: Snippet<[{ item: Item; index: number | null; total: number }]>
+    next_snippet?: Snippet<[SnippetProps]>
     min_items?: number
     link_props?: HTMLAttributes<HTMLAnchorElement>
   } = $props()
 
-  // Convert items to consistent [key, value] format
   let items_arr = $derived(
     (items ?? []).map(
-      (itm) => (typeof itm === `string` ? [itm, itm] : itm),
-    ) as Item[],
+      (item): NavItem => (typeof item === `string` ? [item, item] : item),
+    ),
   )
 
   // Calculate prev/next items with wraparound
@@ -51,6 +57,10 @@
   let total = $derived(items_arr.length)
   let prev = $derived(items_arr[idx - 1] ?? items_arr.at(-1))
   let next = $derived(items_arr[idx + 1] ?? items_arr[0])
+  let nav_entries: NavEntry[] = $derived([
+    { kind: `prev`, item: prev, snippet: prev_snippet, title: titles.prev },
+    { kind: `next`, item: next, snippet: next_snippet, title: titles.next },
+  ])
 
   // Validation and logging
   $effect.pre(() => {
@@ -81,7 +91,8 @@
       items_arr.length < min_items ||
       !prev ||
       !next
-    ) return
+    )
+      return
     const key_map = onkeyup({ prev, next })
     const to = key_map[event.key]
     if (to === undefined) return
@@ -101,39 +112,23 @@
 
 {#if items_arr.length >= min_items}
   <svelte:element this={node} class="prev-next" {...rest}>
-    <!-- ensures `prev` is a defined [key, value] tuple.
-      Due to prior normalization of the `items` prop, any defined `prev` item
-      is guaranteed to be a 2-element array except if `prev` is null.
-    -->
-    {#if prev?.length >= 2}
-      {#if prev_snippet}
-        {@render prev_snippet({ item: prev, index, total })}
-      {:else if children}
-        {@render children({ kind: `prev`, item: prev, index, total })}
-      {:else}
-        <div>
-          {#if titles.prev}<span>{@html titles.prev}</span>{/if}
-          <a data-sveltekit-preload-data="hover" {...link_props} href={prev[0]}>{
-            prev[0]
-          }</a>
-        </div>
+    {#each nav_entries as { kind, item, snippet, title } (kind)}
+      {#if kind === `next`}{@render between?.()}{/if}
+      {#if item}
+        {#if snippet}
+          {@render snippet({ item, index, total })}
+        {:else if children}
+          {@render children({ kind, item, index, total })}
+        {:else}
+          <div>
+            {#if title}<span>{@html title}</span>{/if}
+            <a data-sveltekit-preload-data="hover" {...link_props} href={item[0]}
+              >{item[0]}
+            </a>
+          </div>
+        {/if}
       {/if}
-    {/if}
-    {@render between?.()}
-    {#if next?.length >= 2}
-      {#if next_snippet}
-        {@render next_snippet({ item: next, index, total })}
-      {:else if children}
-        {@render children({ kind: `next`, item: next, index, total })}
-      {:else}
-        <div>
-          {#if titles.next}<span>{@html titles.next}</span>{/if}
-          <a data-sveltekit-preload-data="hover" {...link_props} href={next[0]}>{
-            next[0]
-          }</a>
-        </div>
-      {/if}
-    {/if}
+    {/each}
   </svelte:element>
 {/if}
 

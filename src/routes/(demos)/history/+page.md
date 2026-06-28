@@ -25,7 +25,8 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
   let canRedo = $state(false)
   let events: EventLogEntry[] = $state([])
   // Use same platform detection as component (userAgentData is modern API, userAgent is fallback)
-  const is_mac: boolean = typeof navigator !== 'undefined' &&
+  const is_mac: boolean =
+    typeof navigator !== 'undefined' &&
     (navigator.userAgentData?.platform === 'macOS' ||
       /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
   const mod_key: string = is_mac ? 'Cmd' : 'Ctrl'
@@ -45,12 +46,8 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
     </p>
 
     <div class="button-group">
-      <button id="undo-btn" onclick={() => undo?.()} disabled={!canUndo}>
-        ↩ Undo
-      </button>
-      <button id="redo-btn" onclick={() => redo?.()} disabled={!canRedo}>
-        Redo ↪
-      </button>
+      <button id="undo-btn" onclick={() => undo?.()} disabled={!canUndo}>↩ Undo</button>
+      <button id="redo-btn" onclick={() => redo?.()} disabled={!canRedo}>Redo ↪</button>
     </div>
 
     <MultiSelect
@@ -70,9 +67,9 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
     </MultiSelect>
 
     <p class="status">
-      <span id="selection-count">Selected: {selected.length} item{
-          selected.length !== 1 ? 's' : ''
-        }</span>
+      <span id="selection-count">
+        Selected: {selected.length} item{selected.length !== 1 ? 's' : ''}
+      </span>
       <span>canUndo: <strong id="can-undo-status">{canUndo}</strong></span>
       <span>canRedo: <strong id="can-redo-status">{canRedo}</strong></span>
     </p>
@@ -217,10 +214,7 @@ History supports platform-aware keyboard shortcuts:
 Custom shortcuts can be configured via the `shortcuts` prop:
 
 ```svelte
-<MultiSelect
-  history={true}
-  shortcuts={{ undo: 'alt+z', redo: 'alt+shift+z' }}
-/>
+<MultiSelect history={true} shortcuts={{ undo: 'alt+z', redo: 'alt+shift+z' }} />
 ```
 
 ### Implementation Notes
