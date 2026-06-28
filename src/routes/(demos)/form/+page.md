@@ -24,12 +24,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
   <label for="colors">
     <strong>Which colors would you pick for the Martian flag?</strong>
   </label>
-  <MultiSelect
-    options={colors}
-    placeholder="Pick some colors..."
-    {name}
-    required={2}
-  >
+  <MultiSelect options={colors} placeholder="Pick some colors..." {name} required={2}>
     {#snippet children({ idx, option })}
       <ColorSnippet {idx} {option} />
     {/snippet}

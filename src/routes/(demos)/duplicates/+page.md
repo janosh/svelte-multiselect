@@ -22,9 +22,10 @@
 
 Allow duplicates: <input type="checkbox" bind:checked={duplicates} />
 
-<label for="key">Key
+<label for="key">
+  Key
   <input bind:group={key} type="radio" name="key" value="JSON.stringify" /> JSON.stringify
-  <input bind:group={key} type="radio" name="key" value="==="> ===
+  <input bind:group={key} type="radio" name="key" value="===" /> ===
 </label>
 
 <MultiSelect
@@ -33,7 +34,7 @@ Allow duplicates: <input type="checkbox" bind:checked={duplicates} />
   bind:selected
   {duplicates}
   key={key === 'JSON.stringify' ? JSON.stringify : (option) => option}
-  onduplicate={({ option }) => dupe_msg = `'${option.label}' is already selected`}
+  onduplicate={({ option }) => (dupe_msg = `'${option.label}' is already selected`)}
 />
 
 {#if dupe_msg}

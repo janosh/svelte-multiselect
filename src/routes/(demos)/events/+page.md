@@ -63,26 +63,26 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
       onduplicate={(data) => log_event('onduplicate', data)}
       onactivate={(data) => log_event('onactivate', data)}
       onblur={(event: FocusEvent) =>
-      log_event('onblur', {
-        type: event.type,
-        target: (event.target as HTMLElement)?.tagName,
-      })}
+        log_event('onblur', {
+          type: event.type,
+          target: (event.target as HTMLElement)?.tagName,
+        })}
       onclick={(event: MouseEvent) =>
-      log_event('onclick', {
-        type: event.type,
-        target: (event.target as HTMLElement)?.tagName,
-      })}
+        log_event('onclick', {
+          type: event.type,
+          target: (event.target as HTMLElement)?.tagName,
+        })}
       onfocus={(event: FocusEvent) =>
-      log_event('onfocus', {
-        type: event.type,
-        target: (event.target as HTMLElement)?.tagName,
-      })}
+        log_event('onfocus', {
+          type: event.type,
+          target: (event.target as HTMLElement)?.tagName,
+        })}
       onkeydown={(event: KeyboardEvent) =>
-      log_event('onkeydown', {
-        type: event.type,
-        key: event.key,
-        code: event.code,
-      })}
+        log_event('onkeydown', {
+          type: event.type,
+          key: event.key,
+          code: event.code,
+        })}
       bind:selected={selected_options}
     >
       {#snippet children({ idx, option })}
@@ -107,9 +107,10 @@ This demo showcases all the events that `<MultiSelect>` emits. Each emitted even
     {#each events as entry}
       <article class="log-entry">
         <header class="entry-header">
-          <span><span style="color: light-dark(#999, #666)">#{entry.number}</span> <span
-              class="event-name"
-            >{entry.event}</span></span>
+          <span
+            ><span style="color: light-dark(#999, #666)">#{entry.number}</span>
+            <span class="event-name">{entry.event}</span></span
+          >
           <span class="timestamp">{entry.timestamp}</span>
         </header>
         <pre class="log-data">{entry.data}</pre>

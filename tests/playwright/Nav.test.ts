@@ -2,8 +2,11 @@ import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
 test.describe(`Nav dropdown`, () => {
-  // Move the cursor out first so hover() crosses the dropdown boundary.
-  const hover_open = async (page: Page, dropdown: Locator, menu: Locator) => {
+  const hover_open = async (
+    page: Page,
+    dropdown: Locator,
+    menu: Locator,
+  ): Promise<void> => {
     const trigger = dropdown.locator(`:scope > div`).first()
     await expect(trigger).toBeVisible()
     await expect(async () => {
@@ -26,7 +29,7 @@ test.describe(`Nav dropdown`, () => {
     await expect(menu).toHaveCSS(`display`, `none`)
   })
 
-  test(`click pins dropdown: stays open on mouse leave, closes on click outside/Escape/toggle`, async ({
+  test(`click pins dropdown until outside, Escape, or toggle closes it`, async ({
     page,
   }) => {
     await page.goto(`/nav`, { waitUntil: `networkidle` })
@@ -35,22 +38,18 @@ test.describe(`Nav dropdown`, () => {
     const menu = dropdown.locator(`[data-submenu]`)
     const toggle = dropdown.locator(`[data-dropdown-toggle]`)
 
-    // Click pins open, mouse leave doesn't close
     await toggle.click()
     await expect(menu).toHaveCSS(`display`, `flex`)
     await page.mouse.move(0, 0)
     await expect(menu).toHaveCSS(`display`, `flex`)
 
-    // Click outside closes
     await page.locator(`body`).click({ position: { x: 10, y: 10 } })
     await expect(menu).toHaveCSS(`display`, `none`)
 
-    // Escape closes
     await toggle.click()
     await page.keyboard.press(`Escape`)
     await expect(menu).toHaveCSS(`display`, `none`)
 
-    // Toggle click closes
     await toggle.click()
     await toggle.click()
     await expect(menu).toHaveCSS(`display`, `none`)

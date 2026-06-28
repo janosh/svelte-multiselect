@@ -1,8 +1,9 @@
 <script lang="ts">
   // see svelte.config.js where this component is passed to live-examples remark plugin
-  import type { Snippet } from 'svelte';
-  import type { HTMLAttributes } from 'svelte/elements';
-  import Icon from './Icon.svelte';
+  import type { Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
+  import Icon from './Icon.svelte'
+  import type { IconName } from './icons'
 
   let {
     src = ``,
@@ -16,7 +17,8 @@
   }: {
     // src+meta are passed in by live-examples remark plugin
     src?: string // code fence content, sadly without indentation so we prefer node?.innerText below
-    meta?: { // code fence metadata
+    meta?: {
+      // code fence metadata
       collapsible?: boolean // whether to show a button to expand/collapse the code
       code_above?: boolean // whether to show the code above the example (default: true when collapsible, false otherwise)
       id?: string // id of the <div> wrapping the code and example (e.g. to write very specific testing selectors)
@@ -38,21 +40,19 @@
 
   let { id, collapsible, repl, github, repo, file, lang } = $derived(meta)
   let code_above = $derived(meta.code_above ?? collapsible) // if code is collapsed, render code above example by default
+  let external_links: { cond: unknown; href?: string; icon: IconName }[] = $derived([
+    { cond: repl, href: repl, icon: `Svelte` },
+    {
+      cond: github && repo,
+      href: github && file ? `${repo}/blob/-/${github === true ? file : github}` : repo,
+      icon: `GitHub`,
+    },
+  ])
   const links = { target: `_blank`, rel: `noreferrer` }
 </script>
 
 <nav>
-  {#each [
-      { cond: repl, href: repl, icon: `Svelte` },
-      {
-        cond: github && repo,
-        href: file ? `${repo}/blob/-/${github === true ? file : github}` : repo,
-        icon: `GitHub`,
-      },
-    ] as const as
-    { cond, href, icon }
-    (icon)
-  }
+  {#each external_links as { cond, href, icon } (icon)}
     <a
       {href}
       {...links}
@@ -74,7 +74,9 @@
 <!-- wrap in div with id for precise CSS selectors in playwright E2E tests -->
 <div {id} class="code-example" class:code-above={code_above}>
   {@render example?.()}
-  <pre class:open>{#if lang}<span class="lang-label">{lang}</span>{/if}<code>{#if code}{@render code()}{:else}{src}{/if}</code></pre>
+  <pre class:open>{#if lang}<span class="lang-label">{lang}</span>{/if}<code
+      >{#if code}{@render code()}{:else}{src}{/if}</code
+    ></pre>
 </div>
 
 <style>

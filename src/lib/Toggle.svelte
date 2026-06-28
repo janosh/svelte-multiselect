@@ -27,12 +27,7 @@
 
 <label {...rest}>
   {@render children?.({ checked })}
-  <input
-    type="checkbox"
-    bind:checked
-    {...input_props}
-    onkeydown={handle_keydown}
-  />
+  <input type="checkbox" bind:checked {...input_props} onkeydown={handle_keydown} />
   <span></span>
 </label>
 
@@ -75,9 +70,8 @@
       --toggle-knob-after-transform,
       translate(
         calc(
-          var(--toggle-knob-width, 3em) - var(--toggle-knob-height, 1.5em)
-            + var(--toggle-knob-padding, 0.1em)
-            - var(--toggle-knob-border, 2px)
+          var(--toggle-knob-width, 3em) - var(--toggle-knob-height, 1.5em) +
+            var(--toggle-knob-padding, 0.1em) - var(--toggle-knob-border, 2px)
         )
       )
     );

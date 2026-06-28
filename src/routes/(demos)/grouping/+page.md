@@ -14,9 +14,7 @@ Group related options together with visual headers. Add a `group` key to option 
     Backend: [`Python`, `Go`, `Rust`, `Java`, `Node.js`, `Ruby`],
     Database: [`PostgreSQL`, `MongoDB`, `Redis`, `MySQL`, `SQLite`],
     DevOps: [`Docker`, `Kubernetes`, `Terraform`, `AWS`],
-  }).flatMap(([group, options]) =>
-    options.map((option) => ({ label: option, group }))
-  )
+  }).flatMap(([group, options]) => options.map((option) => ({ label: option, group })))
 
   let selected: ObjectOption[] = $state([])
   let searchMatchesGroups = $state(false)
@@ -52,13 +50,12 @@ Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpan
     Fruits: `🍎 Apple,🍊 Orange,🍌 Banana,🍇 Grapes,🍓 Strawberry,🫐 Blueberry`.split(
       `,`,
     ),
-    Vegetables: `🥕 Carrot,🥦 Broccoli,🌽 Corn,🥬 Lettuce,🍅 Tomato,🥒 Cucumber`
-      .split(`,`),
+    Vegetables: `🥕 Carrot,🥦 Broccoli,🌽 Corn,🥬 Lettuce,🍅 Tomato,🥒 Cucumber`.split(
+      `,`,
+    ),
     Dairy: `🥛 Milk,🧀 Cheese,🧈 Butter,🍦 Ice Cream,🥚 Eggs`.split(`,`),
     Meat: `🥩 Steak,🍗 Chicken,🥓 Bacon,🌭 Hot Dog,🍖 Ribs`.split(`,`),
-  }).flatMap(([group, options]) =>
-    options.map((option) => ({ label: option, group }))
-  )
+  }).flatMap(([group, options]) => options.map((option) => ({ label: option, group })))
 
   let selected: ObjectOption[] = $state([])
   let collapsedGroups: Set<string> = $state(new Set([`Dairy`])) // Dairy starts collapsed
@@ -113,9 +110,7 @@ Enable `groupSelectAll` to add a toggle button to each group header:
     Secondary: [`Orange`, `Green`, `Purple`],
     Tertiary: [`Vermilion`, `Amber`, `Chartreuse`, `Teal`, `Violet`, `Magenta`],
     Neutrals: [`White`, `Black`, `Gray`, `Silver`, `Beige`],
-  }).flatMap(([group, options]) =>
-    options.map((option) => ({ label: option, group }))
-  )
+  }).flatMap(([group, options]) => options.map((option) => ({ label: option, group })))
 
   let selected: ObjectOption[] = $state([])
 </script>
@@ -145,9 +140,7 @@ Use `ungroupedPosition` for options without a `group` key, and `groupSortOrder` 
     `⭐ Featured Item`,
     `🔥 Popular Choice`,
     `✨ Editor's Pick`,
-  ].map(
-    (label) => ({ label }),
-  )
+  ].map((label) => ({ label }))
   const grouped: ObjectOption[] = Object.entries({
     'Z Animals': [`Zebra`, `Zorse`, `Zebu`],
     'A Fruits': [`Apple`, `Apricot`, `Avocado`],
@@ -202,25 +195,26 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
   }
 
   const departments: string[] =
-    `Engineering,Design,Marketing,Sales,HR,Finance,Legal,Operations`
-      .split(`,`)
+    `Engineering,Design,Marketing,Sales,HR,Finance,Legal,Operations`.split(`,`)
   const server_data: TeamMember[] = departments.flatMap((dept) =>
     Array.from({ length: 8 }, (_, idx) => ({
       label: `${dept.slice(0, 3)}-${String(idx + 1).padStart(3, `0`)}`,
       name: `${dept} Team Member ${idx + 1}`,
       group: dept,
-    }))
+    })),
   )
 
   async function load_options(
-    { search, offset, limit }: LoadOptionsParams,
+    params: LoadOptionsParams,
   ): Promise<LoadOptionsResult<TeamMember>> {
+    const { search, offset, limit } = params
     await new Promise((resolve) => setTimeout(resolve, 200))
     const filtered = search
-      ? server_data.filter((user) =>
-        user.name.toLowerCase().includes(search.toLowerCase()) ||
-        (user.group?.toLowerCase().includes(search.toLowerCase()) ?? false)
-      )
+      ? server_data.filter(
+          (user) =>
+            user.name.toLowerCase().includes(search.toLowerCase()) ||
+            (user.group?.toLowerCase().includes(search.toLowerCase()) ?? false),
+        )
       : server_data
     return {
       options: filtered.slice(offset, offset + limit),
@@ -262,9 +256,7 @@ Use the `groupHeader` snippet for complete control over header rendering:
     Japan: [`Tokyo`, `Osaka`, `Kyoto`, `Yokohama`],
     France: [`Paris`, `Lyon`, `Marseille`, `Toulouse`],
     Germany: [`Berlin`, `Munich`, `Hamburg`, `Frankfurt`],
-  }).flatMap(([group, options]) =>
-    options.map((option) => ({ label: option, group }))
-  )
+  }).flatMap(([group, options]) => options.map((option) => ({ label: option, group })))
 
   const emojis: Record<string, string> = {
     USA: `🇺🇸`,

@@ -1,16 +1,20 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements'
 
-  let { option, idx, height = `20px`, gap = `5pt`, ...rest }: {
+  let {
+    option,
+    idx,
+    height = `20px`,
+    gap = `5pt`,
+    ...rest
+  }: {
     option: string
     idx?: number | undefined
     height?: string
     gap?: string
   } & HTMLAttributes<HTMLSpanElement> = $props()
 
-  let lang = $derived(
-    option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`),
-  )
+  let lang = $derived(option.toLowerCase().replaceAll(`+`, `plus`).replace(`#`, `sharp`))
   let src = $derived(
     `https://cdn.jsdelivr.net/gh/devicons/devicon/icons/${lang}/${lang}-original.svg`,
   )

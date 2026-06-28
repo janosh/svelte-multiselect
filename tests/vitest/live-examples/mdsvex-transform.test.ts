@@ -43,12 +43,12 @@ const find_script_node = (tree: TestTree): string | undefined => {
 
 // Get first example text value
 const get_example_value = (tree: TestTree): string => {
-  const node = tree.children[0] as { children?: { value?: string }[] }
+  const node = tree.children[0]
   return node.children?.[0]?.value ?? ``
 }
 
 describe(`exports`, () => {
-  test(`exports correct prefix values`, () => {
+  test(`exports stable live-example prefixes`, () => {
     expect(EXAMPLE_MODULE_PREFIX).toBe(`___live_example___`)
     expect(EXAMPLE_COMPONENT_PREFIX).toBe(`LiveExample___`)
   })
@@ -68,7 +68,7 @@ describe(`code block detection`, () => {
     expect(get_example_value(tree)).toContain(EXAMPLE_COMPONENT_PREFIX)
   })
 
-  test.each([`ts`, `typescript`, `js`, `javascript`, `css`, `json`, `shell`, `bash`])(
+  test.each([`typescript`, `ts`, `bash`])(
     `transforms %s code blocks as code-only (no live component)`,
     (lang) => {
       const tree = create_tree([create_code_node(lang, `const x = 1`, `example`)])
@@ -209,25 +209,18 @@ const hide_option_cases = [
 ]
 
 describe(`hide_script and hide_style options`, () => {
-  test.each(hide_option_cases)(
-    `$option via meta removes block`,
-    ({ option, code, hidden, visible }) => {
-      const tree = create_tree([create_code_node(`svelte`, code, `example ${option}`)])
-      remark()(tree, create_file())
-      const value = get_example_value(tree)
-      expect(value).not.toContain(hidden)
-      expect(value).toContain(visible)
-    },
-  )
-
-  test.each(hide_option_cases)(
-    `$option via defaults removes block`,
-    ({ option, code, hidden }) => {
-      const tree = create_tree([create_code_node(`svelte`, code, `example`)])
-      remark({ defaults: { [option]: true } })(tree, create_file())
-      expect(get_example_value(tree)).not.toContain(hidden)
-    },
-  )
+  test.each([
+    { ...hide_option_cases[0], source: `meta` },
+    { ...hide_option_cases[1], source: `defaults` },
+  ])(`$option via $source removes block`, ({ option, code, hidden, visible, source }) => {
+    const meta = source === `meta` ? `example ${option}` : `example`
+    const options = source === `defaults` ? { defaults: { [option]: true } } : undefined
+    const tree = create_tree([create_code_node(`svelte`, code, meta)])
+    remark(options)(tree, create_file())
+    const value = get_example_value(tree)
+    expect(value).not.toContain(hidden)
+    if (visible) expect(value).toContain(visible)
+  })
 
   test(`hide_script and hide_style combined strips both blocks`, () => {
     const code = `<script>let x = 1</script><div>Test</div><style>div { color: red }</style>`

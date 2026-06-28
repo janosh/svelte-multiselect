@@ -135,6 +135,7 @@ These are the core props you'll use in most cases:
    <script>
      let selected = $state(['Red']) // Preselect Red
    </script>
+
    <MultiSelect bind:selected options={colors} />
    ```
 
@@ -252,7 +253,8 @@ These are the core props you'll use in most cases:
    The function receives `{ search, offset, limit }` and must return `{ options, hasMore }`:
 
    ```ts
-   async function load_options({ search, offset, limit }) {
+   async function load_options(params) {
+     const { search, offset, limit } = params
      const response = await fetch(`/api/items?q=${search}&skip=${offset}&take=${limit}`)
      const { items, total } = await response.json()
      return { options: items, hasMore: offset + limit < total }
@@ -1163,13 +1165,9 @@ This simplified version of the DOM structure of the component shows where these 
   <ul class="options {ulOptionsClass}">
     <li class="select-all {liSelectAllClass}">Select all</li>
     <li class={liOptionClass}>Option 1</li>
-    <li class="{liOptionClass} {liActiveOptionClass}">
-      Option 2 (currently active)
-    </li>
+    <li class="{liOptionClass} {liActiveOptionClass}">Option 2 (currently active)</li>
     ...
-    <li class="{liUserMsgClass} {liActiveUserMsgClass}">
-      Create this option...
-    </li>
+    <li class="{liUserMsgClass} {liActiveUserMsgClass}">Create this option...</li>
   </ul>
 </div>
 ```

@@ -17,7 +17,9 @@
   {@const { component, ...rest } = props}
   <CopyButton {...rest}>
     {#snippet children({ state, disabled })}
-      <span data-testid="copy-snippet" data-state={state} data-disabled={disabled}>{state}</span>
+      <span data-testid="copy-snippet" data-state={state} data-disabled={disabled}>
+        {state}
+      </span>
     {/snippet}
   </CopyButton>
 {:else if props.component === `file-details`}
@@ -59,7 +61,8 @@
         data-kind={kind}
         data-index={index}
         data-total={total}
-      >{item[0]}</span>
+        >{item[0]}
+      </span>
     {/snippet}
   </PrevNext>
 {:else if props.component === `prev-next-named`}

@@ -8,15 +8,19 @@
   import { foods } from '$site/options'
 
   function random_color(): string {
-    const r = Math.floor(Math.random() * 255)
-    const g = Math.floor(Math.random() * 255)
-    const b = Math.floor(Math.random() * 255)
-    return `rgb(${r}, ${g}, ${b})`
+    const [r, g, b] = Array.from([1, 2, 3], (_) => Math.floor(Math.random() * 255))
+    return `rgba(${r}, ${g}, ${b}, 0.3)`
   }
+  let options = $derived(
+    foods.map((label) => ({
+      label,
+      style: `background-color: ${random_color()}`,
+    })),
+  )
 </script>
 
 <MultiSelect
-  options={foods.map((label) => ({ label, style: `background-color: ${random_color()}` }))}
+  {options}
   placeholder="Pick your favorite foods"
   removeAllTitle="Remove all foods"
   closeDropdownOnSelect

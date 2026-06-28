@@ -46,8 +46,8 @@ with `aria-selected="true"`.
 </MultiSelect>
 
 <p id="input-dropdown-state">
-  Typed: <strong>{color_text || `empty`}</strong>,
-  selected: <strong>{selected_color?.label ?? `none`}</strong>
+  Typed: <strong>{color_text || `empty`}</strong>, selected:
+  <strong>{selected_color?.label ?? `none`}</strong>
 </p>
 ```
 

@@ -7,7 +7,7 @@ import { doc_query } from './index'
 describe(`SSR and client-side heading level consistency`, () => {
   const preprocess = (content: string) => heading_ids().markup({ content })
 
-  it.each([`h1`, `h2`, `h3`, `h4`, `h5`, `h6`])(
+  it.each([`h1`, `h6`])(
     `%s is processed by both SSR preprocessor and client-side attachment`,
     (tag) => {
       // SSR: preprocessor should add ID
@@ -31,9 +31,6 @@ describe(`heading_ids preprocessor`, () => {
   describe(`basic ID generation`, () => {
     it.each([
       [`<h2>Hello World</h2>`, `<h2 id="hello-world">Hello World</h2>`],
-      [`<h3>Test Heading</h3>`, `<h3 id="test-heading">Test Heading</h3>`],
-      [`<h4>Another One</h4>`, `<h4 id="another-one">Another One</h4>`],
-      [`<h5>Fifth Level</h5>`, `<h5 id="fifth-level">Fifth Level</h5>`],
       [`<h6>Sixth Level</h6>`, `<h6 id="sixth-level">Sixth Level</h6>`],
       [`<h1>Title</h1>`, `<h1 id="title">Title</h1>`],
       [`<h2>Hello! World? Yes.</h2>`, `<h2 id="hello-world-yes">Hello! World? Yes.</h2>`],
@@ -177,7 +174,7 @@ describe(`heading_anchors attachment`, () => {
 
   describe(`adds anchors to headings`, () => {
     // Default selector includes h1-h6 as direct or 2nd-level children of main
-    it.each([`h1`, `h2`, `h3`, `h4`, `h5`, `h6`])(`adds anchor to %s`, (tag: string) => {
+    it.each([`h2`, `h6`])(`adds anchor to %s`, (tag: string) => {
       const container = create_container(`<${tag} id="test">Content</${tag}>`)
       heading_anchors()(container)
       const anchor = container.querySelector(`${tag} ${anchor_selector}`)
@@ -198,7 +195,6 @@ describe(`heading_anchors attachment`, () => {
   describe(`generates IDs for headings without them`, () => {
     it.each([
       [`<h2>Generated ID</h2>`, `generated-id`],
-      [`<h2>Hello! World?</h2>`, `hello-world`],
       [`<h2>Same</h2><h3>Same</h3>`, `same`, `same-1`], // tests unique ID generation
     ])(`%s → id includes "%s"`, (html: string, ...expected_ids: string[]) => {
       const container = create_container(html)

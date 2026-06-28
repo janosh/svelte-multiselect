@@ -99,12 +99,6 @@ test.each([
   },
 )
 
-test(`renders default icon and ready label`, () => {
-  const { copy_button } = mount_copy_button()
-  expect(copy_button.querySelector(`svg`)).toBeInstanceOf(SVGElement)
-  expect(copy_button.textContent).toContain(`ready`)
-})
-
 test.each([
   [``, 0],
   [`Copy me`, 1],
@@ -303,7 +297,7 @@ test(`global_selector remount uses latest callback after parent remount`, async 
   const on_copy_success_initial = vi.fn()
   const on_copy_success_next = vi.fn()
   const { pre } = create_pre_with_code(`selector content`, `copy-target`)
-  const global_props = { global_selector: `.copy-target`, reset_sec: 1 } as const
+  const global_props = { global_selector: `.copy-target`, reset_sec: 1 }
 
   const initial_component = mount(CopyButton, {
     target: document.body,

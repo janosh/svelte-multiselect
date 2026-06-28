@@ -21,11 +21,10 @@
 
   if (browser) {
     const saved = localStorage.getItem(`theme`)
-    const effective = saved === `light` || saved === `dark`
-      ? saved
-      : matchMedia(`(prefers-color-scheme: dark)`).matches
-      ? `dark`
-      : `light`
+    let effective = saved
+    if (effective !== `light` && effective !== `dark`) {
+      effective = matchMedia(`(prefers-color-scheme: dark)`).matches ? `dark` : `light`
+    }
     document.documentElement.style.colorScheme = effective
     document.documentElement.dataset.theme = effective
   }

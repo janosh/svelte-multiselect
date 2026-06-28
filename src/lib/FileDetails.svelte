@@ -81,7 +81,7 @@
       .replaceAll(/<[^>]*>/gu, ``)
       .match(/\.(?<ext>\w+)$/u)
       ?.groups?.ext?.toLowerCase()
-    return ext ? ext_to_lang[ext] ?? ext : undefined
+    return ext ? (ext_to_lang[ext] ?? ext) : undefined
   }
 
   const resolve_lang = (file: File): string =>
@@ -90,15 +90,16 @@
   // Lazy-loaded syntax highlighter using starry-night (CSS already loaded in app.css).
   // Deliberately does NOT import from ./live-examples/highlighter.ts, which
   // eagerly initializes starry-night with all grammars at module load.
-  let highlighter: {
-    highlight: (code: string, scope: string) => HastNode
-    flagToScope: (flag: string) => string | undefined
-  } | undefined
+  let highlighter:
+    | {
+        highlight: (code: string, scope: string) => HastNode
+        flagToScope: (flag: string) => string | undefined
+      }
+    | undefined
   async function highlight(code: string, lang: string): Promise<string> {
     if (!highlighter) {
       const { createStarryNight, common } = await import(`@wooorm/starry-night`)
-      const source_svelte =
-        (await import(`@wooorm/starry-night/source.svelte`)).default
+      const source_svelte = (await import(`@wooorm/starry-night/source.svelte`)).default
       highlighter = await createStarryNight([...common, source_svelte])
     }
     const scope = highlighter.flagToScope(lang)
@@ -154,7 +155,11 @@
           </summary>
         {/if}
 
-        <pre class="language-{language}"><span class="lang-label">{language}</span><code>{#if highlighted_cache[cache_key]}{@html highlighted_cache[cache_key]}{:else}{content}{/if}</code></pre>
+        <pre class="language-{language}"><span class="lang-label">{language}</span><code
+            >{#if highlighted_cache[cache_key]}{@html highlighted_cache[
+                cache_key
+              ]}{:else}{content}{/if}</code
+          ></pre>
       </details>
     </li>
   {/each}

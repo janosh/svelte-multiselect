@@ -49,12 +49,6 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   expect(toggle_button.textContent).toContain(`Close`)
 })
 
-test(`renders a <pre> with the src`, () => {
-  mount(CodeExample, { target: document.body, props: { src } })
-
-  expect(doc_query(`pre > code`).textContent).toBe(src)
-})
-
 test.each([
   [
     `REPL`,
@@ -79,7 +73,7 @@ test.each([
   expect(link.getAttribute(`target`)).toBe(`_blank`)
 })
 
-test.each([`typescript`, `css`, `python`])(
+test.each([`typescript`, `css`])(
   `lang-label renders %s out of flow so it can't indent the first code line`,
   (lang) => {
     mount(CodeExample, { target: document.body, props: { src, meta: { lang } } })

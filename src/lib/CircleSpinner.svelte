@@ -1,5 +1,9 @@
 <script lang="ts">
-  let { color = `cornflowerblue`, duration = `1.5s`, size = `1em` }: {
+  let {
+    color = `cornflowerblue`,
+    duration = `1.5s`,
+    size = `1em`,
+  }: {
     color?: string
     duration?: string
     size?: string
@@ -12,8 +16,7 @@
   {color}"
   style:width={size}
   style:height={size}
->
-</div>
+></div>
 
 <style>
   div {
