@@ -3913,7 +3913,7 @@ test.each([
       await tick()
       return doc_query(`ul.options > li.active`).textContent?.trim()
     },
-    expected_option: `Solid`,
+    expected_option: `React`,
   },
 ] as const)(
   `closeDropdownOnSelect='retain-focus' reopens on $reopen_method after keyboard selection`,

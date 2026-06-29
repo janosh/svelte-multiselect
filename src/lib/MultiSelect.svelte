@@ -940,7 +940,7 @@
     open = false
     show_all_input_options = false
     if (!retain_focus) input?.blur()
-    activeIndex = null
+    if (!retain_focus) activeIndex = null
     onclose?.({ event })
   }
 
