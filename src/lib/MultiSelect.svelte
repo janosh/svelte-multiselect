@@ -916,8 +916,8 @@
     onchange?.({ option: option_removed, type: `remove` })
   }
 
-  function open_dropdown(event: Event) {
-    event.stopPropagation()
+  function open_dropdown(event: Event, focus_input = true, stop_propagation = true) {
+    if (stop_propagation) event.stopPropagation()
 
     if (disabled) return
     const clicked_expand_icon =
@@ -928,7 +928,7 @@
     }
     if (open) return
     open = true
-    if (!(event instanceof FocusEvent)) {
+    if (focus_input && !(event instanceof FocusEvent)) {
       // avoid double-focussing input when event that opened dropdown was already input FocusEvent
       input?.focus()
     }
@@ -1130,6 +1130,7 @@
       // on up/down arrow keys: update active option
       event.stopPropagation()
       event.preventDefault()
+      if (!open) open_dropdown(event, false)
       await handle_arrow_navigation(event.key === `ArrowUp` ? -1 : 1)
     }  // on backspace key: remove highlighted or last selected option
     else if (
@@ -1353,6 +1354,7 @@
 
   const handle_input_input = (event: Event) => {
     show_all_input_options = false
+    if (!open) open_dropdown(event, false, false)
     // Fallback for input events fired without beforeinput (e.g. some
     // programmatic value setters); bind:value has already synced searchText.
     if (input_committed_label !== null && searchText !== input_committed_label) {
@@ -1365,6 +1367,10 @@
     highlighted_idx = null
     open_dropdown(event)
     onfocus?.(event)
+  }
+
+  const prevent_retain_focus_blur = (event: MouseEvent) => {
+    if (closeDropdownOnSelect === `retain-focus`) event.preventDefault()
   }
 
   // Override input's focus method to ensure dropdown opens on programmatic focus
@@ -1831,6 +1837,7 @@
       bind:this={ul_options}
       style={ulOptionsStyle}
       onscroll={handle_options_scroll}
+      onmousedown={prevent_retain_focus_blur}
       onmousemove={() => (ignore_hover = false)}
     >
       {#if selectAllOption && effective_options.length > 0 && (maxSelect === null || maxSelect > 1)}

@@ -29,6 +29,22 @@
 />
 ```
 
+### Retain Focus Picker
+
+```svelte example id="retain-focus"
+<script lang="ts">
+  import MultiSelect from '$lib'
+
+  const options = [`Svelte`, `Solid`, `React`]
+</script>
+
+<MultiSelect
+  {options}
+  closeDropdownOnSelect="retain-focus"
+  placeholder="Pick a framework"
+/>
+```
+
 This page is used for Playwright testing to ensure
 
 - the remove-all button
