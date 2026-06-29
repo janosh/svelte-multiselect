@@ -44,6 +44,29 @@ test.describe(`input`, () => {
     await expect(dropdown).toHaveClass(/hidden/u)
     await expect(dropdown).toBeHidden()
   })
+
+  // https://github.com/janosh/svelte-multiselect/issues/423
+  test(`retain-focus keeps input focused after mouse selection`, async ({ page }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+    const input = page.locator(`#retain-focus input[autocomplete]`)
+    const dropdown = page.locator(`#retain-focus ul.options`)
+
+    await input.click()
+    await expect(input).toBeFocused()
+    await expect(dropdown).toBeVisible()
+
+    await dropdown.getByRole(`option`, { name: `Svelte`, exact: true }).click()
+
+    await expect(dropdown).toBeHidden()
+    await expect(input).toBeFocused()
+
+    await page.keyboard.type(`r`)
+
+    await expect(dropdown).toBeVisible()
+    await expect(
+      dropdown.getByRole(`option`, { name: `React`, exact: true }),
+    ).toBeVisible()
+  })
 })
 
 test.describe(`multiselect`, () => {
