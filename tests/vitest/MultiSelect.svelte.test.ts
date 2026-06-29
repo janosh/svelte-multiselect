@@ -3820,7 +3820,7 @@ test.each([
   },
 )
 
-test.each([true, false, `if-mobile`] as const)(
+test.each([true, false, `if-mobile`, `retain-focus`] as const)(
   `closeDropdownOnSelect=%s controls input focus and dropdown closing`,
   async (closeDropdownOnSelect) => {
     const original_inner_width = globalThis.innerWidth
@@ -3831,6 +3831,9 @@ test.each([true, false, `if-mobile`] as const)(
         props: { options: [1, 2, 3], closeDropdownOnSelect, open: true },
       })
 
+      const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      if (closeDropdownOnSelect === `retain-focus`) input_el.focus()
+
       // simulate selecting an option
       const first_option = doc_query(`ul.options > li`)
       first_option.click()
@@ -3839,6 +3842,7 @@ test.each([true, false, `if-mobile`] as const)(
       const is_desktop = globalThis.innerWidth > select.breakpoint
       const should_be_closed =
         closeDropdownOnSelect === true ||
+        closeDropdownOnSelect === `retain-focus` ||
         (closeDropdownOnSelect === `if-mobile` && !is_desktop)
 
       // count number of selected items
@@ -3847,7 +3851,6 @@ test.each([true, false, `if-mobile`] as const)(
 
       // check that dropdown is closed when closeDropdownOnSelect = true
       const dropdown = doc_query(`ul.options`)
-      const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
       const state = JSON.stringify({
         is_desktop,
         should_be_closed,
@@ -3857,7 +3860,9 @@ test.each([true, false, `if-mobile`] as const)(
 
       expect(dropdown.classList.contains(`hidden`), state).toBe(should_be_closed)
       // focus tracking is reliable only for the close path in happy-dom
-      if (should_be_closed) {
+      if (closeDropdownOnSelect === `retain-focus`) {
+        expect(document.activeElement).toBe(input_el)
+      } else if (should_be_closed) {
         expect(document.activeElement).not.toBe(input_el)
       } else {
         expect([input_el, document.body]).toContain(document.activeElement)
@@ -3887,26 +3892,58 @@ test.each([true, false, `if-mobile`] as const)(
   },
 )
 
-test(`closeDropdownOnSelect='retain-focus' retains input focus when dropdown closes after option selection`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      closeDropdownOnSelect: `retain-focus`,
-      open: true,
+const retain_focus_keydown = (key: string) =>
+  new KeyboardEvent(`keydown`, { key, bubbles: true })
+
+test.each([
+  {
+    reopen_method: `typing`,
+    reopen_action: async (input_el: HTMLInputElement) => {
+      input_el.value = `r`
+      input_el.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await tick()
+      return doc_query(`ul.options > li`).textContent?.trim()
     },
-  })
+    expected_option: `React`,
+  },
+  {
+    reopen_method: `ArrowDown`,
+    reopen_action: async (input_el: HTMLInputElement) => {
+      input_el.dispatchEvent(retain_focus_keydown(`ArrowDown`))
+      await tick()
+      return doc_query(`ul.options > li.active`).textContent?.trim()
+    },
+    expected_option: `React`,
+  },
+] as const)(
+  `closeDropdownOnSelect='retain-focus' reopens on $reopen_method after keyboard selection`,
+  async ({ reopen_action, expected_option }) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [`Svelte`, `Solid`, `React`],
+        closeDropdownOnSelect: `retain-focus`,
+        open: true,
+      },
+    })
 
-  const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
-  input_el.focus()
+    const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    const dropdown = doc_query(`ul.options`)
+    input_el.focus()
+    input_el.dispatchEvent(retain_focus_keydown(`ArrowDown`))
+    await tick()
+    input_el.dispatchEvent(retain_focus_keydown(`Enter`))
+    await tick()
 
-  // select an option - should close dropdown but retain focus
-  doc_query(`ul.options > li`).click()
-  await tick()
+    expect(document.activeElement).toBe(input_el)
+    expect(dropdown.classList).toContain(`hidden`)
 
-  expect(document.activeElement).toBe(input_el)
-  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(1)
-})
+    const reopened_option = await reopen_action(input_el)
+
+    expect(dropdown.classList).not.toContain(`hidden`)
+    expect(reopened_option).toBe(expected_option)
+  },
+)
 
 test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, async () => {
   mount(MultiSelect, {
