@@ -69,6 +69,16 @@ export function get_style(
   return css_str
 }
 
+export function split_shortcut(shortcut: string): string[] {
+  const parts = shortcut
+    .toLowerCase()
+    .split(`+`)
+    .map((part) => part.trim())
+
+  if (parts.at(-1) === `` && parts.at(-2) === ``) parts.splice(-2, 2, `+`)
+  return parts
+}
+
 // Parse shortcut string into modifier+key parts
 export function parse_shortcut(shortcut: string): {
   key: string
@@ -77,10 +87,7 @@ export function parse_shortcut(shortcut: string): {
   alt: boolean
   meta: boolean
 } {
-  const parts = shortcut
-    .toLowerCase()
-    .split(`+`)
-    .map((part) => part.trim())
+  const parts = split_shortcut(shortcut)
   const key = parts.pop() ?? ``
   const ctrl = parts.includes(`ctrl`)
   const shift = parts.includes(`shift`)
@@ -100,7 +107,7 @@ export function matches_shortcut(
   return (
     event.key.toLowerCase() === key &&
     event.ctrlKey === ctrl &&
-    event.shiftKey === shift &&
+    (event.shiftKey === shift || (key === `+` && !shift)) &&
     event.altKey === alt &&
     event.metaKey === meta
   )
