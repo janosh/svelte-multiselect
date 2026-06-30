@@ -626,10 +626,8 @@ export const tooltip =
         const tooltip_styles = getComputedStyle(tooltip_el)
         const default_arrow_color = `var(--tooltip-bg, light-dark(#fff, #2a2a2e))`
         const tooltip_bg = tooltip_styles.backgroundColor.trim()
-        const is_transparent = (color: string) =>
-          !color ||
-          color === `transparent` ||
-          /rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0\s*\)/u.test(color)
+        const transparent_colors = new Set([``, `transparent`, `rgba(0, 0, 0, 0)`])
+        const is_transparent = (color: string) => transparent_colors.has(color.trim())
         const arrow_size_raw = tooltip_styles
           .getPropertyValue(`--tooltip-arrow-size`)
           .trim()
