@@ -935,13 +935,38 @@
     onopen?.({ event })
   }
 
+  let suppress_next_focus_open = false
+
+  function focus_input_without_open(only_if_internal = false) {
+    const active_element = document.activeElement
+    const focus_is_internal =
+      active_element instanceof Node &&
+      (outerDiv?.contains(active_element) || ul_options?.contains(active_element))
+    if (!input || active_element === input || (only_if_internal && !focus_is_internal))
+      return
+    suppress_next_focus_open = true
+    try {
+      input.focus()
+    } finally {
+      suppress_next_focus_open = false
+    }
+  }
+
   function close_dropdown(event: Event, retain_focus = false) {
     if (!open) return
+    const focus_before_onclose = document.activeElement
     open = false
     show_all_input_options = false
     if (!retain_focus) input?.blur()
-    if (!retain_focus) activeIndex = null
+    activeIndex = null
+    option_msg_is_active = false
     onclose?.({ event })
+    const active_element = document.activeElement
+    const focus_changed_by_onclose = active_element !== focus_before_onclose
+    if (retain_focus && !focus_changed_by_onclose) {
+      focus_input_without_open()
+      tick().then(() => focus_input_without_open(true))
+    }
   }
 
   function clear_validity() {
@@ -1365,7 +1390,7 @@
 
   const handle_input_focus: FocusEventHandler<HTMLInputElement> = (event) => {
     highlighted_idx = null
-    open_dropdown(event)
+    if (!suppress_next_focus_open) open_dropdown(event)
     onfocus?.(event)
   }
 
@@ -1382,7 +1407,7 @@
 
     input.focus = (focus_options?: FocusOptions) => {
       orig_focus(focus_options)
-      if (!disabled && !open) {
+      if (!suppress_next_focus_open && !disabled && !open) {
         open_dropdown(new FocusEvent(`focus`, { bubbles: true }))
       }
     }

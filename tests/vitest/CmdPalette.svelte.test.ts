@@ -790,6 +790,12 @@ const option_labels = () =>
     li.textContent?.trim(),
   )
 
+const shortcut_kbd_parts = () =>
+  Array.from(
+    document.querySelectorAll(`li[role='option'] .cmd-shortcut kbd`),
+    (kbd) => kbd.textContent,
+  )
+
 const press_ctrl_shift = (key: string) =>
   globalThis.dispatchEvent(
     new KeyboardEvent(`keydown`, { key, ctrlKey: true, shiftKey: true }),
@@ -811,17 +817,27 @@ test(`renders shortcut kbd hints and descriptions in options`, async () => {
   })
   await tick()
 
-  const kbd_parts = Array.from(
-    document.querySelectorAll(`li[role='option'] .cmd-shortcut kbd`),
-    (kbd) => kbd.textContent,
-  )
-  expect(kbd_parts).toEqual([`Ctrl`, `⇧`, `S`])
+  expect(shortcut_kbd_parts()).toEqual([`Ctrl`, `⇧`, `S`])
   expect(doc_query(`.cmd-description`).textContent).toBe(`Write buffer to disk`)
   // action without shortcut renders no kbd
   const quit_li = Array.from(document.querySelectorAll(`li[role='option']`)).find((li) =>
     li.textContent?.includes(`quit`),
   )
   expect(quit_li?.querySelector(`kbd`)).toBeNull()
+})
+
+test(`renders plus-key shortcut hints`, async () => {
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      open: true,
+      fade_duration: 0,
+      actions: [{ label: `zoom in`, action: vi.fn(), shortcut: `ctrl++` }],
+    },
+  })
+  await tick()
+
+  expect(shortcut_kbd_parts()).toEqual([`Ctrl`, `+`])
 })
 
 test(`plain actions without shortcut/description use default option rendering`, async () => {

@@ -15,7 +15,7 @@
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
   import type { MultiSelectProps } from './types'
-  import { matches_shortcut } from './utils'
+  import { matches_shortcut, split_shortcut } from './utils'
 
   // MultiSelect's option snippet param (option + idx/selected/active/disabled)
   type OptionSnippetParams = Parameters<
@@ -123,7 +123,7 @@
     arrowright: `→`,
   }
   const format_shortcut = (shortcut: string): string[] =>
-    shortcut.split(`+`).map((part) => {
+    split_shortcut(shortcut).map((part) => {
       const key_segment = part.trim().toLowerCase()
       // title-case unknown multi-char segments, upper-case single chars (empty stays empty)
       const title_case = key_segment.charAt(0).toUpperCase() + key_segment.slice(1)
