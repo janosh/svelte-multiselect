@@ -107,7 +107,7 @@ export function matches_shortcut(
   return (
     event.key.toLowerCase() === key &&
     event.ctrlKey === ctrl &&
-    event.shiftKey === shift &&
+    (event.shiftKey === shift || (key === `+` && !shift)) &&
     event.altKey === alt &&
     event.metaKey === meta
   )

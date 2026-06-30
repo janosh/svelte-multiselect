@@ -139,6 +139,8 @@ describe(`keyboard shortcut parsing`, () => {
 
   test.each([
     [`ctrl++`, { key: `+`, ctrlKey: true }, true],
+    [`ctrl++`, { key: `+`, ctrlKey: true, shiftKey: true }, true],
+    [`ctrl+shift++`, { key: `+`, ctrlKey: true }, false],
     [`ctrl+`, { key: `+`, ctrlKey: true }, false],
   ])(`matches_shortcut(%j) with plus key`, (shortcut, event_init, expected) => {
     const event = new KeyboardEvent(`keydown`, event_init)
