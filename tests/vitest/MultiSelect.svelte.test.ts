@@ -3895,13 +3895,23 @@ test.each([true, false, `if-mobile`, `retain-focus`] as const)(
 const retain_focus_keydown = (key: string) =>
   new KeyboardEvent(`keydown`, { key, bubbles: true })
 
+async function type_retain_focus_input(input_el: HTMLInputElement, value: string) {
+  input_el.value = value
+  input_el.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  await tick()
+}
+
+const mount_retain_focus = (props: Partial<MultiSelectProps> = {}) =>
+  mount(MultiSelect, {
+    target: document.body,
+    props: { closeDropdownOnSelect: `retain-focus`, open: true, ...props },
+  })
+
 test.each([
   {
     reopen_method: `typing`,
     reopen_action: async (input_el: HTMLInputElement) => {
-      input_el.value = `r`
-      input_el.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
-      await tick()
+      await type_retain_focus_input(input_el, `r`)
       return doc_query(`ul.options > li`).textContent?.trim()
     },
     expected_option: `React`,
@@ -3918,14 +3928,7 @@ test.each([
 ] as const)(
   `closeDropdownOnSelect='retain-focus' reopens on $reopen_method after keyboard selection`,
   async ({ reopen_action, expected_option }) => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [`Svelte`, `Solid`, `React`],
-        closeDropdownOnSelect: `retain-focus`,
-        open: true,
-      },
-    })
+    mount_retain_focus({ options: [`Svelte`, `Solid`, `React`] })
 
     const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
     const dropdown = doc_query(`ul.options`)
@@ -3944,6 +3947,77 @@ test.each([
     expect(reopened_option).toBe(expected_option)
   },
 )
+
+test(`closeDropdownOnSelect='retain-focus' clears active create message after creating an option`, async () => {
+  mount_retain_focus({
+    options: [`apple`, `banana`, `cherry`],
+    allowUserOptions: true,
+  })
+
+  const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  const dropdown = doc_query(`ul.options`)
+  input_el.focus()
+  await type_retain_focus_input(input_el, `app`)
+  input_el.dispatchEvent(retain_focus_keydown(`ArrowDown`))
+  await tick()
+  input_el.dispatchEvent(retain_focus_keydown(`ArrowDown`))
+  await tick()
+
+  expect(doc_query(`ul.options li.user-msg`).classList).toContain(`active`)
+
+  input_el.dispatchEvent(retain_focus_keydown(`Enter`))
+  await tick()
+
+  expect(dropdown.classList).toContain(`hidden`)
+  expect(document.activeElement).toBe(input_el)
+
+  await type_retain_focus_input(input_el, `b`)
+
+  expect(dropdown.classList).not.toContain(`hidden`)
+  expect(doc_query(`ul.options > li:not(.user-msg)`).textContent?.trim()).toBe(`banana`)
+  expect(doc_query(`ul.options li.user-msg`).classList).not.toContain(`active`)
+  expect(input_el.getAttribute(`aria-activedescendant`) ?? ``).not.toMatch(/user-msg/u)
+})
+
+test(`closeDropdownOnSelect='retain-focus' restores input focus after keyboard select all`, async () => {
+  mount_retain_focus({
+    options: [`Apple`, `Banana`],
+    selectAllOption: true,
+  })
+
+  const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  const dropdown = doc_query(`ul.options`)
+  const select_all_el = doc_query(`ul.options > li.select-all`)
+  select_all_el.focus()
+  select_all_el.dispatchEvent(retain_focus_keydown(`Enter`))
+  await tick()
+
+  expect(dropdown.classList).toContain(`hidden`)
+  expect(document.activeElement).toBe(input_el)
+
+  await type_retain_focus_input(input_el, `z`)
+
+  expect(dropdown.classList).not.toContain(`hidden`)
+  expect(doc_query(`ul.options li.user-msg`).textContent?.trim()).toBe(
+    `No matching options`,
+  )
+})
+
+test(`closeDropdownOnSelect='retain-focus' does not override onclose focus`, async () => {
+  const external_button = document.createElement(`button`)
+  document.body.append(external_button)
+
+  mount_retain_focus({
+    options: [`Apple`, `Banana`],
+    selectAllOption: true,
+    onclose: () => external_button.focus(),
+  })
+
+  doc_query(`ul.options > li.select-all`).dispatchEvent(retain_focus_keydown(`Enter`))
+  await tick()
+
+  expect(document.activeElement).toBe(external_button)
+})
 
 test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, async () => {
   mount(MultiSelect, {
