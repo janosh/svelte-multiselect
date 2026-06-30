@@ -7,6 +7,8 @@ import {
   get_uuid,
   has_group,
   is_object,
+  matches_shortcut,
+  parse_shortcut,
 } from '$lib/utils'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
@@ -122,6 +124,25 @@ describe(`get_style`, () => {
     expect(console.error).toHaveBeenCalledWith(
       `MultiSelect: Invalid key=invalid_key for get_style`,
     )
+  })
+})
+
+describe(`keyboard shortcut parsing`, () => {
+  test.each([
+    [`+`, { key: `+`, ctrl: false, shift: false, alt: false, meta: false }],
+    [`ctrl++`, { key: `+`, ctrl: true, shift: false, alt: false, meta: false }],
+    [`ctrl+shift++`, { key: `+`, ctrl: true, shift: true, alt: false, meta: false }],
+    [`ctrl+`, { key: ``, ctrl: true, shift: false, alt: false, meta: false }],
+  ])(`parse_shortcut(%j)`, (shortcut, expected) => {
+    expect(parse_shortcut(shortcut)).toEqual(expected)
+  })
+
+  test.each([
+    [`ctrl++`, { key: `+`, ctrlKey: true }, true],
+    [`ctrl+`, { key: `+`, ctrlKey: true }, false],
+  ])(`matches_shortcut(%j) with plus key`, (shortcut, event_init, expected) => {
+    const event = new KeyboardEvent(`keydown`, event_init)
+    expect(matches_shortcut(event, shortcut)).toBe(expected)
   })
 })
 
