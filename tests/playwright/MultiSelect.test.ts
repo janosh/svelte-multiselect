@@ -1,16 +1,31 @@
 // deno-lint-ignore-file no-await-in-loop
 import { foods, languages, octicons } from '$site/options'
-import { expect, test } from '@playwright/test'
+import { expect, test, type Page } from '@playwright/test'
+
+async function goto_persistent(page: Page): Promise<void> {
+  await page.goto(`/persistent`)
+  await expect(page.locator(`#languages input[autocomplete]`)).toBeVisible()
+  const store_binding_input = page.locator(
+    `#store-binding input[placeholder='Select colors...']`,
+  )
+  await expect(store_binding_input).toBeVisible()
+  await page.waitForFunction(() => {
+    const input_el = document.querySelector<HTMLInputElement>(
+      `#store-binding input[placeholder='Select colors...']`,
+    )
+    return input_el && !String(input_el.focus).includes(`[native code]`)
+  })
+}
 
 // Issue #309: Array cloning by reactive wrappers (stores, Superforms) caused infinite loops
 // https://github.com/janosh/svelte-multiselect/issues/309
 test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => {
-  await page.goto(`/persistent`, { waitUntil: `networkidle` })
+  await goto_persistent(page)
 
-  const dropdown = page.locator(`#store-binding ul.options`)
-  await page.click(`#store-binding input[placeholder='Select colors...']`)
-  await expect(dropdown).toBeVisible()
-  await dropdown.locator(`text=Red`).click()
+  const input = page.locator(`#store-binding input[placeholder='Select colors...']`)
+  await input.focus()
+  await input.press(`ArrowDown`)
+  await input.press(`Enter`)
 
   const status = page.locator(`#store-binding-status`)
   await expect(status.locator(`text=✅ Fixed`)).toBeVisible()
@@ -126,9 +141,10 @@ test.describe(`multiselect`, () => {
   test(`retains its selected state on page reload when bound to localStorage`, async ({
     page,
   }) => {
-    await page.goto(`/persistent`, { waitUntil: `networkidle` })
+    await goto_persistent(page)
     await page.evaluate(() => sessionStorage.clear())
-    await page.reload({ waitUntil: `networkidle` })
+    await page.reload()
+    await expect(page.locator(`#languages input[autocomplete]`)).toBeVisible()
 
     const selected = page.locator(`#languages ul.selected`)
     await expect(selected).toContainText(`Python`)
@@ -146,7 +162,7 @@ test.describe(`multiselect`, () => {
 
 // https://github.com/janosh/svelte-multiselect/issues/176
 test(`browser drag reorders selected options`, async ({ page }) => {
-  await page.goto(`/persistent`, { waitUntil: `networkidle` })
+  await goto_persistent(page)
   const selected = page.locator(`#languages ul.selected`)
   await expect(selected).toHaveText(`1  Python 2  TypeScript 3  C 4  Haskell`)
 
