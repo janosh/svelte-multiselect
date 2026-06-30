@@ -624,6 +624,12 @@ export const tooltip =
         if (!arrow) return
 
         const tooltip_styles = getComputedStyle(tooltip_el)
+        const default_arrow_color = `var(--tooltip-bg, light-dark(#fff, #2a2a2e))`
+        const tooltip_bg = tooltip_styles.backgroundColor.trim()
+        const is_transparent = (color: string) =>
+          !color ||
+          color === `transparent` ||
+          /rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0\s*\)/u.test(color)
         const arrow_size_raw = tooltip_styles
           .getPropertyValue(`--tooltip-arrow-size`)
           .trim()
@@ -633,7 +639,7 @@ export const tooltip =
           arrow,
           placement,
           arrow_px,
-          `var(--tooltip-bg, light-dark(#fff, #2a2a2e))`,
+          is_transparent(tooltip_bg) ? default_arrow_color : tooltip_bg,
         )
 
         const border_arrow = tooltip_el.querySelector<HTMLElement>(
@@ -643,11 +649,7 @@ export const tooltip =
 
         const border_color = tooltip_styles.borderTopColor
         const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
-        const is_transparent =
-          !border_color ||
-          border_color === `transparent` ||
-          /rgba\(\s*[\d.]+\s*,\s*[\d.]+\s*,\s*[\d.]+\s*,\s*0\s*\)/u.test(border_color)
-        const has_border = !is_transparent && border_width_num > 0
+        const has_border = !is_transparent(border_color) && border_width_num > 0
         if (!has_border) {
           border_arrow.remove()
           return

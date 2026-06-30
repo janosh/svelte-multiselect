@@ -891,6 +891,32 @@ describe(`tooltip`, () => {
         `https://example.com/tooltip.svg`,
       )
     })
+
+    it(`uses custom style background-color for tooltip arrow fill`, () => {
+      const { set_prop_values, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `custom arrow fill`
+        mock_bounds(element)
+        setup_tooltip(element, {
+          delay: 0,
+          style: `background-color: red`,
+        })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      const arrow_borders = set_prop_values.filter(
+        (entry) =>
+          entry.startsWith(`border-`) &&
+          entry.includes(`solid`) &&
+          !entry.includes(`transparent`),
+      )
+      expect(
+        arrow_borders.some((entry) => /\b(?:red|rgb\(255,\s*0,\s*0\))/u.test(entry)),
+      ).toBe(true)
+    })
   })
 })
 
