@@ -754,8 +754,11 @@ describe(`tooltip`, () => {
       const tooltip_css = find_tooltip_css(css_texts)
       expect(tooltip_css).toBeDefined()
       expect(tooltip_css).not.toContain(`color-scheme`)
-      expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#f5f5f7,\s*#2a2a2e/u)
+      expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#fff,\s*#2a2a2e/u)
       expect(tooltip_css).toMatch(/\bcolor:.*light-dark\(\s*#222,\s*#eee/u)
+      expect(tooltip_css).toMatch(
+        /border:.*var\(--tooltip-border,\s*1px solid light-dark\(\s*rgba\(0,\s*0,\s*0,\s*0\.12\),\s*rgba\(255,\s*255,\s*255,\s*0\.18\)/u,
+      )
 
       const arrow_borders = set_prop_values.filter(
         (entry) =>
@@ -765,7 +768,7 @@ describe(`tooltip`, () => {
       )
       expect(arrow_borders.length).toBeGreaterThan(0)
       for (const entry of arrow_borders) {
-        expect(entry).toMatch(/light-dark\(\s*#f5f5f7,\s*#2a2a2e/u)
+        expect(entry).toMatch(/light-dark\(\s*#fff,\s*#2a2a2e/u)
       }
     })
 
@@ -787,6 +790,26 @@ describe(`tooltip`, () => {
       )
       const tooltip_css = find_tooltip_css(css_texts)
       expect(tooltip_css).toContain(`var(--tooltip-bg,`)
+    })
+
+    it(`custom --tooltip-border overrides default border`, () => {
+      const { css_texts, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `custom border`
+        element.style.setProperty(`--tooltip-border`, `2px solid red`)
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      expect(
+        doc_query(`.custom-tooltip`).style.getPropertyValue(`--tooltip-border`),
+      ).toBe(`2px solid red`)
+      const tooltip_css = find_tooltip_css(css_texts)
+      expect(tooltip_css).toContain(`var(--tooltip-border,`)
     })
 
     it(`updates visible tooltip content when tooltip attributes change`, () => {
@@ -852,6 +875,21 @@ describe(`tooltip`, () => {
       expect(tooltip_el.style.color).toBe(`blue`)
       expect(tooltip_el.style.getPropertyValue(`invalid`)).toBe(``)
       expect(tooltip_el.style.getPropertyValue(`empty`)).toBe(``)
+    })
+
+    it(`preserves custom style values containing colons`, () => {
+      const element = create_element()
+      element.title = `custom style url`
+      mock_bounds(element)
+      setup_tooltip(element, {
+        delay: 0,
+        style: `background-image: url("https://example.com/tooltip.svg")`,
+      })
+
+      trigger_tooltip(element)
+      expect(doc_query(`.custom-tooltip`).style.backgroundImage).toContain(
+        `https://example.com/tooltip.svg`,
+      )
     })
   })
 })

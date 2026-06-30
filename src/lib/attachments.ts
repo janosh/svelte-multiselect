@@ -633,7 +633,7 @@ export const tooltip =
           arrow,
           placement,
           arrow_px,
-          `var(--tooltip-bg, light-dark(#f5f5f7, #2a2a2e))`,
+          `var(--tooltip-bg, light-dark(#fff, #2a2a2e))`,
         )
 
         const border_arrow = tooltip_el.querySelector<HTMLElement>(
@@ -835,7 +835,7 @@ export const tooltip =
           // light-dark() inherits the page's color-scheme (defaults to light if unset)
           tooltip_el.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0; display: inline-block;
-          background-color: var(--tooltip-bg, light-dark(#f5f5f7, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, none);
+          background-color: var(--tooltip-bg, light-dark(#fff, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, 1px solid light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.18)));
           padding: var(--tooltip-padding, 2px 6px); border-radius: var(--tooltip-radius, 5pt); font-size: var(--tooltip-font-size, 0.8rem); line-height: 1.4;
           max-width: var(--tooltip-max-width, 280px); overflow-wrap: break-word; text-wrap: balance; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
@@ -843,12 +843,16 @@ export const tooltip =
 
           // Apply custom styles if provided (these will override base styles due to CSS specificity)
           if (options.style) {
-            // Parse and apply custom styles as individual properties for better control
-            const custom_styles = options.style.split(`;`).filter((style) => style.trim())
-            custom_styles.forEach((style) => {
-              const [property, value] = style.split(`:`).map((part) => part.trim())
-              if (property && value) tooltip_el.style.setProperty(property, value)
-            })
+            const custom_style = document.createElement(`div`).style
+            custom_style.cssText = options.style
+            for (let idx = 0; idx < custom_style.length; idx++) {
+              const property = custom_style.item(idx)
+              tooltip_el.style.setProperty(
+                property,
+                custom_style.getPropertyValue(property),
+                custom_style.getPropertyPriority(property),
+              )
+            }
           }
 
           // Wrap content in a span for reactive content updates
