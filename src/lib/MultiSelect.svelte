@@ -954,16 +954,19 @@
 
   function close_dropdown(event: Event, retain_focus = false) {
     if (!open) return
-    const retain_active_option = retain_focus && !option_msg_is_active
+    const focus_before_onclose = document.activeElement
     open = false
     show_all_input_options = false
-    if (retain_focus) {
-      focus_input_without_open()
-      tick().then(() => focus_input_without_open(true))
-    } else input?.blur()
-    if (!retain_active_option) activeIndex = null
+    if (!retain_focus) input?.blur()
+    activeIndex = null
     option_msg_is_active = false
     onclose?.({ event })
+    const active_element = document.activeElement
+    const focus_changed_by_onclose = active_element !== focus_before_onclose
+    if (retain_focus && !focus_changed_by_onclose) {
+      focus_input_without_open()
+      tick().then(() => focus_input_without_open(true))
+    }
   }
 
   function clear_validity() {

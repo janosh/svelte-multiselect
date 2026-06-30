@@ -3923,7 +3923,7 @@ test.each([
       await tick()
       return doc_query(`ul.options > li.active`).textContent?.trim()
     },
-    expected_option: `React`,
+    expected_option: `Solid`,
   },
 ] as const)(
   `closeDropdownOnSelect='retain-focus' reopens on $reopen_method after keyboard selection`,
@@ -4003,21 +4003,34 @@ test(`closeDropdownOnSelect='retain-focus' restores input focus after keyboard s
   )
 })
 
-test(`closeDropdownOnSelect='retain-focus' does not override onclose focus`, async () => {
-  const external_button = document.createElement(`button`)
-  document.body.append(external_button)
+test.each([
+  {
+    focus_target: `external`,
+    attach_button: (button: HTMLButtonElement) => document.body.append(button),
+  },
+  {
+    focus_target: `internal`,
+    attach_button: (button: HTMLButtonElement) =>
+      doc_query(`div.multiselect`).append(button),
+  },
+])(
+  `closeDropdownOnSelect='retain-focus' does not override $focus_target onclose focus`,
+  async ({ attach_button }) => {
+    const focus_button = document.createElement(`button`)
+    focus_button.tabIndex = 0
+    mount_retain_focus({
+      options: [`Apple`, `Banana`],
+      selectAllOption: true,
+      onclose: () => focus_button.focus(),
+    })
+    attach_button(focus_button)
 
-  mount_retain_focus({
-    options: [`Apple`, `Banana`],
-    selectAllOption: true,
-    onclose: () => external_button.focus(),
-  })
+    doc_query(`ul.options > li.select-all`).dispatchEvent(retain_focus_keydown(`Enter`))
+    await tick()
 
-  doc_query(`ul.options > li.select-all`).dispatchEvent(retain_focus_keydown(`Enter`))
-  await tick()
-
-  expect(document.activeElement).toBe(external_button)
-})
+    expect(document.activeElement).toBe(focus_button)
+  },
+)
 
 test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, async () => {
   mount(MultiSelect, {
