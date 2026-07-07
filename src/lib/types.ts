@@ -30,7 +30,9 @@ export type PlaceholderConfig = {
 // custom events created by MultiSelect
 export interface MultiSelectEvents<T extends Option = Option> {
   onadd?: (data: { option: T; selected: T[] }) => unknown
-  oncreate?: (data: { option: T }) => false | T | undefined // return false to reject, return T to transform, undefined to accept as-is
+  oncreate?: (data: {
+    option: T
+  }) => false | T | undefined | Promise<false | T | undefined> // return false to reject, return T to transform, undefined to accept as-is (sync or async)
   onremove?: (data: { option: T; selected: T[] }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
   onselectAll?: (data: { options: T[] }) => unknown // fires when select all is triggered
@@ -139,6 +141,11 @@ export interface MultiSelectSnippets<T extends Option = Option> {
 export interface PortalParams {
   target_node?: HTMLElement | null
   active?: boolean
+  // `auto` (default): below the input, flips above when the dropdown would overflow
+  //   the viewport bottom and there's more space above
+  // `bottom`: always below the input
+  // `top`: always above the input
+  placement?: `auto` | `bottom` | `top`
 }
 
 type InputEventProp = Extract<keyof HTMLInputAttributes, `on${string}`>
@@ -206,6 +213,12 @@ export interface MultiSelectProps<T extends Option = Option>
   loading?: boolean
   matchingOptions?: T[]
   maxOptions?: number | undefined
+  // Virtualized dropdown rendering for large flat (ungrouped) option lists: only options
+  // near the scroll viewport are rendered as DOM nodes. Pass true for defaults or
+  // { itemHeight, overscan } to tune row height (px, default 30) and extra rows rendered
+  // above/below the visible window (default 10). Falls back to full rendering (with a
+  // console.warn) if any matching option has a group.
+  virtualList?: boolean | { itemHeight?: number; overscan?: number }
   maxSelect?: number | null // null means there is no upper limit for selected.length
   maxSelectMsg?: ((current: number, max: number) => string) | null
   maxSelectMsgClass?: string

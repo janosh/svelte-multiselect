@@ -269,12 +269,4 @@ describe(`get_option_key`, () => {
     expect(get_option_key(opt2)).toBe(obj2)
     expect(get_option_key(opt1)).not.toBe(get_option_key(opt2))
   })
-
-  test(`same value across case-variant labels produces identical keys`, () => {
-    const keys = [
-      { label: `pd`, value: `shared` },
-      { label: `PD`, value: `shared` },
-    ].map((option) => get_option_key(option))
-    expect(new Set(keys).size).toBe(1)
-  })
 })

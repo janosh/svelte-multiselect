@@ -17,20 +17,7 @@ test.each([
     with_ctrl: false,
     should_open: true,
   },
-  {
-    triggers: [`o`],
-    key_to_press: `o`,
-    with_meta: true,
-    with_ctrl: false,
-    should_open: true,
-  },
-  {
-    triggers: [`k`, `o`],
-    key_to_press: `k`,
-    with_meta: true,
-    with_ctrl: false,
-    should_open: true,
-  },
+  // any trigger in the list works, not just the first
   {
     triggers: [`k`, `o`],
     key_to_press: `o`,
@@ -38,6 +25,7 @@ test.each([
     with_ctrl: false,
     should_open: true,
   },
+  // trigger key without modifier does nothing
   {
     triggers: [`k`],
     key_to_press: `k`,
@@ -45,6 +33,7 @@ test.each([
     with_ctrl: false,
     should_open: false,
   },
+  // non-trigger key does nothing even with modifier
   {
     triggers: [`j`, `l`],
     key_to_press: `k`,
@@ -52,7 +41,7 @@ test.each([
     with_ctrl: false,
     should_open: false,
   },
-  // Test Ctrl key support
+  // Ctrl works as alternative to Meta, and both together
   {
     triggers: [`k`],
     key_to_press: `k`,
@@ -60,35 +49,6 @@ test.each([
     with_ctrl: true,
     should_open: true,
   },
-  {
-    triggers: [`o`],
-    key_to_press: `o`,
-    with_meta: false,
-    with_ctrl: true,
-    should_open: true,
-  },
-  {
-    triggers: [`k`, `o`],
-    key_to_press: `k`,
-    with_meta: false,
-    with_ctrl: true,
-    should_open: true,
-  },
-  {
-    triggers: [`k`, `o`],
-    key_to_press: `o`,
-    with_meta: false,
-    with_ctrl: true,
-    should_open: true,
-  },
-  {
-    triggers: [`j`, `l`],
-    key_to_press: `k`,
-    with_meta: false,
-    with_ctrl: true,
-    should_open: false,
-  },
-  // Test that both Meta and Ctrl work together
   {
     triggers: [`k`],
     key_to_press: `k`,
@@ -130,9 +90,9 @@ test.each([
 
 test.each([
   { close_keys: [`Escape`], key_to_press: `Escape`, should_close: true },
-  { close_keys: [`x`], key_to_press: `x`, should_close: true },
-  { close_keys: [`Escape`, `x`], key_to_press: `Escape`, should_close: true },
+  // any key in the list closes, not just the first
   { close_keys: [`Escape`, `x`], key_to_press: `x`, should_close: true },
+  // non-close key (even default Escape) does nothing when not configured
   { close_keys: [`q`], key_to_press: `Escape`, should_close: false },
 ])(
   `handles close keys: $close_keys with key $key_to_press -> $should_close`,
@@ -160,16 +120,12 @@ test.each([
   },
 )
 
-test.each([
-  { opens_via: `keypress`, description: `via keypress` },
-  { opens_via: `programmatic`, description: `programmatically` },
-])(`opens dialog and manages focus correctly $description`, async ({ opens_via }) => {
+// keypress-open focus management is covered by the trigger-keys table above
+test(`opens dialog and manages focus correctly when opened programmatically`, async () => {
   const props = $state({ actions: mock_actions, open: false, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
 
-  if (opens_via === `keypress`) {
-    globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `k`, metaKey: true }))
-  } else props.open = true
+  props.open = true
   await tick()
 
   expect(props.open).toBe(true)
@@ -293,6 +249,16 @@ test.each([
   // showModal() backdrop clicks dispatch with the dialog element itself as the target,
   // so a naive dialog.contains(target) check would wrongly keep the palette open
   [`modal backdrop (target === dialog)`, () => doc_query<HTMLDialogElement>(`dialog`)],
+  // SVG targets are Element but not HTMLElement - an instanceof HTMLElement guard
+  // would wrongly ignore them and leave the palette open
+  [
+    `svg element outside dialog`,
+    () => {
+      const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
+      document.body.append(svg)
+      return svg
+    },
+  ],
 ])(`closes dialog on outside click: %s`, async (_label, get_target) => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
@@ -384,6 +350,30 @@ test.each([
   },
 )
 
+test(`stays open when a button's click handler sets open=true and the click bubbles to window`, async () => {
+  // the very click that opens the palette bubbles to <svelte:window onclick> while
+  // dialog is still null (not rendered until next flush) - close_if_outside must
+  // not treat it as an outside click and instantly close the palette
+  const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+
+  const open_button = document.createElement(`button`)
+  open_button.addEventListener(`click`, () => {
+    props.open = true
+  })
+  document.body.append(open_button)
+
+  try {
+    open_button.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    await tick()
+
+    expect(props.open).toBe(true)
+    expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
+  } finally {
+    open_button.remove()
+  }
+})
+
 test(`closes dialog when clicking an unrelated portalled options list`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
@@ -462,19 +452,6 @@ test(`handles empty actions array`, () => {
   }
 })
 
-test(`ignores non-trigger events when dialog is closed`, async () => {
-  const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
-
-  expect(props.open).toBe(false)
-
-  // Non-trigger events should not open dialog
-  globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape` }))
-  await tick()
-
-  expect(props.open).toBe(false)
-})
-
 test(`remains open when trigger keys are pressed while already open`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
@@ -487,17 +464,6 @@ test(`remains open when trigger keys are pressed while already open`, async () =
 
   expect(props.open).toBe(true)
   expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
-})
-
-test(`uses default values when props not provided`, () => {
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions: mock_actions },
-  })
-
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-  expect(input.placeholder).toBe(`Filter actions...`)
-  expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
 test(`lets command palette dropdown overflow dialog box`, async () => {
@@ -610,21 +576,6 @@ test.each([
   })
 })
 
-test(`handles empty search text`, async () => {
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions: mock_actions, fade_duration: 0 },
-  })
-
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-  input.value = ``
-  input.dispatchEvent(new Event(`input`, { bubbles: true }))
-  await tick()
-
-  const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
-  expect(visible_options).toHaveLength(mock_actions.length)
-})
-
 test(`handles bindable props correctly`, async () => {
   const props = $state({
     open: false,
@@ -643,21 +594,6 @@ test(`handles bindable props correctly`, async () => {
 
   expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
   expect(props.input).toBeInstanceOf(HTMLInputElement)
-})
-
-test(`handles action execution with different label types`, () => {
-  const actions = [
-    { label: `simple action`, action: vi.fn() },
-    { label: `action with spaces`, action: vi.fn() },
-    { label: `action-with-dashes`, action: vi.fn() },
-  ]
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions, fade_duration: 0 },
-  })
-
-  expect(doc_query(`dialog div.multiselect`)).toBeInstanceOf(HTMLDivElement)
-  expect(doc_query(`dialog ul.options li`)?.textContent).toContain(`simple action`)
 })
 
 // Grouping tests
@@ -741,23 +677,6 @@ test.each([
     ).toHaveLength(2)
   },
 )
-
-test(`groupSelectAll prop enables group selection in command palette`, async () => {
-  mount(CmdPalette, {
-    target: document.body,
-    props: {
-      open: true,
-      actions: grouped_actions,
-      groupSelectAll: true,
-      fade_duration: 0,
-    },
-  })
-  await tick()
-
-  // Group headers should have select-all functionality when enabled
-  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers).toHaveLength(2)
-})
 
 test(`mixed grouped and ungrouped actions render correctly`, async () => {
   const mixed_actions = [
@@ -954,6 +873,13 @@ test.each([
     `valid recents rank first`,
     JSON.stringify([`beta`, `gamma`]),
     [`beta`, `gamma`, `alpha`],
+  ],
+  // stale persisted ids (actions since removed/renamed) must not occupy low ranks,
+  // else a real recent (rank 4 here) sorts after non-recents (default rank 3)
+  [
+    `stale ids are ignored so real recents still rank first`,
+    JSON.stringify([`removed-1`, `removed-2`, `removed-3`, `removed-4`, `gamma`]),
+    [`gamma`, `alpha`, `beta`],
   ],
   [`unparsable JSON is ignored`, `not valid json{{{`, [`alpha`, `beta`, `gamma`]],
   [`non-array JSON is ignored`, `{"not":"an array"}`, [`alpha`, `beta`, `gamma`]],

@@ -97,7 +97,14 @@
   const sorted_actions = $derived.by(() => {
     if (!recent_actions_key || !can_track_recents || recent_action_ids.length === 0)
       return actions
-    const rank = new Map(recent_action_ids.map((action_id, idx) => [action_id, idx]))
+    // drop stale persisted ids (actions removed/renamed since) so they don't
+    // occupy low ranks and push real recents below non-recent actions
+    const current_ids = new Set(actions.map(get_action_id))
+    const rank = new Map(
+      recent_action_ids
+        .filter((recent_id) => current_ids.has(recent_id))
+        .map((action_id, idx) => [action_id, idx]),
+    )
     return [...actions].toSorted(
       (left_action, right_action) =>
         (rank.get(get_action_id(left_action)) ?? actions.length) -
@@ -176,10 +183,13 @@
 
   function close_if_outside(event: MouseEvent) {
     const target = event.target
-    if (!open || !(target instanceof HTMLElement)) return
+    // dialog is null until the next flush after open is set, e.g. when a button's
+    // click handler sets open=true and the same click bubbles up to window - don't
+    // treat that click as outside. Element (not HTMLElement) so SVG targets count.
+    if (!open || !dialog || !(target instanceof Element)) return
     // backdrop clicks on a modal dialog have target === dialog, so close unless the click
     // is on this palette's MultiSelect (scoped inside the dialog) or its options list
-    if (dialog?.contains(target) && target.closest(`div.multiselect`)) return
+    if (dialog.contains(target) && target.closest(`div.multiselect`)) return
     const listbox_id = input?.getAttribute(`aria-controls`)
     const listbox = listbox_id && document.querySelector(`#${CSS.escape(listbox_id)}`)
     if (listbox && listbox.contains(target)) return

@@ -100,10 +100,11 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
     // Generate ID from text content (fallback for dynamic headings)
     const base_id = slugify((heading.textContent ?? ``).trim())
     if (!base_id) return
-    // Ensure unique ID in document
+    // Ensure unique ID in document (getElementById since slugs can start with a
+    // digit, which querySelector rejects as an invalid CSS ID selector)
     let counter = 0
-    while (document.querySelector(`#${counter ? `${base_id}-${counter}` : base_id}`))
-      counter++
+    // oxlint-disable-next-line unicorn/prefer-query-selector
+    while (document.getElementById(counter ? `${base_id}-${counter}` : base_id)) counter++
     heading.id = counter ? `${base_id}-${counter}` : base_id
   }
   const anchor = document.createElement(`a`)

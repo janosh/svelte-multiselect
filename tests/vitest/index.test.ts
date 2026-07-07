@@ -70,14 +70,6 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
     vi.stubGlobal(`IntersectionObserver`, MockObserver)
   }
 
-  test(`creates observer and observes element`, () => {
-    create_mock_observer()
-    const element = document.createElement(`div`)
-    const observer = scroll_into_view_if_needed_polyfill(element, true)
-    expect(observer).toBeInstanceOf(Object)
-    expect(mock.observe).toHaveBeenCalledWith(element)
-  })
-
   test.each([
     // [ratio, centerIfNeeded, expectedScrollCalls]
     [0, true, [{ block: `center`, inline: `center` }]],
@@ -95,6 +87,7 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
       element.scrollIntoView = scroll_spy
 
       const observer = scroll_into_view_if_needed_polyfill(element, center_if_needed)
+      expect(mock.observe).toHaveBeenCalledWith(element)
       // @ts-expect-error partial IntersectionObserverEntry mock
       mock.callback?.([{ intersectionRatio: ratio }], observer)
 

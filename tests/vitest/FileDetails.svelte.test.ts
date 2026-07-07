@@ -2,6 +2,10 @@ import { FileDetails } from '$lib'
 import { flushSync, mount, tick } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
+import TestSnippetHarness from './TestSnippetHarness.svelte'
+
+const all_text = (selector: string) =>
+  [...document.querySelectorAll(selector)].map((node) => node.textContent)
 
 test.each([
   // inferred from title extension
@@ -65,16 +69,10 @@ test(`unsupported language falls back to escaped raw content`, async () => {
     props: { files: [{ title: `file.xyz`, content, language: `nonexistent-lang-xyz` }] },
   })
   // wait for highlight attempt to complete and fall back
-  await vi.waitFor(
-    () => {
-      const code_el = doc_query(`pre code`)
-      if (code_el.innerHTML.includes(`&lt;`)) return
-      throw new Error(`not escaped yet`)
-    },
-    { timeout: 5000 },
-  )
-  const code_el = doc_query(`pre code`)
-  expect(code_el.textContent).toBe(content)
+  await vi.waitFor(() => expect(doc_query(`pre code`).innerHTML).toContain(`&lt;`), {
+    timeout: 5000,
+  })
+  expect(doc_query(`pre code`).textContent).toBe(content)
 })
 
 test(`syntax highlighting produces starry-night spans`, async () => {
@@ -85,72 +83,53 @@ test(`syntax highlighting produces starry-night spans`, async () => {
   })
 
   await vi.waitFor(
-    () => {
-      if (!doc_query(`pre code`).querySelector(`span[class^="pl-"]`)) {
-        throw new Error(`no highlighted spans yet`)
-      }
-    },
+    () =>
+      expect(doc_query(`pre code`).querySelector(`span[class^="pl-"]`)).not.toBeNull(),
     { timeout: 5000 },
   )
   expect(doc_query(`pre code`).textContent).toContain(`let count`)
 })
 
-test(`toggle all button opens, closes, and handles partial open state`, async () => {
-  const files = [
-    { title: `file1`, content: `content1` },
-    { title: `file2`, content: `content2` },
-    { title: `file3`, content: `content3` },
-  ]
+test(`toggle all button opens/closes all, tracks label, and handles partial/native toggles`, async () => {
+  const files = [`file1`, `file2`, `file3`].map((title) => ({
+    title,
+    content: `content of ${title}`,
+  }))
   mount(FileDetails, {
     target: document.body,
     props: { files, toggle_all_btn_title: `toggle all` },
   })
   await tick()
 
-  const details = Array.from(document.querySelectorAll(`details`))
+  const details = [...document.querySelectorAll(`details`)]
   const btn = doc_query(`button[title='toggle all']`)
-  const all_open = () => details.every((d) => d.open)
-  const all_closed = () => details.every((d) => !d.open)
+  const open_states = () => details.map((el) => el.open)
 
-  expect(all_closed()).toBe(true) // initially closed
-  btn.click()
-  expect(all_open()).toBe(true) // opened all
-  btn.click()
-  expect(all_closed()).toBe(true) // closed all
-
-  // partial open state: clicking closes all
-  details[0].open = true
-  details[1].open = true
-  btn.click()
-  expect(all_closed()).toBe(true)
-})
-
-test(`toggle all button label tracks open state from clicks and native toggles`, async () => {
-  const files = [
-    { title: `file1`, content: `content1` },
-    { title: `file2`, content: `content2` },
-  ]
-  mount(FileDetails, { target: document.body, props: { files } })
-  await tick()
-
-  const btn = doc_query(`button[title='Toggle all']`)
+  expect(open_states()).toEqual([false, false, false]) // initially closed
   expect(btn.textContent).toContain(`Open all`)
 
   btn.click()
   flushSync()
+  expect(open_states()).toEqual([true, true, true])
   expect(btn.textContent).toContain(`Close all`)
 
   btn.click()
   flushSync()
+  expect(open_states()).toEqual([false, false, false])
   expect(btn.textContent).toContain(`Open all`)
 
   // user opens a single <details> directly - the DOM open property is not
   // reactive, so the label must update via the native toggle event
-  const details = doc_query<HTMLDetailsElement>(`details`)
-  details.open = true
-  details.dispatchEvent(new Event(`toggle`))
+  details[0].open = true
+  details[0].dispatchEvent(new Event(`toggle`))
   flushSync()
   expect(btn.textContent).toContain(`Close all`)
+
+  // partial open state: clicking closes all
+  details[1].open = true
+  btn.click()
+  flushSync()
+  expect(open_states()).toEqual([false, false, false])
 })
 
 test(`toggle all label reflects pre-opened details on mount`, async () => {
@@ -215,4 +194,83 @@ test(`node refs are trimmed when files are removed to prevent memory leaks`, asy
 
   // The removed file's node should no longer be in the DOM
   expect(document.body.contains(old_nodes[2] ?? null)).toBe(false)
+})
+
+test(`renders empty default file list`, () => {
+  mount(FileDetails, { target: document.body })
+
+  expect(document.querySelector(`ol`)).toBeInstanceOf(HTMLOListElement)
+  expect(document.querySelectorAll(`button, li`)).toHaveLength(0)
+})
+
+test(`renders custom container with summary titles and custom default_lang`, () => {
+  mount(FileDetails, {
+    target: document.body,
+    props: {
+      as: `ul`,
+      class: `files-list`,
+      default_lang: `txt`,
+      files: [
+        { title: `<code>component.svelte</code>`, content: `<h1>Hello</h1>` },
+        { title: `script.ts`, content: `const answer = 42` },
+        { title: `README`, content: `plain text` },
+      ],
+    },
+  })
+
+  expect(document.querySelector(`ul.files-list`)).toBeInstanceOf(HTMLUListElement)
+  expect(all_text(`summary`)).toEqual([`component.svelte`, `script.ts`, `README`])
+  expect(all_text(`.lang-label`)).toEqual([`svelte`, `typescript`, `txt`])
+})
+
+test(`single file omits toggle-all button and forwards details toggle event`, () => {
+  const ontoggle = vi.fn()
+  mount(FileDetails, {
+    target: document.body,
+    props: {
+      details_props: { open: true, ontoggle },
+      files: [{ title: `config.yml`, content: `name: test` }],
+    },
+  })
+
+  expect(document.querySelector(`button`)).toBeNull()
+  const details = doc_query<HTMLDetailsElement>(`details`)
+  expect(details.open).toBe(true)
+
+  details.dispatchEvent(new Event(`toggle`))
+  expect(ontoggle).toHaveBeenCalledWith(expect.any(Event))
+  expect(doc_query(`.lang-label`).textContent).toBe(`yaml`)
+})
+
+test(`title snippet renders title content (incl. empty titles) and receives index`, () => {
+  mount(TestSnippetHarness, {
+    target: document.body,
+    props: {
+      component: `file-details`,
+      files: [
+        { title: `first.ts`, content: `const first = true` },
+        { title: `second.py`, content: `second = True` },
+        { title: ``, content: `untitled` }, // default rendering would omit this summary
+      ],
+    },
+  })
+
+  expect(all_text(`[data-testid="file-title"]`)).toEqual([`first.ts`, `second.py`, ``])
+  expect(
+    [...document.querySelectorAll<HTMLElement>(`[data-testid="file-title"]`)].map(
+      (node) => node.dataset.idx,
+    ),
+  ).toEqual([`0`, `1`, `2`])
+  // with a title snippet, even empty-title files render a summary
+  expect(document.querySelectorAll(`summary`)).toHaveLength(3)
+})
+
+test(`empty title renders details without summary`, () => {
+  mount(FileDetails, {
+    target: document.body,
+    props: { files: [{ title: ``, content: `untitled` }] },
+  })
+
+  expect(document.querySelector(`details`)).toBeInstanceOf(HTMLDetailsElement)
+  expect(document.querySelector(`summary`)).toBeNull()
 })
