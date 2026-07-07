@@ -1600,10 +1600,14 @@
     }
 
     const search = effective_filter_text
-    const is_first_load = load_options_last_search === null
+    // First load = nothing dispatched yet for this open: no completed search AND none in
+    // flight. Read loading via untrack so its synchronous set inside load_dynamic_options
+    // can't re-trigger this effect — otherwise keystrokes during the still-awaiting first
+    // fetch would fire repeated immediate loads instead of taking the debounce path.
+    const is_first_load =
+      load_options_last_search === null && !untrack(() => load_options_loading)
 
     if (is_first_load) {
-      // Load immediately on open; if onOpen=false, wait to debounce until the user types
       if (config.on_open) load_dynamic_options(true)
       else if (search) schedule_load()
     } else if (search !== load_options_last_search) {
