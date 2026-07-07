@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/tes
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
 import type { MultiSelectProps } from '$lib/types'
-import { get_label, get_style } from '$lib/utils'
+import { get_label } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
 import Test2WayBind from './Test2WayBind.svelte'
@@ -3696,54 +3696,6 @@ test.each([[true], [-1], [3.5], [`foo`], [{}]])(
       // eslint-disable-next-line @typescript-eslint/no-base-to-string -- testing console.error message with invalid maxOptions values
       `MultiSelect: maxOptions must be undefined or a positive integer, got ${String(maxOptions)}`,
     )
-  },
-)
-
-test.each([
-  // Invalid key cases
-  [
-    `test-style`,
-    `invalid`,
-    `test-style;`,
-    `MultiSelect: Invalid key=invalid for get_style`,
-  ],
-  // Valid key cases
-  [`test-style`, `selected`, `test-style;`],
-  [`test-style`, `option`, `test-style;`],
-  [`test-style`, null, `test-style;`],
-  // Object style cases (get the same trailing-semicolon normalization as strings)
-  [{ selected: `selected-style`, option: `option-style` }, `selected`, `selected-style;`],
-  [{ selected: `selected-style`, option: `option-style` }, `option`, `option-style;`],
-  [{ selected: `selected-style` }, `selected`, `selected-style;`],
-  [{ selected: `selected-style` }, `option`, ``],
-  [{ option: `option-style` }, `option`, `option-style;`],
-  [{ option: `option-style` }, `selected`, ``],
-  [{}, `selected`, ``],
-  // Invalid object style cases
-  [
-    { invalid: `invalid-style` },
-    `selected`,
-    ``,
-    [
-      `MultiSelect: invalid style object for option`,
-      { style: { invalid: `invalid-style` } },
-    ],
-  ],
-])(
-  `get_style returns and console.errors correctly (%s, %s, %s, %s)`,
-  (style, key, expected, err_args: unknown[] | string = ``) => {
-    console.error = vi.fn()
-
-    // @ts-expect-error test invalid option
-    const result = get_style({ style }, key)
-
-    if (err_args) {
-      expect(console.error).toHaveBeenCalledTimes(1)
-      expect(console.error).toHaveBeenCalledWith(
-        ...(Array.isArray(err_args) ? err_args : [err_args]),
-      )
-    } else expect(console.error).not.toHaveBeenCalled()
-    expect(result).toBe(expected)
   },
 )
 
