@@ -1066,11 +1066,14 @@ test(`invalid=true gives top-level div class 'invalid' and input attribute of 'a
 })
 
 describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
-  test(`implements ARIA combobox pattern with proper attributes and listbox association`, async () => {
+  const mount_a11y = (props: Partial<MultiSelectProps> = {}) =>
     mount(MultiSelect, {
       target: document.body,
-      props: { options: [`foo`, `bar`, `baz`] },
+      props: { options: [`foo`, `bar`, `baz`], ...props },
     })
+
+  test(`implements ARIA combobox pattern with proper attributes and listbox association`, async () => {
+    mount_a11y()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
@@ -1097,10 +1100,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
   })
 
   test(`aria-activedescendant tracks keyboard navigation with unique option IDs`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [`foo`, `bar`, `baz`] },
-    })
+    mount_a11y()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -1134,10 +1134,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     [`foo`, `1 option available`],
     [`xyz`, `0 options available`],
   ])(`aria-live region announces "%s" filter as "%s"`, async (filter, expected) => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [`foo`, `bar`, `baz`] },
-    })
+    mount_a11y()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -1199,10 +1196,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
   })
 
   test(`options have aria-posinset and aria-setsize for position announcements`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [`foo`, `bar`, `baz`] },
-    })
+    mount_a11y()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -1220,10 +1214,7 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
   })
 
   test(`aria-live announces selection changes`, async () => {
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options: [`foo`, `bar`, `baz`] },
-    })
+    mount_a11y()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
@@ -3981,15 +3972,7 @@ test.each([
 )
 
 test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      closeDropdownOnSelect: `retain-focus`,
-      maxSelect: 2,
-      open: true,
-    },
-  })
+  mount_retain_focus({ options: [1, 2, 3], maxSelect: 2 })
 
   const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input_el.focus()
@@ -4009,14 +3992,7 @@ test(`closeDropdownOnSelect='retain-focus' works correctly with maxSelect`, asyn
 })
 
 test(`Escape and Tab still blur input even with closeDropdownOnSelect='retain-focus'`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: {
-      options: [1, 2, 3],
-      closeDropdownOnSelect: `retain-focus`,
-      open: true,
-    },
-  })
+  mount_retain_focus({ options: [1, 2, 3] })
 
   const input_el = doc_query<HTMLInputElement>(`input[autocomplete]`)
   input_el.focus()
@@ -5136,6 +5112,33 @@ describe(`load_options_pending`, () => {
   }
 
   beforeEach(() => vi.useFakeTimers())
+
+  test(`typing during the first in-flight load debounces instead of firing immediate fetches`, async () => {
+    const { fetch_fn } = create_deferred_fetch()
+
+    mount(MultiSelect, {
+      target: document.body,
+      // onOpen defaults to true, so the first load fires immediately on open
+      props: { loadOptions: { fetch: fetch_fn, debounceMs: 200 }, open: true },
+    })
+    await tick()
+    expect(fetch_fn).toHaveBeenCalledTimes(1) // immediate open load, still in-flight
+
+    // type two chars while the first fetch is still awaiting (load_options_last_search
+    // is null until it resolves). Pre-fix, each keystroke re-entered the first-load branch
+    // and fired another immediate load_dynamic_options(true); the fix routes them to debounce.
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    for (const value of [`a`, `ab`]) {
+      input.value = value
+      input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+      await tick()
+    }
+    expect(fetch_fn).toHaveBeenCalledTimes(1) // no extra immediate fetches while debouncing
+
+    await vi.advanceTimersByTimeAsync(200)
+    expect(fetch_fn).toHaveBeenCalledTimes(2) // exactly one debounced fetch for the latest search
+    expect(fetch_fn).toHaveBeenLastCalledWith(expect.objectContaining({ search: `ab` }))
+  })
 
   test(`Enter during debounce does not create unwanted option`, async () => {
     const { fetch_fn, fetch_resolvers } = create_deferred_fetch()
@@ -6502,32 +6505,48 @@ describe(`option grouping feature`, () => {
 })
 
 describe(`keyboard shortcuts`, () => {
-  test(`ctrl+a selects all when shortcut is explicitly set`, async () => {
+  // Mount with shortcut props, focus the input, dispatch one keydown, and return the
+  // bound props plus the (cancelable) event so callers can assert selection + defaultPrevented.
+  async function test_shortcut(
+    shortcut_props: Partial<MultiSelectProps>,
+    key_event: {
+      key: string
+      ctrlKey?: boolean
+      shiftKey?: boolean
+      altKey?: boolean
+      metaKey?: boolean
+    },
+  ): Promise<{ props: MultiSelectProps; input: HTMLInputElement; event: KeyboardEvent }> {
     const props = $state<MultiSelectProps>({
       options: [`a`, `b`, `c`],
-      selectAllOption: true,
       selected: [],
-      shortcuts: { select_all: `ctrl+a` },
       open: true,
+      ...shortcut_props,
     })
 
     mount(MultiSelect, { target: document.body, props })
     await tick()
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.focus()
     const event = new KeyboardEvent(`keydown`, {
-      key: `a`,
-      ctrlKey: true,
+      ...key_event,
       bubbles: true,
       cancelable: true,
     })
-    const prevent_default_spy = vi.spyOn(event, `preventDefault`)
-
     input.dispatchEvent(event)
     await tick()
 
+    return { props, input, event }
+  }
+
+  test(`ctrl+a selects all when shortcut is explicitly set`, async () => {
+    const { props, event } = await test_shortcut(
+      { selectAllOption: true, shortcuts: { select_all: `ctrl+a` } },
+      { key: `a`, ctrlKey: true },
+    )
     expect(props.selected).toEqual([`a`, `b`, `c`])
-    expect(prevent_default_spy).toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true)
   })
 
   test.each([
@@ -6536,54 +6555,26 @@ describe(`keyboard shortcuts`, () => {
   ])(
     `%s clears all selected options and prevents default`,
     async (_label, shortcut_override, modifiers) => {
-      const props = $state<MultiSelectProps>({
-        options: [`a`, `b`, `c`],
-        selected: [`a`, `b`],
-        open: true,
-        ...(Object.keys(shortcut_override).length > 0
-          ? { shortcuts: shortcut_override }
-          : {}),
-      })
-
-      mount(MultiSelect, { target: document.body, props })
-      await tick()
-
-      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-      input.focus()
-      const event = new KeyboardEvent(`keydown`, {
-        key: `Backspace`,
-        ...modifiers,
-        bubbles: true,
-        cancelable: true,
-      })
-      input.dispatchEvent(event)
-      await tick()
-
+      const { props, event } = await test_shortcut(
+        {
+          selected: [`a`, `b`],
+          ...(Object.keys(shortcut_override).length > 0
+            ? { shortcuts: shortcut_override }
+            : {}),
+        },
+        { key: `Backspace`, ...modifiers },
+      )
       expect(props.selected).toEqual([])
       expect(event.defaultPrevented).toBe(true)
     },
   )
 
   test(`custom shortcuts override defaults`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: `ctrl+e` },
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-
-    // Default ctrl+a should NOT work anymore
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    // Default ctrl+a should NOT work with a custom select_all binding
+    const { props, input } = await test_shortcut(
+      { selectAllOption: true, shortcuts: { select_all: `ctrl+e` } },
+      { key: `a`, ctrlKey: true },
     )
-    await tick()
     expect(props.selected).toEqual([])
 
     // Custom ctrl+e SHOULD work
@@ -6598,27 +6589,10 @@ describe(`keyboard shortcuts`, () => {
     [`default (null)`, {}],
     [`explicitly null`, { shortcuts: { select_all: null } }],
   ])(`select_all %s: ctrl+a not swallowed`, async (_label, extra_props) => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      open: true,
-      ...extra_props,
-    })
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    const event = new KeyboardEvent(`keydown`, {
-      key: `a`,
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true,
-    })
-    input.dispatchEvent(event)
-    await tick()
-
+    const { props, event } = await test_shortcut(
+      { selectAllOption: true, ...extra_props },
+      { key: `a`, ctrlKey: true },
+    )
     expect(props.selected).toEqual([])
     expect(event.defaultPrevented).toBe(false)
   })
@@ -6642,88 +6616,32 @@ describe(`keyboard shortcuts`, () => {
       1,
     ],
   ])(`%s`, async (_label, extra_props, key_event, expected_length) => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      open: true,
-      ...extra_props,
-    })
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { ...key_event, bubbles: true }))
-    await tick()
-
+    const { props } = await test_shortcut(extra_props, key_event)
     expect(props.selected).toHaveLength(expected_length)
   })
 
   test(`clear_all skipped when searchText is non-empty`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selected: [`a`, `b`],
-      searchText: `xyz`,
-      open: true,
-    })
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    const event = new KeyboardEvent(`keydown`, {
-      key: `Backspace`,
-      ctrlKey: true,
-      bubbles: true,
-      cancelable: true,
-    })
-    input.dispatchEvent(event)
-    await tick()
-
+    const { props, event } = await test_shortcut(
+      { selected: [`a`, `b`], searchText: `xyz` },
+      { key: `Backspace`, ctrlKey: true },
+    )
     expect(props.selected).toEqual([`a`, `b`])
     expect(event.defaultPrevented).toBe(false)
   })
 
   test.each([`meta+a`, `cmd+a`])(`%s shortcut works for Mac users`, async (shortcut) => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: shortcut },
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, metaKey: true, bubbles: true }),
+    const { props } = await test_shortcut(
+      { selectAllOption: true, shortcuts: { select_all: shortcut } },
+      { key: `a`, metaKey: true },
     )
-    await tick()
-
     expect(props.selected).toEqual([`a`, `b`, `c`])
   })
 
   test(`select_all does nothing when selectAllOption is false`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: false,
-      selected: [],
-      shortcuts: { select_all: `ctrl+a` },
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    const { props } = await test_shortcut(
+      { selectAllOption: false, shortcuts: { select_all: `ctrl+a` } },
+      { key: `a`, ctrlKey: true },
     )
-    await tick()
-
     // Should NOT select all since selectAllOption is false
     expect(props.selected).toEqual([])
   })
@@ -6757,22 +6675,10 @@ describe(`keyboard shortcuts`, () => {
   })
 
   test(`custom close shortcut closes the dropdown`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      shortcuts: { close: `ctrl+w` },
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `w`, ctrlKey: true, bubbles: true }),
+    const { props } = await test_shortcut(
+      { shortcuts: { close: `ctrl+w` } },
+      { key: `w`, ctrlKey: true },
     )
-    await tick()
-
     expect(props.open).toBe(false)
   })
 
@@ -6780,46 +6686,18 @@ describe(`keyboard shortcuts`, () => {
     [`alt+a`, `a`, { altKey: true }],
     [`ctrl+shift+alt+s`, `s`, { ctrlKey: true, shiftKey: true, altKey: true }],
   ] as const)(`modifier combo %s works`, async (shortcut, key, modifiers) => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: shortcut },
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key, ...modifiers, bubbles: true }),
+    const { props } = await test_shortcut(
+      { selectAllOption: true, shortcuts: { select_all: shortcut } },
+      { key, ...modifiers },
     )
-    await tick()
-
     expect(props.selected).toEqual([`a`, `b`, `c`])
   })
 
   test(`shortcuts are blocked when disabled=true`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selectAllOption: true,
-      selected: [],
-      shortcuts: { select_all: `ctrl+a` },
-      disabled: true,
-      open: true,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `a`, ctrlKey: true, bubbles: true }),
+    const { props } = await test_shortcut(
+      { selectAllOption: true, shortcuts: { select_all: `ctrl+a` }, disabled: true },
+      { key: `a`, ctrlKey: true },
     )
-    await tick()
-
     // Shortcuts should not work when component is disabled
     expect(props.selected).toEqual([])
   })
@@ -6830,37 +6708,18 @@ describe(`keyboard shortcuts`, () => {
   ])(
     `invalid shortcut format "%s" does not trigger action`,
     async (shortcut, modifiers) => {
-      const props = $state<MultiSelectProps>({
-        options: [`a`, `b`, `c`],
-        selectAllOption: true,
-        selected: [],
-        shortcuts: { select_all: shortcut },
-        open: true,
-      })
-
-      mount(MultiSelect, { target: document.body, props })
-      await tick()
-
-      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-      input.focus()
-      input.dispatchEvent(
-        new KeyboardEvent(`keydown`, { key: `a`, ...modifiers, bubbles: true }),
+      const { props } = await test_shortcut(
+        { selectAllOption: true, shortcuts: { select_all: shortcut } },
+        { key: `a`, ...modifiers },
       )
-      await tick()
-
       expect(props.selected).toEqual([])
     },
   )
 
   test.each([
-    // deno-fmt-ignore
     [
       `select_all`,
-      {
-        selectAllOption: true,
-        selected: [],
-        shortcuts: { select_all: `ctrl+a` },
-      },
+      { selectAllOption: true, selected: [], shortcuts: { select_all: `ctrl+a` } },
       `a`,
       { ctrlKey: true },
       [`a`, `b`, `c`],
@@ -6869,54 +6728,13 @@ describe(`keyboard shortcuts`, () => {
   ])(
     `%s shortcut works when dropdown is closed`,
     async (_name, extra_props, key, modifiers, expected) => {
-      const props = $state<MultiSelectProps>({
-        options: [`a`, `b`, `c`],
-        open: false,
-        ...extra_props,
-      })
-
-      mount(MultiSelect, { target: document.body, props })
-      await tick()
-
-      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-      input.focus()
-      input.dispatchEvent(
-        new KeyboardEvent(`keydown`, { key, ...modifiers, bubbles: true }),
+      const { props } = await test_shortcut(
+        { open: false, ...extra_props },
+        { key, ...modifiers },
       )
-      await tick()
-
       expect(props.selected).toEqual(expected)
     },
   )
-
-  // Helper to reduce boilerplate in shortcut tests
-  async function test_shortcut(
-    shortcut_props: Partial<MultiSelectProps>,
-    key_event: {
-      key: string
-      ctrlKey?: boolean
-      shiftKey?: boolean
-      altKey?: boolean
-      metaKey?: boolean
-    },
-  ): Promise<{ props: MultiSelectProps; input: HTMLInputElement }> {
-    const props = $state<MultiSelectProps>({
-      options: [`a`, `b`, `c`],
-      selected: [],
-      open: true,
-      ...shortcut_props,
-    })
-
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { ...key_event, bubbles: true }))
-    await tick()
-
-    return { props, input }
-  }
 
   test.each([
     [`open`, true, { open: `ctrl+o` }, `o`],
@@ -7123,35 +6941,69 @@ describe(`onsearch event`, () => {
 })
 
 describe(`onmaxreached event`, () => {
-  test(`fires when trying to add beyond maxSelect`, async () => {
-    const onmaxreached_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3, 4],
-        maxSelect: 2,
-        selected: [1, 2],
-        onmaxreached: onmaxreached_spy,
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Try to add a 3rd option when maxSelect is 2
-    const option3 = doc_query(`ul.options li:nth-child(1)`) // first available option
-    option3.click()
-    await tick()
-
-    expect(onmaxreached_spy).toHaveBeenCalledTimes(1)
-    expect(onmaxreached_spy).toHaveBeenCalledWith({
+  const object_opts = [
+    { label: `Apple`, value: 1 },
+    { label: `Banana`, value: 2 },
+    { label: `Cherry`, value: 3 },
+  ]
+  test.each<{
+    desc: string
+    options: Option[]
+    selected: Option[]
+    trigger: `click` | `keyboard`
+    attempted: Option
+  }>([
+    {
+      desc: `click, primitives`,
+      options: [1, 2, 3, 4],
       selected: [1, 2],
-      maxSelect: 2,
-      attemptedOption: 3,
-    })
-  })
+      trigger: `click`,
+      attempted: 3,
+    },
+    {
+      desc: `keyboard Enter, primitives`,
+      options: [1, 2, 3, 4],
+      selected: [1, 2],
+      trigger: `keyboard`,
+      attempted: 3,
+    },
+    {
+      desc: `click, object options`,
+      options: object_opts,
+      selected: [object_opts[0], object_opts[1]],
+      trigger: `click`,
+      attempted: object_opts[2],
+    },
+  ])(
+    `fires when adding beyond maxSelect ($desc)`,
+    async ({ options, selected, trigger, attempted }) => {
+      const onmaxreached_spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options, maxSelect: 2, selected, onmaxreached: onmaxreached_spy },
+      })
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      input.focus()
+      await tick()
+
+      // try to add a 3rd option when maxSelect is 2, via click or keyboard
+      // (fresh events, not the shared arrow_down/enter constants, to avoid cross-test pollution)
+      if (trigger === `keyboard`) {
+        input.dispatchEvent(
+          new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
+        )
+        input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
+      } else doc_query(`ul.options li:nth-child(1)`).click()
+      await tick()
+
+      expect(onmaxreached_spy).toHaveBeenCalledTimes(1)
+      expect(onmaxreached_spy).toHaveBeenCalledWith({
+        selected,
+        maxSelect: 2,
+        attemptedOption: attempted,
+      })
+    },
+  )
 
   test.each([
     { maxSelect: 3, selected: [1], desc: `under limit` },
@@ -7179,111 +7031,9 @@ describe(`onmaxreached event`, () => {
 
     expect(onmaxreached_spy).not.toHaveBeenCalled()
   })
-
-  test(`fires via keyboard Enter key`, async () => {
-    const onmaxreached_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3, 4],
-        maxSelect: 2,
-        selected: [1, 2],
-        onmaxreached: onmaxreached_spy,
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Navigate to option and try to add via Enter
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
-    await tick()
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    await tick()
-
-    expect(onmaxreached_spy).toHaveBeenCalledTimes(1)
-    expect(onmaxreached_spy).toHaveBeenCalledWith({
-      selected: [1, 2],
-      maxSelect: 2,
-      attemptedOption: 3,
-    })
-  })
-
-  test(`fires with object options`, async () => {
-    const onmaxreached_spy = vi.fn()
-    const options = [
-      { label: `Apple`, value: 1 },
-      { label: `Banana`, value: 2 },
-      { label: `Cherry`, value: 3 },
-    ]
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options,
-        maxSelect: 2,
-        selected: [options[0], options[1]],
-        onmaxreached: onmaxreached_spy,
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Try to add Cherry when already at max
-    const option3 = doc_query(`ul.options li:nth-child(1)`)
-    option3.click()
-    await tick()
-
-    expect(onmaxreached_spy).toHaveBeenCalledTimes(1)
-    expect(onmaxreached_spy).toHaveBeenCalledWith({
-      selected: [options[0], options[1]],
-      maxSelect: 2,
-      attemptedOption: options[2],
-    })
-  })
 })
 
 describe(`onduplicate event`, () => {
-  test(`fires when adding duplicate with duplicates=false`, async () => {
-    const onduplicate_spy = vi.fn()
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [1, 2, 3],
-        duplicates: false,
-        selected: [1],
-        onduplicate: onduplicate_spy,
-        allowUserOptions: true, // allows typing custom options
-      },
-    })
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.focus()
-    await tick()
-
-    // Type "1" which matches the already-selected option
-    // Since selected option is hidden from dropdown, no options match
-    // But pressing Enter will try to create a user option with value "1"
-    // which gets converted to number 1 and triggers duplicate detection
-    input.value = `1`
-    input.dispatchEvent(input_event)
-    await tick()
-
-    // Press Enter to try adding the user-typed value
-    input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
-    await tick()
-
-    expect(onduplicate_spy).toHaveBeenCalledTimes(1)
-    // Note: user typed "1" which stays as string because get_label converts primitives to strings
-    // so the number conversion condition fails (typeof selected_labels[0] is "string", not "number")
-    expect(onduplicate_spy).toHaveBeenCalledWith({ option: `1` })
-  })
-
   test.each([
     { duplicates: true, desc: `duplicates=true allows adding same option` },
     { duplicates: false, desc: `adding different option (not a duplicate)` },
@@ -7313,12 +7063,28 @@ describe(`onduplicate event`, () => {
   // Tests duplicate detection via allowUserOptions for both string and object options
   // For object options, label-based detection fires even when keys differ (e.g., typing "Apple"
   // when {label: "Apple", value: 1} is selected) - prevents confusing UX
-  test.each([
+  test.each<{
+    desc: string
+    options: Option[]
+    selected: Option[]
+    typed_value: string
+    expected: { option: unknown }
+  }>([
+    {
+      // user typed "1" stays a string (get_label stringifies primitives), so numeric
+      // coercion doesn't apply and detection is label-based
+      desc: `numeric options coerced to string`,
+      options: [1, 2, 3],
+      selected: [1],
+      typed_value: `1`,
+      expected: { option: `1` },
+    },
     {
       desc: `string options`,
       options: [`apple`, `banana`, `cherry`],
       selected: [`apple`],
       typed_value: `apple`,
+      expected: { option: `apple` },
     },
     {
       desc: `object options (label match)`,
@@ -7328,10 +7094,11 @@ describe(`onduplicate event`, () => {
       ],
       selected: [{ label: `Apple`, value: 1 }],
       typed_value: `Apple`,
+      expected: { option: `Apple` },
     },
   ])(
     `fires with $desc via allowUserOptions`,
-    async ({ options, selected, typed_value }) => {
+    async ({ options, selected, typed_value, expected }) => {
       const onduplicate_spy = vi.fn()
 
       mount(MultiSelect, {
@@ -7353,10 +7120,13 @@ describe(`onduplicate event`, () => {
       input.dispatchEvent(input_event)
       await tick()
 
+      // fresh Enter event per case: the shared `enter` constant's defaultPrevented flag
+      // persists across re-dispatch and would suppress later iterations
       input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }))
       await tick()
 
       expect(onduplicate_spy).toHaveBeenCalledTimes(1)
+      expect(onduplicate_spy).toHaveBeenCalledWith(expected)
     },
   )
 
@@ -8390,33 +8160,29 @@ describe(`parse_paste`, () => {
     expect(props.selected).toEqual([`valid`, `also_ok`])
   })
 
-  test(`onparsed_paste fires with added/rejected/overflow summary`, async () => {
-    const { onparsed_paste } = await paste_into(
-      { options: [`a`, `b`, `c`, `d`, `e`], selected: [`a`], maxSelect: 3 },
-      `b,c,d,e`,
-    )
-    expect(onparsed_paste).toHaveBeenCalledTimes(1)
-    const payload = onparsed_paste.mock.calls[0][0]
-    expect(payload.added).toEqual([`b`, `c`])
-    expect(payload.overflow).toEqual([`d`, `e`])
-    expect(payload.raw_text).toBe(`b,c,d,e`)
-  })
-
-  test(`onparsed_paste with maxSelect=1 reports replaced option as added`, async () => {
-    const { onparsed_paste, props } = await paste_into(
-      { options: [`a`, `b`, `c`], selected: [`a`], maxSelect: 1 },
-      `b,c`,
-    )
-    expect(onparsed_paste).toHaveBeenCalledTimes(1)
-    const payload = onparsed_paste.mock.calls[0][0]
-    expect(payload.added).toEqual([`b`])
-    expect(payload.overflow).toEqual([`c`])
-    expect(props.selected).toEqual([`b`])
-  })
-
-  test(`onparsed_paste reports rejected options from oncreate`, async () => {
-    const { onparsed_paste } = await paste_into(
-      {
+  test.each<{
+    desc: string
+    props: Partial<MultiSelectProps>
+    paste: string
+    expected: Record<string, unknown>
+    expected_selected?: Option[]
+  }>([
+    {
+      desc: `added/overflow summary beyond maxSelect`,
+      props: { options: [`a`, `b`, `c`, `d`, `e`], selected: [`a`], maxSelect: 3 },
+      paste: `b,c,d,e`,
+      expected: { added: [`b`, `c`], overflow: [`d`, `e`], raw_text: `b,c,d,e` },
+    },
+    {
+      desc: `maxSelect=1 reports replaced option as added`,
+      props: { options: [`a`, `b`, `c`], selected: [`a`], maxSelect: 1 },
+      paste: `b,c`,
+      expected: { added: [`b`], overflow: [`c`] },
+      expected_selected: [`b`],
+    },
+    {
+      desc: `reports rejected options from oncreate`,
+      props: {
         options: [],
         selected: [],
         allowUserOptions: `append`,
@@ -8425,11 +8191,13 @@ describe(`parse_paste`, () => {
             ? undefined
             : false,
       },
-      `ab,valid,x`,
-    )
-    const payload = onparsed_paste.mock.calls[0][0]
-    expect(payload.added).toEqual([`valid`])
-    expect(payload.rejected).toEqual([`ab`, `x`])
-    expect(payload.overflow).toEqual([])
+      paste: `ab,valid,x`,
+      expected: { added: [`valid`], rejected: [`ab`, `x`], overflow: [] },
+    },
+  ])(`onparsed_paste $desc`, async ({ props, paste, expected, expected_selected }) => {
+    const { onparsed_paste, props: bound } = await paste_into(props, paste)
+    expect(onparsed_paste).toHaveBeenCalledTimes(1)
+    expect(onparsed_paste.mock.calls[0][0]).toEqual(expect.objectContaining(expected))
+    if (expected_selected) expect(bound.selected).toEqual(expected_selected)
   })
 })
