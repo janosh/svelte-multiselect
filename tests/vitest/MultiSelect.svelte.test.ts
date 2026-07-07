@@ -2893,11 +2893,11 @@ test(`remove buttons lack default-icon class when removeIcon snippet is provided
 test(`errors to console when option is an object but has no label key`, () => {
   console.error = vi.fn()
 
-  // mount() doesn't enforce generic component prop types, so { foo: 42 }
-  // isn't caught as a type error despite ObjectOption requiring label https://github.com/sveltejs/svelte/issues/17658
+  // mount() doesn't enforce generic component prop types, so { foo: 42 } is accepted
+  // despite ObjectOption requiring label https://github.com/sveltejs/svelte/issues/17658
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [{ foo: 42 } as unknown as Option] }, // eslint-disable-line @typescript-eslint/no-unsafe-type-assertion
+    props: { options: [{ foo: 42 }] },
   })
 
   expect(console.error).toHaveBeenCalledWith(

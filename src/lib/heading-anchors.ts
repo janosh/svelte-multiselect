@@ -70,9 +70,7 @@ export function heading_ids() {
         return id ? `${prefix}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
       }
       result = result
-        .replace(heading_regex_line_start, (match, indent, tag, attrs, inner) =>
-          build_heading(match, indent, tag, attrs, inner),
-        )
+        .replace(heading_regex_line_start, build_heading)
         .replace(heading_regex_after_tag, (match, gt, space, tag, attrs, inner) =>
           build_heading(match, `${gt}${space}`, tag, attrs, inner),
         )
