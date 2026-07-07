@@ -26,7 +26,7 @@ describe(`Wiggle`, () => {
     return { props, get_value: () => wiggle_value }
   }
 
-  test.each([200, 500])(`resets wiggle to false after duration=%dms`, (duration) => {
+  test.each([0, 200, 500])(`resets wiggle to false after duration=%dms`, (duration) => {
     const { props, get_value } = create_bindable_wiggle(true, { duration })
     mount(Wiggle, { target: document.body, props })
 
@@ -67,14 +67,5 @@ describe(`Wiggle`, () => {
     void unmount(component)
     vi.advanceTimersByTime(500)
     expect(get_value()).toBe(true) // timer was cancelled, no write-after-destroy
-  })
-
-  test(`resets wiggle immediately with duration=0`, () => {
-    const { props, get_value } = create_bindable_wiggle(true, { duration: 0 })
-    mount(Wiggle, { target: document.body, props })
-
-    expect(get_value()).toBe(true)
-    vi.runAllTimers()
-    expect(get_value()).toBe(false)
   })
 })

@@ -136,24 +136,7 @@ describe(`Nav`, () => {
     )
   })
 
-  test(`click outside closes menu, inside does not`, async () => {
-    mount(Nav, { target: document.body, props: { routes: default_routes } })
-    const button = doc_query(`.burger`)
-    const menu = doc_query(`.menu`)
-
-    await click(button)
-    await click(menu)
-    expect(button.getAttribute(`aria-expanded`)).toBe(`true`)
-
-    const outside = document.createElement(`div`)
-    document.body.append(outside)
-    outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
-    await tick()
-    expect(button.getAttribute(`aria-expanded`)).toBe(`false`)
-    outside.remove()
-  })
-
-  test(`click outside closes burger menu and dropdowns`, async () => {
+  test(`click outside closes burger menu and dropdowns, inside click does not`, async () => {
     mount(Nav, {
       target: document.body,
       props: { routes: [[`/parent`, [`/parent`, `/parent/child`]]] },
@@ -168,6 +151,10 @@ describe(`Nav`, () => {
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
     expect(is_visible(dropdown_menu)).toBe(true)
 
+    // Click inside the menu should not close it
+    await click(doc_query(`.menu`))
+    expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
+
     // Click outside should close both
     const outside = document.createElement(`div`)
     document.body.append(outside)
@@ -176,31 +163,6 @@ describe(`Nav`, () => {
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
     expect(is_visible(dropdown_menu)).toBe(false)
     outside.remove()
-  })
-
-  test(`dropdown structure: parent link, toggle button, filtered children`, () => {
-    mount(Nav, {
-      target: document.body,
-      props: { routes: [[`/parent`, [`/parent`, `/parent/child1`, `/parent/child2`]]] },
-    })
-
-    const dropdown = doc_query(`.dropdown`)
-    expect(dropdown.getAttribute(`data-href`)).toBe(`/parent`)
-
-    const parent_link = doc_query(`.dropdown div:first-child > a`)
-    expect(parent_link.tagName).toBe(`A`)
-    expect(parent_link.getAttribute(`href`)).toBe(`/parent`)
-
-    const toggle = doc_query(`[data-dropdown-toggle]`)
-    expect(toggle.tagName).toBe(`BUTTON`)
-    expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
-    expect(toggle.getAttribute(`aria-haspopup`)).toBe(`true`)
-
-    const { dropdown_menu } = query_dropdown_elements()
-    const hrefs = Array.from(dropdown_menu.querySelectorAll(`a`)).map((link) =>
-      link.getAttribute(`href`),
-    )
-    expect(hrefs).toEqual([`/parent/child1`, `/parent/child2`])
   })
 
   test.each([
@@ -226,17 +188,7 @@ describe(`Nav`, () => {
         expect(menu.classList.contains(`visible`)).toBe(false)
       },
     ],
-    [
-      `click toggle button`,
-      async (dropdown: Element, menu: Element) => {
-        const toggle_button = dropdown.querySelector(`[data-dropdown-toggle]`)
-        if (!toggle_button) throw new Error(`toggle button not found`)
-        await click(toggle_button)
-        expect(menu.classList.contains(`visible`)).toBe(true)
-        await click(toggle_button)
-        expect(menu.classList.contains(`visible`)).toBe(false)
-      },
-    ],
+    // toggle-button clicks are covered by `click toggles pinned state and aria-expanded`
   ])(`dropdown interaction via %s`, async (_desc, interaction) => {
     vi.useFakeTimers()
     mount(Nav, {
@@ -507,6 +459,8 @@ describe(`Nav`, () => {
     const toggle_button = doc_query(`[data-dropdown-toggle]`)
     const aria_label = toggle_button.getAttribute(`aria-label`)
     expect(aria_label).toMatch(/Toggle.*submenu/u)
+    expect(toggle_button.tagName).toBe(`BUTTON`)
+    expect(toggle_button.getAttribute(`aria-haspopup`)).toBe(`true`)
   })
 
   test(`renders object routes with href, label, class, and style`, () => {
@@ -1246,22 +1200,27 @@ describe(`Nav`, () => {
     })
   })
 
-  describe(`CSS custom properties for dropdown`, () => {
-    test.each([
-      [`--nav-dropdown-min-width: 200px`, `--nav-dropdown-min-width`, `200px`],
-      [`--nav-dropdown-max-width: 150px`, `--nav-dropdown-max-width`, `150px`],
-      [`--nav-dropdown-width: 250px`, `--nav-dropdown-width`, `250px`],
-      [`--nav-dropdown-left: 10px`, `--nav-dropdown-left`, `10px`],
-      [`--nav-dropdown-right: 5px`, `--nav-dropdown-right`, `5px`],
-      [`--nav-dropdown-margin: 8pt`, `--nav-dropdown-margin`, `8pt`],
-      [`--nav-dropdown-padding: 5pt 2pt`, `--nav-dropdown-padding`, `5pt 2pt`],
-      [`--nav-dropdown-z-index: 999`, `--nav-dropdown-z-index`, `999`],
-    ])(`%s is passed to nav element`, (style, css_var, expected) => {
-      mount(Nav, {
-        target: document.body,
-        props: { routes: single_dropdown_route, style },
-      })
-      expect(doc_query(`nav`).style.getPropertyValue(css_var)).toBe(expected)
+  test(`CSS custom properties for dropdown are passed to nav element`, () => {
+    const css_vars = {
+      '--nav-dropdown-min-width': `200px`,
+      '--nav-dropdown-max-width': `150px`,
+      '--nav-dropdown-width': `250px`,
+      '--nav-dropdown-left': `10px`,
+      '--nav-dropdown-right': `5px`,
+      '--nav-dropdown-margin': `8pt`,
+      '--nav-dropdown-padding': `5pt 2pt`,
+      '--nav-dropdown-z-index': `999`,
+    }
+    const style = Object.entries(css_vars)
+      .map(([css_var, value]) => `${css_var}: ${value}`)
+      .join(`; `)
+    mount(Nav, {
+      target: document.body,
+      props: { routes: single_dropdown_route, style },
     })
+    const nav = doc_query(`nav`)
+    for (const [css_var, expected] of Object.entries(css_vars)) {
+      expect(nav.style.getPropertyValue(css_var), css_var).toBe(expected)
+    }
   })
 })

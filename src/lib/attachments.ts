@@ -136,6 +136,8 @@ export const draggable =
     return () => {
       globalThis.removeEventListener(`mousemove`, handle_mousemove)
       globalThis.removeEventListener(`mouseup`, handle_mouseup)
+      // If unmounted mid-drag, undo global side effects mouseup would have reset
+      if (dragging) document.body.style.userSelect = ``
       if (handle) {
         handle.removeEventListener(`mousedown`, handle_mousedown)
         handle.style.cursor = `` // Reset cursor
@@ -264,6 +266,8 @@ export const resizable =
       node.removeEventListener(`mousemove`, on_hover)
       globalThis.removeEventListener(`mousemove`, on_mousemove)
       globalThis.removeEventListener(`mouseup`, on_mouseup)
+      // If unmounted mid-resize, undo global side effects mouseup would have reset
+      if (active_edge) document.body.style.userSelect = ``
       node.style.cursor = ``
     }
   }
@@ -312,20 +316,21 @@ export const sortable =
     type HeaderState = {
       header: HTMLTableCellElement
       handler: () => void
-      original_text: string
+      original_html: string
       original_style: string
     }
     // Store original state for cleanup
     const header_state: HeaderState[] = []
-    const restore_header = ({ header, original_text, original_style }: HeaderState) => {
-      header.textContent = original_text
+    const restore_header = ({ header, original_html, original_style }: HeaderState) => {
+      // Restore innerHTML (not textContent) to preserve child markup like icons
+      header.innerHTML = original_html
       header.classList.remove(asc_class, desc_class)
       if (original_style) header.setAttribute(`style`, original_style)
       else header.removeAttribute(`style`)
     }
 
     headers.forEach((header, idx) => {
-      const original_text = header.textContent ?? ``
+      const original_html = header.innerHTML
       const original_style = header.getAttribute(`style`) ?? ``
       header.style.cursor = `pointer` // add cursor pointer to headers
 
@@ -343,20 +348,27 @@ export const sortable =
         }
         header.classList.add(sort_dir > 0 ? asc_class : desc_class)
         Object.assign(header.style, sorted_style)
-        header.textContent = `${header.textContent?.replace(/ ↑| ↓/u, ``)} ${
-          sort_dir > 0 ? `↑` : `↓`
-        }`
+        // Render arrow in a separate span so the header's own markup stays intact
+        // (restore_header above already removed any previous arrow span)
+        const arrow_span = document.createElement(`span`)
+        arrow_span.className = `sort-arrow`
+        arrow_span.textContent = ` ${sort_dir > 0 ? `↑` : `↓`}`
+        header.append(arrow_span)
 
         const table_body = node.querySelector(`tbody`)
         if (!table_body) return
 
-        // re-sort table
-        const rows = Array.from(table_body.querySelectorAll(`tr`))
+        // re-sort table (:scope > tr so rows of nested tables aren't re-parented)
+        const rows = Array.from(
+          table_body.querySelectorAll<HTMLTableRowElement>(`:scope > tr`),
+        )
         rows.sort((row_1, row_2) => {
           const cell_1 = row_1.cells[sort_col_idx]
           const cell_2 = row_2.cells[sort_col_idx]
-          const val_1 = get_html_sort_value(cell_1)
-          const val_2 = get_html_sort_value(cell_2)
+          // Rows can have fewer cells than the sort column (colspan placeholders,
+          // ragged rows) — treat missing cells as empty so they sort last
+          const val_1 = cell_1 ? get_html_sort_value(cell_1) : ``
+          const val_2 = cell_2 ? get_html_sort_value(cell_2) : ``
 
           const [trimmed_1, trimmed_2] = [val_1.trim(), val_2.trim()]
           if (trimmed_1 === trimmed_2) return 0
@@ -379,7 +391,7 @@ export const sortable =
       }
 
       header.addEventListener(`click`, click_handler)
-      header_state.push({ header, handler: click_handler, original_text, original_style })
+      header_state.push({ header, handler: click_handler, original_html, original_style })
     })
 
     // Return cleanup function that fully restores original state
@@ -428,8 +440,34 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 
   // iterate over all text nodes and find matches
   const find_ranges = (el: Node): Range[] => {
-    const text = el.textContent?.toLowerCase()
-    if (!text) return []
+    const original_text = el.textContent
+    if (!original_text) return []
+    const text = original_text.toLowerCase()
+
+    // Offsets are computed on the lowercased text but applied to the original
+    // node. Lowercasing can grow some Unicode chars (e.g. İ → i̇, 2 UTF-16 units),
+    // shifting offsets. Build a lowered→original offset map (per-unit lowercase
+    // preserves alignment; only length-changing chars need mapping) so ranges
+    // land on the right original characters.
+    const node_length = original_text.length
+    let orig_offsets: number[] | null = null // lowered offset → original offset
+    if (text.length !== node_length) {
+      orig_offsets = []
+      for (let orig_idx = 0; orig_idx < node_length; orig_idx++) {
+        const lowered_char = original_text[orig_idx].toLowerCase()
+        // one entry per lowered UTF-16 unit
+        orig_offsets.push(...Array.from(lowered_char, () => orig_idx))
+      }
+    }
+    const make_range = (start: number, end: number): Range[] => {
+      const orig_start = orig_offsets ? (orig_offsets[start] ?? node_length) : start
+      const orig_end = orig_offsets ? (orig_offsets[end - 1] ?? node_length - 1) + 1 : end
+      if (orig_start >= node_length) return []
+      const range = new Range()
+      range.setStart(el, orig_start)
+      range.setEnd(el, Math.min(orig_end, node_length))
+      return [range]
+    }
 
     const search = query.toLowerCase()
 
@@ -437,12 +475,8 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       // Fuzzy highlighting: highlight individual characters that match in order.
       // null means not all characters matched, so highlight nothing.
       const matching_indices = fuzzy_match_indices(search, text)
-      return (matching_indices ?? []).map((index) => {
-        const range = new Range()
-        range.setStart(el, index)
-        range.setEnd(el, index + 1) // highlight single character
-        return range
-      })
+      // highlight single characters
+      return (matching_indices ?? []).flatMap((index) => make_range(index, index + 1))
     }
     // Substring highlighting: highlight consecutive substrings
     const indices = []
@@ -455,12 +489,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     }
 
     // create range object for each substring found in the text node
-    return indices.map((index) => {
-      const range = new Range()
-      range.setStart(el, index)
-      range.setEnd(el, index + search.length)
-      return range
-    })
+    return indices.flatMap((index) => make_range(index, index + search.length))
   }
   const ranges = text_nodes.map((text_node) => find_ranges(text_node))
 
@@ -477,9 +506,14 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 let current_tooltip: (HTMLElement & { owner_element?: HTMLElement }) | null = null
 let show_timeout: ReturnType<typeof setTimeout> | undefined
 let hide_timeout: ReturnType<typeof setTimeout> | undefined
+// Element that scheduled the pending show_timeout. owner_element is only set once
+// the timeout fires, so pending shows need their own ownership tracking to let
+// cleanup of one tooltip instance leave another instance's pending show alone.
+let show_timeout_owner: HTMLElement | null = null
 
 function clear_tooltip() {
   if (show_timeout) clearTimeout(show_timeout)
+  show_timeout_owner = null
   if (hide_timeout) clearTimeout(hide_timeout)
   if (current_tooltip) {
     // Remove aria-describedby from the trigger element
@@ -488,6 +522,10 @@ function clear_tooltip() {
     current_tooltip = null
   }
 }
+
+// whether the element owns the visible tooltip or a pending (delayed) show
+const owns_tooltip_state = (element: HTMLElement): boolean =>
+  current_tooltip?.owner_element === element || show_timeout_owner === element
 
 // Options for the tooltip attachment.
 export interface TooltipOptions {
@@ -515,7 +553,9 @@ function render_tooltip_content(
     return
   }
 
-  let html = content.replaceAll(`\r`, `<br/>`)
+  // Convert all newline flavors: HTML parsing normalizes CR/CRLF to LF in
+  // attributes, and JS callers pass \n, so matching only \r would never fire
+  let html = content.replaceAll(/\r\n?|\n/gu, `<br/>`)
   if (options.sanitize_html) html = options.sanitize_html(html)
   content_el.innerHTML = html
 }
@@ -825,7 +865,9 @@ export const tooltip =
 
         clear_tooltip()
 
+        show_timeout_owner = element
         show_timeout = setTimeout(() => {
+          show_timeout_owner = null
           const tooltip_el = document.createElement(`div`)
           tooltip_el.className = `custom-tooltip`
           const placement = options.placement ?? `bottom`
@@ -839,7 +881,7 @@ export const tooltip =
           // light-dark() inherits the page's color-scheme (defaults to light if unset)
           tooltip_el.style.cssText = `
           position: absolute; z-index: 9999; opacity: 0; display: inline-block;
-          background-color: var(--tooltip-bg, light-dark(#fff, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, 1px solid light-dark(rgba(0, 0, 0, 0.12), rgba(255, 255, 255, 0.18)));
+          background-color: var(--tooltip-bg, light-dark(#fff, #2a2a2e)); color: var(--text-color, light-dark(#222, #eee)); border: var(--tooltip-border, 1px solid light-dark(lightgray, #555));
           padding: var(--tooltip-padding, 2px 6px); border-radius: var(--tooltip-radius, 5pt); font-size: var(--tooltip-font-size, 0.8rem); line-height: 1.4;
           max-width: var(--tooltip-max-width, 280px); overflow-wrap: break-word; text-wrap: balance; pointer-events: none;
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
@@ -970,7 +1012,10 @@ export const tooltip =
               (removed_node instanceof Element && removed_node.contains(element)),
           ),
         )
-        if (was_removed && current_tooltip?.owner_element === element) clear_tooltip()
+        // Clear owned visible tooltip AND owned pending show — otherwise the
+        // pending timeout fires after removal and appends an orphaned tooltip
+        // positioned against a detached element
+        if (was_removed && owns_tooltip_state(element)) clear_tooltip()
       })
       if (element.parentElement) {
         removal_observer.observe(element.parentElement, {
@@ -986,8 +1031,8 @@ export const tooltip =
         globalThis.removeEventListener(`scroll`, handle_scroll, true)
         document.removeEventListener(`keydown`, handle_keydown)
 
-        // Clear tooltip if this element owns it (also removes aria-describedby)
-        if (current_tooltip?.owner_element === element) clear_tooltip()
+        // Clear owned tooltip/pending show (also removes aria-describedby)
+        if (owns_tooltip_state(element)) clear_tooltip()
 
         if (element.hasAttribute(`data-original-title`)) {
           element.setAttribute(`title`, element.getAttribute(`data-original-title`) ?? ``)
@@ -1008,10 +1053,9 @@ export const tooltip =
 
     if (cleanup_functions.length === 0) return undefined
 
-    return () => {
-      cleanup_functions.forEach((cleanup) => cleanup())
-      clear_tooltip()
-    }
+    // per-element cleanups already clear any tooltip/pending show they own, and
+    // only elements set up here can own one — no extra outer clearing needed
+    return () => cleanup_functions.forEach((cleanup) => cleanup())
   }
 
 export type ClickOutsideConfig<T extends HTMLElement> = {
@@ -1029,7 +1073,9 @@ export const click_outside =
 
     function handle_click(event: MouseEvent) {
       const { target } = event
-      if (!(target instanceof HTMLElement)) return
+      // Element (not HTMLElement) so clicks on SVG elements still count; .closest
+      // below exists on all Elements
+      if (!(target instanceof Element)) return
       const path = event.composedPath()
 
       // Check if click target is the node or inside it
