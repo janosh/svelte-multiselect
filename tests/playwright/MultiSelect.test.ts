@@ -52,26 +52,25 @@ test.describe(`input`, () => {
   test(`programmatic focus opens dropdown`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const dropdown = page.locator(`#foods div.multiselect > ul.options`)
+    // Raw DOM focus/blur (not locator.focus(), which skips an already-focused element
+    // and would bypass the component's .focus() override in the retry below).
+    const input_method = (method: `focus` | `blur`) =>
+      page.evaluate((name) => {
+        document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)?.[name]()
+      }, method)
 
-    // generous timeout: on cold CI runs the dev server may still be compiling /ui
-    await expect(dropdown).toHaveClass(/hidden/u, { timeout: 15_000 })
+    await expect(dropdown).toHaveClass(/hidden/u)
     await expect(dropdown).toBeHidden()
 
-    const focus_input = () =>
-      page.evaluate(() => {
-        document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)?.focus()
-      })
-    // retry focus: it's a no-op if it fires before hydration attached the focus handler
+    // Retry focus: it's a no-op if it fires before hydration installs the .focus()
+    // override; each retry re-invokes .focus() until the override opens the dropdown.
     await expect(async () => {
-      await focus_input()
+      await input_method(`focus`)
       await expect(dropdown).not.toHaveClass(/hidden/u, { timeout: 1000 })
     }).toPass()
     await expect(dropdown).toBeVisible()
 
-    await page.evaluate(() => {
-      const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
-      input?.blur()
-    })
+    await input_method(`blur`)
     await expect(dropdown).toHaveClass(/hidden/u)
     await expect(dropdown).toBeHidden()
   })
