@@ -55,12 +55,20 @@ export function get_style(
   let css_str = ``
   if (key !== null && key !== `selected` && key !== `option`) {
     console.error(`MultiSelect: Invalid key=${String(key)} for get_style`)
+    return css_str
   }
   if (typeof option === `object` && option.style) {
     if (typeof option.style === `string`) css_str = option.style
-    if (typeof option.style === `object`) {
-      if (key && key in option.style) return option.style[key] ?? ``
-      else if (key) console.error(`MultiSelect: invalid style object for option`, option)
+    if (typeof option.style === `object` && key) {
+      if (key in option.style) css_str = option.style[key] ?? ``
+      // partial style objects (e.g. only `selected`) are fine; flag any keys
+      // other than the known ones, even when a valid key is also present
+      const has_unknown_key = Object.keys(option.style).some(
+        (style_key) => style_key !== `option` && style_key !== `selected`,
+      )
+      if (has_unknown_key) {
+        console.error(`MultiSelect: invalid style object for option`, option)
+      }
     }
   }
   // ensure css_str ends with a semicolon
@@ -154,15 +162,8 @@ export function fuzzy_match_indices(
 // Returns true if the search string can be found as a subsequence in the target string
 // e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
 export function fuzzy_match(search_text: string, target_text: string): boolean {
-  // Handle null/undefined inputs first
-  if (
-    search_text === null ||
-    search_text === undefined ||
-    target_text === null ||
-    target_text === undefined
-  )
-    return false
-
+  // guard null/undefined inputs (fuzzy_match_indices would throw on .toLowerCase())
+  if (search_text == null || target_text == null) return false
   // empty search matches everything, empty target matches nothing - both already
   // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
   return fuzzy_match_indices(search_text, target_text) !== null

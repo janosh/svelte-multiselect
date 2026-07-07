@@ -88,28 +88,34 @@ describe(`get_style`, () => {
     selected: `color: blue`,
     option: `color: green`,
   }
+  // object styles get the same trailing-semicolon normalization as string styles;
+  // partial style objects (e.g. only `selected`) are fine, but any key other than
+  // `option`/`selected` logs an error, even when a valid key is also present
   test.each([
-    [{ style: option_style }, `selected`, `color: blue`],
-    [{ style: option_style }, `option`, `color: green`],
-    [{ style: { selected: `color: blue` } }, `option`, ``],
+    [option_style, `selected`, `color: blue;`, false],
+    [option_style, `option`, `color: green;`, false],
+    [{ selected: `color: blue` }, `option`, ``, false],
+    [{ option: `color: green` }, `selected`, ``, false],
+    [{}, `option`, ``, false],
+    [{ selected: `color: blue`, custom: `color: red` }, `selected`, `color: blue;`, true],
+    [{ option: `color: green`, custom: `color: red` }, `option`, `color: green;`, true],
+    [{ selected: `color: blue`, custom: `color: red` }, `option`, ``, true],
+    [{ invalid_key: `some-style` }, `selected`, ``, true],
   ] as const)(
-    `handles object styles correctly for %j with key %s`,
-    (option, key, expected) => {
-      // @ts-expect-error missing key option in last test case
+    `object style %j with key %s returns %j (logs error: %s)`,
+    (style, key, expected, should_log_error) => {
+      console.error = vi.fn<typeof console.error>()
+      const option = { label: `test`, style }
+      // @ts-expect-error style objects with unknown keys test runtime validation
       expect(get_style(option, key)).toBe(expected)
+      if (should_log_error) {
+        expect(console.error).toHaveBeenCalledWith(
+          `MultiSelect: invalid style object for option`,
+          option,
+        )
+      } else expect(console.error).not.toHaveBeenCalled()
     },
   )
-
-  test(`logs error for invalid style object without requested key`, () => {
-    const option_obj = { style: { invalid_key: `some-style` } }
-    console.error = vi.fn<typeof console.error>()
-    // @ts-expect-error invalid key
-    get_style(option_obj, `selected`)
-    expect(console.error).toHaveBeenCalledWith(
-      `MultiSelect: invalid style object for option`,
-      option_obj,
-    )
-  })
 
   test.each([undefined, null])(`no error for style object when key is %s`, (key) => {
     console.error = vi.fn<typeof console.error>()
@@ -117,10 +123,13 @@ describe(`get_style`, () => {
     expect(console.error).not.toHaveBeenCalled()
   })
 
-  test(`logs error for invalid key parameter`, () => {
+  test.each([
+    [{ style: `color: red;` }], // string style must not leak through for unknown keys
+    [{ style: option_style }],
+  ])(`logs error and returns empty string for invalid key with style %j`, (option) => {
     console.error = vi.fn<typeof console.error>()
     // @ts-expect-error invalid key
-    get_style({ style: `color: red;` }, `invalid_key`)
+    expect(get_style(option, `invalid_key`)).toBe(``)
     expect(console.error).toHaveBeenCalledWith(
       `MultiSelect: Invalid key=invalid_key for get_style`,
     )
@@ -182,11 +191,15 @@ describe(`fuzzy_match`, () => {
     expect(fuzzy_match(search, target)).toBe(expected)
   })
 
-  test(`handles null/undefined inputs`, () => {
-    // @ts-expect-error testing runtime behavior
-    expect(fuzzy_match(null, `test`)).toBe(false)
-    // @ts-expect-error testing runtime behavior
-    expect(fuzzy_match(undefined, `test`)).toBe(false)
+  test.each([
+    [null, `test`],
+    [undefined, `test`],
+    [`test`, null],
+    [`test`, undefined],
+    [null, null],
+  ])(`handles null/undefined inputs fuzzy_match(%s, %s)`, (search, target) => {
+    // @ts-expect-error testing runtime behavior with null/undefined
+    expect(fuzzy_match(search, target)).toBe(false)
   })
 })
 

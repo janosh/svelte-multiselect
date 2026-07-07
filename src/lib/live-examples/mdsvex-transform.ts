@@ -4,9 +4,6 @@ import path from 'node:path'
 import { hast_to_html } from './hast.ts'
 import { starry_night } from './highlighter.ts'
 
-// Base64 encode to prevent preprocessors from modifying the content
-const to_base64 = (src: string): string => Buffer.from(src, `utf-8`).toString(`base64`)
-
 // Escape backticks and template literal syntax for embedding in template literals
 const encode_escapes = (src: string) =>
   src.replaceAll(`\``, `\\\``).replaceAll(`\${`, `\\$\{`)
@@ -87,7 +84,8 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
   const { defaults = {} } = options
 
   return function transformer(tree: RemarkTree, file: RemarkFile): void {
-    const examples: { csr?: boolean; wrapper_alias: string }[] = []
+    // csr flag per live example (index = component index); drives the import loop below
+    const example_csr: (boolean | undefined)[] = []
     // Track wrapper imports to avoid duplicates and generate unique aliases
     const wrapper_aliases = new Map<string, string>() // wrapper key -> alias name
 
@@ -115,25 +113,25 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       }
 
       const { csr, example, Wrapper } = meta
+      const scope = node.lang ? starry_night.flagToScope(node.lang) : undefined
 
       // find code blocks with `example` meta in supported languages
-      if (example && node.lang && starry_night.flagToScope(node.lang)) {
+      if (example && node.lang && scope) {
         const is_live = LIVE_LANGUAGES.has(node.lang)
         const wrapper_alias = is_live ? get_wrapper_alias(Wrapper ?? DEFAULT_WRAPPER) : ``
 
         const value = create_example_component(
           node.value ?? ``,
           meta,
-          is_live ? examples.length : -1, // -1 for code-only (no component import needed)
+          is_live ? example_csr.length : -1, // -1 for code-only (no component import needed)
           node.lang,
+          scope,
           is_live,
           wrapper_alias,
         )
 
         // Only track live examples for component imports
-        if (is_live) {
-          examples.push({ csr, wrapper_alias })
-        }
+        if (is_live) example_csr.push(csr)
 
         node.type = `paragraph`
         node.children = [{ type: `text`, value }]
@@ -161,8 +159,8 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       }
     }
     // Add example component imports
-    for (const [idx, ex] of examples.entries()) {
-      if (!ex.csr) {
+    for (const [idx, csr] of example_csr.entries()) {
+      if (!csr) {
         scripts += `import ${EXAMPLE_COMPONENT_PREFIX}${idx} from "${EXAMPLE_MODULE_PREFIX}${idx}.svelte";\n`
       }
     }
@@ -220,12 +218,11 @@ function create_example_component(
   meta: RemarkMeta,
   index: number,
   lang: string,
+  scope: string,
   is_live: boolean,
   wrapper_alias: string,
 ): string {
   const code = format_code(value, meta)
-  const scope = starry_night.flagToScope(lang)
-  if (!scope) throw new Error(`Unsupported language: ${lang}`)
   const tree = starry_night.highlight(code, scope)
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
   const highlighted = hast_to_html(tree).replaceAll(`\n`, `&#10;`)
@@ -243,7 +240,8 @@ function create_example_component(
   // src={...} expression — escaping backticks/`${` on top of it would double-escape
   // and inject literal backslashes into the runtime src prop.
   const component = `${EXAMPLE_COMPONENT_PREFIX}${index}`
-  const base64_src = to_base64(value)
+  // base64-encode to prevent preprocessors from modifying the content
+  const base64_src = Buffer.from(value, `utf-8`).toString(`base64`)
   const escaped_src = JSON.stringify(code)
   const escaped_meta = encode_escapes(JSON.stringify({ ...meta, lang }))
 

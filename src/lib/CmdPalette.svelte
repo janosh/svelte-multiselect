@@ -139,17 +139,16 @@
   )
 
   $effect(() => {
-    if (!dialog || !open || dialog.open) return
-    try {
-      dialog.showModal()
-    } catch {
-      // showModal missing (older DOM impls) or dialog not in document
-      dialog.setAttribute(`open`, ``)
+    if (!open) return
+    if (dialog && !dialog.open) {
+      try {
+        dialog.showModal()
+      } catch {
+        // showModal missing (older DOM impls) or dialog not in document
+        dialog.setAttribute(`open`, ``)
+      }
     }
-  })
-
-  $effect(() => {
-    if (open && input && document.activeElement !== input) input.focus()
+    if (input && document.activeElement !== input) input.focus()
   })
 
   function toggle(event: KeyboardEvent): boolean {

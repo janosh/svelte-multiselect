@@ -737,9 +737,9 @@ describe(`tooltip`, () => {
     })
 
     it(`tooltip uses theme-aware light-dark() defaults`, () => {
-      // Regression test for commit 9bfac33: tooltip must not set color-scheme (would
-      // override page theme). Asserts via raw cssText/setProperty spies because
-      // happy-dom strips var()/light-dark() from parsed style values.
+      // Base styles must not carry a color-scheme (page-declared schemes stay in
+      // control, see #405); the schemeless-page fallback is covered below. Asserts
+      // via raw cssText/setProperty spies because happy-dom strips var()/light-dark().
       const { css_texts, set_prop_values, restore } = capture_style_writes()
       try {
         const element = create_element()
@@ -790,6 +790,76 @@ describe(`tooltip`, () => {
       )
       const tooltip_css = find_tooltip_css(css_texts)
       expect(tooltip_css).toContain(`var(--tooltip-bg,`)
+    })
+
+    // Dark-styled pages that never declare `color-scheme` resolve the default
+    // light-dark() background to LIGHT while their inherited --text-color may be
+    // near-white → unreadable tooltip. The fallback pairs scheme + text color.
+    it(`pairs color-scheme and text color when page declares no scheme`, () => {
+      const { set_prop_values, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `scheme fallback`
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      expect(set_prop_values).toContain(`color-scheme: light dark`)
+      expect(set_prop_values).toContain(`--text-color: light-dark(#222, #eee)`)
+    })
+
+    it.each([
+      [
+        `page declares a color-scheme`,
+        (_element: HTMLElement) => (document.body.style.colorScheme = `dark`),
+      ],
+      [
+        `trigger customizes --tooltip-bg`,
+        (element: HTMLElement) => element.style.setProperty(`--tooltip-bg`, `red`),
+      ],
+      [
+        `trigger carries its own --text-color`,
+        (element: HTMLElement) => element.style.setProperty(`--text-color`, `#0ff`),
+      ],
+    ])(`scheme fallback is skipped when %s`, (_desc, customize) => {
+      const { set_prop_values, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `no fallback`
+        customize(element)
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+        document.body.style.colorScheme = ``
+      }
+
+      expect(set_prop_values).not.toContain(`color-scheme: light dark`)
+      expect(set_prop_values).not.toContain(`--text-color: light-dark(#222, #eee)`)
+    })
+
+    it(`scheme fallback still applies when only the trigger has a color-scheme`, () => {
+      // A scheme on the trigger (or some container around it) never reaches the
+      // tooltip since it's appended to document.body, so it must not suppress the
+      // fallback — only a page-level (body-inherited) scheme should.
+      const { set_prop_values, restore } = capture_style_writes()
+      try {
+        const element = create_element()
+        element.title = `trigger scheme`
+        element.style.colorScheme = `dark`
+        mock_bounds(element)
+        setup_tooltip(element, { delay: 0 })
+        trigger_tooltip(element)
+      } finally {
+        restore()
+      }
+
+      expect(set_prop_values).toContain(`color-scheme: light dark`)
+      expect(set_prop_values).toContain(`--text-color: light-dark(#222, #eee)`)
     })
 
     it(`custom --tooltip-border overrides default border`, () => {
