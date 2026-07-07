@@ -880,6 +880,30 @@ export const tooltip =
             if (value) tooltip_el.style.setProperty(css_var_name, value)
           }
 
+          // Pages that style themselves dark via CSS vars but never declare `color-scheme`
+          // resolve the default light-dark() background to LIGHT while the inherited
+          // --text-color may be near-white → unreadable tooltip. Follow the OS preference
+          // and pair the text color with it. Pages that declare a scheme keep control
+          // (see #405), as do triggers with custom --tooltip-bg or own --text-color.
+          // Read the scheme from document.body (inherits any root-declared scheme), not
+          // the trigger: the tooltip is appended to body, so a scheme on some container
+          // around the trigger never reaches it.
+          const body_styles = getComputedStyle(document.body)
+          const page_scheme = body_styles.colorScheme
+          if (!page_scheme || page_scheme === `normal`) {
+            const text_color = tooltip_el.style.getPropertyValue(`--text-color`)
+            // body (not documentElement) since the body-mounted tooltip inherits from
+            // body, which in turn inherits any :root-declared vars
+            const page_text_color = body_styles.getPropertyValue(`--text-color`).trim()
+            const trigger_overrides =
+              tooltip_el.style.getPropertyValue(`--tooltip-bg`) ||
+              (text_color && text_color !== page_text_color)
+            if (!trigger_overrides) {
+              tooltip_el.style.setProperty(`color-scheme`, `light dark`)
+              tooltip_el.style.setProperty(`--text-color`, `light-dark(#222, #eee)`)
+            }
+          }
+
           // Append early so we can read computed border styles for arrow border
           document.body.append(tooltip_el)
 
