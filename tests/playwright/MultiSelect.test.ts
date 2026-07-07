@@ -43,7 +43,7 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
   await expect(status.locator(`text=⚠️ Regression`)).not.toBeVisible()
 
   const count_text = await status.textContent()
-  const count = parseInt(count_text?.match(/\d+/u)?.[0] ?? `0`, 10)
+  const count = Math.trunc(Number(count_text?.match(/\d+/u)?.[0] ?? `0`))
   expect(count).toBeLessThan(10)
 })
 

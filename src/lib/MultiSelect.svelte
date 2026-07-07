@@ -1308,6 +1308,8 @@
   const drop = (target_idx: number) => (event: DragEvent) => {
     if (!event.dataTransfer) return
     event.dataTransfer.dropEffect = `move`
+    // parseInt keeps NaN (a safe no-op reorder) for empty/foreign drag data; Number('') → 0 moves item 0
+    // oxlint-disable-next-line unicorn/prefer-number-coercion
     const start_idx = parseInt(event.dataTransfer.getData(`text/plain`), 10)
     const previous = [...selected]
     const new_selected = [...selected]

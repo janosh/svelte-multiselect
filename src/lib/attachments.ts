@@ -1,5 +1,11 @@
 import type { Attachment } from 'svelte/attachments'
 import { fuzzy_match_indices, get_uuid } from './utils'
+// Computed CSS lengths resolve to `<number>px`; strip the unit so Number() can coerce.
+// Empty and non-px values (e.g. `none`, `0.5rem`) yield NaN so callers can apply fallbacks.
+const css_px = (css_length: string): number => {
+  const trimmed = css_length.trim()
+  return trimmed ? Number(trimmed.replace(/px$/, ``)) : NaN
+}
 
 // Type definitions for CSS highlight API (experimental)
 declare global {
@@ -630,7 +636,7 @@ export const tooltip =
         const arrow_size_raw = tooltip_styles
           .getPropertyValue(`--tooltip-arrow-size`)
           .trim()
-        const arrow_size_num = Number.parseInt(arrow_size_raw || ``, 10)
+        const arrow_size_num = css_px(arrow_size_raw)
         const arrow_px = Number.isFinite(arrow_size_num) ? arrow_size_num : 6
         apply_triangle_style(
           arrow,
@@ -645,7 +651,7 @@ export const tooltip =
         if (!border_arrow) return
 
         const border_color = tooltip_styles.borderTopColor
-        const border_width_num = Number.parseFloat(tooltip_styles.borderTopWidth || `0`)
+        const border_width_num = css_px(tooltip_styles.borderTopWidth)
         const has_border = !is_transparent(border_color) && border_width_num > 0
         if (!has_border) {
           border_arrow.remove()
@@ -667,13 +673,12 @@ export const tooltip =
         requestAnimationFrame(() => {
           if (!document.body.contains(tooltip_el)) return
           const computed = getComputedStyle(tooltip_el)
-          const padding_h =
-            parseFloat(computed.paddingLeft) + parseFloat(computed.paddingRight)
+          const padding_h = css_px(computed.paddingLeft) + css_px(computed.paddingRight)
           const border_h =
-            parseFloat(computed.borderLeftWidth) + parseFloat(computed.borderRightWidth)
+            css_px(computed.borderLeftWidth) + css_px(computed.borderRightWidth)
           // Handle max-width: none as unbounded, fallback to 280 only for invalid values
           const max_width_raw = computed.maxWidth
-          const max_width_parsed = parseFloat(max_width_raw)
+          const max_width_parsed = css_px(max_width_raw)
           const max_width =
             max_width_raw === `none`
               ? Infinity
@@ -890,14 +895,15 @@ export const tooltip =
           const body_styles = getComputedStyle(document.body)
           const page_scheme = body_styles.colorScheme
           if (!page_scheme || page_scheme === `normal`) {
-            const text_color = tooltip_el.style.getPropertyValue(`--text-color`)
-            // body (not documentElement) since the body-mounted tooltip inherits from
-            // body, which in turn inherits any :root-declared vars
-            const page_text_color = body_styles.getPropertyValue(`--text-color`).trim()
-            const trigger_overrides =
-              tooltip_el.style.getPropertyValue(`--tooltip-bg`) ||
-              (text_color && text_color !== page_text_color)
-            if (!trigger_overrides) {
+            // A var counts as a per-trigger override only if it differs from the value
+            // inherited from body/:root (page-level styling shouldn't disable the
+            // fallback). Compare against body, not documentElement: the body-mounted
+            // tooltip inherits from body, which in turn inherits :root-declared vars.
+            const overrides_page = (css_var: string) => {
+              const value = tooltip_el.style.getPropertyValue(css_var)
+              return value && value !== body_styles.getPropertyValue(css_var).trim()
+            }
+            if (!overrides_page(`--tooltip-bg`) && !overrides_page(`--text-color`)) {
               tooltip_el.style.setProperty(`color-scheme`, `light dark`)
               tooltip_el.style.setProperty(`--text-color`, `light-dark(#222, #eee)`)
             }
