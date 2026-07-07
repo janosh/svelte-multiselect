@@ -53,14 +53,19 @@ test.describe(`input`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const dropdown = page.locator(`#foods div.multiselect > ul.options`)
 
-    await expect(dropdown).toHaveClass(/hidden/u)
+    // generous timeout: on cold CI runs the dev server may still be compiling /ui
+    await expect(dropdown).toHaveClass(/hidden/u, { timeout: 15_000 })
     await expect(dropdown).toBeHidden()
 
-    await page.evaluate(() => {
-      const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
-      input?.focus()
-    })
-    await expect(dropdown).not.toHaveClass(/hidden/u)
+    const focus_input = () =>
+      page.evaluate(() => {
+        document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)?.focus()
+      })
+    // retry focus: it's a no-op if it fires before hydration attached the focus handler
+    await expect(async () => {
+      await focus_input()
+      await expect(dropdown).not.toHaveClass(/hidden/u, { timeout: 1000 })
+    }).toPass()
     await expect(dropdown).toBeVisible()
 
     await page.evaluate(() => {
