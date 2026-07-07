@@ -57,23 +57,25 @@ export function heading_ids() {
         seen_ids.set(base_id, count + 1)
         return count ? `${base_id}-${count}` : base_id
       }
-      // Pass 1: Match headings at start of line (for .svelte files)
-      result = result.replace(
-        heading_regex_line_start,
-        (match, indent, tag, attrs, inner) => {
-          const id = process_heading(String(attrs), String(inner))
-          return id ? `${indent}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
-        },
-      )
-
-      // Pass 2: Match headings after closing tag (for mdsvex single-line output)
-      result = result.replace(
-        heading_regex_after_tag,
-        (match, gt, space, tag, attrs, inner) => {
-          const id = process_heading(String(attrs), String(inner))
-          return id ? `${gt}${space}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
-        },
-      )
+      // Rewrite a matched heading with a slug id (or return it unchanged). Pass 1 matches
+      // at line start (.svelte files); pass 2 after a closing tag (mdsvex single-line output).
+      const build_heading = (
+        match: string,
+        prefix: string,
+        tag: string,
+        attrs: string,
+        inner: string,
+      ) => {
+        const id = process_heading(attrs, inner)
+        return id ? `${prefix}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
+      }
+      result = result
+        .replace(heading_regex_line_start, (match, indent, tag, attrs, inner) =>
+          build_heading(match, indent, tag, attrs, inner),
+        )
+        .replace(heading_regex_after_tag, (match, gt, space, tag, attrs, inner) =>
+          build_heading(match, `${gt}${space}`, tag, attrs, inner),
+        )
 
       return { code: result }
     },
@@ -115,16 +117,11 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
 
 const is_heading = (element: Element): boolean => /^H[1-6]$/u.test(element.tagName)
 
-const get_default_headings = (node: Element): Element[] => {
-  const headings: Element[] = []
-  for (const child of Array.from(node.children)) {
-    if (is_heading(child)) headings.push(child)
-    for (const grandchild of Array.from(child.children)) {
-      if (is_heading(grandchild)) headings.push(grandchild)
-    }
-  }
-  return headings
-}
+const get_default_headings = (node: Element): Element[] =>
+  [...node.children].flatMap((child) => [
+    ...(is_heading(child) ? [child] : []),
+    ...[...child.children].filter(is_heading),
+  ])
 
 // Svelte 5 attachment that adds anchor links to headings within a container
 // Uses MutationObserver to handle dynamically added headings

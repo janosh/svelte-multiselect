@@ -26,15 +26,11 @@ export function scroll_into_view_if_needed_polyfill(
   centerIfNeeded: boolean = true,
 ): IntersectionObserver {
   const observer = new IntersectionObserver(([entry], obs) => {
-    const ratio = entry.intersectionRatio
-    if (ratio < 1) {
-      const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-      element.scrollIntoView({
-        block: place,
-        inline: place,
-      })
-    }
     obs.disconnect()
+    const ratio = entry.intersectionRatio
+    if (ratio >= 1) return
+    const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
+    element.scrollIntoView({ block: place, inline: place })
   })
   observer.observe(element)
 

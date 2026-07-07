@@ -161,15 +161,10 @@ export function fuzzy_match_indices(
 // Returns true if the search string can be found as a subsequence in the target string
 // e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
 export function fuzzy_match(search_text: string, target_text: string): boolean {
-  // Handle null/undefined inputs first
-  if (
-    search_text === null ||
-    search_text === undefined ||
-    target_text === null ||
-    target_text === undefined
-  )
+  // guard null/undefined inputs (fuzzy_match_indices would throw on .toLowerCase())
+  if ([search_text, target_text].some((val) => val === null || val === undefined)) {
     return false
-
+  }
   // empty search matches everything, empty target matches nothing - both already
   // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
   return fuzzy_match_indices(search_text, target_text) !== null

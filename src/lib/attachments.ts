@@ -104,8 +104,7 @@ export const draggable =
       node.style.left = `${initial.left + dx}px`
       node.style.top = `${initial.top + dy}px`
 
-      // Only call callback if it exists (minimize overhead)
-      if (options.on_drag) options.on_drag(event)
+      options.on_drag?.(event)
     }
 
     function handle_mouseup(event: MouseEvent) {

@@ -107,19 +107,23 @@
     focused_item_index = -1
   }
 
+  // Query the submenu links / toggle button of the dropdown for a given route href
+  const dropdown_links = (href: string) =>
+    document.querySelectorAll<HTMLElement>(
+      `.dropdown[data-href="${CSS.escape(href)}"] [data-submenu] a`,
+    )
+  const dropdown_toggle = (href: string) =>
+    document.querySelector<HTMLButtonElement>(
+      `.dropdown[data-href="${CSS.escape(href)}"] [data-dropdown-toggle]`,
+    )
+
   function toggle_dropdown(href: string, focus_first = false) {
     const is_opening = pinned_dropdown !== href
     pinned_dropdown = is_opening ? href : null
     hovered_dropdown = is_opening ? href : null
     focused_item_index = is_opening && focus_first ? 0 : -1
     if (is_opening && focus_first) {
-      setTimeout(() => {
-        document
-          .querySelector<HTMLElement>(
-            `.dropdown[data-href="${CSS.escape(href)}"] [data-submenu] a`,
-          )
-          ?.focus()
-      }, 0)
+      setTimeout(() => dropdown_links(href)[0]?.focus(), 0)
     }
   }
 
@@ -165,11 +169,7 @@
         0,
         Math.min(sub_routes.length - 1, focused_item_index + direction),
       )
-      document
-        .querySelectorAll<HTMLElement>(
-          `.dropdown[data-href="${CSS.escape(href)}"] [data-submenu] a`,
-        )
-        ?.[focused_item_index]?.focus()
+      dropdown_links(href)[focused_item_index]?.focus()
     }
 
     // Open dropdown with ArrowDown when closed
@@ -183,11 +183,7 @@
     if (event.key === `Escape`) {
       event.preventDefault()
       close_menus()
-      document
-        .querySelector<HTMLButtonElement>(
-          `.dropdown[data-href="${CSS.escape(href)}"] [data-dropdown-toggle]`,
-        )
-        ?.focus()
+      dropdown_toggle(href)?.focus()
     }
   }
 

@@ -192,11 +192,15 @@ describe(`fuzzy_match`, () => {
     expect(fuzzy_match(search, target)).toBe(expected)
   })
 
-  test(`handles null/undefined inputs`, () => {
-    // @ts-expect-error testing runtime behavior
-    expect(fuzzy_match(null, `test`)).toBe(false)
-    // @ts-expect-error testing runtime behavior
-    expect(fuzzy_match(undefined, `test`)).toBe(false)
+  test.each([
+    [null, `test`],
+    [undefined, `test`],
+    [`test`, null],
+    [`test`, undefined],
+    [null, null],
+  ])(`handles null/undefined inputs fuzzy_match(%s, %s)`, (search, target) => {
+    // @ts-expect-error testing runtime behavior with null/undefined
+    expect(fuzzy_match(search, target)).toBe(false)
   })
 })
 
