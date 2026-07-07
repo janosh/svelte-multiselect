@@ -956,12 +956,10 @@ test(`required and non-empty MultiSelect makes form pass validity check`, () => 
 })
 
 test.each([
-  [
-    [1, 2, 3],
-    [`a`, `b`, `c`],
-    [{ label: `a` }, { label: `b` }, { label: `c` }],
-  ],
-])(`passes selected options=%s to form submission handlers`, async (options) => {
+  [[1, 2, 3]],
+  [[`a`, `b`, `c`]],
+  [[{ label: `a` }, { label: `b` }, { label: `c` }]],
+])(`passes selected options=%j to form submission handlers`, async (options) => {
   const form = document.createElement(`form`)
   // actual form submission not supported in nodejs, would throw without preventing default behavior
   form.addEventListener(`submit`, (event) => event.preventDefault())
@@ -2481,16 +2479,12 @@ describe(`arrow key navigation between selected items`, () => {
     expect(highlighted()).toHaveLength(0)
   })
 
-  test(`ArrowLeft is no-op with no selected items`, async () => {
-    const input = setup([])
-    input.dispatchEvent(press(`ArrowLeft`))
-    await tick()
-    expect(highlighted()).toHaveLength(0)
-  })
-
-  test(`ArrowRight is no-op without prior highlight`, async () => {
-    const input = setup()
-    input.dispatchEvent(press(`ArrowRight`))
+  test.each([
+    [`ArrowLeft`, []],
+    [`ArrowRight`, [`Red`, `Green`, `Blue`]],
+  ])(`%s is a no-op when highlight cannot start`, async (key, selected) => {
+    const input = setup(selected)
+    input.dispatchEvent(press(key))
     await tick()
     expect(highlighted()).toHaveLength(0)
   })
@@ -2606,7 +2600,12 @@ describe(`arrow key navigation between selected items`, () => {
     expect(highlighted()).toHaveLength(0)
   })
 
-  test(`external selected shrink clamps highlighted_idx`, async () => {
+  test.each([
+    // externally shrinking past the highlighted idx should clamp to the last valid index;
+    // clearing should drop the highlight entirely (expected_idx null)
+    [`shrink clamps highlighted_idx`, [`Red`, `Green`], 1],
+    [`clear nullifies highlighted_idx`, [], null],
+  ])(`external selected %s`, async (_name, next_selected, expected_idx) => {
     const props = $state<MultiSelectProps>({
       options,
       selected: [`Red`, `Green`, `Blue`],
@@ -2617,27 +2616,11 @@ describe(`arrow key navigation between selected items`, () => {
     input.dispatchEvent(press(`ArrowLeft`))
     await tick()
     expect(is_highlighted(2)).toBe(true)
-    // externally shrink to 2 items — idx 2 is out of bounds
-    props.selected = [`Red`, `Green`]
+    props.selected = next_selected
     await tick()
-    expect(selected_items()).toHaveLength(2)
-    // $effect should clamp to last valid index (1)
-    expect(is_highlighted(1)).toBe(true)
-  })
-
-  test(`external selected clear nullifies highlighted_idx`, async () => {
-    const props = $state<MultiSelectProps>({
-      options,
-      selected: [`Red`, `Green`, `Blue`],
-    })
-    mount(MultiSelect, { target: document.body, props })
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.dispatchEvent(press(`ArrowLeft`))
-    await tick()
-    expect(highlighted()).toHaveLength(1)
-    props.selected = []
-    await tick()
-    expect(highlighted()).toHaveLength(0)
+    expect(selected_items()).toHaveLength(next_selected.length)
+    if (expected_idx === null) expect(highlighted()).toHaveLength(0)
+    else expect(is_highlighted(expected_idx)).toBe(true)
   })
 
   test(`highlighted pill does not set aria-activedescendant`, async () => {
@@ -4514,60 +4497,26 @@ describe(`loadOptions feature`, () => {
     ul.dispatchEvent(new Event(`scroll`))
   }
 
-  test(`loadOptions is called when dropdown opens`, async () => {
-    const load_options = vi.fn(() =>
-      Promise.resolve({ options: mock_data.slice(0, 50), hasMore: true }),
-    )
-    // Use open prop directly for reliable testing
-    mount(MultiSelect, {
-      target: document.body,
-      props: { loadOptions: load_options, open: true },
-    })
-    await tick()
+  // bare-fn and `{ fetch }` object forms both default to batchSize 50 / onOpen true, so
+  // the object form parameterizes all three initial-open cases uniformly
+  test.each([
+    [`default batch on open`, {}, 1, { search: ``, offset: 0, limit: 50 }],
+    [`batchSize config`, { batchSize: 25 }, 1, { search: ``, offset: 0, limit: 25 }],
+    [`onOpen=false skips open load`, { onOpen: false }, 0, null],
+  ])(
+    `loadOptions initial fetch: %s`,
+    async (_label, config_extra, expected_calls, expected_args) => {
+      const load_options = vi.fn(() => Promise.resolve({ options: [], hasMore: false }))
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, ...config_extra }, open: true },
+      })
+      await tick()
 
-    expect(load_options).toHaveBeenCalledTimes(1)
-    expect(load_options).toHaveBeenCalledWith({
-      search: ``,
-      offset: 0,
-      limit: 50, // default batch size
-    })
-  })
-
-  test(`loadOptions respects batchSize config`, async () => {
-    const load_options = vi.fn(() =>
-      Promise.resolve({ options: mock_data.slice(0, 25), hasMore: true }),
-    )
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        loadOptions: { fetch: load_options, batchSize: 25 },
-        open: true,
-      },
-    })
-    await tick()
-
-    expect(load_options).toHaveBeenCalledWith({
-      search: ``,
-      offset: 0,
-      limit: 25,
-    })
-  })
-
-  test(`loadOptions onOpen=false prevents loading on dropdown open`, async () => {
-    const load_options = vi.fn(() =>
-      Promise.resolve({ options: [`Test`], hasMore: false }),
-    )
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        loadOptions: { fetch: load_options, onOpen: false },
-        open: true,
-      },
-    })
-    await tick()
-
-    expect(load_options).not.toHaveBeenCalled()
-  })
+      expect(load_options).toHaveBeenCalledTimes(expected_calls)
+      if (expected_args) expect(load_options).toHaveBeenCalledWith(expected_args)
+    },
+  )
 
   test(`loadOptions renders loaded options in dropdown`, async () => {
     const load_options = vi.fn(() =>
@@ -4604,53 +4553,43 @@ describe(`loadOptions feature`, () => {
     expect(document.querySelector(`ul.options > li.loading-more`)).toBeNull()
   })
 
-  test(`scroll triggers pagination when hasMore=true`, async () => {
-    const load_options = vi
-      .fn()
-      .mockResolvedValueOnce({ options: mock_data.slice(0, 50), hasMore: true })
-      .mockResolvedValueOnce({ options: mock_data.slice(50, 100), hasMore: false })
+  test.each([
+    [
+      `triggers another fetch when hasMore=true`,
+      () =>
+        vi
+          .fn()
+          .mockResolvedValueOnce({ options: mock_data.slice(0, 50), hasMore: true })
+          .mockResolvedValueOnce({ options: mock_data.slice(50, 100), hasMore: false }),
+      2,
+      { search: ``, offset: 50, limit: 50 },
+    ],
+    [
+      `does not fetch again when hasMore=false`,
+      () => vi.fn(() => Promise.resolve({ options: [`A`, `B`], hasMore: false })),
+      1,
+      null,
+    ],
+  ])(
+    `scroll pagination: %s`,
+    async (_label, make_load_options, expected_calls, last_args) => {
+      const load_options = make_load_options()
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: load_options, open: true },
+      })
+      await tick()
+      await tick()
 
-    mount(MultiSelect, {
-      target: document.body,
-      props: { loadOptions: load_options, open: true },
-    })
-    await tick()
-    await tick()
+      expect(load_options).toHaveBeenCalledTimes(1)
 
-    expect(load_options).toHaveBeenCalledTimes(1)
+      mock_scroll_near_bottom(doc_query(`ul.options`))
+      await tick()
 
-    const ul = doc_query(`ul.options`)
-    mock_scroll_near_bottom(ul)
-    await tick()
-
-    expect(load_options).toHaveBeenCalledTimes(2)
-    expect(load_options).toHaveBeenLastCalledWith({
-      search: ``,
-      offset: 50,
-      limit: 50,
-    })
-  })
-
-  test(`scroll does not trigger when hasMore=false`, async () => {
-    const load_options = vi.fn(() =>
-      Promise.resolve({ options: [`A`, `B`], hasMore: false }),
-    )
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: { loadOptions: load_options, open: true },
-    })
-    await tick()
-    await tick()
-
-    expect(load_options).toHaveBeenCalledTimes(1)
-
-    const ul = doc_query(`ul.options`)
-    mock_scroll_near_bottom(ul)
-    await tick()
-
-    expect(load_options).toHaveBeenCalledTimes(1)
-  })
+      expect(load_options).toHaveBeenCalledTimes(expected_calls)
+      if (last_args) expect(load_options).toHaveBeenLastCalledWith(last_args)
+    },
+  )
 
   // https://github.com/janosh/svelte-multiselect/issues/412
   test(`auto-fills when small batchSize doesn't overflow dropdown`, async () => {
@@ -5475,15 +5414,38 @@ describe(`CSS static analysis`, () => {
     expect(default_icon_block).toMatch(/overflow:\s*hidden/u)
   })
 
-  test(`options dropdown has border with light-dark default`, () => {
+  test(`options dropdown border and bg use light-dark defaults`, () => {
     expect(options_block).toMatch(/--sms-options-border,\s*1px solid light-dark\(/u)
     expect(options_block).toMatch(
       /border-width:\s*var\(--sms-options-border-width,\s*1px\)/u,
     )
+    expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/u)
   })
 
-  test(`options dropdown bg contrasts with typical page bg`, () => {
-    expect(options_block).toMatch(/--sms-options-bg,\s*light-dark\(#fcfcfc/u)
+  // Guards the schemeless-dark-page readability fix: the primary text-bearing surfaces
+  // (root, input, dropdown) must pair their light-dark() background with a light-dark()
+  // text default, so the widget can't render white-on-white when the page never declares
+  // color-scheme (light-dark() → light).
+  test.each([
+    [`div.multiselect root`, /:where\(div\.multiselect\)\s*\{(?<block>[\s\S]*?)\}/u],
+    [
+      `input`,
+      /:where\(div\.multiselect > ul\.selected > input\)\s*\{(?<block>[\s\S]*?)\}/u,
+    ],
+    [`ul.options dropdown`, /:where\(ul\.options\)\s*\{(?<block>[\s\S]*?)\}/u],
+  ])(`%s pairs text color with a light-dark() default`, (_desc, pattern) => {
+    expect(get_css_block(pattern)).toMatch(
+      /color:\s*var\(--sms-text-color,\s*light-dark\(#222,\s*#eee\)\)/u,
+    )
+  })
+
+  test(`selected option text color chain ends in a light-dark() default`, () => {
+    const selected_block = get_css_block(
+      /:where\(div\.multiselect > ul\.selected > li\)\s*\{(?<block>[\s\S]*?)\}/u,
+    )
+    expect(selected_block).toMatch(
+      /color:\s*var\(--sms-selected-text-color,\s*var\(--sms-text-color,\s*light-dark\(#222,\s*#eee\)\)\)/u,
+    )
   })
 
   test(`custom-snippet remove-all overrides circular defaults`, () => {
@@ -6250,14 +6212,19 @@ describe(`option grouping feature`, () => {
     expect(count_span?.textContent?.trim()).toBe(expected_count)
   })
 
-  test(`searchExpandsCollapsedGroups expands matching groups`, async () => {
+  test.each([
+    [`expands the matching group`, `Rock`, { group: `Genre`, collapsed: false }],
+    // "C Major"/"D Minor" contain spaces, so a bare space fuzzy-matches them. The
+    // has_search_text guard must stop the Key group expanding on whitespace-only input.
+    [`ignores whitespace-only input`, ` `, null],
+  ])(`searchExpandsCollapsedGroups %s`, async (_name, search, expected_toggle) => {
     const ongroupToggle_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
         options: grouped_options,
         collapsibleGroups: true,
-        collapsedGroups: new Set([`Genre`, `Key`]), // Both collapsed initially
+        collapsedGroups: new Set([`Genre`, `Key`]), // both collapsed initially
         searchExpandsCollapsedGroups: true,
         ongroupToggle: ongroupToggle_spy,
         open: true,
@@ -6265,47 +6232,21 @@ describe(`option grouping feature`, () => {
     })
     await tick()
 
-    // Both groups collapsed, so no options visible
-    const visible_options = document.querySelectorAll(
-      `ul.options > li:not(.group-header):not(.select-all):not(.user-msg)`,
-    )
-    // Only ungrouped option visible
-    expect(visible_options).toHaveLength(1)
+    // both groups collapsed → only the ungrouped option is visible initially
+    expect(
+      document.querySelectorAll(
+        `ul.options > li:not(.group-header):not(.select-all):not(.user-msg)`,
+      ),
+    ).toHaveLength(1)
 
-    // Type search that matches Genre option
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.value = `Rock`
+    input.value = search
     input.dispatchEvent(input_event)
     await tick()
 
-    // Genre group should now be expanded because "Rock" matches
-    // ongroupToggle should have been called
-    expect(ongroupToggle_spy).toHaveBeenCalledWith({ group: `Genre`, collapsed: false })
-  })
-
-  test(`searchExpandsCollapsedGroups ignores whitespace-only input`, async () => {
-    // "C Major" and "D Minor" contain spaces, so a single space fuzzy-matches them.
-    // Without the has_search_text guard, the Key group would expand on whitespace input.
-    const ongroupToggle_spy = vi.fn()
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: grouped_options,
-        collapsibleGroups: true,
-        collapsedGroups: new Set([`Genre`, `Key`]),
-        searchExpandsCollapsedGroups: true,
-        ongroupToggle: ongroupToggle_spy,
-        open: true,
-      },
-    })
-    await tick()
-
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.value = ` `
-    input.dispatchEvent(input_event)
-    await tick()
-
-    expect(ongroupToggle_spy).not.toHaveBeenCalled()
+    if (expected_toggle) {
+      expect(ongroupToggle_spy).toHaveBeenCalledWith(expected_toggle)
+    } else expect(ongroupToggle_spy).not.toHaveBeenCalled()
   })
 
   test.each([

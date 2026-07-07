@@ -380,8 +380,7 @@
   let effective_options = $derived(loadOptions ? loaded_options : (options ?? []))
 
   let has_search_text = $derived(searchText.trim().length > 0)
-  // Cache selected keys and labels to avoid repeated .map() calls
-  let selected_keys = $derived(selected.map((opt) => key(opt)))
+  // Cache selected labels to avoid repeated .map() calls (keys are mapped once into the Set below)
   let selected_labels = $derived(selected.map((opt) => utils.get_label(opt)))
   let input_committed_label = $derived(
     input_display && selected[0] !== undefined ? `${utils.get_label(selected[0])}` : null,
@@ -426,7 +425,7 @@
     return open && load_options_has_more && search_changed
   })
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch operations)
-  let selected_keys_set = $derived(new SvelteSet(selected_keys))
+  let selected_keys_set = $derived(new SvelteSet(selected.map((opt) => key(opt))))
   // String-normalized for consistent comparison (numeric labels like 123 match "123")
   let selected_labels_set = $derived(
     new SvelteSet(selected_labels.map((label) => `${label}`)),
@@ -997,17 +996,13 @@
     } else input?.focus()
   }
 
+  // user messages only show while the input has an active query and no fetch is pending
+  const user_msgs_eligible = $derived(show_input_user_msg && !load_options_pending)
   const can_show_create_msg = $derived(
-    show_input_user_msg &&
-      Boolean(allowUserOptions) &&
-      Boolean(resolved_create_msg) &&
-      !load_options_pending,
+    user_msgs_eligible && Boolean(allowUserOptions) && Boolean(resolved_create_msg),
   )
   const can_show_no_match_msg = $derived(
-    show_input_user_msg &&
-      navigable_options.length === 0 &&
-      Boolean(noMatchingOptionsMsg) &&
-      !load_options_pending,
+    user_msgs_eligible && navigable_options.length === 0 && Boolean(noMatchingOptionsMsg),
   )
 
   // Check if a user message (create option, duplicate warning, no match) is visible
@@ -1582,43 +1577,39 @@
 
   // Single effect handles initial load + search changes
   $effect(() => {
-    if (!load_options_config) return
+    const config = load_options_config
+    if (!config) return
+
+    let debounce_timer: ReturnType<typeof setTimeout> | undefined
+    const clear_loaded_batch = () => {
+      loaded_options = []
+      load_options_has_more = true
+    }
+    // debounce a fresh load so the UI doesn't refetch on every keystroke
+    const schedule_load = () => {
+      debounce_timer = setTimeout(() => load_dynamic_options(true), config.debounce_ms)
+    }
 
     // Reset state when dropdown closes so next open triggers fresh load
     if (!open) {
       load_request_id++
       load_options_last_search = null
-      loaded_options = []
-      load_options_has_more = true
+      clear_loaded_batch()
       load_options_loading = false
       return
     }
 
     const search = effective_filter_text
     const is_first_load = load_options_last_search === null
-    let debounce_timer: ReturnType<typeof setTimeout> | undefined
 
     if (is_first_load) {
-      if (load_options_config.on_open) {
-        // Load immediately on dropdown open
-        load_dynamic_options(true)
-      } else if (search) {
-        // onOpen=false but user typed - debounce and load
-        debounce_timer = setTimeout(
-          () => load_dynamic_options(true),
-          load_options_config.debounce_ms,
-        )
-      }
-      // If onOpen=false and no search text, do nothing (wait for user to type)
+      // Load immediately on open; if onOpen=false, wait to debounce until the user types
+      if (config.on_open) load_dynamic_options(true)
+      else if (search) schedule_load()
     } else if (search !== load_options_last_search) {
-      // Subsequent loads: debounce search changes
-      // Clear stale results immediately so UI doesn't show wrong results while loading
-      loaded_options = []
-      load_options_has_more = true
-      debounce_timer = setTimeout(
-        () => load_dynamic_options(true),
-        load_options_config.debounce_ms,
-      )
+      // Subsequent loads: clear stale results immediately, then debounce the new search
+      clear_loaded_batch()
+      schedule_load()
     }
     return () => {
       if (debounce_timer) clearTimeout(debounce_timer)
@@ -2103,7 +2094,11 @@
     width: var(--sms-width);
     max-width: var(--sms-max-width);
     padding: var(--sms-padding, 0 3pt);
-    color: var(--sms-text-color);
+    /* pair the default text color with the light-dark() background so the widget
+       stays readable on dark pages that never declare color-scheme (light-dark()
+       falls back to light there). Set --sms-text-color: inherit to blend with the
+       page instead. */
+    color: var(--sms-text-color, light-dark(#222, #eee));
     font-size: var(--sms-font-size, inherit);
     min-height: var(--sms-min-height, 22pt);
     margin: var(--sms-margin);
@@ -2144,7 +2139,7 @@
       light-dark(rgba(100, 120, 140, 0.15), rgba(120, 170, 255, 0.2))
     );
     padding: var(--sms-selected-li-padding, 0 2pt 0 5pt);
-    color: var(--sms-selected-text-color, var(--sms-text-color));
+    color: var(--sms-selected-text-color, var(--sms-text-color, light-dark(#222, #eee)));
   }
   :where(div.multiselect > ul.selected > li[draggable='true']) {
     cursor: grab;
@@ -2205,7 +2200,7 @@
     flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
     min-width: 2em;
     /* ensure input uses text color and not --sms-selected-text-color */
-    color: var(--sms-text-color);
+    color: var(--sms-text-color, light-dark(#222, #eee));
     font-size: inherit;
     cursor: inherit; /* needed for disabled state */
     border-radius: 0; /* reset ul.selected > li */
@@ -2257,6 +2252,9 @@
       visibility 0.2s;
     box-sizing: border-box;
     background: var(--sms-options-bg, light-dark(#fcfcfc, #222226));
+    /* pair text with the light-dark() background: when portalled the dropdown is
+       moved to document.body and no longer inherits div.multiselect's color */
+    color: var(--sms-text-color, light-dark(#222, #eee));
     max-height: var(--sms-options-max-height, 50vh);
     overscroll-behavior: var(--sms-options-overscroll, none);
     box-shadow: var(
