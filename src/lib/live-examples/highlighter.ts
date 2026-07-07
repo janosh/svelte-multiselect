@@ -31,12 +31,10 @@ export const starry_night = await create_starry_night()
 export function starry_night_highlighter(code: string, lang?: string | null): string {
   const lang_key = lang?.toLowerCase()
   const scope = lang_key ? starry_night.flagToScope(lang_key) : undefined
-  if (!scope) {
-    // Return escaped code if language not supported
-    const escaped = escape_svelte(escape_html_text(code))
-    return `<pre class="highlight"><code>${escaped}</code></pre>`
-  }
-  const tree = starry_night.highlight(code, scope)
-  const html = escape_svelte(hast_to_html(tree))
-  return `<pre class="highlight highlight-${lang_key}"><code>${html}</code></pre>`
+  // fall back to plain escaped code when the language is missing or unsupported
+  const html = scope
+    ? escape_svelte(hast_to_html(starry_night.highlight(code, scope)))
+    : escape_svelte(escape_html_text(code))
+  const class_name = scope ? `highlight highlight-${lang_key}` : `highlight`
+  return `<pre class="${class_name}"><code>${html}</code></pre>`
 }

@@ -4,9 +4,9 @@ import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
 
 export type Option = string | number | ObjectOption
 
-// single CSS string or an object with keys 'option' and 'selected', each a string,
+// single CSS string or an object with optional 'option' and 'selected' keys,
 // which only apply to the dropdown list and list of selected options, respectively
-export type OptionStyle = string | { option: string; selected: string }
+export type OptionStyle = string | { option?: string; selected?: string }
 
 export type ObjectOption = {
   label: string | number // user-displayed text

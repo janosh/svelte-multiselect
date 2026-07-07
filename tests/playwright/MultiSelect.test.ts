@@ -1,6 +1,17 @@
 // deno-lint-ignore-file no-await-in-loop
 import { foods, languages, octicons } from '$site/options'
-import { expect, test, type Page } from '@playwright/test'
+import { expect, test, type Locator, type Page } from '@playwright/test'
+
+// Open the /portal demo modal and return its content locator
+async function open_portal_modal(page: Page): Promise<Locator> {
+  await page.goto(`/portal`, { waitUntil: `networkidle` })
+  await page.getByRole(`button`, { name: `Open Modal` }).click()
+  return page.locator(`div.modal-content.modal`)
+}
+
+// Locate the visible portalled dropdown containing an option with the given label
+const portalled_options = (page: Page, label: string): Locator =>
+  page.locator(`body > ul.options:not(.hidden):has(li:has-text("${label}"))`)
 
 async function goto_persistent(page: Page): Promise<void> {
   await page.goto(`/persistent`)
@@ -32,7 +43,7 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
   await expect(status.locator(`text=⚠️ Regression`)).not.toBeVisible()
 
   const count_text = await status.textContent()
-  const count = parseInt(count_text?.match(/\d+/u)?.[0] ?? `0`, 10)
+  const count = Math.trunc(Number(count_text?.match(/\d+/u)?.[0] ?? `0`))
   expect(count).toBeLessThan(10)
 })
 
@@ -42,14 +53,19 @@ test.describe(`input`, () => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const dropdown = page.locator(`#foods div.multiselect > ul.options`)
 
-    await expect(dropdown).toHaveClass(/hidden/u)
+    // generous timeout: on cold CI runs the dev server may still be compiling /ui
+    await expect(dropdown).toHaveClass(/hidden/u, { timeout: 15_000 })
     await expect(dropdown).toBeHidden()
 
-    await page.evaluate(() => {
-      const input = document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)
-      input?.focus()
-    })
-    await expect(dropdown).not.toHaveClass(/hidden/u)
+    const focus_input = () =>
+      page.evaluate(() => {
+        document.querySelector<HTMLInputElement>(`#foods input[autocomplete]`)?.focus()
+      })
+    // retry focus: it's a no-op if it fires before hydration attached the focus handler
+    await expect(async () => {
+      await focus_input()
+      await expect(dropdown).not.toHaveClass(/hidden/u, { timeout: 1000 })
+    }).toPass()
     await expect(dropdown).toBeVisible()
 
     await page.evaluate(() => {
@@ -186,19 +202,14 @@ test.describe(`portal feature`, () => {
 
   test(`mobile touch selection works with portal enabled`, async ({ page }) => {
     await page.setViewportSize({ width: 375, height: 812 })
-    await page.goto(`/portal`, { waitUntil: `networkidle` })
-    await page.getByRole(`button`, { name: `Open Modal` }).click()
-
-    const modal_content = page.locator(`div.modal-content.modal`)
+    const modal_content = await open_portal_modal(page)
     const languages_input = modal_content.locator(
       `div.multiselect input[placeholder='Choose languages...']`,
     )
 
     await languages_input.click()
 
-    const portalled_languages_options = page.locator(
-      `body > ul.options:not(.hidden):has(li:has-text("${languages[0]}"))`,
-    )
+    const portalled_languages_options = portalled_options(page, languages[0])
     await expect(portalled_languages_options).toBeVisible()
 
     const dropdown_stays_open = await page.evaluate(() => {
@@ -228,18 +239,13 @@ test.describe(`portal feature`, () => {
   })
 
   test(`dropdowns in modal render in body when portal is active`, async ({ page }) => {
-    await page.goto(`/portal`, { waitUntil: `networkidle` })
-    await page.getByRole(`button`, { name: `Open Modal` }).click()
-
-    const modal_content = page.locator(`div.modal-content.modal`)
+    const modal_content = await open_portal_modal(page)
     const languages_input = modal_content.locator(
       `div.multiselect input[placeholder='Choose languages...']`,
     )
     await languages_input.click()
 
-    const portalled_languages_options = page.locator(
-      `body > ul.options:not(.hidden):has(li:has-text("${languages[0]}"))`,
-    )
+    const portalled_languages_options = portalled_options(page, languages[0])
     await expect(portalled_languages_options).toBeVisible()
     await expect(
       modal_content
@@ -263,9 +269,7 @@ test.describe(`portal feature`, () => {
     )
     await octicons_input.click()
 
-    const portalled_octicons_options = page.locator(
-      `body > ul.options:not(.hidden):has(li:has-text("${octicons[0]}"))`,
-    )
+    const portalled_octicons_options = portalled_options(page, octicons[0])
     await expect(portalled_octicons_options).toBeVisible()
     await expect(
       modal_content
@@ -290,10 +294,7 @@ test.describe(`portal feature`, () => {
     page,
   }) => {
     await page.setViewportSize({ width: 900, height: 700 })
-    await page.goto(`/portal`, { waitUntil: `networkidle` })
-    await page.getByRole(`button`, { name: `Open Modal` }).click()
-
-    const modal_content = page.locator(`div.modal-content.modal`)
+    const modal_content = await open_portal_modal(page)
     const languages_input_selector = `div.multiselect input[placeholder='Choose languages...']`
     const languages_input = modal_content.locator(languages_input_selector)
 
@@ -311,9 +312,7 @@ test.describe(`portal feature`, () => {
     })
 
     await languages_input.click()
-    const portalled_languages_options = page.locator(
-      `body > ul.options:not(.hidden):has(li:has-text("${languages[0]}"))`,
-    )
+    const portalled_languages_options = portalled_options(page, languages[0])
     await expect(portalled_languages_options).toBeVisible()
 
     const assert_aligned = async () => {
@@ -400,4 +399,68 @@ test(`component buttons are styled correctly with border: none`, async ({ page }
     (element) => getComputedStyle(element).borderStyle,
   )
   expect(border_style).toBe(`none`)
+})
+
+// Runtime regression tests for the schemeless-dark-page readability fix: the component
+// pairs a light-dark() text-color default with its light-dark() backgrounds so text can't
+// inherit a near-white page color on pages that never declare `color-scheme` (there
+// light-dark() resolves to its light branch). happy-dom strips light-dark()/var() from
+// computed styles, so this can only be verified in a real browser.
+// light-dark(#222, #eee) → #222 = rgb(34, 34, 34) under the schemeless (light) scheme.
+test.describe(`schemeless-dark-page text-color readability`, () => {
+  test.use({ colorScheme: `light` }) // schemeless subtree resolves light-dark() to its light branch
+  const readable = `rgb(34, 34, 34)`
+  const computed_color = (page: Page, selector: string) =>
+    page
+      .locator(selector)
+      .first()
+      .evaluate((element) => getComputedStyle(element).color)
+
+  // in-place: the div.multiselect root default cascades to the input the user types in
+  test(`in-place widget text uses the light-dark() default, not the inherited page color`, async ({
+    page,
+  }) => {
+    await page.goto(`/ui`, { waitUntil: `networkidle` })
+
+    // simulate a dark page that never declares color-scheme: force the schemeless (normal)
+    // scheme on the widget's subtree and give its parent a distinctive inherited color.
+    await page.evaluate(() => {
+      const parent =
+        document.querySelector<HTMLElement>(`#foods div.multiselect`)?.parentElement
+      if (!parent) throw new Error(`#foods div.multiselect parent not found`)
+      parent.style.colorScheme = `normal`
+      parent.style.color = `rgb(255, 0, 0)`
+    })
+
+    expect(await computed_color(page, `#foods div.multiselect`), `root`).toBe(readable)
+    expect(await computed_color(page, `#foods input[autocomplete]`), `input`).toBe(
+      readable,
+    )
+  })
+
+  // portalled: ul.options is moved to document.body and no longer inherits div.multiselect's
+  // color, so it needs its own default — this is the surface an in-place test can't verify.
+  test(`portalled dropdown text uses the light-dark() default, not the inherited page color`, async ({
+    page,
+  }) => {
+    const modal_content = await open_portal_modal(page)
+    await modal_content.locator(`input[placeholder='Choose languages...']`).click()
+
+    const dropdown = page.locator(`body > ul.options:not(.hidden)`)
+    await expect(dropdown).toBeVisible()
+
+    // schemeless dark page: the portalled dropdown inherits color-scheme + color from body
+    await page.evaluate(() => {
+      document.body.style.colorScheme = `normal`
+      document.body.style.color = `rgb(255, 0, 0)`
+    })
+
+    expect(await computed_color(page, `body > ul.options:not(.hidden)`), `dropdown`).toBe(
+      readable,
+    )
+    expect(
+      await computed_color(page, `body > ul.options:not(.hidden) > li`),
+      `option`,
+    ).toBe(readable)
+  })
 })
