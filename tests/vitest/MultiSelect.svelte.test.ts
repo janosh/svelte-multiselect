@@ -3711,30 +3711,38 @@ test.each([
   [`test-style`, `selected`, `test-style;`],
   [`test-style`, `option`, `test-style;`],
   [`test-style`, null, `test-style;`],
-  // Object style cases
-  [{ selected: `selected-style`, option: `option-style` }, `selected`, `selected-style`],
-  [{ selected: `selected-style`, option: `option-style` }, `option`, `option-style`],
+  // Object style cases (get the same trailing-semicolon normalization as strings)
+  [{ selected: `selected-style`, option: `option-style` }, `selected`, `selected-style;`],
+  [{ selected: `selected-style`, option: `option-style` }, `option`, `option-style;`],
+  [{ selected: `selected-style` }, `selected`, `selected-style;`],
+  [{ selected: `selected-style` }, `option`, ``],
+  [{ option: `option-style` }, `option`, `option-style;`],
+  [{ option: `option-style` }, `selected`, ``],
+  [{}, `selected`, ``],
   // Invalid object style cases
   [
     { invalid: `invalid-style` },
     `selected`,
     ``,
-    `Invalid style object for option=${JSON.stringify({
-      style: { invalid: `invalid-style` },
-    })}`,
+    [
+      `MultiSelect: invalid style object for option`,
+      { style: { invalid: `invalid-style` } },
+    ],
   ],
 ])(
   `get_style returns and console.errors correctly (%s, %s, %s, %s)`,
-  (style, key, expected, err_msg = ``) => {
+  (style, key, expected, err_args: unknown[] | string = ``) => {
     console.error = vi.fn()
 
     // @ts-expect-error test invalid option
     const result = get_style({ style }, key)
 
-    if (expected.startsWith(`Invalid`) || expected.startsWith(`MultiSelect`)) {
+    if (err_args) {
       expect(console.error).toHaveBeenCalledTimes(1)
-      expect(console.error).toHaveBeenCalledWith(err_msg)
-    }
+      expect(console.error).toHaveBeenCalledWith(
+        ...(Array.isArray(err_args) ? err_args : [err_args]),
+      )
+    } else expect(console.error).not.toHaveBeenCalled()
     expect(result).toBe(expected)
   },
 )
@@ -3749,6 +3757,11 @@ test.each<[OptionStyle, string | null, string]>([
   // Object style cases
   [{ selected: `color: red;`, option: `color: blue;` }, `selected`, `color: red;`],
   [{ selected: `color: red;`, option: `color: blue;` }, `option`, `color: blue;`],
+  [{ selected: `color: red;` }, `selected`, `color: red;`],
+  [{ selected: `color: red;` }, `option`, ``],
+  [{ option: `color: blue;` }, `option`, `color: blue;`],
+  [{ option: `color: blue;` }, `selected`, ``],
+  [{}, `selected`, ``],
   // Invalid object style cases
   // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- intentionally testing invalid style object
   [{ invalid: `color: green;` } as unknown as OptionStyle, `selected`, ``],

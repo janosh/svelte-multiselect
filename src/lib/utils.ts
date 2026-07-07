@@ -58,9 +58,16 @@ export function get_style(
   }
   if (typeof option === `object` && option.style) {
     if (typeof option.style === `string`) css_str = option.style
-    if (typeof option.style === `object`) {
-      if (key && key in option.style) return option.style[key] ?? ``
-      else if (key) console.error(`MultiSelect: invalid style object for option`, option)
+    if (typeof option.style === `object` && key) {
+      if (key in option.style) css_str = option.style[key] ?? ``
+      else {
+        // partial style objects (e.g. only `selected`) are fine; only error when
+        // the object has keys but none of the known ones
+        const has_known_key = `option` in option.style || `selected` in option.style
+        if (!has_known_key && Object.keys(option.style).length > 0) {
+          console.error(`MultiSelect: invalid style object for option`, option)
+        }
+      }
     }
   }
   // ensure css_str ends with a semicolon

@@ -89,18 +89,28 @@ describe(`get_style`, () => {
     option: `color: green`,
   }
   test.each([
-    [{ style: option_style }, `selected`, `color: blue`],
-    [{ style: option_style }, `option`, `color: green`],
-    [{ style: { selected: `color: blue` } }, `option`, ``],
+    // object styles get the same trailing-semicolon normalization as string styles
+    [{ label: `test`, style: option_style }, `selected`, `color: blue;`],
+    [{ label: `test`, style: option_style }, `option`, `color: green;`],
+    [{ label: `test`, style: { selected: `color: blue` } }, `option`, ``],
+    [{ label: `test`, style: { option: `color: green` } }, `selected`, ``],
+    [{ label: `test`, style: {} }, `option`, ``],
   ] as const)(
     `handles object styles correctly for %j with key %s`,
     (option, key, expected) => {
-      // @ts-expect-error missing key option in last test case
       expect(get_style(option, key)).toBe(expected)
     },
   )
 
-  test(`logs error for invalid style object without requested key`, () => {
+  test(`does not log for partial style objects`, () => {
+    console.error = vi.fn<typeof console.error>()
+    get_style({ label: `test`, style: { selected: `color: blue` } }, `option`)
+    get_style({ label: `test`, style: { option: `color: green` } }, `selected`)
+    get_style({ label: `test`, style: {} }, `option`)
+    expect(console.error).not.toHaveBeenCalled()
+  })
+
+  test(`logs error for style object with no known style keys`, () => {
     const option_obj = { style: { invalid_key: `some-style` } }
     console.error = vi.fn<typeof console.error>()
     // @ts-expect-error invalid key
