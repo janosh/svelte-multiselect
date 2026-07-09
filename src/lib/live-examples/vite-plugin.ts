@@ -1,8 +1,10 @@
 // Vite plugin - handles virtual module resolution for example components
-import { parse } from 'acorn'
 import { Buffer } from 'node:buffer'
 import process from 'node:process'
 import type { HmrContext, Plugin, ViteDevServer } from 'vite'
+// Vite's own ESTree parser (native OXC, no extra dependency): same node types
+// and start/end offsets acorn produced, module + latest syntax by default
+import { parseSync } from 'vite'
 import { EXAMPLE_MODULE_PREFIX } from './mdsvex-transform.ts'
 
 // Matches import paths emitted by mdsvex-transform, e.g. ___live_example___0.svelte
@@ -135,19 +137,12 @@ export default function live_examples_plugin(
       if (id.includes(`svelte&type=`)) return with_empty_map(code)
 
       if (is_markdown) {
-        // Use AST for precise node location, collect edits to apply at end
-        let tree
-        try {
-          tree = parse(code, {
-            ranges: true,
-            ecmaVersion: `latest`,
-            sourceType: `module`,
-          })
-        } catch {
-          // Code may contain Svelte syntax that the JS parser can't handle
-          // (e.g., template blocks, special directives). Skip transformation.
-          return with_empty_map(code)
-        }
+        // Use AST for precise node location, collect edits to apply at end.
+        // parseSync reports errors instead of throwing (unlike acorn): code may
+        // contain Svelte syntax the JS parser can't handle (e.g., template
+        // blocks, special directives) — skip transformation then.
+        const { program: tree, errors } = parseSync(`file.js`, code)
+        if (errors.length > 0) return with_empty_map(code)
         const edits: Edit[] = []
         const { src_props, imports } = collect_nodes(tree)
         const invalidate_virtual_modules = (virtual_id: string) => {

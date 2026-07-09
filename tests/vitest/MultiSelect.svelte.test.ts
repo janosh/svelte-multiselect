@@ -7836,6 +7836,8 @@ describe(`async oncreate`, () => {
 })
 
 describe(`portal placement`, () => {
+  afterEach(() => vi.unstubAllGlobals()) // don't leak innerHeight overrides to other tests
+
   // happy-dom has no real layout engine, so stub getBoundingClientRect on the
   // outer div, offsetHeight on the portalled dropdown, and the viewport height
   function stub_layout({
@@ -7865,11 +7867,7 @@ describe(`portal placement`, () => {
       value: dropdown_height,
       configurable: true,
     })
-    Object.defineProperty(globalThis, `innerHeight`, {
-      value: viewport_height,
-      configurable: true,
-      writable: true,
-    })
+    vi.stubGlobal(`innerHeight`, viewport_height)
     return dropdown
   }
 
@@ -7939,6 +7937,16 @@ describe(`portal placement`, () => {
       viewport_height: 700,
       expected_placement: `bottom`,
       desc: `unmeasured dropdown (offsetHeight 0) falls back to bottom`,
+    },
+    {
+      // omitted placement must default to auto: same tight-space-below setup as
+      // the auto row above, so a flip to top proves the default contract
+      placement: undefined,
+      trigger_rect: { top: 600, bottom: 630 },
+      dropdown_height: 200,
+      viewport_height: 700,
+      expected_placement: `top`,
+      desc: `omitted placement defaults to auto and flips above`,
     },
   ] as const)(
     `placement=$placement with $desc resolves to $expected_placement`,
@@ -8013,11 +8021,7 @@ describe(`portal placement`, () => {
       y: 600,
       toJSON: () => ({}),
     })
-    Object.defineProperty(globalThis, `innerHeight`, {
-      value: 700,
-      configurable: true,
-      writable: true,
-    })
+    vi.stubGlobal(`innerHeight`, 700)
     globalThis.dispatchEvent(new Event(`scroll`))
     expect(dropdown.dataset.placement).toBe(`top`)
 

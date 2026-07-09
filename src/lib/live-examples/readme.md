@@ -4,10 +4,10 @@ The optional `svelte-multiselect/live-examples` subpath provides the mdsvex
 remark transform, Vite plugin, and code highlighter used by the documentation's
 live code examples.
 
-Install its optional peer dependencies in apps that import this subpath:
+Install its optional peer dependency in apps that import this subpath:
 
 ```sh
-npm install --dev acorn @wooorm/starry-night
+npm install --dev @wooorm/starry-night
 ```
 
 The Vite plugin uses Vite's built-in `parseSync` AST parser, which requires

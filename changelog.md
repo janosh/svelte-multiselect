@@ -1,5 +1,20 @@
 # Changelog
 
+## [v11.8.0](https://github.com/janosh/svelte-multiselect/compare/v11.7.2...v11.8.0)
+
+> 9 July 2026
+
+- Add async `oncreate` support: return a Promise (or thenable) to persist user-created options before they're added; spinner + `aria-busy` while pending, rejections abort the add [`#427`](https://github.com/janosh/svelte-multiselect/pull/427)
+- Add `virtualList` prop for windowed dropdown rendering of large flat option lists (tunable `itemHeight`/`overscan`) [`#427`](https://github.com/janosh/svelte-multiselect/pull/427)
+- Add portal `placement` param: `auto` (new default) flips the dropdown above the input when it would overflow the viewport bottom [`#427`](https://github.com/janosh/svelte-multiselect/pull/427)
+- Fix 19 bugs across `MultiSelect`, attachments, `CmdPalette`, `CodeExample`, and heading-anchors, incl. falsy options (`0`) unselectable via keyboard, foreign drag-drops corrupting `selected`, keyboard nav escaping `maxOptions`, group deselect bypassing `minSelect`, missing IME composition guard, duplicate options crashing the keyed each, `sortable` destroying header markup, cross-instance tooltip clearing, and Unicode highlight offsets [`#427`](https://github.com/janosh/svelte-multiselect/pull/427)
+- Give tooltips a visible theme-aware default border and audit the test suite (~58 redundant tests removed, ~50 regression tests added) [`#427`](https://github.com/janosh/svelte-multiselect/pull/427)
+- Fix schemeless-page tooltip readability and support partial `OptionStyle` objects [`#426`](https://github.com/janosh/svelte-multiselect/pull/426)
+- Fix tooltip, focus, and shortcut edge cases [`#425`](https://github.com/janosh/svelte-multiselect/pull/425)
+- Fix retain-focus dropdown behavior [`#424`](https://github.com/janosh/svelte-multiselect/pull/424)
+- Clean up Svelte formatting, types, and low-value tests [`#422`](https://github.com/janosh/svelte-multiselect/pull/422)
+- Simplify Vite/Svelte setup and tighten tests [`#421`](https://github.com/janosh/svelte-multiselect/pull/421)
+
 ## [v11.7.2](https://github.com/janosh/svelte-multiselect/compare/v11.7.1...v11.7.2)
 
 > 11 June 2026
