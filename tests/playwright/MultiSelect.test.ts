@@ -328,7 +328,12 @@ test.describe(`portal feature`, () => {
         const wrapper_rect = wrapper.getBoundingClientRect()
         const dropdown_rect = dropdown.getBoundingClientRect()
         const left_delta = Math.abs(dropdown_rect.left - wrapper_rect.left)
-        const top_delta = Math.abs(dropdown_rect.top - wrapper_rect.bottom)
+        // auto placement may flip the dropdown above the trigger when space below
+        // is tight; measure the gap on whichever edge the portal chose
+        const top_delta =
+          dropdown.dataset.placement === `top`
+            ? Math.abs(wrapper_rect.top - dropdown_rect.bottom)
+            : Math.abs(dropdown_rect.top - wrapper_rect.bottom)
         const width_delta = Math.abs(dropdown_rect.width - wrapper_rect.width)
         const aligned =
           left_delta <= 2 &&
