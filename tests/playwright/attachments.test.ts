@@ -118,9 +118,9 @@ test.describe(`tooltip shrink-to-fit sizing`, () => {
     const metrics = await measure_tooltip(tooltip_el)
     const word_width = await measure_text_width(tooltip_el, long_word)
 
-    expect(metrics.max_width).toBe(280)
     expect(metrics.line_count).toBeGreaterThanOrEqual(2)
-    // the binary search shrinks the box down to its widest line: the long word
+    // shrink-to-fit grows past the CSS max-width when needed so the longest
+    // unbreakable word stays intact; width matches that word
     expect(metrics.content_width).toBeGreaterThanOrEqual(word_width - 3)
     expect(metrics.content_width).toBeLessThanOrEqual(word_width + 20)
     expect_within_viewport(metrics)

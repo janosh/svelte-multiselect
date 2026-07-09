@@ -777,8 +777,10 @@ export const tooltip =
               width: `${initial_width - box_adjust}px`,
             })
 
-            // If longest word exceeds wrapped width, use min_width (can't shrink further)
+            // If longest word exceeds wrapped width, grow past max-width so the
+            // word stays intact (restoring maxWidth would clamp width back down).
             if (min_width >= initial_width) {
+              style.maxWidth = `none`
               style.width = `${min_width - box_adjust}px`
             } else {
               // Binary search for minimum width that maintains baseline height
