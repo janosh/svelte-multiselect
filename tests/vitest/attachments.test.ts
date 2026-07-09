@@ -480,6 +480,59 @@ describe(`tooltip`, () => {
     })
   })
 
+  describe(`Cross-Instance Cleanup`, () => {
+    beforeEach(() => vi.useFakeTimers())
+
+    it(`cleanup of one instance keeps another instance's visible tooltip`, () => {
+      const [el_a, el_b] = [create_element(), create_element()]
+      el_a.title = `tooltip A`
+      el_b.title = `tooltip B`
+      mock_bounds(el_a)
+      mock_bounds(el_b)
+      const cleanup_a = setup_tooltip(el_a, { delay: 0 })
+      setup_tooltip(el_b, { delay: 0 })
+
+      trigger_tooltip(el_b)
+      expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip B`)
+
+      cleanup_a?.()
+      expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(
+        `tooltip B`,
+      )
+    })
+
+    it(`cleanup of one instance keeps another instance's pending show`, () => {
+      const [el_a, el_b] = [create_element(), create_element()]
+      el_a.title = `tooltip A`
+      el_b.title = `tooltip B`
+      mock_bounds(el_a)
+      mock_bounds(el_b)
+      const cleanup_a = setup_tooltip(el_a, { delay: 100 })
+      setup_tooltip(el_b, { delay: 100 })
+
+      el_b.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      cleanup_a?.() // must not cancel B's pending show timeout
+
+      vi.runAllTimers()
+      expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(
+        `tooltip B`,
+      )
+    })
+
+    it(`cleanup cancels its own pending show`, () => {
+      const element = create_element()
+      element.title = `own pending`
+      mock_bounds(element)
+      const cleanup = setup_tooltip(element, { delay: 100 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      cleanup?.()
+
+      vi.runAllTimers()
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
+    })
+  })
+
   describe(`New Features`, () => {
     beforeEach(() => vi.useFakeTimers())
 
@@ -757,7 +810,7 @@ describe(`tooltip`, () => {
       expect(tooltip_css).toMatch(/background-color:.*light-dark\(\s*#fff,\s*#2a2a2e/u)
       expect(tooltip_css).toMatch(/\bcolor:.*light-dark\(\s*#222,\s*#eee/u)
       expect(tooltip_css).toMatch(
-        /border:.*var\(--tooltip-border,\s*1px solid light-dark\(\s*rgba\(0,\s*0,\s*0,\s*0\.12\),\s*rgba\(255,\s*255,\s*255,\s*0\.18\)/u,
+        /border:.*var\(--tooltip-border,\s*1px solid light-dark\(\s*lightgray,\s*#555\)/u,
       )
 
       const arrow_borders = set_prop_values.filter(
@@ -962,6 +1015,21 @@ describe(`tooltip`, () => {
       )
     })
 
+    it.each([
+      [`LF`, `line1\nline2`],
+      [`CRLF`, `line1\r\nline2`],
+      [`CR`, `line1\rline2`],
+    ])(`converts %s newlines to <br/> in allow_html content`, (_desc, content) => {
+      const element = create_element()
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0, allow_html: true, content })
+
+      trigger_tooltip(element)
+      const content_el = doc_query(`.tooltip-content`)
+      expect(content_el.querySelectorAll(`br`)).toHaveLength(1)
+      expect(content_el.textContent).toBe(`line1line2`)
+    })
+
     it(`uses custom style background-color for tooltip arrow fill`, () => {
       const { set_prop_values, restore } = capture_style_writes()
       try {
@@ -997,7 +1065,7 @@ describe(`click_outside`, () => {
     return element
   }
 
-  const dispatch_click = (target: HTMLElement, path: EventTarget[] = []) => {
+  const dispatch_click = (target: Element, path: EventTarget[] = []) => {
     const event = new Event(`click`, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
@@ -1049,6 +1117,18 @@ describe(`click_outside`, () => {
     dispatch_click(excluded2)
     dispatch_click(nested)
     expect(callback).not.toHaveBeenCalled()
+  })
+
+  it(`should trigger on clicks landing on SVG elements outside the node`, () => {
+    const element = create_element()
+    const callback = vi.fn()
+    click_outside({ callback })(element)
+
+    const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
+    document.body.append(svg)
+    dispatch_click(svg)
+
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
   it(`should dispatch custom event (with or without callback)`, () => {
@@ -1261,6 +1341,21 @@ describe(`draggable`, () => {
 
     expect(on_drag_end).not.toHaveBeenCalled()
   })
+
+  it(`should reset body userSelect and cursor when cleaned up mid-drag`, () => {
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 0, top: 0 })
+
+    const cleanup = draggable()(element)
+    element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
+    expect(document.body.style.userSelect).toBe(`none`)
+    expect(element.style.cursor).toBe(`grabbing`)
+
+    cleanup?.() // unmount mid-drag, before any mouseup
+    expect(document.body.style.userSelect).toBe(``)
+    expect(element.style.cursor).toBe(``)
+  })
 })
 
 describe(`highlight_matches`, () => {
@@ -1420,6 +1515,21 @@ describe(`highlight_matches`, () => {
       [11, 12],
     ])
   })
+
+  // 'İ' (U+0130) lowercases to 2 UTF-16 units, so offsets computed on the
+  // lowercased text can exceed the original node length and must not throw
+  it.each([
+    [`substring`, false],
+    [`fuzzy`, true],
+  ])(
+    `%s highlighting must not throw when lowercasing changes string length`,
+    (_desc, fuzzy) => {
+      mock_element.innerHTML = `<p>İİİab</p>`
+
+      expect(() => highlight_matches({ query: `b`, fuzzy })(mock_element)).not.toThrow()
+      expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
+    },
+  )
 
   it(`should not clear other highlights when highlighting`, () => {
     // Setup existing highlights from other components
@@ -1606,6 +1716,71 @@ describe(`sortable`, () => {
     get_required_header(table).dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
 
     expect(get_column_values(table, 0).map((val) => val?.trim())).toEqual(expected)
+  })
+
+  it(`should treat rows with missing cells (colspan placeholder) as empty and sort them last`, () => {
+    const table = document.createElement(`table`)
+    table.innerHTML =
+      `<thead><tr><th>Name</th><th>Score</th></tr></thead><tbody>` +
+      `<tr><td colspan="2">No data</td></tr>` +
+      `<tr><td>Alice</td><td>3</td></tr>` +
+      `<tr><td>Bob</td><td>1</td></tr>` +
+      `</tbody>`
+    document.body.append(table)
+
+    sortable()(table)
+    // click 2nd column header; placeholder row has no cell at index 1
+    const score_header = table.querySelectorAll(`thead th`)[1]
+    score_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+
+    const first_cells = Array.from(
+      table.querySelectorAll<HTMLTableRowElement>(`tbody tr`),
+    ).map((row) => row.cells[0]?.textContent)
+    expect(first_cells).toEqual([`Bob`, `Alice`, `No data`])
+  })
+
+  it(`should not re-parent rows of nested tables when sorting`, () => {
+    const table = document.createElement(`table`)
+    table.innerHTML =
+      `<thead><tr><th>Name</th><th>Data</th></tr></thead><tbody>` +
+      `<tr><td>Beta</td><td><table><tbody><tr><td>nested</td></tr></tbody></table></td></tr>` +
+      `<tr><td>Alpha</td><td>plain</td></tr>` +
+      `</tbody>`
+    document.body.append(table)
+
+    sortable()(table)
+    get_required_header(table).dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+
+    const nested_table = table.querySelector(`tbody table`)
+    expect(nested_table?.querySelectorAll(`tr`)).toHaveLength(1)
+    const outer_rows = Array.from(table.querySelector(`tbody`)?.children ?? []).filter(
+      (child) => child.tagName === `TR`,
+    )
+    expect(outer_rows.map((row) => row.querySelector(`td`)?.textContent)).toEqual([
+      `Alpha`,
+      `Beta`,
+    ])
+  })
+
+  it(`should preserve header child markup across sort clicks and cleanup`, () => {
+    const table = create_table()
+    const header = get_required_header(table)
+    header.innerHTML = `<span class="icon">▲</span> Planet`
+
+    const cleanup = sortable()(table)
+    header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+
+    expect(header.querySelector(`span.icon`)?.textContent).toBe(`▲`)
+    expect(header.querySelector(`span.sort-arrow`)?.textContent).toContain(`↑`)
+
+    // repeated clicks must not accumulate arrows
+    header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(header.querySelectorAll(`span.sort-arrow`)).toHaveLength(1)
+    expect(header.querySelector(`span.sort-arrow`)?.textContent).toContain(`↓`)
+    expect(header.querySelector(`span.icon`)?.textContent).toBe(`▲`)
+
+    cleanup?.()
+    expect(header.innerHTML).toBe(`<span class="icon">▲</span> Planet`)
   })
 })
 
@@ -1884,6 +2059,18 @@ describe(`resizable`, () => {
     expect(document.body.style.userSelect).toBe(`none`)
 
     globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    expect(document.body.style.userSelect).toBe(``)
+  })
+
+  it(`should reset body userSelect when cleaned up mid-resize`, () => {
+    const element = create_element()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+
+    const cleanup = resizable()(element)
+    element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
+    expect(document.body.style.userSelect).toBe(`none`)
+
+    cleanup?.() // unmount mid-resize, before any mouseup
     expect(document.body.style.userSelect).toBe(``)
   })
 })

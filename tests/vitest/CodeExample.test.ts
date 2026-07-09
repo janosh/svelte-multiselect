@@ -73,6 +73,24 @@ test.each([
   expect(link.getAttribute(`target`)).toBe(`_blank`)
 })
 
+// github: true must link to the file serving the current page; the mdsvex transform
+// emits that path as meta.filename, so it must work as fallback when meta.file is unset
+test.each([
+  [`meta.file`, { file: `src/lib/CodeExample.svelte` }, `src/lib/CodeExample.svelte`],
+  [
+    `meta.filename (set by mdsvex transform)`,
+    { filename: `src/routes/(demos)/attachments/+page.md` },
+    `src/routes/(demos)/attachments/+page.md`,
+  ],
+])(`github: true links to blob path from %s`, (_label, file_meta, expected_path) => {
+  const repo = `https://github.com/janosh/svelte-multiselect`
+  const meta = { github: true, repo, ...file_meta }
+  mount(CodeExample, { target: document.body, props: { meta, src } })
+
+  const link = doc_query<HTMLAnchorElement>(`nav a[href*="github.com"]`)
+  expect(link.getAttribute(`href`)).toBe(`${repo}/blob/-/${expected_path}`)
+})
+
 test.each([`typescript`, `css`])(
   `lang-label renders %s out of flow so it can't indent the first code line`,
   (lang) => {
