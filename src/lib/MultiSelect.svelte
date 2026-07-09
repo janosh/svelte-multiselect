@@ -980,47 +980,34 @@
         }
         // Fire oncreate — return false to reject, return Option to transform
         if (creating_option) return // ignore create attempts while an async oncreate is pending
-        let oncreate_result:
-          | false
-          | Option
-          | undefined
-          | Promise<false | Option | undefined>
+        type CreateResult = false | Option | undefined
+        let oncreate_result: CreateResult
+        let was_async = false
         try {
-          oncreate_result = oncreate?.({ option: option_to_add })
+          const raw_result = oncreate?.({ option: option_to_add })
+          // await thenables (not just native Promises) so results from non-native
+          // promise implementations aren't added as option objects
+          if (typeof (raw_result as PromiseLike<unknown>)?.then === `function`) {
+            was_async = true
+            creating_option = true
+            try {
+              oncreate_result = await (raw_result as PromiseLike<CreateResult>)
+            } finally {
+              creating_option = false
+            }
+          } else oncreate_result = raw_result as CreateResult
         } catch (error) {
-          // add() is async, so an uncaught sync throw would surface as an
-          // unhandled promise rejection in non-awaiting event handlers
-          console.error(`MultiSelect: oncreate threw:`, error)
+          // sync throws are caught too: add() is async, so an uncaught throw would
+          // surface as an unhandled rejection in non-awaiting event handlers
+          const failure = was_async ? `promise rejected` : `threw`
+          console.error(`MultiSelect: oncreate ${failure}:`, error)
           return
         }
         if (oncreate_result === false) return
-        // detect thenables (not just native Promises) so results from non-native
-        // promise implementations are awaited instead of added as option objects
-        const is_thenable =
-          oncreate_result != null &&
-          typeof (oncreate_result as PromiseLike<unknown>).then === `function`
-        if (is_thenable) {
-          creating_option = true
-          let resolved_result: false | Option | undefined
-          try {
-            resolved_result = await (oncreate_result as Promise<
-              false | Option | undefined
-            >)
-          } catch (error) {
-            console.error(`MultiSelect: oncreate promise rejected:`, error)
-            return
-          } finally {
-            creating_option = false
-          }
-          if (resolved_result === false) return
-          if (is_non_empty_option(resolved_result)) {
-            option_to_add = resolved_result
-          }
-          // re-check guards since selected may have changed while awaiting
-          if (at_max_capacity() || (is_dupe() && duplicates !== true)) return
-        } else if (is_non_empty_option(oncreate_result as Option | undefined)) {
-          // safe cast: the thenable branch above handles every promise-like result
-          option_to_add = oncreate_result as Option
+        if (is_non_empty_option(oncreate_result)) option_to_add = oncreate_result
+        // re-check guards after awaiting: selected may have changed meanwhile
+        if (was_async && (at_max_capacity() || (is_dupe() && duplicates !== true))) {
+          return
         }
         if (allowUserOptions === `append`) {
           if (loadOptions) loaded_options = [...loaded_options, option_to_add]
