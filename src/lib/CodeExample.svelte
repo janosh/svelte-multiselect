@@ -48,8 +48,9 @@
     { cond: repl, href: repl, icon: `Svelte` },
     {
       cond: github && repo,
+      // string github is an explicit path and needs no file/filename fallback
       href:
-        github && github_file
+        github && (github !== true || github_file)
           ? `${repo}/blob/-/${github === true ? github_file : github}`
           : repo,
       icon: `GitHub`,

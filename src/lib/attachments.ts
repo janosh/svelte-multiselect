@@ -445,14 +445,27 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     const text = original_text.toLowerCase()
 
     // Offsets are computed on the lowercased text but applied to the original
-    // node. Lowercasing can change string length for some Unicode (e.g. İ), so
-    // clamp end offsets to the node's actual length to avoid IndexSizeError.
+    // node. Lowercasing can grow some Unicode chars (e.g. İ → i̇, 2 UTF-16 units),
+    // shifting offsets. Build a lowered→original offset map (per-unit lowercase
+    // preserves alignment; only length-changing chars need mapping) so ranges
+    // land on the right original characters.
     const node_length = original_text.length
+    let orig_offsets: number[] | null = null // lowered offset → original offset
+    if (text.length !== node_length) {
+      orig_offsets = []
+      for (let orig_idx = 0; orig_idx < node_length; orig_idx++) {
+        const lowered_char = original_text[orig_idx].toLowerCase()
+        // one entry per lowered UTF-16 unit
+        orig_offsets.push(...Array.from(lowered_char, () => orig_idx))
+      }
+    }
     const make_range = (start: number, end: number): Range[] => {
-      if (start >= node_length) return []
+      const orig_start = orig_offsets ? (orig_offsets[start] ?? node_length) : start
+      const orig_end = orig_offsets ? (orig_offsets[end - 1] ?? node_length - 1) + 1 : end
+      if (orig_start >= node_length) return []
       const range = new Range()
-      range.setStart(el, start)
-      range.setEnd(el, Math.min(end, node_length))
+      range.setStart(el, orig_start)
+      range.setEnd(el, Math.min(orig_end, node_length))
       return [range]
     }
 
@@ -509,6 +522,10 @@ function clear_tooltip() {
     current_tooltip = null
   }
 }
+
+// whether the element owns the visible tooltip or a pending (delayed) show
+const owns_tooltip_state = (element: HTMLElement): boolean =>
+  current_tooltip?.owner_element === element || show_timeout_owner === element
 
 // Options for the tooltip attachment.
 export interface TooltipOptions {
@@ -995,7 +1012,10 @@ export const tooltip =
               (removed_node instanceof Element && removed_node.contains(element)),
           ),
         )
-        if (was_removed && current_tooltip?.owner_element === element) clear_tooltip()
+        // Clear owned visible tooltip AND owned pending show — otherwise the
+        // pending timeout fires after removal and appends an orphaned tooltip
+        // positioned against a detached element
+        if (was_removed && owns_tooltip_state(element)) clear_tooltip()
       })
       if (element.parentElement) {
         removal_observer.observe(element.parentElement, {
@@ -1011,11 +1031,8 @@ export const tooltip =
         globalThis.removeEventListener(`scroll`, handle_scroll, true)
         document.removeEventListener(`keydown`, handle_keydown)
 
-        // Clear tooltip if this element owns it (also removes aria-describedby),
-        // or cancel a still-pending show that this element scheduled (a pending
-        // show has no owner_element yet, hence the separate ownership check)
-        if (current_tooltip?.owner_element === element || show_timeout_owner === element)
-          clear_tooltip()
+        // Clear owned tooltip/pending show (also removes aria-describedby)
+        if (owns_tooltip_state(element)) clear_tooltip()
 
         if (element.hasAttribute(`data-original-title`)) {
           element.setAttribute(`title`, element.getAttribute(`data-original-title`) ?? ``)
@@ -1036,14 +1053,9 @@ export const tooltip =
 
     if (cleanup_functions.length === 0) return undefined
 
-    return () => {
-      cleanup_functions.forEach((cleanup) => cleanup())
-      // Only clear tooltip state owned by this node or one of its descendants —
-      // an unconditional clear would remove another instance's visible tooltip
-      // and cancel its pending show/hide timeouts
-      const owner = current_tooltip?.owner_element ?? show_timeout_owner
-      if (owner && node.contains(owner)) clear_tooltip()
-    }
+    // per-element cleanups already clear any tooltip/pending show they own, and
+    // only elements set up here can own one — no extra outer clearing needed
+    return () => cleanup_functions.forEach((cleanup) => cleanup())
   }
 
 export type ClickOutsideConfig<T extends HTMLElement> = {

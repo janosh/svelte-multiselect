@@ -1,11 +1,11 @@
 // deno-lint-ignore-file no-await-in-loop
 import { readFileSync } from 'node:fs'
-import { mount, tick } from 'svelte'
+import { createRawSnippet, mount, tick } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
-import type { MultiSelectProps } from '$lib/types'
+import type { MultiSelectProps, PortalParams } from '$lib/types'
 import { get_label } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
@@ -2637,6 +2637,18 @@ class DragEvent extends MouseEvent {
   }
 }
 
+// simulate a real chip drag: dragstart on the source li, then drop on the target
+async function drag_chip(source_idx: number, target_idx: number) {
+  const data_transfer = new DataTransfer()
+  doc_query(`ul.selected li:nth-child(${source_idx + 1})`).dispatchEvent(
+    new DragEvent(`dragstart`, { dataTransfer: data_transfer }),
+  )
+  doc_query(`ul.selected li:nth-child(${target_idx + 1})`).dispatchEvent(
+    new DragEvent(`drop`, { dataTransfer: data_transfer }),
+  )
+  await tick()
+}
+
 // https://github.com/janosh/svelte-multiselect/issues/176
 test(`dragging selected options across each other changes their order`, async () => {
   const options = [1, 2, 3]
@@ -2647,22 +2659,11 @@ test(`dragging selected options across each other changes their order`, async ()
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 
   // test swapping selected options 1 and 2
-  const li = doc_query(`ul.selected li`)
-
-  const dataTransfer = new DataTransfer()
-  dataTransfer.setData(`text/plain`, `1`)
-
-  li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
-  await tick()
-
+  await drag_chip(1, 0)
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`2 1 3`)
 
   // test swapping them back
-  const li2 = doc_query(`ul.selected li:nth-child(2)`)
-  dataTransfer.setData(`text/plain`, `0`)
-
-  li2.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
-  await tick()
+  await drag_chip(0, 1)
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`1 2 3`)
 })
 
@@ -2698,12 +2699,7 @@ test(`drag-drop reordering fires onreorder and onchange events`, async () => {
   })
 
   // drag option at index 1 to index 0
-  const first_li = doc_query(`ul.selected li`)
-  const dataTransfer = new DataTransfer()
-  dataTransfer.setData(`text/plain`, `1`)
-
-  first_li.dispatchEvent(new DragEvent(`drop`, { dataTransfer }))
-  await tick()
+  await drag_chip(1, 0)
 
   // verify onreorder was called with the new order
   expect(onreorder_spy).toHaveBeenCalledTimes(1)
@@ -7797,9 +7793,8 @@ async function paste_into(extra_props: Partial<MultiSelectProps>, paste_text: st
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   const event = make_paste_event(paste_text)
   input.dispatchEvent(event)
-  // macrotask flushes the async handle_paste loop (one microtask hop per pasted
-  // option since add() became async for async-oncreate support)
-  await new Promise((resolve) => setTimeout(resolve, 0))
+  // no macrotask wait: sync-oncreate paste must complete synchronously (handle_paste
+  // only awaits add() when an async oncreate actually suspends it)
   await tick()
   return { ...spies, props, event }
 }
@@ -8048,6 +8043,9 @@ describe(`drag-drop rejects foreign/invalid drag data (previously corrupted sele
     [`empty string`, ``],
     [`out-of-range numeric prefix`, `42 items`],
     [`negative index`, `-1`],
+    // numeric page text passes parseInt — must still be rejected since no
+    // dragstart fired on this instance (foreign drag source)
+    [`valid-looking numeric text without dragstart`, `0`],
   ])(`drop with %s is a no-op`, async (_desc, drag_data) => {
     const onreorder_spy = vi.fn()
     mount(MultiSelect, {
@@ -8149,11 +8147,61 @@ describe(`duplicate entries in options array`, () => {
         { label: `second`, value: `same` },
       ],
     ],
+    // a real option key that collides with a would-be generated duplicate suffix
+    [`option key colliding with dup-suffix pattern`, [`a`, `a`, `a-dup-0-1`]],
   ])(`%s render without keyed-each crash (duplicates=false)`, (_desc, options) => {
     // previously threw Svelte's each_key_duplicate because the keyed {#each} only
     // disambiguated keys when the `duplicates` prop was truthy
     mount(MultiSelect, { target: document.body, props: { options } })
     expect(document.querySelectorAll(`ul.options > li`)).toHaveLength(options.length)
+  })
+
+  test(`duplicate options get unique DOM ids, aria-posinset, and hover indices`, async () => {
+    mount(MultiSelect, { target: document.body, props: { options: [`a`, `a`, `b`] } })
+    const option_lis = [...document.querySelectorAll(`ul.options > li`)]
+
+    // previously navigable_index_map collapsed duplicate values to the last index,
+    // giving both 'a' rows the same id and posinset
+    expect(option_lis.map((li) => li.id.split(`-opt-`)[1])).toEqual([`0`, `1`, `2`])
+    expect(option_lis.map((li) => li.getAttribute(`aria-posinset`))).toEqual([
+      `1`,
+      `2`,
+      `3`,
+    ])
+
+    // hovering the first duplicate activates only that row
+    option_lis[0].dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
+    await tick()
+    const active = [...document.querySelectorAll(`ul.options > li.active`)]
+    expect(active).toHaveLength(1)
+    expect(active[0].id.endsWith(`-opt-0`)).toBe(true)
+  })
+})
+
+describe(`stale create-option message state`, () => {
+  test(`clearing searchText while the message is active drops aria-activedescendant`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`], allowUserOptions: true },
+    })
+    const input = doc_query<HTMLInputElement>(`ul.selected input[autocomplete]`)
+    input.value = `xyz`
+    input.dispatchEvent(input_event)
+    await tick()
+
+    // no options match 'xyz' -> ArrowDown activates the create-option message
+    input.dispatchEvent(fresh_key(`ArrowDown`))
+    await tick()
+    expect(doc_query(`ul.options > li.user-msg`).classList.contains(`active`)).toBe(true)
+    expect(input.getAttribute(`aria-activedescendant`)).toContain(`user-msg`)
+
+    // clearing the search removes the message li — active state must not go stale
+    input.value = ``
+    input.dispatchEvent(input_event)
+    await tick()
+    expect(document.querySelector(`ul.options > li.user-msg`)).toBeNull()
+    // previously kept pointing at the removed user-msg li (dangling ARIA reference)
+    expect(input.getAttribute(`aria-activedescendant`)).toBeNull()
   })
 })
 
@@ -8179,5 +8227,577 @@ describe(`ArrowUp from the create-option message`, () => {
     input.dispatchEvent(fresh_key(`ArrowUp`))
     await tick()
     expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`baz`)
+  })
+})
+
+describe(`async oncreate`, () => {
+  type OncreateResult = false | Option | undefined
+
+  // type text into the search input to set searchText
+  async function type_search_text(search_text: string): Promise<HTMLInputElement> {
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = search_text
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await tick()
+    return input
+  }
+
+  // manually-controlled promise so tests decide exactly when oncreate settles
+  function make_deferred<T>() {
+    let resolve_fn: (value: T) => void = () => {}
+    let reject_fn: (reason: unknown) => void = () => {}
+    const promise = new Promise<T>((resolve, reject) => {
+      resolve_fn = resolve
+      reject_fn = reject
+    })
+    return { promise, resolve_fn, reject_fn }
+  }
+
+  test(`resolving undefined adds typed option after resolve, spinner shown only while pending`, async () => {
+    const { promise, resolve_fn } = make_deferred<OncreateResult>()
+    const oncreate = vi.fn(() => promise)
+    const onadd = vi.fn()
+    const spinner = createRawSnippet(() => ({
+      render: () => `<span class="custom-spinner">creating</span>`,
+    }))
+    const props = $state<MultiSelectProps>({
+      options: [`foo`, `bar`],
+      selected: [],
+      allowUserOptions: true,
+      oncreate,
+      onadd,
+      spinner,
+    })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = await type_search_text(`new async option`)
+    expect(document.querySelector(`.custom-spinner`)).toBeNull()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+
+    input.dispatchEvent(fresh_key(`Enter`))
+    await tick()
+
+    expect(oncreate).toHaveBeenCalledTimes(1)
+    expect(oncreate).toHaveBeenCalledWith({ option: `new async option` })
+    // while the promise is pending: spinner visible, input busy, nothing added yet
+    expect(doc_query(`.custom-spinner`).textContent).toBe(`creating`)
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+    expect(props.selected).toEqual([])
+    expect(onadd).not.toHaveBeenCalled()
+
+    resolve_fn(undefined)
+    await promise
+    await tick()
+
+    expect(document.querySelector(`.custom-spinner`)).toBeNull()
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+    expect(props.selected).toEqual([`new async option`])
+    expect(onadd).toHaveBeenCalledTimes(1)
+    expect(onadd).toHaveBeenCalledWith({
+      option: `new async option`,
+      selected: [`new async option`],
+    })
+  })
+
+  test.each<[string, OncreateResult, Option[], number]>([
+    [`undefined keeps the original option`, undefined, [`fresh-opt`], 1],
+    [`a transformed option replaces the original`, `TRANSFORMED`, [`TRANSFORMED`], 1],
+    [`false aborts the add`, false, [], 0],
+  ])(
+    `resolving %s`,
+    async (_label, resolved_value, expected_selected, expected_onadd_calls) => {
+      console.error = vi.fn()
+      const { promise, resolve_fn } = make_deferred<OncreateResult>()
+      const onadd = vi.fn()
+      const props = $state<MultiSelectProps>({
+        options: [`foo`, `bar`],
+        selected: [],
+        allowUserOptions: true,
+        oncreate: () => promise,
+        onadd,
+      })
+      mount(MultiSelect, { target: document.body, props })
+
+      const input = await type_search_text(`fresh-opt`)
+      input.dispatchEvent(fresh_key(`Enter`))
+      await tick()
+
+      resolve_fn(resolved_value)
+      await promise
+      await tick()
+
+      expect(props.selected).toEqual(expected_selected)
+      expect(onadd).toHaveBeenCalledTimes(expected_onadd_calls)
+      expect(console.error).not.toHaveBeenCalled()
+    },
+  )
+
+  test(`non-native thenable oncreate result is awaited, not added as an option`, async () => {
+    const onadd = vi.fn()
+    // custom thenable (e.g. from a non-native promise implementation): must be
+    // awaited like a Promise instead of being treated as an option object
+    const thenable = {
+      // oxlint-disable-next-line unicorn/no-thenable -- deliberately testing thenable handling
+      then: (resolve: (value: OncreateResult) => void) => resolve(`from-thenable`),
+    }
+    const props = $state<MultiSelectProps>({
+      options: [`foo`],
+      selected: [],
+      allowUserOptions: true,
+      oncreate: () => thenable as unknown as OncreateResult,
+      onadd,
+    })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = await type_search_text(`typed-text`)
+    input.dispatchEvent(fresh_key(`Enter`))
+    await tick()
+    await tick() // extra microtask hop for the thenable resolution
+
+    expect(props.selected).toEqual([`from-thenable`])
+    expect(onadd).toHaveBeenCalledTimes(1)
+  })
+
+  test(`oncreate throwing synchronously adds nothing and logs console.error`, async () => {
+    console.error = vi.fn()
+    const onadd = vi.fn()
+    const sync_error = new Error(`validation blew up`)
+    const props = $state<MultiSelectProps>({
+      options: [`foo`],
+      selected: [],
+      allowUserOptions: true,
+      oncreate: () => {
+        throw sync_error
+      },
+      onadd,
+    })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = await type_search_text(`doomed-opt`)
+    input.dispatchEvent(fresh_key(`Enter`))
+    await tick()
+
+    expect(props.selected).toEqual([])
+    expect(onadd).not.toHaveBeenCalled()
+    expect(console.error).toHaveBeenCalledWith(`MultiSelect: oncreate threw:`, sync_error)
+  })
+
+  test(`rejecting adds nothing and logs console.error`, async () => {
+    console.error = vi.fn()
+    const { promise, reject_fn } = make_deferred<OncreateResult>()
+    const onadd = vi.fn()
+    const props = $state<MultiSelectProps>({
+      options: [`foo`],
+      selected: [],
+      allowUserOptions: true,
+      oncreate: () => promise,
+      onadd,
+    })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = await type_search_text(`doomed-opt`)
+    input.dispatchEvent(fresh_key(`Enter`))
+    await tick()
+    expect(input.getAttribute(`aria-busy`)).toBe(`true`)
+
+    const rejection = new Error(`backend validation failed`)
+    reject_fn(rejection)
+    await promise.catch(() => {})
+    await tick()
+
+    expect(props.selected).toEqual([])
+    expect(onadd).not.toHaveBeenCalled()
+    expect(console.error).toHaveBeenCalledTimes(1)
+    expect(console.error).toHaveBeenCalledWith(
+      `MultiSelect: oncreate promise rejected:`,
+      rejection,
+    )
+    // busy state must reset even on rejection
+    expect(input.getAttribute(`aria-busy`)).toBeNull()
+  })
+
+  test(`double Enter while async create is pending adds only one option`, async () => {
+    const { promise, resolve_fn } = make_deferred<OncreateResult>()
+    const oncreate = vi.fn(() => promise)
+    const props = $state<MultiSelectProps>({
+      options: [`foo`],
+      selected: [],
+      allowUserOptions: true,
+      oncreate,
+    })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = await type_search_text(`only-once`)
+    input.dispatchEvent(fresh_key(`Enter`))
+    await tick()
+    input.dispatchEvent(fresh_key(`Enter`)) // second Enter while first create pending
+    await tick()
+
+    expect(oncreate).toHaveBeenCalledTimes(1)
+
+    resolve_fn(undefined)
+    await promise
+    await tick()
+
+    expect(props.selected).toEqual([`only-once`])
+  })
+
+  test.each<[string, MultiSelectProps[`oncreate`], Option[]]>([
+    [`returning false blocks the option`, () => false, []],
+    [
+      `returning an option transforms it`,
+      ({ option }) => `${get_label(option)}`.toUpperCase(),
+      [`SYNC-OPT`],
+    ],
+    [`returning undefined keeps the original option`, () => undefined, [`sync-opt`]],
+  ])(`sync oncreate regression: %s`, async (_label, oncreate, expected_selected) => {
+    const props = $state<MultiSelectProps>({
+      options: [`foo`],
+      selected: [],
+      allowUserOptions: true,
+      oncreate,
+    })
+    mount(MultiSelect, { target: document.body, props })
+
+    const input = await type_search_text(`sync-opt`)
+    input.dispatchEvent(fresh_key(`Enter`))
+    await tick()
+
+    expect(props.selected).toEqual(expected_selected)
+  })
+})
+
+describe(`portal placement`, () => {
+  // happy-dom has no real layout engine, so stub getBoundingClientRect on the
+  // outer div, offsetHeight on the portalled dropdown, and the viewport height
+  function stub_layout({
+    trigger_rect,
+    dropdown_height,
+    viewport_height,
+  }: {
+    trigger_rect: { top: number; bottom: number }
+    dropdown_height: number
+    viewport_height: number
+  }): HTMLUListElement {
+    const { top, bottom } = trigger_rect
+    const rect = {
+      top,
+      bottom,
+      left: 10,
+      right: 210,
+      width: 200,
+      height: bottom - top,
+      x: 10,
+      y: top,
+      toJSON: () => ({}),
+    } as DOMRect
+    vi.spyOn(doc_query(`div.multiselect`), `getBoundingClientRect`).mockReturnValue(rect)
+    const dropdown = doc_query<HTMLUListElement>(`body > ul.options`)
+    Object.defineProperty(dropdown, `offsetHeight`, {
+      value: dropdown_height,
+      configurable: true,
+    })
+    Object.defineProperty(globalThis, `innerHeight`, {
+      value: viewport_height,
+      configurable: true,
+      writable: true,
+    })
+    return dropdown
+  }
+
+  async function mount_with_portal(placement?: PortalParams[`placement`]) {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [1, 2, 3],
+        open: true,
+        portal: { active: true, placement },
+      },
+    })
+    await tick()
+  }
+
+  // `top` positions the dropdown's margin edge, so the action subtracts the
+  // computed margin-top when placing above — mirror that in expected values
+  function expected_top_style(
+    expected_placement: `top` | `bottom`,
+    trigger_rect: { top: number; bottom: number },
+    dropdown_height: number,
+    dropdown: HTMLUListElement,
+  ): string {
+    if (expected_placement === `bottom`) return `${trigger_rect.bottom}px`
+    const margin_px = getComputedStyle(dropdown).marginTop.replace(/px$/u, ``)
+    const margin_top = Number(margin_px) || 0
+    return `${Math.max(0, trigger_rect.top - dropdown_height - margin_top)}px`
+  }
+
+  test.each([
+    {
+      placement: `auto`,
+      trigger_rect: { top: 100, bottom: 130 },
+      dropdown_height: 200,
+      viewport_height: 800,
+      expected_placement: `bottom`,
+      desc: `plenty of space below`,
+    },
+    {
+      placement: `auto`,
+      trigger_rect: { top: 600, bottom: 630 },
+      dropdown_height: 200,
+      viewport_height: 700,
+      expected_placement: `top`,
+      desc: `insufficient space below and more space above`,
+    },
+    {
+      placement: `top`,
+      trigger_rect: { top: 300, bottom: 330 },
+      dropdown_height: 200,
+      viewport_height: 800,
+      expected_placement: `top`,
+      desc: `forced above despite ample space below`,
+    },
+    {
+      placement: `bottom`,
+      trigger_rect: { top: 600, bottom: 630 },
+      dropdown_height: 200,
+      viewport_height: 700,
+      expected_placement: `bottom`,
+      desc: `forced below despite tight space below`,
+    },
+    {
+      placement: `auto`,
+      trigger_rect: { top: 600, bottom: 630 },
+      dropdown_height: 0,
+      viewport_height: 700,
+      expected_placement: `bottom`,
+      desc: `unmeasured dropdown (offsetHeight 0) falls back to bottom`,
+    },
+  ] as const)(
+    `placement=$placement with $desc resolves to $expected_placement`,
+    async ({
+      placement,
+      trigger_rect,
+      dropdown_height,
+      viewport_height,
+      expected_placement,
+    }) => {
+      await mount_with_portal(placement)
+      const dropdown = stub_layout({ trigger_rect, dropdown_height, viewport_height })
+
+      globalThis.dispatchEvent(new Event(`resize`)) // force update_position with stubs
+
+      expect(dropdown.dataset.placement).toBe(expected_placement)
+      expect(dropdown.style.top).toBe(
+        expected_top_style(expected_placement, trigger_rect, dropdown_height, dropdown),
+      )
+    },
+  )
+
+  test.each([
+    // forced top with trigger near viewport top and dropdown taller than space above
+    { placement: `top`, trigger_rect: { top: 50, bottom: 80 }, dropdown_height: 300 },
+    // auto flips above (830 + 900 > 800 and 750 > 800 - 780) but 750 - 900 < 0
+    { placement: `auto`, trigger_rect: { top: 750, bottom: 780 }, dropdown_height: 900 },
+  ] as const)(
+    `placement=$placement never positions dropdown above viewport top (clamps to 0)`,
+    async ({ placement, trigger_rect, dropdown_height }) => {
+      await mount_with_portal(placement)
+      const dropdown = stub_layout({
+        trigger_rect,
+        dropdown_height,
+        viewport_height: 800,
+      })
+
+      globalThis.dispatchEvent(new Event(`resize`))
+
+      expect(dropdown.dataset.placement).toBe(`top`)
+      expect(dropdown.style.top).toBe(`0px`)
+    },
+  )
+
+  test(`placement recomputes on scroll and reacts to updated portal params`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [1, 2, 3],
+      open: true,
+      portal: { active: true, placement: `auto` },
+    })
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    const dropdown = stub_layout({
+      trigger_rect: { top: 100, bottom: 130 },
+      dropdown_height: 200,
+      viewport_height: 800,
+    })
+    globalThis.dispatchEvent(new Event(`scroll`)) // scroll listener also repositions
+    expect(dropdown.dataset.placement).toBe(`bottom`)
+    expect(dropdown.style.top).toBe(`130px`)
+
+    // trigger moves near viewport bottom → auto placement flips above on next scroll
+    vi.spyOn(doc_query(`div.multiselect`), `getBoundingClientRect`).mockReturnValue({
+      top: 600,
+      bottom: 630,
+      left: 10,
+      right: 210,
+      width: 200,
+      height: 30,
+      x: 10,
+      y: 600,
+      toJSON: () => ({}),
+    })
+    Object.defineProperty(globalThis, `innerHeight`, {
+      value: 700,
+      configurable: true,
+      writable: true,
+    })
+    globalThis.dispatchEvent(new Event(`scroll`))
+    expect(dropdown.dataset.placement).toBe(`top`)
+
+    // changing placement via props flows through the action's update() method
+    props.portal = { active: true, placement: `bottom` }
+    await tick()
+    globalThis.dispatchEvent(new Event(`resize`))
+    expect(dropdown.dataset.placement).toBe(`bottom`)
+    expect(dropdown.style.top).toBe(`630px`)
+  })
+})
+
+describe(`virtualList`, () => {
+  const item_height = 30
+  const overscan = 5
+  const viewport_estimate = 400 // component falls back to 400px since happy-dom reports clientHeight 0
+  const n_options = 1000
+  const virtual_options = Array.from({ length: n_options }, (_, idx) => `option ${idx}`)
+  const virtual_props = {
+    options: virtual_options,
+    open: true,
+    virtualList: { itemHeight: item_height, overscan },
+  } satisfies MultiSelectProps
+
+  // window math mirrored from the component (start = 0 before any scrolling)
+  const window_end = (scroll_top: number, extra_rows: number) =>
+    Math.min(
+      n_options,
+      Math.ceil((scroll_top + viewport_estimate) / item_height) + extra_rows,
+    )
+  const initial_end = window_end(0, overscan)
+
+  const get_rendered_options = () => [
+    ...document.querySelectorAll<HTMLLIElement>(`ul.options li[role='option']`),
+  ]
+  const get_spacers = () => [
+    ...document.querySelectorAll<HTMLLIElement>(`ul.options li[aria-hidden='true']`),
+  ]
+
+  test.each([
+    [{ itemHeight: item_height, overscan }, initial_end],
+    [true, window_end(0, 10)], // boolean form uses defaults itemHeight=30, overscan=10
+    [false, n_options], // non-virtual sanity check: every option gets a DOM node
+  ])(
+    `virtualList=%j renders %i of ${n_options} options`,
+    (virtualList, expected_count) => {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { options: virtual_options, open: true, virtualList },
+      })
+
+      expect(get_rendered_options()).toHaveLength(expected_count)
+      expect(get_spacers()).toHaveLength(virtualList ? 2 : 0)
+    },
+  )
+
+  test(`spacers pad the rendered window to the full list height`, () => {
+    mount(MultiSelect, { target: document.body, props: { ...virtual_props } })
+
+    const [top_spacer, bottom_spacer] = get_spacers()
+    expect(top_spacer.style.height).toBe(`0px`)
+    expect(bottom_spacer.style.height).toBe(
+      `${(n_options - initial_end) * item_height}px`,
+    )
+  })
+
+  test(`scrolling the dropdown re-windows which options are rendered`, async () => {
+    mount(MultiSelect, { target: document.body, props: { ...virtual_props } })
+
+    const ul_options = doc_query<HTMLUListElement>(`ul.options`)
+    const scroll_top = 600
+    // happy-dom has no layout, so fake the scroll offset and fire the event manually
+    Object.defineProperty(ul_options, `scrollTop`, {
+      value: scroll_top,
+      configurable: true,
+    })
+    ul_options.dispatchEvent(new Event(`scroll`))
+    await tick()
+
+    const expected_start = Math.floor(scroll_top / item_height) - overscan // 15
+    const rendered = get_rendered_options()
+    expect(rendered[0]?.textContent?.trim()).toBe(`option ${expected_start}`)
+    expect(rendered).toHaveLength(window_end(scroll_top, overscan) - expected_start)
+    expect(get_spacers()[0].style.height).toBe(`${expected_start * item_height}px`)
+  })
+
+  test(`clicking a rendered option selects it`, async () => {
+    const props = $state<MultiSelectProps>({ ...virtual_props, selected: [] })
+    mount(MultiSelect, { target: document.body, props })
+
+    get_rendered_options()[0].click()
+    await tick()
+
+    expect(props.selected).toEqual([`option 0`])
+    expect(doc_query(`ul.selected > li`).textContent?.trim()).toContain(`option 0`)
+  })
+
+  test(`arrow keys keep the active option rendered beyond the initial window`, async () => {
+    mount(MultiSelect, { target: document.body, props: { ...virtual_props } })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    const n_presses = 25 // activeIndex 24 lies past the initial window end of 19
+    for (let press_idx = 0; press_idx < n_presses; press_idx++) {
+      input.dispatchEvent(fresh_key(`ArrowDown`))
+      await tick()
+    }
+    await tick() // flush the async scroll adjustment in handle_arrow_navigation
+
+    expect(doc_query(`ul.options li.active`).textContent?.trim()).toBe(
+      `option ${n_presses - 1}`,
+    )
+    // the window scrolled down: option 0 is no longer rendered
+    expect(get_rendered_options()[0]?.textContent?.trim()).not.toBe(`option 0`)
+    expect(get_rendered_options().length).toBeLessThan(50)
+  })
+
+  test(`fuzzy search filtering still works in virtual mode`, async () => {
+    mount(MultiSelect, { target: document.body, props: { ...virtual_props } })
+
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+    input.value = `999`
+    input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+    await tick()
+
+    const rendered = get_rendered_options()
+    expect(rendered).toHaveLength(1)
+    expect(rendered[0].textContent?.trim()).toBe(`option 999`)
+    for (const spacer of get_spacers()) expect(spacer.style.height).toBe(`0px`)
+  })
+
+  test(`grouped options fall back to non-virtual rendering with a console.warn`, async () => {
+    console.warn = vi.fn()
+    const grouped_options = Array.from({ length: 50 }, (_, idx) => ({
+      label: `option ${idx}`,
+      group: `group ${idx % 5}`,
+    }))
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: grouped_options, open: true, virtualList: true },
+    })
+    await tick() // wait for validation $effect to run
+
+    expect(console.warn).toHaveBeenCalledTimes(1)
+    expect(console.warn).toHaveBeenCalledWith(
+      `MultiSelect: virtualList only supports flat (ungrouped) option lists. ` +
+        `Grouped options detected, falling back to non-virtual rendering.`,
+    )
+    expect(get_rendered_options()).toHaveLength(50) // fallback renders ALL options
+    expect(get_spacers()).toHaveLength(0)
   })
 })

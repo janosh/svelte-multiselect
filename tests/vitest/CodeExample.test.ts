@@ -91,6 +91,16 @@ test.each([
   expect(link.getAttribute(`href`)).toBe(`${repo}/blob/-/${expected_path}`)
 })
 
+// string github is an explicit blob path — must link there even without file/filename
+test(`github as string links to its path without file/filename meta`, () => {
+  const repo = `https://github.com/janosh/svelte-multiselect`
+  const meta = { github: `docs/example.svelte`, repo }
+  mount(CodeExample, { target: document.body, props: { meta, src } })
+
+  const link = doc_query<HTMLAnchorElement>(`nav a[href*="github.com"]`)
+  expect(link.getAttribute(`href`)).toBe(`${repo}/blob/-/docs/example.svelte`)
+})
+
 test.each([`typescript`, `css`])(
   `lang-label renders %s out of flow so it can't indent the first code line`,
   (lang) => {

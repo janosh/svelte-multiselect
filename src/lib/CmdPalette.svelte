@@ -189,7 +189,7 @@
     if (!open || !dialog || !(target instanceof Element)) return
     // backdrop clicks on a modal dialog have target === dialog, so close unless the click
     // is on this palette's MultiSelect (scoped inside the dialog) or its options list
-    if (dialog?.contains(target) && target.closest(`div.multiselect`)) return
+    if (dialog.contains(target) && target.closest(`div.multiselect`)) return
     const listbox_id = input?.getAttribute(`aria-controls`)
     const listbox = listbox_id && document.querySelector(`#${CSS.escape(listbox_id)}`)
     if (listbox && listbox.contains(target)) return

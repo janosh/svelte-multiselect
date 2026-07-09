@@ -531,6 +531,23 @@ describe(`tooltip`, () => {
       vi.runAllTimers()
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
+
+    it(`removing the element from the DOM cancels its pending show`, async () => {
+      const element = create_element()
+      element.title = `pending on removed element`
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 100 })
+
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      element.remove() // element leaves the DOM before the show delay elapses
+      // MutationObserver callbacks are microtasks — flush before advancing timers
+      await Promise.resolve()
+
+      vi.runAllTimers()
+      // previously the timeout still fired and appended an orphaned tooltip
+      // positioned against the detached element
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
+    })
   })
 
   describe(`New Features`, () => {
@@ -1516,18 +1533,35 @@ describe(`highlight_matches`, () => {
     ])
   })
 
-  // 'İ' (U+0130) lowercases to 2 UTF-16 units, so offsets computed on the
-  // lowercased text can exceed the original node length and must not throw
+  // 'İ' (U+0130) lowercases to 2 UTF-16 units, shifting offsets computed on the
+  // lowercased text. Ranges must map back to the ORIGINAL character positions
+  // (and never exceed the node length). 'İİİab': lowered is 'i̇i̇i̇ab' so naive
+  // offsets for 'a'/'b' would be 6/7 — the correct original offsets are 3/4.
   it.each([
     [`substring`, false],
     [`fuzzy`, true],
   ])(
-    `%s highlighting must not throw when lowercasing changes string length`,
+    `%s highlighting maps offsets back to original text when lowercasing changes length`,
     (_desc, fuzzy) => {
       mock_element.innerHTML = `<p>İİİab</p>`
 
-      expect(() => highlight_matches({ query: `b`, fuzzy })(mock_element)).not.toThrow()
-      expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
+      expect(() => highlight_matches({ query: `ab`, fuzzy })(mock_element)).not.toThrow()
+      const highlight = mock_css_highlights.get(`highlight-match`)
+      if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
+        throw new Error(`Expected highlight with ranges`)
+      }
+      const ranges = highlight.ranges
+      if (!Array.isArray(ranges)) throw new Error(`Expected ranges array`)
+      const offsets = ranges.map((range) => [range.startOffset, range.endOffset])
+      // substring: one 'ab' range; fuzzy: single-char ranges for 'a' and 'b'
+      expect(offsets).toEqual(
+        fuzzy
+          ? [
+              [3, 4],
+              [4, 5],
+            ]
+          : [[3, 5]],
+      )
     },
   )
 

@@ -25,6 +25,8 @@ Exported from `svelte-multiselect/attachments`:
       content: `<strong>Custom</strong> <em>HTML</em> tooltip`,
       placement: `right`,
       delay: custom_delay,
+      // only enable allow_html for trusted or sanitized content, never raw
+      // user input — HTML tooltips are an XSS vector otherwise
       allow_html: true,
     })}
   >
