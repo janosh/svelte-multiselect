@@ -76,6 +76,22 @@
       )
     );
   }
+  /* in RTL the unchecked knob starts at the track's right edge, so the checked
+  state slides it left by the same distance (negated default) */
+  input:checked:dir(rtl) + span::after {
+    transform: var(
+      --toggle-knob-after-transform,
+      translate(
+        calc(
+          -1 *
+            (
+              var(--toggle-knob-width, 3em) - var(--toggle-knob-height, 1.5em) +
+                var(--toggle-knob-padding, 0.1em) - var(--toggle-knob-border, 2px)
+            )
+        )
+      )
+    );
+  }
   input:focus + span {
     border: var(
       --toggle-knob-focus-border,

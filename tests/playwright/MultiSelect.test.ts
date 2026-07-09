@@ -367,6 +367,176 @@ test.describe(`portal feature`, () => {
   })
 })
 
+// virtualList windowing needs real browser layout (happy-dom reports zero
+// heights), exercised on the internal /virtual-list test page which mounts
+// 2000 options with rows pinned to the default 30px itemHeight
+test.describe(`virtualList`, () => {
+  const item_height = 30
+  const total_options = 2000
+  const rendered_options = (page: Page): Locator =>
+    page.locator(`#virtual ul.options > li[role="option"]`)
+  const spacers = (page: Page): Locator =>
+    page.locator(`#virtual ul.options > li[aria-hidden="true"]`)
+
+  const goto_virtual_list = async (page: Page): Promise<void> => {
+    await page.goto(`/virtual-list`, { waitUntil: `networkidle` })
+    await expect(page.locator(`#virtual ul.options`)).toBeVisible()
+    // scroll + keyboard handlers only work once hydration installs the
+    // component's input.focus override (same readiness signal as goto_persistent)
+    await page.waitForFunction(() => {
+      const input_el = document.querySelector<HTMLInputElement>(
+        `#virtual input[autocomplete]`,
+      )
+      return input_el && !String(input_el.focus).includes(`[native code]`)
+    })
+  }
+
+  test(`renders only a small window of the 2000-option list`, async ({ page }) => {
+    await goto_virtual_list(page)
+
+    await expect(rendered_options(page).first()).toHaveText(`Option 0`)
+    const option_count = await rendered_options(page).count()
+    expect(option_count).toBeGreaterThan(5)
+    expect(option_count).toBeLessThan(100)
+
+    // spacers keep scrollHeight at the full 2000 * 30px list height
+    await expect(spacers(page)).toHaveCount(2)
+    const scroll_height = await page
+      .locator(`#virtual ul.options`)
+      .evaluate((ul_el) => ul_el.scrollHeight)
+    expect(Math.abs(scroll_height - total_options * item_height)).toBeLessThanOrEqual(100)
+  })
+
+  test(`scrolling to the middle re-windows options and adjusts spacers`, async ({
+    page,
+  }) => {
+    await goto_virtual_list(page)
+    const options_list = page.locator(`#virtual ul.options`)
+    await expect(rendered_options(page).first()).toHaveText(`Option 0`)
+
+    const target_scroll = 15_000 // row 500 of 2000
+    await options_list.evaluate(
+      (ul_el, scroll_top) => (ul_el.scrollTop = scroll_top),
+      target_scroll,
+    )
+
+    // window start = floor(15_000 / 30) - default overscan 10 = 490
+    await expect(rendered_options(page).first()).toHaveText(`Option 490`)
+    await expect(
+      options_list.getByRole(`option`, { name: `Option 0`, exact: true }),
+    ).toHaveCount(0)
+
+    const [top_spacer_height, bottom_spacer_height] = await spacers(page).evaluateAll(
+      (spacer_els) => spacer_els.map((el) => (el as HTMLElement).offsetHeight),
+    )
+    expect(top_spacer_height).toBe(490 * item_height)
+    expect(bottom_spacer_height).toBeGreaterThan(40_000)
+
+    const { scroll_height, scroll_top } = await options_list.evaluate((ul_el) => ({
+      scroll_height: ul_el.scrollHeight,
+      scroll_top: ul_el.scrollTop,
+    }))
+    expect(scroll_top).toBe(target_scroll)
+    expect(Math.abs(scroll_height - total_options * item_height)).toBeLessThanOrEqual(100)
+  })
+
+  test(`ArrowDown navigation keeps the active option rendered and visible`, async ({
+    page,
+  }) => {
+    await goto_virtual_list(page)
+    const input = page.locator(`#virtual input[autocomplete]`)
+    await input.click()
+
+    const active_option = page.locator(`#virtual ul.options > li.active`)
+    // 15 rows * 30px > 300px dropdown viewport → navigation must scroll the window
+    for (let idx = 0; idx < 15; idx++) {
+      await input.press(`ArrowDown`)
+      await expect(active_option).toHaveCount(1)
+      await expect(active_option).toHaveText(`Option ${idx}`)
+    }
+
+    // the active row must lie fully inside the dropdown's scroll viewport
+    const in_view = await page.waitForFunction(() => {
+      const ul_el = document.querySelector(`#virtual ul.options`)
+      const active_el = ul_el?.querySelector(`li.active`)
+      if (!ul_el || !active_el) return false
+      const ul_rect = ul_el.getBoundingClientRect()
+      const active_rect = active_el.getBoundingClientRect()
+      return (
+        active_rect.top >= ul_rect.top - 2 && active_rect.bottom <= ul_rect.bottom + 2
+      )
+    })
+    expect(await in_view.jsonValue()).toBe(true)
+  })
+})
+
+// the portal's `auto` placement flips the dropdown above the input when it would
+// overflow the viewport bottom — needs real viewport geometry. Uses the /portal
+// modal: in a short viewport the lower (octicons) input has more space above.
+test.describe(`portal placement auto-flip`, () => {
+  const open_dropdown_at_viewport_height = async (
+    page: Page,
+    height: number,
+    placeholder: string,
+    pin_modal_to_bottom = false,
+  ): Promise<{ dropdown: Locator; input: Locator }> => {
+    await page.setViewportSize({ width: 800, height })
+    const modal_content = await open_portal_modal(page)
+    if (pin_modal_to_bottom) {
+      // the centered modal never leaves enough room above AND too little below;
+      // pin it to the viewport bottom so the flip geometry is deterministic
+      await page.evaluate(() => {
+        const backdrop = document.querySelector<HTMLElement>(`.modal-backdrop`)
+        if (!backdrop) throw new Error(`modal backdrop not found`)
+        backdrop.style.alignItems = `flex-end`
+      })
+    }
+    const input = modal_content.locator(`input[placeholder='${placeholder}']`)
+
+    const dropdown = page.locator(`body > ul.options:not(.hidden)`)
+    await expect(async () => {
+      await input.click()
+      await expect(dropdown).toBeVisible({ timeout: 1000 })
+    }).toPass()
+    return { dropdown, input }
+  }
+
+  test(`input near viewport bottom flips dropdown above the input`, async ({ page }) => {
+    const { dropdown, input } = await open_dropdown_at_viewport_height(
+      page,
+      500,
+      `Choose octicons...`,
+      true,
+    )
+    await expect(dropdown).toHaveAttribute(`data-placement`, `top`)
+
+    const [dropdown_box, input_box] = [
+      await dropdown.boundingBox(),
+      await input.boundingBox(),
+    ]
+    if (!dropdown_box || !input_box) throw new Error(`missing bounding box`)
+    expect(dropdown_box.y + dropdown_box.height).toBeLessThanOrEqual(input_box.y + 1)
+  })
+
+  test(`input with ample space below keeps dropdown below the input`, async ({
+    page,
+  }) => {
+    const { dropdown, input } = await open_dropdown_at_viewport_height(
+      page,
+      900,
+      `Choose languages...`,
+    )
+    await expect(dropdown).toHaveAttribute(`data-placement`, `bottom`)
+
+    const [dropdown_box, input_box] = [
+      await dropdown.boundingBox(),
+      await input.boundingBox(),
+    ]
+    if (!dropdown_box || !input_box) throw new Error(`missing bounding box`)
+    expect(dropdown_box.y).toBeGreaterThanOrEqual(input_box.y + input_box.height - 1)
+  })
+})
+
 test(`input width minimizes when options are selected`, async ({ page }) => {
   await page.goto(`/ui`, { waitUntil: `networkidle` })
   const input = page.locator(`#foods input[autocomplete]`)

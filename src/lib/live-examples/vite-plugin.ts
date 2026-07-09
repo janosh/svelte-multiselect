@@ -35,34 +35,29 @@ function is_record(val: unknown): val is Record<string, unknown> {
   return typeof val === `object` && val !== null
 }
 
-// Check if an AST node matches a shallow pattern object
-function matches(node: unknown, pattern: Record<string, unknown>): boolean {
-  if (!is_record(node)) return false
-  for (const [key, expected] of Object.entries(pattern)) {
-    const actual = node[key]
-    if (is_record(expected)) {
-      if (!matches(actual, expected)) return false
-    } else if (actual !== expected) return false
-  }
-  return true
-}
+type AstNode = Record<string, unknown>
 
-// Recursively find all AST nodes matching a pattern
-function find_nodes(
-  node: unknown,
-  pattern: Record<string, unknown>,
-  results: Record<string, unknown>[] = [],
-): Record<string, unknown>[] {
-  if (!is_record(node)) return results
-  if (matches(node, pattern)) results.push(node)
-  for (const val of Object.values(node)) {
-    if (Array.isArray(val)) {
-      for (const item of val) find_nodes(item, pattern, results)
-    } else if (is_record(val)) {
-      find_nodes(val, pattern, results)
+// Single-pass AST walk collecting the two node kinds this plugin rewrites:
+// __live_example_src properties and import declarations/expressions
+function collect_nodes(tree: unknown): { src_props: AstNode[]; imports: AstNode[] } {
+  const src_props: AstNode[] = []
+  const imports: AstNode[] = []
+  const walk = (node: unknown): void => {
+    if (Array.isArray(node)) return node.forEach(walk)
+    if (!is_record(node)) return
+    if (
+      node.type === `Property` &&
+      is_record(node.key) &&
+      node.key.name === `__live_example_src`
+    ) {
+      src_props.push(node)
+    } else if (node.type === `ImportDeclaration` || node.type === `ImportExpression`) {
+      imports.push(node)
     }
+    Object.values(node).forEach(walk)
   }
-  return results
+  walk(tree)
+  return { src_props, imports }
 }
 
 // Normalize a module ID to absolute path for consistent lookups.
@@ -154,12 +149,7 @@ export default function live_examples_plugin(
           return with_empty_map(code)
         }
         const edits: Edit[] = []
-
-        // Find all __live_example_src properties
-        const src_props = find_nodes(tree, {
-          type: `Property`,
-          key: { name: `__live_example_src` },
-        })
+        const { src_props, imports } = collect_nodes(tree)
         const invalidate_virtual_modules = (virtual_id: string) => {
           const server = vite_server
           if (!server) return
@@ -215,10 +205,6 @@ export default function live_examples_plugin(
         if (pending_hmr_file === base_id) pending_hmr_file = null
 
         // Update import paths (static and dynamic) to use virtual file IDs
-        const imports = [
-          ...find_nodes(tree, { type: `ImportDeclaration` }),
-          ...find_nodes(tree, { type: `ImportExpression` }),
-        ]
         for (const import_node of imports) {
           const source = import_node.source
           if (!is_record(source) || typeof source.value !== `string`) continue

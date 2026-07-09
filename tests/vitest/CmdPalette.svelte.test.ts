@@ -438,6 +438,37 @@ test(`applies custom styles and props correctly`, async () => {
   expect(li_el.style.fontWeight).toBe(`bold`)
 })
 
+// dialog_props spreads after the built-in onclose handler, so a user-provided
+// onclose replaces it and the palette no longer auto-closes on the native close event
+test.each([
+  { desc: `resets open state on native close`, custom_onclose: false },
+  { desc: `dialog_props onclose replaces built-in handler`, custom_onclose: true },
+])(`native dialog close event: $desc`, async ({ custom_onclose }) => {
+  const on_close = vi.fn()
+  const props = $state({
+    open: true,
+    actions: mock_actions,
+    fade_duration: 0,
+    dialog_props: {
+      class: `custom-dialog`,
+      ...(custom_onclose ? { onclose: on_close } : {}),
+    },
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  // dialog_props spread onto the element without clobbering default attributes
+  const dialog = doc_query<HTMLDialogElement>(`dialog`)
+  expect(dialog.classList.contains(`custom-dialog`)).toBe(true)
+  expect(dialog.getAttribute(`aria-label`)).toBe(`Command palette`)
+
+  dialog.dispatchEvent(new Event(`close`))
+  await tick()
+
+  expect(on_close).toHaveBeenCalledTimes(custom_onclose ? 1 : 0)
+  expect(props.open).toBe(custom_onclose)
+})
+
 test(`handles empty actions array`, () => {
   const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
   const props = $state({ open: true, actions: [], fade_duration: 0 })
@@ -701,6 +732,32 @@ test(`mixed grouped and ungrouped actions render correctly`, async () => {
     `dialog ul.options li:not(.group-header)`,
   )
   expect(action_items).toHaveLength(4)
+})
+
+test(`groupSelectAll selects a whole action group without executing actions or closing`, async () => {
+  const actions = [
+    { label: `New File`, action: vi.fn(), group: `File` },
+    { label: `Save`, action: vi.fn(), group: `File` },
+    { label: `Copy`, action: vi.fn(), group: `Edit` },
+  ]
+  const on_select_all = vi.fn()
+  const props = $state({
+    open: true,
+    actions,
+    groupSelectAll: true,
+    onselectAll: on_select_all,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  doc_query<HTMLButtonElement>(`dialog li.group-header button.group-select-all`).click()
+  await tick()
+
+  // group selected (scoping is covered by MultiSelect tests) - no action executed
+  expect(on_select_all).toHaveBeenCalledTimes(1)
+  for (const { action } of actions) expect(action).not.toHaveBeenCalled()
+  expect(props.open).toBe(true)
 })
 
 // dropdown option labels in display order (used by shortcut/recents tests below)

@@ -63,6 +63,7 @@
     maxSelect = $bindable(null),
     maxSelectMsg = (current, max) => (max > 1 ? `${current}/${max}` : ``),
     maxSelectMsgClass = ``,
+    maxVisibleChips = null,
     name = null,
     noMatchingOptionsMsg = `No matching options`,
     open = $bindable(false),
@@ -249,6 +250,30 @@
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
   let highlighted_idx: number | null = $state(null) // index of highlighted selected item for arrow key navigation
 
+  // maxVisibleChips: chips beyond the limit collapse into a "+N more" toggle.
+  // chip_limit normalizes invalid values to null (error logged in the validation
+  // effect) so they can't leak a nonsensical "+N more" chip into the template.
+  let chips_expanded = $state(false)
+  const chip_limit = $derived(
+    maxVisibleChips !== null && Number.isInteger(maxVisibleChips) && maxVisibleChips >= 0
+      ? maxVisibleChips
+      : null,
+  )
+  const visible_chips = $derived(
+    chip_limit !== null && !chips_expanded ? selected.slice(0, chip_limit) : selected,
+  )
+  const hidden_chip_count = $derived(selected.length - visible_chips.length)
+  // keyboard chip navigation must never highlight an unrendered chip — auto-expand
+  $effect(() => {
+    if (
+      highlighted_idx !== null &&
+      chip_limit !== null &&
+      highlighted_idx >= chip_limit
+    ) {
+      chips_expanded = true
+    }
+  })
+
   // Clamp highlighted_idx when selected items change externally (undo/redo, parent prop, select_all)
   $effect(() => {
     if (highlighted_idx !== null && highlighted_idx >= selected.length) {
@@ -397,10 +422,17 @@
   let show_input_user_msg = $derived(
     has_search_text && !(input_text_is_committed || show_all_input_options),
   )
+  // whitespace-only input maps to `` (it previously filtered out every option while
+  // also suppressing the no-match message = blank dropdown); non-blank input stays
+  // raw so filterFunc/loadOptions/highlighting receive exactly what the user typed
   let effective_filter_text = $derived(
-    input_text_is_committed || show_all_input_options ? `` : searchText,
+    input_text_is_committed || show_all_input_options || !has_search_text
+      ? ``
+      : searchText,
   )
   let form_value = $derived.by(() => {
+    // input mode intentionally submits the visible text, committed or draft
+    // (free-text combobox contract, pinned by tests)
     if (input_display) return has_search_text ? searchText : null
     return selected.length >= Number(required) ? form_serialize(selected) : null
   })
@@ -565,10 +597,15 @@
         : 10
     return { item_height, overscan }
   })
-  // Virtualization only supports flat option lists: any grouped option disables it
-  // (falls back to full rendering, see console.warn in validation effect below)
+  const has_grouped_options = $derived(
+    grouped_options.some(({ group }) => group !== null),
+  )
+  // Virtualization supports flat and grouped lists (headers become rows of the same
+  // itemHeight). stickyGroupHeaders is the exception: a sticky header scrolled out
+  // of the render window can't stay pinned, so fall back to full rendering (see
+  // console.warn in the validation effect below).
   const virtual_enabled = $derived(
-    Boolean(virtual_config) && grouped_options.every(({ group }) => group === null),
+    Boolean(virtual_config) && !(stickyGroupHeaders && has_grouped_options),
   )
   let warned_virtual_grouped = false // only warn once per component instance
   let options_scroll_top = $state(0)
@@ -577,10 +614,51 @@
   const virtual_viewport = $derived(
     options_client_height > 0 ? options_client_height : 400,
   )
-  // Flat rows eligible for rendering (maxOptions hides options past the limit)
-  const virtual_rows = $derived(
-    virtual_enabled ? navigable_options.slice(0, visible_navigable_count) : [],
-  )
+  // Rows eligible for rendering: group headers interleaved with their options
+  // (maxOptions hides options past the limit, collapsed groups keep only their header)
+  type VirtualRow =
+    | { kind: `option`; opt: Option; flat_idx: number; render_key: unknown }
+    | { kind: `header`; group_idx: number; render_key: unknown }
+  // stable symbols as header render keys: can't collide with user option keys.
+  // Cache is bounded by distinct group names seen over the component's life, so
+  // symbols stay stable when filtering temporarily removes a group.
+  const header_key_cache = new Map<string, symbol>()
+  const header_key = (group: string): symbol => {
+    const sym = header_key_cache.get(group) ?? Symbol(`sms-header-${group}`)
+    header_key_cache.set(group, sym)
+    return sym
+  }
+  const virtual_rows = $derived.by((): VirtualRow[] => {
+    if (!virtual_enabled) return []
+    const rows: VirtualRow[] = []
+    grouped_options.forEach(({ group, options: opts, collapsed }, group_idx) => {
+      if (group !== null) {
+        rows.push({ kind: `header`, group_idx, render_key: header_key(group) })
+      }
+      if (collapsed && collapsibleGroups) return
+      opts.forEach((opt, local_idx) => {
+        const flat_idx = group_flat_offsets[group_idx] + local_idx
+        if (flat_idx < visible_navigable_count) {
+          rows.push({
+            kind: `option`,
+            opt,
+            flat_idx,
+            render_key: option_render_keys[group_idx][local_idx],
+          })
+        }
+      })
+    })
+    return rows
+  })
+  // row index of each navigable option (keyboard auto-scroll needs row offsets,
+  // which diverge from flat option indices once header rows are interleaved)
+  const option_row_indices = $derived.by(() => {
+    const indices: number[] = []
+    virtual_rows.forEach((row, row_idx) => {
+      if (row.kind === `option`) indices[row.flat_idx] = row_idx
+    })
+    return indices
+  })
   // Window of row indices [start, end) to render as DOM nodes
   const virtual_window = $derived.by(() => {
     if (!virtual_enabled || !virtual_config) return null
@@ -697,10 +775,16 @@
       group && collapsed && opts.length > 0 ? [group] : [],
     )
 
-  // Auto-expand collapsed groups when search matches their options
+  // Auto-expand collapsed groups when search matches their options. Only reacts
+  // to search-text changes (via prev_expand_search + untrack) so a group the
+  // user manually collapses mid-search isn't instantly re-expanded.
+  let prev_expand_search = ``
   $effect(() => {
-    if (searchExpandsCollapsedGroups && has_search_text && collapsibleGroups) {
-      expand_groups(get_collapsed_with_matches())
+    const search = has_search_text ? searchText : ``
+    const search_changed = search !== prev_expand_search
+    prev_expand_search = search
+    if (searchExpandsCollapsedGroups && collapsibleGroups && search && search_changed) {
+      untrack(() => expand_groups(get_collapsed_with_matches()))
     }
   })
 
@@ -779,17 +863,27 @@
         `MultiSelect: maxOptions must be undefined or a positive integer, got ${maxOptions}`,
       )
     }
-    // short-circuit keeps grouped_options out of this effect's dependencies unless
-    // virtualList is on and the warning hasn't fired yet
+    if (
+      maxVisibleChips !== null &&
+      (!Number.isInteger(maxVisibleChips) || maxVisibleChips < 0)
+    ) {
+      console.error(
+        `MultiSelect: maxVisibleChips must be null or a non-negative integer, got ${maxVisibleChips}`,
+      )
+    }
+    // short-circuit keeps has_grouped_options out of this effect's dependencies
+    // unless the sticky+virtual combo is on and the warning hasn't fired yet
     if (
       virtualList &&
+      stickyGroupHeaders &&
       !warned_virtual_grouped &&
-      grouped_options.some(({ group }) => group !== null)
+      has_grouped_options
     ) {
       warned_virtual_grouped = true
       console.warn(
-        `MultiSelect: virtualList only supports flat (ungrouped) option lists. ` +
-          `Grouped options detected, falling back to non-virtual rendering.`,
+        `MultiSelect: virtualList does not support stickyGroupHeaders (a sticky header ` +
+          `scrolled out of the render window can't stay pinned). Falling back to ` +
+          `non-virtual rendering.`,
       )
     }
   })
@@ -860,6 +954,16 @@
       ? null
       : (navigable_options[activeIndex ?? -1] ?? null)
   })
+
+  // Whether the options <ul> is in the DOM at all — aria-controls must not
+  // reference a non-existent id (mirrors the template's render condition)
+  const listbox_rendered = $derived(
+    Boolean(
+      (has_search_text && noMatchingOptionsMsg) ||
+      effective_options.length > 0 ||
+      loadOptions,
+    ),
+  )
 
   // Compute the ID of the currently active dropdown option for aria-activedescendant.
   // Selected chips are plain list items, so left/right chip highlighting stays visual.
@@ -1217,7 +1321,7 @@
         // instead of scrollIntoViewIfNeeded. Clamp scroll so the active row lies
         // within [row_bottom - viewport, row_top] (no-op when already in view).
         const { item_height } = virtual_window
-        const row_top = activeIndex * item_height
+        const row_top = (option_row_indices[activeIndex] ?? activeIndex) * item_height
         const next_scroll_top = Math.min(
           Math.max(options_scroll_top, row_top + item_height - virtual_viewport),
           row_top,
@@ -1664,68 +1768,96 @@
   // Portal action: use: directive instead of @attach because portalling requires
   // synchronous DOM manipulation during element creation and in-place updates
   // (the action's update method avoids teardown/re-creation when outerDiv changes).
+  // `active` is honored at runtime: toggling it portals/un-portals in place.
   function portal(node: HTMLElement, params: PortalParams) {
-    let { target_node, active, placement = `auto` } = params
-    if (!active) return
-    let render_in_place =
-      typeof globalThis.document === `undefined` || !document.body.contains(node)
+    if (typeof globalThis.document === `undefined`) return // SSR: nothing to portal
+    let { target_node, placement = `auto` } = params
+    let portalled = false
+    // original DOM position so deactivating can move the node back
+    let home_parent: ParentNode | null = null
+    let home_anchor: Node | null = null
 
-    if (!render_in_place) {
+    const update_position = () => {
+      if (!portalled) return
+      if (!target_node || !open) return (node.hidden = true)
+      const rect = target_node.getBoundingClientRect()
+      node.style.left = `${rect.left}px`
+      node.style.width = `${rect.width}px`
+      node.hidden = false // unhide before measuring so offsetHeight is accurate
+      const dropdown_height = node.offsetHeight
+      const overflows_bottom = rect.bottom + dropdown_height > globalThis.innerHeight
+      const more_space_above = rect.top > globalThis.innerHeight - rect.bottom
+      // dropdown_height === 0 means unmeasured (e.g. happy-dom), fall back to bottom
+      const place_above =
+        placement === `top` ||
+        (placement === `auto` &&
+          dropdown_height > 0 &&
+          overflows_bottom &&
+          more_space_above)
+      if (place_above) {
+        // subtract margin-top (default 6pt) since `top` positions the margin edge,
+        // which would otherwise push the dropdown down over the input
+        // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed margin has px suffix
+        const margin_top = Number.parseFloat(getComputedStyle(node).marginTop) || 0
+        node.style.top = `${Math.max(0, rect.top - dropdown_height - margin_top)}px`
+      } else node.style.top = `${rect.bottom}px`
+      node.dataset.placement = place_above ? `top` : `bottom`
+    }
+
+    const activate = () => {
+      if (portalled || !document.body.contains(node)) return
+      home_parent = node.parentNode
+      home_anchor = node.nextSibling
       document.body.append(node)
       node.style.position = `fixed`
-
-      const update_position = () => {
-        if (!target_node || !open) return (node.hidden = true)
-        const rect = target_node.getBoundingClientRect()
-        node.style.left = `${rect.left}px`
-        node.style.width = `${rect.width}px`
-        node.hidden = false // unhide before measuring so offsetHeight is accurate
-        const dropdown_height = node.offsetHeight
-        const overflows_bottom = rect.bottom + dropdown_height > globalThis.innerHeight
-        const more_space_above = rect.top > globalThis.innerHeight - rect.bottom
-        // dropdown_height === 0 means unmeasured (e.g. happy-dom), fall back to bottom
-        const place_above =
-          placement === `top` ||
-          (placement === `auto` &&
-            dropdown_height > 0 &&
-            overflows_bottom &&
-            more_space_above)
-        if (place_above) {
-          // subtract margin-top (default 6pt) since `top` positions the margin edge,
-          // which would otherwise push the dropdown down over the input
-          // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed margin has px suffix
-          const margin_top = Number.parseFloat(getComputedStyle(node).marginTop) || 0
-          node.style.top = `${Math.max(0, rect.top - dropdown_height - margin_top)}px`
-        } else node.style.top = `${rect.bottom}px`
-        node.dataset.placement = place_above ? `top` : `bottom`
-      }
-
-      if (open) tick().then(update_position)
-
       globalThis.addEventListener(`scroll`, update_position, true)
       globalThis.addEventListener(`resize`, update_position)
+      portalled = true
+      if (open) tick().then(update_position)
+      else node.hidden = true
+    }
 
-      $effect(() => {
-        if (open && target_node) update_position()
+    const deactivate = () => {
+      if (!portalled) return
+      globalThis.removeEventListener(`scroll`, update_position, true)
+      globalThis.removeEventListener(`resize`, update_position)
+      if (home_anchor) home_anchor.before(node)
+      else home_parent?.append(node)
+      // clear portal-only inline styles so component CSS takes over again
+      for (const prop of [`position`, `left`, `top`, `width`]) {
+        node.style.removeProperty(prop)
+      }
+      delete node.dataset.placement
+      node.hidden = false
+      portalled = false
+    }
+
+    // reposition/hide on open changes (reads current portalled state on each run)
+    $effect(() => {
+      if (!portalled) return
+      if (open && target_node) update_position()
+      else node.hidden = true
+    })
+
+    if (params.active) activate()
+
+    return {
+      update(next_params: PortalParams) {
+        target_node = next_params.target_node
+        placement = next_params.placement ?? `auto`
+        if (next_params.active && !portalled) activate()
+        else if (!next_params.active && portalled) deactivate()
+        if (!portalled) return
+        if (open && target_node) tick().then(update_position)
         else node.hidden = true
-      })
-
-      return {
-        update(next_params: PortalParams) {
-          target_node = next_params.target_node
-          placement = next_params.placement ?? `auto`
-          render_in_place =
-            typeof globalThis.document === `undefined` || !document.body.contains(node)
-          if (open && !render_in_place && target_node) {
-            tick().then(update_position)
-          } else if (!open || !target_node) node.hidden = true
-        },
-        destroy() {
-          if (!render_in_place) node.remove()
+      },
+      destroy() {
+        if (portalled) {
           globalThis.removeEventListener(`scroll`, update_position, true)
           globalThis.removeEventListener(`resize`, update_position)
-        },
-      }
+          node.remove()
+        }
+      },
     }
   }
 
@@ -1926,7 +2058,7 @@
   >
     {@render beforeInput?.(input_snippet_props)}
     {#if !input_display}
-      {#each selected as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
+      {#each visible_chips as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
         {@const selectedOptionStyle = merge_styles(option, `selected`, liSelectedStyle)}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -- selected chips stay plain list items; nested buttons handle removal -->
         <li
@@ -1965,6 +2097,25 @@
           {/if}
         </li>
       {/each}
+      {#if chip_limit !== null && selected.length > chip_limit}
+        <li class="more-chip">
+          <button
+            type="button"
+            class="more-chips"
+            aria-expanded={chips_expanded}
+            onclick={(event) => {
+              event.stopPropagation()
+              chips_expanded = !chips_expanded
+              // clear a beyond-limit highlight, else the auto-expand effect would
+              // instantly undo this collapse (making "show less" a no-op)
+              if (!chips_expanded) highlighted_idx = null
+            }}
+            onmouseup={(event) => event.stopPropagation()}
+          >
+            {chips_expanded ? `show less` : `+${hidden_chip_count} more`}
+          </button>
+        </li>
+      {/if}
     {/if}
     <input
       {...rest}
@@ -1984,7 +2135,7 @@
       role="combobox"
       aria-haspopup="listbox"
       aria-expanded={open}
-      aria-controls={listbox_id}
+      aria-controls={listbox_rendered ? listbox_id : undefined}
       aria-activedescendant={active_option_id}
       aria-busy={loading || load_options_pending || creating_option || null}
       aria-invalid={invalid ? `true` : null}
@@ -2046,7 +2197,7 @@
   {/if}
 
   <!-- only render options dropdown if options or searchText is not empty (needed to avoid briefly flashing empty dropdown) -->
-  {#if (has_search_text && noMatchingOptionsMsg) || effective_options.length > 0 || loadOptions}
+  {#if listbox_rendered}
     <ul
       use:portal={{ target_node: outerDiv, ...portal_params }}
       {@attach highlight_matches({
@@ -2091,7 +2242,9 @@
           onclick={all_selected ? undefined : select_all}
           onkeydown={all_selected ? undefined : if_enter_or_space(select_all)}
           role="option"
-          aria-selected="false"
+          aria-selected={selected.length > 0 && all_selectable_selected
+            ? `true`
+            : `false`}
           aria-disabled={all_selected || undefined}
           title={all_selected ? disabled_title : null}
           tabindex={all_selected ? -1 : 0}
@@ -2162,78 +2315,89 @@
           style="height: {height}px; padding: 0; margin: 0; visibility: hidden"
         ></li>
       {/snippet}
+      <!-- group header <li> shared by the virtual and non-virtual render paths -->
+      {#snippet group_header_li(group_idx: number)}
+        {@const {
+          group: group_name,
+          options: group_opts,
+          collapsed,
+        } = grouped_options[group_idx]}
+        {#if group_name !== null}
+          {@const { all_selected, selected_count } = group_header_state.get(
+            group_name,
+          ) ?? { all_selected: false, selected_count: 0 }}
+          {@const handle_toggle = () =>
+            collapsibleGroups && toggle_group_collapsed(group_name)}
+          {@const handle_group_select = (event: Event) =>
+            toggle_group_selection(group_opts, collapsed, all_selected, event)}
+          <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+          <li
+            class="group-header {liGroupHeaderClass}"
+            class:collapsible={collapsibleGroups}
+            class:sticky={stickyGroupHeaders}
+            role={collapsibleGroups ? `button` : `presentation`}
+            aria-expanded={collapsibleGroups ? !collapsed : undefined}
+            aria-label="Group: {group_name}"
+            style={liGroupHeaderStyle}
+            onclick={handle_toggle}
+            onkeydown={if_enter_or_space(handle_toggle)}
+            tabindex={collapsibleGroups ? 0 : -1}
+          >
+            {#if groupHeader}
+              {@render groupHeader({
+                group: group_name,
+                options: group_opts,
+                collapsed,
+              })}
+            {:else}
+              <span class="group-label">{group_name}</span>
+              <span class="group-count">
+                {#if keepSelectedInDropdown && selected_count > 0}
+                  ({selected_count}/{group_opts.length})
+                {:else}
+                  ({group_opts.length})
+                {/if}
+              </span>
+              {#if groupSelectAll && multi_select}
+                {@const group_selectable = get_selectable_opts(group_opts, collapsed)}
+                {@const group_blocked =
+                  (!all_selected && maxSelect !== null && selected.length >= maxSelect) ||
+                  (!all_selected && group_selectable.length === 0)}
+                <button
+                  type="button"
+                  class="group-select-all"
+                  class:deselect={all_selected}
+                  disabled={group_blocked}
+                  onclick={handle_group_select}
+                  onkeydown={if_enter_or_space(handle_group_select)}
+                >
+                  {all_selected ? `Deselect all` : `Select all`}
+                </button>
+              {/if}
+              {#if collapsibleGroups}
+                <Icon
+                  icon={collapsed ? `ChevronRight` : `ChevronDown`}
+                  style="width: 12px; margin-inline-start: auto"
+                />
+              {/if}
+            {/if}
+          </li>
+        {/if}
+      {/snippet}
       {#if virtual_window && virtual_rows.length > 0}
         {@const { start, end, item_height } = virtual_window}
         {@render virtual_spacer(start * item_height)}
-        {#each virtual_rows.slice(start, end) as option_item, window_idx (option_render_keys[0][start + window_idx])}
-          {@render option_li(option_item, start + window_idx)}
+        {#each virtual_rows.slice(start, end) as row (row.render_key)}
+          {#if row.kind === `option`}
+            {@render option_li(row.opt, row.flat_idx)}
+          {:else}
+            {@render group_header_li(row.group_idx)}
+          {/if}
         {/each}
         {@render virtual_spacer((virtual_rows.length - end) * item_height)}
       {:else}
         {#each grouped_options as { group: group_name, options: group_opts, collapsed }, group_idx (group_name ?? `ungrouped-${group_idx}`)}
-          {#if group_name !== null}
-            {@const { all_selected, selected_count } = group_header_state.get(
-              group_name,
-            ) ?? { all_selected: false, selected_count: 0 }}
-            {@const handle_toggle = () =>
-              collapsibleGroups && toggle_group_collapsed(group_name)}
-            {@const handle_group_select = (event: Event) =>
-              toggle_group_selection(group_opts, collapsed, all_selected, event)}
-            <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-            <li
-              class="group-header {liGroupHeaderClass}"
-              class:collapsible={collapsibleGroups}
-              class:sticky={stickyGroupHeaders}
-              role={collapsibleGroups ? `button` : `presentation`}
-              aria-expanded={collapsibleGroups ? !collapsed : undefined}
-              aria-label="Group: {group_name}"
-              style={liGroupHeaderStyle}
-              onclick={handle_toggle}
-              onkeydown={if_enter_or_space(handle_toggle)}
-              tabindex={collapsibleGroups ? 0 : -1}
-            >
-              {#if groupHeader}
-                {@render groupHeader({
-                  group: group_name,
-                  options: group_opts,
-                  collapsed,
-                })}
-              {:else}
-                <span class="group-label">{group_name}</span>
-                <span class="group-count">
-                  {#if keepSelectedInDropdown && selected_count > 0}
-                    ({selected_count}/{group_opts.length})
-                  {:else}
-                    ({group_opts.length})
-                  {/if}
-                </span>
-                {#if groupSelectAll && multi_select}
-                  {@const group_selectable = get_selectable_opts(group_opts, collapsed)}
-                  {@const group_blocked =
-                    (!all_selected &&
-                      maxSelect !== null &&
-                      selected.length >= maxSelect) ||
-                    (!all_selected && group_selectable.length === 0)}
-                  <button
-                    type="button"
-                    class="group-select-all"
-                    class:deselect={all_selected}
-                    disabled={group_blocked}
-                    onclick={handle_group_select}
-                    onkeydown={if_enter_or_space(handle_group_select)}
-                  >
-                    {all_selected ? `Deselect all` : `Select all`}
-                  </button>
-                {/if}
-                {#if collapsibleGroups}
-                  <Icon
-                    icon={collapsed ? `ChevronRight` : `ChevronDown`}
-                    style="width: 12px; margin-left: auto"
-                  />
-                {/if}
-              {/if}
-            </li>
-          {/if}
+          {@render group_header_li(group_idx)}
           {#if !collapsed || !collapsibleGroups}
             {#each group_opts as option_item, local_idx (option_render_keys[group_idx][local_idx])}
               {@render option_li(option_item, group_flat_offsets[group_idx] + local_idx)}
@@ -2407,7 +2571,8 @@
     cursor: pointer;
     outline: none;
     padding: 0;
-    margin: 0 0 0 2pt; /* CSS reset */
+    margin: 0; /* CSS reset */
+    margin-inline-start: 2pt;
   }
   :is(div.multiselect button.default-icon) {
     min-height: 0; /* let aspect-ratio win over content sizing */
@@ -2421,6 +2586,15 @@
     border-radius: 3pt;
     aspect-ratio: auto;
     padding: 0 2pt;
+  }
+  /* "+N more" chip toggle rendered when maxVisibleChips collapses overflow */
+  :is(div.multiselect li.more-chip button.more-chips) {
+    border-radius: 3pt;
+    aspect-ratio: auto;
+    padding: 0 4pt;
+    margin: 0;
+    font-size: inherit;
+    white-space: nowrap;
   }
   :is(ul.selected > li button:hover, button.remove-all:hover, button:focus) {
     color: var(--sms-remove-btn-hover-color, inherit);
@@ -2460,7 +2634,7 @@
 
   /* don't wrap ::placeholder rules in :is() as it seems to be overpowered by browser defaults i.t.o. specificity */
   div.multiselect > ul.selected > input::placeholder {
-    padding-left: 5pt;
+    padding-inline-start: 5pt;
     color: var(--sms-placeholder-color);
     opacity: var(--sms-placeholder-opacity);
   }
@@ -2482,6 +2656,9 @@
     /* but provide defaults for non-portaled or initial state */
     position: absolute; /* Default, overridden by portal to fixed when open */
     top: 100%;
+    /* deliberately physical: with width 100% left/right anchoring is identical, and
+       a logical inset would resolve to `right` in RTL, conflicting with the portal's
+       physical `left` positioning (over-constrained fixed element) */
     left: 0;
     width: 100%;
     /* Default z-index if not portaled/overridden by portal */
@@ -2529,7 +2706,7 @@
     padding: var(--sms-options-li-padding, 3pt 1ex);
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
-    border-left: 1px solid transparent;
+    border-inline-start: 1px solid transparent;
   }
   :where(ul.options .user-msg) {
     /* block needed so vertical padding applies to span */
@@ -2541,7 +2718,7 @@
       --sms-li-selected-plain-bg,
       light-dark(rgba(0, 123, 255, 0.1), rgba(100, 180, 255, 0.2))
     );
-    border-left: var(
+    border-inline-start: var(
       --sms-li-selected-plain-border,
       1px solid var(--sms-active-color, cornflowerblue)
     );
@@ -2564,7 +2741,7 @@
   :is(ul.options > li > input.option-checkbox) {
     width: 16px;
     height: 16px;
-    margin-right: 6px;
+    margin-inline-end: 6px;
     accent-color: var(--sms-active-color, cornflowerblue);
   }
   /* Select all option styling - has liSelectAllClass prop */
@@ -2604,7 +2781,7 @@
     background: var(--sms-group-header-bg, transparent);
     padding: var(--sms-group-header-padding, 2pt 1ex);
     cursor: default;
-    border-left: none;
+    border-inline-start: none;
     text-transform: var(--sms-group-header-text-transform, uppercase);
     letter-spacing: var(--sms-group-header-letter-spacing, 0.5px);
   }
@@ -2629,7 +2806,7 @@
     opacity: 0.6;
     font-size: 0.9em;
     font-weight: normal;
-    margin-left: 4pt;
+    margin-inline-start: 4pt;
   }
   /* Sticky group headers when enabled */
   :where(ul.options > li.group-header.sticky) {
@@ -2645,7 +2822,7 @@
   :where(
     ul.options > li:not(.group-header):not(.select-all):not(.user-msg):not(.loading-more)
   ) {
-    padding-left: var(
+    padding-inline-start: var(
       --sms-group-item-padding-left,
       var(--sms-group-option-indent, 1.5ex)
     );
@@ -2664,7 +2841,7 @@
     border: none;
     cursor: pointer;
     padding: 2pt 4pt;
-    margin-left: 8pt;
+    margin-inline-start: 8pt;
     border-radius: 3pt;
     aspect-ratio: auto; /* override global button aspect-ratio: 1 */
   }

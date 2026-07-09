@@ -152,6 +152,6 @@
     margin: var(--prev-next-label-margin, 0 auto 1ex);
   }
   .prev-next > div:nth-child(2) {
-    text-align: right;
+    text-align: end;
   }
 </style>

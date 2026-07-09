@@ -1,5 +1,5 @@
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/static/favicon.svg" alt="Svelte MultiSelect" height="60" width="60">
+  <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/src/site/favicon.svg" alt="Svelte MultiSelect" height="60" width="60">
   <br class="hide-in-docs"> Svelte MultiSelect
 </h1>
 
@@ -337,10 +337,10 @@ These are the core props you'll use in most cases:
    Whether/how to sort selected options. `true` uses default sort, function enables custom sorting.
 
 1. ```ts
-   portal: { target_node?: HTMLElement; active?: boolean } = {}
+   portal: { target_node?: HTMLElement; active?: boolean; placement?: 'auto' | 'bottom' | 'top' } = {}
    ```
 
-   Configuration for portal rendering. When `active: true`, the dropdown is rendered at document.body level with fixed positioning. Useful for avoiding z-index and overflow issues.
+   Configuration for portal rendering. When `active: true`, the dropdown is rendered at document.body level with fixed positioning. Useful for avoiding z-index and overflow issues. `active` is honored at runtime, so toggling it portals/un-portals in place. `placement` controls which side of the input the dropdown opens on: `'auto'` (default) opens below and flips above when the dropdown would overflow the viewport bottom with more space available above, `'bottom'`/`'top'` force a side.
 
 ### Grouping Props
 
@@ -496,6 +496,18 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    ```
 
    Limit number of options shown in dropdown. `undefined` = no limit.
+
+1. ```ts
+   maxVisibleChips: number | null = null
+   ```
+
+   Max number of selected chips to render before collapsing the rest into a `+N more` toggle chip (click to expand/collapse). `null` renders all chips. Keyboard chip navigation auto-expands so hidden chips can't be highlighted invisibly. Ignored in `selectedDisplay="input"` mode.
+
+1. ```ts
+   virtualList: boolean | { itemHeight?: number; overscan?: number } = false
+   ```
+
+   Virtualized dropdown rendering for large option lists: only rows near the scroll viewport are rendered as DOM nodes. Pass `true` for defaults or an object to tune `itemHeight` (px per row, default 30, also applies to group headers) and `overscan` (extra rows rendered above/below the visible window, default 10). Grouped options are supported except in combination with `stickyGroupHeaders`, which falls back to full rendering with a console warning.
 
 1. ```ts
    minSelect: number | null = null
