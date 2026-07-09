@@ -5,6 +5,7 @@
   import { CmdPalette, CopyButton, GitHubCorner } from '$lib'
   import { name, repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
+  import favicon from '$site/favicon.svg'
   import type { Snippet } from 'svelte'
   import { Toc } from 'svelte-toc'
   // eslint-disable-next-line import/no-unassigned-import -- global route styles
@@ -30,9 +31,13 @@
   }
 </script>
 
+<svelte:head>
+  <link rel="icon" href={favicon} />
+</svelte:head>
+
 {#if page.url.pathname !== `/`}
   <h1>
-    <img src="favicon.svg" alt={name} height="50" width="50" />&ensp;Svelte MultiSelect
+    <img src={favicon} alt={name} height="50" width="50" />&ensp;Svelte MultiSelect
   </h1>
   <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}

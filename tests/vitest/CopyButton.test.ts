@@ -1,6 +1,8 @@
 import { CopyButton } from '$lib'
+import { icon_data } from '$lib/icons'
 import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
+import { fromStore, get, writable } from 'svelte/store'
 import { beforeEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 import TestCopyButtonGlobalUpdate from './TestCopyButtonGlobalUpdate.svelte'
@@ -236,6 +238,57 @@ test(`unmount clears outstanding reset timer`, async () => {
     }
   })
 })
+
+// two-way binding tests: this file isn't compiled by the Svelte plugin so $state is
+// unavailable - a getter/setter pair backed by fromStore mimics a parent bind:state
+type CopyState = `ready` | `success` | `error`
+
+const icon_path = (copy_button: HTMLElement): string | null =>
+  copy_button.querySelector(`svg path`)?.getAttribute(`d`) ?? null
+
+const mount_bound_copy_button = () => {
+  const state_store = writable<CopyState>(`ready`)
+  const state_proxy = fromStore(state_store)
+  mount(CopyButton, {
+    target: document.body,
+    props: {
+      content: `bound content`,
+      as: `div`,
+      labels: default_labels,
+      reset_sec: 0,
+      get state() {
+        return state_proxy.current
+      },
+      set state(new_state: CopyState) {
+        state_store.set(new_state)
+      },
+    },
+  })
+  return { copy_button: doc_query(`[data-sms-copy]`), state_store }
+}
+
+test.each([
+  [`success`, null, `Check`],
+  [`error`, new Error(`clipboard failed`), `Alert`],
+] as const)(
+  `bound state: click propagates %s outward, external writes update rendering`,
+  async (expected_state, rejection, icon) => {
+    const console_error_spy = vi.spyOn(console, `error`).mockImplementation(() => void 0)
+    if (rejection) mock_write_text.mockRejectedValue(rejection)
+
+    const { copy_button, state_store } = mount_bound_copy_button()
+    await click_copy_button(copy_button)
+    expect(get(state_store)).toBe(expected_state) // internal change reached the binding
+    expect(icon_path(copy_button)).toBe(icon_data[icon].path)
+
+    // external write back to idle flows into the component and restores the Copy icon
+    state_store.set(`ready`)
+    await tick()
+    expect(icon_path(copy_button)).toBe(icon_data.Copy.path)
+
+    console_error_spy.mockRestore()
+  },
+)
 
 test(`global=true propagates disabled prop to mounted buttons`, async () => {
   const on_copy_success = vi.fn()

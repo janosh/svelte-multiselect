@@ -137,7 +137,7 @@
   .lang-label {
     position: absolute;
     bottom: 2px;
-    right: 6px;
+    inset-inline-end: 6px;
     font-size: 0.65rem;
     opacity: 0.35;
     text-transform: uppercase;

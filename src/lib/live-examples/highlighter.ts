@@ -32,9 +32,9 @@ export function starry_night_highlighter(code: string, lang?: string | null): st
   const lang_key = lang?.toLowerCase()
   const scope = lang_key ? starry_night.flagToScope(lang_key) : undefined
   // fall back to plain escaped code when the language is missing or unsupported
-  const html = scope
-    ? escape_svelte(hast_to_html(starry_night.highlight(code, scope)))
-    : escape_svelte(escape_html_text(code))
+  const html = escape_svelte(
+    scope ? hast_to_html(starry_night.highlight(code, scope)) : escape_html_text(code),
+  )
   const class_name = scope ? `highlight highlight-${lang_key}` : `highlight`
   return `<pre class="${class_name}"><code>${html}</code></pre>`
 }

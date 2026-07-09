@@ -9,3 +9,6 @@ Install its optional peer dependencies in apps that import this subpath:
 ```sh
 npm install --dev acorn @wooorm/starry-night
 ```
+
+The Vite plugin uses Vite's built-in `parseSync` AST parser, which requires
+`vite >= 8` (declared as optional peer dependency).

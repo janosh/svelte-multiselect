@@ -16,7 +16,11 @@
     <meta name="viewport" content="width=device-width,initial-scale=1" />
 
     <meta property="og:type" content="article" />
-    <meta property="og:image" content="/favicon.svg" />
+    <!-- absolute URL since social scrapers can't resolve site-relative paths or data URIs -->
+    <meta
+      property="og:image"
+      content="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/src/site/favicon.svg"
+    />
     <meta property="og:url" content="https://janosh.github.io/svelte-multiselect" />
     <meta property="twitter:site_name" content="Svelte MultiSelect" />
 
@@ -25,8 +29,6 @@
       data-domain="janosh.github.io/svelte-multiselect"
       src="https://plausible.io/js/plausible.js"
     ></script>
-
-    <link rel="icon" href="favicon.svg" />
 
     %sveltekit.head%
   </head>

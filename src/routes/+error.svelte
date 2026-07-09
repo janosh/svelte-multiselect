@@ -1,6 +1,7 @@
 <script lang="ts">
   import { page } from '$app/state'
   import { homepage, name } from '$root/package.json'
+  import favicon from '$site/favicon.svg'
 
   // undefined until hydration reads navigator.onLine - starting with false would
   // flash the "you're offline" message at online users in the prerendered HTML
@@ -33,7 +34,7 @@
 
   <p>
     Back to <a href=".">
-      <img src="favicon.svg" alt={name} height="30" />
+      <img src={favicon} alt={name} height="30" />
       landing page
     </a>.
   </p>

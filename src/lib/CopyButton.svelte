@@ -59,7 +59,9 @@
     type MountedCopyButton = Parameters<typeof unmount>[0]
     const mounted_copy_buttons: { pre: HTMLElement; component: MountedCopyButton }[] = []
     const apply_copy_buttons = () => {
-      const style = `position: absolute; top: 6pt; right: 6pt; ${rest.style ?? ``}`
+      const style = `position: absolute; top: 6pt; inset-inline-end: 6pt; ${
+        rest.style ?? ``
+      }`
       const skip_sel = skip_selector ?? as
       for (const code of document.querySelectorAll(global_selector ?? `pre > code`)) {
         const pre = code.parentElement
