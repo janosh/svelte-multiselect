@@ -21,6 +21,19 @@ export type ObjectOption = {
   [key: string]: unknown // allow any other keys users might want
 }
 
+export type CmdAction = {
+  id?: string | number
+  label: string
+  action: (label: string) => void
+  badge?: string
+  description?: string
+  disabled?: boolean
+  group?: string
+  keywords?: string[]
+  metadata?: string | string[]
+  shortcut?: string
+} & Record<string, unknown>
+
 // placeholder can be a simple string or object with extended options
 export type PlaceholderConfig = {
   text: string

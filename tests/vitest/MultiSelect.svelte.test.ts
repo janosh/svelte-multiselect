@@ -1448,7 +1448,7 @@ test(`autoScroll=false skips scrolling active options into view`, async () => {
   }
 })
 
-test(`highlightMatches=false clears but does not create CSS highlights`, async () => {
+test(`highlightMatches=false does not modify CSS highlights`, async () => {
   const previous_css = globalThis.CSS
   const highlights = { delete: vi.fn(), set: vi.fn() }
 
@@ -1465,7 +1465,7 @@ test(`highlightMatches=false clears but does not create CSS highlights`, async (
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     await type_search_text(`Al`, input)
 
-    expect(highlights.delete).toHaveBeenCalledWith(`sms-search-matches`)
+    expect(highlights.delete).not.toHaveBeenCalled()
     expect(highlights.set).not.toHaveBeenCalled()
   } finally {
     Object.defineProperty(globalThis, `CSS`, {
@@ -1662,26 +1662,20 @@ test(`can't select disabled options`, async () => {
   expect(selected_ul.textContent?.trim()).toBe(`2 3`)
 })
 
-test(`Enter key can't select disabled active option`, async () => {
+test(`keyboard navigation skips disabled options`, async () => {
   const props = $state<MultiSelectProps>({
     options: [{ label: `Disabled`, disabled: true }, { label: `Enabled` }],
     selected: [],
     open: true,
+    key: () => `duplicate`,
   })
   mount(MultiSelect, { target: document.body, props })
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
   input.dispatchEvent(fresh_key(`ArrowDown`))
   await tick()
-  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`Disabled`)
-  expect(doc_query(`ul.options > li.active`).getAttribute(`aria-disabled`)).toBe(`true`)
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`Enabled`)
 
-  input.dispatchEvent(fresh_key(`Enter`))
-  await tick()
-  expect(props.selected).toEqual([])
-
-  input.dispatchEvent(fresh_key(`ArrowDown`))
-  await tick()
   input.dispatchEvent(fresh_key(`Enter`))
   await tick()
   expect(props.selected).toEqual([{ label: `Enabled` }])
@@ -4955,8 +4949,10 @@ describe(`CSS static analysis`, () => {
     )
   })
 
-  test(`::highlight uses light-dark()`, () => {
-    expect(css).toMatch(/::highlight\(sms-search-matches\)[\s\S]*?light-dark\(/u)
+  test(`::highlight is global and uses light-dark()`, () => {
+    expect(css).toMatch(
+      /:global\(::highlight\(sms-search-matches\)\)\s*\{[^}]*light-dark\(/u,
+    )
   })
 
   test(`dropdown highlight query uses effective filter text`, () => {

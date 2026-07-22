@@ -1,8 +1,9 @@
 <script lang="ts">
   import { browser } from '$app/environment'
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import { page } from '$app/state'
-  import { CmdPalette, CopyButton, GitHubCorner } from '$lib'
+  import { CopyButton, GitHubCorner, PagefindPalette, slug_to_title } from '$lib'
   import { name, repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
   import favicon from '$site/favicon.svg'
@@ -19,19 +20,32 @@
     label: route,
     action: () => goto(route),
   }))
+  const page_title = $derived.by(() => {
+    const route_slug = page.url.pathname
+      .split(`/`)
+      .findLast(Boolean)
+      ?.replace(/\.html$/, ``)
+    return !route_slug || route_slug === `index`
+      ? `Svelte MultiSelect`
+      : slug_to_title(route_slug)
+  })
 
   if (browser) {
-    const saved = localStorage.getItem(`theme`)
-    let effective = saved
-    if (effective !== `light` && effective !== `dark`) {
-      effective = matchMedia(`(prefers-color-scheme: dark)`).matches ? `dark` : `light`
+    const saved_theme = localStorage.getItem(`theme`)
+    let effective_theme = saved_theme
+    if (effective_theme !== `light` && effective_theme !== `dark`) {
+      effective_theme = matchMedia(`(prefers-color-scheme: dark)`).matches
+        ? `dark`
+        : `light`
     }
-    document.documentElement.style.colorScheme = effective
-    document.documentElement.dataset.theme = effective
+    document.documentElement.style.colorScheme = effective_theme
+    document.documentElement.dataset.theme = effective_theme
   }
 </script>
 
 <svelte:head>
+  <title>{page_title}</title>
+  <meta data-pagefind-meta="title[content]" content={page_title} />
   <link rel="icon" href={favicon} />
 </svelte:head>
 
@@ -42,13 +56,21 @@
   <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}
 
-<CmdPalette {actions} placeholder="Go to..." recent_actions_key="nav-palette-recents" />
+<PagefindPalette
+  fallback_actions={actions}
+  navigate={goto}
+  strip_html_suffix
+  transform_url={(url) => `${base}${url}`}
+  pagefind_path={`${base}/pagefind/pagefind.js`}
+/>
 
 <GitHubCorner href={repository} />
 
 <CopyButton global global_selector="pre:not(li > pre) > code" />
 
-{@render children?.()}
+<div data-pagefind-body style="display: contents">
+  {@render children?.()}
+</div>
 
 {#if page.url.pathname === `/`}
   <Toc

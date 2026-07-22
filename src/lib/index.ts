@@ -1,6 +1,7 @@
 export * from './heading-anchors'
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CmdPalette } from './CmdPalette.svelte'
+export { default as PagefindPalette } from './PagefindPalette.svelte'
 export { default as CodeExample } from './CodeExample.svelte'
 export { default as CopyButton } from './CopyButton.svelte'
 export { default as FileDetails } from './FileDetails.svelte'

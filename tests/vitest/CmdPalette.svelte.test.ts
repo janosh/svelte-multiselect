@@ -1,6 +1,6 @@
-import { CmdPalette } from '$lib'
+import { CmdPalette, PagefindPalette } from '$lib'
 import { flushSync, mount, tick } from 'svelte'
-import { expect, test, vi } from 'vite-plus/test'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const mock_actions = [
@@ -194,20 +194,24 @@ test.each([`throws`, `unavailable`] as const)(
   },
 )
 
-test(`handles action selection and execution`, () => {
+test(`handles action selection and execution`, async () => {
   const actions_with_spies = mock_actions.map(({ label }) => ({
     label,
     action: vi.fn(),
   }))
-  const props = $state({ open: true, actions: actions_with_spies, fade_duration: 0 })
+  const onadd = vi.fn()
+  const props = $state({
+    open: true,
+    actions: actions_with_spies,
+    fade_duration: 0,
+    onadd,
+  })
   mount(CmdPalette, { target: document.body, props })
+  await tick()
 
   const input_el = doc_query(`dialog div.multiselect input[autocomplete]`)
 
   // Navigate to second action and select it
-  input_el.dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
-  )
   input_el.dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
   )
@@ -216,6 +220,9 @@ test(`handles action selection and execution`, () => {
   expect(actions_with_spies[1].action).toHaveBeenCalledExactlyOnceWith(`action 2`)
   expect(actions_with_spies[0].action).not.toHaveBeenCalled()
   expect(actions_with_spies[2].action).not.toHaveBeenCalled()
+  expect(onadd).toHaveBeenCalledWith(
+    expect.objectContaining({ option: actions_with_spies[1] }),
+  )
   expect(props.open).toBe(false)
 })
 
@@ -550,7 +557,7 @@ test.each([
   {
     fuzzy: true,
     search: `qwerty`,
-    expected: [`No matching options`],
+    expected: [`No matching commands`],
     description: `fuzzy match 'qwerty' -> no matches message`,
   },
   {
@@ -574,13 +581,13 @@ test.each([
   {
     fuzzy: false,
     search: `cu`,
-    expected: [`No matching options`],
+    expected: [`No matching commands`],
     description: `exact match 'cu' -> no matches (not a substring)`,
   },
   {
     fuzzy: false,
     search: `xyz`,
-    expected: [`No matching options`],
+    expected: [`No matching commands`],
     description: `exact match 'xyz' -> no matches message`,
   },
 ])(`filtering with fuzzy=$fuzzy: $description`, async ({ fuzzy, search, expected }) => {
@@ -625,6 +632,68 @@ test(`handles bindable props correctly`, async () => {
 
   expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
   expect(props.input).toBeInstanceOf(HTMLInputElement)
+  expect(doc_query(`dialog input[autocomplete]`).getAttribute(`aria-label`)).toBe(
+    `Search commands`,
+  )
+})
+
+test(`selects the first enabled action and preserves keyboard selection on refresh`, async () => {
+  const actions = [
+    { id: `alpha`, label: `Alpha`, action: vi.fn() },
+    { id: `disabled`, label: `Disabled`, disabled: true, action: vi.fn() },
+    { id: `beta`, label: `Beta`, action: vi.fn() },
+  ]
+  const props = $state({ open: true, actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+  expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
+
+  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  await tick()
+  expect(doc_query(`li.active`).textContent).toContain(`Beta`)
+
+  props.actions = [{ ...actions[2], label: `Renamed Beta` }, actions[0], actions[1]]
+  await tick()
+  expect(doc_query(`li.active`).textContent).toContain(`Renamed Beta`)
+
+  input.value = `alpha`
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+  expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
+})
+
+test(`preserves active action when IDs and signatures collide`, async () => {
+  const first_action = {
+    id: `duplicate`,
+    label: `Duplicate`,
+    description: `Same action`,
+    action: vi.fn(),
+  }
+  const second_action = { ...first_action, action: vi.fn() }
+  const third_action = { id: `third`, label: `Third`, action: vi.fn() }
+  const props = $state({
+    open: true,
+    actions: [first_action, second_action, third_action],
+    activeIndex: 1,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  expect(props.activeIndex).toBe(1)
+
+  props.actions = [first_action, third_action, second_action]
+  await tick()
+  await tick()
+
+  expect(props.activeIndex).toBe(2)
+  doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
+  )
+  expect(second_action.action).toHaveBeenCalledExactlyOnceWith(`Duplicate`)
+  expect(first_action.action).not.toHaveBeenCalled()
 })
 
 // Grouping tests
@@ -777,13 +846,16 @@ const press_ctrl_shift = (key: string) =>
     new KeyboardEvent(`keydown`, { key, ctrlKey: true, shiftKey: true }),
   )
 
-test(`renders shortcut kbd hints and descriptions in options`, async () => {
+test(`renders and searches action descriptions, metadata, badges, and keywords`, async () => {
   const actions = [
     {
       label: `save file`,
       action: vi.fn(),
       shortcut: `ctrl+shift+s`,
       description: `Write buffer to disk`,
+      metadata: [`Workspace`, `Modified`],
+      badge: `File`,
+      keywords: [`persist`],
     },
     { label: `quit`, action: vi.fn() },
   ]
@@ -795,11 +867,293 @@ test(`renders shortcut kbd hints and descriptions in options`, async () => {
 
   expect(shortcut_kbd_parts()).toEqual([`Ctrl`, `⇧`, `S`])
   expect(doc_query(`.cmd-description`).textContent).toBe(`Write buffer to disk`)
+  expect(doc_query(`.cmd-metadata`).textContent).toBe(`Workspace · Modified`)
+  expect(doc_query(`.cmd-badge`).textContent).toBe(`File`)
   // action without shortcut renders no kbd
   const quit_li = Array.from(document.querySelectorAll(`li[role='option']`)).find((li) =>
     li.textContent?.includes(`quit`),
   )
   expect(quit_li?.querySelector(`kbd`)).toBeNull()
+
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+  input.value = `workspace persist`
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+  expect(option_labels()).toHaveLength(1)
+  expect(option_labels()[0]).toContain(`save file`)
+})
+
+async function search_pagefind(query: string): Promise<void> {
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+  input.value = query
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await vi.runAllTimersAsync()
+  await tick()
+}
+
+describe(`PagefindPalette`, () => {
+  const base_props = { open: true, fade_duration: 0, debounce_ms: 0 }
+  const make_pagefind_response = (title: string) => ({
+    results: [
+      {
+        id: title,
+        data: async () => ({
+          url: `/${title.toLowerCase()}.html`,
+          plain_excerpt: `${title} content`,
+          meta: { title },
+          sub_results: [],
+        }),
+      },
+    ],
+  })
+
+  beforeEach(() => vi.useFakeTimers())
+  afterEach(() => vi.useRealTimers())
+
+  test.each([
+    {
+      strip_html_suffix: true,
+      transform_url: (url: string) => `/docs${url}`,
+      section_url: `/phase-diagram.html#temperature-composition`,
+      expected_url: `/docs/phase-diagram#temperature-composition`,
+    },
+    {
+      strip_html_suffix: false,
+      transform_url: undefined,
+      section_url: `/phase-diagram.html#temperature-composition`,
+      expected_url: `/phase-diagram.html#temperature-composition`,
+    },
+    {
+      strip_html_suffix: true,
+      transform_url: undefined,
+      section_url: `/download?file=guide.html`,
+      expected_url: `/download?file=guide.html`,
+    },
+    {
+      strip_html_suffix: true,
+      transform_url: undefined,
+      section_url: `/docs/index.html?next=/legacy.html`,
+      expected_url: `/docs/?next=/legacy.html`,
+    },
+    {
+      strip_html_suffix: true,
+      transform_url: undefined,
+      section_url: `/docs/#config.html`,
+      expected_url: `/docs/#config.html`,
+    },
+  ])(
+    `PagefindPalette paginates and navigates $section_url`,
+    async ({ strip_html_suffix, transform_url, section_url, expected_url }) => {
+      const navigate = vi.fn()
+      const search = vi.fn(async () => ({
+        results: [
+          {
+            id: `phase-diagram`,
+            data: async () => ({
+              url: `/phase-diagram.html`,
+              plain_excerpt: `Binary phase diagram`,
+              meta: { title: `Phase diagrams` },
+              sub_results: [
+                {
+                  title: `Overview`,
+                  url: `/phase-diagram.html#overview`,
+                  plain_excerpt: `General phase diagram`,
+                },
+                {
+                  title: `Temperature composition`,
+                  url: section_url,
+                  plain_excerpt: `Interactive &lt;temperature&gt; composition diagram`,
+                },
+              ],
+            }),
+          },
+        ],
+      }))
+      const props = $state({
+        ...base_props,
+        batch_size: 0.5,
+        navigate,
+        strip_html_suffix,
+        transform_url,
+        load_pagefind: async () => ({ search }),
+      })
+      mount(PagefindPalette, { target: document.body, props })
+
+      await search_pagefind(`binary`)
+
+      expect(search).toHaveBeenCalledExactlyOnceWith(`binary`)
+      doc_query<HTMLUListElement>(`ul.options`).dispatchEvent(new Event(`scroll`))
+      await vi.runAllTimersAsync()
+      await tick()
+      const options = document.querySelectorAll<HTMLLIElement>(`li[role='option']`)
+      expect(Array.from(options, (option) => option.textContent?.trim())).toEqual([
+        `Phase diagrams › Overview General phase diagram`,
+        `Phase diagrams › Temperature composition Interactive <temperature> composition diagram`,
+      ])
+
+      options[1].click()
+      await tick()
+
+      expect(navigate).toHaveBeenCalledExactlyOnceWith(expected_url)
+      expect(props.open).toBe(false)
+    },
+  )
+
+  test(`isolates concurrent queries that normalize to the same text`, async () => {
+    const stale_response = make_pagefind_response(`Stale`)
+    const fresh_response = make_pagefind_response(`Fresh`)
+    const requests = [
+      Promise.withResolvers<typeof stale_response>(),
+      Promise.withResolvers<typeof fresh_response>(),
+    ]
+    const search = vi
+      .fn()
+      .mockReturnValueOnce(requests[0].promise)
+      .mockReturnValueOnce(requests[1].promise)
+    mount(PagefindPalette, {
+      target: document.body,
+      props: {
+        ...base_props,
+        load_pagefind: async () => ({ search }),
+      },
+    })
+
+    await search_pagefind(`alpha`)
+    await search_pagefind(` alpha `)
+    expect(search).toHaveBeenCalledTimes(2)
+
+    requests[1].resolve(fresh_response)
+    await vi.runAllTimersAsync()
+    await tick()
+    expect(doc_query(`.cmd-label`).childNodes[0]?.textContent?.trim()).toBe(`Fresh`)
+
+    requests[0].resolve(stale_response)
+    await tick()
+
+    expect(doc_query(`.cmd-label`).childNodes[0]?.textContent?.trim()).toBe(`Fresh`)
+  })
+
+  test(`retries loading Pagefind after a transient failure`, async () => {
+    const search = vi.fn(async () => make_pagefind_response(`Fresh`))
+    const load_pagefind = vi
+      .fn()
+      .mockRejectedValueOnce(new Error(`Unavailable`))
+      .mockResolvedValue({ search })
+    mount(PagefindPalette, {
+      target: document.body,
+      props: {
+        ...base_props,
+        fallback_actions: [{ label: `Fallback`, action: vi.fn() }],
+        load_pagefind,
+      },
+    })
+
+    await search_pagefind(`fallback`)
+    expect(doc_query(`.cmd-label`).textContent).toContain(`Fallback`)
+
+    await search_pagefind(`fresh`)
+    expect(load_pagefind).toHaveBeenCalledTimes(2)
+    expect(doc_query(`.cmd-label`).textContent).toContain(`Fresh`)
+  })
+
+  test.each([
+    [
+      `index has no matches`,
+      () => vi.fn(async () => ({ search: async () => ({ results: [] }) })),
+    ],
+    [
+      `result fragments all fail`,
+      () =>
+        vi.fn(async () => ({
+          search: async () => ({
+            results: [
+              {
+                id: `broken`,
+                data: async () => {
+                  throw new Error(`Fragment unavailable`)
+                },
+              },
+            ],
+          }),
+        })),
+    ],
+  ])(`filters fallback actions when the %s`, async (_scenario, make_load_pagefind) => {
+    const fallback_actions = [
+      { label: `API reference`, description: `All exported props`, action: vi.fn() },
+      { label: `Styling guide`, description: `CSS custom properties`, action: vi.fn() },
+    ]
+    const load_pagefind = make_load_pagefind()
+    mount(PagefindPalette, {
+      target: document.body,
+      props: { ...base_props, fallback_actions, load_pagefind },
+    })
+
+    await vi.runAllTimersAsync()
+    expect(
+      Array.from(document.querySelectorAll(`li[role='option']`), (option) =>
+        option.textContent?.trim(),
+      ),
+    ).toEqual([`API reference All exported props`, `Styling guide CSS custom properties`])
+    expect(load_pagefind).not.toHaveBeenCalled()
+
+    await search_pagefind(`css`)
+
+    const options = document.querySelectorAll(`li[role='option']`)
+    expect(options).toHaveLength(1)
+    expect(options[0].textContent).toContain(`Styling guide`)
+    expect(load_pagefind).toHaveBeenCalledTimes(1)
+
+    await search_pagefind(`api`)
+
+    expect(load_pagefind).toHaveBeenCalledTimes(1)
+    doc_query<HTMLLIElement>(`li[role='option']`).click()
+    expect(fallback_actions[0].action).toHaveBeenCalledExactlyOnceWith(`API reference`)
+    expect(fallback_actions[1].action).not.toHaveBeenCalled()
+  })
+
+  test(`PagefindPalette handles a failed fragment and URL-derived title`, async () => {
+    const make_result = (
+      url: string,
+      title: string,
+      meta: Record<string, string> = { title },
+    ) => ({
+      id: url,
+      data: async () => ({
+        url,
+        plain_excerpt: `${title} content`,
+        meta,
+        sub_results: [],
+      }),
+    })
+    const search = vi.fn(async () => ({
+      results: [
+        {
+          id: `broken`,
+          data: async () => {
+            throw new Error(`Fragment unavailable`)
+          },
+        },
+        make_result(`/reference-guide.html?tab=api`, `Reference content`, {}),
+        make_result(`/later.html`, `Later page`),
+        make_result(`/docs/`, `Docs content`, {}),
+      ],
+    }))
+    mount(PagefindPalette, {
+      target: document.body,
+      props: {
+        ...base_props,
+        batch_size: 3,
+        load_pagefind: async () => ({ search }),
+      },
+    })
+
+    await search_pagefind(`content`)
+
+    const labels = Array.from(document.querySelectorAll(`.cmd-label`), (label) =>
+      label.childNodes[0]?.textContent?.trim(),
+    )
+    expect(labels).toEqual([`Reference Guide`, `Later page`, `Docs`])
+  })
 })
 
 test(`renders plus-key shortcut hints`, async () => {
@@ -826,21 +1180,54 @@ test(`plain actions without shortcut/description use default option rendering`, 
 })
 
 test.each([
-  { desc: `fires when closed`, open: false, global_shortcuts: true, calls: 1 },
-  { desc: `disabled via prop`, open: false, global_shortcuts: false, calls: 0 },
-  { desc: `inactive while open`, open: true, global_shortcuts: true, calls: 0 },
+  {
+    desc: `fires when closed`,
+    open: false,
+    global_shortcuts: true,
+    action_disabled: false,
+    calls: 1,
+  },
+  {
+    desc: `disabled via prop`,
+    open: false,
+    global_shortcuts: false,
+    action_disabled: false,
+    calls: 0,
+  },
+  {
+    desc: `ignores disabled actions`,
+    open: false,
+    global_shortcuts: true,
+    action_disabled: true,
+    calls: 0,
+  },
+  {
+    desc: `inactive while open`,
+    open: true,
+    global_shortcuts: true,
+    action_disabled: false,
+    calls: 0,
+  },
   {
     desc: `ignores wrong modifiers`,
     open: false,
     global_shortcuts: true,
+    action_disabled: false,
     calls: 0,
     shift: false,
   },
 ])(
   `global action shortcuts: $desc`,
-  async ({ open, global_shortcuts, calls, shift = true }) => {
+  async ({ open, global_shortcuts, calls, shift = true, action_disabled }) => {
     const spy = vi.fn()
-    const actions = [{ label: `save`, action: spy, shortcut: `ctrl+shift+s` }]
+    const actions = [
+      {
+        label: `save`,
+        action: spy,
+        shortcut: `ctrl+shift+s`,
+        disabled: action_disabled,
+      },
+    ]
     mount(CmdPalette, {
       target: document.body,
       props: { actions, open, global_shortcuts, fade_duration: 0 },
@@ -862,6 +1249,31 @@ test.each([
   },
 )
 
+test(`global shortcuts skip disabled duplicate bindings`, async () => {
+  const disabled_action = vi.fn()
+  const enabled_action = vi.fn()
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      actions: [
+        {
+          label: `disabled save`,
+          action: disabled_action,
+          shortcut: `ctrl+shift+s`,
+          disabled: true,
+        },
+        { label: `save`, action: enabled_action, shortcut: `ctrl+shift+s` },
+      ],
+    },
+  })
+
+  press_ctrl_shift(`s`)
+  await tick()
+
+  expect(disabled_action).not.toHaveBeenCalled()
+  expect(enabled_action).toHaveBeenCalledExactlyOnceWith(`save`)
+})
+
 test(`recent_actions_key ranks recently triggered actions first and persists them`, async () => {
   const storage_key = `test-cmd-recents`
   const actions = [`alpha`, `beta`, `gamma`].map((label) => ({
@@ -880,9 +1292,9 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   // no recents yet: original order
   expect(option_labels()).toEqual([`alpha`, `beta`, `gamma`])
 
-  // trigger gamma via keyboard (ArrowDown x3 + Enter)
+  // trigger gamma via keyboard (ArrowDown x2 + Enter)
   const input_el = doc_query(`dialog div.multiselect input[autocomplete]`)
-  for (let idx = 0; idx < 3; idx++) {
+  for (let idx = 0; idx < 2; idx++) {
     input_el.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
     )
@@ -930,6 +1342,13 @@ test.each([
     `valid recents rank first`,
     JSON.stringify([`beta`, `gamma`]),
     [`beta`, `gamma`, `alpha`],
+    undefined,
+  ],
+  [
+    `max_recent limits stored recents`,
+    JSON.stringify([`beta`, `gamma`]),
+    [`beta`, `alpha`, `gamma`],
+    1,
   ],
   // stale persisted ids (actions since removed/renamed) must not occupy low ranks,
   // else a real recent (rank 4 here) sorts after non-recents (default rank 3)
@@ -937,29 +1356,49 @@ test.each([
     `stale ids are ignored so real recents still rank first`,
     JSON.stringify([`removed-1`, `removed-2`, `removed-3`, `removed-4`, `gamma`]),
     [`gamma`, `alpha`, `beta`],
+    undefined,
   ],
-  [`unparsable JSON is ignored`, `not valid json{{{`, [`alpha`, `beta`, `gamma`]],
-  [`non-array JSON is ignored`, `{"not":"an array"}`, [`alpha`, `beta`, `gamma`]],
-  [`non-string entries are ignored`, `[1,2,3]`, [`alpha`, `beta`, `gamma`]],
-])(`recents storage on initial open: %s`, async (_desc, stored, expected_order) => {
-  const storage_key = `test-cmd-stored-recents`
-  localStorage.setItem(storage_key, stored)
-  const actions = [`alpha`, `beta`, `gamma`].map((label) => ({
-    label,
-    action: vi.fn(),
-  }))
-  // flushSync so render errors from bad storage data fail this test, not the suite
-  flushSync(() => {
-    mount(CmdPalette, {
-      target: document.body,
-      props: { open: true, actions, recent_actions_key: storage_key, fade_duration: 0 },
+  [
+    `unparsable JSON is ignored`,
+    `not valid json{{{`,
+    [`alpha`, `beta`, `gamma`],
+    undefined,
+  ],
+  [
+    `non-array JSON is ignored`,
+    `{"not":"an array"}`,
+    [`alpha`, `beta`, `gamma`],
+    undefined,
+  ],
+  [`non-string entries are ignored`, `[1,2,3]`, [`alpha`, `beta`, `gamma`], undefined],
+])(
+  `recents storage on initial open: %s`,
+  async (_desc, stored, expected_order, max_recent) => {
+    const storage_key = `test-cmd-stored-recents`
+    localStorage.setItem(storage_key, stored)
+    const actions = [`alpha`, `beta`, `gamma`].map((label) => ({
+      label,
+      action: vi.fn(),
+    }))
+    // flushSync so render errors from bad storage data fail this test, not the suite
+    flushSync(() => {
+      mount(CmdPalette, {
+        target: document.body,
+        props: {
+          open: true,
+          actions,
+          recent_actions_key: storage_key,
+          max_recent,
+          fade_duration: 0,
+        },
+      })
     })
-  })
-  await tick()
+    await tick()
 
-  expect(option_labels()).toEqual(expected_order)
-  localStorage.removeItem(storage_key)
-})
+    expect(option_labels()).toEqual(expected_order)
+    localStorage.removeItem(storage_key)
+  },
+)
 
 // global shortcut presses (while closed) persist the triggered action to recents
 // (that the action also fires is covered by `global action shortcuts: fires when closed`)

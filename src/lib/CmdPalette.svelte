@@ -1,29 +1,22 @@
-<script module lang="ts">
-  type CmdAction = {
-    id?: string | number
-    label: string
-    action: (label: string) => void
-    group?: string
-    shortcut?: string
-    description?: string
-  } & Record<string, unknown>
-</script>
-
 <script lang="ts" generics="Action extends CmdAction = CmdAction">
   import type { ComponentProps } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import { untrack } from 'svelte'
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
-  import type { MultiSelectProps } from './types'
-  import { matches_shortcut, split_shortcut } from './utils'
+  import type { CmdAction, MultiSelectProps } from './types'
+  import { fuzzy_match, matches_shortcut, split_shortcut } from './utils'
 
   // MultiSelect's option snippet param (option + idx/selected/active/disabled)
   type OptionSnippetParams = Parameters<
     NonNullable<MultiSelectProps<Action>[`option`]>
   >[0]
+  type ActivateParams = Parameters<NonNullable<MultiSelectProps<Action>[`onactivate`]>>[0]
+  type AddParams = Parameters<NonNullable<MultiSelectProps<Action>[`onadd`]>>[0]
 
   let {
     actions,
+    activeIndex: active_idx = $bindable(null),
     triggers = [`k`],
     close_keys = [`Escape`],
     fade_duration = 200,
@@ -32,7 +25,16 @@
     dialog = $bindable(null),
     input = $bindable(null),
     aria_label = `Command palette`,
-    placeholder = `Filter actions...`,
+    filterFunc: filter_func,
+    fuzzy = true,
+    inputProps: input_props,
+    input_aria_label = aria_label === `Command palette` ? `Search commands` : aria_label,
+    matchingOptions: matching_actions = $bindable([]),
+    noMatchingOptionsMsg: no_matching_options_msg = `No matching commands`,
+    onadd,
+    onactivate,
+    placeholder = `Type a command…`,
+    searchText: search_text = $bindable(``),
     dialog_props,
     global_shortcuts = true,
     recent_actions_key = null,
@@ -47,6 +49,7 @@
     open?: boolean
     dialog?: HTMLDialogElement | null
     input?: HTMLInputElement | null
+    input_aria_label?: string
     aria_label?: string
     placeholder?: string
     dialog_props?: HTMLAttributes<HTMLDialogElement>
@@ -62,6 +65,60 @@
   let recent_action_ids = $state<string[]>([])
 
   const get_action_id = (action: CmdAction): string => `${action.id ?? action.label}`
+  const recent_limit = $derived(
+    Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
+  )
+  const get_action_signature = (action: CmdAction): string =>
+    JSON.stringify([
+      action.id,
+      action.label,
+      action.description,
+      action.badge,
+      action.disabled,
+      action.group,
+      action.metadata,
+      action.keywords,
+      action.shortcut,
+    ])
+  const action_key_cache = new WeakMap<CmdAction[`action`], Map<string, symbol>>()
+  const get_action_key = (action: Action): symbol | Action => {
+    if (
+      typeof action !== `object` ||
+      action === null ||
+      typeof action.action !== `function`
+    )
+      return action
+    const signature = get_action_signature(action)
+    const signature_keys =
+      action_key_cache.get(action.action) ?? new Map<string, symbol>()
+    action_key_cache.set(action.action, signature_keys)
+    const action_key = signature_keys.get(signature) ?? Symbol(`cmd-action`)
+    signature_keys.set(signature, action_key)
+    return action_key
+  }
+  const format_metadata = (metadata: CmdAction[`metadata`]): string =>
+    Array.isArray(metadata) ? metadata.join(` · `) : (metadata ?? ``)
+  const action_matches_search = (action: Action, search: string): boolean => {
+    const normalized_search = search.trim().toLowerCase()
+    if (!normalized_search) return true
+    const searchable_text = [
+      action.label,
+      action.description,
+      action.badge,
+      action.group,
+      action.shortcut,
+      action.keywords?.join(` `),
+      format_metadata(action.metadata),
+    ]
+      .filter(Boolean)
+      .join(` `)
+      .toLowerCase()
+    return normalized_search
+      .split(/\s+/)
+      .every((term) =>
+        fuzzy ? fuzzy_match(term, searchable_text) : searchable_text.includes(term),
+      )
+  }
   const can_track_recents = $derived(
     new Set(actions.map(get_action_id)).size === actions.length,
   )
@@ -72,7 +129,7 @@
     try {
       const stored: unknown = JSON.parse(localStorage.getItem(recent_actions_key) ?? `[]`)
       recent_action_ids = Array.isArray(stored)
-        ? stored.filter((rec) => typeof rec === `string`)
+        ? stored.filter((recent) => typeof recent === `string`).slice(0, recent_limit)
         : []
     } catch {
       recent_action_ids = [] // ignore corrupted storage
@@ -85,7 +142,7 @@
     recent_action_ids = [
       action_id,
       ...recent_action_ids.filter((recent_id) => recent_id !== action_id),
-    ].slice(0, max_recent)
+    ].slice(0, recent_limit)
     try {
       localStorage.setItem(recent_actions_key, JSON.stringify(recent_action_ids))
     } catch {
@@ -140,10 +197,55 @@
       )
     })
 
-  // only swap in the custom option snippet when an action actually uses shortcut/description
+  // Dynamic actions may contain metadata not present in the static action list.
   const has_action_meta = $derived(
-    actions.some((action) => action.shortcut || action.description),
+    Boolean(rest.loadOptions) ||
+      actions.some(
+        (action) =>
+          action.shortcut || action.description || action.badge || action.metadata,
+      ),
   )
+  let active_action_key: symbol | Action | undefined
+  let active_action_callback: CmdAction[`action`] | undefined
+  let previous_search = ``
+
+  const remember_active = (action?: Action): void => {
+    active_action_key = action ? get_action_key(action) : undefined
+    active_action_callback = action?.action
+  }
+
+  $effect(() => {
+    let preserved_idx =
+      search_text === previous_search && active_action_key
+        ? matching_actions.findIndex(
+            (action) => get_action_key(action) === active_action_key && !action.disabled,
+          )
+        : -1
+    if (preserved_idx < 0 && search_text === previous_search && active_action_callback) {
+      const callback_matches = (action: Action) =>
+        action.action === active_action_callback && !action.disabled
+      const callback_idx = matching_actions.findIndex(callback_matches)
+      if (callback_idx === matching_actions.findLastIndex(callback_matches))
+        preserved_idx = callback_idx
+    }
+    const supplied_active_idx = untrack(() => active_idx)
+    const next_idx =
+      preserved_idx >= 0
+        ? preserved_idx
+        : supplied_active_idx !== null &&
+            matching_actions[supplied_active_idx] &&
+            !matching_actions[supplied_active_idx].disabled
+          ? supplied_active_idx
+          : matching_actions.findIndex((action) => !action.disabled)
+    active_idx = next_idx >= 0 ? next_idx : null
+    remember_active(next_idx >= 0 ? matching_actions[next_idx] : undefined)
+    previous_search = search_text
+  })
+
+  const handle_activate = (params: ActivateParams): void => {
+    remember_active(params.option ?? undefined)
+    onactivate?.(params)
+  }
 
   $effect(() => {
     if (!open) return
@@ -172,8 +274,9 @@
     if (toggle(event)) return
     // run action hotkeys globally while the palette is closed
     if (open || !global_shortcuts) return
-    const action = actions.find((cmd_action) =>
-      matches_shortcut(event, cmd_action.shortcut),
+    const action = actions.find(
+      (cmd_action) =>
+        !cmd_action.disabled && matches_shortcut(event, cmd_action.shortcut),
     )
     if (!action) return
     event.preventDefault()
@@ -196,17 +299,20 @@
     open = false
   }
 
-  function trigger_action_and_close({ option }: { option: Action }) {
-    if (!option?.action) return
+  function trigger_action_and_close(params: AddParams) {
+    const { option } = params
+    if (!option?.action || option.disabled) return
     record_recent(option)
     option.action(option.label)
     open = false
+    onadd?.(params)
   }
 </script>
 
 <svelte:window onkeydown={handle_window_keydown} onclick={close_if_outside} />
 
 {#snippet action_item({ option }: OptionSnippetParams)}
+  {@const metadata = format_metadata(option.metadata)}
   <span class="cmd-action">
     <span class="cmd-label">
       {option.label}
@@ -214,11 +320,17 @@
         <small class="cmd-description">{option.description}</small>
       {/if}
     </span>
-    {#if option.shortcut}
-      <span class="cmd-shortcut" aria-hidden="true">
-        {#each format_shortcut(option.shortcut) as part, idx (idx)}
-          <kbd>{part}</kbd>
-        {/each}
+    {#if metadata || option.badge || option.shortcut}
+      <span class="cmd-meta">
+        {#if metadata}<small class="cmd-metadata">{metadata}</small>{/if}
+        {#if option.badge}<span class="cmd-badge">{option.badge}</span>{/if}
+        {#if option.shortcut}
+          <span class="cmd-shortcut" aria-hidden="true">
+            {#each format_shortcut(option.shortcut) as part, idx (idx)}
+              <kbd>{part}</kbd>
+            {/each}
+          </span>
+        {/if}
       </span>
     {/if}
   </span>
@@ -235,15 +347,23 @@
   >
     <MultiSelect
       options={sorted_actions}
+      bind:activeIndex={active_idx}
       bind:input
+      bind:matchingOptions={matching_actions}
+      bind:searchText={search_text}
+      filterFunc={filter_func ?? action_matches_search}
+      {fuzzy}
+      inputProps={{ 'aria-label': input_aria_label, ...input_props }}
+      noMatchingOptionsMsg={no_matching_options_msg}
+      onactivate={handle_activate}
       {placeholder}
-      key={get_action_id}
+      key={get_action_key}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       option={has_action_meta ? action_item : undefined}
       {...rest}
       --sms-bg="var(--sms-options-bg)"
-      --sms-width="min(20em, 90vw)"
+      --sms-width="var(--cmd-width, min(38rem, 90vw))"
       --sms-max-width="none"
       --sms-placeholder-color="lightgray"
       --sms-padding="3pt"
@@ -266,6 +386,27 @@
     display: block;
     opacity: 0.6;
     font-size: var(--cmd-description-font-size, 0.75em);
+  }
+  .cmd-meta {
+    display: flex;
+    min-width: 0;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 0.5em;
+  }
+  .cmd-metadata {
+    max-width: var(--cmd-metadata-max-width, 14em);
+    overflow: hidden;
+    opacity: 0.6;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .cmd-badge {
+    padding: 0.05em 0.4em;
+    border-radius: 999px;
+    background: var(--cmd-badge-bg, color-mix(in srgb, currentColor 10%, transparent));
+    opacity: 0.7;
+    font-size: var(--cmd-badge-font-size, 0.7em);
   }
   .cmd-shortcut {
     flex-shrink: 0;

@@ -477,17 +477,8 @@
   const is_option_selected = (opt: Option, label: string | number): boolean =>
     selected_keys_set.has(key(opt)) || (lower_dupes && is_label_selected(`${label}`))
 
-  // Memoized Set of disabled option keys for O(1) lookups in large option sets
-  let disabled_option_keys = $derived(
-    new Set(
-      effective_options
-        .filter((opt) => utils.is_object(opt) && opt.disabled)
-        .map((opt) => key(opt)),
-    ),
-  )
-
-  // Check if an option is disabled (uses memoized Set for O(1) lookup)
-  const is_disabled = (opt: Option) => disabled_option_keys.has(key(opt))
+  const is_disabled = (opt: Option): boolean =>
+    Boolean(utils.is_object(opt) && opt.disabled)
 
   // Check if option index is within the maxOptions visibility limit
   const is_option_visible = (idx: number) => idx >= 0 && idx < visible_navigable_count
@@ -1296,19 +1287,21 @@
     }
     if (activeIndex === null && navigable_options.length === 0) return // nothing to navigate
 
-    // activate first option or navigate with wrap-around
-    // (wrap over rendered options only: maxOptions hides options past the limit)
-    if (activeIndex === null) {
-      activeIndex = 0
-    } else {
-      const total = visible_navigable_count + (has_user_msg ? 1 : 0)
-      // Guard against division by zero (can happen if options filtered away before effect resets activeIndex)
-      if (total === 0) {
-        activeIndex = null
-        return
+    // Navigate rendered, enabled options with wrap-around. The user-message row
+    // remains navigable when present.
+    const total = visible_navigable_count + (has_user_msg ? 1 : 0)
+    const start_idx = activeIndex ?? (direction === 1 ? -1 : 1)
+    activeIndex = null
+    for (let offset = 1; offset <= total; offset++) {
+      const next_idx = (start_idx + direction * offset + total) % total
+      const is_user_msg = has_user_msg && next_idx === visible_navigable_count
+      const next_option = navigable_options[next_idx]
+      if (is_user_msg || (next_option !== undefined && !is_disabled(next_option))) {
+        activeIndex = next_idx
+        break
       }
-      activeIndex = (activeIndex + direction + total) % total // +total handles negative mod
     }
+    if (activeIndex === null) return
 
     // update active state based on new index
     option_msg_is_active = has_user_msg && activeIndex === visible_navigable_count
@@ -2861,7 +2854,7 @@
   :where(span.max-select-msg) {
     padding: 0 3pt;
   }
-  ::highlight(sms-search-matches) {
+  :global(::highlight(sms-search-matches)) {
     color: light-dark(#1a8870, #6cc9a8);
   }
   /* Loading more indicator for infinite scrolling - internal, no class prop */

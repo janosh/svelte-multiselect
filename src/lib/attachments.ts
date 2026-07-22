@@ -411,6 +411,41 @@ export type HighlightOptions = {
   css_class?: string
 }
 
+type HighlightRegistry = {
+  set: (name: string, highlight: Highlight) => unknown
+  delete: (name: string) => unknown
+}
+
+const owned_highlight_ranges = new WeakMap<object, Map<string, Map<symbol, Range[]>>>()
+
+const sync_owned_highlight = (
+  registry: HighlightRegistry,
+  css_class: string,
+  owner: symbol,
+  ranges?: Range[],
+): void => {
+  let classes = owned_highlight_ranges.get(registry)
+  if (!classes) {
+    if (!ranges) return
+    classes = new Map()
+    owned_highlight_ranges.set(registry, classes)
+  }
+  let owners = classes.get(css_class)
+  if (!owners) {
+    if (!ranges) return
+    owners = new Map()
+    classes.set(css_class, owners)
+  }
+  if (ranges) owners.set(owner, ranges)
+  else owners.delete(owner)
+  if (owners.size === 0) {
+    classes.delete(css_class)
+    registry.delete(css_class)
+    return
+  }
+  registry.set(css_class, new Highlight(...[...owners.values()].flat()))
+}
+
 export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) => {
   const {
     query = ``,
@@ -422,46 +457,48 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 
   // abort if CSS highlight API not supported
   if (typeof CSS === `undefined` || !CSS.highlights) return undefined
-  // always clear our own highlight first
-  CSS.highlights.delete(css_class)
-  // if disabled or empty query, stop after cleanup
+  // if disabled or empty query, this instance owns no highlight
   if (!query || disabled) return undefined
+  const highlight_registry = CSS.highlights
+  const highlight_owner = Symbol(css_class)
+  const search = query.toLowerCase()
+  let active = true
 
-  const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-    acceptNode: node_filter,
-  })
-  const text_nodes: Node[] = []
-  let current_node = tree_walker.nextNode()
-
-  while (current_node) {
-    text_nodes.push(current_node)
-    current_node = tree_walker.nextNode()
-  }
-
-  // iterate over all text nodes and find matches
   const find_ranges = (el: Node): Range[] => {
     const original_text = el.textContent
     if (!original_text) return []
     const text = original_text.toLowerCase()
 
     // Offsets are computed on the lowercased text but applied to the original
-    // node. Lowercasing can grow some Unicode chars (e.g. İ → i̇, 2 UTF-16 units),
-    // shifting offsets. Build a lowered→original offset map (per-unit lowercase
-    // preserves alignment; only length-changing chars need mapping) so ranges
-    // land on the right original characters.
+    // node. Lowercasing can grow some Unicode chars (e.g. İ → i̇), while astral
+    // characters span two UTF-16 units. Map each lowered unit to the complete
+    // original code point so ranges never shift or split a character.
     const node_length = original_text.length
-    let orig_offsets: number[] | null = null // lowered offset → original offset
-    if (text.length !== node_length) {
-      orig_offsets = []
-      for (let orig_idx = 0; orig_idx < node_length; orig_idx++) {
-        const lowered_char = original_text[orig_idx].toLowerCase()
-        // one entry per lowered UTF-16 unit
-        orig_offsets.push(...Array.from(lowered_char, () => orig_idx))
+    const characters = Array.from(original_text)
+    let original_starts: number[] | null = null
+    let original_ends: number[] | null = null
+    if (
+      characters.some(
+        (character) =>
+          character.length > 1 || character.toLowerCase().length !== character.length,
+      )
+    ) {
+      original_starts = []
+      original_ends = []
+      let original_idx = 0
+      for (const character of characters) {
+        const original_end = original_idx + character.length
+        const lowered_length = character.toLowerCase().length
+        original_starts.push(
+          ...Array.from({ length: lowered_length }, () => original_idx),
+        )
+        original_ends.push(...Array.from({ length: lowered_length }, () => original_end))
+        original_idx = original_end
       }
     }
     const make_range = (start: number, end: number): Range[] => {
-      const orig_start = orig_offsets ? (orig_offsets[start] ?? node_length) : start
-      const orig_end = orig_offsets ? (orig_offsets[end - 1] ?? node_length - 1) + 1 : end
+      const orig_start = original_starts ? (original_starts[start] ?? node_length) : start
+      const orig_end = original_ends ? (original_ends[end - 1] ?? node_length) : end
       if (orig_start >= node_length) return []
       const range = new Range()
       range.setStart(el, orig_start)
@@ -469,14 +506,16 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       return [range]
     }
 
-    const search = query.toLowerCase()
-
     if (fuzzy) {
       // Fuzzy highlighting: highlight individual characters that match in order.
       // null means not all characters matched, so highlight nothing.
       const matching_indices = fuzzy_match_indices(search, text)
-      // highlight single characters
-      return (matching_indices ?? []).flatMap((index) => make_range(index, index + 1))
+      const unique_ranges = new Map<string, Range>()
+      for (const index of matching_indices ?? []) {
+        const [range] = make_range(index, index + 1)
+        if (range) unique_ranges.set(`${range.startOffset}:${range.endOffset}`, range)
+      }
+      return [...unique_ranges.values()]
     }
     // Substring highlighting: highlight consecutive substrings
     const indices = []
@@ -491,14 +530,30 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     // create range object for each substring found in the text node
     return indices.flatMap((index) => make_range(index, index + search.length))
   }
-  const ranges = text_nodes.map((text_node) => find_ranges(text_node))
 
-  // create Highlight object from ranges and add to registry
-  CSS.highlights.set(css_class, new Highlight(...ranges.flat()))
+  const update_highlight = () => {
+    if (!active) return
+    const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+      acceptNode: node_filter,
+    })
+    const ranges: Range[] = []
+    let text_node = tree_walker.nextNode()
+    while (text_node) {
+      ranges.push(...find_ranges(text_node))
+      text_node = tree_walker.nextNode()
+    }
+    sync_owned_highlight(highlight_registry, css_class, highlight_owner, ranges)
+  }
+
+  update_highlight()
+  const observer = new MutationObserver(update_highlight)
+  observer.observe(node, { childList: true, subtree: true, characterData: true })
 
   // Return cleanup function
   return () => {
-    CSS.highlights.delete(css_class)
+    active = false
+    observer.disconnect()
+    sync_owned_highlight(highlight_registry, css_class, highlight_owner)
   }
 }
 

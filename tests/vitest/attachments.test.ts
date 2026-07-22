@@ -1411,6 +1411,15 @@ describe(`highlight_matches`, () => {
     )
   })
 
+  const get_highlight_ranges = (): Range[] => {
+    const highlight = mock_css_highlights.get(`highlight-match`)
+    if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
+      throw new Error(`Expected highlight with ranges`)
+    }
+    if (!Array.isArray(highlight.ranges)) throw new Error(`Expected ranges array`)
+    return highlight.ranges
+  }
+
   it.each([
     // Early returns
     [`CSS not supported`, undefined, `test`, `test`, false, 0, undefined],
@@ -1519,13 +1528,7 @@ describe(`highlight_matches`, () => {
 
     highlight_matches({ query: `auo`, fuzzy: true })(mock_element)
 
-    const highlight = mock_css_highlights.get(`highlight-match`)
-    expect(highlight).toHaveProperty(`ranges`)
-    if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
-      throw new Error(`Expected highlight with ranges`)
-    }
-    const ranges = highlight.ranges
-    if (!Array.isArray(ranges)) throw new Error(`Expected ranges array`)
+    const ranges = get_highlight_ranges()
     expect(ranges.map((range) => [range.startOffset, range.endOffset])).toEqual([
       [0, 1],
       [6, 7],
@@ -1546,12 +1549,7 @@ describe(`highlight_matches`, () => {
       mock_element.innerHTML = `<p>İİİab</p>`
 
       expect(() => highlight_matches({ query: `ab`, fuzzy })(mock_element)).not.toThrow()
-      const highlight = mock_css_highlights.get(`highlight-match`)
-      if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
-        throw new Error(`Expected highlight with ranges`)
-      }
-      const ranges = highlight.ranges
-      if (!Array.isArray(ranges)) throw new Error(`Expected ranges array`)
+      const ranges = get_highlight_ranges()
       const offsets = ranges.map((range) => [range.startOffset, range.endOffset])
       // substring: one 'ab' range; fuzzy: single-char ranges for 'a' and 'b'
       expect(offsets).toEqual(
@@ -1562,6 +1560,22 @@ describe(`highlight_matches`, () => {
             ]
           : [[3, 5]],
       )
+    },
+  )
+
+  it.each([
+    [`astral character`, `😀x`, `😀`, [[0, 2]]],
+    [`length-changing lowercase`, `İx`, `İ`, [[0, 1]]],
+  ] as const)(
+    `fuzzy highlighting keeps each %s range whole`,
+    (_description, text, query, expected) => {
+      mock_element.textContent = text
+
+      highlight_matches({ query, fuzzy: true })(mock_element)
+
+      expect(
+        get_highlight_ranges().map((range) => [range.startOffset, range.endOffset]),
+      ).toEqual(expected)
     },
   )
 
@@ -1577,6 +1591,40 @@ describe(`highlight_matches`, () => {
     expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
     expect(mock_css_highlights.has(`other-highlight`)).toBe(true)
     expect(clear_highlights_spy).not.toHaveBeenCalled()
+  })
+
+  it(`updates highlights when matching text is inserted`, async () => {
+    const cleanup = highlight_matches({ query: `PagefindPalette` })(mock_element)
+    mock_element.textContent = `PagefindPalette excerpt`
+    await Promise.resolve()
+
+    expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
+      ranges: [expect.any(Range)],
+    })
+    cleanup?.()
+    mock_element.textContent = `PagefindPalette updated excerpt`
+    await Promise.resolve()
+
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+  })
+
+  it(`aggregates same-name highlights across attached elements`, () => {
+    const second_element = document.createElement(`div`)
+    mock_element.textContent = `First match`
+    second_element.textContent = `Second match`
+
+    const cleanup_first = highlight_matches({ query: `match` })(mock_element)
+    const cleanup_second = highlight_matches({ query: `match` })(second_element)
+
+    expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
+      ranges: [expect.any(Range), expect.any(Range)],
+    })
+    cleanup_first?.()
+    expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
+      ranges: [expect.any(Range)],
+    })
+    cleanup_second?.()
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
   })
 
   it(`cleanup removes only its own highlight entry`, () => {
