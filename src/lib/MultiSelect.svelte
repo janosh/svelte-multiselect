@@ -1814,8 +1814,8 @@
       if (!portalled) return
       globalThis.removeEventListener(`scroll`, update_position, true)
       globalThis.removeEventListener(`resize`, update_position)
-      if (home_anchor) home_anchor.before(node)
-      else home_parent?.append(node)
+      // oxlint-disable-next-line unicorn/prefer-modern-dom-apis -- Node.before missing in TS native DOM types
+      home_parent?.insertBefore(node, home_anchor)
       // clear portal-only inline styles so component CSS takes over again
       for (const prop of [`position`, `left`, `top`, `width`]) {
         node.style.removeProperty(prop)

@@ -16,6 +16,8 @@ const wrap_entity_tags = (str: string) =>
     )
     .join(`\``)
 
-export const load = async () => ({
+export const load = async (): Promise<{
+  changelog: Awaited<ReturnType<typeof compile>>
+}> => ({
   changelog: await compile(wrap_entity_tags(brace_to_paren(changelog))),
 })

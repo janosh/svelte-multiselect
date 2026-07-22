@@ -1,3 +1,5 @@
+import MagicString from 'magic-string'
+
 // Svelte preprocessor that adds IDs to headings at build time for SSR support
 // This ensures fragment navigation (#heading-id) works on initial page load
 
@@ -38,9 +40,10 @@ const slugify = (text: string): string =>
 export function heading_ids() {
   return {
     name: `heading-ids`,
-    markup({ content }: { content: string }) {
+    markup({ content, filename }: { content: string; filename?: string }) {
       const seen_ids = new Map<string, number>()
-      let result = content
+      const processed_heading_starts = new Set<number>()
+      const result = new MagicString(content)
 
       const process_heading = (attrs: string, inner: string): string | null => {
         // Skip if already has an id (use ^|\s to avoid matching data-id, aria-id, etc.)
@@ -57,25 +60,42 @@ export function heading_ids() {
         seen_ids.set(base_id, count + 1)
         return count ? `${base_id}-${count}` : base_id
       }
-      // Rewrite a matched heading with a slug id (or return it unchanged). Pass 1 matches
-      // at line start (.svelte files); pass 2 after a closing tag (mdsvex single-line output).
-      const build_heading = (
-        match: string,
-        prefix: string,
-        tag: string,
-        attrs: string,
-        inner: string,
-      ) => {
-        const id = process_heading(attrs, inner)
-        return id ? `${prefix}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
+      const add_heading_ids = (heading_regex: RegExp): void => {
+        for (const match of content.matchAll(heading_regex)) {
+          const {
+            attrs,
+            gt = ``,
+            indent = ``,
+            inner,
+            space = ``,
+            tag,
+          } = match.groups ?? {}
+          if (match.index === undefined || !tag) continue
+          const heading_start =
+            match.index + (indent ? indent.length : gt.length + space.length)
+          if (processed_heading_starts.has(heading_start)) continue
+          const id =
+            attrs !== undefined && inner !== undefined
+              ? process_heading(attrs, inner)
+              : null
+          if (!id) continue
+          processed_heading_starts.add(heading_start)
+          result.overwrite(
+            heading_start,
+            match.index + match[0].length,
+            `<${tag} id="${id}"${attrs}>${inner}</${tag}>`,
+          )
+        }
       }
-      result = result
-        .replace(heading_regex_line_start, build_heading)
-        .replace(heading_regex_after_tag, (match, gt, space, tag, attrs, inner) =>
-          build_heading(match, `${gt}${space}`, tag, attrs, inner),
-        )
 
-      return { code: result }
+      // Pass 1 matches line starts (.svelte); pass 2 matches after tags (mdsvex output).
+      add_heading_ids(heading_regex_line_start)
+      add_heading_ids(heading_regex_after_tag)
+
+      return {
+        code: result.toString(),
+        map: result.generateMap({ hires: true, source: filename }),
+      }
     },
   }
 }

@@ -1,5 +1,5 @@
 <script lang="ts">
-  let { data } = $props()
+  let { data }: { data: { changelog?: { code?: string } } } = $props()
 </script>
 
 <main>

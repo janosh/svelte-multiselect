@@ -5,6 +5,10 @@ import { doc_query } from './index'
 const preprocess = (content: string) => heading_ids().markup({ content })
 
 describe(`heading_ids preprocessor`, () => {
+  it(`returns a source map for transformed markup`, () => {
+    expect(preprocess(`<h2>Mapped heading</h2>`).map).toHaveProperty(`mappings`)
+  })
+
   describe(`basic ID generation`, () => {
     it.each([
       [`<h2>Hello World</h2>`, `<h2 id="hello-world">Hello World</h2>`],
