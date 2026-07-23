@@ -1,70 +1,21 @@
 <script lang="ts">
-  import { base } from '$app/paths'
+  import { resolve } from '$app/paths'
   import { page } from '$app/state'
+  import type { Pathname } from '$app/types'
   import { Nav, ThemeToggle } from '$lib'
-  import type { NavRoute } from '$lib/types'
   import type { ComponentProps } from 'svelte'
+  import { demo_nav_routes } from '../routes/(demos)'
 
   let props: Partial<ComponentProps<typeof Nav>> = $props()
 
-  // NOTE: Update this list when adding/removing demo pages in src/routes/(demos)/
-  const grouped_routes = [
-    `/`,
-    {
-      href: `/basics`,
-      label: `Basics`,
-      children: [`/basics`, `/form`, `/events`, `/disabled`],
-    },
-    {
-      href: `/selection`,
-      label: `Selection`,
-      children: [
-        `/selection`,
-        `/min-max-select`,
-        `/input-dropdown`,
-        `/duplicates`,
-        `/sort-selected`,
-        `/keep-selected`,
-        `/allow-user-options`,
-        `/history`,
-      ],
-    },
-    {
-      href: `/styling`,
-      label: `Styling`,
-      children: [
-        `/styling`,
-        `/ui`,
-        `/css-classes`,
-        `/snippets`,
-        `/parse-labels-as-html`,
-        `/portal`,
-      ],
-    },
-    {
-      href: `/data`,
-      label: `Data`,
-      children: [`/data`, `/grouping`, `/infinite-scroll`],
-    },
-    {
-      href: `/integration`,
-      label: `Integration`,
-      children: [`/integration`, `/kit-form-actions`, `/persistent`, `/attachments`],
-    },
-    {
-      href: `/components`,
-      label: `Components`,
-      children: [`/components`, `/nav`, `/cmd-palette`],
-    },
-  ] satisfies NavRoute[]
-  const add_base = (path: string): string => `${base}${path}`
-  const prefixed_routes = grouped_routes.map((route) =>
+  const resolve_path = resolve as (path: Pathname) => string
+  const prefixed_routes = [`/` as Pathname, ...demo_nav_routes].map((route) =>
     typeof route === `string`
-      ? add_base(route)
+      ? resolve_path(route)
       : {
           ...route,
-          href: add_base(route.href),
-          children: route.children?.map(add_base),
+          href: resolve_path(route.href),
+          children: route.children.map(resolve_path),
         },
   )
 
@@ -78,18 +29,18 @@
   style={base_style + (props.style ?? ``)}
   menu_props={{ style: `gap: 10pt` }}
   labels={{
-    [add_base(`/`)]: `Home`,
-    [add_base(`/ui`)]: `UI`,
-    [add_base(`/css-classes`)]: `CSS Classes`,
-    [add_base(`/kit-form-actions`)]: `Form Actions`,
-    [add_base(`/cmd-palette`)]: `CmdPalette`,
-    [add_base(`/min-max-select`)]: `Min/Max`,
-    [add_base(`/input-dropdown`)]: `Input Dropdown`,
-    [add_base(`/allow-user-options`)]: `User Options`,
-    [add_base(`/sort-selected`)]: `Sort Selected`,
-    [add_base(`/keep-selected`)]: `Keep Selected`,
-    [add_base(`/parse-labels-as-html`)]: `HTML Labels`,
-    [add_base(`/infinite-scroll`)]: `Infinite Scroll`,
+    [resolve_path(`/`)]: `Home`,
+    [resolve_path(`/ui`)]: `UI`,
+    [resolve_path(`/css-classes`)]: `CSS Classes`,
+    [resolve_path(`/kit-form-actions`)]: `Form Actions`,
+    [resolve_path(`/cmd-palette`)]: `CmdPalette`,
+    [resolve_path(`/min-max-select`)]: `Min/Max`,
+    [resolve_path(`/input-dropdown`)]: `Input Dropdown`,
+    [resolve_path(`/allow-user-options`)]: `User Options`,
+    [resolve_path(`/sort-selected`)]: `Sort Selected`,
+    [resolve_path(`/keep-selected`)]: `Keep Selected`,
+    [resolve_path(`/parse-labels-as-html`)]: `HTML Labels`,
+    [resolve_path(`/infinite-scroll`)]: `Infinite Scroll`,
     ...(props.labels ?? {}),
   }}
 >

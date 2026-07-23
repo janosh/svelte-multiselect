@@ -1,5 +1,5 @@
 import { SubpageGrid } from '$lib'
-import BasicsPage from '$root/src/routes/(demos)/basics/+page.svelte'
+import BasicsPage from '$root/src/routes/(demos)/(basics)/basics/+page.svelte'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 

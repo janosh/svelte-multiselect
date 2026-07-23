@@ -79,8 +79,8 @@ test.each([
   [`meta.file`, { file: `src/lib/CodeExample.svelte` }, `src/lib/CodeExample.svelte`],
   [
     `meta.filename (set by mdsvex transform)`,
-    { filename: `src/routes/(demos)/attachments/+page.md` },
-    `src/routes/(demos)/attachments/+page.md`,
+    { filename: `src/routes/(demos)/(integration)/attachments/+page.md` },
+    `src/routes/(demos)/(integration)/attachments/+page.md`,
   ],
 ])(`github: true links to blob path from %s`, (_label, file_meta, expected_path) => {
   const repo = `https://github.com/janosh/svelte-multiselect`

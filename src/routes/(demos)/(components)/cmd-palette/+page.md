@@ -13,7 +13,7 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { CmdPalette } from '$lib'
-  import { routes } from '../index'
+  import { routes } from '../../index'
 
   interface Action {
     label: string
@@ -49,7 +49,7 @@ the palette filters `fallback_actions`:
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { PagefindPalette } from '$lib'
-  import { routes } from '../index'
+  import { routes } from '../../index'
 
   const fallback_actions = routes.map(({ route }) => ({
     label: route,
