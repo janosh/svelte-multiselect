@@ -8,7 +8,8 @@ import {
   starry_night_highlighter,
 } from './src/lib/live-examples/index.ts'
 
-const base_path = (process.env.BASE_PATH ?? ``) as `` | `/${string}`
+const base_segment = (process.env.BASE_PATH ?? ``).replaceAll(/^\/+|\/+$/gu, ``)
+const base_path: `` | `/${string}` = base_segment ? `/${base_segment}` : ``
 const remarkPlugins = [
   [
     mdsvex_transform,
