@@ -23,6 +23,8 @@ jobs:
 
       - run: npm install
       - run: npm run build:site
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}
 
       - uses: actions/upload-pages-artifact@v4
         with:

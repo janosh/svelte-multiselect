@@ -18,16 +18,15 @@
 
   const actions = routes.map(({ route }) => ({
     label: route,
-    action: () => goto(route),
+    action: () => goto(`${base}${route}`),
   }))
+  const is_home = $derived(page.route.id === `/`)
   const page_title = $derived.by(() => {
     const route_slug = page.url.pathname
       .split(`/`)
       .findLast(Boolean)
       ?.replace(/\.html$/, ``)
-    return !route_slug || route_slug === `index`
-      ? `Svelte MultiSelect`
-      : slug_to_title(route_slug)
+    return is_home || !route_slug ? `Svelte MultiSelect` : slug_to_title(route_slug)
   })
 
   if (browser) {
@@ -49,7 +48,7 @@
   <link rel="icon" href={favicon} />
 </svelte:head>
 
-{#if page.url.pathname !== `/`}
+{#if !is_home}
   <h1>
     <img src={favicon} alt={name} height="50" width="50" />&ensp;Svelte MultiSelect
   </h1>
@@ -60,7 +59,6 @@
   fallback_actions={actions}
   navigate={goto}
   strip_html_suffix
-  transform_url={(url) => `${base}${url}`}
   pagefind_path={`${base}/pagefind/pagefind.js`}
 />
 
@@ -72,7 +70,7 @@
   {@render children?.()}
 </div>
 
-{#if page.url.pathname === `/`}
+{#if is_home}
   <Toc
     headingSelector="main > :where(h2, h3)"
     breakpoint={1500}

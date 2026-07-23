@@ -22,6 +22,8 @@
   let {
     activeIndex = $bindable(null),
     activeOption = $bindable(null),
+    activeOptionFallbackKey: active_option_fallback_key,
+    autoActiveFirstOption = false,
     createOptionMsg = `Create this option...`,
     allowUserOptions = false,
     allowEmpty = false,
@@ -224,26 +226,18 @@
   // reacting to changes in the "destination" value, and utils.values_equal to prevent
   // infinite loops with reactive wrappers that clone arrays. See issue #309.
   $effect.pre(() => {
-    let new_value: typeof value = selected
-    if (maxSelect === 1) new_value = selected[0] ?? null
-
+    const new_value = maxSelect === 1 ? (selected[0] ?? null) : selected
     const old_value = untrack(() => value)
-    if (!utils.values_equal(old_value, new_value)) {
-      value = new_value
-    }
+    if (!utils.values_equal(old_value, new_value)) value = new_value
   })
   $effect.pre(() => {
-    let new_selected: Option[] = []
-    if (Array.isArray(value)) {
-      new_selected = value
-    } else if (maxSelect === 1 && value !== null && value !== undefined) {
-      new_selected = [value]
-    }
-
+    const new_selected = Array.isArray(value)
+      ? value
+      : maxSelect === 1 && value != null
+        ? [value]
+        : []
     const old_selected = untrack(() => selected)
-    if (!utils.values_equal(old_selected, new_selected)) {
-      selected = new_selected
-    }
+    if (!utils.values_equal(old_selected, new_selected)) selected = new_selected
   })
 
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
@@ -265,18 +259,10 @@
   const hidden_chip_count = $derived(selected.length - visible_chips.length)
   // keyboard chip navigation must never highlight an unrendered chip — auto-expand
   $effect(() => {
-    if (
-      highlighted_idx !== null &&
-      chip_limit !== null &&
-      highlighted_idx >= chip_limit
-    ) {
-      chips_expanded = true
-    }
-  })
-
-  // Clamp highlighted_idx when selected items change externally (undo/redo, parent prop, select_all)
-  $effect(() => {
-    if (highlighted_idx !== null && highlighted_idx >= selected.length) {
+    if (highlighted_idx === null) return
+    if (chip_limit !== null && highlighted_idx >= chip_limit) chips_expanded = true
+    // Clamp when selected changes externally (undo/redo, parent prop, select_all)
+    if (highlighted_idx >= selected.length) {
       highlighted_idx = selected.length > 0 ? selected.length - 1 : null
     }
   })
@@ -289,10 +275,9 @@
 
   // Clear last_action after announcement so option counts can be announced again
   $effect(() => {
-    if (last_action) {
-      const timer = setTimeout(() => (last_action = null), 1000)
-      return () => clearTimeout(timer)
-    }
+    if (!last_action) return
+    const timer = setTimeout(() => (last_action = null), 1000)
+    return () => clearTimeout(timer)
   })
 
   // History tracking for undo/redo
@@ -326,24 +311,11 @@
     // Check if actually changed (avoid duplicates from reactive updates)
     if (utils.values_equal(selected, prev_selected)) return
 
-    // On first change, push initial state first
-    if (history_stack.length === 0) {
-      history_stack = [[...prev_selected]]
-      history_index = 0
-    }
-    // Truncate any redo states
-    if (history_index < history_stack.length - 1) {
-      history_stack = history_stack.slice(0, history_index + 1)
-    }
-    // Push new state
-    history_stack = [...history_stack, [...selected]]
+    const next_stack = history_stack.slice(0, history_index + 1)
+    if (next_stack.length === 0) next_stack.push([...prev_selected])
+    next_stack.push([...selected])
+    history_stack = next_stack.slice(-max_history)
     history_index = history_stack.length - 1
-    // Trim to max size (remove oldest)
-    if (history_stack.length > max_history) {
-      const excess = history_stack.length - max_history
-      history_stack = history_stack.slice(excess)
-      history_index = Math.max(0, history_index - excess)
-    }
     prev_selected = [...selected]
   })
 
@@ -353,31 +325,25 @@
     canRedo = max_history > 0 && !disabled && history_index < history_stack.length - 1
   })
 
-  function restore_history(next_index: number) {
+  function move_history(offset: -1 | 1, callback: typeof onundo) {
+    const next_index = history_index + offset
+    if (
+      max_history <= 0 ||
+      disabled ||
+      next_index < 0 ||
+      next_index >= history_stack.length
+    )
+      return false
     const previous = [...selected]
     history_index = next_index
     selected = [...history_stack[history_index]]
     prev_selected = [...selected] // sync tracker to prevent $effect re-recording
-    return { previous, current: selected }
-  }
-
-  // Undo: restore previous state
-  undo = () => {
-    if (max_history <= 0 || disabled || history_index <= 0) return false
-    const change = restore_history(history_index - 1)
-    onundo?.(change)
+    callback?.({ previous, current: selected })
     return true
   }
 
-  // Redo: restore next state
-  redo = () => {
-    if (max_history <= 0 || disabled || history_index >= history_stack.length - 1) {
-      return false
-    }
-    const change = restore_history(history_index + 1)
-    onredo?.(change)
-    return true
-  }
+  undo = () => move_history(-1, onundo)
+  redo = () => move_history(1, onredo)
 
   // Debounced onsearch event - fires 150ms after search text stops changing
   let search_initialized = false
@@ -403,6 +369,7 @@
   let load_options_loading = $state(false)
   let load_options_last_search: string | null = $state(null)
   let load_request_id = 0 // monotonic counter to invalidate stale in-flight fetches
+  let previous_load_options_fetch: LoadOptionsConfig<Option>[`fetch`] | null = null
   let auto_fill_count = 0
   const MAX_AUTO_FILL_ROUNDS = 20
 
@@ -419,9 +386,6 @@
     input_display && searchText === input_committed_label,
   )
   let show_all_input_options = $state(false)
-  let show_input_user_msg = $derived(
-    has_search_text && !(input_text_is_committed || show_all_input_options),
-  )
   // whitespace-only input maps to `` (it previously filtered out every option while
   // also suppressing the no-match message = blank dropdown); non-blank input stays
   // raw so filterFunc/loadOptions/highlighting receive exactly what the user typed
@@ -454,13 +418,13 @@
     prev_input_committed_label = input_committed_label
   })
   // has_more check: errors (has_more=false) clear pending state
-  let load_options_pending = $derived.by(() => {
-    if (!load_options_config) return false
-    if (load_options_loading) return true
-
-    const search_changed = (load_options_last_search ?? ``) !== effective_filter_text
-    return open && load_options_has_more && search_changed
-  })
+  let load_options_pending = $derived(
+    Boolean(load_options_config) &&
+      (load_options_loading ||
+        (open &&
+          load_options_has_more &&
+          (load_options_last_search ?? ``) !== effective_filter_text)),
+  )
   // Sets for O(1) lookups (used in template, has_user_msg, group_header_state, batch
   // operations). Plain (non-reactive) collections suffice for all these deriveds:
   // they're rebuilt wholesale on change, never mutated in place.
@@ -545,25 +509,11 @@
 
   // Pre-computed Map for O(1) index lookups (avoids O(n²) in template).
   // NOTE: duplicate option values collapse to their last index here — rendering
-  // uses positional indices instead (group_flat_offsets), this map only backs
+  // uses positional indices instead, this map only backs
   // get_selectable_opts where duplicates are value-interchangeable anyway.
   let navigable_index_map = $derived(
     new Map(navigable_options.map((opt, idx) => [opt, idx])),
   )
-
-  // Flat navigable index of each group's first option, aligned with grouped_options
-  // (collapsed groups contribute no navigable options). Lets the template compute
-  // each rendered option's flat index positionally, which stays correct even when
-  // the options array contains duplicate values.
-  let group_flat_offsets = $derived.by(() => {
-    const offsets: number[] = []
-    let acc = 0
-    for (const { options: opts, collapsed } of grouped_options) {
-      offsets.push(acc)
-      if (!(collapsed && collapsibleGroups)) acc += opts.length
-    }
-    return offsets
-  })
 
   // Number of options actually rendered in the dropdown: maxOptions hides options
   // beyond the limit, so keyboard navigation must not activate them (otherwise
@@ -576,16 +526,13 @@
   // === Virtualized dropdown rendering (flat/ungrouped option lists only) ===
   const virtual_config = $derived.by(() => {
     if (!virtualList) return null
-    const config = typeof virtualList === `object` ? virtualList : {}
+    const { itemHeight: item_height_prop = 30, overscan: overscan_prop = 10 } =
+      typeof virtualList === `object` ? virtualList : {}
     // clamp to sane values: itemHeight <= 0 would break the window division
     const item_height =
-      Number.isFinite(config.itemHeight) && (config.itemHeight ?? 0) > 0
-        ? (config.itemHeight as number)
-        : 30
+      Number.isFinite(item_height_prop) && item_height_prop > 0 ? item_height_prop : 30
     const overscan =
-      Number.isFinite(config.overscan) && (config.overscan ?? -1) >= 0
-        ? (config.overscan as number)
-        : 10
+      Number.isFinite(overscan_prop) && overscan_prop >= 0 ? overscan_prop : 10
     return { item_height, overscan }
   })
   const has_grouped_options = $derived(
@@ -607,7 +554,7 @@
   )
   // Rows eligible for rendering: group headers interleaved with their options
   // (maxOptions hides options past the limit, collapsed groups keep only their header)
-  type VirtualRow =
+  type RenderRow =
     | { kind: `option`; opt: Option; flat_idx: number; render_key: unknown }
     | { kind: `header`; group_idx: number; render_key: unknown }
   // stable symbols as header render keys: can't collide with user option keys.
@@ -619,16 +566,15 @@
     header_key_cache.set(group, sym)
     return sym
   }
-  const virtual_rows = $derived.by((): VirtualRow[] => {
-    if (!virtual_enabled) return []
-    const rows: VirtualRow[] = []
+  const render_rows = $derived.by((): RenderRow[] => {
+    const rows: RenderRow[] = []
+    let flat_idx = 0
     grouped_options.forEach(({ group, options: opts, collapsed }, group_idx) => {
       if (group !== null) {
         rows.push({ kind: `header`, group_idx, render_key: header_key(group) })
       }
       if (collapsed && collapsibleGroups) return
       opts.forEach((opt, local_idx) => {
-        const flat_idx = group_flat_offsets[group_idx] + local_idx
         if (flat_idx < visible_navigable_count) {
           rows.push({
             kind: `option`,
@@ -637,6 +583,7 @@
             render_key: option_render_keys[group_idx][local_idx],
           })
         }
+        flat_idx++
       })
     })
     return rows
@@ -645,7 +592,7 @@
   // which diverge from flat option indices once header rows are interleaved)
   const option_row_indices = $derived.by(() => {
     const indices: number[] = []
-    virtual_rows.forEach((row, row_idx) => {
+    render_rows.forEach((row, row_idx) => {
       if (row.kind === `option`) indices[row.flat_idx] = row_idx
     })
     return indices
@@ -655,15 +602,21 @@
     if (!virtual_enabled || !virtual_config) return null
     const { item_height, overscan } = virtual_config
     // clamp stale scroll offsets (e.g. after filtering shrinks the list) into valid range
-    const max_scroll = Math.max(0, virtual_rows.length * item_height - virtual_viewport)
+    const max_scroll = Math.max(0, render_rows.length * item_height - virtual_viewport)
     const scroll_top = Math.min(options_scroll_top, max_scroll)
     const start = Math.max(0, Math.floor(scroll_top / item_height) - overscan)
     const end = Math.min(
-      virtual_rows.length,
+      render_rows.length,
       Math.ceil((scroll_top + virtual_viewport) / item_height) + overscan,
     )
     return { start, end, item_height }
   })
+  const render_window = $derived(render_rows.length > 0 ? virtual_window : null)
+  const visible_render_rows = $derived(
+    render_window
+      ? render_rows.slice(render_window.start, render_window.end)
+      : render_rows,
+  )
   // Measure the dropdown viewport when it opens so the window matches the real
   // scroll area (clientHeight is 0 before open and in happy-dom/SSR)
   $effect(() => {
@@ -698,7 +651,11 @@
   })
 
   // Pre-computed group header state (avoids repeated calculations in template)
-  type GroupHeaderState = { all_selected: boolean; selected_count: number }
+  type GroupHeaderState = {
+    all_selected: boolean
+    selected_count: number
+    selectable: Option[]
+  }
   let group_header_state = $derived.by(() => {
     const state = new Map<string, GroupHeaderState>()
     for (const { group, options: opts, collapsed } of grouped_options) {
@@ -710,7 +667,7 @@
       const selected_count = keepSelectedInDropdown
         ? opts.filter((opt) => selected_keys_set.has(key(opt))).length
         : 0
-      state.set(group, { all_selected, selected_count })
+      state.set(group, { all_selected, selected_count, selectable })
     }
     return state
   })
@@ -762,9 +719,7 @@
 
   // Get names of collapsed groups that have matching options
   const get_collapsed_with_matches = () =>
-    grouped_options.flatMap(({ group, collapsed, options: opts }) =>
-      group && collapsed && opts.length > 0 ? [group] : [],
-    )
+    grouped_options.flatMap(({ group, collapsed }) => (group && collapsed ? [group] : []))
 
   // Auto-expand collapsed groups when search matches their options. Only reacts
   // to search-text changes (via prev_expand_search + untrack) so a group the
@@ -895,7 +850,6 @@
   })
 
   let option_msg_is_active = $state(false) // controls active state of <li>{createOptionMsg}</li>
-  let window_width = $state(0)
 
   // Check if option matches search text (label or optionally group name)
   const matches_search = (opt: Option, search: string): boolean =>
@@ -907,43 +861,76 @@
 
   $effect.pre(() => {
     // When using loadOptions, server handles filtering, so skip client-side filterFunc
-    matchingOptions = effective_options.filter((opt) => {
-      // Check if option is already selected and should be excluded
-      const keep_in_list =
-        !selected_keys_set.has(key(opt)) ||
-        duplicates ||
-        keepSelectedInDropdown ||
-        input_text_is_committed
-      if (!keep_in_list) return false
-
-      // When using loadOptions, server handles filtering; otherwise check search match
-      return loadOptions || matches_search(opt, effective_filter_text)
-    })
+    matchingOptions = effective_options.filter(
+      (opt) =>
+        (!selected_keys_set.has(key(opt)) ||
+          Boolean(duplicates) ||
+          keepSelectedInDropdown ||
+          input_text_is_committed) &&
+        (Boolean(loadOptions) || matches_search(opt, effective_filter_text)),
+    )
   })
 
-  // reset activeIndex if out of bounds (can happen when options change while dropdown is open).
-  // Check `=== undefined` (not truthiness) so falsy options like 0 or `` stay navigable,
-  // and exempt the user-msg sentinel index (activeIndex === navigable_options.length
-  // while the create/duplicate message is active).
+  let previous_active_index = activeIndex
+  let previous_active_option = activeOption
+  let previous_filter_text = ``
+
+  // Keep active state valid and preserve option identity across regrouping/refreshes.
   $effect(() => {
-    // clear stale user-msg active state (e.g. searchText cleared while the create
-    // message was highlighted) so aria-activedescendant can't reference the
-    // no-longer-rendered user-msg li
     if (option_msg_is_active && !has_user_msg) option_msg_is_active = false
-    if (activeIndex === null) return
-    const out_of_bounds =
-      navigable_options[activeIndex] === undefined ||
-      activeIndex >= visible_navigable_count
-    if (out_of_bounds && !option_msg_is_active) activeIndex = null
-  })
-
-  // update activeOption when activeIndex changes. While the user-msg is active, keep
-  // activeOption null: with maxOptions the sentinel index can point at a real-but-hidden
-  // option and Enter should create, not select it.
-  $effect(() => {
+    if (
+      activeIndex !== null &&
+      !option_msg_is_active &&
+      (navigable_options[activeIndex] === undefined ||
+        activeIndex >= visible_navigable_count)
+    ) {
+      activeIndex = null
+    }
+    const visible_options = navigable_options.slice(0, visible_navigable_count)
+    const index_changed = activeIndex !== previous_active_index
+    const option_changed = activeOption !== previous_active_option
+    const filter_changed = effective_filter_text !== previous_filter_text
+    if (!index_changed && (!filter_changed || option_changed) && activeOption !== null) {
+      const previous_option = activeOption
+      let preserved_idx =
+        activeIndex !== null &&
+        Object.is(visible_options[activeIndex], previous_option) &&
+        !is_disabled(previous_option)
+          ? activeIndex
+          : visible_options.findIndex(
+              (candidate) =>
+                Object.is(candidate, previous_option) && !is_disabled(candidate),
+            )
+      const find_unique_idx = (get_key: (option: Option) => unknown) => {
+        const active_key = get_key(previous_option)
+        const indices = visible_options.flatMap((candidate, idx) =>
+          get_key(candidate) === active_key && !is_disabled(candidate) ? [idx] : [],
+        )
+        return indices.length === 1 ? indices[0] : -1
+      }
+      if (preserved_idx === -1) preserved_idx = find_unique_idx(key)
+      if (preserved_idx === -1 && active_option_fallback_key)
+        preserved_idx = find_unique_idx(active_option_fallback_key)
+      if (preserved_idx !== -1) activeIndex = preserved_idx
+    }
+    const current_option = visible_options[activeIndex ?? -1]
+    const should_auto_activate =
+      activeIndex === null ||
+      (!option_msg_is_active &&
+        (current_option === undefined || is_disabled(current_option))) ||
+      (filter_changed && !option_changed)
+    if (autoActiveFirstOption && should_auto_activate) {
+      const first_enabled_idx = visible_options.findIndex(
+        (candidate) => !is_disabled(candidate),
+      )
+      activeIndex = first_enabled_idx === -1 ? null : first_enabled_idx
+    }
     activeOption = option_msg_is_active
       ? null
       : (navigable_options[activeIndex ?? -1] ?? null)
+    previous_active_index = activeIndex
+    previous_active_option = activeOption
+    previous_filter_text = effective_filter_text
   })
 
   // Whether the options <ul> is in the DOM at all — aria-controls must not
@@ -951,7 +938,7 @@
   const listbox_rendered = $derived(
     Boolean(
       (has_search_text && noMatchingOptionsMsg) ||
-      effective_options.length > 0 ||
+      effective_options.length ||
       loadOptions,
     ),
   )
@@ -990,8 +977,6 @@
       disabledTitle = defaultDisabledTitle,
     } = utils.is_object(option_item) ? option_item : { label: option_item }
     return {
-      flat_idx,
-      label,
       disabled: option_disabled,
       title,
       selectedTitle,
@@ -1049,85 +1034,82 @@
     }
     if (is_duplicate && duplicates !== true) onduplicate?.({ option: option_to_add })
 
-    if (!max_reached && (duplicates === true || !is_duplicate)) {
-      if (
-        !is_from_options && // first check if we find option in the options list
-        // this has the side-effect of not allowing to user to add the same
-        // custom option twice in append mode
-        [true, `append`].includes(allowUserOptions) &&
-        (has_search_text || from_paste)
-      ) {
-        // Reconstruct option for type homogeneity, but preserve object options
-        // from parse_paste as-is so extra fields (value/group/metadata) aren't stripped
-        if (!(from_paste && typeof option_to_add === `object`)) {
-          const label_text = from_paste ? `${utils.get_label(option_to_add)}` : searchText
-          if (typeof effective_options[0] === `object`) {
-            option_to_add = { label: label_text } as Option
-          } else if (
-            [`number`, `undefined`].includes(typeof effective_options[0]) &&
-            label_text.trim().length > 0 &&
-            !isNaN(Number(label_text))
-          ) {
-            option_to_add = Number(label_text) as Option
-          } else {
-            option_to_add = label_text as Option
-          }
-        }
-        // Fire oncreate — return false to reject, return Option to transform
-        if (creating_option) return // ignore create attempts while an async oncreate is pending
-        type CreateResult = false | Option | undefined
-        let oncreate_result: CreateResult
-        let was_async = false
-        try {
-          const raw_result = oncreate?.({ option: option_to_add })
-          // await thenables (not just native Promises) so results from non-native
-          // promise implementations aren't added as option objects
-          if (typeof (raw_result as PromiseLike<unknown>)?.then === `function`) {
-            was_async = true
-            creating_option = true
-            try {
-              oncreate_result = await (raw_result as PromiseLike<CreateResult>)
-            } finally {
-              creating_option = false
-            }
-          } else oncreate_result = raw_result as CreateResult
-        } catch (error) {
-          // sync throws are caught too: add() is async, so an uncaught throw would
-          // surface as an unhandled rejection in non-awaiting event handlers
-          const failure = was_async ? `promise rejected` : `threw`
-          console.error(`MultiSelect: oncreate ${failure}:`, error)
-          return
-        }
-        if (oncreate_result === false) return
-        if (is_non_empty_option(oncreate_result)) option_to_add = oncreate_result
-        // re-check guards after awaiting: selected may have changed meanwhile
-        if (was_async && (at_max_capacity() || (is_dupe() && duplicates !== true))) {
-          return
-        }
-        if (allowUserOptions === `append`) {
-          if (loadOptions) loaded_options = [...loaded_options, option_to_add]
-          else options = [...(options ?? []), option_to_add]
+    if (max_reached || (duplicates !== true && is_duplicate)) return
+    if (
+      !is_from_options && // first check if we find option in the options list
+      // this has the side-effect of not allowing to user to add the same
+      // custom option twice in append mode
+      [true, `append`].includes(allowUserOptions) &&
+      (has_search_text || from_paste)
+    ) {
+      // Reconstruct option for type homogeneity, but preserve object options
+      // from parse_paste as-is so extra fields (value/group/metadata) aren't stripped
+      if (!(from_paste && typeof option_to_add === `object`)) {
+        const label_text = from_paste ? `${utils.get_label(option_to_add)}` : searchText
+        if (typeof effective_options[0] === `object`) {
+          option_to_add = { label: label_text } as Option
+        } else if (
+          [`number`, `undefined`].includes(typeof effective_options[0]) &&
+          label_text.trim().length > 0 &&
+          !isNaN(Number(label_text))
+        ) {
+          option_to_add = Number(label_text) as Option
+        } else {
+          option_to_add = label_text as Option
         }
       }
-
-      if (!is_non_empty_option(option_to_add)) {
-        console.error(`MultiSelect: encountered falsy option`, option_to_add)
+      // Fire oncreate — return false to reject, return Option to transform
+      if (creating_option) return // ignore create attempts while an async oncreate is pending
+      type CreateResult = false | Option | undefined
+      let oncreate_result: CreateResult
+      let was_async = false
+      try {
+        const raw_result = oncreate?.({ option: option_to_add })
+        // await thenables (not just native Promises) so results from non-native
+        // promise implementations aren't added as option objects
+        if (typeof (raw_result as PromiseLike<unknown>)?.then === `function`) {
+          was_async = true
+          creating_option = true
+          try {
+            oncreate_result = await (raw_result as PromiseLike<CreateResult>)
+          } finally {
+            creating_option = false
+          }
+        } else oncreate_result = raw_result as CreateResult
+      } catch (error) {
+        // sync throws are caught too: add() is async, so an uncaught throw would
+        // surface as an unhandled rejection in non-awaiting event handlers
+        const failure = was_async ? `promise rejected` : `threw`
+        console.error(`MultiSelect: oncreate ${failure}:`, error)
         return
       }
-      if (input_display) searchText = `${utils.get_label(option_to_add)}`
-      else if (resetFilterOnAdd) searchText = `` // reset search string on selection
-      // for maxSelect = 1 we always replace current option with new one
-      if (maxSelect === 1) selected = [option_to_add]
-      else {
-        selected = sort_selected([...selected, option_to_add])
+      if (oncreate_result === false) return
+      if (is_non_empty_option(oncreate_result)) option_to_add = oncreate_result
+      // re-check guards after awaiting: selected may have changed meanwhile
+      if (was_async && (at_max_capacity() || (is_dupe() && duplicates !== true))) {
+        return
       }
-
-      clear_validity()
-      handle_dropdown_after_select(event)
-      last_action = { type: `add`, label: `${utils.get_label(option_to_add)}` }
-      onadd?.({ option: option_to_add, selected })
-      onchange?.({ option: option_to_add, type: `add` })
+      if (allowUserOptions === `append`) {
+        if (loadOptions) loaded_options = [...loaded_options, option_to_add]
+        else options = [...(options ?? []), option_to_add]
+      }
     }
+
+    if (!is_non_empty_option(option_to_add)) {
+      console.error(`MultiSelect: encountered falsy option`, option_to_add)
+      return
+    }
+    if (input_display) searchText = `${utils.get_label(option_to_add)}`
+    else if (resetFilterOnAdd) searchText = `` // reset search string on selection
+    // for maxSelect = 1 we always replace current option with new one
+    selected =
+      maxSelect === 1 ? [option_to_add] : sort_selected([...selected, option_to_add])
+
+    clear_validity()
+    handle_dropdown_after_select(event)
+    last_action = { type: `add`, label: `${utils.get_label(option_to_add)}` }
+    onadd?.({ option: option_to_add, selected })
+    onchange?.({ option: option_to_add, type: `add` })
   }
 
   // remove an option from selected list
@@ -1241,6 +1223,7 @@
 
   function handle_dropdown_after_select(event: Event) {
     const reached_max = selected.length >= (maxSelect ?? Infinity)
+    const window_width = globalThis.innerWidth
     const should_close =
       closeDropdownOnSelect === true ||
       closeDropdownOnSelect === `retain-focus` ||
@@ -1250,23 +1233,23 @@
     } else input?.focus()
   }
 
-  // user messages only show while the input has an active query and no fetch is pending
-  const user_msgs_eligible = $derived(show_input_user_msg && !load_options_pending)
-  const can_show_create_msg = $derived(
-    user_msgs_eligible && Boolean(allowUserOptions) && Boolean(resolved_create_msg),
+  const user_message = $derived.by(
+    (): { type: `dupe` | `create` | `no-match`; msg: string } | null => {
+      if (!has_search_text || input_text_is_committed || show_all_input_options)
+        return null
+      if (duplicates !== true && is_label_selected(searchText)) {
+        return { type: `dupe`, msg: duplicateOptionMsg }
+      }
+      if (load_options_pending) return null
+      if (allowUserOptions && resolved_create_msg) {
+        return { type: `create`, msg: resolved_create_msg }
+      }
+      return navigable_options.length === 0 && noMatchingOptionsMsg
+        ? { type: `no-match`, msg: noMatchingOptionsMsg }
+        : null
+    },
   )
-  const can_show_no_match_msg = $derived(
-    user_msgs_eligible && navigable_options.length === 0 && Boolean(noMatchingOptionsMsg),
-  )
-  const show_dupe_msg = $derived(
-    show_input_user_msg && duplicates !== true && is_label_selected(searchText),
-  )
-
-  // Check if a user message (create option, duplicate warning, no match) is visible
-  // (each term implies show_input_user_msg)
-  const has_user_msg = $derived(
-    can_show_create_msg || show_dupe_msg || can_show_no_match_msg,
-  )
+  const has_user_msg = $derived(user_message !== null)
 
   // === Keyboard and pointer handlers ===
   // Handle arrow key navigation through options (uses navigable_options to skip collapsed groups)
@@ -1280,8 +1263,7 @@
     }
 
     // toggle user message when no options match but user can create
-    // (can_show_create_msg already implies has_search_text)
-    if (can_show_create_msg && navigable_options.length === 0) {
+    if (user_message?.type === `create` && navigable_options.length === 0) {
       option_msg_is_active = !option_msg_is_active
       return
     }
@@ -1353,6 +1335,7 @@
     // composition (not the active option) and arrow keys navigate the IME
     // candidate window, so acting on them would hijack CJK text input
     if (event.isComposing) return
+    const chip_navigation_enabled = !input_display && selected.length > 0 && !searchText
 
     // Check keyboard shortcuts first (before other key handling)
     if (
@@ -1362,11 +1345,8 @@
         Boolean(selectAllOption) && navigable_options.length > 0 && maxSelect !== 1,
         () => select_all(event),
       ) ||
-      run_shortcut(
-        event,
-        `clear_all`,
-        !input_display && selected.length > 0 && !searchText,
-        () => remove_all(event),
+      run_shortcut(event, `clear_all`, chip_navigation_enabled, () =>
+        remove_all(event),
       ) ||
       run_shortcut(event, `open`, !open, () => open_dropdown(event)) ||
       run_shortcut(event, `close`, open, () => close_and_clear(event)) ||
@@ -1394,9 +1374,8 @@
       // != null (not truthiness) so falsy options like 0 or `` can be selected via Enter
       if (activeOption != null) {
         if (is_disabled(activeOption)) return
-        if (selected_keys_set.has(key(activeOption))) {
-          if (!input_display && can_remove) remove(activeOption, event)
-        } else add(activeOption, event) // add() handles resetFilterOnAdd internally when successful
+        if (!input_display) toggle_option(activeOption, event)
+        else if (!selected_keys_set.has(key(activeOption))) add(activeOption, event)
       } else if (allowUserOptions && has_search_text && !load_options_pending) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
@@ -1406,12 +1385,7 @@
         open_dropdown(event)
       }
     }  // on left/right arrow keys: navigate between selected items
-    else if (
-      event.key === `ArrowLeft` &&
-      !input_display &&
-      selected.length > 0 &&
-      !searchText
-    ) {
+    else if (event.key === `ArrowLeft` && chip_navigation_enabled) {
       event.preventDefault()
       highlighted_idx =
         highlighted_idx === null ? selected.length - 1 : Math.max(0, highlighted_idx - 1)
@@ -1425,12 +1399,7 @@
       if (!open) open_dropdown(event, false)
       await handle_arrow_navigation(event.key === `ArrowUp` ? -1 : 1)
     }  // on backspace key: remove highlighted or last selected option
-    else if (
-      event.key === `Backspace` &&
-      !input_display &&
-      selected.length > 0 &&
-      !searchText
-    ) {
+    else if (event.key === `Backspace` && chip_navigation_enabled) {
       event.stopPropagation()
       if (can_remove) {
         const prev_highlighted = highlighted_idx
@@ -1519,13 +1488,11 @@
   // Toggle group selection: works even when group is collapsed
   // If all selectable options are selected, deselect them; otherwise select all
   function toggle_group_selection(
-    group_opts: Option[],
-    group_collapsed: boolean,
+    selectable: Option[],
     all_selected: boolean,
     event: Event,
   ) {
     event.stopPropagation()
-    const selectable = get_selectable_opts(group_opts, group_collapsed)
     if (all_selected) {
       // Deselect options in this group, but never drop below minSelect
       // (consistent with remove_all and per-chip removal)
@@ -1698,15 +1665,9 @@
     // For portalled dropdowns, don't close on blur since clicks on portalled elements
     // will cause blur but we want to allow the click to register first
     // (otherwise mobile touch event is unable to select options https://github.com/janosh/svelte-multiselect/issues/335)
-    if (portal_params?.active) {
-      onblur?.(event) // Let the click handler manage closing for portalled dropdowns
-      return
-    }
-
-    // For non-portalled dropdowns, close when focus moves outside the component
     if (
-      !(event.relatedTarget instanceof Node) ||
-      !outerDiv?.contains(event.relatedTarget)
+      !portal_params?.active &&
+      (!(event.relatedTarget instanceof Node) || !outerDiv?.contains(event.relatedTarget))
     )
       close_dropdown(event)
 
@@ -1723,8 +1684,7 @@
     const added: Option[] = []
     const rejected: Option[] = []
     const overflow: Option[] = []
-    for (let idx = 0; idx < parsed.length; idx++) {
-      const parsed_option = parsed[idx]
+    for (const [idx, parsed_option] of parsed.entries()) {
       if (at_max_capacity() && maxSelect !== null) {
         overflow.push(parsed_option, ...parsed.slice(idx + 1))
         wiggle = true
@@ -1888,29 +1848,34 @@
     // Auto-fill: if the loaded batch doesn't overflow the dropdown, the scrollbar
     // won't appear and onscroll can never fire. Keep loading until scrollable or done.
     if (
-      request_id === load_request_id &&
-      load_options_has_more &&
-      open &&
-      ul_options &&
-      auto_fill_count < MAX_AUTO_FILL_ROUNDS
-    ) {
-      await tick()
-      if (
-        open &&
-        ul_options &&
-        ul_options.clientHeight > 0 &&
-        ul_options.scrollHeight <= ul_options.clientHeight
-      ) {
-        auto_fill_count++
-        load_dynamic_options(false)
-      }
-    }
+      request_id !== load_request_id ||
+      !load_options_has_more ||
+      !open ||
+      !ul_options ||
+      auto_fill_count >= MAX_AUTO_FILL_ROUNDS
+    )
+      return
+    await tick()
+    if (
+      !open ||
+      !ul_options ||
+      ul_options.clientHeight <= 0 ||
+      ul_options.scrollHeight > ul_options.clientHeight
+    )
+      return
+    auto_fill_count++
+    load_dynamic_options(false)
   }
 
   // Single effect handles initial load + search changes
   $effect(() => {
     const config = load_options_config
-    if (!config) return
+    if (!config) {
+      previous_load_options_fetch = null
+      return
+    }
+    const fetch_changed = config.fetch !== previous_load_options_fetch
+    previous_load_options_fetch = config.fetch
 
     let debounce_timer: ReturnType<typeof setTimeout> | undefined
     const clear_loaded_batch = () => {
@@ -1922,14 +1887,14 @@
       debounce_timer = setTimeout(() => load_dynamic_options(true), config.debounce_ms)
     }
 
-    // Reset state when dropdown closes so next open triggers fresh load
-    if (!open) {
+    // Reset when closed or when the loader changes under the current query.
+    if (!open || fetch_changed) {
       load_request_id++
       load_options_last_search = null
       clear_loaded_batch()
       load_options_loading = false
-      return
     }
+    if (!open) return
 
     const search = effective_filter_text
     // First load = nothing dispatched yet for this open: no completed search AND none in
@@ -1947,9 +1912,7 @@
       clear_loaded_batch()
       schedule_load()
     }
-    return () => {
-      if (debounce_timer) clearTimeout(debounce_timer)
-    }
+    return () => clearTimeout(debounce_timer)
   })
 
   function handle_options_scroll(event: Event) {
@@ -2008,11 +1971,7 @@
   </button>
 {/snippet}
 
-<svelte:window
-  onclick={on_click_outside}
-  ontouchstart={on_click_outside}
-  bind:innerWidth={window_width}
-/>
+<svelte:window onclick={on_click_outside} ontouchstart={on_click_outside} />
 
 <!-- svelte-ignore a11y_no_static_element_interactions -- the nested combobox input owns the interactive ARIA semantics -->
 <div
@@ -2052,7 +2011,6 @@
     {@render beforeInput?.(input_snippet_props)}
     {#if !input_display}
       {#each visible_chips as option, idx (duplicates ? `${key(option)}-${idx}` : key(option))}
-        {@const selectedOptionStyle = merge_styles(option, `selected`, liSelectedStyle)}
         <!-- svelte-ignore a11y_no_noninteractive_element_interactions -- selected chips stay plain list items; nested buttons handle removal -->
         <li
           id="{internal_id}-selected-{idx}"
@@ -2071,7 +2029,7 @@
             drag_start_idx = null
           }}
           class:active={drag_idx === idx}
-          style={selectedOptionStyle}
+          style={merge_styles(option, `selected`, liSelectedStyle)}
           onmouseup={can_remove && !disabled
             ? (event) => event.stopPropagation()
             : undefined}
@@ -2217,8 +2175,6 @@
       onmousemove={() => (ignore_hover = false)}
     >
       {#if selectAllOption && effective_options.length > 0 && multi_select}
-        {@const label =
-          typeof selectAllOption === `string` ? selectAllOption : `Select all`}
         {@const selectable = get_selectable_opts(navigable_options)}
         {@const max_reached = maxSelect !== null && selected.length >= maxSelect}
         {@const all_selectable_selected = selectable.every((opt) =>
@@ -2235,14 +2191,12 @@
           onclick={all_selected ? undefined : select_all}
           onkeydown={all_selected ? undefined : if_enter_or_space(select_all)}
           role="option"
-          aria-selected={selected.length > 0 && all_selectable_selected
-            ? `true`
-            : `false`}
+          aria-selected={selected.length > 0 && all_selectable_selected}
           aria-disabled={all_selected || undefined}
           title={all_selected ? disabled_title : null}
           tabindex={all_selected ? -1 : 0}
         >
-          {label}
+          {typeof selectAllOption === `string` ? selectAllOption : `Select all`}
         </li>
       {/if}
       <!-- option <li> markup shared by the virtual and non-virtual render paths.
@@ -2250,55 +2204,53 @@
         unique DOM ids / aria-posinset / hover indices -->
       {#snippet option_li(option_item: Option, flat_idx: number)}
         {@const view = get_option_view(option_item, flat_idx)}
-        {#if is_option_visible(view.flat_idx)}
-          <li
-            id="{internal_id}-opt-{view.flat_idx}"
-            onclick={(event) => handle_option_interact(option_item, view.disabled, event)}
-            title={view.disabled
-              ? view.disabledTitle
-              : (view.selected && view.selectedTitle) || view.title}
-            class:selected={view.selected}
-            class:active={view.active}
-            class:disabled={view.disabled}
-            class="{liOptionClass} {view.active ? liActiveOptionClass : ``}"
-            onmouseover={() => {
-              if (!view.disabled && !ignore_hover) activeIndex = view.flat_idx
-            }}
-            onfocus={() => {
-              if (!view.disabled) activeIndex = view.flat_idx
-            }}
-            role="option"
-            aria-selected={view.selected ? `true` : `false`}
-            aria-disabled={view.disabled ? `true` : undefined}
-            aria-posinset={view.flat_idx + 1}
-            aria-setsize={visible_navigable_count}
-            style={view.style}
-            onkeydown={if_enter_or_space((event) =>
-              handle_option_interact(option_item, view.disabled, event),
-            )}
-          >
-            {#if keepSelectedInDropdown === `checkboxes`}
-              <input
-                type="checkbox"
-                class="option-checkbox"
-                checked={view.selected}
-                aria-label="Toggle {utils.get_label(option_item)}"
-                tabindex="-1"
-              />
-            {/if}
-            {#if option}
-              {@render option({
-                option: option_item,
-                idx: view.flat_idx,
-                selected: view.selected,
-                active: view.active,
-                disabled: view.disabled ?? false,
-              })}
-            {:else}
-              {@render render_label(option_item, view.flat_idx, `option`)}
-            {/if}
-          </li>
-        {/if}
+        <li
+          id="{internal_id}-opt-{flat_idx}"
+          onclick={(event) => handle_option_interact(option_item, view.disabled, event)}
+          title={view.disabled
+            ? view.disabledTitle
+            : (view.selected && view.selectedTitle) || view.title}
+          class:selected={view.selected}
+          class:active={view.active}
+          class:disabled={view.disabled}
+          class="{liOptionClass} {view.active ? liActiveOptionClass : ``}"
+          onmouseover={() => {
+            if (!view.disabled && !ignore_hover) activeIndex = flat_idx
+          }}
+          onfocus={() => {
+            if (!view.disabled) activeIndex = flat_idx
+          }}
+          role="option"
+          aria-selected={view.selected ? `true` : `false`}
+          aria-disabled={view.disabled ? `true` : undefined}
+          aria-posinset={flat_idx + 1}
+          aria-setsize={visible_navigable_count}
+          style={view.style}
+          onkeydown={if_enter_or_space((event) =>
+            handle_option_interact(option_item, view.disabled, event),
+          )}
+        >
+          {#if keepSelectedInDropdown === `checkboxes`}
+            <input
+              type="checkbox"
+              class="option-checkbox"
+              checked={view.selected}
+              aria-label="Toggle {utils.get_label(option_item)}"
+              tabindex="-1"
+            />
+          {/if}
+          {#if option}
+            {@render option({
+              option: option_item,
+              idx: flat_idx,
+              selected: view.selected,
+              active: view.active,
+              disabled: view.disabled ?? false,
+            })}
+          {:else}
+            {@render render_label(option_item, flat_idx, `option`)}
+          {/if}
+        </li>
       {/snippet}
       <!-- spacers keep scrollHeight equal to the full list height so the scrollbar
         behaves as if all options were rendered -->
@@ -2316,13 +2268,13 @@
           collapsed,
         } = grouped_options[group_idx]}
         {#if group_name !== null}
-          {@const { all_selected, selected_count } = group_header_state.get(
+          {@const { all_selected, selected_count, selectable } = group_header_state.get(
             group_name,
-          ) ?? { all_selected: false, selected_count: 0 }}
+          ) ?? { all_selected: false, selected_count: 0, selectable: [] }}
           {@const handle_toggle = () =>
             collapsibleGroups && toggle_group_collapsed(group_name)}
           {@const handle_group_select = (event: Event) =>
-            toggle_group_selection(group_opts, collapsed, all_selected, event)}
+            toggle_group_selection(selectable, all_selected, event)}
           <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
           <li
             class="group-header {liGroupHeaderClass}"
@@ -2345,17 +2297,13 @@
             {:else}
               <span class="group-label">{group_name}</span>
               <span class="group-count">
-                {#if keepSelectedInDropdown && selected_count > 0}
-                  ({selected_count}/{group_opts.length})
-                {:else}
-                  ({group_opts.length})
-                {/if}
+                ({selected_count > 0
+                  ? `${selected_count}/${group_opts.length}`
+                  : group_opts.length})
               </span>
               {#if groupSelectAll && multi_select}
-                {@const group_selectable = get_selectable_opts(group_opts, collapsed)}
                 {@const group_blocked =
-                  (!all_selected && maxSelect !== null && selected.length >= maxSelect) ||
-                  (!all_selected && group_selectable.length === 0)}
+                  !all_selected && (at_max_capacity() || selectable.length === 0)}
                 <button
                   type="button"
                   class="group-select-all"
@@ -2377,71 +2325,53 @@
           </li>
         {/if}
       {/snippet}
-      {#if virtual_window && virtual_rows.length > 0}
-        {@const { start, end, item_height } = virtual_window}
-        {@render virtual_spacer(start * item_height)}
-        {#each virtual_rows.slice(start, end) as row (row.render_key)}
-          {#if row.kind === `option`}
-            {@render option_li(row.opt, row.flat_idx)}
-          {:else}
-            {@render group_header_li(row.group_idx)}
-          {/if}
-        {/each}
-        {@render virtual_spacer((virtual_rows.length - end) * item_height)}
-      {:else}
-        {#each grouped_options as { group: group_name, options: group_opts, collapsed }, group_idx (group_name ?? `ungrouped-${group_idx}`)}
-          {@render group_header_li(group_idx)}
-          {#if !collapsed || !collapsibleGroups}
-            {#each group_opts as option_item, local_idx (option_render_keys[group_idx][local_idx])}
-              {@render option_li(option_item, group_flat_offsets[group_idx] + local_idx)}
-            {/each}
-          {/if}
-        {/each}
+      {#if render_window}
+        {@render virtual_spacer(render_window.start * render_window.item_height)}
       {/if}
-      {#if has_search_text}
-        {@const msgType =
-          (show_dupe_msg && `dupe`) ||
-          (can_show_create_msg && `create`) ||
-          (can_show_no_match_msg && `no-match`)}
-        {@const msg =
-          msgType &&
-          {
-            dupe: duplicateOptionMsg,
-            create: resolved_create_msg,
-            'no-match': noMatchingOptionsMsg,
-          }[msgType]}
-        {@const can_add_user_option = msgType === `create` && allowUserOptions}
+      {#each visible_render_rows as row (row.render_key)}
+        {#if row.kind === `option`}
+          {@render option_li(row.opt, row.flat_idx)}
+        {:else}
+          {@render group_header_li(row.group_idx)}
+        {/if}
+      {/each}
+      {#if render_window}
+        {@render virtual_spacer(
+          (render_rows.length - render_window.end) * render_window.item_height,
+        )}
+      {/if}
+      {#if user_message && user_message.msg}
+        {@const { type: msgType, msg } = user_message}
+        {@const can_add_user_option = msgType === `create`}
         {@const handle_create = (event: Event) =>
           can_add_user_option && add(searchText as Option, event)}
-        {#if msg}
-          <li
-            id={user_msg_id}
-            onclick={handle_create}
-            onkeydown={can_add_user_option ? if_enter_or_space(handle_create) : undefined}
-            title={msgType !== `no-match` ? msg : ``}
-            class:active={option_msg_is_active}
-            onmouseover={() => !ignore_hover && (option_msg_is_active = true)}
-            onfocus={() => (option_msg_is_active = true)}
-            onmouseout={() => (option_msg_is_active = false)}
-            onblur={() => (option_msg_is_active = false)}
-            role="option"
-            aria-selected="false"
-            class="
+        <li
+          id={user_msg_id}
+          onclick={handle_create}
+          onkeydown={can_add_user_option ? if_enter_or_space(handle_create) : undefined}
+          title={msgType !== `no-match` ? msg : ``}
+          class:active={option_msg_is_active}
+          onmouseover={() => !ignore_hover && (option_msg_is_active = true)}
+          onfocus={() => (option_msg_is_active = true)}
+          onmouseout={() => (option_msg_is_active = false)}
+          onblur={() => (option_msg_is_active = false)}
+          role="option"
+          aria-selected="false"
+          class="
               user-msg {liUserMsgClass} {option_msg_is_active ? liActiveUserMsgClass : ``}
             "
-            style:cursor={{
-              dupe: `not-allowed`,
-              create: `pointer`,
-              'no-match': `default`,
-            }[msgType]}
-          >
-            {#if userMsg}
-              {@render userMsg({ searchText, msgType, msg })}
-            {:else}
-              {msg}
-            {/if}
-          </li>
-        {/if}
+          style:cursor={{
+            dupe: `not-allowed`,
+            create: `pointer`,
+            'no-match': `default`,
+          }[msgType]}
+        >
+          {#if userMsg}
+            {@render userMsg({ searchText, msgType, msg })}
+          {:else}
+            {msg}
+          {/if}
+        </li>
       {/if}
       {#if loadOptions && load_options_loading}
         <li class="loading-more" role="status" aria-label="Loading more options">
@@ -2453,11 +2383,7 @@
   <!-- Screen reader announcements for dropdown state, option count, and selection changes -->
   <div class="sr-only" aria-live="polite" aria-atomic="true">
     {#if last_action}
-      {#if last_action.type === `add`}
-        {last_action.label} selected
-      {:else}
-        {last_action.label} removed
-      {/if}
+      {last_action.label} {last_action.type === `add` ? `selected` : `removed`}
     {:else if open}
       {matchingOptions.length} option{matchingOptions.length === 1 ? `` : `s`} available
     {/if}
@@ -2748,7 +2674,8 @@
     background: var(--sms-select-all-bg, transparent);
     margin-bottom: var(--sms-select-all-margin-bottom, 2pt);
   }
-  :where(ul.options > li.select-all.disabled) {
+  :where(ul.options > li.select-all.disabled),
+  :is(ul.options > li.group-header button.group-select-all:disabled) {
     opacity: 0.4;
     cursor: not-allowed;
   }
@@ -2837,10 +2764,6 @@
     margin-inline-start: 8pt;
     border-radius: 3pt;
     aspect-ratio: auto; /* override global button aspect-ratio: 1 */
-  }
-  :is(ul.options > li.group-header button.group-select-all:disabled) {
-    opacity: 0.4;
-    cursor: not-allowed;
   }
   :is(ul.options > li.group-header button.group-select-all:hover:not(:disabled)) {
     background: var(

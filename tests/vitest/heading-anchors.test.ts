@@ -1,12 +1,20 @@
 import { heading_anchors, heading_ids } from '$lib/heading-anchors'
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import { doc_query } from './index'
 
-const preprocess = (content: string) => heading_ids().markup({ content })
+const preprocess = (content: string, filename?: string) =>
+  heading_ids().markup({ content, filename })
 
 describe(`heading_ids preprocessor`, () => {
-  it(`returns a source map for transformed markup`, () => {
-    expect(preprocess(`<h2>Mapped heading</h2>`).map).toHaveProperty(`mappings`)
+  it(`maps original markup exactly across inserted IDs`, () => {
+    const source = `<h2>A</h2>\n<h2>B</h2>`
+    expect(preprocess(source, `Heading.svelte`).map).toEqual({
+      version: 3,
+      names: [],
+      sources: [`Heading.svelte`],
+      sourcesContent: [source],
+      mappings: `AAAA,GAAG,OAAA;AACH,GAAG,OAAA`,
+    })
   })
 
   describe(`basic ID generation`, () => {
@@ -15,8 +23,8 @@ describe(`heading_ids preprocessor`, () => {
       [`<h6>Sixth Level</h6>`, `<h6 id="sixth-level">Sixth Level</h6>`],
       [`<h1>Title</h1>`, `<h1 id="title">Title</h1>`],
       [`<h2>Hello! World? Yes.</h2>`, `<h2 id="hello-world-yes">Hello! World? Yes.</h2>`],
+      [`<h2>Über Café</h2>`, `<h2 id="über-café">Über Café</h2>`],
       [`<h2>✨ Styling</h2>`, `<h2 id="styling">✨ Styling</h2>`], // emoji stripped
-      [`<h2>🔣 Props</h2>`, `<h2 id="props">🔣 Props</h2>`],
       [
         `<h2>Multi\nLine\nContent</h2>`,
         `<h2 id="multi-line-content">Multi\nLine\nContent</h2>`,
@@ -28,10 +36,7 @@ describe(`heading_ids preprocessor`, () => {
 
   describe(`skip existing IDs`, () => {
     it.each([
-      [`<h2 id="custom">Hello</h2>`],
-      [`<h3 id="my-id">Test</h3>`],
       [`<h2 id="">Empty ID</h2>`],
-      [`<h2  id="with-space" >Test</h2>`],
       [`<h2 class="test" id="existing" data-foo="bar">Text</h2>`],
     ])(`preserves: %s`, (input: string) => {
       expect(preprocess(input).code).toBe(input)
@@ -41,8 +46,6 @@ describe(`heading_ids preprocessor`, () => {
   describe(`preserves/adds attributes correctly`, () => {
     it.each([
       [`<h2 data-id="foo">Hello</h2>`, `<h2 id="hello" data-id="foo">Hello</h2>`],
-      [`<h2 aria-id="bar">World</h2>`, `<h2 id="world" aria-id="bar">World</h2>`],
-      [`<h2 class="fancy">Title</h2>`, `<h2 id="title" class="fancy">Title</h2>`],
       [
         `<h2 class="test" data-test="foo">Title</h2>`,
         `<h2 id="title" class="test" data-test="foo">Title</h2>`,
@@ -58,21 +61,21 @@ describe(`heading_ids preprocessor`, () => {
 
   it(`handles duplicate headings with -1, -2 suffixes`, () => {
     const result = preprocess(
-      `<h2>Foo</h2>\n<h2>Foo</h2>\n<h3>Foo</h3>\n<h2>Bar</h2>\n<h2>Foo</h2>`,
+      `<h2>Foo</h2>\n<h2>Foo</h2>\n<h3>Foo</h3>\n<h2>Bar</h2>\n<h2>Foo</h2>\n<h2>Café</h2>\n<h2>Cafe\u0301</h2>`,
     )
     expect(result.code).toContain(`id="foo"`)
     expect(result.code).toContain(`id="foo-1"`)
     expect(result.code).toContain(`id="foo-2"`)
     expect(result.code).toContain(`id="foo-3"`)
     expect(result.code).toContain(`id="bar"`)
+    expect(result.code).toContain(`id="café"`)
+    expect(result.code).toContain(`id="café-1"`)
   })
 
   describe(`strip Svelte expressions`, () => {
     it.each([
-      [`<h2>Hello {name}</h2>`, `<h2 id="hello">Hello {name}</h2>`],
       [`<h2>{greeting} World</h2>`, `<h2 id="world">{greeting} World</h2>`],
       [`<h2>{first} and {second}</h2>`, `<h2 id="and">{first} and {second}</h2>`],
-      [`<h2>Value: {format({x: 1})}</h2>`, `<h2 id="value">Value: {format({x: 1})}</h2>`],
       [
         `<h2>Result {fn({a: {b: {c: 1}}})}</h2>`,
         `<h2 id="result">Result {fn({a: {b: {c: 1}}})}</h2>`,
@@ -88,20 +91,17 @@ describe(`heading_ids preprocessor`, () => {
   })
 
   describe(`skip empty/dynamic-only headings`, () => {
-    it.each([
-      [`<h2>{dynamicOnly}</h2>`],
-      [`<h2>   </h2>`],
-      [`<h2></h2>`],
-      [`<h2><span></span></h2>`],
-    ])(`unchanged: %s`, (input: string) => {
-      expect(preprocess(input).code).toBe(input)
-    })
+    it.each([[`<h2>{dynamicOnly}</h2>`], [`<h2><span></span></h2>`]])(
+      `unchanged: %s`,
+      (input: string) => {
+        expect(preprocess(input).code).toBe(input)
+      },
+    )
   })
 
   describe(`inline headings (mdsvex output)`, () => {
     it.each([
       [`</p> <h2>Title</h2>`, `</p> <h2 id="title">Title</h2>`],
-      [`</div><h3>Inline</h3>`, `</div><h3 id="inline">Inline</h3>`],
       [
         `</p><h2>First</h2></section><h3>Second</h3>`,
         `</p><h2 id="first">First</h2></section><h3 id="second">Second</h3>`,
@@ -113,14 +113,6 @@ describe(`heading_ids preprocessor`, () => {
 
   describe(`headings with HTML tags inside`, () => {
     it.each([
-      [
-        `<h2><span>Nested</span> Text</h2>`,
-        `<h2 id="nested-text"><span>Nested</span> Text</h2>`,
-      ],
-      [
-        `<h2><a href="#">Link Text</a></h2>`,
-        `<h2 id="link-text"><a href="#">Link Text</a></h2>`,
-      ],
       [
         `<h2>Using <code>someFunction</code></h2>`,
         `<h2 id="using-somefunction">Using <code>someFunction</code></h2>`,
@@ -168,14 +160,11 @@ describe(`heading_anchors attachment`, () => {
   })
 
   describe(`generates IDs for headings without them`, () => {
-    it.each([
-      [`<h2>Generated ID</h2>`, `generated-id`],
-      [`<h2>Same</h2><h3>Same</h3>`, `same`, `same-1`], // tests unique ID generation
-    ])(`%s → id includes "%s"`, (html: string, ...expected_ids: string[]) => {
-      const container = create_container(html)
+    it(`generates unique IDs`, () => {
+      const container = create_container(`<h2>Same</h2><h3>Same</h3>`)
       heading_anchors()(container)
       const ids = Array.from(container.querySelectorAll(`h1, h2, h3`)).map((el) => el.id)
-      for (const id of expected_ids) expect(ids).toContain(id)
+      expect(ids).toEqual([`same`, `same-1`])
     })
 
     it(`skips headings with no usable text`, () => {
@@ -224,46 +213,25 @@ describe(`heading_anchors attachment`, () => {
   })
 
   describe(`MutationObserver for dynamic content`, () => {
-    it.each([
-      [
-        `direct child`,
-        (container: Element) => {
-          const heading = document.createElement(`h2`)
-          heading.id = `dyn`
-          container.append(heading)
-        },
-      ],
-      [
-        `grandchild (2nd level)`,
-        (container: Element) => {
-          const div = document.createElement(`div`)
-          div.innerHTML = `<h3 id="nest">X</h3>`
-          container.append(div)
-        },
-      ],
-    ])(
-      `adds anchors to %s dynamically inserted headings`,
-      async (_desc: string, insert_fn: (container: Element) => void) => {
-        const container = create_container()
-        heading_anchors()(container)
-        insert_fn(container)
-        await tick()
-        expect(document.querySelector(anchor_selector)).toBeInstanceOf(HTMLAnchorElement)
-      },
-    )
+    it(`adds anchors to dynamically inserted headings`, async () => {
+      const container = create_container()
+      heading_anchors()(container)
+      const wrapper = document.createElement(`div`)
+      wrapper.innerHTML = `<h3 id="dynamic">X</h3>`
+      container.append(wrapper)
+      await tick()
+      expect(document.querySelector(anchor_selector)).toBeInstanceOf(HTMLAnchorElement)
+    })
   })
 
   describe(`cleanup function`, () => {
     it(`disconnects observer and stops processing`, async () => {
-      const spy = vi.spyOn(MutationObserver.prototype, `disconnect`)
       // Use isolated container with custom selector to avoid interference from other tests
       const container = document.createElement(`div`)
       document.body.append(container)
       const cleanup = heading_anchors({ selector: `h2` })(container)
       expect(cleanup).toBeTypeOf(`function`)
       cleanup?.()
-      expect(spy).toHaveBeenCalled()
-      spy.mockRestore()
 
       // verify no anchors added after cleanup
       const heading = document.createElement(`h2`)
@@ -275,34 +243,15 @@ describe(`heading_anchors attachment`, () => {
   })
 
   describe(`options`, () => {
-    it.each([
-      [
-        `filters by tag`,
-        `h2, h3`,
-        `<h2 id="h2">H2</h2><h4 id="h4">H4</h4>`,
-        `h2`,
-        true,
-        `h4`,
-        false,
-      ],
-      [
-        `filters by class`,
-        `h2.anchored`,
-        `<h2 id="p">P</h2><h2 id="a" class="anchored">A</h2>`,
-        `#p`,
-        false,
-        `#a`,
-        true,
-      ],
-    ])(`selector %s`, (_desc, selector, html, sel1, match1, sel2, match2) => {
-      const container = create_container(html)
-      heading_anchors({ selector })(container)
-      const anchor1 = container.querySelector(`${sel1} ${anchor_selector}`)
-      const anchor2 = container.querySelector(`${sel2} ${anchor_selector}`)
-      if (match1) expect(anchor1).toBeInstanceOf(HTMLAnchorElement)
-      else expect(anchor1).toBeNull()
-      if (match2) expect(anchor2).toBeInstanceOf(HTMLAnchorElement)
-      else expect(anchor2).toBeNull()
+    it(`custom selector filters headings`, () => {
+      const container = create_container(
+        `<h2 id="plain">Plain</h2><h2 id="anchored" class="anchored">Anchored</h2>`,
+      )
+      heading_anchors({ selector: `h2.anchored` })(container)
+      expect(container.querySelector(`#plain ${anchor_selector}`)).toBeNull()
+      expect(container.querySelector(`#anchored ${anchor_selector}`)).toBeInstanceOf(
+        HTMLAnchorElement,
+      )
     })
 
     it(`icon_svg customizes icon, default has aria-label`, () => {

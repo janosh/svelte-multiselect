@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { base } from '$app/paths'
   import { page } from '$app/state'
   import { Nav, ThemeToggle } from '$lib'
   import type { NavRoute } from '$lib/types'
@@ -7,7 +8,7 @@
   let props: Partial<ComponentProps<typeof Nav>> = $props()
 
   // NOTE: Update this list when adding/removing demo pages in src/routes/(demos)/
-  const grouped_routes: NavRoute[] = [
+  const grouped_routes = [
     `/`,
     {
       href: `/basics`,
@@ -55,30 +56,40 @@
       label: `Components`,
       children: [`/components`, `/nav`, `/cmd-palette`],
     },
-  ]
+  ] satisfies NavRoute[]
+  const add_base = (path: string): string => `${base}${path}`
+  const prefixed_routes = grouped_routes.map((route) =>
+    typeof route === `string`
+      ? add_base(route)
+      : {
+          ...route,
+          href: add_base(route.href),
+          children: route.children?.map(add_base),
+        },
+  )
 
   const base_style = `max-width: var(--main-max-width); --nav-item-padding: 2pt 4pt; --nav-link-active-color: var(--accent); `
 </script>
 
 <Nav
   {...props}
-  routes={grouped_routes}
+  routes={prefixed_routes}
   {page}
   style={base_style + (props.style ?? ``)}
   menu_props={{ style: `gap: 10pt` }}
   labels={{
-    '/': `Home`,
-    '/ui': `UI`,
-    '/css-classes': `CSS Classes`,
-    '/kit-form-actions': `Form Actions`,
-    '/cmd-palette': `CmdPalette`,
-    '/min-max-select': `Min/Max`,
-    '/input-dropdown': `Input Dropdown`,
-    '/allow-user-options': `User Options`,
-    '/sort-selected': `Sort Selected`,
-    '/keep-selected': `Keep Selected`,
-    '/parse-labels-as-html': `HTML Labels`,
-    '/infinite-scroll': `Infinite Scroll`,
+    [add_base(`/`)]: `Home`,
+    [add_base(`/ui`)]: `UI`,
+    [add_base(`/css-classes`)]: `CSS Classes`,
+    [add_base(`/kit-form-actions`)]: `Form Actions`,
+    [add_base(`/cmd-palette`)]: `CmdPalette`,
+    [add_base(`/min-max-select`)]: `Min/Max`,
+    [add_base(`/input-dropdown`)]: `Input Dropdown`,
+    [add_base(`/allow-user-options`)]: `User Options`,
+    [add_base(`/sort-selected`)]: `Sort Selected`,
+    [add_base(`/keep-selected`)]: `Keep Selected`,
+    [add_base(`/parse-labels-as-html`)]: `HTML Labels`,
+    [add_base(`/infinite-scroll`)]: `Infinite Scroll`,
     ...(props.labels ?? {}),
   }}
 >

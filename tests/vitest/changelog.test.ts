@@ -12,8 +12,8 @@ test(`changelog transform preserves code spans and wraps entity tags`, async () 
   // bare entity tags like &lt;input&gt; get wrapped in full code spans
   expect(html).toContain(`<code>&lt;input&gt;</code>`)
   // heading levels are preserved: # Changelog stays h1, ## version headings stay h2
-  expect(html).toContain(`<h1>`)
-  expect(html).toMatch(/<h2[ >]/u)
+  expect(html).toMatch(/<h1[ >]/u)
+  expect(html).toContain(`<h2 id="v1180">`)
   // no stray backticks leak into the rendered output
   expect(html).not.toContain(`\``)
 })

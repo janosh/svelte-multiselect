@@ -1,6 +1,9 @@
 import { SubpageGrid } from '$lib'
+import BasicsPage from '$root/src/routes/(demos)/basics/+page.svelte'
 import { mount } from 'svelte'
-import { expect, test } from 'vite-plus/test'
+import { expect, test, vi } from 'vite-plus/test'
+
+vi.mock(`$app/paths`, () => ({ base: `/docs` }))
 
 test(`renders tuple subpages correctly`, () => {
   mount(SubpageGrid, {
@@ -21,4 +24,12 @@ test(`renders tuple subpages correctly`, () => {
   expect(link_element?.getAttribute(`href`)).toBe(`/basics`)
   expect(link_element?.textContent).toContain(`Basics`)
   expect(link_element?.textContent).toContain(`Basics overview`)
+})
+
+test(`overview pages link to base-prefixed sibling routes`, () => {
+  mount(BasicsPage, { target: document.body })
+
+  expect(
+    [...document.querySelectorAll(`nav.grid a`)].map((link) => link.getAttribute(`href`)),
+  ).toEqual([`/docs/form`, `/docs/events`, `/docs/disabled`])
 })

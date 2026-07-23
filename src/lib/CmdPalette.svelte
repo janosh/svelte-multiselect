@@ -1,18 +1,24 @@
 <script lang="ts" generics="Action extends CmdAction = CmdAction">
   import type { ComponentProps } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { untrack } from 'svelte'
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
   import type { CmdAction, MultiSelectProps } from './types'
-  import { fuzzy_match, matches_shortcut, split_shortcut } from './utils'
+  import {
+    cmd_action_matches,
+    format_cmd_metadata,
+    matches_shortcut,
+    split_shortcut,
+  } from './utils'
 
   // MultiSelect's option snippet param (option + idx/selected/active/disabled)
   type OptionSnippetParams = Parameters<
     NonNullable<MultiSelectProps<Action>[`option`]>
   >[0]
-  type ActivateParams = Parameters<NonNullable<MultiSelectProps<Action>[`onactivate`]>>[0]
   type AddParams = Parameters<NonNullable<MultiSelectProps<Action>[`onadd`]>>[0]
+  type DialogEvent = Parameters<
+    NonNullable<HTMLAttributes<HTMLDialogElement>[`oncancel`]>
+  >[0]
 
   let {
     actions,
@@ -32,7 +38,6 @@
     matchingOptions: matching_actions = $bindable([]),
     noMatchingOptionsMsg: no_matching_options_msg = `No matching commands`,
     onadd,
-    onactivate,
     placeholder = `Type a command…`,
     searchText: search_text = $bindable(``),
     dialog_props,
@@ -69,18 +74,20 @@
     Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
   )
   const get_action_signature = (action: CmdAction): string =>
-    JSON.stringify([
-      action.id,
-      action.label,
-      action.description,
-      action.badge,
-      action.disabled,
-      action.group,
-      action.metadata,
-      action.keywords,
-      action.shortcut,
-    ])
+    action.id === undefined
+      ? JSON.stringify([
+          action.label,
+          action.description,
+          action.badge,
+          action.disabled,
+          action.group,
+          action.metadata,
+          action.keywords,
+          action.shortcut,
+        ])
+      : JSON.stringify([`id`, action.id])
   const action_key_cache = new WeakMap<CmdAction[`action`], Map<string, symbol>>()
+  const get_action_fallback_key = (action: Action) => action.id ?? action.action
   const get_action_key = (action: Action): symbol | Action => {
     if (
       typeof action !== `object` ||
@@ -95,29 +102,6 @@
     const action_key = signature_keys.get(signature) ?? Symbol(`cmd-action`)
     signature_keys.set(signature, action_key)
     return action_key
-  }
-  const format_metadata = (metadata: CmdAction[`metadata`]): string =>
-    Array.isArray(metadata) ? metadata.join(` · `) : (metadata ?? ``)
-  const action_matches_search = (action: Action, search: string): boolean => {
-    const normalized_search = search.trim().toLowerCase()
-    if (!normalized_search) return true
-    const searchable_text = [
-      action.label,
-      action.description,
-      action.badge,
-      action.group,
-      action.shortcut,
-      action.keywords?.join(` `),
-      format_metadata(action.metadata),
-    ]
-      .filter(Boolean)
-      .join(` `)
-      .toLowerCase()
-    return normalized_search
-      .split(/\s+/)
-      .every((term) =>
-        fuzzy ? fuzzy_match(term, searchable_text) : searchable_text.includes(term),
-      )
   }
   const can_track_recents = $derived(
     new Set(actions.map(get_action_id)).size === actions.length,
@@ -205,48 +189,6 @@
           action.shortcut || action.description || action.badge || action.metadata,
       ),
   )
-  let active_action_key: symbol | Action | undefined
-  let active_action_callback: CmdAction[`action`] | undefined
-  let previous_search = ``
-
-  const remember_active = (action?: Action): void => {
-    active_action_key = action ? get_action_key(action) : undefined
-    active_action_callback = action?.action
-  }
-
-  $effect(() => {
-    let preserved_idx =
-      search_text === previous_search && active_action_key
-        ? matching_actions.findIndex(
-            (action) => get_action_key(action) === active_action_key && !action.disabled,
-          )
-        : -1
-    if (preserved_idx < 0 && search_text === previous_search && active_action_callback) {
-      const callback_matches = (action: Action) =>
-        action.action === active_action_callback && !action.disabled
-      const callback_idx = matching_actions.findIndex(callback_matches)
-      if (callback_idx === matching_actions.findLastIndex(callback_matches))
-        preserved_idx = callback_idx
-    }
-    const supplied_active_idx = untrack(() => active_idx)
-    const next_idx =
-      preserved_idx >= 0
-        ? preserved_idx
-        : supplied_active_idx !== null &&
-            matching_actions[supplied_active_idx] &&
-            !matching_actions[supplied_active_idx].disabled
-          ? supplied_active_idx
-          : matching_actions.findIndex((action) => !action.disabled)
-    active_idx = next_idx >= 0 ? next_idx : null
-    remember_active(next_idx >= 0 ? matching_actions[next_idx] : undefined)
-    previous_search = search_text
-  })
-
-  const handle_activate = (params: ActivateParams): void => {
-    remember_active(params.option ?? undefined)
-    onactivate?.(params)
-  }
-
   $effect(() => {
     if (!open) return
     if (dialog && !dialog.open) {
@@ -270,7 +212,14 @@
     return true
   }
 
+  function handle_dialog_cancel(event: DialogEvent) {
+    if (!close_keys.includes(`Escape`)) event.preventDefault()
+    dialog_props?.oncancel?.(event)
+  }
+
   function handle_window_keydown(event: KeyboardEvent) {
+    const is_close_key = open && close_keys.includes(event.key)
+    if (event.defaultPrevented && !is_close_key) return
     if (toggle(event)) return
     // run action hotkeys globally while the palette is closed
     if (open || !global_shortcuts) return
@@ -312,7 +261,7 @@
 <svelte:window onkeydown={handle_window_keydown} onclick={close_if_outside} />
 
 {#snippet action_item({ option }: OptionSnippetParams)}
-  {@const metadata = format_metadata(option.metadata)}
+  {@const metadata = format_cmd_metadata(option.metadata)}
   <span class="cmd-action">
     <span class="cmd-label">
       {option.label}
@@ -344,18 +293,21 @@
     aria-label={aria_label}
     onclose={() => (open = false)}
     {...dialog_props}
+    oncancel={handle_dialog_cancel}
   >
     <MultiSelect
       options={sorted_actions}
       bind:activeIndex={active_idx}
+      activeOptionFallbackKey={get_action_fallback_key}
+      autoActiveFirstOption
       bind:input
       bind:matchingOptions={matching_actions}
       bind:searchText={search_text}
-      filterFunc={filter_func ?? action_matches_search}
+      filterFunc={filter_func ??
+        ((action, search) => cmd_action_matches(action, search, fuzzy))}
       {fuzzy}
       inputProps={{ 'aria-label': input_aria_label, ...input_props }}
       noMatchingOptionsMsg={no_matching_options_msg}
-      onactivate={handle_activate}
       {placeholder}
       key={get_action_key}
       onadd={trigger_action_and_close}

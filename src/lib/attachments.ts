@@ -411,12 +411,13 @@ export type HighlightOptions = {
   css_class?: string
 }
 
-type HighlightRegistry = {
-  set: (name: string, highlight: Highlight) => unknown
-  delete: (name: string) => unknown
+type OwnedHighlight = {
+  owners: Map<symbol, Range[]>
+  previous?: Highlight
+  installed?: Highlight
 }
 
-const owned_highlight_ranges = new WeakMap<object, Map<string, Map<symbol, Range[]>>>()
+const owned_highlights = new WeakMap<object, Map<string, OwnedHighlight>>()
 
 const sync_owned_highlight = (
   registry: HighlightRegistry,
@@ -424,26 +425,31 @@ const sync_owned_highlight = (
   owner: symbol,
   ranges?: Range[],
 ): void => {
-  let classes = owned_highlight_ranges.get(registry)
+  let classes = owned_highlights.get(registry)
   if (!classes) {
     if (!ranges) return
     classes = new Map()
-    owned_highlight_ranges.set(registry, classes)
+    owned_highlights.set(registry, classes)
   }
-  let owners = classes.get(css_class)
-  if (!owners) {
+  let state = classes.get(css_class)
+  if (!state) {
     if (!ranges) return
-    owners = new Map()
-    classes.set(css_class, owners)
+    state = { owners: new Map(), previous: registry.get(css_class) }
+    classes.set(css_class, state)
   }
-  if (ranges) owners.set(owner, ranges)
-  else owners.delete(owner)
-  if (owners.size === 0) {
+  if (ranges) state.owners.set(owner, ranges)
+  else state.owners.delete(owner)
+  const current = registry.get(css_class)
+  if (state.owners.size === 0) {
     classes.delete(css_class)
-    registry.delete(css_class)
+    if (current !== state.installed) return
+    if (state.previous) registry.set(css_class, state.previous)
+    else registry.delete(css_class)
     return
   }
-  registry.set(css_class, new Highlight(...[...owners.values()].flat()))
+  if (state.installed && current !== state.installed) return
+  state.installed = new Highlight(...[...state.owners.values()].flat())
+  registry.set(css_class, state.installed)
 }
 
 export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) => {
@@ -474,19 +480,20 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     // characters span two UTF-16 units. Map each lowered unit to the complete
     // original code point so ranges never shift or split a character.
     const node_length = original_text.length
-    const characters = Array.from(original_text)
     let original_starts: number[] | null = null
     let original_ends: number[] | null = null
-    if (
-      characters.some(
-        (character) =>
-          character.length > 1 || character.toLowerCase().length !== character.length,
-      )
-    ) {
+    let needs_offset_map = false
+    for (const character of original_text) {
+      if (character.length > 1 || character.toLowerCase().length !== character.length) {
+        needs_offset_map = true
+        break
+      }
+    }
+    if (needs_offset_map) {
       original_starts = []
       original_ends = []
       let original_idx = 0
-      for (const character of characters) {
+      for (const character of original_text) {
         const original_end = original_idx + character.length
         const lowered_length = character.toLowerCase().length
         original_starts.push(

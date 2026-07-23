@@ -7557,6 +7557,12 @@ describe(`duplicate entries in options array`, () => {
     const active = [...document.querySelectorAll(`ul.options > li.active`)]
     expect(active).toHaveLength(1)
     expect(active[0].id.endsWith(`-opt-0`)).toBe(true)
+
+    option_lis[1].dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
+    await tick()
+    const second_active = [...document.querySelectorAll(`ul.options > li.active`)]
+    expect(second_active).toHaveLength(1)
+    expect(second_active[0].id.endsWith(`-opt-1`)).toBe(true)
   })
 })
 

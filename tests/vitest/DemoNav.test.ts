@@ -4,9 +4,11 @@ import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 import { demo_pages } from '../../src/routes/(demos)'
 
-vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/` } } }))
+const base = `/docs`
+vi.mock(`$app/paths`, () => ({ base: `/docs` }))
+vi.mock(`$app/state`, () => ({ page: { url: { pathname: `/docs/` } } }))
 
-test(`DemoNav grouped_routes contains all demo pages`, () => {
+test(`DemoNav grouped_routes contains all base-prefixed demo pages`, () => {
   mount(DemoNav, { target: document.body })
 
   // Extract all hrefs from the rendered nav (excluding group headers like #basics)
@@ -15,8 +17,11 @@ test(`DemoNav grouped_routes contains all demo pages`, () => {
     return href && !href.startsWith(`#`) ? [href] : []
   })
 
-  const missing = demo_pages.filter((page) => !hrefs.includes(page))
-  const extra = hrefs.filter((href) => href !== `/` && !demo_pages.includes(href))
+  const expected_pages = demo_pages.map((page) => `${base}${page}`)
+  const missing = expected_pages.filter((page) => !hrefs.includes(page))
+  const extra = hrefs.filter(
+    (href) => href !== `${base}/` && !expected_pages.includes(href),
+  )
 
   expect(missing, `Demo pages missing from DemoNav`).toEqual([])
   expect(extra, `Routes in DemoNav not in demo_pages`).toEqual([])

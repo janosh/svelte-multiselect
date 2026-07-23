@@ -1,4 +1,4 @@
-import type { Option } from './types'
+import type { CmdAction, Option } from './types'
 
 let uuid_counter = 0
 
@@ -172,4 +172,30 @@ export function fuzzy_match(search_text: string, target_text: string): boolean {
   // empty search matches everything, empty target matches nothing - both already
   // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
   return fuzzy_match_indices(search_text, target_text) !== null
+}
+
+export const format_cmd_metadata = (metadata: CmdAction[`metadata`]): string =>
+  Array.isArray(metadata) ? metadata.join(` · `) : (metadata ?? ``)
+
+export function cmd_action_matches(
+  action: CmdAction,
+  search: string,
+  fuzzy = true,
+): boolean {
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const searchable_text = [
+    action.label,
+    action.description,
+    action.badge,
+    action.group,
+    action.shortcut,
+    action.keywords?.join(` `),
+    format_cmd_metadata(action.metadata),
+  ]
+    .filter(Boolean)
+    .join(` `)
+    .toLowerCase()
+  return terms.every((term) =>
+    fuzzy ? fuzzy_match(term, searchable_text) : searchable_text.includes(term),
+  )
 }

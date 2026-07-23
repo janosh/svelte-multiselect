@@ -1,4 +1,5 @@
 import changelog from '$root/changelog.md?raw'
+import { heading_ids } from '$lib/heading-anchors'
 import { compile } from 'mdsvex'
 
 const brace_to_paren = (str: string) => str.replaceAll(`{`, `(`).replaceAll(`}`, `)`)
@@ -16,8 +17,9 @@ const wrap_entity_tags = (str: string) =>
     )
     .join(`\``)
 
-export const load = async (): Promise<{
-  changelog: Awaited<ReturnType<typeof compile>>
-}> => ({
-  changelog: await compile(wrap_entity_tags(brace_to_paren(changelog))),
-})
+export const load = async () => {
+  const compiled_changelog = await compile(wrap_entity_tags(brace_to_paren(changelog)))
+  if (!compiled_changelog) return { changelog: compiled_changelog }
+  const { code } = heading_ids().markup({ content: compiled_changelog.code })
+  return { changelog: { ...compiled_changelog, code } }
+}

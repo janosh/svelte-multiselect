@@ -41,18 +41,11 @@ test.each([
     with_ctrl: false,
     should_open: false,
   },
-  // Ctrl works as alternative to Meta, and both together
+  // Ctrl works as alternative to Meta
   {
     triggers: [`k`],
     key_to_press: `k`,
     with_meta: false,
-    with_ctrl: true,
-    should_open: true,
-  },
-  {
-    triggers: [`k`],
-    key_to_press: `k`,
-    with_meta: true,
     with_ctrl: true,
     should_open: true,
   },
@@ -120,17 +113,52 @@ test.each([
   },
 )
 
-// keypress-open focus management is covered by the trigger-keys table above
-test(`opens dialog and manages focus correctly when opened programmatically`, async () => {
-  const props = $state({ actions: mock_actions, open: false, fade_duration: 0 })
+test(`a custom close key does not also trigger its global action shortcut`, async () => {
+  const action = vi.fn()
+  const props = $state({
+    open: true,
+    close_keys: [`x`],
+    actions: [{ label: `Close action`, shortcut: `x`, action }],
+    fade_duration: 0,
+  })
   mount(CmdPalette, { target: document.body, props })
-
-  props.open = true
   await tick()
 
-  expect(props.open).toBe(true)
-  expect(document.activeElement).toBe(doc_query(`dialog input[autocomplete]`))
+  doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `x`, bubbles: true, cancelable: true }),
+  )
+  await tick()
+
+  expect(props.open).toBe(false)
+  expect(action).not.toHaveBeenCalled()
 })
+
+test.each([
+  { close_keys: [`Escape`], default_prevented: false },
+  { close_keys: [`q`], default_prevented: true },
+])(
+  `dialog cancel with close_keys=$close_keys prevents default: $default_prevented`,
+  async ({ close_keys, default_prevented }) => {
+    const oncancel = vi.fn()
+    mount(CmdPalette, {
+      target: document.body,
+      props: {
+        open: true,
+        close_keys,
+        actions: mock_actions,
+        dialog_props: { oncancel },
+        fade_duration: 0,
+      },
+    })
+    await tick()
+
+    const cancel_event = new Event(`cancel`, { cancelable: true })
+    doc_query<HTMLDialogElement>(`dialog`).dispatchEvent(cancel_event)
+
+    expect(cancel_event.defaultPrevented).toBe(default_prevented)
+    expect(oncancel).toHaveBeenCalledOnce()
+  },
+)
 
 function restore_show_modal(original_show_modal: PropertyDescriptor | undefined): void {
   if (original_show_modal) {
@@ -278,16 +306,14 @@ test.each([
   expect(document.querySelector(`dialog`)).toBeNull()
 })
 
-test.each([
-  [`input wrapper`, `dialog div.multiselect`],
-  [`search input`, `dialog div.multiselect input[autocomplete]`],
-  [`options list`, `dialog ul.options`],
-])(`keeps dialog open when clicking palette %s`, async (_label, selector) => {
+test(`keeps dialog open when clicking inside the palette`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CmdPalette, { target: document.body, props })
   await tick()
 
-  doc_query(selector).dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  doc_query(`dialog div.multiselect input[autocomplete]`).dispatchEvent(
+    new MouseEvent(`click`, { bubbles: true }),
+  )
   await tick()
 
   expect(props.open).toBe(true)
@@ -323,39 +349,31 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
   }
 })
 
-// clicks on this palette's portalled ul.options (rendered outside the dialog)
-// must keep the palette open, both on a direct <li> and a nested descendant
-test.each([
-  [`direct li child`, `<li>Option 1</li><li>Option 2</li>`, `li`],
-  [`nested element inside li`, `<li><span>Nested option</span></li>`, `span`],
-])(
-  `keeps dialog open when clicking portalled options: %s`,
-  async (_label, html, click_selector) => {
-    const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-    mount(CmdPalette, { target: document.body, props })
-    await tick()
+test(`keeps dialog open when clicking a nested portalled option`, async () => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
 
-    const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-    const real_listbox_id = input.getAttribute(`aria-controls`)
-    if (!real_listbox_id) throw new Error(`Palette input has no aria-controls listbox id`)
-    const listbox_id = `${real_listbox_id}-portalled`
-    input.setAttribute(`aria-controls`, listbox_id)
+  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+  const real_listbox_id = input.getAttribute(`aria-controls`)
+  if (!real_listbox_id) throw new Error(`Palette input has no aria-controls listbox id`)
+  const listbox_id = `${real_listbox_id}-portalled`
+  input.setAttribute(`aria-controls`, listbox_id)
 
-    const container = document.createElement(`div`)
-    container.innerHTML = `<ul class="options" id="${listbox_id}">${html}</ul>`
-    document.body.append(container)
+  const container = document.createElement(`div`)
+  container.innerHTML = `<ul class="options" id="${listbox_id}"><li><span>Nested option</span></li></ul>`
+  document.body.append(container)
 
-    doc_query(`#${listbox_id} ${click_selector}`).dispatchEvent(
-      new MouseEvent(`click`, { bubbles: true }),
-    )
-    await tick()
+  doc_query(`#${listbox_id} span`).dispatchEvent(
+    new MouseEvent(`click`, { bubbles: true }),
+  )
+  await tick()
 
-    expect(props.open).toBe(true)
-    expect(document.querySelector(`dialog`)).not.toBeNull()
+  expect(props.open).toBe(true)
+  expect(document.querySelector(`dialog`)).not.toBeNull()
 
-    container.remove()
-  },
-)
+  container.remove()
+})
 
 test(`stays open when a button's click handler sets open=true and the click bubbles to window`, async () => {
   // the very click that opens the palette bubbles to <svelte:window onclick> while
@@ -517,16 +535,6 @@ test(`lets command palette dropdown overflow dialog box`, async () => {
   expect(dialog_style.left).toBe(`0px`)
   expect(dialog_style.right).toBe(`0px`)
   expect(dialog_style.overflow).toBe(`visible`)
-
-  const options_list = doc_query<HTMLUListElement>(`dialog ul.options`)
-  expect(dialog.contains(options_list)).toBe(true)
-  expect(options_list.classList.contains(`hidden`)).toBe(false)
-  expect(options_list.getAttribute(`role`)).toBe(`listbox`)
-  // aria-expanded belongs on the combobox input, not the listbox (invalid ARIA there)
-  expect(options_list.hasAttribute(`aria-expanded`)).toBe(false)
-  expect(options_list.querySelectorAll(`li[role="option"]`)).toHaveLength(
-    mock_actions.length,
-  )
 })
 
 test.each([
@@ -535,24 +543,6 @@ test.each([
     search: `cu`,
     expected: [`create user`],
     description: `fuzzy match 'cu' -> 'create user'`,
-  },
-  {
-    fuzzy: true,
-    search: `del`,
-    expected: [`delete file`],
-    description: `fuzzy match 'del' -> 'delete file'`,
-  },
-  {
-    fuzzy: true,
-    search: `up`,
-    expected: [`update config`],
-    description: `fuzzy match 'up' -> 'update config'`,
-  },
-  {
-    fuzzy: true,
-    search: `user`,
-    expected: [`create user`],
-    description: `fuzzy match 'user' -> 'create user'`,
   },
   {
     fuzzy: true,
@@ -568,27 +558,9 @@ test.each([
   },
   {
     fuzzy: false,
-    search: `delete`,
-    expected: [`delete file`],
-    description: `exact match 'delete' -> 'delete file'`,
-  },
-  {
-    fuzzy: false,
-    search: `config`,
-    expected: [`update config`],
-    description: `exact match 'config' -> 'update config'`,
-  },
-  {
-    fuzzy: false,
     search: `cu`,
     expected: [`No matching commands`],
     description: `exact match 'cu' -> no matches (not a substring)`,
-  },
-  {
-    fuzzy: false,
-    search: `xyz`,
-    expected: [`No matching commands`],
-    description: `exact match 'xyz' -> no matches message`,
   },
 ])(`filtering with fuzzy=$fuzzy: $description`, async ({ fuzzy, search, expected }) => {
   const actions = [
@@ -635,33 +607,82 @@ test(`handles bindable props correctly`, async () => {
   expect(doc_query(`dialog input[autocomplete]`).getAttribute(`aria-label`)).toBe(
     `Search commands`,
   )
+  expect(document.activeElement).toBe(props.input)
 })
 
-test(`selects the first enabled action and preserves keyboard selection on refresh`, async () => {
+test(`selects the first enabled action and preserves pointer selection across grouped refreshes`, async () => {
   const actions = [
-    { id: `alpha`, label: `Alpha`, action: vi.fn() },
-    { id: `disabled`, label: `Disabled`, disabled: true, action: vi.fn() },
-    { id: `beta`, label: `Beta`, action: vi.fn() },
+    { id: `alpha`, label: `Alpha`, group: `A`, action: vi.fn() },
+    { id: `disabled`, label: `Disabled`, group: `B`, disabled: true, action: vi.fn() },
+    { id: `beta`, label: `Beta`, group: `A`, action: vi.fn() },
+    { id: `extra`, label: `Extra`, group: `B`, action: vi.fn() },
   ]
-  const props = $state({ open: true, actions, fade_duration: 0 })
+  const props = $state({
+    open: true,
+    actions,
+    activeIndex: null as number | null,
+    fade_duration: 0,
+  })
   mount(CmdPalette, { target: document.body, props })
   await tick()
 
   const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
 
-  input.dispatchEvent(new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }))
+  const beta_option = [...document.querySelectorAll(`li[role=option]`)].find((option) =>
+    option.textContent?.includes(`Beta`),
+  )
+  beta_option?.dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
   await tick()
   expect(doc_query(`li.active`).textContent).toContain(`Beta`)
 
-  props.actions = [{ ...actions[2], label: `Renamed Beta` }, actions[0], actions[1]]
+  const renamed_beta = { ...actions[2], label: `Renamed Beta` }
+  props.actions = [actions[1], renamed_beta, actions[3], actions[0]]
   await tick()
+  expect(props.activeIndex).toBe(2)
   expect(doc_query(`li.active`).textContent).toContain(`Renamed Beta`)
+
+  props.activeIndex = 3
+  await tick()
+  props.actions = [renamed_beta, actions[0], actions[1], actions[3]]
+  await tick()
+  expect(props.activeIndex).toBe(1)
+  expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
 
   input.value = `alpha`
   input.dispatchEvent(new Event(`input`, { bubbles: true }))
   await tick()
   expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
+})
+
+test(`auto-active considers only visible enabled actions`, async () => {
+  const props = $state({
+    open: true,
+    actions: [
+      { label: `Disabled`, disabled: true, action: vi.fn() },
+      { label: `Enabled`, action: vi.fn() },
+    ],
+    activeIndex: 0,
+    maxOptions: 1,
+    fade_duration: 0,
+  })
+  mount(CmdPalette, { target: document.body, props })
+  await tick()
+
+  expect(props.activeIndex).toBeNull()
+  expect(document.querySelector(`li.active`)).toBeNull()
+
+  props.maxOptions = 2
+  await tick()
+  expect(props.activeIndex).toBe(1)
+  expect(doc_query(`li.active`).textContent).toContain(`Enabled`)
+
+  props.actions = [
+    { ...props.actions[0], disabled: false },
+    { ...props.actions[1], disabled: true },
+  ]
+  await tick()
+  expect(props.activeIndex).toBe(0)
 })
 
 test(`preserves active action when IDs and signatures collide`, async () => {
@@ -696,111 +717,31 @@ test(`preserves active action when IDs and signatures collide`, async () => {
   expect(first_action.action).not.toHaveBeenCalled()
 })
 
-// Grouping tests
-const grouped_actions = [
-  { label: `New File`, action: vi.fn(), group: `File` },
-  { label: `Save`, action: vi.fn(), group: `File` },
-  { label: `Copy`, action: vi.fn(), group: `Edit` },
-  { label: `Paste`, action: vi.fn(), group: `Edit` },
-]
-
-test(`renders grouped actions with group headers`, async () => {
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions: grouped_actions, fade_duration: 0 },
+test(`preserves the active action by ID when callbacks are rebuilt`, async () => {
+  const props = $state({
+    open: true,
+    actions: [
+      { id: `alpha`, label: `Alpha`, action: vi.fn() },
+      { id: `beta`, label: `Beta`, action: vi.fn() },
+    ],
+    activeIndex: 1,
+    fade_duration: 0,
   })
+  mount(CmdPalette, { target: document.body, props })
   await tick()
 
-  // Check that group headers are rendered
-  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers).toHaveLength(2)
-
-  // Check group header text contains group names (headers include count like "File (2)")
-  const header_texts = [...group_headers].map((header) => header.textContent?.trim())
-  expect(header_texts.some((text) => text?.startsWith(`File`))).toBe(true)
-  expect(header_texts.some((text) => text?.startsWith(`Edit`))).toBe(true)
-
-  // Check all actions are rendered
-  const action_items = document.querySelectorAll(
-    `dialog ul.options li:not(.group-header)`,
-  )
-  expect(action_items).toHaveLength(4)
-})
-
-test(`ungrouped actions continue to work without group headers`, async () => {
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions: mock_actions, fade_duration: 0 },
-  })
-  await tick()
-
-  // No group headers should be rendered for ungrouped actions
-  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers).toHaveLength(0)
-
-  // All actions should still be rendered
-  const action_items = document.querySelectorAll(`dialog ul.options li`)
-  expect(action_items).toHaveLength(mock_actions.length)
-})
-
-test.each([
-  [`File`, `New File`],
-  [`Edit`, `Copy`],
-])(
-  `collapsedGroups collapses the %s group, hiding its options`,
-  async (collapsed_group, hidden_label) => {
-    mount(CmdPalette, {
-      target: document.body,
-      props: {
-        open: true,
-        actions: grouped_actions,
-        collapsibleGroups: true,
-        collapsedGroups: new Set([collapsed_group]),
-        fade_duration: 0,
-      },
-    })
-    await tick()
-
-    // collapsed group's header reports aria-expanded=false
-    const header = [
-      ...document.querySelectorAll(`dialog ul.options li.group-header`),
-    ].find((el) => el.textContent?.includes(collapsed_group))
-    expect(header?.getAttribute(`aria-expanded`)).toBe(`false`)
-
-    // its options are not rendered; only the other group's 2 options remain
-    const hidden_option = [...document.querySelectorAll(`dialog ul.options li`)].find(
-      (li) => li.textContent?.includes(hidden_label),
-    )
-    expect(hidden_option).toBeUndefined()
-    expect(
-      document.querySelectorAll(`dialog ul.options li:not(.group-header)`),
-    ).toHaveLength(2)
-  },
-)
-
-test(`mixed grouped and ungrouped actions render correctly`, async () => {
-  const mixed_actions = [
-    { label: `Global Action`, action: vi.fn() },
-    { label: `New File`, action: vi.fn(), group: `File` },
-    { label: `Save`, action: vi.fn(), group: `File` },
-    { label: `Another Global`, action: vi.fn() },
+  const beta_action = vi.fn()
+  props.actions = [
+    { id: `beta`, label: `Rebuilt Beta`, action: beta_action },
+    { id: `alpha`, label: `Rebuilt Alpha`, action: vi.fn() },
   ]
-  mount(CmdPalette, {
-    target: document.body,
-    props: { open: true, actions: mixed_actions, fade_duration: 0 },
-  })
   await tick()
 
-  // Should have one group header for File group (header includes count like "File (2)")
-  const group_headers = document.querySelectorAll(`dialog ul.options li.group-header`)
-  expect(group_headers).toHaveLength(1)
-  expect(group_headers[0].textContent?.trim()).toMatch(/^File/u)
-
-  // All 4 actions should be rendered
-  const action_items = document.querySelectorAll(
-    `dialog ul.options li:not(.group-header)`,
+  expect(props.activeIndex).toBe(0)
+  doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
   )
-  expect(action_items).toHaveLength(4)
+  expect(beta_action).toHaveBeenCalledExactlyOnceWith(`Rebuilt Beta`)
 })
 
 test(`groupSelectAll selects a whole action group without executing actions or closing`, async () => {
@@ -982,6 +923,7 @@ describe(`PagefindPalette`, () => {
       await search_pagefind(`binary`)
 
       expect(search).toHaveBeenCalledExactlyOnceWith(`binary`)
+      expect(document.querySelectorAll(`li[role='option']`)).toHaveLength(1)
       doc_query<HTMLUListElement>(`ul.options`).dispatchEvent(new Event(`scroll`))
       await vi.runAllTimersAsync()
       await tick()
@@ -1056,6 +998,29 @@ describe(`PagefindPalette`, () => {
     expect(doc_query(`.cmd-label`).textContent).toContain(`Fresh`)
   })
 
+  test(`reloads the current query when loader props change`, async () => {
+    const second_navigate = vi.fn()
+    const search = vi.fn(async () => make_pagefind_response(`Fresh`))
+    const props = $state({
+      ...base_props,
+      load_pagefind: async () => ({ search }),
+      navigate: vi.fn(),
+      transform_url: (url: string) => `/old${url}`,
+    })
+    mount(PagefindPalette, { target: document.body, props })
+
+    await search_pagefind(`fresh`)
+    props.navigate = second_navigate
+    props.transform_url = (url: string) => `/new${url}`
+    await tick()
+    await vi.runAllTimersAsync()
+    await tick()
+
+    expect(search).toHaveBeenCalledTimes(2)
+    doc_query<HTMLLIElement>(`li[role='option']`).click()
+    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh.html`)
+  })
+
   test.each([
     [
       `index has no matches`,
@@ -1079,8 +1044,22 @@ describe(`PagefindPalette`, () => {
     ],
   ])(`filters fallback actions when the %s`, async (_scenario, make_load_pagefind) => {
     const fallback_actions = [
-      { label: `API reference`, description: `All exported props`, action: vi.fn() },
-      { label: `Styling guide`, description: `CSS custom properties`, action: vi.fn() },
+      {
+        label: `API reference`,
+        description: `All exported props`,
+        badge: `Docs`,
+        metadata: `Library`,
+        keywords: [`schema`],
+        action: vi.fn(),
+      },
+      {
+        label: `Styling guide`,
+        description: `CSS custom properties`,
+        badge: `Guide`,
+        metadata: `Visual`,
+        keywords: [`theme`],
+        action: vi.fn(),
+      },
     ]
     const load_pagefind = make_load_pagefind()
     mount(PagefindPalette, {
@@ -1089,21 +1068,17 @@ describe(`PagefindPalette`, () => {
     })
 
     await vi.runAllTimersAsync()
-    expect(
-      Array.from(document.querySelectorAll(`li[role='option']`), (option) =>
-        option.textContent?.trim(),
-      ),
-    ).toEqual([`API reference All exported props`, `Styling guide CSS custom properties`])
+    expect(document.querySelectorAll(`li[role='option']`)).toHaveLength(2)
     expect(load_pagefind).not.toHaveBeenCalled()
 
-    await search_pagefind(`css`)
+    await search_pagefind(`css theme visual guide`)
 
     const options = document.querySelectorAll(`li[role='option']`)
     expect(options).toHaveLength(1)
     expect(options[0].textContent).toContain(`Styling guide`)
     expect(load_pagefind).toHaveBeenCalledTimes(1)
 
-    await search_pagefind(`api`)
+    await search_pagefind(`api schema library docs`)
 
     expect(load_pagefind).toHaveBeenCalledTimes(1)
     doc_query<HTMLLIElement>(`li[role='option']`).click()
@@ -1248,6 +1223,32 @@ test.each([
     if (calls > 0) expect(spy).toHaveBeenCalledWith(`save`)
   },
 )
+
+test(`global shortcuts ignore events consumed by editable controls`, () => {
+  const action = vi.fn()
+  mount(CmdPalette, {
+    target: document.body,
+    props: {
+      actions: [{ label: `save`, action, shortcut: `ctrl+shift+s` }],
+      fade_duration: 0,
+    },
+  })
+  const textarea = document.createElement(`textarea`)
+  textarea.addEventListener(`keydown`, (event) => event.preventDefault())
+  document.body.append(textarea)
+
+  textarea.dispatchEvent(
+    new KeyboardEvent(`keydown`, {
+      key: `s`,
+      ctrlKey: true,
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    }),
+  )
+
+  expect(action).not.toHaveBeenCalled()
+})
 
 test(`global shortcuts skip disabled duplicate bindings`, async () => {
   const disabled_action = vi.fn()

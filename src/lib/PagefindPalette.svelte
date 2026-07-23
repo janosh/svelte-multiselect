@@ -1,6 +1,6 @@
 <script module lang="ts">
   import type { CmdAction, LoadOptionsParams, LoadOptionsResult } from './types'
-  import { slug_to_title } from './utils'
+  import { cmd_action_matches, slug_to_title } from './utils'
 
   type PagefindAction = CmdAction & { url?: string }
 
@@ -28,6 +28,7 @@
 
   type PagefindLoaderOptions = {
     fallback_actions?: PagefindAction[]
+    fuzzy?: boolean
     load_pagefind?: () => Promise<PagefindApi>
     navigate?: (url: string) => unknown
     pagefind_path?: string
@@ -106,6 +107,7 @@
 
   const create_pagefind_loader = ({
     fallback_actions = [],
+    fuzzy = false,
     load_pagefind,
     navigate = (url) => globalThis.location.assign(url),
     pagefind_path = `/pagefind/pagefind.js`,
@@ -124,16 +126,12 @@
     }: LoadOptionsParams): Promise<LoadOptionsResult<PagefindAction>> => {
       const query = search.trim()
       if (!query) return paginate_actions(fallback_actions, offset, limit)
-      const fallback_result = () => {
-        const normalized_query = query.toLowerCase()
-        return paginate_actions(
-          fallback_actions.filter(({ label, description }) =>
-            `${label} ${description ?? ``}`.toLowerCase().includes(normalized_query),
-          ),
+      const fallback_result = () =>
+        paginate_actions(
+          fallback_actions.filter((action) => cmd_action_matches(action, query, fuzzy)),
           offset,
           limit,
         )
-      }
       try {
         if (offset === 0 || search_cache?.query !== query) {
           search_cache = {
@@ -234,6 +232,7 @@
   const load_options = $derived(
     create_pagefind_loader({
       fallback_actions,
+      fuzzy,
       load_pagefind,
       navigate,
       pagefind_path,

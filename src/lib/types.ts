@@ -176,6 +176,8 @@ export interface MultiSelectProps<T extends Option = Option>
     > {
   activeIndex?: number | null
   activeOption?: T | null
+  activeOptionFallbackKey?: (option: T) => unknown
+  autoActiveFirstOption?: boolean
   createOptionMsg?:
     | string
     | ((state: {

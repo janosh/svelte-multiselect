@@ -11,6 +11,7 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
 ```svelte example id="disabled-input-title"
 <script lang="ts">
   import { goto } from '$app/navigation'
+  import { base } from '$app/paths'
   import { CmdPalette } from '$lib'
   import { routes } from '../index'
 
@@ -21,7 +22,7 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
 
   const actions: Action[] = routes.map(({ route }) => ({
     label: route,
-    action: () => goto(route),
+    action: () => goto(`${base}${route}`),
   }))
 </script>
 
@@ -52,7 +53,7 @@ the palette filters `fallback_actions`:
 
   const fallback_actions = routes.map(({ route }) => ({
     label: route,
-    action: () => goto(route),
+    action: () => goto(`${base}${route}`),
   }))
 </script>
 
@@ -61,7 +62,6 @@ the palette filters `fallback_actions`:
   navigate={goto}
   strip_html_suffix
   pagefind_path={`${base}/pagefind/pagefind.js`}
-  transform_url={(url) => `${base}${url}`}
   triggers={[`j`]}
   aria_label="Search documentation"
 />
