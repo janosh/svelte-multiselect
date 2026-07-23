@@ -1272,7 +1272,7 @@
     // Navigate rendered, enabled options with wrap-around. The user-message row
     // remains navigable when present.
     const total = visible_navigable_count + (has_user_msg ? 1 : 0)
-    const start_idx = activeIndex ?? (direction === 1 ? -1 : 1)
+    const start_idx = activeIndex ?? (direction === 1 ? -1 : 0)
     activeIndex = null
     for (let offset = 1; offset <= total; offset++) {
       const next_idx = (start_idx + direction * offset + total) % total

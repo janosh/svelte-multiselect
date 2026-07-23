@@ -1662,24 +1662,32 @@ test(`can't select disabled options`, async () => {
   expect(selected_ul.textContent?.trim()).toBe(`2 3`)
 })
 
-test(`keyboard navigation skips disabled options`, async () => {
-  const props = $state<MultiSelectProps>({
-    options: [{ label: `Disabled`, disabled: true }, { label: `Enabled` }],
-    selected: [],
-    open: true,
-    key: () => `duplicate`,
-  })
-  mount(MultiSelect, { target: document.body, props })
-  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+test.each([
+  [`ArrowDown`, `First enabled`],
+  [`ArrowUp`, `Last enabled`],
+] as const)(
+  `%s from no active option skips disabled options`,
+  async (key_name, label) => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [
+          { label: `First disabled`, disabled: true },
+          { label: `First enabled` },
+          { label: `Last enabled` },
+          { label: `Last disabled`, disabled: true },
+        ],
+        open: true,
+        key: () => `duplicate`,
+      },
+    })
+    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  input.dispatchEvent(fresh_key(`ArrowDown`))
-  await tick()
-  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`Enabled`)
-
-  input.dispatchEvent(fresh_key(`Enter`))
-  await tick()
-  expect(props.selected).toEqual([{ label: `Enabled` }])
-})
+    input.dispatchEvent(fresh_key(key_name))
+    await tick()
+    expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(label)
+  },
+)
 
 test(`autoScroll scopes active option lookup to current instance`, async () => {
   const [first_target, second_target] = [
@@ -3800,8 +3808,11 @@ describe(`selectAllOption feature`, () => {
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.click()
     await tick()
-    doc_query(`ul.options > li.select-all`).click()
+    const select_all = doc_query(`ul.options > li.select-all`)
+    expect(select_all.getAttribute(`aria-selected`)).toBe(`false`)
+    select_all.click()
     await tick()
+    expect(select_all.getAttribute(`aria-selected`)).toBe(`true`)
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
     expect(onselectAll_spy).toHaveBeenCalledWith({ options })
     expect(onchange_spy).toHaveBeenCalledWith({ options, type: `selectAll` })
@@ -6561,7 +6572,7 @@ describe(`onduplicate event`, () => {
 describe(`onactivate event`, () => {
   test.each([
     { key: `ArrowDown`, options: [1, 2, 3], expected: { option: 1, index: 0 } },
-    { key: `ArrowUp`, options: [1, 2, 3], expected: { option: 1, index: 0 } },
+    { key: `ArrowUp`, options: [1, 2, 3], expected: { option: 3, index: 2 } },
     {
       key: `ArrowDown`,
       options: [{ label: `A`, value: 1 }],
