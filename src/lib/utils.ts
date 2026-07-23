@@ -23,7 +23,9 @@ export const is_object = (val: unknown): val is Record<string, unknown> =>
   typeof val === `object` && val !== null
 
 export const slug_to_title = (slug: string): string =>
-  slug.replaceAll(`-`, ` `).replaceAll(/\b\w/g, (character) => character.toUpperCase())
+  slug
+    .replaceAll(`-`, ` `)
+    .replaceAll(/(?<![\p{L}\p{M}\p{N}_])\p{L}/gu, (letter) => letter.toUpperCase())
 
 // Type guard for checking if an option has a group key
 export const has_group = <T extends Option>(opt: T): opt is T & { group: string } =>
