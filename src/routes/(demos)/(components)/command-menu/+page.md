@@ -6,7 +6,7 @@
 
 ## Navigation Command Menu
 
-You can use `<MultiSelect />` to build a navigation command menu in just 70 lines of code (50 without styles).
+`<MultiSelect />` can implement a navigation command menu in 70 lines of code (50 without styles).
 
 ```svelte example id="disabled-input-title"
 <script lang="ts">
@@ -103,11 +103,8 @@ navigation and apply `highlight_matches` to the destination content:
 </style>
 ```
 
-`highlight_matches` injects no styles or text effects. Use `css_class` for custom CSS,
-`duration_ms` for automatic removal, and `on_highlight` for opt-in effects. It scrolls the
-first match smoothly into view by default; set `scroll_to_match: false` or pass
-`ScrollIntoViewOptions` to customize it. The callback may return a cleanup function and
-runs again when content changes. Stemmed Pagefind results may have no exact substring.
+See the [attachments demo](../attachments) for `highlight_matches` options and effects.
+Stemmed Pagefind results may have no exact substring.
 
 ## Shortcuts, Descriptions & Recent Actions
 

@@ -42,28 +42,21 @@ describe(`get_html_sort_value`, () => {
     expect(get_html_sort_value(element)).toBe(expected)
   })
 
-  it(`should return child data-sort-value recursively`, () => {
-    const [parent, child, grandchild] = [
+  it(`returns the first descendant data-sort-value recursively`, () => {
+    const [parent, child, grandchild, sibling] = [
       create_element(),
       create_element(`span`),
       create_element(`em`),
+      create_element(`span`),
     ]
     add_text(parent, `Parent text`)
     add_text(child, `Child text`)
     add_data_sort(grandchild, `grandchild-value`)
+    add_data_sort(sibling, `sibling-value`)
     add_text(grandchild, `Grandchild text`)
     child.append(grandchild)
-    parent.append(child)
+    parent.append(child, sibling)
     expect(get_html_sort_value(parent)).toBe(`grandchild-value`)
-  })
-
-  it(`should return first child data-sort-value when multiple exist`, () => {
-    const parent = create_element()
-    const [child1, child2] = [create_element(`span`), create_element(`span`)]
-    add_data_sort(child1, `first-value`)
-    add_data_sort(child2, `second-value`)
-    parent.append(child1, child2)
-    expect(get_html_sort_value(parent)).toBe(`first-value`)
   })
 })
 
@@ -388,23 +381,7 @@ describe(`tooltip`, () => {
     // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
     beforeEach(() => vi.useFakeTimers())
 
-    it(`scroll from an unrelated element keeps the tooltip`, () => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
-      trigger_tooltip(element)
-      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
-
-      const scroll_event = new Event(`scroll`, { bubbles: true })
-      Object.defineProperty(scroll_event, `target`, {
-        value: document.createElement(`div`),
-      })
-      globalThis.dispatchEvent(scroll_event)
-      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLDivElement)
-    })
-
-    it(`scroll from ancestor hides tooltip`, () => {
+    it(`hides on ancestor scroll but ignores unrelated scroll`, () => {
       const ancestor = document.createElement(`div`)
       const element = create_element()
       ancestor.append(element)
@@ -413,6 +390,13 @@ describe(`tooltip`, () => {
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
       trigger_tooltip(element)
+
+      const unrelated_scroll = new Event(`scroll`, { bubbles: true })
+      Object.defineProperty(unrelated_scroll, `target`, {
+        value: document.createElement(`div`),
+      })
+      globalThis.dispatchEvent(unrelated_scroll)
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLDivElement)
 
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: ancestor })
@@ -1307,10 +1291,12 @@ describe(`highlight_matches`, () => {
   it.each([
     // Early returns
     [`no query`, ``, `test`, false, undefined, undefined],
+    [`whitespace-only query`, ` \t\n `, `a b`, false, undefined, undefined],
 
     // Substring highlighting (fuzzy=false)
     [`substring match`, `test`, `<p>This is a test paragraph</p>`, false, 1, undefined],
     [`case insensitive`, `test`, `<p>Test with TEST and TeSt</p>`, false, 3, undefined],
+    [`no cross-node match`, `bc`, `<ul><li>ab</li><li>cd</li></ul>`, false, 0, undefined],
     [`no matches`, `xyz`, `<p>Content without search term</p>`, false, 0, undefined],
 
     // Fuzzy highlighting (fuzzy=true)
@@ -1321,17 +1307,6 @@ describe(`highlight_matches`, () => {
       `<div>Test content</div><li class="user-msg">Test hidden</li>`,
       false,
       1,
-      (node: Node) =>
-        node?.parentElement?.closest(`li.user-msg`)
-          ? NodeFilter.FILTER_REJECT
-          : NodeFilter.FILTER_ACCEPT,
-    ],
-    [
-      `fuzzy skip with node_filter`,
-      `test`,
-      `<div>Test content</div><li class="user-msg">Test hidden</li>`,
-      true,
-      4,
       (node: Node) =>
         node?.parentElement?.closest(`li.user-msg`)
           ? NodeFilter.FILTER_REJECT
@@ -1350,6 +1325,16 @@ describe(`highlight_matches`, () => {
       )
       expect(get_highlight_ranges()).toHaveLength(expected_range_count)
     }
+    cleanup?.()
+  })
+
+  it(`normalizes query and source whitespace without shifting ranges`, () => {
+    mock_element.textContent = `form\n submit`
+    const cleanup = highlight_matches({ query: ` form  submit ` })(mock_element)
+
+    expect(get_highlight_ranges().map((range) => range.toString())).toEqual([
+      `form\n submit`,
+    ])
     cleanup?.()
   })
 
@@ -1612,32 +1597,10 @@ describe(`sortable`, () => {
 
   const create_table = () => {
     const table = document.createElement(`table`)
-    const thead = document.createElement(`thead`)
-    const tr = document.createElement(`tr`)
-    ;[`Planet`, `Moons`].forEach((text) => {
-      const th = document.createElement(`th`)
-      th.textContent = text
-      tr.append(th)
-    })
-    thead.append(tr)
-    table.append(thead)
-
-    const tbody = document.createElement(`tbody`)
-    const rows = [
-      [`Mars`, `2`],
-      [`Earth`, `1`],
-      [`Jupiter`, `95`],
-    ]
-    rows.forEach(([planet, moons]) => {
-      const row = document.createElement(`tr`)
-      const td1 = document.createElement(`td`)
-      const td2 = document.createElement(`td`)
-      td1.textContent = planet
-      td2.textContent = moons
-      row.append(td1, td2)
-      tbody.append(row)
-    })
-    table.append(tbody)
+    table.innerHTML = `<thead><tr><th>Planet</th><th>Moons</th></tr></thead>
+      <tbody><tr><td>Mars</td><td>2</td></tr>
+      <tr><td>Earth</td><td>1</td></tr>
+      <tr><td>Jupiter</td><td>95</td></tr></tbody>`
     document.body.append(table)
     return table
   }
@@ -1668,28 +1631,6 @@ describe(`sortable`, () => {
     const table = create_table()
     expect(sortable({ disabled: true })(table)).toBeUndefined()
     expect(get_required_header(table).style.cursor).toBe(``)
-  })
-
-  it(`should add pointer cursor and fully restore on cleanup`, () => {
-    const table = create_table()
-    const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
-    headers[0].style.color = `blue`
-    const original_texts = headers.map((h) => h.textContent)
-
-    const cleanup = sortable()(table)
-    headers.forEach((header) => expect(header.style.cursor).toBe(`pointer`))
-
-    headers[0].dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-    expect(headers[0].textContent).toContain(`↑`)
-    expect(headers[0].classList.contains(`table-sort-asc`)).toBe(true)
-
-    cleanup?.()
-    headers.forEach((header, idx) => {
-      expect(header.textContent).toBe(original_texts[idx])
-      expect(header.classList.contains(`table-sort-asc`)).toBe(false)
-      expect(header.classList.contains(`table-sort-desc`)).toBe(false)
-    })
-    expect(headers[0].style.color).toBe(`blue`)
   })
 
   it(`should apply custom classes and sorted_style, reset other columns`, () => {
@@ -1794,10 +1735,13 @@ describe(`sortable`, () => {
 
   it(`should preserve header child markup across sort clicks and cleanup`, () => {
     const table = create_table()
-    const header = get_required_header(table)
+    const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
+    const [header] = headers
     header.innerHTML = `<span class="icon">▲</span> Planet`
+    header.style.color = `blue`
 
     const cleanup = sortable()(table)
+    expect(headers.map(({ style }) => style.cursor)).toEqual([`pointer`, `pointer`])
     header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
 
     expect(header.querySelector(`span.icon`)?.textContent).toBe(`▲`)
@@ -1811,6 +1755,14 @@ describe(`sortable`, () => {
 
     cleanup?.()
     expect(header.innerHTML).toBe(`<span class="icon">▲</span> Planet`)
+    expect(header.style.color).toBe(`blue`)
+    expect(headers.map(({ style }) => style.cursor)).toEqual([``, ``])
+    expect(
+      headers.some(
+        ({ classList }) =>
+          classList.contains(`table-sort-asc`) || classList.contains(`table-sort-desc`),
+      ),
+    ).toBe(false)
   })
 })
 

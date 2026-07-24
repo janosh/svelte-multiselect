@@ -290,7 +290,7 @@ describe(`pending_hmr_file lifecycle`, () => {
     expect(hot_send).not.toHaveBeenCalled()
   })
 
-  test(`triggers full-reload when examples actually change during HMR`, () => {
+  test(`triggers full-reload when examples change during HMR`, () => {
     const { plugin, ctx, id, hot_send, server } = setup_hmr()
 
     transform(plugin, ctx, make_code(`<div>V1</div>`), id)

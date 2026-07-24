@@ -71,7 +71,7 @@ When setting an integer value for `maxSelect` Multiselect will
 </form>
 ```
 
-Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
+`maxSelect={n}` and `required={m}` can be combined when `n >= m`.
 
 ```svelte example
 <script lang="ts">

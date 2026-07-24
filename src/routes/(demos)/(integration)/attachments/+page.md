@@ -286,9 +286,8 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
   })}
 >
   <p>
-    This paragraph will highlight occurrences of the query across element boundaries. Try
-    words like <em>ancient</em>, <strong>giant</strong>, or split-
-    <span>word</span> matches.
+    This paragraph highlights matches inside text and inline elements. Try words like
+    <em>ancient</em> or <strong>giant</strong>.
   </p>
   <p class="no-hl" style="opacity: 0.7">This line is excluded via node_filter.</p>
 </article>
@@ -308,13 +307,11 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
 </style>
 ```
 
-Use `css_class` to select a custom `::highlight()` rule, `duration_ms` to remove
-matches automatically, and `on_highlight` for optional range-based effects.
+Use `css_class` to select a custom `::highlight()` rule, `duration_ms` to remove matches
+automatically, and `on_highlight` for optional range-based effects.
 `scroll_to_match` scrolls the first match smoothly into view by default; set it to `false`
-to keep the viewport fixed, as this live-input demo does, or pass custom
-`ScrollIntoViewOptions`. `on_highlight` still receives ranges when the CSS Highlight API
-is unavailable and runs again when observed content changes. No styles or text effects
-are injected by the attachment.
+to keep the viewport fixed or pass custom `ScrollIntoViewOptions`. `on_highlight` still
+receives ranges without the CSS Highlight API and reruns when observed content changes.
 
 ### `click_outside`
 

@@ -49,7 +49,7 @@ Flexible, accessible navigation with dropdown support, mobile burger menu, and k
 
 ## Dropdown Menus
 
-Use tuple syntax `[parent, [children...]]` for nested routes. When the parent exists in children array, it becomes a clickable link. Otherwise, it's just a label.
+Use tuple syntax `[parent, [children...]]` for nested routes. When the parent exists in the children array, it becomes a clickable link. Otherwise, it is a non-clickable label.
 
 ```svelte example collapsible
 <script lang="ts">
@@ -59,7 +59,7 @@ Use tuple syntax `[parent, [children...]]` for nested routes. When the parent ex
   const routes = [
     '/',
     ['/docs', ['/docs', '/docs/api', '/docs/guides']], // /docs is clickable (in children)
-    ['/help', ['/help/faq', '/help/support']], // /help is just a label (not in children)
+    ['/help', ['/help/faq', '/help/support']], // /help is a label (not in children)
     '/about',
   ]
   const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
@@ -112,7 +112,7 @@ For full control, use objects with all available properties:
 - **Dropdowns**: `children` array creates nested menu
 - **Standalone separator**: `{ separator: true }` with no href
 - **Disabled with tooltip**: `disabled: 'Login required'` shows message on hover
-- **Disabled boolean**: `disabled: true` just grays out
+- **Disabled boolean**: `disabled: true` grays out
 - **Separator after item**: `separator: true` on a route object
 - **Tooltip**: `tooltip: 'text'` shows on-hover tooltip
 - **Right alignment**: `align: 'right'` pushes items to the right

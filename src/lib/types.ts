@@ -356,7 +356,7 @@ export type NavRouteObject = {
 } & ({ href: string } | { separator: true; href?: string })
 
 // NavRoute supports multiple formats for backward compatibility:
-// - string: just a path ("/about")
+// - string: path only ("/about")
 // - [string, string]: [path, custom_label] ("/about", "About Us")
 // - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs/intro"])
 // - NavRouteObject: full object with all options

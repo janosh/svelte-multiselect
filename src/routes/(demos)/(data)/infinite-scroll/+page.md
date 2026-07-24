@@ -4,7 +4,7 @@ For large datasets or server-side data, use `loadOptions` to dynamically load op
 
 ### Basic Example
 
-Just provide a `loadOptions` function that fetches data:
+Provide a `loadOptions` function that fetches data:
 
 ```svelte example id="load-basic"
 <script lang="ts">
@@ -35,7 +35,7 @@ Just provide a `loadOptions` function that fetches data:
 <MultiSelect loadOptions={load_options} placeholder="Search 10,000 items..." />
 ```
 
-That's it! No state management needed. The component handles:
+The component handles the required state management:
 
 - Loading initial options when dropdown opens
 - Loading more as user scrolls
@@ -224,7 +224,7 @@ By default, options load when the dropdown opens. Set `onOpen: false` to disable
 The `loadOptions` prop accepts either a function (simple) or an object (with config):
 
 ```typescript
-// Simple: just a function
+// Function shorthand
 loadOptions={myFetchFn}
 
 // With config: object with fetch + options

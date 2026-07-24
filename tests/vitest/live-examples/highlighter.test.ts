@@ -94,7 +94,7 @@ describe(`starry_night_highlighter`, () => {
         `su`,
       ),
     )
-    // Verify actual syntax highlighting produces spans (not just wrapper)
+    // Verify syntax highlighting produces spans, not only a wrapper.
     expect(result).toContain(`<span class="pl-`)
   })
 

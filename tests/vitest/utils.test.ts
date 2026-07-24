@@ -188,6 +188,8 @@ describe(`fuzzy_match`, () => {
     [`@`, `@user`, true],
     [`#`, `#hashtag`, true],
     [`/`, `path/to/file`, true],
+    [`form submit`, `form\n submit`, true],
+    [`a  b`, `a b`, true],
     // Numbers and unicode
     [`123`, `abc123def`, true],
     [`ñ`, `niño`, true],

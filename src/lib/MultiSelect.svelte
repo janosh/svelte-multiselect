@@ -308,7 +308,7 @@
       prev_selected = [...selected]
       return
     }
-    // Check if actually changed (avoid duplicates from reactive updates)
+    // Ignore duplicate reactive updates.
     if (utils.values_equal(selected, prev_selected)) return
 
     const next_stack = history_stack.slice(0, history_index + 1)
@@ -515,7 +515,7 @@
     new Map(navigable_options.map((opt, idx) => [opt, idx])),
   )
 
-  // Number of options actually rendered in the dropdown: maxOptions hides options
+  // Number of options rendered in the dropdown: maxOptions hides options
   // beyond the limit, so keyboard navigation must not activate them (otherwise
   // aria-activedescendant would point at a non-existent DOM id and Enter could
   // select an option the user can't see)
@@ -1438,7 +1438,7 @@
     // If no minSelect constraint, remove all
     const keep_count = minSelect ?? 0
     const removed_options = selected.slice(keep_count)
-    // Only fire events if something was actually removed
+    // Only fire events when options were removed.
     if (removed_options.length === 0) return
 
     // Keep the first minSelect items

@@ -130,7 +130,7 @@
     try {
       localStorage.setItem(recent_actions_key, JSON.stringify(recent_action_ids))
     } catch {
-      // storage full or unavailable - recents just won't persist
+      // Storage full or unavailable; recents do not persist.
     }
   }
 

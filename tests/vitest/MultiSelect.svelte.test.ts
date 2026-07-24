@@ -4386,7 +4386,7 @@ describe(`loadOptions feature`, () => {
     expect(load_options).toHaveBeenCalledTimes(capped_count + 1)
 
     // After scroll-triggered load resolves, auto-fill should resume
-    // (list still doesn't overflow) — this verifies counter was actually reset
+    // (list still doesn't overflow), verifying that the counter was reset.
     vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(100)
     resolvers[capped_count]({ options: [`Post-scroll`], hasMore: true })
     await flush_ticks()
@@ -7202,8 +7202,8 @@ async function paste_into(extra_props: Partial<MultiSelectProps>, paste_text: st
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   const event = make_paste_event(paste_text)
   input.dispatchEvent(event)
-  // no macrotask wait: sync-oncreate paste must complete synchronously (handle_paste
-  // only awaits add() when an async oncreate actually suspends it)
+  // No macrotask wait: sync-oncreate paste must complete synchronously. handle_paste
+  // only awaits add() when an async oncreate suspends.
   await tick()
   return { ...spies, props, event }
 }

@@ -467,18 +467,22 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     on_highlight,
   } = ops
 
+  const search = query.trim().toLowerCase().replaceAll(/\s+/gu, ` `)
   // if disabled or empty query, this instance owns no highlight
-  if (!query || disabled) return undefined
+  if (!search || disabled) return undefined
   const highlight_registry = globalThis.CSS?.highlights
   const highlight_owner = Symbol(css_class)
-  const search = query.toLowerCase()
+  const substring_pattern = new RegExp(
+    search.replaceAll(/[.*+?^${}()|[\]\\]/gu, `\\$&`).replaceAll(` `, `\\s+`),
+    `gu`,
+  )
   let active = true
   let did_scroll = false
   let effect_cleanup: (() => void) | undefined
   let timeout: ReturnType<typeof setTimeout> | undefined
 
-  const find_ranges = (el: Node): Range[] => {
-    const original_text = el.textContent
+  const find_ranges = (text_node: Node): Range[] => {
+    const original_text = text_node.textContent
     if (!original_text) return []
     const text = original_text.toLowerCase()
 
@@ -511,17 +515,18 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       }
     }
     const make_range = (start: number, end: number): Range[] => {
-      const orig_start = original_starts ? (original_starts[start] ?? node_length) : start
-      const orig_end = original_ends ? (original_ends[end - 1] ?? node_length) : end
-      if (orig_start >= node_length) return []
-      const range = new Range()
-      range.setStart(el, orig_start)
-      range.setEnd(el, Math.min(orig_end, node_length))
+      const original_start = original_starts
+        ? (original_starts[start] ?? node_length)
+        : start
+      const original_end = original_ends ? (original_ends[end - 1] ?? node_length) : end
+      if (original_start >= node_length) return []
+      const range = node.ownerDocument.createRange()
+      range.setStart(text_node, original_start)
+      range.setEnd(text_node, Math.min(original_end, node_length))
       return [range]
     }
 
     if (fuzzy) {
-      // Fuzzy highlighting: highlight individual characters that match in order.
       // null means not all characters matched, so highlight nothing.
       const matching_indices = fuzzy_match_indices(search, text)
       const unique_ranges = new Map<string, Range>()
@@ -531,18 +536,9 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       }
       return [...unique_ranges.values()]
     }
-    // Substring highlighting: highlight consecutive substrings
-    const indices = []
-    let start_pos = 0
-    while (start_pos < text.length) {
-      const index = text.indexOf(search, start_pos)
-      if (index === -1) break
-      indices.push(index)
-      start_pos = index + search.length
-    }
-
-    // create range object for each substring found in the text node
-    return indices.flatMap((index) => make_range(index, index + search.length))
+    return [...text.matchAll(substring_pattern)].flatMap((match) =>
+      make_range(match.index, match.index + match[0].length),
+    )
   }
 
   const update_highlight = () => {
@@ -553,9 +549,11 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
       effect_cleanup = undefined
       previous_cleanup?.()
       if (!active) return
-      const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-        acceptNode: node_filter,
-      })
+      const tree_walker = node.ownerDocument.createTreeWalker(
+        node,
+        NodeFilter.SHOW_TEXT,
+        { acceptNode: node_filter },
+      )
       const ranges: Range[] = []
       let text_node = tree_walker.nextNode()
       while (text_node) {

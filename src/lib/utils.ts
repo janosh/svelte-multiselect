@@ -148,7 +148,8 @@ export function fuzzy_match_indices(
   search_text: string,
   target_text: string,
 ): number[] | null {
-  const [search, target] = [search_text.toLowerCase(), target_text.toLowerCase()]
+  const search = search_text.toLowerCase().replaceAll(/\s+/gu, ` `)
+  const target = target_text.toLowerCase().replaceAll(/\s/gu, ` `)
   const indices: number[] = []
   let [search_idx, target_idx] = [0, 0]
 
