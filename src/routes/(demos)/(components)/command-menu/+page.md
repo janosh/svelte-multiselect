@@ -103,7 +103,7 @@ navigation and apply `highlight_matches` to the destination content:
 </style>
 ```
 
-See the [attachments demo](../attachments) for `highlight_matches` options and effects.
+See the [attachments demo](attachments) for `highlight_matches` options and effects.
 Stemmed Pagefind results may have no exact substring.
 
 ## Shortcuts, Descriptions & Recent Actions

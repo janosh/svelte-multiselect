@@ -15,7 +15,14 @@
 
   function handle_modal_keydown(event: KeyboardEvent): void {
     if (!open_modal) return
-    if (event.key === `Escape`) return close_modal()
+    if (event.key === `Escape`) {
+      const multiselect =
+        event.target instanceof HTMLElement
+          ? event.target.closest(`div.multiselect`)
+          : null
+      if (multiselect?.querySelector(`[role="combobox"][aria-expanded="true"]`)) return
+      return close_modal()
+    }
     if (event.key !== `Tab` || !modal_element) return
 
     const focusable_elements = [
