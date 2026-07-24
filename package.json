@@ -21,10 +21,20 @@
   "types": "./dist/index.d.ts",
   "svelte": "./dist/index.js",
   "exports": {
+    "./CommandMenu.svelte": {
+      "types": "./dist/CommandMenu.svelte.d.ts",
+      "svelte": "./dist/CommandMenu.svelte",
+      "default": "./dist/CommandMenu.svelte"
+    },
     "./MultiSelect.svelte": {
       "types": "./dist/MultiSelect.svelte.d.ts",
       "svelte": "./dist/MultiSelect.svelte",
       "default": "./dist/MultiSelect.svelte"
+    },
+    "./PageSearch.svelte": {
+      "types": "./dist/PageSearch.svelte.d.ts",
+      "svelte": "./dist/PageSearch.svelte",
+      "default": "./dist/PageSearch.svelte"
     },
     ".": {
       "types": "./dist/index.d.ts",
@@ -43,6 +53,10 @@
       "types": "./dist/heading-anchors.d.ts",
       "default": "./dist/heading-anchors.js"
     },
+    "./types": {
+      "types": "./dist/types.d.ts",
+      "default": "./dist/types.js"
+    },
     "./live-examples": {
       "types": "./dist/live-examples/index.d.ts",
       "default": "./dist/live-examples/index.js"
@@ -52,6 +66,7 @@
     "access": "public"
   },
   "scripts": {
+    "build:site": "vp build && pagefind --site build --exclude-selectors \"pre, details\"",
     "test": "vp test --run && playwright test",
     "test:coverage": "vp test --run --coverage",
     "test:package": "npm run package && npm pack --dry-run && vp build --config tests/package-smoke/vite.config.ts",
@@ -63,19 +78,21 @@
     "@janosh/vite-config": "github:janosh/dotfiles",
     "@playwright/test": "^1.61.1",
     "@sveltejs/adapter-static": "^3.0.10",
-    "@sveltejs/kit": "^2.69.2",
+    "@sveltejs/kit": "^2.70.1",
     "@sveltejs/package": "2.5.8",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
     "@types/node": "^26.1.1",
+    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
     "@vitest/coverage-v8": "4.1.10",
     "@wooorm/starry-night": "^3.10.0",
-    "happy-dom": "^20.10.6",
-    "mdsvex": "^0.12.7",
-    "svelte": "^5.56.4",
+    "happy-dom": "^20.11.0",
+    "mdsvex": "^0.12.8",
+    "pagefind": "^1.5.2",
+    "svelte": "^5.56.7",
     "svelte-toc": "^0.7.0",
     "typescript": "^6.0.3",
-    "vite": "^8.1.4",
-    "vite-plus": "0.2.4"
+    "vite": "^8.1.5",
+    "vite-plus": "0.2.5"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",

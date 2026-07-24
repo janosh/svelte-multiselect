@@ -10,7 +10,106 @@
 const heading_regex_line_start =
   /^(?<indent>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/gimu
 const heading_regex_after_tag =
-  /(?<gt>>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
+  /(?<=>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
+
+type TextInsertion = { index: number; text: string }
+
+const BASE64 = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
+
+const encode_vlq = (value: number): string => {
+  let encoded = ``
+  let remaining = value < 0 ? (-value << 1) | 1 : value << 1
+  do {
+    let digit = remaining & 31
+    remaining >>>= 5
+    if (remaining) digit |= 32
+    encoded += BASE64[digit]
+  } while (remaining)
+  return encoded
+}
+
+// Apply newline-free insertions and map every unchanged span back to its exact
+// original position. Inserted text maps to the insertion point.
+function insert_with_source_map(
+  source: string,
+  insertions: TextInsertion[],
+  filename = `source.svelte`,
+) {
+  const sorted_insertions = insertions.toSorted((left, right) => left.index - right.index)
+  let source_cursor = 0
+  let code = ``
+  for (const insertion of sorted_insertions) {
+    if (
+      insertion.index < source_cursor ||
+      insertion.index > source.length ||
+      insertion.text.includes(`\n`)
+    ) {
+      throw new RangeError(`heading_ids: invalid insertion at ${insertion.index}`)
+    }
+    code += source.slice(source_cursor, insertion.index) + insertion.text
+    source_cursor = insertion.index
+  }
+  code += source.slice(source_cursor)
+
+  let insertion_idx = 0
+  let original_offset = 0
+  let previous_original_line = 0
+  let previous_original_column = 0
+  const mappings = source
+    .split(`\n`)
+    .map((line, original_line) => {
+      const segments: [generated_column: number, original_column: number][] = [[0, 0]]
+      const line_end = original_offset + line.length
+      let inserted_columns = 0
+      while (
+        insertion_idx < sorted_insertions.length &&
+        sorted_insertions[insertion_idx].index <= line_end
+      ) {
+        const insertion = sorted_insertions[insertion_idx]
+        const original_column = insertion.index - original_offset
+        const generated_column = original_column + inserted_columns
+        segments.push(
+          [generated_column, original_column],
+          [generated_column + insertion.text.length, original_column],
+        )
+        inserted_columns += insertion.text.length
+        insertion_idx++
+      }
+      const generated_line_end = line.length + inserted_columns
+      if (inserted_columns && segments.at(-1)?.[0] !== generated_line_end)
+        segments.push([generated_line_end, line.length])
+      original_offset = line_end + 1
+      let previous_generated_column = 0
+      return segments
+        .map(([generated_column, original_column]) => {
+          const mapping = [
+            generated_column - previous_generated_column,
+            0,
+            original_line - previous_original_line,
+            original_column - previous_original_column,
+          ]
+            .map(encode_vlq)
+            .join(``)
+          previous_generated_column = generated_column
+          previous_original_line = original_line
+          previous_original_column = original_column
+          return mapping
+        })
+        .join(`,`)
+    })
+    .join(`;`)
+
+  return {
+    code,
+    map: {
+      version: 3,
+      names: [],
+      sources: [filename],
+      sourcesContent: [source],
+      mappings,
+    },
+  }
+}
 
 // Remove Svelte expressions handling nested braces (e.g., {fn({a: 1})})
 // Treats unmatched } as literal text to avoid dropping content
@@ -28,9 +127,10 @@ function strip_svelte_expressions(str: string): string {
 // Generate URL-friendly slug from text
 const slugify = (text: string): string =>
   text
+    .normalize(`NFC`)
     .toLowerCase()
     .replaceAll(/\s+/gu, `-`)
-    .replaceAll(/[^\w-]/gu, ``)
+    .replaceAll(/[^\p{L}\p{M}\p{N}_-]/gu, ``)
     .replaceAll(/-+/gu, `-`) // collapse multiple dashes
     .replaceAll(/^-|-$/gu, ``) // trim leading/trailing dashes
 
@@ -38,11 +138,12 @@ const slugify = (text: string): string =>
 export function heading_ids() {
   return {
     name: `heading-ids`,
-    markup({ content }: { content: string }) {
+    markup({ content, filename }: { content: string; filename?: string }) {
       const seen_ids = new Map<string, number>()
-      let result = content
+      const processed_heading_starts = new Set<number>()
+      const insertions: TextInsertion[] = []
 
-      const process_heading = (attrs: string, inner: string): string | null => {
+      const get_heading_id = (attrs: string, inner: string): string | null => {
         // Skip if already has an id (use ^|\s to avoid matching data-id, aria-id, etc.)
         if (/(?:^|\s)id\s*=/u.test(attrs)) return null
 
@@ -57,25 +158,33 @@ export function heading_ids() {
         seen_ids.set(base_id, count + 1)
         return count ? `${base_id}-${count}` : base_id
       }
-      // Rewrite a matched heading with a slug id (or return it unchanged). Pass 1 matches
-      // at line start (.svelte files); pass 2 after a closing tag (mdsvex single-line output).
-      const build_heading = (
-        match: string,
-        prefix: string,
-        tag: string,
-        attrs: string,
-        inner: string,
-      ) => {
-        const id = process_heading(attrs, inner)
-        return id ? `${prefix}<${tag} id="${id}"${attrs}>${inner}</${tag}>` : match
+      const add_heading_ids = (heading_regex: RegExp): void => {
+        for (const match of content.matchAll(heading_regex)) {
+          const { attrs, inner, tag } = match.groups ?? {}
+          if (
+            match.index === undefined ||
+            attrs === undefined ||
+            inner === undefined ||
+            !tag
+          )
+            continue
+          const heading_start = match.index + match[0].indexOf(`<${tag}`)
+          if (processed_heading_starts.has(heading_start)) continue
+          const id = get_heading_id(attrs, inner)
+          if (!id) continue
+          processed_heading_starts.add(heading_start)
+          insertions.push({
+            index: heading_start + tag.length + 1,
+            text: ` id="${id}"`,
+          })
+        }
       }
-      result = result
-        .replace(heading_regex_line_start, build_heading)
-        .replace(heading_regex_after_tag, (match, gt, space, tag, attrs, inner) =>
-          build_heading(match, `${gt}${space}`, tag, attrs, inner),
-        )
 
-      return { code: result }
+      // Pass 1 matches line starts (.svelte); pass 2 matches after tags (mdsvex output).
+      add_heading_ids(heading_regex_line_start)
+      add_heading_ids(heading_regex_after_tag)
+
+      return insert_with_source_map(content, insertions, filename)
     },
   }
 }

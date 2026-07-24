@@ -12,7 +12,7 @@
     Edit this page
   </a>
   <small title="For keyboard-only site navigation">
-    <kbd>cmd+k</kbd> to open nav palette.
+    <kbd>cmd+k</kbd> to open site search.
   </small>
 </footer>
 

@@ -9,6 +9,7 @@ import {
   is_object,
   matches_shortcut,
   parse_shortcut,
+  slug_to_title,
 } from '$lib/utils'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
@@ -45,6 +46,10 @@ describe(`get_uuid`, () => {
       expect(new Set(uuids).size).toBe(100)
     })
   })
+})
+
+test(`slug_to_title capitalizes Unicode slug words`, () => {
+  expect(slug_to_title(`über-café`)).toBe(`Über Café`)
 })
 
 describe(`get_label`, () => {
@@ -183,6 +188,8 @@ describe(`fuzzy_match`, () => {
     [`@`, `@user`, true],
     [`#`, `#hashtag`, true],
     [`/`, `path/to/file`, true],
+    [`form submit`, `form\n submit`, true],
+    [`a  b`, `a b`, true],
     // Numbers and unicode
     [`123`, `abc123def`, true],
     [`ñ`, `niño`, true],

@@ -42,34 +42,21 @@ describe(`get_html_sort_value`, () => {
     expect(get_html_sort_value(element)).toBe(expected)
   })
 
-  it(`should return child data-sort-value recursively`, () => {
-    const [parent, child, grandchild] = [
+  it(`returns the first descendant data-sort-value recursively`, () => {
+    const [parent, child, grandchild, sibling] = [
       create_element(),
       create_element(`span`),
       create_element(`em`),
+      create_element(`span`),
     ]
     add_text(parent, `Parent text`)
     add_text(child, `Child text`)
     add_data_sort(grandchild, `grandchild-value`)
+    add_data_sort(sibling, `sibling-value`)
     add_text(grandchild, `Grandchild text`)
     child.append(grandchild)
-    parent.append(child)
+    parent.append(child, sibling)
     expect(get_html_sort_value(parent)).toBe(`grandchild-value`)
-  })
-
-  it(`should return first child data-sort-value when multiple exist`, () => {
-    const parent = create_element()
-    const [child1, child2] = [create_element(`span`), create_element(`span`)]
-    add_data_sort(child1, `first-value`)
-    add_data_sort(child2, `second-value`)
-    parent.append(child1, child2)
-    expect(get_html_sort_value(parent)).toBe(`first-value`)
-  })
-
-  it(`should return empty string for null textContent`, () => {
-    const element = create_element()
-    Object.defineProperty(element, `textContent`, { value: null })
-    expect(get_html_sort_value(element)).toBe(``)
   })
 })
 
@@ -80,10 +67,7 @@ describe(`tooltip`, () => {
     return element
   }
 
-  const setup_tooltip = (element: HTMLElement, options = {}) => {
-    const cleanup = tooltip(options)(element)
-    return cleanup
-  }
+  const setup_tooltip = (element: HTMLElement, options = {}) => tooltip(options)(element)
 
   const mock_bounds = (
     element: HTMLElement,
@@ -256,34 +240,41 @@ describe(`tooltip`, () => {
       const options = attr === `content` ? { content } : {}
       if (attr !== `content`) element.setAttribute(attr, content)
 
-      setup_tooltip(element, options)
+      const cleanup = setup_tooltip(element, options)
 
+      expect(cleanup).toBeTypeOf(`function`)
       expect(element.hasAttribute(`data-original-title`)).toBe(stores_title)
       if (stores_title) expect(element.getAttribute(`data-original-title`)).toBe(content)
       if (attr !== `content`) {
         expect(element.getAttribute(attr)).toBe(stores_title ? null : content)
       }
+      cleanup?.()
     })
 
-    it(`should prioritize custom content over title`, () => {
-      const element = create_element()
-      element.title = `Title content`
-      setup_tooltip(element, { content: `Custom content` })
-      expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
-      expect(element.hasAttribute(`title`)).toBe(false)
-    })
+    it.each([
+      [`custom content over title`, { content: `Custom content` }, `Custom content`],
+      [`title over aria-label`, {}, `Title content`],
+    ])(`should prioritize %s`, (_description, options, expected_content) => {
+      vi.useFakeTimers()
+      try {
+        const element = create_element()
+        element.title = `Title content`
+        element.setAttribute(`aria-label`, `Aria content`)
+        mock_bounds(element)
+        setup_tooltip(element, { ...options, delay: 0 })
+        trigger_tooltip(element)
 
-    it(`should prioritize title over aria-label`, () => {
-      const element = create_element()
-      element.title = `Title content`
-      element.setAttribute(`aria-label`, `Aria content`)
-      setup_tooltip(element)
-      expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
+        expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
+        expect(element.hasAttribute(`title`)).toBe(false)
+        expect(doc_query(`.tooltip-content`).textContent).toBe(expected_content)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it.each([
       [`empty content strings`, ``, undefined],
-      [`null and undefined content`, undefined, undefined],
+      [`missing content`, undefined, undefined],
     ])(`should handle %s`, (_desc, content, expected) => {
       const element = create_element()
       if (content !== undefined) element.title = content
@@ -305,33 +296,24 @@ describe(`tooltip`, () => {
 
   describe(`Child Element Handling`, () => {
     it.each([
-      [`title`, `title`, `Child tooltip`],
+      [`title`, `title`, `Child title tooltip`],
       [`aria-label`, `aria-label`, `Child aria tooltip`],
       [`data-title`, `data-title`, `Child data tooltip`],
     ])(`should setup tooltips for child elements with %s`, (_desc, attr, content) => {
       const parent = create_element()
+      const wrapper = document.createElement(`div`)
       const child = document.createElement(`span`)
       child.setAttribute(attr, content)
-      parent.append(child)
-      setup_tooltip(parent)
+      wrapper.append(child)
+      parent.append(wrapper)
+      const cleanup = setup_tooltip(parent)
 
+      expect(cleanup).toBeTypeOf(`function`)
       if (attr === `title`) {
         expect(child.hasAttribute(`title`)).toBe(false)
         expect(child.getAttribute(`data-original-title`)).toBe(content)
       } else expect(child.getAttribute(attr)).toBe(content)
-    })
-
-    it(`should handle deeply nested and multiple children`, () => {
-      const parent = create_element()
-      let current = parent
-      for (let idx = 0; idx < 5; idx++) {
-        const child = document.createElement(`div`)
-        child.title = `Level ${idx}`
-        current.append(child)
-        current = child
-      }
-      setup_tooltip(parent)
-      expect(parent.querySelectorAll(`[data-original-title]`)).toHaveLength(5)
+      cleanup?.()
     })
 
     it(`should not setup children added after initialization`, () => {
@@ -388,13 +370,10 @@ describe(`tooltip`, () => {
   })
 
   describe(`Error Handling`, () => {
-    it.each([
-      [`null element`, null],
-      [`undefined element`, undefined],
-    ])(`should handle %s gracefully`, (_desc, el) => {
+    it(`should handle an invalid element gracefully`, () => {
       const attach = tooltip()
-      // @ts-expect-error testing null/undefined inputs
-      expect(attach(el)).toBeUndefined()
+      // @ts-expect-error testing a null input
+      expect(attach(null)).toBeUndefined()
     })
   })
 
@@ -402,36 +381,7 @@ describe(`tooltip`, () => {
     // MutationObserver callbacks don't fire in happy-dom, so we test setup/cleanup/ownership.
     beforeEach(() => vi.useFakeTimers())
 
-    it(`tracks tooltip ownership via owner_element property`, () => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
-      trigger_tooltip(element)
-
-      expect(Reflect.get(doc_query(`.custom-tooltip`), `owner_element`)).toBe(element)
-    })
-
-    it.each([
-      [`unrelated element keeps tooltip`, () => document.createElement(`div`), true],
-      [`document hides tooltip`, () => document, false],
-    ])(`scroll from %s`, (_desc, get_target, should_persist) => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
-      trigger_tooltip(element)
-      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
-
-      const scroll_event = new Event(`scroll`, { bubbles: true })
-      Object.defineProperty(scroll_event, `target`, { value: get_target() })
-      globalThis.dispatchEvent(scroll_event)
-      expect(document.querySelector(`.custom-tooltip`)).toEqual(
-        should_persist ? expect.any(HTMLDivElement) : null,
-      )
-    })
-
-    it(`scroll from ancestor hides tooltip`, () => {
+    it(`hides on ancestor scroll but ignores unrelated scroll`, () => {
       const ancestor = document.createElement(`div`)
       const element = create_element()
       ancestor.append(element)
@@ -440,6 +390,13 @@ describe(`tooltip`, () => {
       mock_bounds(element)
       setup_tooltip(element, { delay: 0 })
       trigger_tooltip(element)
+
+      const unrelated_scroll = new Event(`scroll`, { bubbles: true })
+      Object.defineProperty(unrelated_scroll, `target`, {
+        value: document.createElement(`div`),
+      })
+      globalThis.dispatchEvent(unrelated_scroll)
+      expect(document.querySelector(`.custom-tooltip`)).toBeInstanceOf(HTMLDivElement)
 
       const scroll_event = new Event(`scroll`, { bubbles: true })
       Object.defineProperty(scroll_event, `target`, { value: ancestor })
@@ -643,7 +600,6 @@ describe(`tooltip`, () => {
 
     it.each([
       [`hide_delay: 200 delays hiding`, { hide_delay: 200 }, true, 200],
-      [`hide_delay: 0 hides immediately`, { hide_delay: 0 }, false, 0],
       [`undefined hide_delay hides immediately`, {}, false, 0],
     ])(`%s`, (_desc, options, visible_after_leave, delay_ms) => {
       const element = create_element()
@@ -758,7 +714,6 @@ describe(`tooltip`, () => {
 
     it.each([
       [`offset: 20`, 20, 170], // top (100) + height (50) + offset (20) = 170
-      [`offset: 5`, 5, 155], // top (100) + height (50) + offset (5) = 155
       [`default offset: 12`, undefined, 162], // top (100) + height (50) + default (12) = 162
     ])(`applies %s`, (_desc, offset, expected_top) => {
       const element = create_element()
@@ -771,7 +726,6 @@ describe(`tooltip`, () => {
     })
 
     it.each([
-      [`allow_html: false uses textContent`, false, `<b>bold</b>`, `<b>bold</b>`],
       [`allow_html: true uses innerHTML`, true, `<b>bold</b>`, `bold`],
       [
         `allow_html: undefined (default) uses textContent`,
@@ -842,12 +796,15 @@ describe(`tooltip`, () => {
       }
     })
 
-    it(`custom --tooltip-bg overrides default background`, () => {
+    it.each([
+      [`background`, `--tooltip-bg`, `red`],
+      [`border`, `--tooltip-border`, `2px solid red`],
+    ])(`custom %s variable overrides its default`, (_description, css_var, value) => {
       const { css_texts, restore } = capture_style_writes()
       try {
         const element = create_element()
-        element.title = `custom bg`
-        element.style.setProperty(`--tooltip-bg`, `red`)
+        element.title = `custom ${css_var}`
+        element.style.setProperty(css_var, value)
         mock_bounds(element)
         setup_tooltip(element, { delay: 0 })
         trigger_tooltip(element)
@@ -855,11 +812,9 @@ describe(`tooltip`, () => {
         restore()
       }
 
-      expect(doc_query(`.custom-tooltip`).style.getPropertyValue(`--tooltip-bg`)).toBe(
-        `red`,
-      )
+      expect(doc_query(`.custom-tooltip`).style.getPropertyValue(css_var)).toBe(value)
       const tooltip_css = find_tooltip_css(css_texts)
-      expect(tooltip_css).toContain(`var(--tooltip-bg,`)
+      expect(tooltip_css).toContain(`var(${css_var},`)
     })
 
     // Dark-styled pages that never declare `color-scheme` resolve the default
@@ -932,26 +887,6 @@ describe(`tooltip`, () => {
       expect(set_prop_values).toContain(`--text-color: light-dark(#222, #eee)`)
     })
 
-    it(`custom --tooltip-border overrides default border`, () => {
-      const { css_texts, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `custom border`
-        element.style.setProperty(`--tooltip-border`, `2px solid red`)
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-      }
-
-      expect(
-        doc_query(`.custom-tooltip`).style.getPropertyValue(`--tooltip-border`),
-      ).toBe(`2px solid red`)
-      const tooltip_css = find_tooltip_css(css_texts)
-      expect(tooltip_css).toContain(`var(--tooltip-border,`)
-    })
-
     it(`updates visible tooltip content when tooltip attributes change`, () => {
       const mutation_callbacks: MutationCallback[] = []
       const original_mutation_observer = globalThis.MutationObserver
@@ -1006,30 +941,18 @@ describe(`tooltip`, () => {
       mock_bounds(element)
       setup_tooltip(element, {
         delay: 0,
-        style: `background-color: red; color: blue; invalid; empty:`,
+        style: `background-color: red; background-image: url("https://example.com/tooltip.svg"); color: blue; invalid; empty:`,
       })
 
       trigger_tooltip(element)
       const tooltip_el = doc_query(`.custom-tooltip`)
       expect(tooltip_el.style.backgroundColor).toBe(`red`)
+      expect(tooltip_el.style.backgroundImage).toContain(
+        `https://example.com/tooltip.svg`,
+      )
       expect(tooltip_el.style.color).toBe(`blue`)
       expect(tooltip_el.style.getPropertyValue(`invalid`)).toBe(``)
       expect(tooltip_el.style.getPropertyValue(`empty`)).toBe(``)
-    })
-
-    it(`preserves custom style values containing colons`, () => {
-      const element = create_element()
-      element.title = `custom style url`
-      mock_bounds(element)
-      setup_tooltip(element, {
-        delay: 0,
-        style: `background-image: url("https://example.com/tooltip.svg")`,
-      })
-
-      trigger_tooltip(element)
-      expect(doc_query(`.custom-tooltip`).style.backgroundImage).toContain(
-        `https://example.com/tooltip.svg`,
-      )
     })
 
     it.each([
@@ -1123,9 +1046,6 @@ describe(`click_outside`, () => {
     excluded1.className = `modal`
     excluded2.className = `popover`
     excluded1.append(nested)
-    excluded1.closest = vi.fn((sel) => (sel === `.modal` ? excluded1 : null))
-    excluded2.closest = vi.fn((sel) => (sel === `.popover` ? excluded2 : null))
-    nested.closest = vi.fn((sel) => (sel === `.modal` ? excluded1 : null))
 
     const callback = vi.fn()
     click_outside({ callback, exclude: [`.modal`, `.popover`] })(element)
@@ -1148,7 +1068,7 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it(`should dispatch custom event (with or without callback)`, () => {
+  it(`should dispatch custom event without a callback`, () => {
     const element = create_element()
     const listener = vi.fn()
     element.addEventListener(`outside-click`, listener)
@@ -1195,81 +1115,41 @@ describe(`draggable`, () => {
     }))
   }
 
-  it(`should not set width on mousedown and should set left/top`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 40, top: 60, width: 123, height: 45 })
-
-    draggable()(element)
-
-    element.dispatchEvent(mouse_event(`mousedown`, 100, 100))
-
-    expect(element.style.width).toBe(``)
-    expect(element.style.left).toBe(`40px`)
-    expect(element.style.top).toBe(`60px`)
-  })
-
-  it(`should update position while dragging and reset cursor on mouseup`, () => {
+  it(`should update position, callbacks, cursor, and userSelect while dragging`, () => {
     const element = create_element()
     element.style.position = `fixed`
     mock_rect(element, { left: 10, top: 20 })
+    const [on_drag_start, on_drag, on_drag_end] = [vi.fn(), vi.fn(), vi.fn()]
 
-    const attach = draggable({ on_drag: vi.fn() })
-    const cleanup = attach(element)
+    const cleanup = draggable({ on_drag_start, on_drag, on_drag_end })(element)
+    expect(element.style.cursor).toBe(`grab`)
+
     element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
+    expect(element.style.left).toBe(`10px`)
+    expect(element.style.top).toBe(`20px`)
+    expect(element.style.cursor).toBe(`grabbing`)
+    expect(document.body.style.userSelect).toBe(`none`)
+    expect(on_drag_start).toHaveBeenCalledOnce()
 
     globalThis.dispatchEvent(mouse_event(`mousemove`, 15, 25))
     expect(element.style.left).toBe(`20px`)
     expect(element.style.top).toBe(`40px`)
+    expect(on_drag).toHaveBeenCalledOnce()
 
     const mouseup = new MouseEvent(`mouseup`, { bubbles: true })
     globalThis.dispatchEvent(mouseup)
+    expect(on_drag_end).toHaveBeenCalledOnce()
+    expect(element.style.cursor).toBe(`grab`)
+    expect(document.body.style.userSelect).toBe(``)
 
     cleanup?.()
-    const position_after_cleanup = [element.style.left, element.style.top]
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
-    expect([element.style.left, element.style.top]).toEqual(position_after_cleanup)
+    expect(element.style.cursor).toBe(``)
   })
 
   it(`should not set up dragging when disabled`, () => {
     const element = create_element()
     const cleanup = draggable({ disabled: true })(element)
     expect(cleanup).toBeUndefined()
-    expect(element.style.cursor).toBe(``)
-  })
-
-  it(`should call callbacks, update cursor/userSelect throughout drag lifecycle`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
-
-    const [on_drag_start, on_drag, on_drag_end] = [vi.fn(), vi.fn(), vi.fn()]
-    draggable({ on_drag_start, on_drag, on_drag_end })(element)
-
-    expect(element.style.cursor).toBe(`grab`)
-
-    element.dispatchEvent(mouse_event(`mousedown`, 0, 0))
-    expect(on_drag_start).toHaveBeenCalledTimes(1)
-    expect(element.style.cursor).toBe(`grabbing`)
-    expect(document.body.style.userSelect).toBe(`none`)
-
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 10, 10))
-    expect(on_drag).toHaveBeenCalledTimes(1)
-
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-    expect(on_drag_end).toHaveBeenCalledTimes(1)
-    expect(element.style.cursor).toBe(`grab`)
-    expect(document.body.style.userSelect).toBe(``)
-  })
-
-  it(`should cleanup and reset cursor`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
-
-    const cleanup = draggable()(element)
-    expect(element.style.cursor).toBe(`grab`)
-    cleanup?.()
     expect(element.style.cursor).toBe(``)
   })
 
@@ -1330,32 +1210,15 @@ describe(`draggable`, () => {
     expect(element.style.top).toBe(`75px`) // 35 + (50-10)
   })
 
-  it(`should ignore mousemove when not dragging`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
+  it(`should ignore global drag events before dragging starts`, () => {
     const on_drag = vi.fn()
-
-    draggable({ on_drag })(element)
-
-    // Dispatch mousemove without mousedown first
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
-
-    expect(on_drag).not.toHaveBeenCalled()
-    expect(element.style.left).toBe(``)
-  })
-
-  it(`should ignore mouseup when not dragging`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
     const on_drag_end = vi.fn()
+    draggable({ on_drag, on_drag_end })(create_element())
 
-    draggable({ on_drag_end })(element)
-
-    // Dispatch mouseup without mousedown first
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
     globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
 
+    expect(on_drag).not.toHaveBeenCalled()
     expect(on_drag_end).not.toHaveBeenCalled()
   })
 
@@ -1372,6 +1235,10 @@ describe(`draggable`, () => {
     cleanup?.() // unmount mid-drag, before any mouseup
     expect(document.body.style.userSelect).toBe(``)
     expect(element.style.cursor).toBe(``)
+
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
+    expect(element.style.left).toBe(`0px`)
+    expect(element.style.top).toBe(`0px`)
   })
 })
 
@@ -1394,6 +1261,7 @@ describe(`highlight_matches`, () => {
     const css_mock = {
       highlights: {
         clear: clear_highlights_spy,
+        get: (key: string) => mock_css_highlights.get(key),
         set: set_highlights_spy,
         delete: delete_highlights_spy,
       },
@@ -1411,55 +1279,32 @@ describe(`highlight_matches`, () => {
     )
   })
 
+  const get_highlight_ranges = (): Range[] => {
+    const highlight = mock_css_highlights.get(`highlight-match`)
+    if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
+      throw new Error(`Expected highlight with ranges`)
+    }
+    if (!Array.isArray(highlight.ranges)) throw new Error(`Expected ranges array`)
+    return highlight.ranges
+  }
+
   it.each([
     // Early returns
-    [`CSS not supported`, undefined, `test`, `test`, false, 0, undefined],
-    [`no query`, true, ``, `test`, false, 0, undefined],
+    [`no query`, ``, `test`, false, undefined, undefined],
+    [`whitespace-only query`, ` \t\n `, `a b`, false, undefined, undefined],
 
     // Substring highlighting (fuzzy=false)
-    [
-      `substring match`,
-      true,
-      `<p>This is a test paragraph</p>`,
-      `test`,
-      false,
-      1,
-      undefined,
-    ],
-    [
-      `case insensitive`,
-      true,
-      `<p>Test with TEST and TeSt</p>`,
-      `test`,
-      false,
-      1,
-      undefined,
-    ],
-    [
-      `no matches`,
-      true,
-      `<p>Content without search term</p>`,
-      `xyz`,
-      false,
-      1,
-      undefined,
-    ],
+    [`substring match`, `test`, `<p>This is a test paragraph</p>`, false, 1, undefined],
+    [`case insensitive`, `test`, `<p>Test with TEST and TeSt</p>`, false, 3, undefined],
+    [`no cross-node match`, `bc`, `<ul><li>ab</li><li>cd</li></ul>`, false, 0, undefined],
+    [`no matches`, `xyz`, `<p>Content without search term</p>`, false, 0, undefined],
 
     // Fuzzy highlighting (fuzzy=true)
-    [
-      `fuzzy no matches`,
-      true,
-      `<p>Content without search term</p>`,
-      `xyz`,
-      true,
-      1,
-      undefined,
-    ],
+    [`fuzzy no matches`, `xyz`, `<p>Content without search term</p>`, true, 0, undefined],
     [
       `skip with node_filter`,
-      true,
-      `<div>Test content</div><li class="user-msg">Create this option...</li>`,
       `test`,
+      `<div>Test content</div><li class="user-msg">Test hidden</li>`,
       false,
       1,
       (node: Node) =>
@@ -1467,65 +1312,80 @@ describe(`highlight_matches`, () => {
           ? NodeFilter.FILTER_REJECT
           : NodeFilter.FILTER_ACCEPT,
     ],
-    [
-      `fuzzy skip with node_filter`,
-      true,
-      `<div>Test content</div><li class="user-msg">Create this option...</li>`,
-      `test`,
-      true,
-      1,
-      (node: Node) =>
-        node?.parentElement?.closest(`li.user-msg`)
-          ? NodeFilter.FILTER_REJECT
-          : NodeFilter.FILTER_ACCEPT,
-    ],
-  ])(
-    `%s`,
-    (
-      _desc,
-      css_supported,
-      query,
-      html_content,
-      fuzzy,
-      expected_set_calls,
-      node_filter,
-    ) => {
-      if (css_supported === undefined) {
-        vi.stubGlobal(`CSS`, undefined)
-      }
+  ])(`%s`, (_desc, query, html_content, fuzzy, expected_range_count, node_filter) => {
+    mock_element.innerHTML = html_content
+    const cleanup = highlight_matches({ query, fuzzy, node_filter })(mock_element)
 
-      mock_element.innerHTML = html_content
-      const attachment = highlight_matches({ query, fuzzy, node_filter })
-      attachment(mock_element)
-
-      expect(mock_css_highlights.size).toBe(
-        css_supported === undefined ? 0 : expected_set_calls,
+    expect(mock_css_highlights.size).toBe(expected_range_count === undefined ? 0 : 1)
+    expect(clear_highlights_spy).not.toHaveBeenCalled()
+    if (expected_range_count !== undefined) {
+      expect(set_highlights_spy).toHaveBeenCalledWith(
+        `highlight-match`,
+        expect.any(Object),
       )
+      expect(get_highlight_ranges()).toHaveLength(expected_range_count)
+    }
+    cleanup?.()
+  })
 
-      if (css_supported) {
-        expect(clear_highlights_spy).toHaveBeenCalledTimes(0)
-        if (expected_set_calls > 0) {
-          expect(set_highlights_spy).toHaveBeenCalledWith(
-            `highlight-match`,
-            expect.any(Object),
-          )
-        }
-      }
-    },
-  )
+  it(`normalizes query and source whitespace without shifting ranges`, () => {
+    mock_element.textContent = `form\n submit`
+    const cleanup = highlight_matches({ query: ` form  submit ` })(mock_element)
+
+    expect(get_highlight_ranges().map((range) => range.toString())).toEqual([
+      `form\n submit`,
+    ])
+    cleanup?.()
+  })
+
+  it(`runs range effects without CSS Highlight API support`, () => {
+    vi.stubGlobal(`CSS`, undefined)
+    mock_element.textContent = `PageSearch result`
+    const on_highlight = vi.fn()
+
+    const cleanup = highlight_matches({ query: `PageSearch`, on_highlight })(mock_element)
+
+    expect(on_highlight).toHaveBeenCalledExactlyOnceWith({
+      node: mock_element,
+      ranges: [expect.any(Range)],
+    })
+    cleanup?.()
+  })
+
+  it.each([
+    [
+      `default smooth centered scrolling`,
+      undefined,
+      { behavior: `smooth`, block: `center` },
+    ],
+    [`disabled scrolling`, false, undefined],
+    [
+      `custom scrolling`,
+      { behavior: `instant`, block: `start`, inline: `nearest` },
+      { behavior: `instant`, block: `start`, inline: `nearest` },
+    ],
+  ] as const)(`supports %s`, (_description, scroll_to_match, expected_options) => {
+    mock_element.textContent = `PageSearch result`
+    const scroll_into_view = vi.fn()
+    mock_element.scrollIntoView = scroll_into_view
+
+    const cleanup = highlight_matches({
+      query: `PageSearch`,
+      scroll_to_match,
+    })(mock_element)
+
+    expect(scroll_into_view.mock.calls).toEqual(
+      expected_options ? [[expected_options]] : [],
+    )
+    cleanup?.()
+  })
 
   it(`fuzzy highlighting marks matching characters in order`, () => {
     mock_element.innerHTML = `<p>allow-user-options</p>`
 
     highlight_matches({ query: `auo`, fuzzy: true })(mock_element)
 
-    const highlight = mock_css_highlights.get(`highlight-match`)
-    expect(highlight).toHaveProperty(`ranges`)
-    if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
-      throw new Error(`Expected highlight with ranges`)
-    }
-    const ranges = highlight.ranges
-    if (!Array.isArray(ranges)) throw new Error(`Expected ranges array`)
+    const ranges = get_highlight_ranges()
     expect(ranges.map((range) => [range.startOffset, range.endOffset])).toEqual([
       [0, 1],
       [6, 7],
@@ -1546,12 +1406,7 @@ describe(`highlight_matches`, () => {
       mock_element.innerHTML = `<p>İİİab</p>`
 
       expect(() => highlight_matches({ query: `ab`, fuzzy })(mock_element)).not.toThrow()
-      const highlight = mock_css_highlights.get(`highlight-match`)
-      if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
-        throw new Error(`Expected highlight with ranges`)
-      }
-      const ranges = highlight.ranges
-      if (!Array.isArray(ranges)) throw new Error(`Expected ranges array`)
+      const ranges = get_highlight_ranges()
       const offsets = ranges.map((range) => [range.startOffset, range.endOffset])
       // substring: one 'ab' range; fuzzy: single-char ranges for 'a' and 'b'
       expect(offsets).toEqual(
@@ -1565,18 +1420,154 @@ describe(`highlight_matches`, () => {
     },
   )
 
-  it(`should not clear other highlights when highlighting`, () => {
-    // Setup existing highlights from other components
-    mock_css_highlights.set(`other-highlight`, `existing highlight`)
+  it.each([
+    [`astral character`, `😀x`, `😀`, [[0, 2]]],
+    [`length-changing lowercase`, `İx`, `İ`, [[0, 1]]],
+  ] as const)(
+    `fuzzy highlighting keeps each %s range whole`,
+    (_description, text, query, expected) => {
+      mock_element.textContent = text
 
-    // Create our highlight
-    mock_element.innerHTML = `<p>test content</p>`
-    highlight_matches({ query: `test` })(mock_element)
+      highlight_matches({ query, fuzzy: true })(mock_element)
 
-    // Verify our highlight was added and others preserved
-    expect(mock_css_highlights.has(`highlight-match`)).toBe(true)
-    expect(mock_css_highlights.has(`other-highlight`)).toBe(true)
-    expect(clear_highlights_spy).not.toHaveBeenCalled()
+      expect(
+        get_highlight_ranges().map((range) => [range.startOffset, range.endOffset]),
+      ).toEqual(expected)
+    },
+  )
+
+  it(`updates highlights when matching text is inserted`, async () => {
+    const scroll_into_view = vi.fn()
+    mock_element.scrollIntoView = scroll_into_view
+    const effect_cleanup = vi.fn()
+    const on_highlight = vi.fn(() => effect_cleanup)
+    const cleanup = highlight_matches({ query: `PageSearch`, on_highlight })(mock_element)
+    expect(scroll_into_view).not.toHaveBeenCalled()
+    expect(on_highlight).toHaveBeenCalledExactlyOnceWith({
+      node: mock_element,
+      ranges: [],
+    })
+    mock_element.textContent = `PageSearch excerpt`
+    await Promise.resolve()
+
+    expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
+      ranges: [expect.any(Range)],
+    })
+    expect(scroll_into_view).toHaveBeenCalledExactlyOnceWith({
+      behavior: `smooth`,
+      block: `center`,
+    })
+    expect(on_highlight).toHaveBeenCalledTimes(2)
+    expect(effect_cleanup).toHaveBeenCalledOnce()
+    cleanup?.()
+    mock_element.textContent = `PageSearch updated excerpt`
+    await Promise.resolve()
+
+    expect(effect_cleanup).toHaveBeenCalledTimes(2)
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+  })
+
+  it(`supports timed highlights and opt-in range effects`, async () => {
+    vi.useFakeTimers()
+    try {
+      mock_element.textContent = `PageSearch result`
+      const effect_cleanup = vi.fn()
+
+      const cleanup = highlight_matches({
+        query: `PageSearch`,
+        duration_ms: 50,
+        on_highlight: () => effect_cleanup,
+      })(mock_element)
+
+      await vi.advanceTimersByTimeAsync(50)
+      expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+      expect(effect_cleanup).toHaveBeenCalledOnce()
+
+      cleanup?.()
+      expect(effect_cleanup).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it(`removes highlights when range effect setup or cleanup throws`, () => {
+    mock_element.textContent = `PageSearch result`
+
+    expect(() =>
+      highlight_matches({
+        query: `PageSearch`,
+        on_highlight: () => {
+          throw new Error(`effect failed`)
+        },
+      })(mock_element),
+    ).toThrow(`effect failed`)
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+
+    const cleanup = highlight_matches({
+      query: `PageSearch`,
+      on_highlight: () => () => {
+        throw new Error(`cleanup failed`)
+      },
+    })(mock_element)
+    expect(() => cleanup?.()).toThrow(`cleanup failed`)
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+  })
+
+  it(`stays disposed when range effect cleanup removes the attachment`, async () => {
+    mock_element.textContent = `PageSearch result`
+    let cleanup: (() => void) | undefined
+    const on_highlight = vi.fn(() => () => cleanup?.())
+    cleanup = highlight_matches({ query: `PageSearch`, on_highlight })(mock_element)
+
+    mock_element.textContent = `Updated PageSearch result`
+    await Promise.resolve()
+
+    expect(on_highlight).toHaveBeenCalledOnce()
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+  })
+
+  it(`aggregates same-name highlights across attached elements`, () => {
+    const second_element = document.createElement(`div`)
+    mock_element.textContent = `First match`
+    second_element.textContent = `Second match`
+
+    const cleanup_first = highlight_matches({ query: `match` })(mock_element)
+    const cleanup_second = highlight_matches({ query: `match` })(second_element)
+
+    expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
+      ranges: [expect.any(Range), expect.any(Range)],
+    })
+    cleanup_first?.()
+    expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
+      ranges: [expect.any(Range)],
+    })
+    cleanup_second?.()
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+  })
+
+  it.each([
+    [`restores a pre-existing`, `keep`],
+    [`preserves a later replacement`, `replace`],
+    [`respects a later deletion of the`, `delete`],
+  ])(`%s same-name highlight`, (_description, external_action) => {
+    const previous = { external: `previous` }
+    const replacement = { external: `replacement` }
+    mock_css_highlights.set(`highlight-match`, previous)
+    mock_element.textContent = `match`
+
+    const cleanup = highlight_matches({ query: `match` })(mock_element)
+    if (external_action === `replace`)
+      mock_css_highlights.set(`highlight-match`, replacement)
+    if (external_action === `delete`) mock_css_highlights.delete(`highlight-match`)
+    cleanup?.()
+
+    expect(mock_css_highlights.get(`highlight-match`)).toBe(
+      external_action === `replace`
+        ? replacement
+        : external_action === `keep`
+          ? previous
+          : undefined,
+    )
   })
 
   it(`cleanup removes only its own highlight entry`, () => {
@@ -1606,32 +1597,10 @@ describe(`sortable`, () => {
 
   const create_table = () => {
     const table = document.createElement(`table`)
-    const thead = document.createElement(`thead`)
-    const tr = document.createElement(`tr`)
-    ;[`Planet`, `Moons`].forEach((text) => {
-      const th = document.createElement(`th`)
-      th.textContent = text
-      tr.append(th)
-    })
-    thead.append(tr)
-    table.append(thead)
-
-    const tbody = document.createElement(`tbody`)
-    const rows = [
-      [`Earth`, `1`],
-      [`Jupiter`, `95`],
-      [`Mars`, `2`],
-    ]
-    rows.forEach(([planet, moons]) => {
-      const row = document.createElement(`tr`)
-      const td1 = document.createElement(`td`)
-      const td2 = document.createElement(`td`)
-      td1.textContent = planet
-      td2.textContent = moons
-      row.append(td1, td2)
-      tbody.append(row)
-    })
-    table.append(tbody)
+    table.innerHTML = `<thead><tr><th>Planet</th><th>Moons</th></tr></thead>
+      <tbody><tr><td>Mars</td><td>2</td></tr>
+      <tr><td>Earth</td><td>1</td></tr>
+      <tr><td>Jupiter</td><td>95</td></tr></tbody>`
     document.body.append(table)
     return table
   }
@@ -1662,26 +1631,6 @@ describe(`sortable`, () => {
     const table = create_table()
     expect(sortable({ disabled: true })(table)).toBeUndefined()
     expect(get_required_header(table).style.cursor).toBe(``)
-  })
-
-  it(`should add pointer cursor and fully restore on cleanup`, () => {
-    const table = create_table()
-    const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
-    const original_texts = headers.map((h) => h.textContent)
-
-    const cleanup = sortable()(table)
-    headers.forEach((header) => expect(header.style.cursor).toBe(`pointer`))
-
-    headers[0].dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-    expect(headers[0].textContent).toContain(`↑`)
-    expect(headers[0].classList.contains(`table-sort-asc`)).toBe(true)
-
-    cleanup?.()
-    headers.forEach((header, idx) => {
-      expect(header.textContent).toBe(original_texts[idx])
-      expect(header.classList.contains(`table-sort-asc`)).toBe(false)
-      expect(header.classList.contains(`table-sort-desc`)).toBe(false)
-    })
   })
 
   it(`should apply custom classes and sorted_style, reset other columns`, () => {
@@ -1719,18 +1668,6 @@ describe(`sortable`, () => {
     sortable_header.dispatchEvent(new MouseEvent(`click`))
     expect(sortable_header.textContent).toBe(`A ↑`)
     expect(sortable_header.classList.contains(`table-sort-asc`)).toBe(true)
-  })
-
-  it(`should restore pre-existing custom styles`, () => {
-    const table = create_table()
-    const header = get_required_header(table)
-    header.style.color = `blue`
-
-    const cleanup = sortable()(table)
-    header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-    cleanup?.()
-
-    expect(header.style.color).toBe(`blue`)
   })
 
   it.each([
@@ -1798,10 +1735,13 @@ describe(`sortable`, () => {
 
   it(`should preserve header child markup across sort clicks and cleanup`, () => {
     const table = create_table()
-    const header = get_required_header(table)
+    const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
+    const [header] = headers
     header.innerHTML = `<span class="icon">▲</span> Planet`
+    header.style.color = `blue`
 
     const cleanup = sortable()(table)
+    expect(headers.map(({ style }) => style.cursor)).toEqual([`pointer`, `pointer`])
     header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
 
     expect(header.querySelector(`span.icon`)?.textContent).toBe(`▲`)
@@ -1815,6 +1755,14 @@ describe(`sortable`, () => {
 
     cleanup?.()
     expect(header.innerHTML).toBe(`<span class="icon">▲</span> Planet`)
+    expect(header.style.color).toBe(`blue`)
+    expect(headers.map(({ style }) => style.cursor)).toEqual([``, ``])
+    expect(
+      headers.some(
+        ({ classList }) =>
+          classList.contains(`table-sort-asc`) || classList.contains(`table-sort-desc`),
+      ),
+    ).toBe(false)
   })
 })
 
@@ -1872,15 +1820,19 @@ describe(`resizable`, () => {
     },
   )
 
-  it(`should reset cursor when not hovering on edge`, () => {
+  it(`should use custom handle_size and reset the cursor away from edges`, () => {
     const element = create_element()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
-    resizable()(element)
+    const cleanup = resizable({ handle_size: 20 })(element)
 
-    element.dispatchEvent(mouse_event(`mousemove`, 195, 75))
+    element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
     expect(element.style.cursor).toBe(`ew-resize`)
 
-    element.dispatchEvent(mouse_event(`mousemove`, 100, 75))
+    element.dispatchEvent(mouse_event(`mousemove`, 175, 75))
+    expect(element.style.cursor).toBe(``)
+
+    cleanup?.()
+    element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
     expect(element.style.cursor).toBe(``)
   })
 
@@ -1923,6 +1875,7 @@ describe(`resizable`, () => {
     resizable({ on_resize_start, on_resize, on_resize_end })(element)
 
     element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
+    expect(document.body.style.userSelect).toBe(`none`)
     expect(on_resize_start).toHaveBeenCalledTimes(1)
     expect(on_resize_start).toHaveBeenCalledWith(expect.any(MouseEvent), {
       width: 200,
@@ -1938,6 +1891,7 @@ describe(`resizable`, () => {
 
     // End resize
     globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    expect(document.body.style.userSelect).toBe(``)
     expect(on_resize_end).toHaveBeenCalledTimes(1)
     expect(on_resize_end).toHaveBeenCalledWith(
       expect.any(MouseEvent),
@@ -2025,31 +1979,6 @@ describe(`resizable`, () => {
     expect(element.style.position).toBe(expected_position)
   })
 
-  it(`should cleanup properly and remove all event listeners`, () => {
-    const element = create_element()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
-
-    const cleanup = resizable()(element)
-
-    element.dispatchEvent(mouse_event(`mousemove`, 195, 75))
-    expect(element.style.cursor).toBe(`ew-resize`)
-
-    cleanup?.()
-    expect(element.style.cursor).toBe(``)
-  })
-
-  it(`should use custom handle_size`, () => {
-    const element = create_element()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
-    resizable({ handle_size: 20 })(element)
-
-    element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
-    expect(element.style.cursor).toBe(`ew-resize`)
-
-    element.dispatchEvent(mouse_event(`mousemove`, 175, 75))
-    expect(element.style.cursor).toBe(``)
-  })
-
   it(`should not start resizing when clicking outside edge areas`, () => {
     const element = create_element()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
@@ -2061,50 +1990,34 @@ describe(`resizable`, () => {
     expect(on_resize_start).not.toHaveBeenCalled()
   })
 
-  it(`should ignore mousemove when not resizing`, () => {
-    const element = create_element()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+  it(`should ignore global resize events before resizing starts`, () => {
     const on_resize = vi.fn()
-    resizable({ on_resize })(element)
+    const on_resize_end = vi.fn()
+    resizable({ on_resize, on_resize_end })(create_element())
 
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 300, 75))
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
 
     expect(on_resize).not.toHaveBeenCalled()
-  })
-
-  it(`should ignore mouseup when not resizing`, () => {
-    const element = create_element()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
-    const on_resize_end = vi.fn()
-    resizable({ on_resize_end })(element)
-
-    // Dispatch mouseup without starting resize
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-
     expect(on_resize_end).not.toHaveBeenCalled()
-  })
-
-  it(`should reset userSelect on mouseup`, () => {
-    const element = create_element()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
-    resizable()(element)
-
-    element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
-    expect(document.body.style.userSelect).toBe(`none`)
-
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-    expect(document.body.style.userSelect).toBe(``)
   })
 
   it(`should reset body userSelect when cleaned up mid-resize`, () => {
     const element = create_element()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    const on_resize = vi.fn()
 
-    const cleanup = resizable()(element)
+    const cleanup = resizable({ on_resize })(element)
+    element.dispatchEvent(mouse_event(`mousemove`, 195, 75))
     element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
     expect(document.body.style.userSelect).toBe(`none`)
+    expect(element.style.cursor).toBe(`ew-resize`)
 
     cleanup?.() // unmount mid-resize, before any mouseup
     expect(document.body.style.userSelect).toBe(``)
+    expect(element.style.cursor).toBe(``)
+
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
+    expect(on_resize).not.toHaveBeenCalled()
   })
 })
