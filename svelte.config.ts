@@ -8,6 +8,8 @@ import {
   starry_night_highlighter,
 } from './src/lib/live-examples/index.ts'
 
+const base_segment = (process.env.BASE_PATH ?? ``).replaceAll(/^\/+|\/+$/gu, ``)
+const base_path: `` | `/${string}` = base_segment ? `/${base_segment}` : ``
 const remarkPlugins = [
   [
     mdsvex_transform,
@@ -42,6 +44,7 @@ const config: Config = {
 
   kit: {
     adapter: adapter(),
+    paths: { base: base_path },
 
     alias: {
       $root: `.`,
@@ -57,7 +60,7 @@ const config: Config = {
       },
       handleHttpError: ({ status, referrer, message }) => {
         // Ignore 404s from the /nav demo page which contains links to non-existent routes
-        if (status === 404 && referrer === `/nav`) return
+        if (status === 404 && referrer === `${base_path}/nav`) return
         throw new Error(message)
       },
     },

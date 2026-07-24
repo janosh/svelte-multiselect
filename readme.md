@@ -243,7 +243,7 @@ These are the core props you'll use in most cases:
    **Dynamic loading for large datasets.** Enables lazy loading / infinite scroll instead of passing static `options`. Pass either a function or an object with config:
 
    ```svelte
-   <!-- Simple: just a function -->
+   <!-- Function shorthand -->
    <MultiSelect loadOptions={myFetchFn} />
 
    <!-- With config -->
@@ -959,7 +959,7 @@ Example using several snippets:
 
    Triggers when a redo operation re-applies a previously undone selection change. `previous` is the selection before redo, `current` is the new selection.
 
-For example, here's how you might annoy your users with an alert every time one or more options are added or removed:
+The following example shows an alert whenever one or more options are added or removed:
 
 ```svelte
 <MultiSelect
@@ -1039,7 +1039,7 @@ See [src/lib/live-examples/readme.md](https://github.com/janosh/svelte-multisele
 
 ## ✨ &thinsp; Styling
 
-There are 3 ways to style this component. To understand which options do what, it helps to keep in mind this simplified DOM structure of the component:
+There are 3 ways to style this component. The simplified DOM structure below shows which elements each option affects:
 
 ```svelte
 <div class="multiselect">
@@ -1187,7 +1187,7 @@ This simplified version of the DOM structure of the component shows where these 
 
 ### With global CSS
 
-Odd as it may seem, you get the most fine-grained control over the styling of every part of this component by using the following `:global()` CSS selectors. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component is in its `open` state. See also [simplified DOM structure](#styling).
+The following `:global()` CSS selectors provide fine-grained control over every part of the component. `ul.selected` is the list of currently selected options rendered inside the component's input whereas `ul.options` is the list of available options that slides out when the component is in its `open` state. See also [simplified DOM structure](#styling).
 
 ```css
 :global(div.multiselect) {

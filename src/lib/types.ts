@@ -21,6 +21,25 @@ export type ObjectOption = {
   [key: string]: unknown // allow any other keys users might want
 }
 
+export type CmdAction = {
+  id?: string | number
+  label: string
+  action: (label: string) => void
+  badge?: string
+  description?: string
+  disabled?: boolean
+  group?: string
+  keywords?: string[]
+  metadata?: string | string[]
+  shortcut?: string
+} & Record<string, unknown>
+
+export type PageSearchNavigateDetails = {
+  query: string
+  label: string
+  description: string
+}
+
 // placeholder can be a simple string or object with extended options
 export type PlaceholderConfig = {
   text: string
@@ -163,6 +182,8 @@ export interface MultiSelectProps<T extends Option = Option>
     > {
   activeIndex?: number | null
   activeOption?: T | null
+  activeOptionFallbackKey?: (option: T) => unknown
+  autoActiveFirstOption?: boolean
   createOptionMsg?:
     | string
     | ((state: {
@@ -335,7 +356,7 @@ export type NavRouteObject = {
 } & ({ href: string } | { separator: true; href?: string })
 
 // NavRoute supports multiple formats for backward compatibility:
-// - string: just a path ("/about")
+// - string: path only ("/about")
 // - [string, string]: [path, custom_label] ("/about", "About Us")
 // - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs/intro"])
 // - NavRouteObject: full object with all options

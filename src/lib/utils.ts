@@ -1,4 +1,4 @@
-import type { Option } from './types'
+import type { CmdAction, Option } from './types'
 
 let uuid_counter = 0
 
@@ -21,6 +21,11 @@ export function get_uuid(): string {
 // Type guard for checking if a value is a non-null object
 export const is_object = (val: unknown): val is Record<string, unknown> =>
   typeof val === `object` && val !== null
+
+export const slug_to_title = (slug: string): string =>
+  slug
+    .replaceAll(`-`, ` `)
+    .replaceAll(/(?<![\p{L}\p{M}\p{N}_])\p{L}/gu, (letter) => letter.toUpperCase())
 
 // Type guard for checking if an option has a group key
 export const has_group = <T extends Option>(opt: T): opt is T & { group: string } =>
@@ -143,7 +148,8 @@ export function fuzzy_match_indices(
   search_text: string,
   target_text: string,
 ): number[] | null {
-  const [search, target] = [search_text.toLowerCase(), target_text.toLowerCase()]
+  const search = search_text.toLowerCase().replaceAll(/\s+/gu, ` `)
+  const target = target_text.toLowerCase().replaceAll(/\s/gu, ` `)
   const indices: number[] = []
   let [search_idx, target_idx] = [0, 0]
 
@@ -167,4 +173,30 @@ export function fuzzy_match(search_text: string, target_text: string): boolean {
   // empty search matches everything, empty target matches nothing - both already
   // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
   return fuzzy_match_indices(search_text, target_text) !== null
+}
+
+export const format_cmd_metadata = (metadata: CmdAction[`metadata`]): string =>
+  Array.isArray(metadata) ? metadata.join(` · `) : (metadata ?? ``)
+
+export function cmd_action_matches(
+  action: CmdAction,
+  search: string,
+  fuzzy = true,
+): boolean {
+  const terms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
+  const searchable_text = [
+    action.label,
+    action.description,
+    action.badge,
+    action.group,
+    action.shortcut,
+    action.keywords?.join(` `),
+    format_cmd_metadata(action.metadata),
+  ]
+    .filter(Boolean)
+    .join(` `)
+    .toLowerCase()
+  return terms.every((term) =>
+    fuzzy ? fuzzy_match(term, searchable_text) : searchable_text.includes(term),
+  )
 }

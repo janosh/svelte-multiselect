@@ -2,7 +2,7 @@
 
 ## 🙋 How can I help?
 
-Pull requests to improve docs, test coverage or examples are always welcome! If you want to implement a new feature, please submit an issue first so we can discuss project-fit. You can also look for [issues labeled 'help wanted'](https://github.com/janosh/svelte-multiselect/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) and open a PR to close one of those. If you don't finish, you're welcome to submit it as draft PR anyway. Someone else might take over.
+Pull requests to improve docs, test coverage, or examples are welcome. Before implementing a new feature, submit an issue to discuss project fit. The [issues labeled `help wanted`](https://github.com/janosh/svelte-multiselect/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are also available for contributions. Incomplete work can be submitted as a draft PR for others to continue.
 
 ## 🚀 Submit a PR
 
@@ -31,7 +31,7 @@ To ensure your changes didn't break anything, run the full test suite (which als
 npm test
 ```
 
-Any new features should come with corresponding tests. If you fix a bug, please add a test that fails under the old code and passes with your changes. If you're having trouble writing tests, you can submit your PR anyway. Others might be able to help with tests but chances are your code will take longer to get merged.
+New features should include corresponding tests. Bug fixes should include a test that fails under the old code and passes with the change. PRs without tests are accepted when assistance is needed, but may take longer to merge.
 
 ## ✅ CI checks
 

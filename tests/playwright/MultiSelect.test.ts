@@ -262,6 +262,7 @@ test.describe(`portal feature`, () => {
 
     await page.keyboard.press(`Escape`)
     await expect(portalled_languages_options).toBeHidden()
+    await expect(modal_content).toBeVisible()
 
     const octicons_input = modal_content.locator(
       `div.multiselect input[placeholder='Choose octicons...']`,

@@ -214,7 +214,7 @@ function create_example_component(
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
   const highlighted = hast_to_html(tree).replaceAll(`\n`, `&#10;`)
 
-  // Code-only examples (ts, js, css, etc.) - just render highlighted code block
+  // Code-only examples (ts, js, css, etc.) render only the highlighted code block.
   if (index === -1) {
     // Close and reopen <p> to avoid block-in-inline HTML nesting issues
     return `</p><pre class="highlight highlight-${lang}" style="position:relative"><span class="lang-label" style="${LABEL_STYLE}">${lang}</span><code>{@html ${JSON.stringify(

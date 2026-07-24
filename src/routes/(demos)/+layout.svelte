@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { base } from '$app/paths'
   import { page } from '$app/state'
   import { heading_anchors, PrevNext } from '$lib'
   import type { Snippet } from 'svelte'
@@ -6,15 +7,15 @@
 
   let { children }: { children?: Snippet<[]> } = $props()
 
-  let is_visible_demo = $derived(demo_pages.includes(page.url.pathname))
+  const demo_paths = demo_pages.map((route) => `${base}${route}`)
 </script>
 
 <main {@attach heading_anchors()}>
   {@render children?.()}
 
-  {#if is_visible_demo}
+  {#if demo_paths.includes(page.url.pathname)}
     {@const style = `max-width: var(--main-max-width); margin: 2em auto`}
-    <PrevNext items={demo_pages} current={page.url.pathname} onkeyup={null} {style} />
+    <PrevNext items={demo_paths} current={page.url.pathname} onkeyup={null} {style} />
   {/if}
 </main>
 
