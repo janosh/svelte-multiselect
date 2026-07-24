@@ -3,7 +3,7 @@
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { page } from '$app/state'
-  import { CopyButton, GitHubCorner, PagefindPalette, slug_to_title } from '$lib'
+  import { CopyButton, GitHubCorner, PageSearch, slug_to_title } from '$lib'
   import { name, repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
   import favicon from '$site/favicon.svg'
@@ -55,7 +55,7 @@
   <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}
 
-<PagefindPalette
+<PageSearch
   fallback_actions={actions}
   navigate={goto}
   strip_html_suffix

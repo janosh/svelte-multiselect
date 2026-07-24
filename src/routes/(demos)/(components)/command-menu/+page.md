@@ -1,18 +1,18 @@
 <script lang="ts">
-  import cmd_palette_src from '$lib/CmdPalette.svelte?raw'
-  import pagefind_palette_src from '$lib/PagefindPalette.svelte?raw'
+  import command_menu_src from '$lib/CommandMenu.svelte?raw'
+  import page_search_src from '$lib/PageSearch.svelte?raw'
   import { FileDetails } from '$lib'
 </script>
 
-## Nav Palette
+## Navigation Command Menu
 
-You can use `<MultiSelect />` to build a navigation palette in just 70 lines of code (50 without styles).
+You can use `<MultiSelect />` to build a navigation command menu in just 70 lines of code (50 without styles).
 
 ```svelte example id="disabled-input-title"
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
-  import { CmdPalette } from '$lib'
+  import { CommandMenu } from '$lib'
   import { routes } from '../../index'
 
   const actions = routes.map(({ route }) => ({
@@ -21,15 +21,15 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
   }))
 </script>
 
-<CmdPalette {actions} triggers={[`n`]} />
+<CommandMenu {actions} triggers={[`n`]} />
 ```
 
 ## Site Search with Pagefind
 
-`PagefindPalette` wraps `CmdPalette` with full-text search over statically generated pages.
+`PageSearch` wraps `CommandMenu` with full-text search over statically generated pages.
 Install `pagefind` as a development dependency, then index the rendered site after the
 application build. Run this script before previewing or deploying; when the index is absent,
-the palette filters `fallback_actions`:
+the search filters `fallback_actions`:
 
 ```json
 {
@@ -39,11 +39,11 @@ the palette filters `fallback_actions`:
 }
 ```
 
-```svelte example id="pagefind-palette"
+```svelte example id="page-search"
 <script lang="ts">
   import { goto } from '$app/navigation'
   import { base } from '$app/paths'
-  import { PagefindPalette } from '$lib'
+  import { PageSearch } from '$lib'
   import { routes } from '../../index'
 
   const fallback_actions = routes.map(({ route }) => ({
@@ -52,7 +52,7 @@ the palette filters `fallback_actions`:
   }))
 </script>
 
-<PagefindPalette
+<PageSearch
   {fallback_actions}
   navigate={goto}
   strip_html_suffix
@@ -69,13 +69,13 @@ the palette filters `fallback_actions`:
 Actions can carry a `description`, `metadata`, `badge`, `keywords`, `shortcut`, and
 `disabled` state. The default filter searches all visible fields plus `keywords` and
 supports multiple terms. Shortcuts render as <kbd>⌘</kbd>-style key hints and trigger
-globally while the palette is closed unless `global_shortcuts={false}`. Pass
+globally while the menu is closed unless `global_shortcuts={false}`. Pass
 `recent_actions_key` to persist triggered actions to `localStorage` and rank them first
-when the palette reopens.
+when the menu reopens.
 
-```svelte example id="cmd-palette-shortcuts"
+```svelte example id="command-menu-shortcuts"
 <script lang="ts">
-  import { CmdPalette } from '$lib'
+  import { CommandMenu } from '$lib'
 
   let last_triggered = $state(``)
 
@@ -99,7 +99,7 @@ when the palette reopens.
   ]
 </script>
 
-<CmdPalette
+<CommandMenu
   {actions}
   triggers={[`p`]}
   recent_actions_key="demo-recent-actions"
@@ -113,6 +113,6 @@ when the palette reopens.
 ```
 
 <FileDetails files={[
-{ title: `<code>CmdPalette.svelte</code> source code`, content: cmd_palette_src },
-{ title: `<code>PagefindPalette.svelte</code> source code`, content: pagefind_palette_src },
+{ title: `<code>CommandMenu.svelte</code> source code`, content: command_menu_src },
+{ title: `<code>PageSearch.svelte</code> source code`, content: page_search_src },
 ]} />

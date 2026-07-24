@@ -30,11 +30,11 @@
     open = $bindable(false),
     dialog = $bindable(null),
     input = $bindable(null),
-    aria_label = `Command palette`,
+    aria_label = `Command menu`,
     filterFunc: filter_func,
     fuzzy = true,
     inputProps: input_props,
-    input_aria_label = aria_label === `Command palette` ? `Search commands` : aria_label,
+    input_aria_label = aria_label === `Command menu` ? `Search commands` : aria_label,
     matchingOptions: matching_actions = $bindable([]),
     noMatchingOptionsMsg: no_matching_options_msg = `No matching commands`,
     onadd,
@@ -58,7 +58,7 @@
     aria_label?: string
     placeholder?: string
     dialog_props?: HTMLAttributes<HTMLDialogElement>
-    // run action.shortcut hotkeys globally while the palette is closed (default: true)
+    // run action.shortcut hotkeys globally while the menu is closed (default: true)
     global_shortcuts?: boolean
     // localStorage key to persist recently triggered actions. When set, recent
     // actions rank first in the dropdown (most recent on top). null = disabled
@@ -74,13 +74,15 @@
     Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
   )
   const get_action_fallback_key = (action: Action) => action.id ?? action.label
-  const can_track_recents = $derived(
+  const action_ids_are_unique = $derived(
     new Set(actions.map(get_action_id)).size === actions.length,
   )
+  const get_action_key = (action: Action) =>
+    action_ids_are_unique ? get_action_id(action) : action.action
 
   // load persisted recents (client-only since $effect doesn't run during SSR)
   $effect(() => {
-    if (!recent_actions_key || !can_track_recents) return
+    if (!recent_actions_key || !action_ids_are_unique) return
     try {
       const stored: unknown = JSON.parse(localStorage.getItem(recent_actions_key) ?? `[]`)
       recent_action_ids = Array.isArray(stored)
@@ -92,7 +94,7 @@
   })
 
   function record_recent(action: Action) {
-    if (!recent_actions_key || !can_track_recents) return
+    if (!recent_actions_key || !action_ids_are_unique) return
     const action_id = get_action_id(action)
     recent_action_ids = [
       action_id,
@@ -107,7 +109,7 @@
 
   // recently triggered actions first (most recent on top), rest keep original order
   const sorted_actions = $derived.by(() => {
-    if (!recent_actions_key || !can_track_recents || recent_action_ids.length === 0)
+    if (!recent_actions_key || !action_ids_are_unique || recent_action_ids.length === 0)
       return actions
     // drop stale persisted ids (actions removed/renamed since) so they don't
     // occupy low ranks and push real recents below non-recent actions
@@ -192,7 +194,7 @@
     const is_close_key = open && close_keys.includes(event.key)
     if (event.defaultPrevented && !is_close_key) return
     if (toggle(event)) return
-    // run action hotkeys globally while the palette is closed
+    // run action hotkeys globally while the menu is closed
     if (open || !global_shortcuts) return
     const action = actions.find(
       (cmd_action) =>
@@ -211,7 +213,7 @@
     // treat that click as outside. Element (not HTMLElement) so SVG targets count.
     if (!open || !dialog || !(target instanceof Element)) return
     // backdrop clicks on a modal dialog have target === dialog, so close unless the click
-    // is on this palette's MultiSelect (scoped inside the dialog) or its options list
+    // is on this menu's MultiSelect (scoped inside the dialog) or its options list
     if (dialog.contains(target) && target.closest(`div.multiselect`)) return
     const listbox_id = input?.getAttribute(`aria-controls`)
     const listbox = listbox_id && document.querySelector(`#${CSS.escape(listbox_id)}`)
@@ -280,7 +282,7 @@
       inputProps={{ 'aria-label': input_aria_label, ...input_props }}
       noMatchingOptionsMsg={no_matching_options_msg}
       {placeholder}
-      key={(action) => action.action}
+      key={get_action_key}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       option={has_action_meta ? action_item : undefined}
@@ -360,7 +362,7 @@
     /* Let command results/popovers escape the dialog; default clipping hides suggestions. */
     overflow: visible;
     color: light-dark(#222, #eee);
-    z-index: var(--cmd-palette-z-index, 10);
+    z-index: var(--cmd-menu-z-index, 10);
     font-size: 2.4ex;
   }
 </style>

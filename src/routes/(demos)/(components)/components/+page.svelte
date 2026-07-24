@@ -8,6 +8,6 @@
   subtitle="Examples for related components shipped with this project."
   subpages={[
     [`Nav`, `${base}/nav`, `Configurable navigation component patterns.`],
-    [`CmdPalette`, `${base}/cmd-palette`, `Command palette built on MultiSelect.`],
+    [`CommandMenu`, `${base}/command-menu`, `Command menu built on MultiSelect.`],
   ]}
 />

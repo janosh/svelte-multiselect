@@ -1523,15 +1523,15 @@ describe(`highlight_matches`, () => {
   )
 
   it(`updates highlights when matching text is inserted`, async () => {
-    const cleanup = highlight_matches({ query: `PagefindPalette` })(mock_element)
-    mock_element.textContent = `PagefindPalette excerpt`
+    const cleanup = highlight_matches({ query: `PageSearch` })(mock_element)
+    mock_element.textContent = `PageSearch excerpt`
     await Promise.resolve()
 
     expect(mock_css_highlights.get(`highlight-match`)).toMatchObject({
       ranges: [expect.any(Range)],
     })
     cleanup?.()
-    mock_element.textContent = `PagefindPalette updated excerpt`
+    mock_element.textContent = `PageSearch updated excerpt`
     await Promise.resolve()
 
     expect(mock_css_highlights.has(`highlight-match`)).toBe(false)

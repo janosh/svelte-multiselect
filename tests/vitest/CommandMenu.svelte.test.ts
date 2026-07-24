@@ -1,4 +1,4 @@
-import { CmdPalette, PagefindPalette } from '$lib'
+import { CommandMenu, PageSearch } from '$lib'
 import { flushSync, mount, tick } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
@@ -58,7 +58,7 @@ test.each([
       actions: mock_actions,
       fade_duration: 0,
     })
-    mount(CmdPalette, { target: document.body, props })
+    mount(CommandMenu, { target: document.body, props })
 
     const event = new KeyboardEvent(`keydown`, {
       key: key_to_press,
@@ -96,7 +96,7 @@ test.each([
       actions: mock_actions,
       fade_duration: 0,
     })
-    mount(CmdPalette, { target: document.body, props })
+    mount(CommandMenu, { target: document.body, props })
 
     const event = new KeyboardEvent(`keydown`, {
       key: key_to_press,
@@ -121,7 +121,7 @@ test(`a custom close key does not also trigger its global action shortcut`, asyn
     actions: [{ label: `Close action`, shortcut: `x`, action }],
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
@@ -140,7 +140,7 @@ test.each([
   `dialog cancel with close_keys=$close_keys prevents default: $default_prevented`,
   async ({ close_keys, default_prevented }) => {
     const oncancel = vi.fn()
-    mount(CmdPalette, {
+    mount(CommandMenu, {
       target: document.body,
       props: {
         open: true,
@@ -183,7 +183,7 @@ test(`opens a labelled modal dialog`, async () => {
   })
 
   try {
-    mount(CmdPalette, { target: document.body, props })
+    mount(CommandMenu, { target: document.body, props })
     await tick()
 
     const dialog = doc_query<HTMLDialogElement>(`dialog`)
@@ -211,7 +211,7 @@ test.each([`throws`, `unavailable`] as const)(
     const props = $state({ actions: mock_actions, open: true, fade_duration: 0 })
 
     try {
-      mount(CmdPalette, { target: document.body, props })
+      mount(CommandMenu, { target: document.body, props })
       await tick()
 
       const dialog = doc_query<HTMLDialogElement>(`dialog`)
@@ -234,7 +234,7 @@ test(`handles action selection and execution`, async () => {
     fade_duration: 0,
     onadd,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   const input_el = doc_query(`dialog div.multiselect input[autocomplete]`)
@@ -262,7 +262,7 @@ test(`ignores user-created options without action handlers`, async () => {
     allowUserOptions: true,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   const input_el = doc_query<HTMLInputElement>(
@@ -282,10 +282,10 @@ test(`ignores user-created options without action handlers`, async () => {
 test.each([
   [`page body`, () => document.body],
   // showModal() backdrop clicks dispatch with the dialog element itself as the target,
-  // so a naive dialog.contains(target) check would wrongly keep the palette open
+  // so a naive dialog.contains(target) check would wrongly keep the menu open
   [`modal backdrop (target === dialog)`, () => doc_query<HTMLDialogElement>(`dialog`)],
   // SVG targets are Element but not HTMLElement - an instanceof HTMLElement guard
-  // would wrongly ignore them and leave the palette open
+  // would wrongly ignore them and leave the menu open
   [
     `svg element outside dialog`,
     () => {
@@ -296,7 +296,7 @@ test.each([
   ],
 ])(`closes dialog on outside click: %s`, async (_label, get_target) => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   get_target().dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
@@ -306,9 +306,9 @@ test.each([
   expect(document.querySelector(`dialog`)).toBeNull()
 })
 
-test(`keeps dialog open when clicking inside the palette`, async () => {
+test(`keeps dialog open when clicking inside the menu`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   doc_query(`dialog div.multiselect input[autocomplete]`).dispatchEvent(
@@ -336,7 +336,7 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
 
   try {
-    mount(CmdPalette, { target: document.body, props })
+    mount(CommandMenu, { target: document.body, props })
     await tick()
 
     other_multiselect.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
@@ -351,12 +351,12 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
 
 test(`keeps dialog open when clicking a nested portalled option`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   const real_listbox_id = input.getAttribute(`aria-controls`)
-  if (!real_listbox_id) throw new Error(`Palette input has no aria-controls listbox id`)
+  if (!real_listbox_id) throw new Error(`Menu input has no aria-controls listbox id`)
   const listbox_id = `${real_listbox_id}-portalled`
   input.setAttribute(`aria-controls`, listbox_id)
 
@@ -376,11 +376,11 @@ test(`keeps dialog open when clicking a nested portalled option`, async () => {
 })
 
 test(`stays open when a button's click handler sets open=true and the click bubbles to window`, async () => {
-  // the very click that opens the palette bubbles to <svelte:window onclick> while
+  // the very click that opens the menu bubbles to <svelte:window onclick> while
   // dialog is still null (not rendered until next flush) - close_if_outside must
-  // not treat it as an outside click and instantly close the palette
+  // not treat it as an outside click and instantly close the menu
   const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
 
   const open_button = document.createElement(`button`)
   open_button.addEventListener(`click`, () => {
@@ -401,7 +401,7 @@ test(`stays open when a button's click handler sets open=true and the click bubb
 
 test(`closes dialog when clicking an unrelated portalled options list`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   const other_options = document.createElement(`ul`)
@@ -440,7 +440,7 @@ test(`applies custom styles and props correctly`, async () => {
     input: null as HTMLInputElement | null,
   })
 
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   // Check element bindings
@@ -464,7 +464,7 @@ test(`applies custom styles and props correctly`, async () => {
 })
 
 // dialog_props spreads after the built-in onclose handler, so a user-provided
-// onclose replaces it and the palette no longer auto-closes on the native close event
+// onclose replaces it and the menu no longer auto-closes on the native close event
 test.each([
   { desc: `resets open state on native close`, custom_onclose: false },
   { desc: `dialog_props onclose replaces built-in handler`, custom_onclose: true },
@@ -479,13 +479,13 @@ test.each([
       ...(custom_onclose ? { onclose: on_close } : {}),
     },
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   // dialog_props spread onto the element without clobbering default attributes
   const dialog = doc_query<HTMLDialogElement>(`dialog`)
   expect(dialog.classList.contains(`custom-dialog`)).toBe(true)
-  expect(dialog.getAttribute(`aria-label`)).toBe(`Command palette`)
+  expect(dialog.getAttribute(`aria-label`)).toBe(`Command menu`)
 
   dialog.dispatchEvent(new Event(`close`))
   await tick()
@@ -498,7 +498,7 @@ test(`handles empty actions array`, () => {
   const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
   const props = $state({ open: true, actions: [], fade_duration: 0 })
   try {
-    mount(CmdPalette, { target: document.body, props })
+    mount(CommandMenu, { target: document.body, props })
 
     expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
     expect(document.querySelector(`dialog ul.options`)?.children.length ?? 0).toBe(0)
@@ -510,7 +510,7 @@ test(`handles empty actions array`, () => {
 
 test(`remains open when trigger keys are pressed while already open`, async () => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
 
   expect(props.open).toBe(true)
 
@@ -522,8 +522,8 @@ test(`remains open when trigger keys are pressed while already open`, async () =
   expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
-test(`lets command palette dropdown overflow dialog box`, async () => {
-  mount(CmdPalette, {
+test(`lets command menu dropdown overflow dialog box`, async () => {
+  mount(CommandMenu, {
     target: document.body,
     props: { open: true, actions: mock_actions, fade_duration: 0 },
   })
@@ -568,7 +568,7 @@ test.each([
     { label: `delete file`, action: vi.fn() },
     { label: `update config`, action: vi.fn() },
   ]
-  mount(CmdPalette, {
+  mount(CommandMenu, {
     target: document.body,
     props: { open: true, actions, fuzzy, fade_duration: 0 },
   })
@@ -594,7 +594,7 @@ test(`handles bindable props correctly`, async () => {
     input: null,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
 
   expect(props.dialog).toBeNull()
   expect(props.input).toBeNull()
@@ -623,7 +623,7 @@ test(`selects the first enabled action and preserves pointer selection across gr
     activeIndex: null as number | null,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
@@ -666,7 +666,7 @@ test(`auto-active considers only visible enabled actions`, async () => {
     maxOptions: 1,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   expect(props.activeIndex).toBeNull()
@@ -700,7 +700,7 @@ test(`preserves active action when IDs and signatures collide`, async () => {
     activeIndex: 1,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   expect(props.activeIndex).toBe(1)
@@ -727,8 +727,9 @@ test(`preserves the active action by ID when callbacks are rebuilt`, async () =>
     activeIndex: 1,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
+  const active_option = doc_query<HTMLLIElement>(`li.active`)
 
   const beta_action = vi.fn()
   props.actions = [
@@ -738,6 +739,7 @@ test(`preserves the active action by ID when callbacks are rebuilt`, async () =>
   await tick()
 
   expect(props.activeIndex).toBe(0)
+  expect(doc_query(`li.active`)).toBe(active_option)
   doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
   )
@@ -758,7 +760,7 @@ test(`groupSelectAll selects a whole action group without executing actions or c
     onselectAll: on_select_all,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   doc_query<HTMLButtonElement>(`dialog li.group-header button.group-select-all`).click()
@@ -800,7 +802,7 @@ test(`renders and searches action descriptions, metadata, badges, and keywords`,
     },
     { label: `quit`, action: vi.fn() },
   ]
-  mount(CmdPalette, {
+  mount(CommandMenu, {
     target: document.body,
     props: { open: true, actions, fade_duration: 0 },
   })
@@ -832,7 +834,7 @@ async function search_pagefind(query: string): Promise<void> {
   await tick()
 }
 
-describe(`PagefindPalette`, () => {
+describe(`PageSearch`, () => {
   const base_props = { open: true, fade_duration: 0, debounce_ms: 0 }
   const make_pagefind_response = (title: string) => ({
     results: [
@@ -883,7 +885,7 @@ describe(`PagefindPalette`, () => {
       expected_url: `/docs/#config.html`,
     },
   ])(
-    `PagefindPalette paginates and navigates $section_url`,
+    `PageSearch paginates and navigates $section_url`,
     async ({ strip_html_suffix, transform_url, section_url, expected_url }) => {
       const navigate = vi.fn()
       const search = vi.fn(async () => ({
@@ -918,7 +920,7 @@ describe(`PagefindPalette`, () => {
         transform_url,
         load_pagefind: async () => ({ search }),
       })
-      mount(PagefindPalette, { target: document.body, props })
+      mount(PageSearch, { target: document.body, props })
 
       await search_pagefind(`binary`)
 
@@ -952,7 +954,7 @@ describe(`PagefindPalette`, () => {
       .fn()
       .mockReturnValueOnce(requests[0].promise)
       .mockReturnValueOnce(requests[1].promise)
-    mount(PagefindPalette, {
+    mount(PageSearch, {
       target: document.body,
       props: {
         ...base_props,
@@ -981,7 +983,7 @@ describe(`PagefindPalette`, () => {
       .fn()
       .mockRejectedValueOnce(new Error(`Unavailable`))
       .mockResolvedValue({ search })
-    mount(PagefindPalette, {
+    mount(PageSearch, {
       target: document.body,
       props: {
         ...base_props,
@@ -1007,7 +1009,7 @@ describe(`PagefindPalette`, () => {
       navigate: vi.fn(),
       transform_url: (url: string) => `/old${url}`,
     })
-    mount(PagefindPalette, { target: document.body, props })
+    mount(PageSearch, { target: document.body, props })
 
     await search_pagefind(`fresh`)
     props.navigate = second_navigate
@@ -1062,7 +1064,7 @@ describe(`PagefindPalette`, () => {
       },
     ]
     const load_pagefind = make_load_pagefind()
-    mount(PagefindPalette, {
+    mount(PageSearch, {
       target: document.body,
       props: { ...base_props, fallback_actions, load_pagefind },
     })
@@ -1086,7 +1088,7 @@ describe(`PagefindPalette`, () => {
     expect(fallback_actions[1].action).not.toHaveBeenCalled()
   })
 
-  test(`PagefindPalette handles a failed fragment and URL-derived title`, async () => {
+  test(`PageSearch handles a failed fragment and URL-derived title`, async () => {
     const make_result = (
       url: string,
       title: string,
@@ -1113,7 +1115,7 @@ describe(`PagefindPalette`, () => {
         make_result(`/docs/`, `Docs content`, {}),
       ],
     }))
-    mount(PagefindPalette, {
+    mount(PageSearch, {
       target: document.body,
       props: {
         ...base_props,
@@ -1132,7 +1134,7 @@ describe(`PagefindPalette`, () => {
 })
 
 test(`renders plus-key shortcut hints`, async () => {
-  mount(CmdPalette, {
+  mount(CommandMenu, {
     target: document.body,
     props: {
       open: true,
@@ -1146,7 +1148,7 @@ test(`renders plus-key shortcut hints`, async () => {
 })
 
 test(`plain actions without shortcut/description use default option rendering`, async () => {
-  mount(CmdPalette, {
+  mount(CommandMenu, {
     target: document.body,
     props: { open: true, actions: mock_actions, fade_duration: 0 },
   })
@@ -1203,7 +1205,7 @@ test.each([
         disabled: action_disabled,
       },
     ]
-    mount(CmdPalette, {
+    mount(CommandMenu, {
       target: document.body,
       props: { actions, open, global_shortcuts, fade_duration: 0 },
     })
@@ -1226,7 +1228,7 @@ test.each([
 
 test(`global shortcuts ignore events consumed by editable controls`, () => {
   const action = vi.fn()
-  mount(CmdPalette, {
+  mount(CommandMenu, {
     target: document.body,
     props: {
       actions: [{ label: `save`, action, shortcut: `ctrl+shift+s` }],
@@ -1253,7 +1255,7 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
 test(`global shortcuts skip disabled duplicate bindings`, async () => {
   const disabled_action = vi.fn()
   const enabled_action = vi.fn()
-  mount(CmdPalette, {
+  mount(CommandMenu, {
     target: document.body,
     props: {
       actions: [
@@ -1287,7 +1289,7 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
     recent_actions_key: storage_key,
     fade_duration: 0,
   })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   // no recents yet: original order
@@ -1304,7 +1306,7 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   await tick()
 
   expect(actions[2].action).toHaveBeenCalledExactlyOnceWith(`gamma`)
-  expect(props.open).toBe(false) // palette closed after trigger
+  expect(props.open).toBe(false) // menu closed after trigger
   expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`gamma`])
 
   // reopen: gamma now ranks first, rest keep original order
@@ -1322,7 +1324,7 @@ test(`recent_actions_key uses action ids for duplicate labels`, async () => {
     { label: `save`, description: `No id`, action: vi.fn() },
   ]
   const props = $state({ open: true, actions, recent_actions_key: storage_key })
-  mount(CmdPalette, { target: document.body, props })
+  mount(CommandMenu, { target: document.body, props })
   await tick()
 
   expect(doc_query(`li[role='option'] .cmd-description`).textContent).toBe(`Mixed`)
@@ -1383,7 +1385,7 @@ test.each([
     }))
     // flushSync so render errors from bad storage data fail this test, not the suite
     flushSync(() => {
-      mount(CmdPalette, {
+      mount(CommandMenu, {
         target: document.body,
         props: {
           open: true,
@@ -1428,7 +1430,7 @@ test.each([
   `global shortcut recents persistence: $desc`,
   async ({ actions, max_recent, keys, expected }) => {
     const storage_key = `test-cmd-recents-${expected.join(`-`)}`
-    mount(CmdPalette, {
+    mount(CommandMenu, {
       target: document.body,
       props: {
         actions,

@@ -192,10 +192,10 @@
 
 <script lang="ts">
   import type { ComponentProps } from 'svelte'
-  import CmdPalette from './CmdPalette.svelte'
+  import CommandMenu from './CommandMenu.svelte'
 
   type Props = Omit<
-    ComponentProps<typeof CmdPalette>,
+    ComponentProps<typeof CommandMenu>,
     | `actions`
     | `dialog`
     | `input`
@@ -244,7 +244,7 @@
   )
 </script>
 
-<CmdPalette
+<CommandMenu
   actions={fallback_actions}
   bind:open
   bind:dialog

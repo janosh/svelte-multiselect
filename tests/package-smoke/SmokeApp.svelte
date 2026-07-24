@@ -1,12 +1,13 @@
 <script lang="ts">
   import MultiSelect, {
+    CommandMenu,
     fuzzy_match,
     MultiSelect as NamedSelect,
-    PagefindPalette,
+    PageSearch,
   } from 'svelte-multiselect'
-  import DirectCmdPalette from 'svelte-multiselect/CmdPalette.svelte'
+  import DirectCommandMenu from 'svelte-multiselect/CommandMenu.svelte'
   import DirectMultiSelect from 'svelte-multiselect/MultiSelect.svelte'
-  import DirectPagefindPalette from 'svelte-multiselect/PagefindPalette.svelte'
+  import DirectPageSearch from 'svelte-multiselect/PageSearch.svelte'
   import type { Option } from 'svelte-multiselect'
   import { click_outside } from 'svelte-multiselect/attachments'
   import type { CmdAction } from 'svelte-multiselect/types'
@@ -14,20 +15,18 @@
 
   const options: Option[] = [`One`, { label: `Two`, value: 2 }]
   const actions: CmdAction[] = [{ label: `Open`, action: () => undefined }]
-  const direct_export_matches = DirectMultiSelect === NamedSelect
-  const pagefind_export_matches = DirectPagefindPalette === PagefindPalette
-  const utility_export_works = fuzzy_match(`tw`, String(get_label(options[1])))
+  const package_api_works =
+    DirectCommandMenu === CommandMenu &&
+    DirectMultiSelect === NamedSelect &&
+    DirectPageSearch === PageSearch &&
+    fuzzy_match(`tw`, String(get_label(options[1])))
   let selected = $state<Option[]>([])
 </script>
 
 <main {@attach click_outside({ callback: () => undefined })}>
   <MultiSelect bind:selected {options} name="choices" />
   <DirectMultiSelect {options} />
-  <DirectCmdPalette {actions} />
-  <DirectPagefindPalette fallback_actions={actions} />
-  <p>
-    {direct_export_matches && pagefind_export_matches && utility_export_works
-      ? `package ok`
-      : `package failed`}
-  </p>
+  <DirectCommandMenu {actions} />
+  <DirectPageSearch fallback_actions={actions} />
+  <p>{package_api_works ? `package ok` : `package failed`}</p>
 </main>

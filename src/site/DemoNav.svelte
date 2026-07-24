@@ -33,7 +33,7 @@
     [resolve_path(`/ui`)]: `UI`,
     [resolve_path(`/css-classes`)]: `CSS Classes`,
     [resolve_path(`/kit-form-actions`)]: `Form Actions`,
-    [resolve_path(`/cmd-palette`)]: `CmdPalette`,
+    [resolve_path(`/command-menu`)]: `CommandMenu`,
     [resolve_path(`/min-max-select`)]: `Min/Max`,
     [resolve_path(`/input-dropdown`)]: `Input Dropdown`,
     [resolve_path(`/allow-user-options`)]: `User Options`,
