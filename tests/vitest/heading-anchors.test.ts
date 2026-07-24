@@ -6,14 +6,14 @@ const preprocess = (content: string, filename?: string) =>
   heading_ids().markup({ content, filename })
 
 describe(`heading_ids preprocessor`, () => {
-  it(`maps original markup exactly across inserted IDs`, () => {
+  it(`maps original markup before and after inserted IDs`, () => {
     const source = `<h2>A</h2>\n<h2>B</h2>`
     expect(preprocess(source, `Heading.svelte`).map).toEqual({
       version: 3,
       names: [],
       sources: [`Heading.svelte`],
       sourcesContent: [source],
-      mappings: `AAAA,GAAG,OAAA;AACH,GAAG,OAAA`,
+      mappings: `AAAA,GAAG,OAAA,OAAO;AACV,GAAG,OAAA,OAAO`,
     })
   })
 
@@ -105,6 +105,10 @@ describe(`heading_ids preprocessor`, () => {
       [
         `</p><h2>First</h2></section><h3>Second</h3>`,
         `</p><h2 id="first">First</h2></section><h3 id="second">Second</h3>`,
+      ],
+      [
+        `</p><h2>First</h2><h2>Second</h2>`,
+        `</p><h2 id="first">First</h2><h2 id="second">Second</h2>`,
       ],
     ])(`%s → %s`, (input: string, expected: string) => {
       expect(preprocess(input).code).toBe(expected)

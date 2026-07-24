@@ -10,7 +10,7 @@
 const heading_regex_line_start =
   /^(?<indent>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/gimu
 const heading_regex_after_tag =
-  /(?<gt>>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
+  /(?<=>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
 
 type TextInsertion = { index: number; text: string }
 
@@ -75,6 +75,9 @@ function insert_with_source_map(
         inserted_columns += insertion.text.length
         insertion_idx++
       }
+      const generated_line_end = line.length + inserted_columns
+      if (inserted_columns && segments.at(-1)?.[0] !== generated_line_end)
+        segments.push([generated_line_end, line.length])
       original_offset = line_end + 1
       let previous_generated_column = 0
       return segments

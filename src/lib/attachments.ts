@@ -409,6 +409,9 @@ export type HighlightOptions = {
   fuzzy?: boolean
   node_filter?: (node: Node) => number
   css_class?: string
+  duration_ms?: number
+  scroll_to_match?: false | ScrollIntoViewOptions
+  on_highlight?: (context: { node: HTMLElement; ranges: Range[] }) => unknown
 }
 
 type OwnedHighlight = {
@@ -459,16 +462,20 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     fuzzy = false,
     node_filter = () => NodeFilter.FILTER_ACCEPT,
     css_class = `highlight-match`,
+    duration_ms,
+    scroll_to_match = { behavior: `smooth`, block: `center` },
+    on_highlight,
   } = ops
 
-  // abort if CSS highlight API not supported
-  if (typeof CSS === `undefined` || !CSS.highlights) return undefined
   // if disabled or empty query, this instance owns no highlight
   if (!query || disabled) return undefined
-  const highlight_registry = CSS.highlights
+  const highlight_registry = globalThis.CSS?.highlights
   const highlight_owner = Symbol(css_class)
   const search = query.toLowerCase()
   let active = true
+  let did_scroll = false
+  let effect_cleanup: (() => void) | undefined
+  let timeout: ReturnType<typeof setTimeout> | undefined
 
   const find_ranges = (el: Node): Range[] => {
     const original_text = el.textContent
@@ -540,28 +547,65 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 
   const update_highlight = () => {
     if (!active) return
-    const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
-      acceptNode: node_filter,
-    })
-    const ranges: Range[] = []
-    let text_node = tree_walker.nextNode()
-    while (text_node) {
-      ranges.push(...find_ranges(text_node))
-      text_node = tree_walker.nextNode()
-    }
-    sync_owned_highlight(highlight_registry, css_class, highlight_owner, ranges)
-  }
-
-  update_highlight()
-  const observer = new MutationObserver(update_highlight)
-  observer.observe(node, { childList: true, subtree: true, characterData: true })
-
-  // Return cleanup function
-  return () => {
-    active = false
     observer.disconnect()
-    sync_owned_highlight(highlight_registry, css_class, highlight_owner)
+    try {
+      const previous_cleanup = effect_cleanup
+      effect_cleanup = undefined
+      previous_cleanup?.()
+      if (!active) return
+      const tree_walker = document.createTreeWalker(node, NodeFilter.SHOW_TEXT, {
+        acceptNode: node_filter,
+      })
+      const ranges: Range[] = []
+      let text_node = tree_walker.nextNode()
+      while (text_node) {
+        ranges.push(...find_ranges(text_node))
+        text_node = tree_walker.nextNode()
+      }
+      if (highlight_registry)
+        sync_owned_highlight(highlight_registry, css_class, highlight_owner, ranges)
+      const first_match = ranges[0]?.startContainer.parentElement
+      if (!did_scroll && scroll_to_match && first_match) {
+        did_scroll = true
+        first_match.scrollIntoView(scroll_to_match)
+      }
+      const next_effect_cleanup = on_highlight?.({ node, ranges })
+      effect_cleanup =
+        typeof next_effect_cleanup === `function`
+          ? () => next_effect_cleanup()
+          : undefined
+    } finally {
+      if (active)
+        observer.observe(node, { childList: true, subtree: true, characterData: true })
+    }
   }
+
+  const observer = new MutationObserver(update_highlight)
+  const cleanup = () => {
+    if (!active) return
+    active = false
+    if (timeout !== undefined) clearTimeout(timeout)
+    observer.disconnect()
+    const final_effect_cleanup = effect_cleanup
+    effect_cleanup = undefined
+    try {
+      final_effect_cleanup?.()
+    } finally {
+      if (highlight_registry)
+        sync_owned_highlight(highlight_registry, css_class, highlight_owner)
+    }
+  }
+  try {
+    update_highlight()
+  } catch (error) {
+    cleanup()
+    throw error
+  }
+  if (duration_ms !== undefined && Number.isFinite(duration_ms) && duration_ms >= 0) {
+    timeout = setTimeout(cleanup, duration_ms)
+  }
+
+  return cleanup
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time

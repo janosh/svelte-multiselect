@@ -64,6 +64,51 @@ the search filters `fallback_actions`:
 <p>Open the documentation search with <kbd>cmd/ctrl+j</kbd>.</p>
 ```
 
+The `navigate` callback receives the selected result's `query`, `label`, and `description`
+as its second argument. A persistent layout can carry the query across client-side
+navigation and apply `highlight_matches` to the destination content:
+
+```svelte
+<script lang="ts">
+  import { afterNavigate, goto } from '$app/navigation'
+  import { highlight_matches } from 'svelte-multiselect/attachments'
+  import type { PageSearchNavigateDetails } from 'svelte-multiselect/types'
+
+  let highlight_query = $state(``)
+
+  const navigate = async (url: string, { query }: PageSearchNavigateDetails) => {
+    await goto(url)
+    highlight_query = ``
+    queueMicrotask(() => (highlight_query = query))
+  }
+
+  afterNavigate(() => (highlight_query = ``))
+</script>
+
+<main
+  {@attach highlight_matches({
+    query: highlight_query,
+    css_class: `site-search-match`,
+    duration_ms: 8000,
+  })}
+>
+  ...
+</main>
+
+<style>
+  :global(::highlight(site-search-match)) {
+    background: gold;
+    color: inherit;
+  }
+</style>
+```
+
+`highlight_matches` injects no styles or text effects. Use `css_class` for custom CSS,
+`duration_ms` for automatic removal, and `on_highlight` for opt-in effects. It scrolls the
+first match smoothly into view by default; set `scroll_to_match: false` or pass
+`ScrollIntoViewOptions` to customize it. The callback may return a cleanup function and
+runs again when content changes. Stemmed Pagefind results may have no exact substring.
+
 ## Shortcuts, Descriptions & Recent Actions
 
 Actions can carry a `description`, `metadata`, `badge`, `keywords`, `shortcut`, and

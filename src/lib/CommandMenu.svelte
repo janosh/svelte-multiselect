@@ -23,6 +23,7 @@
   let {
     actions,
     activeIndex: active_idx = $bindable(null),
+    activeOption: active_option = $bindable(null),
     triggers = [`k`],
     close_keys = [`Escape`],
     fade_duration = 200,
@@ -38,6 +39,8 @@
     matchingOptions: matching_actions = $bindable([]),
     noMatchingOptionsMsg: no_matching_options_msg = `No matching commands`,
     onadd,
+    onkeydown,
+    option: option_snippet,
     placeholder = `Type a command…`,
     searchText: search_text = $bindable(``),
     dialog_props,
@@ -45,7 +48,10 @@
     recent_actions_key = null,
     max_recent = 20,
     ...rest
-  }: Omit<ComponentProps<typeof MultiSelect<Action>>, `options`> & {
+  }: Omit<
+    ComponentProps<typeof MultiSelect<Action>>,
+    `activeOptionFallbackKey` | `autoActiveFirstOption` | `key` | `options`
+  > & {
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
@@ -73,12 +79,33 @@
   const recent_limit = $derived(
     Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
   )
-  const get_action_fallback_key = (action: Action) => action.id ?? action.label
-  const action_ids_are_unique = $derived(
-    new Set(actions.map(get_action_id)).size === actions.length,
-  )
+  const action_id_counts = $derived.by(() => {
+    const counts = new Map<string, number>()
+    for (const action of actions) {
+      const action_id = get_action_id(action)
+      counts.set(action_id, (counts.get(action_id) ?? 0) + 1)
+    }
+    return counts
+  })
+  const action_ids_are_unique = $derived(action_id_counts.size === actions.length)
+  const get_action_signature = (action: CmdAction): string =>
+    JSON.stringify([
+      action.id,
+      action.label,
+      action.description,
+      action.badge,
+      action.disabled,
+      action.group,
+      action.metadata,
+      action.keywords,
+      action.shortcut,
+    ])
+  const action_id_is_unique = (action: Action) =>
+    action_id_counts.get(get_action_id(action)) === 1
   const get_action_key = (action: Action) =>
-    action_ids_are_unique ? get_action_id(action) : action.action
+    action_id_is_unique(action) ? get_action_id(action) : action.action
+  const get_action_fallback_key = (action: Action) =>
+    action_id_is_unique(action) ? get_action_id(action) : get_action_signature(action)
 
   // load persisted recents (client-only since $effect doesn't run during SSR)
   $effect(() => {
@@ -175,13 +202,21 @@
     if (input && document.activeElement !== input) input.focus()
   })
 
+  function close_menu() {
+    open = false
+    active_idx = null
+    active_option = null
+    search_text = ``
+  }
+
   function toggle(event: KeyboardEvent): boolean {
     const should_open =
       !open && triggers.includes(event.key) && (event.metaKey || event.ctrlKey)
     const should_close = open && close_keys.includes(event.key)
     if (!should_open && !should_close) return false
     event.preventDefault()
-    open = should_open
+    if (should_open) open = true
+    else close_menu()
     return true
   }
 
@@ -218,15 +253,15 @@
     const listbox_id = input?.getAttribute(`aria-controls`)
     const listbox = listbox_id && document.querySelector(`#${CSS.escape(listbox_id)}`)
     if (listbox && listbox.contains(target)) return
-    open = false
+    close_menu()
   }
 
   function trigger_action_and_close(params: AddParams) {
     const { option } = params
     if (!option?.action || option.disabled) return
     record_recent(option)
+    close_menu()
     option.action(option.label)
-    open = false
     onadd?.(params)
   }
 </script>
@@ -264,13 +299,15 @@
     transition:fade={{ duration: fade_duration }}
     style={dialog_style}
     aria-label={aria_label}
-    onclose={() => (open = false)}
+    onclose={close_menu}
     {...dialog_props}
     oncancel={handle_dialog_cancel}
   >
     <MultiSelect
+      {...rest}
       options={sorted_actions}
       bind:activeIndex={active_idx}
+      bind:activeOption={active_option}
       activeOptionFallbackKey={get_action_fallback_key}
       autoActiveFirstOption
       bind:input
@@ -284,9 +321,11 @@
       {placeholder}
       key={get_action_key}
       onadd={trigger_action_and_close}
-      onkeydown={toggle}
-      option={has_action_meta ? action_item : undefined}
-      {...rest}
+      onkeydown={(event) => {
+        toggle(event)
+        onkeydown?.(event)
+      }}
+      option={option_snippet ?? (has_action_meta ? action_item : undefined)}
       --sms-bg="var(--sms-options-bg)"
       --sms-width="var(--cmd-width, min(38rem, 90vw))"
       --sms-max-width="none"

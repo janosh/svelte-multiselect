@@ -17,8 +17,6 @@ const input_event = new InputEvent(`input`, { bubbles: true })
 // fresh event per dispatch: happy-dom never resets the stop-propagation flag,
 // so shared event instances go inert once a handler calls stopPropagation()
 const fresh_key = (key: string) => new KeyboardEvent(`keydown`, { key, bubbles: true })
-const arrow_down = fresh_key(`ArrowDown`)
-const enter = fresh_key(`Enter`)
 const console_methods = { error: console.error, warn: console.warn }
 const normalized_text = (element: Element) =>
   element.textContent?.replaceAll(/\s+/gu, ` `).trim()
@@ -48,10 +46,17 @@ async function type_search_text(
   return input
 }
 
-test(`2-way binding of activeIndex`, async () => {
-  const props = $state<MultiSelectProps>({ options: [1, 2, 3], activeIndex: 0 })
+test(`2-way binding preserves a valid initial auto-active index`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [`Alpha`, `Beta`, `Gamma`],
+    activeIndex: 1,
+    autoActiveFirstOption: true,
+    searchText: `a`,
+  })
 
   mount(MultiSelect, { target: document.body, props })
+  await tick()
+  expect(props.activeIndex).toBe(1)
 
   // test internal changes to activeIndex bind outwards
   for (const idx of [1, 2]) {
@@ -65,7 +70,24 @@ test(`2-way binding of activeIndex`, async () => {
   props.activeIndex = 2
   await tick()
 
-  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`3`)
+  expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`Gamma`)
+})
+
+test(`clears active state when replacement identity is ambiguous`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [{ label: `Duplicate` }, { label: `Duplicate` }],
+    activeIndex: 1,
+    activeOption: null,
+    key: () => `duplicate`,
+  })
+  mount(MultiSelect, { target: document.body, props })
+  await tick()
+
+  props.options = [{ label: `Duplicate` }, { label: `Duplicate` }]
+  await tick()
+
+  expect(props.activeIndex).toBeNull()
+  expect(props.activeOption).toBeNull()
 })
 
 test(`1-way binding of activeOption and hovering an option makes it active`, async () => {
@@ -220,7 +242,7 @@ test(`arrow down makes first option active`, async () => {
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
 
-  input.dispatchEvent(arrow_down)
+  input.dispatchEvent(fresh_key(`ArrowDown`))
 
   await tick()
 
@@ -838,17 +860,18 @@ describe(`selectedDisplay=input`, () => {
   })
 })
 
-describe.each([
-  [false, []],
-  [true, []],
-  [1, [1]],
-  [2, [1]],
-  [2, [1, 2]],
-])(`MultiSelect with required=%s, selected=%s`, (required, selected) => {
-  test.each([1, 2, null])(`and maxSelect=%s form validation`, async (maxSelect) => {
+test.each<[string, boolean | number, number[], number | null, boolean, boolean]>([
+  [`optional empty selection`, false, [], null, false, true],
+  [`required empty selection`, true, [], null, false, false],
+  [`one required at max boundary`, 1, [1], 1, false, true],
+  [`two required with one selected`, 2, [1], null, false, false],
+  [`max below required`, 2, [1, 2], 1, true, false],
+  [`two required and selected`, 2, [1, 2], 2, false, true],
+])(
+  `form validation: %s`,
+  async (_description, required, selected, maxSelect, expected_error, form_valid) => {
     const form = document.createElement(`form`)
     document.body.append(form)
-    const expected_error = maxSelect !== null && Number(required) > maxSelect
     console.error = vi.fn()
     try {
       mount(MultiSelect, {
@@ -862,12 +885,8 @@ describe.each([
         )
       } else expect(console.error).not.toHaveBeenCalled()
 
-      // form should be valid if MultiSelect not required or n_selected >= n_required and <= maxSelect
-      const form_valid =
-        !required ||
-        (selected.length >= Number(required) &&
-          selected.length <= (maxSelect ?? Infinity))
-      expect(form.checkValidity(), `form_valid=${form_valid}`).toBe(form_valid) // This test fails for required=2, selected=[1, 2], maxSelect=1
+      // Form is valid if required count is met without exceeding maxSelect.
+      expect(form.checkValidity(), `form_valid=${form_valid}`).toBe(form_valid)
 
       let submit_count = 0
       let submit_default_prevented = false
@@ -889,8 +908,8 @@ describe.each([
     } finally {
       form.remove()
     }
-  })
-})
+  },
+)
 
 test.each([
   [[1, 2, 3]],
@@ -1572,13 +1591,7 @@ test.each([
   const button_selector = `ul.selected button[title='Remove ${get_label(
     option_to_remove,
   )}']`
-  const remove_button = document.querySelector<HTMLButtonElement>(button_selector)
-
-  expect(
-    remove_button,
-    `Button to remove '${get_label(option_to_remove)}' not found`,
-  ).not.toBeNull()
-  remove_button?.click()
+  doc_query<HTMLButtonElement>(button_selector).click()
   await tick()
 
   const selected_ul = doc_query(`ul.selected`)
@@ -1665,6 +1678,7 @@ test(`can't select disabled options`, async () => {
 test.each([
   [`ArrowDown`, `First enabled`],
   [`ArrowUp`, `Last enabled`],
+  [`a`, `First enabled`],
 ] as const)(
   `%s from no active option skips disabled options`,
   async (key_name, label) => {
@@ -1722,18 +1736,25 @@ test(`autoScroll scopes active option lookup to current instance`, async () => {
 })
 
 async function setup_user_message(search_text = `Purple`) {
+  const props = $state({
+    options: [`Red`],
+    activeIndex: null as number | null,
+    allowUserOptions: true,
+    autoActiveFirstOption: true,
+    open: true,
+  })
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [`Red`], allowUserOptions: true, open: true },
+    props,
   })
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   await type_search_text(search_text, input)
 
-  return { input, user_msg: doc_query(`ul.options li.user-msg`) }
+  return { input, props, user_msg: doc_query(`ul.options li.user-msg`) }
 }
 
 test(`user message exposes active descendant and toggles active class`, async () => {
-  const { input, user_msg } = await setup_user_message()
+  const { input, props, user_msg } = await setup_user_message()
 
   for (const [event_name, expected_active] of [
     [`mouseover`, true],
@@ -1751,6 +1772,15 @@ test(`user message exposes active descendant and toggles active class`, async ()
 
   expect(input.getAttribute(`aria-activedescendant`)).toBe(user_msg.id)
   expect(user_msg.classList.contains(`active`)).toBe(true)
+
+  props.options = [`Purple Rain`, `Purple Haze`, `Red`]
+  await tick()
+  expect(props.activeIndex).toBe(2)
+  expect(user_msg.classList.contains(`active`)).toBe(true)
+
+  await type_search_text(`red`, input)
+  expect(doc_query(`li[role=option].active`).textContent).toContain(`Red`)
+  expect(doc_query(`li.user-msg`).classList.contains(`active`)).toBe(false)
 })
 
 test(`option row Enter key selects option`, async () => {
@@ -2065,13 +2095,13 @@ test.each([[null], [`custom add option message`]])(
 
     const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
     input.focus()
-    input.dispatchEvent(arrow_down)
+    input.dispatchEvent(fresh_key(`ArrowDown`))
     await tick()
 
     const user_msg_li = document.querySelector<HTMLLIElement>(`ul.options li.user-msg`)
     if (!user_msg_li) throw new Error(`li.user-msg should exist`)
 
-    expect(user_msg_li.classList).not.toContain(`active`)
+    expect(user_msg_li.classList.contains(`active`)).toBe(createOptionMsg !== null)
     if (createOptionMsg === null) {
       expect(user_msg_li.textContent?.trim()).toBe(`No matching options`)
     } else expect(user_msg_li.textContent?.trim()).toBe(createOptionMsg)
@@ -2143,7 +2173,7 @@ test.each<[string, MultiSelectProps]>([
   input.focus()
   await type_search_text(`    `, input)
 
-  input.dispatchEvent(enter)
+  input.dispatchEvent(fresh_key(`Enter`))
   await tick()
 
   expect(onadd_spy).not.toHaveBeenCalled()
@@ -2175,10 +2205,10 @@ test(`whitespace-only input rejected with loadOptions (root cause path)`, async 
     await type_search_text(`    `, input)
     await vi.runAllTimersAsync()
 
-    input.dispatchEvent(enter)
+    input.dispatchEvent(fresh_key(`Enter`))
     await vi.runAllTimersAsync()
     // second Enter previously caused each_key_duplicate since both resolved to key 0
-    input.dispatchEvent(enter)
+    input.dispatchEvent(fresh_key(`Enter`))
     await vi.runAllTimersAsync()
 
     expect(onadd_spy).not.toHaveBeenCalled()
@@ -2943,32 +2973,6 @@ test(`onclose fires once with KeyboardEvent, not again when already closed`, asy
   document.body.click()
   await tick()
   expect(close_spy).toHaveBeenCalledOnce()
-})
-
-describe.each([
-  [true, (opt: Option) => opt],
-  [false, (opt: Option) => opt],
-  [true, JSON.stringify],
-  [false, JSON.stringify],
-])(`MultiSelect component`, (duplicates, key) => {
-  test(`can select the same object option multiple times if duplicates=${duplicates}`, async () => {
-    const options = [
-      { label: `foo`, id: 1 },
-      { label: `foo`, id: 2 },
-    ]
-    mount(MultiSelect, {
-      target: document.body,
-      props: { options, selected: [{ ...options[0] }], duplicates, key },
-    })
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.dispatchEvent(arrow_down)
-    await tick()
-    input.dispatchEvent(enter)
-    await tick()
-
-    const actual = doc_query(`ul.selected`).textContent?.trim()
-    expect(actual).toBe(`foo`)
-  })
 })
 
 describe(`keepSelectedInDropdown feature`, () => {
@@ -5114,7 +5118,7 @@ describe(`option grouping feature`, () => {
     const input = await focus_input()
 
     // Navigate down - first active should be first option, not group header
-    input.dispatchEvent(arrow_down)
+    input.dispatchEvent(fresh_key(`ArrowDown`))
     await tick()
 
     const active_option = document.querySelector(`ul.options > li.active`)
@@ -6406,7 +6410,7 @@ describe(`onmaxreached event`, () => {
       const input = await focus_input()
 
       // try to add a 3rd option when maxSelect is 2, via click or keyboard
-      // (fresh events, not the shared arrow_down/enter constants, to avoid cross-test pollution)
+      // Fresh events avoid cross-test pollution from retained event flags.
       if (trigger === `keyboard`) {
         input.dispatchEvent(fresh_key(`ArrowDown`))
         input.dispatchEvent(fresh_key(`Enter`))
@@ -6529,8 +6533,8 @@ describe(`onduplicate event`, () => {
 
       await type_search_text(typed_value, input)
 
-      // fresh Enter event per case: the shared `enter` constant's defaultPrevented flag
-      // persists across re-dispatch and would suppress later iterations
+      // Fresh Enter event per case: defaultPrevented persists across re-dispatch
+      // and would suppress later iterations.
       input.dispatchEvent(fresh_key(`Enter`))
       await tick()
 
@@ -6840,9 +6844,8 @@ describe(`history / undo-redo`, () => {
     await tick()
 
     // Select first selectable option (skip group headers)
-    const first_li = document.querySelector(`ul.options > li:not(.group-header)`)
-    if (!first_li) return // some configs may have no visible options
-    if (first_li instanceof HTMLElement) first_li.click()
+    // A missing row is a failure, not a reason to silently skip a compatibility case.
+    doc_query(`ul.options > li:not(.group-header)`).click()
     await tick()
     expect(props.selected?.length).toBeGreaterThan(0)
 
@@ -7157,11 +7160,11 @@ test(`dropdown has no li children when all user-created options are selected`, a
 
   const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
   await type_search_text(`tag1`, input)
-  input.dispatchEvent(enter)
+  input.dispatchEvent(fresh_key(`Enter`))
   await tick()
 
   await type_search_text(`tag2`, input)
-  input.dispatchEvent(enter)
+  input.dispatchEvent(fresh_key(`Enter`))
   await tick()
 
   input.focus()

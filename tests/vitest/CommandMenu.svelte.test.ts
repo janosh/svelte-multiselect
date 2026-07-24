@@ -113,25 +113,34 @@ test.each([
   },
 )
 
-test(`a custom close key does not also trigger its global action shortcut`, async () => {
-  const action = vi.fn()
-  const props = $state({
-    open: true,
-    close_keys: [`x`],
-    actions: [{ label: `Close action`, shortcut: `x`, action }],
-    fade_duration: 0,
-  })
-  mount(CommandMenu, { target: document.body, props })
-  await tick()
+test.each([`Escape`, `x`])(
+  `focused input close key %s does not also trigger its global action shortcut`,
+  async (close_key) => {
+    const action = vi.fn()
+    const onkeydown = vi.fn()
+    const props = $state({
+      open: true,
+      close_keys: [close_key],
+      actions: [{ label: `Close action`, shortcut: close_key, action }],
+      fade_duration: 0,
+      onkeydown,
+    })
+    mount(CommandMenu, { target: document.body, props })
+    await tick()
 
-  doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `x`, bubbles: true, cancelable: true }),
-  )
-  await tick()
+    const event = new KeyboardEvent(`keydown`, {
+      key: close_key,
+      bubbles: true,
+      cancelable: true,
+    })
+    doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(event)
+    await tick()
 
-  expect(props.open).toBe(false)
-  expect(action).not.toHaveBeenCalled()
-})
+    expect(props.open).toBe(false)
+    expect(action).not.toHaveBeenCalled()
+    expect(onkeydown).toHaveBeenCalledExactlyOnceWith(event)
+  },
+)
 
 test.each([
   { close_keys: [`Escape`], default_prevented: false },
@@ -231,6 +240,8 @@ test(`handles action selection and execution`, async () => {
   const props = $state({
     open: true,
     actions: actions_with_spies,
+    activeIndex: null as number | null,
+    searchText: `action`,
     fade_duration: 0,
     onadd,
   })
@@ -252,6 +263,13 @@ test(`handles action selection and execution`, async () => {
     expect.objectContaining({ option: actions_with_spies[1] }),
   )
   expect(props.open).toBe(false)
+  expect(props.activeIndex).toBeNull()
+  expect(props.searchText).toBe(``)
+
+  props.open = true
+  await tick()
+  expect(props.activeIndex).toBe(0)
+  expect(doc_query(`li.active`).textContent).toContain(`action 1`)
 })
 
 test(`ignores user-created options without action handlers`, async () => {
@@ -685,7 +703,7 @@ test(`auto-active considers only visible enabled actions`, async () => {
   expect(props.activeIndex).toBe(0)
 })
 
-test(`preserves active action when IDs and signatures collide`, async () => {
+test(`preserves duplicate action identity across independent key changes`, async () => {
   const first_action = {
     id: `duplicate`,
     label: `Duplicate`,
@@ -704,25 +722,63 @@ test(`preserves active action when IDs and signatures collide`, async () => {
   await tick()
 
   expect(props.activeIndex).toBe(1)
+  const active_option = doc_query<HTMLLIElement>(`li.active`)
 
   props.actions = [first_action, third_action, second_action]
   await tick()
-  await tick()
 
   expect(props.activeIndex).toBe(2)
+  expect(doc_query(`li.active`)).toBe(active_option)
+
+  const renamed_action = { ...second_action, label: `Renamed duplicate` }
+  props.actions = [first_action, third_action, renamed_action]
+  await tick()
+  expect(doc_query(`li.active`)).toBe(active_option)
+
+  const rebuilt_action = vi.fn()
+  props.actions = [
+    first_action,
+    third_action,
+    { ...renamed_action, action: rebuilt_action },
+  ]
+  await tick()
+  expect(props.activeIndex).toBe(2)
+
   doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
   )
-  expect(second_action.action).toHaveBeenCalledExactlyOnceWith(`Duplicate`)
+  expect(rebuilt_action).toHaveBeenCalledExactlyOnceWith(`Renamed duplicate`)
   expect(first_action.action).not.toHaveBeenCalled()
 })
 
-test(`preserves the active action by ID when callbacks are rebuilt`, async () => {
+test(`does not retain an ambiguous index when duplicate actions are rebuilt`, async () => {
+  const make_actions = () => [
+    { id: `duplicate`, label: `Duplicate`, action: vi.fn() },
+    { id: `duplicate`, label: `Duplicate`, action: vi.fn() },
+  ]
+  const props = $state({
+    open: true,
+    actions: make_actions(),
+    activeIndex: 1,
+    fade_duration: 0,
+  })
+  mount(CommandMenu, { target: document.body, props })
+  await tick()
+
+  props.actions = make_actions()
+  await tick()
+
+  expect(props.activeIndex).toBe(0)
+})
+
+test(`preserves the active action by its unique ID amid rebuilt duplicates`, async () => {
   const props = $state({
     open: true,
     actions: [
       { id: `alpha`, label: `Alpha`, action: vi.fn() },
       { id: `beta`, label: `Beta`, action: vi.fn() },
+      { id: `duplicate`, label: `First duplicate`, action: vi.fn() },
+      { id: `duplicate`, label: `Second duplicate`, action: vi.fn() },
     ],
     activeIndex: 1,
     fade_duration: 0,
@@ -733,12 +789,14 @@ test(`preserves the active action by ID when callbacks are rebuilt`, async () =>
 
   const beta_action = vi.fn()
   props.actions = [
+    { id: `duplicate`, label: `Rebuilt duplicate`, action: vi.fn() },
+    { id: `duplicate`, label: `Rebuilt duplicate`, action: vi.fn() },
     { id: `beta`, label: `Rebuilt Beta`, action: beta_action },
     { id: `alpha`, label: `Rebuilt Alpha`, action: vi.fn() },
   ]
   await tick()
 
-  expect(props.activeIndex).toBe(0)
+  expect(props.activeIndex).toBe(2)
   expect(doc_query(`li.active`)).toBe(active_option)
   doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
@@ -938,7 +996,11 @@ describe(`PageSearch`, () => {
       options[1].click()
       await tick()
 
-      expect(navigate).toHaveBeenCalledExactlyOnceWith(expected_url)
+      expect(navigate).toHaveBeenCalledExactlyOnceWith(expected_url, {
+        query: `binary`,
+        label: `Phase diagrams › Temperature composition`,
+        description: `Interactive <temperature> composition diagram`,
+      })
       expect(props.open).toBe(false)
     },
   )
@@ -1020,7 +1082,11 @@ describe(`PageSearch`, () => {
 
     expect(search).toHaveBeenCalledTimes(2)
     doc_query<HTMLLIElement>(`li[role='option']`).click()
-    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh.html`)
+    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh.html`, {
+      query: `fresh`,
+      label: `Fresh`,
+      description: `Fresh content`,
+    })
   })
 
   test.each([

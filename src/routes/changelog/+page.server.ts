@@ -20,6 +20,6 @@ const wrap_entity_tags = (str: string) =>
 export const load = async () => {
   const compiled_changelog = await compile(wrap_entity_tags(brace_to_paren(changelog)))
   if (!compiled_changelog) return { changelog: compiled_changelog }
-  const { code } = heading_ids().markup({ content: compiled_changelog.code })
-  return { changelog: { ...compiled_changelog, code } }
+  const with_heading_ids = heading_ids().markup({ content: compiled_changelog.code })
+  return { changelog: { ...compiled_changelog, ...with_heading_ids } }
 }

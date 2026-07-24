@@ -873,11 +873,17 @@
 
   let previous_active_index = activeIndex
   let previous_active_option = activeOption
-  let previous_filter_text = ``
+  let previous_filter_text = effective_filter_text
 
   // Keep active state valid and preserve option identity across regrouping/refreshes.
   $effect(() => {
-    if (option_msg_is_active && !has_user_msg) option_msg_is_active = false
+    if (option_msg_is_active) {
+      if (has_user_msg) activeIndex = visible_navigable_count
+      else {
+        option_msg_is_active = false
+        activeIndex = null
+      }
+    }
     if (
       activeIndex !== null &&
       !option_msg_is_active &&
@@ -903,15 +909,18 @@
             )
       const find_unique_idx = (get_key: (option: Option) => unknown) => {
         const active_key = get_key(previous_option)
-        const indices = visible_options.flatMap((candidate, idx) =>
-          get_key(candidate) === active_key && !is_disabled(candidate) ? [idx] : [],
-        )
-        return indices.length === 1 ? indices[0] : -1
+        let matching_idx = -1
+        for (const [candidate_idx, candidate] of visible_options.entries()) {
+          if (get_key(candidate) !== active_key || is_disabled(candidate)) continue
+          if (matching_idx !== -1) return -1
+          matching_idx = candidate_idx
+        }
+        return matching_idx
       }
       if (preserved_idx === -1) preserved_idx = find_unique_idx(key)
       if (preserved_idx === -1 && active_option_fallback_key)
         preserved_idx = find_unique_idx(active_option_fallback_key)
-      if (preserved_idx !== -1) activeIndex = preserved_idx
+      activeIndex = preserved_idx === -1 ? null : preserved_idx
     }
     const current_option = visible_options[activeIndex ?? -1]
     const should_auto_activate =
@@ -924,6 +933,7 @@
         (candidate) => !is_disabled(candidate),
       )
       activeIndex = first_enabled_idx === -1 ? null : first_enabled_idx
+      if (first_enabled_idx !== -1) option_msg_is_active = false
     }
     activeOption = option_msg_is_active
       ? null
@@ -1413,7 +1423,10 @@
     }  // make first matching option active on any keypress while open (if no special case matched)
     else if (open && navigable_options.length > 0 && activeIndex === null) {
       // Don't stop propagation or prevent default here, allow normal character input
-      activeIndex = 0
+      const first_enabled_idx = navigable_options
+        .slice(0, visible_navigable_count)
+        .findIndex((candidate) => !is_disabled(candidate))
+      activeIndex = first_enabled_idx === -1 ? null : first_enabled_idx
     }
   }
 
@@ -2155,6 +2168,7 @@
         disabled: !highlightMatches,
         fuzzy,
         css_class: `sms-search-matches`,
+        scroll_to_match: false,
         // don't highlight text in the "Create this option..." message
         node_filter: (node) =>
           node?.parentElement?.closest(`li.user-msg`)

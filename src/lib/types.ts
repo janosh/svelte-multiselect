@@ -34,6 +34,12 @@ export type CmdAction = {
   shortcut?: string
 } & Record<string, unknown>
 
+export type PageSearchNavigateDetails = {
+  query: string
+  label: string
+  description: string
+}
+
 // placeholder can be a simple string or object with extended options
 export type PlaceholderConfig = {
   text: string

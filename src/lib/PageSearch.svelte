@@ -1,5 +1,10 @@
 <script module lang="ts">
-  import type { CmdAction, LoadOptionsParams, LoadOptionsResult } from './types'
+  import type {
+    CmdAction,
+    LoadOptionsParams,
+    LoadOptionsResult,
+    PageSearchNavigateDetails,
+  } from './types'
   import { cmd_action_matches, slug_to_title } from './utils'
 
   type PagefindAction = CmdAction & { url?: string }
@@ -30,7 +35,7 @@
     fallback_actions?: PagefindAction[]
     fuzzy?: boolean
     load_pagefind?: () => Promise<PagefindApi>
-    navigate?: (url: string) => unknown
+    navigate?: (url: string, details: PageSearchNavigateDetails) => unknown
     pagefind_path?: string
     transform_url?: (url: string) => string
   }
@@ -71,8 +76,9 @@
 
   const pagefind_result_to_actions = (
     result_id: string,
+    query: string,
     result: PagefindResultData,
-    navigate: (url: string) => unknown,
+    navigate: (url: string, details: PageSearchNavigateDetails) => unknown,
     transform_url: (url: string) => string,
   ): PagefindAction[] => {
     const page_title = result.meta.title || page_title_from_url(result.url)
@@ -100,7 +106,7 @@
         label,
         description,
         url,
-        action: (_label) => void navigate(url),
+        action: () => void navigate(url, { query, label, description }),
       }
     })
   }
@@ -162,6 +168,7 @@
             result_batch.map(async (result) =>
               pagefind_result_to_actions(
                 result.id,
+                query,
                 await result.data(),
                 navigate,
                 transform_url,

@@ -1,9 +1,11 @@
 <script lang="ts">
   import { browser } from '$app/environment'
-  import { goto } from '$app/navigation'
+  import { afterNavigate, goto } from '$app/navigation'
   import { base } from '$app/paths'
   import { page } from '$app/state'
   import { CopyButton, GitHubCorner, PageSearch, slug_to_title } from '$lib'
+  import { highlight_matches } from '$lib/attachments'
+  import type { PageSearchNavigateDetails } from '$lib/types'
   import { name, repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
   import favicon from '$site/favicon.svg'
@@ -15,6 +17,7 @@
 
   let { children }: { children?: Snippet<[]> } = $props()
   let toc_desktop = $state(true)
+  let page_search_query = $state(``)
 
   const actions = routes.map(({ route }) => ({
     label: route,
@@ -28,6 +31,16 @@
       ?.replace(/\.html$/, ``)
     return is_home || !route_slug ? `Svelte MultiSelect` : slug_to_title(route_slug)
   })
+  const navigate_from_page_search = async (
+    url: string,
+    { query }: PageSearchNavigateDetails,
+  ) => {
+    await goto(url)
+    page_search_query = ``
+    queueMicrotask(() => (page_search_query = query))
+  }
+
+  afterNavigate(() => (page_search_query = ``))
 
   if (browser) {
     const saved_theme = localStorage.getItem(`theme`)
@@ -57,7 +70,7 @@
 
 <PageSearch
   fallback_actions={actions}
-  navigate={goto}
+  navigate={navigate_from_page_search}
   strip_html_suffix
   pagefind_path={`${base}/pagefind/pagefind.js`}
 />
@@ -66,7 +79,15 @@
 
 <CopyButton global global_selector="pre:not(li > pre) > code" />
 
-<div data-pagefind-body style="display: contents">
+<div
+  data-pagefind-body
+  style="display: contents"
+  {@attach highlight_matches({
+    query: page_search_query,
+    css_class: `page-search-match`,
+    duration_ms: 8000,
+  })}
+>
   {@render children?.()}
 </div>
 
@@ -88,3 +109,10 @@
 {/if}
 
 <Footer />
+
+<style>
+  :global(::highlight(page-search-match)) {
+    background: var(--page-search-highlight-bg, light-dark(#ffe07a, #806300));
+    color: var(--page-search-highlight-color, light-dark(#513a00, #fff3ba));
+  }
+</style>
