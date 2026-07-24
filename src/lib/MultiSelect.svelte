@@ -981,7 +981,6 @@
       title,
       selectedTitle,
       disabledTitle,
-      // flat_idx is always >= 0 (computed positionally from group offsets)
       active: activeIndex === flat_idx,
       selected: is_option_selected(option_item, label),
       style: merge_styles(option_item, `option`, liOptionStyle),

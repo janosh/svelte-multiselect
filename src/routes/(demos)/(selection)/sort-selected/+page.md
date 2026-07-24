@@ -48,10 +48,12 @@ selected = {selected.map((itm, idx) => `${idx + 1}. ${itm.label}`).join(`, `) ||
 
 <FileDetails files={[{ title: `<code>options.ts</code>`, content: options_src }]} />
 
-MultiSelect by default simply renders selected items in the order they were chosen. Unless `draggable=false`, users can drag and drop to reorder selected options. The prop
+MultiSelect by default renders selected items in the order they were chosen. Unless
+`selectedOptionsDraggable={false}`, users can drag and drop to reorder them. The prop
 
 ```ts
 sortSelected: boolean | ((op1: Option, op2: Option) => number) = false
 ```
 
-can be set to `true` to instead use default JS array sorting (uses option labels as sorting key if options are objects). Provide your own compare function to define custom sort order of selected options.
+can be set to `true` to sort selected options by label with `localeCompare`. Provide
+your own comparator function to define a custom sort order.

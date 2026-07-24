@@ -6,17 +6,41 @@
   let open_modal = $state(false)
   let selected_languages = $state<string[]>([])
   let selected_octicons = $state<string[]>([])
+  let modal_element = $state<HTMLDivElement>()
 
-  function handle_escape(event: KeyboardEvent): void {
-    if (event.key === `Escape`) open_modal = false
+  function close_modal(): void {
+    open_modal = false
+    document.querySelector<HTMLButtonElement>(`#open-modal`)?.focus()
+  }
+
+  function handle_modal_keydown(event: KeyboardEvent): void {
+    if (!open_modal) return
+    if (event.key === `Escape`) return close_modal()
+    if (event.key !== `Tab` || !modal_element) return
+
+    const focusable_elements = [
+      ...modal_element.querySelectorAll<HTMLElement>(
+        `button, input:not([tabindex="-1"]), [tabindex="0"]`,
+      ),
+    ]
+    const active_idx = focusable_elements.indexOf(document.activeElement as HTMLElement)
+    const boundary_idx = event.shiftKey ? 0 : focusable_elements.length - 1
+    if (active_idx !== -1 && active_idx !== boundary_idx) return
+
+    event.preventDefault()
+    focusable_elements.at(event.shiftKey ? -1 : 0)?.focus()
   }
 </script>
 
-<svelte:window onkeydown={handle_escape} />
+<svelte:window onkeydowncapture={handle_modal_keydown} />
 
 <h2>Portalled MultiSelect in Modal Demo</h2>
 
-<button onclick={() => (open_modal = true)} style="padding: 3pt 6pt; margin: 1em auto">
+<button
+  id="open-modal"
+  onclick={() => (open_modal = true)}
+  style="padding: 3pt 6pt; margin: 1em auto"
+>
   Open Modal
 </button>
 
@@ -25,15 +49,13 @@
   <div
     class="modal-backdrop"
     onclick={(event) => {
-      if (event.target === event.currentTarget) open_modal = false
+      if (event.target === event.currentTarget) close_modal()
     }}
     role="presentation"
   >
     <div
+      bind:this={modal_element}
       class="modal-content modal"
-      onkeydown={(event) => {
-        if (event.key !== `Escape`) event.stopPropagation()
-      }}
       role="dialog"
       aria-modal="true"
       aria-labelledby="modal-title"
@@ -56,7 +78,7 @@
       />
       <p>Selected Languages: {selected_languages.map(get_label).join(`, `) || `None`}</p>
       <p>Selected Octicons: {selected_octicons.map(get_label).join(`, `) || `None`}</p>
-      <button onclick={() => (open_modal = false)}>Close Modal</button>
+      <button onclick={close_modal}>Close Modal</button>
     </div>
   </div>
 {/if}
@@ -64,14 +86,10 @@
 <style>
   .modal-backdrop {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
+    inset: 0;
     background-color: rgba(0, 0, 0, 0.5);
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    display: grid;
+    place-items: center;
   }
   .modal-content {
     background-color: var(--modal-bg, #2d2d2d);

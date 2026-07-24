@@ -16,7 +16,7 @@ if (routes.length < 3) {
   console.error(`Too few demo routes found: ${routes.length}`)
 }
 
-const groups = [...new Set(routes.map(({ group }) => group))].sort()
+const groups = [...new Set(routes.map(({ group }) => group))].toSorted()
 
 export const demo_nav_routes = groups.map((group) => {
   const overview_route = `/${group}` as Pathname

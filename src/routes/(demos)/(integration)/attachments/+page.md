@@ -264,16 +264,17 @@ Tooltip content updates reactively via `MutationObserver` when `title`, `aria-la
       : NodeFilter.FILTER_ACCEPT
 </script>
 
-<label style="display: inline-flex; gap: 0.6em; align-items: center">
-  Search
+<div style="display: inline-flex; gap: 0.6em; align-items: center">
+  <label for="highlight-search">Search</label>
   <input
+    id="highlight-search"
     placeholder="type to highlight..."
     bind:value={search_text}
     style="min-width: 16ch"
   />
   <input id="toggle-disabled" type="checkbox" bind:checked={disabled} />
   <label for="toggle-disabled">disabled</label>
-</label>
+</div>
 
 <article
   class="target"

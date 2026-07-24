@@ -54,8 +54,8 @@ When setting an integer value for `maxSelect` Multiselect will
   import MultiSelect from '$lib'
 
   function handle_submit(event: SubmitEvent): void {
-    const form_data = new FormData(event.target as HTMLFormElement)
-    alert('form data received by submit handler:\n' + JSON.stringify(...form_data))
+    const form_entries = [...new FormData(event.target as HTMLFormElement)]
+    alert(`form data received by submit handler:\n${JSON.stringify(form_entries)}`)
   }
 </script>
 
@@ -78,8 +78,8 @@ Of course, you can combine `maxSelect={n}` and `required={m}` where `n>=m`.
   import MultiSelect from '$lib'
 
   function handle_submit(event: SubmitEvent): void {
-    const form_data = new FormData(event.target as HTMLFormElement)
-    alert('form data received by submit handler:\n' + JSON.stringify(...form_data))
+    const form_entries = [...new FormData(event.target as HTMLFormElement)]
+    alert(`form data received by submit handler:\n${JSON.stringify(form_entries)}`)
   }
 </script>
 

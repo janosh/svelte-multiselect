@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { base } from '$app/paths'
+  import { resolve } from '$app/paths'
   import { SubpageGrid } from '$lib'
 </script>
 
@@ -9,22 +9,22 @@
   subpages={[
     [
       `Min/Max Select`,
-      `${base}/min-max-select`,
+      resolve(`/min-max-select`),
       `Use maxSelect and required constraints.`,
     ],
     [
       `Input Dropdown`,
-      `${base}/input-dropdown`,
+      resolve(`/input-dropdown`),
       `Use a single-select editable input with dropdown suggestions.`,
     ],
-    [`Duplicates`, `${base}/duplicates`, `Handle duplicate labels and options.`],
-    [`Sort Selected`, `${base}/sort-selected`, `Keep selected options sorted.`],
+    [`Duplicates`, resolve(`/duplicates`), `Handle duplicate labels and options.`],
+    [`Sort Selected`, resolve(`/sort-selected`), `Keep selected options sorted.`],
     [
       `Keep Selected`,
-      `${base}/keep-selected`,
+      resolve(`/keep-selected`),
       `Keep selected items visible in dropdown.`,
     ],
-    [`User Options`, `${base}/allow-user-options`, `Create options from user input.`],
-    [`History`, `${base}/history`, `Undo/redo and selection history behavior.`],
+    [`User Options`, resolve(`/allow-user-options`), `Create options from user input.`],
+    [`History`, resolve(`/history`), `Undo/redo and selection history behavior.`],
   ]}
 />

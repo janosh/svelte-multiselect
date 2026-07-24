@@ -73,36 +73,7 @@
   const recent_limit = $derived(
     Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
   )
-  const get_action_signature = (action: CmdAction): string =>
-    action.id === undefined
-      ? JSON.stringify([
-          action.label,
-          action.description,
-          action.badge,
-          action.disabled,
-          action.group,
-          action.metadata,
-          action.keywords,
-          action.shortcut,
-        ])
-      : JSON.stringify([`id`, action.id])
-  const action_key_cache = new WeakMap<CmdAction[`action`], Map<string, symbol>>()
-  const get_action_fallback_key = (action: Action) => action.id ?? action.action
-  const get_action_key = (action: Action): symbol | Action => {
-    if (
-      typeof action !== `object` ||
-      action === null ||
-      typeof action.action !== `function`
-    )
-      return action
-    const signature = get_action_signature(action)
-    const signature_keys =
-      action_key_cache.get(action.action) ?? new Map<string, symbol>()
-    action_key_cache.set(action.action, signature_keys)
-    const action_key = signature_keys.get(signature) ?? Symbol(`cmd-action`)
-    signature_keys.set(signature, action_key)
-    return action_key
-  }
+  const get_action_fallback_key = (action: Action) => action.id ?? action.label
   const can_track_recents = $derived(
     new Set(actions.map(get_action_id)).size === actions.length,
   )
@@ -309,7 +280,7 @@
       inputProps={{ 'aria-label': input_aria_label, ...input_props }}
       noMatchingOptionsMsg={no_matching_options_msg}
       {placeholder}
-      key={get_action_key}
+      key={(action) => action.action}
       onadd={trigger_action_and_close}
       onkeydown={toggle}
       option={has_action_meta ? action_item : undefined}

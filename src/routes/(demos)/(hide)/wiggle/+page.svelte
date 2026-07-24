@@ -11,13 +11,7 @@
   let damping = $state(0.1)
 </script>
 
-<div
-  class="demo"
-  onclick={() => (wiggle = true)}
-  onkeydown={(event) => event.key === `Enter` && (wiggle = true)}
-  role="button"
-  tabindex="0"
->
+<button type="button" class="demo" onclick={() => (wiggle = true)}>
   <Wiggle
     bind:wiggle
     {angle}
@@ -30,7 +24,7 @@
   >
     🎯 Click to wiggle!
   </Wiggle>
-</div>
+</button>
 
 <div class="controls">
   <label>
@@ -65,6 +59,12 @@
 
 <style>
   .demo {
+    width: 100%;
+    border: 0;
+    padding: 0;
+    color: inherit;
+    background: none;
+    font-family: inherit;
     font-size: 1.5em;
     text-align: center;
     margin: 1em 0;

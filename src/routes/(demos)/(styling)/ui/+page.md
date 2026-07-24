@@ -53,21 +53,23 @@ This page is used for Playwright testing to ensure
   - has custom title (if supplied via prop `removeAllTitle`)
 - the component can be focused
   - which opens dropdown
-  - and closes the dropdown when the user tabs out of input or clicks/taps outside component
-  - importantly, don't close the dropdown when input loses focus
+  - closes the dropdown when focus leaves the component via Tab or a click/tap outside
+  - does not close the dropdown when the input alone loses focus within the component
 - filters options to only list matches when entering text
 - accessibility
   - input is `aria-invalid` when the component has `invalid=true`
   - has `aria-expanded='false'` when closed
   - has `aria-expanded='true'` when open
-  - options have `aria-selected='false'` and selected items have `aria-selected='true`
+  - options have `aria-selected='false'` and selected items have `aria-selected='true'`
   - invisible `input.form-control` is `aria-hidden`
 - `closeDropdownOnSelect`: when `true`, the input is not focused when an option is selected and the dropdown is closed
 
 <!-- Smooth scroll is required for arrow key navigation tests to work correctly.
 The Playwright test 'loops through the dropdown list with arrow keys' depends on this. -->
 <style>
-  :global(html) {
-    scroll-behavior: smooth;
+  @media (prefers-reduced-motion: no-preference) {
+    :global(html) {
+      scroll-behavior: smooth;
+    }
   }
 </style>

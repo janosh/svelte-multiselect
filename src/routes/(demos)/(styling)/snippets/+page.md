@@ -48,7 +48,7 @@ This example also moves the expand icon to the right side of the input via `expa
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
-  // local variable used in CollapseIcon onclick callback to close dropdown
+  // local state synchronized with the component through bind:open
   let open = $state(false)
 </script>
 
@@ -79,7 +79,7 @@ This example also moves the expand icon to the right side of the input via `expa
 
 ### `"user-msg"` snippet
 
-```svelte example id="languages-2"
+```svelte example id="languages-3"
 <script lang="ts">
   import MultiSelect, { Icon } from '$lib'
   import { languages } from '$site/options'

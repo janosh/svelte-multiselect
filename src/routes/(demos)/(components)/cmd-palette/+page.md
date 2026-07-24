@@ -15,12 +15,7 @@ You can use `<MultiSelect />` to build a navigation palette in just 70 lines of 
   import { CmdPalette } from '$lib'
   import { routes } from '../../index'
 
-  interface Action {
-    label: string
-    action: () => Promise<void>
-  }
-
-  const actions: Action[] = routes.map(({ route }) => ({
+  const actions = routes.map(({ route }) => ({
     label: route,
     action: () => goto(`${base}${route}`),
   }))

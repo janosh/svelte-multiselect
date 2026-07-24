@@ -3,12 +3,12 @@
 Use `selectedDisplay="input"` with `maxSelect={1}` for a `<datalist>`-like
 autocomplete field backed by the existing dropdown
 ([discussion #221](https://github.com/janosh/svelte-multiselect/discussions/221)).
-The visible input is editable: `searchText` mirrors what the user sees and is
-what the form submits, while `value`/`selected` only update once an option is
-committed (clicked or activated via `Enter`). Editing the text after a commit
-clears `value` but keeps the draft in `searchText`. Forward extra `<input>`
-attributes via `inputProps` (e.g. `maxlength`, `autocapitalize`,
-`aria-describedby`).
+The visible input is editable: `searchText` mirrors what the user sees and, when
+the component has a `name`, is what the form submits. `value`/`selected` only
+update once an option is committed (clicked or activated via `Enter`). Editing
+the text after a commit clears `value` but keeps the draft in `searchText`.
+Forward extra `<input>` attributes via `inputProps` (e.g. `maxlength`,
+`autocapitalize`, `aria-describedby`).
 Click the caret after selecting an option or typing custom text to show the full
 list, then click it again to close the dropdown. Committed options are marked
 with `aria-selected="true"`.

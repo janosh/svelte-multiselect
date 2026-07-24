@@ -10,10 +10,17 @@ This example shows how to combine MultiSelect with `sessionStorage` to persist t
   import { onMount } from 'svelte'
 
   let selected: string[] = $state([])
+  const default_languages = `Python TypeScript C Haskell`.split(` `)
+  const is_string_array = (value: unknown): value is string[] =>
+    Array.isArray(value) && value.every((item) => typeof item === `string`)
 
   onMount(() => {
-    const stored: string | null = sessionStorage.getItem(`languages`)
-    selected = stored ? JSON.parse(stored) : `Python TypeScript C Haskell`.split(` `)
+    try {
+      const parsed: unknown = JSON.parse(sessionStorage.getItem(`languages`) ?? `null`)
+      selected = is_string_array(parsed) ? parsed : default_languages
+    } catch {
+      selected = default_languages
+    }
   })
 
   $effect(() => {

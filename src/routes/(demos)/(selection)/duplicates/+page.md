@@ -1,6 +1,6 @@
 ## Duplicates MultiSelect
 
-```svelte example id="disabled-input-title"
+```svelte example id="duplicates-demo"
 <script lang="ts">
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'
@@ -43,5 +43,3 @@ Allow duplicates: <input type="checkbox" bind:checked={duplicates} />
 
 <pre>{JSON.stringify(selected)}</pre>
 ```
-
-The mouse tooltip will show `disabledInputTitle` when hovering the component.
