@@ -40,6 +40,7 @@ test(`restores from a shadow root after its anchor is removed`, async () => {
 test(`hides synchronously when open flips false`, () => {
   const { target, node } = create_fixture()
   const action = portal_action(node, { active: true, open: true, target_node: target })
+  expect(node.hidden).toBe(false)
 
   action.update({ active: true, open: false, target_node: target })
   expect(node.hidden).toBe(true)
@@ -56,6 +57,13 @@ test(`destroy detaches viewport listeners only when portalled`, () => {
   const baseline = remove_spy.mock.calls.length
 
   portal_action(node, { active: true, open: true, target_node: target }).destroy()
-  expect(remove_spy.mock.calls).toHaveLength(baseline + 2)
+  // the exact pairs matter: scroll must be removed with capture=true or the
+  // capturing listener added on activate stays bound forever
+  expect(
+    remove_spy.mock.calls.slice(baseline).map(([type, , options]) => [type, options]),
+  ).toEqual([
+    [`scroll`, true],
+    [`resize`, undefined],
+  ])
   expect(node.isConnected).toBe(false)
 })

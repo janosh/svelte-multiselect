@@ -1,4 +1,5 @@
 import { FileDetails } from '$lib'
+import type { ComponentProps } from 'svelte'
 import { flushSync, mount, tick } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
@@ -6,6 +7,9 @@ import TestSnippetHarness from './TestSnippetHarness.svelte'
 
 const all_text = (selector: string) =>
   [...document.querySelectorAll(selector)].map((node) => node.textContent)
+
+const mount_files = (props: ComponentProps<typeof FileDetails> = {}) =>
+  mount(FileDetails, { target: document.body, props })
 
 test.each([
   // inferred from title extension
@@ -32,7 +36,7 @@ test.each([
 ])(
   `pre gets language-$expected_lang class and lang-label for "$file.title"`,
   ({ file, expected_lang }) => {
-    mount(FileDetails, { target: document.body, props: { files: [file] } })
+    mount_files({ files: [file] })
     expect(doc_query(`pre`).className).toContain(`language-${expected_lang}`)
     // the label must surface the resolved language, not the raw extension
     expect(doc_query(`.lang-label`).textContent).toBe(expected_lang)
@@ -40,23 +44,15 @@ test.each([
 )
 
 test(`lang-label is positioned out of flow so it can't indent code`, () => {
-  mount(FileDetails, {
-    target: document.body,
-    props: { files: [{ title: `util.ts`, content: `const x = 1` }] },
-  })
-
-  const label = doc_query<HTMLSpanElement>(`.lang-label`)
+  mount_files({ files: [{ title: `util.ts`, content: `const x = 1` }] })
   // pre is white-space: pre, so an in-flow label shifts the first code line right.
   // absolute positioning takes it out of flow (regression guard, see FileDetails.svelte)
-  expect(getComputedStyle(label).position).toBe(`absolute`)
+  expect(getComputedStyle(doc_query(`.lang-label`)).position).toBe(`absolute`)
 })
 
 test(`content with HTML characters is escaped before highlighting loads`, () => {
   const html_content = `<div class="foo">&amp; bar</div>`
-  mount(FileDetails, {
-    target: document.body,
-    props: { files: [{ title: `test.svelte`, content: html_content }] },
-  })
+  mount_files({ files: [{ title: `test.svelte`, content: html_content }] })
   const code_el = doc_query(`pre code`)
   expect(code_el.textContent).toBe(html_content)
   expect(code_el.innerHTML).not.toContain(`<div class="foo">`)
@@ -64,9 +60,8 @@ test(`content with HTML characters is escaped before highlighting loads`, () => 
 
 test(`unsupported language falls back to escaped raw content`, async () => {
   const content = `some <weird> content`
-  mount(FileDetails, {
-    target: document.body,
-    props: { files: [{ title: `file.xyz`, content, language: `nonexistent-lang-xyz` }] },
+  mount_files({
+    files: [{ title: `file.xyz`, content, language: `nonexistent-lang-xyz` }],
   })
   // wait for highlight attempt to complete and fall back
   await vi.waitFor(() => expect(doc_query(`pre code`).innerHTML).toContain(`&lt;`), {
@@ -77,10 +72,7 @@ test(`unsupported language falls back to escaped raw content`, async () => {
 
 test(`syntax highlighting produces starry-night spans`, async () => {
   const svelte_code = `<script lang="ts">\n  let count = $state(0)\n</script>`
-  mount(FileDetails, {
-    target: document.body,
-    props: { files: [{ title: `App.svelte`, content: svelte_code }] },
-  })
+  mount_files({ files: [{ title: `App.svelte`, content: svelte_code }] })
 
   await vi.waitFor(
     () =>
@@ -96,10 +88,7 @@ test(`toggle all button opens/closes all, tracks label, and handles partial/nati
     title,
     content: `content of ${title}`,
   }))
-  mount(FileDetails, {
-    target: document.body,
-    props: { files, toggle_all_btn_title: `toggle all`, button_props: { onclick } },
-  })
+  mount_files({ files, toggle_all_btn_title: `toggle all`, button_props: { onclick } })
   await tick()
 
   const details = [...document.querySelectorAll(`details`)]
@@ -141,10 +130,7 @@ test(`toggle all label reflects pre-opened details on mount`, async () => {
   ]
   // details render open from the start - the toggle event never fires on mount,
   // so the label must be initialized from node_refs in the sync $effect
-  mount(FileDetails, {
-    target: document.body,
-    props: { files, details_props: { open: true } },
-  })
+  mount_files({ files, details_props: { open: true } })
   await tick()
 
   expect(doc_query<HTMLDetailsElement>(`details`).open).toBe(true)
@@ -159,27 +145,28 @@ test(`node refs are trimmed when files are removed to prevent memory leaks`, asy
     { title: `file3`, content: `content3` },
   ])
 
-  mount(FileDetails, {
-    target: document.body,
-    props: {
-      get files() {
-        return reactive_files
-      },
-      set files(val) {
-        reactive_files.splice(0, reactive_files.length, ...val)
-      },
+  mount_files({
+    get files() {
+      return reactive_files
+    },
+    set files(val) {
+      reactive_files.splice(0, reactive_files.length, ...val)
     },
   })
   await tick()
 
-  // All 3 files should have node refs
-  expect(document.querySelectorAll(`details`)).toHaveLength(3)
-  for (const file of reactive_files) {
-    expect(file.node).toBeInstanceOf(HTMLDetailsElement)
-  }
+  const details_nodes = () => [...document.querySelectorAll(`details`)]
+  // by identity, not structural toEqual: [0, 1, ...] means every file points at its
+  // own <details>, -1 means the ref is null or stale
+  const ref_positions = (nodes: (HTMLDetailsElement | null | undefined)[]) =>
+    nodes.map((node) => (node ? details_nodes().indexOf(node) : -1))
+  const file_nodes = () => reactive_files.map((file) => file.node)
+
+  expect(details_nodes()).toHaveLength(3)
+  expect(ref_positions(file_nodes())).toEqual([0, 1, 2])
 
   // Store references to the old nodes before removal
-  const old_nodes = reactive_files.map((file) => file.node)
+  const old_nodes = file_nodes()
 
   // Remove the last file
   flushSync(() => {
@@ -187,37 +174,33 @@ test(`node refs are trimmed when files are removed to prevent memory leaks`, asy
   })
   await tick()
 
-  // Only 2 files should remain with valid node refs
-  expect(document.querySelectorAll(`details`)).toHaveLength(2)
+  // surviving refs must be the same nodes as before, still in their own slots
   expect(reactive_files).toHaveLength(2)
-  for (const file of reactive_files) {
-    expect(file.node).toBeInstanceOf(HTMLDetailsElement)
-  }
+  expect(details_nodes()).toHaveLength(2)
+  expect(ref_positions(file_nodes())).toEqual([0, 1])
+  expect(ref_positions(old_nodes.slice(0, 2))).toEqual([0, 1])
 
   // The removed file's node should no longer be in the DOM
-  expect(document.body.contains(old_nodes[2] ?? null)).toBe(false)
+  expect(old_nodes[2]?.isConnected).toBe(false)
 })
 
 test(`renders empty default file list`, () => {
-  mount(FileDetails, { target: document.body })
+  mount_files()
 
   expect(document.querySelector(`ol`)).toBeInstanceOf(HTMLOListElement)
   expect(document.querySelectorAll(`button, li`)).toHaveLength(0)
 })
 
 test(`renders custom container with summary titles and custom default_lang`, () => {
-  mount(FileDetails, {
-    target: document.body,
-    props: {
-      as: `ul`,
-      class: `files-list`,
-      default_lang: `txt`,
-      files: [
-        { title: `<code>component.svelte</code>`, content: `<h1>Hello</h1>` },
-        { title: `script.ts`, content: `const answer = 42` },
-        { title: `README`, content: `plain text` },
-      ],
-    },
+  mount_files({
+    as: `ul`,
+    class: `files-list`,
+    default_lang: `txt`,
+    files: [
+      { title: `<code>component.svelte</code>`, content: `<h1>Hello</h1>` },
+      { title: `script.ts`, content: `const answer = 42` },
+      { title: `README`, content: `plain text` },
+    ],
   })
 
   expect(document.querySelector(`ul.files-list`)).toBeInstanceOf(HTMLUListElement)
@@ -227,20 +210,19 @@ test(`renders custom container with summary titles and custom default_lang`, () 
 
 test(`single file omits toggle-all button and forwards details toggle event`, () => {
   const ontoggle = vi.fn()
-  mount(FileDetails, {
-    target: document.body,
-    props: {
-      details_props: { open: true, ontoggle },
-      files: [{ title: `config.yml`, content: `name: test` }],
-    },
+  mount_files({
+    details_props: { open: true, ontoggle },
+    files: [{ title: `config.yml`, content: `name: test` }],
   })
 
   expect(document.querySelector(`button`)).toBeNull()
   const details = doc_query<HTMLDetailsElement>(`details`)
   expect(details.open).toBe(true)
 
-  details.dispatchEvent(new Event(`toggle`))
-  expect(ontoggle).toHaveBeenCalledWith(expect.any(Event))
+  const toggle_event = new Event(`toggle`)
+  details.dispatchEvent(toggle_event)
+  // the component wraps ontoggle, so it must forward the very same event object
+  expect(ontoggle).toHaveBeenCalledExactlyOnceWith(toggle_event)
   expect(doc_query(`.lang-label`).textContent).toBe(`yaml`)
 })
 
@@ -268,10 +250,7 @@ test(`title snippet renders title content (incl. empty titles) and receives inde
 })
 
 test(`empty title renders details without summary`, () => {
-  mount(FileDetails, {
-    target: document.body,
-    props: { files: [{ title: ``, content: `untitled` }] },
-  })
+  mount_files({ files: [{ title: ``, content: `untitled` }] })
 
   expect(document.querySelector(`details`)).toBeInstanceOf(HTMLDetailsElement)
   expect(document.querySelector(`summary`)).toBeNull()

@@ -5,6 +5,16 @@ import type { MultiSelectProps } from '$lib/types'
 import { doc_query } from './index'
 
 const alpha_options = [`Alpha`, `Beta`, `Gamma`, `Delta`]
+const dup_options = [
+  { label: `Dup`, id: 0 },
+  { label: `Sel`, id: 1 },
+  { label: `Dup`, id: 2 },
+]
+const same_options = [
+  { label: `Same`, id: 1 },
+  { label: `Same`, id: 2 },
+  { label: `Target`, id: 3 },
+]
 
 const option_rows = (): HTMLLIElement[] => [
   ...document.querySelectorAll<HTMLLIElement>(`ul.options > li[role="option"]`),
@@ -16,7 +26,6 @@ const option_row = (label: string): HTMLLIElement => {
   return row
 }
 
-// returns the onrangeSelect spy, which nearly every test asserts on
 const mount_multiselect = (props: MultiSelectProps) => {
   const onrangeSelect = vi.fn()
   mount(MultiSelect, {
@@ -50,8 +59,7 @@ test(`backward range selects upward from the anchor`, async () => {
 
   await select_range(`Delta`, `Alpha`)
 
-  // from stays the anchor and to the shift-clicked target, so an upward range reports
-  // them in descending order rather than normalizing them to the added range's bounds
+  // from/to report anchor and clicked row, not the added range's ascending bounds
   expect(onrange_select).toHaveBeenCalledExactlyOnceWith({
     added: [`Alpha`, `Beta`, `Gamma`],
     from: `Delta`,
@@ -60,26 +68,27 @@ test(`backward range selects upward from the anchor`, async () => {
   })
 })
 
-// hint indexes the dropdown rows while the lookup runs against the superset that also
-// holds already-selected rows, so a naive first-match lands on the wrong "Dup"
-test(`shift-click resolves to the clicked duplicate-label row`, async () => {
-  const options = [
-    { label: `Dup`, id: 0 },
-    { label: `Sel`, id: 1 },
-    { label: `Dup`, id: 2 },
-  ]
-  const onrange_select = mount_multiselect({ options, open: true })
+// the row hint indexes the dropdown while the lookup runs against a superset that also
+// holds already-selected rows, so a naive first match lands on the wrong duplicate
+test.each([
+  // Sel leaves the dropdown once selected, so the second Dup moves up to index 1
+  [`distinct labels between them`, dup_options, {}, 1],
+  [`a collapsing key()`, same_options, { duplicates: true, key: () => `same` }, 2],
+])(
+  `shift-click resolves to the clicked duplicate row, with %s`,
+  async (_label, options, extra_props, shift_idx) => {
+    const onrange_select = mount_multiselect({ options, open: true, ...extra_props })
 
-  option_row(`Sel`).click()
-  await tick()
-  const dups = option_rows().filter((row) => row.textContent?.trim() === `Dup`)
-  shift_click(dups[1])
-  await tick()
+    option_rows()[1]?.click()
+    await tick()
+    shift_click(option_rows()[shift_idx])
+    await tick()
 
-  // toEqual not toBe: $bindable re-proxies options, so nothing is reference-identical
-  expect(onrange_select.mock.calls[0][0].added).toEqual([options[2]])
-  expect(onrange_select.mock.calls[0][0].to).toEqual(options[2])
-})
+    // toEqual not toBe: $bindable re-proxies options, so nothing is reference-identical
+    const { added, to } = onrange_select.mock.calls[0][0]
+    expect([added, to]).toEqual([[options[2]], options[2]])
+  },
+)
 
 test(`Shift+Enter adds one option instead of extending a range`, async () => {
   const onadd = vi.fn()
@@ -97,8 +106,7 @@ test(`Shift+Enter adds one option instead of extending a range`, async () => {
   await tick()
 
   expect(onrange_select).not.toHaveBeenCalled()
-  // the active option specifically, not just "some second option": a count of 2 alone
-  // would also pass if Beta had been added instead of Gamma
+  // the active option specifically: a count of 2 would also pass if Beta were added
   expect(onadd).toHaveBeenLastCalledWith({
     option: `Gamma`,
     selected: [`Alpha`, `Gamma`],
@@ -188,26 +196,6 @@ test(`range selection skips disabled rows and obeys maxSelect`, async () => {
   expect(onrange_select.mock.calls[0][0].selected).toEqual([options[0], options[2]])
   expect(onmaxreached).toHaveBeenCalledOnce()
   expect(onmaxreached.mock.calls[0][0].attemptedOption).toBe(options[3])
-})
-
-test(`identical duplicates preserve the clicked occurrence`, async () => {
-  const options = [
-    { id: 1, label: `Same` },
-    { id: 2, label: `Same` },
-    { id: 3, label: `Target` },
-  ]
-  const onrange_select = mount_multiselect({
-    options,
-    duplicates: true,
-    key: () => `same`,
-  })
-  const rows = option_rows()
-  rows[1]?.click()
-  await tick()
-  shift_click(rows[2])
-  await tick()
-
-  expect(onrange_select.mock.calls[0][0].added).toEqual([options[2]])
 })
 
 test(`an invalidated anchor falls back to one ordinary add`, async () => {

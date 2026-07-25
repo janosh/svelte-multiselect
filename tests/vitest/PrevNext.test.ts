@@ -1,6 +1,6 @@
 import { PrevNext } from '$lib'
-import { mount, type ComponentProps } from 'svelte'
-import { beforeEach, describe, expect, test, vi } from 'vite-plus/test'
+import { mount, type ComponentProps, unmount } from 'svelte'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 import TestSnippetHarness from './TestSnippetHarness.svelte'
 
 const items = [`page1`, `page2`, `page3`, `page4`]
@@ -14,10 +14,15 @@ describe(`PrevNext`, () => {
     [...target.querySelectorAll(`a`)].map((link) => link.getAttribute(`href`))
   const keyup = (key: string, event_target: EventTarget = globalThis) =>
     event_target.dispatchEvent(new KeyboardEvent(`keyup`, { key, bubbles: true }))
-  const mount_prev_next = (props: ComponentProps<typeof PrevNext>) =>
-    mount(PrevNext, { target, props })
-  const mount_snippet_harness = (props: ComponentProps<typeof TestSnippetHarness>) =>
-    mount(TestSnippetHarness, { target, props })
+  // clearing document.body leaves <svelte:window> keyup listeners attached, so leaked
+  // instances keep navigating and skew call counts
+  const mounted: Record<string, unknown>[] = []
+  const mount_prev_next = (props: ComponentProps<typeof PrevNext>) => {
+    mounted.push(mount(PrevNext, { target, props }))
+  }
+  const mount_snippet_harness = (props: ComponentProps<typeof TestSnippetHarness>) => {
+    mounted.push(mount(TestSnippetHarness, { target, props }))
+  }
   const child_snippets = () => [
     ...target.querySelectorAll<HTMLElement>(`[data-testid="prevnext-child"]`),
   ]
@@ -36,9 +41,18 @@ describe(`PrevNext`, () => {
     Object.defineProperty(globalThis, `scrollY`, { value: 200, writable: true })
   })
 
-  test(`renders nothing with less than min_items`, () => {
-    mount_prev_next({ items: [`page1`, `page2`], current: `page1` })
-    expect(target.querySelector(`nav`)).toBeNull()
+  afterEach(() => {
+    for (const instance of mounted) void unmount(instance)
+    mounted.length = 0
+  })
+
+  test.each<[string, ComponentProps<typeof PrevNext>, number]>([
+    [`fewer items than the default min_items`, { items: [`page1`, `page2`] }, 0],
+    [`fewer items than a custom min_items`, { items, min_items: 5 }, 0],
+    [`exactly min_items`, { items: [`page1`, `page2`], min_items: 2 }, 2],
+  ])(`min_items gate: %s renders %d links`, (_desc, props, expected_links) => {
+    mount_prev_next({ ...props, current: `page1` })
+    expect(target.querySelectorAll(`a`)).toHaveLength(expected_links)
   })
 
   test.each([
@@ -70,11 +84,14 @@ describe(`PrevNext`, () => {
 
     keyup(`ArrowRight`)
     expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, `page3`)
+    expect(replaceStateSpy).toHaveBeenCalledTimes(2)
+    expect(pushStateSpy).not.toHaveBeenCalled() // replace_state defaults to true
   })
 
   test.each([
-    [`onkeyup=null`, { items, current: `page2`, onkeyup: null }, `Home`],
-    [`too few items`, { items: [`page1`, `page2`], current: `page1` }, `Home`],
+    // the first two press a mapped key, so they fail if their guard stops working
+    [`onkeyup=null`, { items, current: `page2`, onkeyup: null }, `ArrowLeft`],
+    [`too few items`, { items: [`page1`, `page2`], current: `page1` }, `ArrowLeft`],
     [`unmapped key`, { items, current: `page2` }, `Home`],
   ])(`keyboard navigation ignores %s`, (_label, props, key) => {
     mount_prev_next(props)
@@ -127,64 +144,36 @@ describe(`PrevNext`, () => {
     mount_prev_next({ items, current: `page2`, node: `div` })
     expect(target.querySelector(`div.prev-next`)).toBeInstanceOf(HTMLDivElement)
     expect(target.querySelector(`nav`)).toBeNull()
+    expect(link_hrefs()).toEqual([`page1`, `page3`]) // links still render inside the div
   })
 
-  test.each([
-    [
-      `p2`,
-      [
-        [`p1`, `L1`],
-        [`p2`, `L2`],
-        [`p3`, `L3`],
-        [`p4`, `L4`],
-      ],
-      [`p1`, `p3`],
-      [`L1`, `L3`],
-    ],
-    [
-      `/page/2`,
-      [
-        [`/page/1`, `P1`],
-        [`/page/2`, `P2`],
-        [`/page/3`, `P3`],
-        [`/page/4`, `P4`],
-      ],
-      [`/page/1`, `/page/3`],
-      [`P1`, `P3`],
-    ],
-  ] satisfies [string, [string, string][], string[], string[]][])(
-    `uses tuple href and label (current=%s)`,
-    (current, test_items, expected_hrefs, expected_labels) => {
-      mount_prev_next({ items: test_items, current })
-      expect(link_hrefs()).toEqual(expected_hrefs)
-      expect(
-        [...target.querySelectorAll(`a`)].map((link) => link.textContent?.trim()),
-      ).toEqual(expected_labels)
-    },
-  )
+  test(`uses tuple href and label`, () => {
+    const tuple_items: [string, string][] = [1, 2, 3, 4].map((num) => [
+      `/page/${num}`,
+      `P${num}`,
+    ])
+    mount_prev_next({ items: tuple_items, current: `/page/2` })
+    expect(link_hrefs()).toEqual([`/page/1`, `/page/3`])
+    expect(
+      [...target.querySelectorAll(`a`)].map((link) => link.textContent?.trim()),
+    ).toEqual([`P1`, `P3`])
+  })
 
+  const few_items_warning = `PrevNext received 1 items - minimum of 3 expected`
+  const bad_current_error = `PrevNext received invalid current=invalid, expected one of page1,page2,page3`
+  // too-few-items warnings are verbose-only, invalid-current errors are errors-only
   test.each([
-    [`verbose` as const, [`page1`], `warn`],
-    [`errors` as const, [`page1`, `page2`, `page3`], `error`],
-    [`silent` as const, [`page1`], null],
-  ])(`log=%s mode shows %s`, (log, test_items, level) => {
+    [`verbose` as const, [`page1`], [few_items_warning], []],
+    [`errors` as const, [`page1`, `page2`, `page3`], [], [bad_current_error]],
+    [`silent` as const, [`page1`], [], []],
+  ])(`log=%s mode`, (log, test_items, expected_warns, expected_errors) => {
     const warn = vi.spyOn(console, `warn`).mockImplementation(() => {})
     const error = vi.spyOn(console, `error`).mockImplementation(() => {})
 
     mount_prev_next({ items: test_items, current: `invalid`, log })
 
-    if (level === `warn`) {
-      expect(warn).toHaveBeenCalledWith(
-        `PrevNext received 1 items - minimum of 3 expected`,
-      )
-    } else if (level === `error`) {
-      expect(error).toHaveBeenCalledWith(
-        expect.stringContaining(`PrevNext received invalid current=invalid`),
-      )
-    } else {
-      expect(warn).not.toHaveBeenCalled()
-      expect(error).not.toHaveBeenCalled()
-    }
+    expect(warn.mock.calls.flat()).toEqual(expected_warns)
+    expect(error.mock.calls.flat()).toEqual(expected_errors)
 
     warn.mockRestore()
     error.mockRestore()
@@ -201,10 +190,20 @@ describe(`PrevNext`, () => {
       keyup(key)
       expect(replaceStateSpy).toHaveBeenCalledWith({}, ``, href)
     }
+    expect(replaceStateSpy).toHaveBeenCalledTimes(2)
+    // the custom handler receives the resolved prev/next tuples
+    expect(onkeyup).toHaveBeenCalledWith({
+      prev: [`page1`, `page1`],
+      next: [`page3`, `page3`],
+    })
   })
 
-  test(`children snippet receives index and total`, () => {
-    mount_snippet_harness({ component: `prev-next-children`, items, current: `page2` })
+  test.each([
+    [`page2`, `1`],
+    [`nonexistent`, undefined], // index is not rendered when current is not among items
+  ])(`children snippet receives kind, index and total (current=%s)`, (current, index) => {
+    const component = `prev-next-children`
+    mount_snippet_harness({ component, items, current, log: `silent` })
 
     expect(
       child_snippets().map((snippet) => [
@@ -213,8 +212,8 @@ describe(`PrevNext`, () => {
         snippet.dataset.total,
       ]),
     ).toEqual([
-      [`prev`, `1`, `4`],
-      [`next`, `1`, `4`],
+      [`prev`, index, `4`],
+      [`next`, index, `4`],
     ])
   })
 
@@ -238,21 +237,6 @@ describe(`PrevNext`, () => {
     )
   })
 
-  test(`children snippet passes index=undefined when current is invalid`, () => {
-    mount_snippet_harness({
-      component: `prev-next-children`,
-      items,
-      current: `nonexistent`,
-      log: `silent`,
-    })
-
-    const snippets = child_snippets()
-    expect(snippets).toHaveLength(2)
-    expect(snippets[0].dataset.index).toBeUndefined()
-    expect(snippets[1].dataset.index).toBeUndefined()
-    expect(snippets[0].dataset.total).toBe(`4`)
-  })
-
   test(`link_props and default attributes applied to links`, () => {
     const link_props = {
       class: `custom-class`,
@@ -261,13 +245,13 @@ describe(`PrevNext`, () => {
     }
     mount_prev_next({ items, current: `page2`, link_props })
 
-    const links = target.querySelectorAll(`a`)
-    expect(links).toHaveLength(2)
-    links.forEach((link) => {
-      expect(link.className).toContain(`custom-class`)
-      expect(link.getAttribute(`data-testid`)).toBe(`nav-link`)
-      expect(link.getAttribute(`target`)).toBe(`_blank`)
-      expect(link.getAttribute(`data-sveltekit-preload-data`)).toBe(`hover`)
-    })
+    const link_attrs = [...target.querySelectorAll(`a`)].map((link) => [
+      link.classList.contains(`custom-class`),
+      link.getAttribute(`data-testid`),
+      link.getAttribute(`target`),
+      link.getAttribute(`data-sveltekit-preload-data`), // component default
+    ])
+    const expected = [true, `nav-link`, `_blank`, `hover`]
+    expect(link_attrs).toEqual([expected, expected])
   })
 })

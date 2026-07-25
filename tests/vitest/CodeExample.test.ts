@@ -22,41 +22,37 @@ const append_code_block = (text: string) => {
 }
 
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
-  const meta = { collapsible: true, id }
   const onclick = vi.fn()
-  const button_props = { onclick }
+  const props = { meta: { collapsible: true, id }, src, button_props: { onclick } }
+  mount(CodeExample, { target: document.body, props })
 
-  mount(CodeExample, { target: document.body, props: { meta, src, button_props } })
-
-  expect(doc_query(`div.code-example#${id}`)).toBeInstanceOf(HTMLDivElement)
-  expect(document.querySelector(`nav`)).toBeInstanceOf(HTMLElement)
+  // collapsible defaults code_above to true, which orders the <pre> above the example
+  expect(doc_query(`div.code-example#${id}`).classList.contains(`code-above`)).toBe(true)
+  expect(document.querySelector(`nav`)).not.toBeNull()
 
   const toggle_button = doc_query<HTMLButtonElement>(`nav > button`)
   expect(toggle_button.textContent).toContain(`View code`)
   const pre_closed = doc_query<HTMLPreElement>(`pre`)
-  const closed_style = getComputedStyle(pre_closed)
   expect(pre_closed.classList.contains(`open`)).toBe(false)
-  expect(closed_style.maxHeight).toBe(`0`)
-  expect(closed_style.overflow).toBe(`hidden`)
+  const { maxHeight, overflow } = getComputedStyle(pre_closed)
+  expect([maxHeight, overflow]).toEqual([`0`, `hidden`])
 
   toggle_button.click()
   await tick()
 
-  const pre = doc_query<HTMLPreElement>(`pre.open`)
-  const open_style = getComputedStyle(pre)
-  expect(pre).toBeInstanceOf(HTMLElement)
+  const { overflowX, overflowY } = getComputedStyle(doc_query(`pre.open`))
+  expect([overflowX, overflowY]).toEqual([`auto`, `auto`])
   expect(doc_query(`pre.open > code`).textContent).toBe(src)
-  expect(open_style.overflowX).toBe(`auto`)
-  expect(open_style.overflowY).toBe(`auto`)
   expect(toggle_button.textContent).toContain(`Close`)
   expect(onclick).toHaveBeenCalledOnce()
 })
 
+// both links always render and toggle via display, so a lost `cond` ships a dead link
 test.each([
   [
-    `REPL`,
+    `Svelte`,
     { collapsible: true, repl: `https://svelte.dev/playground` },
-    `nav a[href="https://svelte.dev/playground"]`,
+    `https://svelte.dev/playground`,
   ],
   [
     `GitHub`,
@@ -66,42 +62,47 @@ test.each([
       repo: `https://github.com/janosh/svelte-multiselect`,
       file: `src/lib/CodeExample.svelte`,
     },
-    `nav a[href*="github.com"]`,
+    `https://github.com/janosh/svelte-multiselect/blob/-/src/lib/CodeExample.svelte`,
   ],
-] as const)(`renders %s link in nav`, (_label, meta, selector) => {
-  mount(CodeExample, { target: document.body, props: { meta, src } })
+] as const)(
+  `renders the %s link in nav and hides the unconfigured one`,
+  (shown_title, meta, expected_href) => {
+    mount(CodeExample, { target: document.body, props: { meta, src } })
+    const link = (title: string) =>
+      doc_query<HTMLAnchorElement>(`nav a[title="${title}"]`)
 
-  const link = doc_query<HTMLAnchorElement>(selector)
-  expect(link).toBeInstanceOf(HTMLAnchorElement)
-  expect(link.getAttribute(`target`)).toBe(`_blank`)
-})
+    expect(link(shown_title).getAttribute(`href`)).toBe(expected_href)
+    expect(link(shown_title).getAttribute(`target`)).toBe(`_blank`)
+    expect(link(shown_title).getAttribute(`rel`)).toBe(`noreferrer`)
+    expect(link(shown_title).style.display).toBe(`inline-block`)
+    expect(link(shown_title === `Svelte` ? `GitHub` : `Svelte`).style.display).toBe(
+      `none`,
+    )
+  },
+)
 
 // github: true must link to the file serving the current page; the mdsvex transform
-// emits that path as meta.filename, so it must work as fallback when meta.file is unset
+// emits that path as meta.filename, so it must work as fallback when meta.file is unset.
+// a string github is instead an explicit blob path, needing no file/filename at all
 test.each([
-  [`meta.file`, { file: `src/lib/CodeExample.svelte` }, `src/lib/CodeExample.svelte`],
   [
-    `meta.filename (set by mdsvex transform)`,
-    { filename: `src/routes/(demos)/(integration)/attachments/+page.md` },
+    `true + meta.file`,
+    { github: true, file: `src/lib/CodeExample.svelte` },
+    `src/lib/CodeExample.svelte`,
+  ],
+  [
+    `true + meta.filename (set by mdsvex transform)`,
+    { github: true, filename: `src/routes/(demos)/(integration)/attachments/+page.md` },
     `src/routes/(demos)/(integration)/attachments/+page.md`,
   ],
-])(`github: true links to blob path from %s`, (_label, file_meta, expected_path) => {
+  [`string`, { github: `docs/example.svelte` }, `docs/example.svelte`],
+])(`github: %s links to its blob path`, (_label, github_meta, expected_path) => {
   const repo = `https://github.com/janosh/svelte-multiselect`
-  const meta = { github: true, repo, ...file_meta }
+  const meta = { repo, ...github_meta }
   mount(CodeExample, { target: document.body, props: { meta, src } })
 
   const link = doc_query<HTMLAnchorElement>(`nav a[href*="github.com"]`)
   expect(link.getAttribute(`href`)).toBe(`${repo}/blob/-/${expected_path}`)
-})
-
-// string github is an explicit blob path — must link there even without file/filename
-test(`github as string links to its path without file/filename meta`, () => {
-  const repo = `https://github.com/janosh/svelte-multiselect`
-  const meta = { github: `docs/example.svelte`, repo }
-  mount(CodeExample, { target: document.body, props: { meta, src } })
-
-  const link = doc_query<HTMLAnchorElement>(`nav a[href*="github.com"]`)
-  expect(link.getAttribute(`href`)).toBe(`${repo}/blob/-/docs/example.svelte`)
 })
 
 test.each([`typescript`, `css`])(
