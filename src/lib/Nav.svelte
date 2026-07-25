@@ -328,7 +328,15 @@
     <span aria-hidden="true"></span>
   </button>
 
-  <div id={panel_id} class="menu" class:open={is_open} {...menu_props}>
+  <!-- Escape is also handled on window, but a consumer onkeydown that stops propagation
+  would prevent that, so close from the element too -->
+  <div
+    id={panel_id}
+    class="menu"
+    class:open={is_open}
+    {...menu_props}
+    onkeydown={chain_handlers(onkeydown, menu_props?.onkeydown)}
+  >
     {#each routes as route, route_idx (get_route_key(route, route_idx))}
       {@const parsed_route = parse_route(route)}
       {@const formatted = format_label(parsed_route.label ?? parsed_route.href)}

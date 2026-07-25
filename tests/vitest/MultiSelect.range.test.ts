@@ -16,14 +16,21 @@ const option_row = (label: string): HTMLLIElement => {
   return row
 }
 
-const mount_multiselect = (props: MultiSelectProps): void => {
-  mount(MultiSelect, { target: document.body, props: { rangeSelect: true, ...props } })
+// returns the onrangeSelect spy, which nearly every test asserts on
+const mount_multiselect = (props: MultiSelectProps) => {
+  const onrangeSelect = vi.fn()
+  mount(MultiSelect, {
+    target: document.body,
+    props: { rangeSelect: true, ...props, onrangeSelect },
+  })
+  return onrangeSelect
 }
 
-const shift_click = (label: string): void => {
-  option_row(label).dispatchEvent(
-    new MouseEvent(`click`, { bubbles: true, shiftKey: true }),
-  )
+// takes a row directly when duplicate labels make a lookup by label ambiguous
+const shift_click = (row: string | HTMLLIElement | undefined): void => {
+  const target = typeof row === `string` ? option_row(row) : row
+  if (!target) throw new Error(`Missing row to shift-click`)
+  target.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))
 }
 
 const select_range = async (anchor: string, target: string): Promise<void> => {
@@ -34,12 +41,18 @@ const select_range = async (anchor: string, target: string): Promise<void> => {
 }
 
 test(`backward range selects upward from the anchor`, async () => {
-  const onrange_select = vi.fn()
-  mount_multiselect({ options: alpha_options, open: true, onrangeSelect: onrange_select })
+  const onrange_select = mount_multiselect({ options: alpha_options, open: true })
 
   await select_range(`Delta`, `Alpha`)
 
-  expect(onrange_select.mock.calls[0][0].added).toEqual([`Alpha`, `Beta`, `Gamma`])
+  // from stays the anchor and to the shift-clicked target, so an upward range reports
+  // them in descending order rather than normalizing them to the added range's bounds
+  expect(onrange_select).toHaveBeenCalledExactlyOnceWith({
+    added: [`Alpha`, `Beta`, `Gamma`],
+    from: `Delta`,
+    to: `Alpha`,
+    selected: [`Delta`, `Alpha`, `Beta`, `Gamma`],
+  })
 })
 
 // hint indexes the dropdown rows while the lookup runs against the superset that also
@@ -50,13 +63,12 @@ test(`shift-click resolves to the clicked duplicate-label row`, async () => {
     { label: `Sel`, id: 1 },
     { label: `Dup`, id: 2 },
   ]
-  const onrange_select = vi.fn()
-  mount_multiselect({ options, open: true, onrangeSelect: onrange_select })
+  const onrange_select = mount_multiselect({ options, open: true })
 
   option_row(`Sel`).click()
   await tick()
   const dups = option_rows().filter((row) => row.textContent?.trim() === `Dup`)
-  dups[1]?.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))
+  shift_click(dups[1])
   await tick()
 
   // toEqual not toBe: $bindable re-proxies options, so nothing is reference-identical
@@ -65,12 +77,10 @@ test(`shift-click resolves to the clicked duplicate-label row`, async () => {
 })
 
 test(`Shift+Enter adds one option instead of extending a range`, async () => {
-  const onrange_select = vi.fn()
   const onadd = vi.fn()
-  mount_multiselect({
+  const onrange_select = mount_multiselect({
     options: [`Alpha`, `Beta`, `Gamma`],
     open: true,
-    onrangeSelect: onrange_select,
     onadd,
   })
 
@@ -94,12 +104,10 @@ test(`Shift+Enter adds one option instead of extending a range`, async () => {
 })
 
 test(`Shift-click adds one visible range and one history entry`, async () => {
-  const onrange_select = vi.fn()
-  mount_multiselect({
+  const onrange_select = mount_multiselect({
     options: alpha_options,
     selected: [],
     maxOptions: 3,
-    onrangeSelect: onrange_select,
   })
 
   await select_range(`Alpha`, `Delta`)
@@ -120,12 +128,10 @@ test(`Shift-click adds one visible range and one history entry`, async () => {
 })
 
 test(`Shift+Arrow selects the active range, plain arrows drop the anchor`, async () => {
-  const onrange_select = vi.fn()
-  mount_multiselect({
+  const onrange_select = mount_multiselect({
     options: alpha_options,
     open: true,
     autoScroll: false,
-    onrangeSelect: onrange_select,
   })
   const input = doc_query<HTMLInputElement>(`input[role="combobox"]`)
   const arrow_down = async (shiftKey = false) => {
@@ -152,10 +158,10 @@ test(`Shift+Arrow selects the active range, plain arrows drop the anchor`, async
 })
 
 test(`Shift-click is an ordinary click while rangeSelect is off`, async () => {
-  const onrange_select = vi.fn()
-  mount(MultiSelect, {
-    target: document.body,
-    props: { options: alpha_options, selected: [], onrangeSelect: onrange_select },
+  const onrange_select = mount_multiselect({
+    options: alpha_options,
+    selected: [],
+    rangeSelect: false,
   })
 
   await select_range(`Alpha`, `Delta`)
@@ -166,19 +172,17 @@ test(`Shift-click is an ordinary click while rangeSelect is off`, async () => {
 
 test(`range selection skips disabled rows and obeys maxSelect`, async () => {
   const onmaxreached = vi.fn()
-  const onrange_select = vi.fn()
   const options = [
     { label: `Alpha` },
     { label: `Beta`, disabled: true },
     { label: `Gamma` },
     { label: `Delta` },
   ]
-  mount_multiselect({
+  const onrange_select = mount_multiselect({
     options,
     selected: [],
     maxSelect: 2,
     onmaxreached,
-    onrangeSelect: onrange_select,
   })
 
   await select_range(`Alpha`, `Delta`)
@@ -194,17 +198,15 @@ test(`identical duplicates preserve the clicked occurrence`, async () => {
     { id: 2, label: `Same` },
     { id: 3, label: `Target` },
   ]
-  const onrange_select = vi.fn()
-  mount_multiselect({
+  const onrange_select = mount_multiselect({
     options,
     duplicates: true,
     key: () => `same`,
-    onrangeSelect: onrange_select,
   })
   const rows = option_rows()
   rows[1]?.click()
   await tick()
-  rows[2]?.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))
+  shift_click(rows[2])
   await tick()
 
   expect(onrange_select.mock.calls[0][0].added).toEqual([options[2]])
@@ -212,12 +214,7 @@ test(`identical duplicates preserve the clicked occurrence`, async () => {
 
 test(`an invalidated anchor falls back to one ordinary add`, async () => {
   const onadd = vi.fn()
-  const onrange_select = vi.fn()
-  mount_multiselect({
-    options: [`Anchor`, `Target`],
-    onadd,
-    onrangeSelect: onrange_select,
-  })
+  const onrange_select = mount_multiselect({ options: [`Anchor`, `Target`], onadd })
 
   option_row(`Anchor`).click()
   await tick()

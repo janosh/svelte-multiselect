@@ -66,6 +66,24 @@ describe(`Nav`, () => {
     ])
   })
 
+  // A consumer handler that stops propagation would keep the event from reaching
+  // <svelte:window>, so Escape can only still close the menu if the .menu element runs
+  // its own handler first.
+  test(`menu_props.onkeydown is chained on the menu element itself`, async () => {
+    const menu_props = {
+      onkeydown: vi.fn((event: KeyboardEvent) => event.stopPropagation()),
+    }
+    mount(Nav, { target: document.body, props: { routes: default_routes, menu_props } })
+    await click(doc_query(`.burger`))
+    expect(doc_query(`.menu`).classList.contains(`open`)).toBe(true)
+
+    keydown(`Escape`, doc_query(`.menu`))
+    await tick()
+
+    expect(menu_props.onkeydown).toHaveBeenCalledOnce()
+    expect(doc_query(`.menu`).classList.contains(`open`)).toBe(false)
+  })
+
   test(`burger menu has accessible structure and closes on Escape or link click`, async () => {
     const link_props = { onclick: vi.fn() }
     const menu_props = { onkeydown: vi.fn() }

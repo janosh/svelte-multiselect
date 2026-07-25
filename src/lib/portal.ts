@@ -29,7 +29,9 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
       placement === `top` ||
       (placement === `auto` &&
         dropdown_height > 0 &&
-        dropdown_height > space_below &&
+        // kept as an addition rather than `dropdown_height > space_below`: the two are
+        // algebraically equal but can round apart by an ULP at an exact fit
+        rect.bottom + dropdown_height > globalThis.innerHeight &&
         rect.top > space_below)
     if (place_above) {
       // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed CSS lengths include units
