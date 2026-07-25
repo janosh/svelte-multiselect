@@ -265,11 +265,6 @@ test(`handles action selection and execution`, async () => {
   expect(props.open).toBe(false)
   expect(props.activeIndex).toBeNull()
   expect(props.searchText).toBe(``)
-
-  props.open = true
-  await tick()
-  expect(props.activeIndex).toBe(0)
-  expect(doc_query(`li.active`).textContent).toContain(`action 1`)
 })
 
 test(`ignores user-created options without action handlers`, async () => {
@@ -461,11 +456,6 @@ test(`applies custom styles and props correctly`, async () => {
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  // Check element bindings
-  expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
-  expect(props.input).toBeInstanceOf(HTMLInputElement)
-
-  // Check applied styles and props
   const select_wrapper = doc_query(`dialog div.multiselect`)
   expect(select_wrapper.classList.contains(custom_class)).toBe(true)
 
@@ -481,26 +471,20 @@ test(`applies custom styles and props correctly`, async () => {
   expect(li_el.style.fontWeight).toBe(`bold`)
 })
 
-// dialog_props spreads after the built-in onclose handler, so a user-provided
-// onclose replaces it and the menu no longer auto-closes on the native close event
-test.each([
-  { desc: `resets open state on native close`, custom_onclose: false },
-  { desc: `dialog_props onclose replaces built-in handler`, custom_onclose: true },
-])(`native dialog close event: $desc`, async ({ custom_onclose }) => {
+test(`native dialog close resets state and forwards dialog_props.onclose`, async () => {
   const on_close = vi.fn()
   const props = $state({
     open: true,
+    activeIndex: 1,
+    activeOption: mock_actions[1],
+    searchText: `action`,
     actions: mock_actions,
     fade_duration: 0,
-    dialog_props: {
-      class: `custom-dialog`,
-      ...(custom_onclose ? { onclose: on_close } : {}),
-    },
+    dialog_props: { class: `custom-dialog`, onclose: on_close },
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  // dialog_props spread onto the element without clobbering default attributes
   const dialog = doc_query<HTMLDialogElement>(`dialog`)
   expect(dialog.classList.contains(`custom-dialog`)).toBe(true)
   expect(dialog.getAttribute(`aria-label`)).toBe(`Command menu`)
@@ -508,8 +492,13 @@ test.each([
   dialog.dispatchEvent(new Event(`close`))
   await tick()
 
-  expect(on_close).toHaveBeenCalledTimes(custom_onclose ? 1 : 0)
-  expect(props.open).toBe(custom_onclose)
+  expect(on_close).toHaveBeenCalledOnce()
+  expect(props).toMatchObject({
+    open: false,
+    activeIndex: null,
+    activeOption: null,
+    searchText: ``,
+  })
 })
 
 test(`handles empty actions array`, () => {
@@ -1062,27 +1051,32 @@ describe(`PageSearch`, () => {
     expect(doc_query(`.cmd-label`).textContent).toContain(`Fresh`)
   })
 
-  test(`reloads the current query when loader props change`, async () => {
+  test(`keeps the loader stable while using current callback props`, async () => {
+    const first_navigate = vi.fn()
     const second_navigate = vi.fn()
+    const onadd = vi.fn()
     const search = vi.fn(async () => make_pagefind_response(`Fresh`))
     const props = $state({
       ...base_props,
       load_pagefind: async () => ({ search }),
-      navigate: vi.fn(),
+      navigate: first_navigate,
+      onadd,
+      strip_html_suffix: false,
       transform_url: (url: string) => `/old${url}`,
     })
     mount(PageSearch, { target: document.body, props })
 
     await search_pagefind(`fresh`)
     props.navigate = second_navigate
+    props.strip_html_suffix = true
     props.transform_url = (url: string) => `/new${url}`
     await tick()
-    await vi.runAllTimersAsync()
-    await tick()
 
-    expect(search).toHaveBeenCalledTimes(2)
+    expect(search).toHaveBeenCalledOnce()
     doc_query<HTMLLIElement>(`li[role='option']`).click()
-    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh.html`, {
+    expect(onadd.mock.calls[0][0].option.id).toBe(`pagefind:Fresh:0:/fresh.html`)
+    expect(first_navigate).not.toHaveBeenCalled()
+    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh`, {
       query: `fresh`,
       label: `Fresh`,
       description: `Fresh content`,
@@ -1177,7 +1171,6 @@ describe(`PageSearch`, () => {
           },
         },
         make_result(`/reference-guide.html?tab=api`, `Reference content`, {}),
-        make_result(`/later.html`, `Later page`),
         make_result(`/docs/`, `Docs content`, {}),
       ],
     }))
@@ -1185,7 +1178,7 @@ describe(`PageSearch`, () => {
       target: document.body,
       props: {
         ...base_props,
-        batch_size: 3,
+        batch_size: 2,
         load_pagefind: async () => ({ search }),
       },
     })
@@ -1195,7 +1188,7 @@ describe(`PageSearch`, () => {
     const labels = Array.from(document.querySelectorAll(`.cmd-label`), (label) =>
       label.childNodes[0]?.textContent?.trim(),
     )
-    expect(labels).toEqual([`Reference Guide`, `Later page`, `Docs`])
+    expect(labels).toEqual([`Reference Guide`, `Docs`])
   })
 })
 

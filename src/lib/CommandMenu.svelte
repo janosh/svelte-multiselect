@@ -6,6 +6,7 @@
   import type { CmdAction, MultiSelectProps } from './types'
   import {
     cmd_action_matches,
+    chain_handlers,
     format_cmd_metadata,
     matches_shortcut,
     split_shortcut,
@@ -299,8 +300,8 @@
     transition:fade={{ duration: fade_duration }}
     style={dialog_style}
     aria-label={aria_label}
-    onclose={close_menu}
     {...dialog_props}
+    onclose={chain_handlers(close_menu, dialog_props?.onclose)}
     oncancel={handle_dialog_cancel}
   >
     <MultiSelect

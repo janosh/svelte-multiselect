@@ -1,5 +1,5 @@
 import { mount, tick, unmount } from 'svelte'
-import { expect, test } from 'vite-plus/test'
+import { expect, test, vi } from 'vite-plus/test'
 import CodeExample from '$lib/CodeExample.svelte'
 import CopyButton from '$lib/CopyButton.svelte'
 import { doc_query } from './index'
@@ -23,8 +23,10 @@ const append_code_block = (text: string) => {
 
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const meta = { collapsible: true, id }
+  const onclick = vi.fn()
+  const button_props = { onclick }
 
-  mount(CodeExample, { target: document.body, props: { meta, src } })
+  mount(CodeExample, { target: document.body, props: { meta, src, button_props } })
 
   expect(doc_query(`div.code-example#${id}`)).toBeInstanceOf(HTMLDivElement)
   expect(document.querySelector(`nav`)).toBeInstanceOf(HTMLElement)
@@ -47,6 +49,7 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   expect(open_style.overflowX).toBe(`auto`)
   expect(open_style.overflowY).toBe(`auto`)
   expect(toggle_button.textContent).toContain(`Close`)
+  expect(onclick).toHaveBeenCalledOnce()
 })
 
 test.each([

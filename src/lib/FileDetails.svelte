@@ -3,6 +3,7 @@
   import type { HTMLAttributes, HTMLDetailsAttributes } from 'svelte/elements'
   import type { HastNode } from './live-examples/hast'
   import { escape_html_text, hast_to_html } from './live-examples/hast'
+  import { chain_handlers } from './utils'
 
   type File = {
     title: string
@@ -63,6 +64,7 @@
     }
     sync_any_open()
   }
+  const handle_toggle_all = $derived(chain_handlers(toggle_all, button_props?.onclick))
 
   // Map file extensions that differ from their starry-night language flag
   const ext_to_lang: Record<string, string> = {
@@ -126,7 +128,7 @@
 </script>
 
 {#if files?.length > 1}
-  <button onclick={toggle_all} title={toggle_all_btn_title} {...button_props}>
+  <button title={toggle_all_btn_title} {...button_props} onclick={handle_toggle_all}>
     {any_open ? `Close` : `Open`} all
   </button>
 {/if}

@@ -6,6 +6,7 @@
   import Self from './CopyButton.svelte'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
+  import { chain_handlers } from './utils'
 
   type State = `ready` | `success` | `error`
 
@@ -129,24 +130,26 @@
       reset_timeout = null
     }, reset_sec * 1000)
   }
+
+  function handle_copy_keydown(event: KeyboardEvent) {
+    if (event.key !== `Enter` && event.key !== ` `) return
+    event.preventDefault()
+    copy()
+  }
 </script>
 
 {#if !(global || global_selector)}
   {@const { text, icon } = labels[state]}
   <svelte:element
     this={as}
-    onclick={copy}
-    onkeydown={(event) => {
-      if (event.key !== `Enter` && event.key !== ` `) return
-      event.preventDefault()
-      copy()
-    }}
     role="button"
     tabindex={disabled ? -1 : 0}
     aria-disabled={disabled || undefined}
     {...as === `button` ? { disabled } : {}}
     data-sms-copy=""
     {...rest}
+    onclick={chain_handlers(copy, rest.onclick)}
+    onkeydown={chain_handlers(handle_copy_keydown, rest.onkeydown)}
   >
     {#if children}
       {@render children({ state, icon, text, disabled })}

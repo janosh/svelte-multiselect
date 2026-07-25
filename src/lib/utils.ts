@@ -2,6 +2,11 @@ import type { CmdAction, Option } from './types'
 
 let uuid_counter = 0
 
+export const chain_handlers =
+  <EventType>(...handlers: (((event: EventType) => unknown) | null | undefined)[]) =>
+  (event: EventType): void =>
+    handlers.forEach((handler) => handler?.(event))
+
 // Generates a UUID for component IDs. Uses native crypto.randomUUID when available.
 // Fallback uses timestamp+counter - sufficient for DOM IDs (uniqueness, not security).
 // Cryptographic randomness is unnecessary here since these IDs are only used for

@@ -67,7 +67,12 @@ describe(`Nav`, () => {
   })
 
   test(`burger menu has accessible structure and closes on Escape or link click`, async () => {
-    mount(Nav, { target: document.body, props: { routes: default_routes } })
+    const link_props = { onclick: vi.fn() }
+    const menu_props = { onkeydown: vi.fn() }
+    mount(Nav, {
+      target: document.body,
+      props: { routes: default_routes, link_props, menu_props },
+    })
     const button = doc_query(`.burger`)
     const menu = doc_query(`.menu`)
     const panel_id = button.getAttribute(`aria-controls`)
@@ -87,13 +92,16 @@ describe(`Nav`, () => {
     expect(button.getAttribute(`aria-expanded`)).toBe(`true`)
     expect(menu.classList.contains(`open`)).toBe(true)
 
-    await escape()
+    keydown(`Escape`, menu)
+    await tick()
     expect(button.getAttribute(`aria-expanded`)).toBe(`false`)
     expect(menu.classList.contains(`open`)).toBe(false)
+    expect(menu_props.onkeydown).toHaveBeenCalledOnce()
 
     await click(button)
     await click(doc_query(`a`))
     expect(button.getAttribute(`aria-expanded`)).toBe(`false`)
+    expect(link_props.onclick).toHaveBeenCalledOnce()
   })
 
   test(`applies custom props`, () => {
@@ -326,9 +334,10 @@ describe(`Nav`, () => {
   })
 
   test(`keyboard navigation: Enter/Space/ArrowDown open, arrows navigate, Escape closes`, async () => {
+    const link_props = { onkeydown: vi.fn() }
     mount(Nav, {
       target: document.body,
-      props: { routes: [[`/p`, [`/p`, `/p/1`, `/p/2`]]] },
+      props: { routes: [[`/p`, [`/p`, `/p/1`, `/p/2`]]], link_props },
     })
     const toggle_button = doc_query(`[data-dropdown-toggle]`)
     const { dropdown_menu: menu } = query_dropdown_elements()
@@ -360,6 +369,7 @@ describe(`Nav`, () => {
     await next_task()
     expect(is_visible(menu)).toBe(false)
     expect(document.activeElement).toBe(toggle_button)
+    expect(link_props.onkeydown).toHaveBeenCalledOnce()
   })
 
   test(`dropdown focus behavior`, async () => {

@@ -5,7 +5,7 @@
   import { click_outside, tooltip } from './attachments'
   import Icon from './Icon.svelte'
   import type { NavRoute, NavRouteObject } from './types'
-  import { get_uuid } from './utils'
+  import { chain_handlers, get_uuid } from './utils'
 
   type NavLinkRouteObject = NavRouteObject & { href: string }
 
@@ -145,6 +145,7 @@
   function onkeydown(event: KeyboardEvent) {
     if (event.key === `Escape`) close_menus()
   }
+  const menu_keydown = $derived(chain_handlers(onkeydown, menu_props?.onkeydown))
 
   function handle_dropdown_keydown(
     event: KeyboardEvent,
@@ -254,6 +255,16 @@
     }
     close_menus()
   }
+  const link_click_handler = (route: NavLinkRouteObject) =>
+    chain_handlers(
+      (event: MouseEvent) => handle_link_click(event, route),
+      link_props?.onclick,
+    )
+  const dropdown_item_keydown_handler = (parent_href: string) =>
+    chain_handlers(
+      (event: KeyboardEvent) => handle_dropdown_item_keydown(event, parent_href),
+      link_props?.onkeydown,
+    )
 
   // Get external link attributes
   function get_external_attrs(route: NavRouteObject) {
@@ -288,11 +299,11 @@
     <a
       href={parsed_route.href}
       aria-current={is_current(parsed_route.href)}
-      onclick={(event: MouseEvent) => handle_link_click(event, parsed_route)}
       class={parsed_route.class}
       {...link_props}
       {...get_external_attrs(parsed_route)}
       style={`${formatted.style}; ${link_props?.style ?? ``}; ${parsed_route.style ?? ``}`}
+      onclick={link_click_handler(parsed_route)}
       {@attach item_tooltip}
     >
       {@html formatted.label}
@@ -318,7 +329,13 @@
     <span aria-hidden="true"></span>
   </button>
 
-  <div id={panel_id} class="menu" class:open={is_open} {onkeydown} {...menu_props}>
+  <div
+    id={panel_id}
+    class="menu"
+    class:open={is_open}
+    {...menu_props}
+    onkeydown={menu_keydown}
+  >
     {#each routes as route, route_idx (get_route_key(route, route_idx))}
       {@const parsed_route = parse_route(route)}
       {@const formatted = format_label(parsed_route.label ?? parsed_route.href)}
@@ -431,12 +448,10 @@
                 <a
                   href={child_href}
                   aria-current={is_current(child_href)}
-                  onclick={(event: MouseEvent) =>
-                    handle_link_click(event, { href: child_href })}
-                  onkeydown={(event: KeyboardEvent) =>
-                    handle_dropdown_item_keydown(event, parsed_route.href)}
                   {...link_props}
                   style={`${child_formatted.style}; ${link_props?.style ?? ``}`}
+                  onclick={link_click_handler({ href: child_href })}
+                  onkeydown={dropdown_item_keydown_handler(parsed_route.href)}
                   {@attach child_tooltip}
                 >
                   {@html child_formatted.label}

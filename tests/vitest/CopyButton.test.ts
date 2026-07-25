@@ -64,7 +64,8 @@ beforeEach(() => {
 })
 
 test.each([`Enter`, ` `])(`%s key triggers copy and prevents default`, (key: string) => {
-  const { copy_button } = mount_copy_button({ content: `test content` })
+  const onkeydown = vi.fn()
+  const { copy_button } = mount_copy_button({ content: `test content`, onkeydown })
   const event = new KeyboardEvent(`keydown`, { key, bubbles: true })
   const prevent_spy = vi.spyOn(event, `preventDefault`)
 
@@ -72,6 +73,7 @@ test.each([`Enter`, ` `])(`%s key triggers copy and prevents default`, (key: str
 
   expect(mock_write_text).toHaveBeenCalledWith(`test content`)
   expect(prevent_spy).toHaveBeenCalled()
+  expect(onkeydown).toHaveBeenCalledOnce()
 })
 
 test.each([`Escape`, `Tab`, `ArrowUp`, `a`, `1`])(`%s key is ignored`, (key: string) => {
@@ -144,10 +146,13 @@ test.each([
 })
 
 test(`calls on_copy_success with copied content`, async () => {
+  const content = `copied text`
+  const onclick = vi.fn()
   const on_copy_success = vi.fn()
-  const { copy_button } = mount_copy_button({ content: `copied text`, on_copy_success })
+  const { copy_button } = mount_copy_button({ content, on_copy_success, onclick })
   await click_copy_button(copy_button)
-  expect(on_copy_success).toHaveBeenCalledWith(`copied text`)
+  expect(on_copy_success).toHaveBeenCalledWith(content)
+  expect(onclick).toHaveBeenCalledOnce()
 })
 
 test(`calls on_copy_error with error and content`, async () => {
