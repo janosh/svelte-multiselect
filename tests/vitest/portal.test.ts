@@ -39,13 +39,27 @@ test(`restores from a shadow root after its anchor is removed`, async () => {
   expect(node.isConnected).toBe(false)
 })
 
-test(`is inert without document`, () => {
-  const { home, target, node } = create_fixture()
-  vi.stubGlobal(`document`, undefined)
+// closing must hide the dropdown in the same tick; deferring it to the reposition
+// microtask would leave a stale dropdown painted for a frame
+test(`hides synchronously when open flips false`, () => {
+  const { target, node } = create_fixture()
   const action = portal_action(node, { active: true, open: true, target_node: target })
 
-  action.update({ active: false, open: false, target_node: null })
+  action.update({ active: true, open: false, target_node: target })
+  expect(node.hidden).toBe(true)
   action.destroy()
-  expect(node.parentElement).toBe(home)
-  expect(node.getAttribute(`style`)).toBeNull()
+})
+
+test(`destroy detaches viewport listeners only when portalled`, () => {
+  const { home, target, node } = create_fixture()
+  const remove_spy = vi.spyOn(globalThis, `removeEventListener`)
+
+  // never portalled, so Svelte owns removal and the action must leave the node alone
+  portal_action(node, { active: false, open: true, target_node: target }).destroy()
+  expect(node.parentNode).toBe(home)
+  const baseline = remove_spy.mock.calls.length
+
+  portal_action(node, { active: true, open: true, target_node: target }).destroy()
+  expect(remove_spy.mock.calls).toHaveLength(baseline + 2)
+  expect(node.isConnected).toBe(false)
 })

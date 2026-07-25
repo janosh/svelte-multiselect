@@ -4260,6 +4260,64 @@ describe(`loadOptions feature`, () => {
     expect(load_options).toHaveBeenCalledTimes(1)
   })
 
+  // `signal` is optional, so a consumer may ignore it. Its request then keeps running
+  // and can fail for real after being superseded — that must still be reported.
+  test(`logs a real failure from a superseded request that ignored signal`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, rejectors } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      await type_search_text(`abc`, input)
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+      expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
+
+      rejectors[0](new Error(`HTTP 500 boom`))
+      await vi.runAllTimersAsync()
+
+      expect(console_error).toHaveBeenCalledWith(
+        `MultiSelect: loadOptions error:`,
+        expect.any(Error),
+      )
+    } finally {
+      vi.useRealTimers()
+      console_error.mockRestore()
+    }
+  })
+
+  test(`a search reset aborts an in-flight pagination request`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+      resolvers[0]({ options: mock_data.slice(0, 50), hasMore: true })
+      await vi.runAllTimersAsync()
+
+      mock_scroll_near_bottom(doc_query(`ul.options`))
+      await tick()
+      expect(load_options).toHaveBeenCalledTimes(2) // pagination now in flight
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      await type_search_text(`zz`, input)
+      await vi.runAllTimersAsync()
+
+      expect(load_options.mock.calls[1][0].signal?.aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   // A server can report hasMore alongside an empty batch. Refetching the same offset
   // can't make progress, and a non-reset load at offset 0 would break the documented
   // cursor-pagination pattern that treats offset 0 as "reset your cursor".
@@ -4300,9 +4358,13 @@ describe(`loadOptions feature`, () => {
       await vi.runAllTimersAsync()
       expect(load_options).toHaveBeenCalledTimes(2)
       expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
-      expect(load_options).toHaveBeenLastCalledWith(
-        expect.objectContaining({ search: `xyz`, offset: 0, limit: 50 }),
-      )
+      // exact match, not objectContaining: pins that a signal is actually handed over
+      expect(load_options).toHaveBeenLastCalledWith({
+        search: `xyz`,
+        offset: 0,
+        limit: 50,
+        signal: expect.any(AbortSignal),
+      })
 
       // Resolve the STALE first request after the new one was initiated
       resolvers[0]({ options: [`Stale Result`], hasMore: false })

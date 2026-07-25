@@ -1508,7 +1508,7 @@
       clear_validity()
       handle_dropdown_after_select(event)
       if (resetFilterOnAdd) searchText = ``
-      void 0
+      last_announcement = bulk_announcement(added.length, `selected`)
     }
     if (added.length < unselected.length && maxSelect !== null) {
       wiggle = true
@@ -1636,10 +1636,17 @@
     if (!multi_select) return false
     const visible_options = range_navigable_options
     // trust the caller's positional hint, falling back to a search when it's stale
-    const index_of = (option_to_find: Option, hint?: number | null): number =>
-      hint != null && is_same_option(visible_options[hint], option_to_find)
-        ? hint
-        : visible_options.findIndex((item) => is_same_option(item, option_to_find))
+    const index_of = (option_to_find: Option, hint?: number | null): number => {
+      // hint indexes the dropdown rows, an order-preserving subsequence of
+      // visible_options, so the real position is at or after it. Picking the first
+      // match past the hint keeps indistinguishable rows on the clicked occurrence.
+      const matches: number[] = []
+      for (const [idx, item] of visible_options.entries()) {
+        if (is_same_option(item, option_to_find)) matches.push(idx)
+      }
+      if (hint == null) return matches[0] ?? -1
+      return matches.find((idx) => idx >= hint) ?? matches.at(-1) ?? -1
+    }
     // A row the user can't see (past maxOptions) or that has left the list can't be a
     // range endpoint. Report it unhandled so the caller still performs an ordinary add
     // rather than swallowing the interaction.
@@ -1892,7 +1899,10 @@
   async function load_dynamic_options(reset: boolean) {
     if (
       !load_options_config ||
-      (!reset && (load_options_loading || !load_options_has_more))
+      // paginating from nothing repeats the first page, and would hand out offset 0 on
+      // a non-reset load, which the documented cursor pattern reads as "reset"
+      (!reset &&
+        (load_options_loading || !load_options_has_more || !loaded_options.length))
     )
       return
     if (reset) {
@@ -1919,10 +1929,15 @@
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
     } catch (error) {
-      // aborts are self-inflicted (superseded/closed), so they're not real errors
-      if (request_id !== load_request_id || abort_controller.signal.aborted) return
+      // A consumer forwarding `signal` rejects with AbortError once we cancel, which is
+      // self-inflicted. One that ignores `signal` still reports genuine failures while
+      // superseded, so only swallow errors that are actually aborts.
+      if (abort_controller.signal.aborted && (error as Error)?.name === `AbortError`) {
+        return
+      }
       console.error(`MultiSelect: loadOptions error:`, error)
-      load_options_has_more = false
+      // a superseded request must not clobber the live request's state
+      if (request_id === load_request_id) load_options_has_more = false
     } finally {
       // Only clear loading if this is still the active request — a newer
       // reset call may have started while this one was in-flight
@@ -2010,7 +2025,7 @@
     return () => clearTimeout(debounce_timer)
   })
   // Abort any in-flight fetch on unmount so callers passing `signal` to fetch can bail
-  $effect(() => cancel_in_flight_load)
+  $effect(() => () => cancel_in_flight_load())
 
   function handle_options_scroll(event: Event) {
     if (!(event.target instanceof HTMLElement)) return
