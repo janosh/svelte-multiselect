@@ -33,6 +33,15 @@ test.each([
       title: `Source`,
     },
   ],
+  // with both defaults, aria-label and title coincide, so nothing pins the fallback
+  [
+    `custom title without aria_label`,
+    { title: `Source` },
+    {
+      aria_label: `Source`,
+      title: `Source`,
+    },
+  ],
 ] as const)(
   `GitHubCorner renders link with svg and %s`,
   (_label, props, expected_props) => {

@@ -7,14 +7,49 @@ import {
   sortable,
   tooltip,
 } from '$lib/attachments'
-import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const mouse_event = (type: string, clientX: number, clientY: number) =>
   new MouseEvent(type, { clientX, clientY, bubbles: true })
 
+const create_element = (tag = `div`, styles: Partial<CSSStyleDeclaration> = {}) => {
+  const element = document.createElement(tag)
+  Object.assign(element.style, styles)
+  document.body.append(element)
+  return element
+}
+
+// Mocks the geometry an attachment reads: getBoundingClientRect plus the
+// offset* properties (read-only, hence defineProperty).
+const mock_rect = (
+  element: HTMLElement,
+  rect: { left: number; top: number; width?: number; height?: number },
+) => {
+  const { left, top, width = 100, height = 50 } = rect
+  element.getBoundingClientRect = vi.fn(() => ({
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  }))
+  const offsets = {
+    offsetLeft: left,
+    offsetTop: top,
+    offsetWidth: width,
+    offsetHeight: height,
+  }
+  for (const [prop, value] of Object.entries(offsets)) {
+    Object.defineProperty(element, prop, { value, configurable: true })
+  }
+}
+
 describe(`get_html_sort_value`, () => {
-  const create_element = (tag = `div`) => document.createElement(tag)
   const add_data_sort = (element: HTMLElement, value: string) =>
     element.setAttribute(`data-sort-value`, value)
   const add_text = (element: HTMLElement, text: string) => (element.textContent = text)
@@ -61,101 +96,69 @@ describe(`get_html_sort_value`, () => {
 })
 
 describe(`tooltip`, () => {
-  const create_element = (tag = `div`) => {
-    const element = document.createElement(tag)
-    document.body.append(element)
-    return element
-  }
-
   const setup_tooltip = (element: HTMLElement, options = {}) => tooltip(options)(element)
 
   const mock_bounds = (
     element: HTMLElement,
     bounds = { left: 100, top: 100, width: 50, height: 50 },
-  ) => {
-    element.getBoundingClientRect = vi.fn(() => ({
-      ...bounds,
-      right: bounds.left + bounds.width,
-      bottom: bounds.top + bounds.height,
-      x: bounds.left,
-      y: bounds.top,
-      toJSON: () => ({}),
-    }))
-  }
+  ) => mock_rect(element, bounds)
 
   const mock_viewport = (width: number, height: number) => {
-    const original_width = globalThis.innerWidth
-    const original_height = globalThis.innerHeight
-    Object.defineProperty(globalThis, `innerWidth`, { configurable: true, value: width })
-    Object.defineProperty(globalThis, `innerHeight`, {
-      configurable: true,
-      value: height,
-    })
-    return () => {
-      Object.defineProperty(globalThis, `innerWidth`, {
-        configurable: true,
-        value: original_width,
-      })
-      Object.defineProperty(globalThis, `innerHeight`, {
-        configurable: true,
-        value: original_height,
-      })
+    const set_size = (inner_width: number, inner_height: number) => {
+      const sizes = { innerWidth: inner_width, innerHeight: inner_height }
+      for (const [prop, value] of Object.entries(sizes)) {
+        Object.defineProperty(globalThis, prop, { configurable: true, value })
+      }
     }
+    const [original_width, original_height] = [
+      globalThis.innerWidth,
+      globalThis.innerHeight,
+    ]
+    set_size(width, height)
+    return () => set_size(original_width, original_height)
   }
 
+  // Only `.custom-tooltip` elements report the mocked size; everything else keeps
+  // its real (zero) geometry so trigger bounds stay under mock_bounds' control.
   const mock_tooltip_size = (width: number, height: number) => {
-    const original_offset_width = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      `offsetWidth`,
-    )
-    const original_offset_height = Object.getOwnPropertyDescriptor(
-      HTMLElement.prototype,
-      `offsetHeight`,
-    )
-
+    const is_tooltip = (node: HTMLElement) => node.classList.contains(`custom-tooltip`)
     const bounds_spy = vi
       .spyOn(HTMLElement.prototype, `getBoundingClientRect`)
       .mockImplementation(function (this: HTMLElement) {
-        const is_tooltip = this.classList.contains(`custom-tooltip`)
+        const [box_width, box_height] = is_tooltip(this) ? [width, height] : [0, 0]
         return {
           left: 0,
           top: 0,
-          width: is_tooltip ? width : 0,
-          height: is_tooltip ? height : 0,
-          right: is_tooltip ? width : 0,
-          bottom: is_tooltip ? height : 0,
+          width: box_width,
+          height: box_height,
+          right: box_width,
+          bottom: box_height,
           x: 0,
           y: 0,
           toJSON: () => ({}),
         }
       })
 
-    Object.defineProperty(HTMLElement.prototype, `offsetWidth`, {
-      configurable: true,
-      get() {
-        if (this.classList.contains(`custom-tooltip`)) return width
-        return original_offset_width?.get?.call(this) ?? 0
-      },
-    })
-    Object.defineProperty(HTMLElement.prototype, `offsetHeight`, {
-      configurable: true,
-      get() {
-        if (this.classList.contains(`custom-tooltip`)) return height
-        return original_offset_height?.get?.call(this) ?? 0
-      },
+    const originals = (
+      [
+        [`offsetWidth`, width],
+        [`offsetHeight`, height],
+      ] as const
+    ).map(([prop, size]) => {
+      const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop)
+      Object.defineProperty(HTMLElement.prototype, prop, {
+        configurable: true,
+        get(this: HTMLElement) {
+          return is_tooltip(this) ? size : (original?.get?.call(this) ?? 0)
+        },
+      })
+      return [prop, original] as const
     })
 
     return () => {
       bounds_spy.mockRestore()
-      if (original_offset_width) {
-        Object.defineProperty(HTMLElement.prototype, `offsetWidth`, original_offset_width)
-      }
-      if (original_offset_height) {
-        Object.defineProperty(
-          HTMLElement.prototype,
-          `offsetHeight`,
-          original_offset_height,
-        )
+      for (const [prop, original] of originals) {
+        if (original) Object.defineProperty(HTMLElement.prototype, prop, original)
       }
     }
   }
@@ -223,13 +226,61 @@ describe(`tooltip`, () => {
   const find_tooltip_css = (css_texts: string[]) =>
     css_texts.find((text) => text.includes(`z-index`) && text.includes(`9999`))
 
+  // Arrow fill borders: the solid, non-transparent ones carry the background color
+  const arrow_border_values = (set_prop_values: string[]) =>
+    set_prop_values.filter(
+      (entry) =>
+        entry.startsWith(`border-`) &&
+        entry.includes(`solid`) &&
+        !entry.includes(`transparent`),
+    )
+
   // Shared helper for triggering tooltip display (requires vi.useFakeTimers())
   const trigger_tooltip = (element: HTMLElement) => {
     element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
     vi.runAllTimers()
   }
 
+  // Creates a trigger with the given title (default bounds: left/top 100, 50x50)
+  // and attaches a tooltip to it, returning the trigger and the attachment cleanup
+  const attach_tooltip = (title = `test`, options: Record<string, unknown> = {}) => {
+    const element = create_element()
+    element.title = title
+    mock_bounds(element)
+    return [element, setup_tooltip(element, { delay: 0, ...options })] as const
+  }
+
+  // Same, but also hovers the trigger so its tooltip becomes visible
+  const show_tooltip = (options: Record<string, unknown> = {}, title = `test`) => {
+    const [element] = attach_tooltip(title, options)
+    trigger_tooltip(element)
+    return element
+  }
+
+  // Shows a tooltip with style writes captured, restoring the prototype patches
+  // even if showing throws. Returns the captured cssText/setProperty values.
+  const show_with_captured_styles = (
+    customize: (element: HTMLElement) => void = () => {},
+    options: Record<string, unknown> = {},
+  ) => {
+    const { css_texts, set_prop_values, restore } = capture_style_writes()
+    try {
+      const element = create_element()
+      element.title = `styled tooltip`
+      customize(element)
+      mock_bounds(element)
+      setup_tooltip(element, { delay: 0, ...options })
+      trigger_tooltip(element)
+    } finally {
+      restore()
+    }
+    return { css_texts, set_prop_values }
+  }
+
   describe(`Content Sources`, () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
     it.each([
       [`title`, `title`, `Title tooltip`, true],
       [`custom content`, `content`, `Custom content`, false],
@@ -237,8 +288,9 @@ describe(`tooltip`, () => {
       [`data-title`, `data-title`, `Data title tooltip`, false],
     ])(`should create tooltip from %s`, (_desc, attr, content, stores_title) => {
       const element = create_element()
-      const options = attr === `content` ? { content } : {}
+      const options = attr === `content` ? { content, delay: 0 } : { delay: 0 }
       if (attr !== `content`) element.setAttribute(attr, content)
+      mock_bounds(element)
 
       const cleanup = setup_tooltip(element, options)
 
@@ -248,28 +300,30 @@ describe(`tooltip`, () => {
       if (attr !== `content`) {
         expect(element.getAttribute(attr)).toBe(stores_title ? null : content)
       }
+
+      // the attachment must actually render this content source on hover
+      trigger_tooltip(element)
+      expect(document.querySelectorAll(`.custom-tooltip`)).toHaveLength(1)
+      expect(doc_query(`.tooltip-content`).textContent).toBe(content)
+
       cleanup?.()
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
 
     it.each([
       [`custom content over title`, { content: `Custom content` }, `Custom content`],
       [`title over aria-label`, {}, `Title content`],
     ])(`should prioritize %s`, (_description, options, expected_content) => {
-      vi.useFakeTimers()
-      try {
-        const element = create_element()
-        element.title = `Title content`
-        element.setAttribute(`aria-label`, `Aria content`)
-        mock_bounds(element)
-        setup_tooltip(element, { ...options, delay: 0 })
-        trigger_tooltip(element)
+      const element = create_element()
+      element.title = `Title content`
+      element.setAttribute(`aria-label`, `Aria content`)
+      mock_bounds(element)
+      setup_tooltip(element, { ...options, delay: 0 })
+      trigger_tooltip(element)
 
-        expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
-        expect(element.hasAttribute(`title`)).toBe(false)
-        expect(doc_query(`.tooltip-content`).textContent).toBe(expected_content)
-      } finally {
-        vi.useRealTimers()
-      }
+      expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
+      expect(element.hasAttribute(`title`)).toBe(false)
+      expect(doc_query(`.tooltip-content`).textContent).toBe(expected_content)
     })
 
     it.each([
@@ -278,19 +332,27 @@ describe(`tooltip`, () => {
     ])(`should handle %s`, (_desc, content, expected) => {
       const element = create_element()
       if (content !== undefined) element.title = content
-      const cleanup = tooltip({ content })(element)
-      expect(cleanup).toBe(expected)
+      mock_bounds(element)
+      expect(tooltip({ content })(element)).toBe(expected)
+
+      // no content means no listeners should have been attached either
+      trigger_tooltip(element)
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
   })
 
   describe(`Configuration Options`, () => {
+    beforeEach(() => vi.useFakeTimers())
+    afterEach(() => vi.useRealTimers())
+
     it(`should handle disabled option`, () => {
-      const element = create_element()
-      element.title = `Disabled tooltip`
-      const cleanup = setup_tooltip(element, { disabled: true })
+      const [element, cleanup] = attach_tooltip(`Disabled tooltip`, { disabled: true })
       expect(cleanup).toBeUndefined()
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
       expect(element.getAttribute(`title`)).toBe(`Disabled tooltip`)
+
+      trigger_tooltip(element)
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
   })
 
@@ -316,13 +378,21 @@ describe(`tooltip`, () => {
       cleanup?.()
     })
 
-    it(`should not setup children added after initialization`, () => {
+    it(`should not setup children added after initialization`, async () => {
       const parent = create_element()
-      setup_tooltip(parent)
+      parent.title = `Parent tooltip` // keep the attachment live, else nothing is observed
+      const cleanup = setup_tooltip(parent)
+      expect(cleanup).toBeTypeOf(`function`)
+      expect(parent.getAttribute(`data-original-title`)).toBe(`Parent tooltip`)
+
       const child = document.createElement(`div`)
       child.title = `Dynamic`
       parent.append(child)
+      await Promise.resolve() // flush MutationObserver microtask
+
       expect(child.hasAttribute(`data-original-title`)).toBe(false)
+      expect(child.getAttribute(`title`)).toBe(`Dynamic`)
+      cleanup?.()
     })
   })
 
@@ -407,16 +477,8 @@ describe(`tooltip`, () => {
     })
 
     it(`shows only one tooltip at a time`, () => {
-      const [el1, el2] = [create_element(), create_element()]
-      el1.title = `tooltip1`
-      el2.title = `tooltip2`
-      mock_bounds(el1)
-      mock_bounds(el2)
-      setup_tooltip(el1, { delay: 0 })
-      setup_tooltip(el2, { delay: 0 })
-
-      trigger_tooltip(el1)
-      trigger_tooltip(el2)
+      show_tooltip({}, `tooltip1`)
+      show_tooltip({}, `tooltip2`)
 
       expect(document.querySelectorAll(`.custom-tooltip`)).toHaveLength(1)
       expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip2`)
@@ -430,7 +492,7 @@ describe(`tooltip`, () => {
 
       element.dispatchEvent(new FocusEvent(`focus`, { bubbles: true }))
       vi.runAllTimers()
-      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+      expect(doc_query(`.custom-tooltip`).textContent).toContain(`focus tooltip`)
 
       element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
@@ -441,46 +503,28 @@ describe(`tooltip`, () => {
     beforeEach(() => vi.useFakeTimers())
 
     it(`cleanup of one instance keeps another instance's visible tooltip`, () => {
-      const [el_a, el_b] = [create_element(), create_element()]
-      el_a.title = `tooltip A`
-      el_b.title = `tooltip B`
-      mock_bounds(el_a)
-      mock_bounds(el_b)
-      const cleanup_a = setup_tooltip(el_a, { delay: 0 })
-      setup_tooltip(el_b, { delay: 0 })
-
-      trigger_tooltip(el_b)
+      const [, cleanup_a] = attach_tooltip(`tooltip A`)
+      const el_b = show_tooltip({}, `tooltip B`)
       expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip B`)
 
       cleanup_a?.()
-      expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(
-        `tooltip B`,
-      )
+      expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip B`)
+      expect(el_b.getAttribute(`aria-describedby`)).toBe(doc_query(`.custom-tooltip`).id)
     })
 
     it(`cleanup of one instance keeps another instance's pending show`, () => {
-      const [el_a, el_b] = [create_element(), create_element()]
-      el_a.title = `tooltip A`
-      el_b.title = `tooltip B`
-      mock_bounds(el_a)
-      mock_bounds(el_b)
-      const cleanup_a = setup_tooltip(el_a, { delay: 100 })
-      setup_tooltip(el_b, { delay: 100 })
+      const [, cleanup_a] = attach_tooltip(`tooltip A`, { delay: 100 })
+      const [el_b] = attach_tooltip(`tooltip B`, { delay: 100 })
 
       el_b.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       cleanup_a?.() // must not cancel B's pending show timeout
 
       vi.runAllTimers()
-      expect(document.querySelector(`.custom-tooltip`)?.textContent).toContain(
-        `tooltip B`,
-      )
+      expect(doc_query(`.custom-tooltip`).textContent).toContain(`tooltip B`)
     })
 
     it(`cleanup cancels its own pending show`, () => {
-      const element = create_element()
-      element.title = `own pending`
-      mock_bounds(element)
-      const cleanup = setup_tooltip(element, { delay: 100 })
+      const [element, cleanup] = attach_tooltip(`own pending`, { delay: 100 })
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       cleanup?.()
@@ -490,10 +534,7 @@ describe(`tooltip`, () => {
     })
 
     it(`removing the element from the DOM cancels its pending show`, async () => {
-      const element = create_element()
-      element.title = `pending on removed element`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 100 })
+      const [element] = attach_tooltip(`pending on removed element`, { delay: 100 })
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       element.remove() // element leaves the DOM before the show delay elapses
@@ -572,12 +613,13 @@ describe(`tooltip`, () => {
         expected_placement,
         requested_placement,
       }) => {
-        // Arrow points away from trigger: offset side has negative value, opposite side is unset
-        const arrow_offset_side: Record<string, [string, string]> = {
-          top: [`bottom`, `top`],
-          bottom: [`top`, `bottom`],
-          left: [`right`, `left`],
-          right: [`left`, `right`],
+        // Arrow points away from trigger: the side opposite the placement carries
+        // the negative offset, the placement side itself stays unset
+        const opposite_side: Record<string, string> = {
+          top: `bottom`,
+          bottom: `top`,
+          left: `right`,
+          right: `left`,
         }
 
         with_mocked_tooltip_geometry(viewport, tooltip_size, () => {
@@ -589,11 +631,12 @@ describe(`tooltip`, () => {
           trigger_tooltip(element)
           const tooltip_el = doc_query(`.custom-tooltip`)
           expect(tooltip_el.getAttribute(`data-placement`)).toBe(expected_placement)
-          const arrow = doc_query(`.custom-tooltip-arrow`)
+          const { style } = doc_query(`.custom-tooltip-arrow`)
 
-          const [set_side, empty_side] = arrow_offset_side[expected_placement]
-          expect(arrow?.style.getPropertyValue(set_side)).toContain(`-`)
-          expect(arrow?.style.getPropertyValue(empty_side)).toBe(``)
+          // exact value: the perpendicular axis holds `calc(50% - 6px)`, so a
+          // substring check for `-` would also pass on swapped axes
+          expect(style.getPropertyValue(opposite_side[expected_placement])).toBe(`-6px`)
+          expect(style.getPropertyValue(expected_placement)).toBe(``)
         })
       },
     )
@@ -602,12 +645,7 @@ describe(`tooltip`, () => {
       [`hide_delay: 200 delays hiding`, { hide_delay: 200 }, true, 200],
       [`undefined hide_delay hides immediately`, {}, false, 0],
     ])(`%s`, (_desc, options, visible_after_leave, delay_ms) => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0, ...options })
-
-      trigger_tooltip(element)
+      const element = show_tooltip(options)
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
@@ -622,10 +660,7 @@ describe(`tooltip`, () => {
     })
 
     it(`mouseleave before delay expires cancels pending tooltip`, () => {
-      const element = create_element()
-      element.title = `delayed tooltip`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 100 })
+      const [element] = attach_tooltip(`delayed tooltip`, { delay: 100 })
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       vi.advanceTimersByTime(99)
@@ -638,10 +673,7 @@ describe(`tooltip`, () => {
 
     it(`disabled: 'touch-devices' skips tooltip on touch input`, () => {
       // With runtime detection, tooltip is set up but skipped when last pointer was touch
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      const cleanup = setup_tooltip(element, { delay: 0, disabled: `touch-devices` })
+      const [element, cleanup] = attach_tooltip(`test`, { disabled: `touch-devices` })
 
       // Simulate touch input, then try to show tooltip
       document.dispatchEvent(
@@ -664,12 +696,7 @@ describe(`tooltip`, () => {
       [`Escape dismisses tooltip`, `Escape`, false],
       [`Enter does not dismiss`, `Enter`, true],
     ])(`%s`, (_desc, key, should_remain) => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
-
-      trigger_tooltip(element)
+      show_tooltip()
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       document.dispatchEvent(new KeyboardEvent(`keydown`, { key }))
@@ -682,24 +709,14 @@ describe(`tooltip`, () => {
       [`show_arrow: false hides arrow`, { show_arrow: false }, false],
       [`show_arrow: true (default) shows arrow`, {}, true],
     ])(`%s`, (_desc, options, expect_arrow) => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0, ...options })
+      show_tooltip(options)
 
-      trigger_tooltip(element)
-
-      const tooltip_el = doc_query(`.custom-tooltip`)
-      const arrow = tooltip_el.querySelector(`.custom-tooltip-arrow`)
+      const arrow = doc_query(`.custom-tooltip`).querySelector(`.custom-tooltip-arrow`)
       expect(arrow).toEqual(expect_arrow ? expect.any(HTMLDivElement) : null)
     })
 
     it(`manages aria-describedby on show/hide`, () => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
-
+      const [element] = attach_tooltip()
       expect(element.hasAttribute(`aria-describedby`)).toBe(false)
 
       trigger_tooltip(element)
@@ -716,12 +733,7 @@ describe(`tooltip`, () => {
       [`offset: 20`, 20, 170], // top (100) + height (50) + offset (20) = 170
       [`default offset: 12`, undefined, 162], // top (100) + height (50) + default (12) = 162
     ])(`applies %s`, (_desc, offset, expected_top) => {
-      const element = create_element()
-      element.title = `test`
-      mock_bounds(element, { left: 100, top: 100, width: 50, height: 50 })
-      setup_tooltip(element, { delay: 0, offset, placement: `bottom` })
-
-      trigger_tooltip(element)
+      show_tooltip({ offset, placement: `bottom` })
       expect(doc_query(`.custom-tooltip`).style.top).toBe(`${expected_top}px`)
     })
 
@@ -734,12 +746,7 @@ describe(`tooltip`, () => {
         `<b>bold</b>`,
       ],
     ])(`%s`, (_desc, allow_html, content, expected_text) => {
-      const element = create_element()
-      element.title = content
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0, allow_html })
-
-      trigger_tooltip(element)
+      show_tooltip({ allow_html }, content)
       expect(doc_query(`.custom-tooltip`).textContent).toBe(expected_text)
     })
 
@@ -750,12 +757,8 @@ describe(`tooltip`, () => {
       const sanitizer = vi.fn((html: string) =>
         html.replaceAll(/<script[^>]*>.*?<\/script>/giu, ``),
       )
-      const element = create_element()
-      element.title = title
-      mock_bounds(element)
-      setup_tooltip(element, { delay: 0, allow_html, sanitize_html: sanitizer })
+      show_tooltip({ allow_html, sanitize_html: sanitizer }, title)
 
-      trigger_tooltip(element)
       expect(sanitizer).toHaveBeenCalledTimes(call_count)
       expect(doc_query(`.custom-tooltip`).textContent).toBe(expected_text)
     })
@@ -764,16 +767,7 @@ describe(`tooltip`, () => {
       // Base styles must not carry a color-scheme (page-declared schemes stay in
       // control, see #405); the schemeless-page fallback is covered below. Asserts
       // via raw cssText/setProperty spies because happy-dom strips var()/light-dark().
-      const { css_texts, set_prop_values, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `bg test`
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-      }
+      const { css_texts, set_prop_values } = show_with_captured_styles()
 
       const tooltip_css = find_tooltip_css(css_texts)
       expect(tooltip_css).toBeDefined()
@@ -784,12 +778,7 @@ describe(`tooltip`, () => {
         /border:.*var\(--tooltip-border,\s*1px solid light-dark\(\s*lightgray,\s*#555\)/u,
       )
 
-      const arrow_borders = set_prop_values.filter(
-        (entry) =>
-          entry.startsWith(`border-`) &&
-          entry.includes(`solid`) &&
-          !entry.includes(`transparent`),
-      )
+      const arrow_borders = arrow_border_values(set_prop_values)
       expect(arrow_borders.length).toBeGreaterThan(0)
       for (const entry of arrow_borders) {
         expect(entry).toMatch(/light-dark\(\s*#fff,\s*#2a2a2e/u)
@@ -800,91 +789,54 @@ describe(`tooltip`, () => {
       [`background`, `--tooltip-bg`, `red`],
       [`border`, `--tooltip-border`, `2px solid red`],
     ])(`custom %s variable overrides its default`, (_description, css_var, value) => {
-      const { css_texts, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `custom ${css_var}`
-        element.style.setProperty(css_var, value)
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-      }
+      const { css_texts } = show_with_captured_styles((element) =>
+        element.style.setProperty(css_var, value),
+      )
 
       expect(doc_query(`.custom-tooltip`).style.getPropertyValue(css_var)).toBe(value)
-      const tooltip_css = find_tooltip_css(css_texts)
-      expect(tooltip_css).toContain(`var(${css_var},`)
+      expect(find_tooltip_css(css_texts)).toContain(`var(${css_var},`)
     })
 
     // Dark-styled pages that never declare `color-scheme` resolve the default
     // light-dark() background to LIGHT while their inherited --text-color may be
-    // near-white → unreadable tooltip. The fallback pairs scheme + text color.
-    it(`pairs color-scheme and text color when page declares no scheme`, () => {
-      const { set_prop_values, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `scheme fallback`
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-      }
-
-      expect(set_prop_values).toContain(`color-scheme: light dark`)
-      expect(set_prop_values).toContain(`--text-color: light-dark(#222, #eee)`)
-    })
-
+    // near-white → unreadable tooltip. The fallback pairs scheme + text color, and
+    // only a page-level (body-inherited) scheme may suppress it — a scheme on the
+    // trigger never reaches the tooltip, which is appended to document.body.
     it.each([
+      [`page declares no scheme`, () => {}, true],
+      [
+        `only the trigger has a color-scheme`,
+        (element: HTMLElement) => (element.style.colorScheme = `dark`),
+        true,
+      ],
       [
         `page declares a color-scheme`,
-        (_element: HTMLElement) => (document.body.style.colorScheme = `dark`),
+        () => (document.body.style.colorScheme = `dark`),
+        false,
       ],
       [
         `trigger customizes --tooltip-bg`,
         (element: HTMLElement) => element.style.setProperty(`--tooltip-bg`, `red`),
+        false,
       ],
       [
         `trigger carries its own --text-color`,
         (element: HTMLElement) => element.style.setProperty(`--text-color`, `#0ff`),
+        false,
       ],
-    ])(`scheme fallback is skipped when %s`, (_desc, customize) => {
-      const { set_prop_values, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `no fallback`
-        customize(element)
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-        document.body.style.colorScheme = ``
-      }
+    ])(`scheme fallback when %s`, (_desc, customize, expect_fallback) => {
+      const { set_prop_values } = show_with_captured_styles(customize)
+      document.body.style.colorScheme = ``
 
-      expect(set_prop_values).not.toContain(`color-scheme: light dark`)
-      expect(set_prop_values).not.toContain(`--text-color: light-dark(#222, #eee)`)
-    })
-
-    it(`scheme fallback still applies when only the trigger has a color-scheme`, () => {
-      // A scheme on the trigger (or some container around it) never reaches the
-      // tooltip since it's appended to document.body, so it must not suppress the
-      // fallback — only a page-level (body-inherited) scheme should.
-      const { set_prop_values, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `trigger scheme`
-        element.style.colorScheme = `dark`
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-      }
-
-      expect(set_prop_values).toContain(`color-scheme: light dark`)
-      expect(set_prop_values).toContain(`--text-color: light-dark(#222, #eee)`)
+      // anchors the negative cases: no tooltip would satisfy them trivially
+      expect(document.querySelectorAll(`.custom-tooltip`)).toHaveLength(1)
+      const fallback_props = [
+        `color-scheme: light dark`,
+        `--text-color: light-dark(#222, #eee)`,
+      ]
+      expect(fallback_props.filter((prop) => set_prop_values.includes(prop))).toEqual(
+        expect_fallback ? fallback_props : [],
+      )
     })
 
     it(`updates visible tooltip content when tooltip attributes change`, () => {
@@ -910,23 +862,13 @@ describe(`tooltip`, () => {
         expect(doc_query(`.tooltip-content`).textContent).toBe(`initial tooltip`)
 
         element.setAttribute(`aria-label`, `updated tooltip`)
-        const empty_nodes = document.querySelectorAll(`.__missing__`)
-        mutation_callbacks[0]?.(
-          [
-            {
-              type: `attributes`,
-              attributeName: `aria-label`,
-              attributeNamespace: null,
-              oldValue: null,
-              target: element,
-              addedNodes: empty_nodes,
-              removedNodes: empty_nodes,
-              nextSibling: null,
-              previousSibling: null,
-            },
-          ],
-          new MockMutationObserver(() => {}),
-        )
+        // only the fields the attachment reads; the rest of MutationRecord is unused
+        const record = {
+          type: `attributes`,
+          attributeName: `aria-label`,
+          target: element,
+        } as unknown as MutationRecord
+        mutation_callbacks[0]?.([record], new MockMutationObserver(() => {}))
 
         expect(doc_query(`.tooltip-content`).textContent).toBe(`updated tooltip`)
       } finally {
@@ -936,23 +878,16 @@ describe(`tooltip`, () => {
     })
 
     it(`applies valid custom style declarations and ignores malformed ones`, () => {
-      const element = create_element()
-      element.title = `custom style`
-      mock_bounds(element)
-      setup_tooltip(element, {
-        delay: 0,
+      show_tooltip({
         style: `background-color: red; background-image: url("https://example.com/tooltip.svg"); color: blue; invalid; empty:`,
       })
 
-      trigger_tooltip(element)
-      const tooltip_el = doc_query(`.custom-tooltip`)
-      expect(tooltip_el.style.backgroundColor).toBe(`red`)
-      expect(tooltip_el.style.backgroundImage).toContain(
-        `https://example.com/tooltip.svg`,
-      )
-      expect(tooltip_el.style.color).toBe(`blue`)
-      expect(tooltip_el.style.getPropertyValue(`invalid`)).toBe(``)
-      expect(tooltip_el.style.getPropertyValue(`empty`)).toBe(``)
+      const { style } = doc_query(`.custom-tooltip`)
+      expect(style.backgroundColor).toBe(`red`)
+      expect(style.backgroundImage).toContain(`https://example.com/tooltip.svg`)
+      expect(style.color).toBe(`blue`)
+      expect(style.getPropertyValue(`invalid`)).toBe(``)
+      expect(style.getPropertyValue(`empty`)).toBe(``)
     })
 
     it.each([
@@ -971,40 +906,20 @@ describe(`tooltip`, () => {
     })
 
     it(`uses custom style background-color for tooltip arrow fill`, () => {
-      const { set_prop_values, restore } = capture_style_writes()
-      try {
-        const element = create_element()
-        element.title = `custom arrow fill`
-        mock_bounds(element)
-        setup_tooltip(element, {
-          delay: 0,
-          style: `background-color: red`,
-        })
-        trigger_tooltip(element)
-      } finally {
-        restore()
-      }
+      const { set_prop_values } = show_with_captured_styles(undefined, {
+        style: `background-color: red`,
+      })
 
-      const arrow_borders = set_prop_values.filter(
-        (entry) =>
-          entry.startsWith(`border-`) &&
-          entry.includes(`solid`) &&
-          !entry.includes(`transparent`),
-      )
       expect(
-        arrow_borders.some((entry) => /\b(?:red|rgb\(255,\s*0,\s*0\))/u.test(entry)),
+        arrow_border_values(set_prop_values).some((entry) =>
+          /\b(?:red|rgb\(255,\s*0,\s*0\))/u.test(entry),
+        ),
       ).toBe(true)
     })
   })
 })
 
 describe(`click_outside`, () => {
-  const create_element = () => {
-    const element = document.createElement(`div`)
-    document.body.append(element)
-    return element
-  }
-
   const dispatch_click = (target: Element, path: EventTarget[] = []) => {
     const event = new Event(`click`, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
@@ -1054,6 +969,10 @@ describe(`click_outside`, () => {
     dispatch_click(excluded2)
     dispatch_click(nested)
     expect(callback).not.toHaveBeenCalled()
+
+    // control: proves the silence above is the exclude list, not a dead listener
+    dispatch_click(create_element())
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
   it(`should trigger on clicks landing on SVG elements outside the node`, () => {
@@ -1092,29 +1011,6 @@ describe(`click_outside`, () => {
 })
 
 describe(`draggable`, () => {
-  const create_element = () => {
-    const element = document.createElement(`div`)
-    document.body.append(element)
-    return element
-  }
-
-  const mock_rect = (
-    element: HTMLElement,
-    rect: { left: number; top: number; width?: number; height?: number },
-  ) => {
-    element.getBoundingClientRect = vi.fn(() => ({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width ?? 100,
-      height: rect.height ?? 50,
-      right: rect.left + (rect.width ?? 100),
-      bottom: rect.top + (rect.height ?? 50),
-      x: rect.left,
-      y: rect.top,
-      toJSON: () => ({}),
-    }))
-  }
-
   it(`should update position, callbacks, cursor, and userSelect while dragging`, () => {
     const element = create_element()
     element.style.position = `fixed`
@@ -1148,9 +1044,15 @@ describe(`draggable`, () => {
 
   it(`should not set up dragging when disabled`, () => {
     const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 10, top: 20 })
     const cleanup = draggable({ disabled: true })(element)
     expect(cleanup).toBeUndefined()
     expect(element.style.cursor).toBe(``)
+
+    element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 50, 50))
+    expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
   it(`should warn and return undefined for missing handle selector`, () => {
@@ -1258,16 +1160,14 @@ describe(`highlight_matches`, () => {
     )
     delete_highlights_spy = vi.fn((key: string) => mock_css_highlights.delete(key))
 
-    const css_mock = {
+    vi.stubGlobal(`CSS`, {
       highlights: {
         clear: clear_highlights_spy,
         get: (key: string) => mock_css_highlights.get(key),
         set: set_highlights_spy,
         delete: delete_highlights_spy,
       },
-    }
-
-    vi.stubGlobal(`CSS`, css_mock)
+    })
     vi.stubGlobal(
       `Highlight`,
       class MockHighlight {
@@ -1280,11 +1180,10 @@ describe(`highlight_matches`, () => {
   })
 
   const get_highlight_ranges = (): Range[] => {
-    const highlight = mock_css_highlights.get(`highlight-match`)
-    if (!highlight || typeof highlight !== `object` || !(`ranges` in highlight)) {
-      throw new Error(`Expected highlight with ranges`)
-    }
-    if (!Array.isArray(highlight.ranges)) throw new Error(`Expected ranges array`)
+    const highlight = mock_css_highlights.get(`highlight-match`) as
+      | { ranges?: Range[] }
+      | undefined
+    if (!Array.isArray(highlight?.ranges)) throw new Error(`Expected highlight ranges`)
     return highlight.ranges
   }
 
@@ -1630,7 +1529,12 @@ describe(`sortable`, () => {
   it(`should not set up sorting when disabled`, () => {
     const table = create_table()
     expect(sortable({ disabled: true })(table)).toBeUndefined()
-    expect(get_required_header(table).style.cursor).toBe(``)
+    const header = get_required_header(table)
+    expect(header.style.cursor).toBe(``)
+
+    header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(get_column_values(table, 0)).toEqual([`Mars`, `Earth`, `Jupiter`]) // unsorted
+    expect(header.classList.contains(`table-sort-asc`)).toBe(false)
   })
 
   it(`should apply custom classes and sorted_style, reset other columns`, () => {
@@ -1652,6 +1556,11 @@ describe(`sortable`, () => {
     h2.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(h1.textContent).not.toContain(`↑`)
     expect(h1.classList.contains(`asc`)).toBe(false)
+    expect(h1.classList.contains(`desc`)).toBe(false)
+    expect(h1.style.backgroundColor).toBe(``) // sorted_style reset too, not just the class
+    expect(h1.style.cursor).toBe(`pointer`) // reset must not strip the pointer cursor
+    expect(h2.classList.contains(`asc`)).toBe(true)
+    expect(h2.style.backgroundColor).toBe(`red`)
   })
 
   it(`should handle empty table body and custom header_selector`, () => {
@@ -1767,40 +1676,7 @@ describe(`sortable`, () => {
 })
 
 describe(`resizable`, () => {
-  const create_element = () => {
-    const element = document.createElement(`div`)
-    element.style.width = `200px`
-    element.style.height = `150px`
-    document.body.append(element)
-    return element
-  }
-
-  const mock_rect = (
-    element: HTMLElement,
-    rect: { left: number; top: number; width: number; height: number },
-  ) => {
-    element.getBoundingClientRect = vi.fn(() => ({
-      left: rect.left,
-      top: rect.top,
-      width: rect.width,
-      height: rect.height,
-      right: rect.left + rect.width,
-      bottom: rect.top + rect.height,
-      x: rect.left,
-      y: rect.top,
-      toJSON: () => ({}),
-    }))
-    Object.defineProperty(element, `offsetWidth`, {
-      value: rect.width,
-      configurable: true,
-    })
-    Object.defineProperty(element, `offsetHeight`, {
-      value: rect.height,
-      configurable: true,
-    })
-    Object.defineProperty(element, `offsetLeft`, { value: rect.left, configurable: true })
-    Object.defineProperty(element, `offsetTop`, { value: rect.top, configurable: true })
-  }
+  const create_box = () => create_element(`div`, { width: `200px`, height: `150px` })
 
   it.each([
     [`right`, undefined, 195, 75, `ew-resize`],
@@ -1810,7 +1686,7 @@ describe(`resizable`, () => {
   ] as const)(
     `should apply resize cursor on %s edge hover`,
     (_edge, edges, clientX, clientY, expected_cursor) => {
-      const element = create_element()
+      const element = create_box()
       mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
       resizable(edges ? { edges: [...edges] } : {})(element)
 
@@ -1821,7 +1697,7 @@ describe(`resizable`, () => {
   )
 
   it(`should use custom handle_size and reset the cursor away from edges`, () => {
-    const element = create_element()
+    const element = create_box()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const cleanup = resizable({ handle_size: 20 })(element)
 
@@ -1851,7 +1727,7 @@ describe(`resizable`, () => {
       dimension,
       expected_value,
     ) => {
-      const element = create_element()
+      const element = create_box()
       mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
       resizable(options)(element)
 
@@ -1865,7 +1741,7 @@ describe(`resizable`, () => {
   )
 
   it(`should fire on_resize_start, on_resize, and on_resize_end callbacks`, () => {
-    const element = create_element()
+    const element = create_box()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
 
     const on_resize_start = vi.fn()
@@ -1923,7 +1799,7 @@ describe(`resizable`, () => {
       [drag_client_x, drag_client_y],
       expected_styles,
     ) => {
-      const element = create_element()
+      const element = create_box()
       mock_rect(element, rect)
       resizable({ edges: [_edge] })(element)
 
@@ -1939,18 +1815,27 @@ describe(`resizable`, () => {
   )
 
   it(`should do nothing when disabled`, () => {
-    const element = create_element()
-    const cleanup = resizable({ disabled: true })(element)
+    const element = create_box()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    const on_resize_start = vi.fn()
+    const cleanup = resizable({ disabled: true, on_resize_start })(element)
 
     expect(cleanup).toBeUndefined()
+    expect(element.style.position).toBe(``) // disabled skips the position: relative fixup
+
+    element.dispatchEvent(mouse_event(`mousemove`, 195, 75)) // edge hover sets no cursor
     expect(element.style.cursor).toBe(``)
+    element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
+    expect(on_resize_start).not.toHaveBeenCalled()
+    expect(element.style.width).toBe(`200px`) // untouched from create_element
   })
 
   it.each([
     [`width`, { min_width: 300, max_width: 100 }],
     [`height`, { min_height: 300, max_height: 100 }],
   ] as const)(`warns and skips invalid %s constraints`, (_dimension, options) => {
-    const element = create_element()
+    const element = create_box()
     const warn = vi.spyOn(console, `warn`).mockImplementation(() => undefined)
 
     try {
@@ -1970,7 +1855,7 @@ describe(`resizable`, () => {
     [`static`, `relative`],
     [`absolute`, `absolute`],
   ])(`position %s initializes as %s`, (initial_position, expected_position) => {
-    const element = create_element()
+    const element = create_box()
     element.style.position = initial_position
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
 
@@ -1980,7 +1865,7 @@ describe(`resizable`, () => {
   })
 
   it(`should not start resizing when clicking outside edge areas`, () => {
-    const element = create_element()
+    const element = create_box()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     resizable({ on_resize_start })(element)
@@ -1993,7 +1878,7 @@ describe(`resizable`, () => {
   it(`should ignore global resize events before resizing starts`, () => {
     const on_resize = vi.fn()
     const on_resize_end = vi.fn()
-    resizable({ on_resize, on_resize_end })(create_element())
+    resizable({ on_resize, on_resize_end })(create_box())
 
     globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
     globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
@@ -2003,7 +1888,7 @@ describe(`resizable`, () => {
   })
 
   it(`should reset body userSelect when cleaned up mid-resize`, () => {
-    const element = create_element()
+    const element = create_box()
     mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize = vi.fn()
 

@@ -6,25 +6,37 @@ import { expect, test, vi } from 'vite-plus/test'
 // stands in for a configured base path, which is what resolve() prefixes
 vi.mock(`$app/paths`, () => ({ resolve: (path: string) => `/docs${path}` }))
 
-test(`renders tuple subpages correctly`, () => {
+test(`renders one card per tuple subpage in order`, () => {
+  const subpages: [string, string, string][] = [
+    [`Basics`, `/basics`, `Basics overview`],
+    [`Styling`, `/styling`, `Styling overview`],
+  ]
   mount(SubpageGrid, {
     target: document.body,
-    props: {
-      title: `Demo`,
-      subtitle: `Demo subtitle`,
-      subpages: [[`Basics`, `/basics`, `Basics overview`]],
-    },
+    props: { title: `Demo`, subtitle: `Demo subtitle`, subpages },
   })
 
-  const title_element = document.querySelector(`h1`)
-  const subtitle_element = document.querySelector(`.subtitle`)
-  const link_element = document.querySelector(`nav a`)
+  expect(document.querySelector(`h1`)?.textContent).toBe(`Demo`)
+  expect(document.querySelector(`.subtitle`)?.textContent).toBe(`Demo subtitle`)
 
-  expect(title_element?.textContent).toBe(`Demo`)
-  expect(subtitle_element?.textContent).toBe(`Demo subtitle`)
-  expect(link_element?.getAttribute(`href`)).toBe(`/basics`)
-  expect(link_element?.textContent).toContain(`Basics`)
-  expect(link_element?.textContent).toContain(`Basics overview`)
+  const cards = [...document.querySelectorAll<HTMLAnchorElement>(`nav.grid a.card`)]
+  expect(cards).toHaveLength(subpages.length)
+  // whole table at once: a dropped card or swapped title/description shows up
+  expect(
+    cards.map((card) => [
+      card.getAttribute(`href`),
+      card.querySelector(`h2`)?.textContent,
+      card.querySelector(`div > p`)?.textContent,
+      card.querySelector(`svg.icon`)?.tagName, // every card carries the chevron
+    ]),
+  ).toEqual(
+    subpages.map(([page_title, href, description]) => [
+      href,
+      page_title,
+      description,
+      `svg`,
+    ]),
+  )
 })
 
 test(`overview pages link to base-prefixed sibling routes`, () => {

@@ -1,4 +1,5 @@
 import { Toggle } from '$lib'
+import type { ComponentProps } from 'svelte'
 import { mount, tick } from 'svelte'
 import { describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
@@ -10,50 +11,57 @@ describe(`Toggle`, () => {
     new KeyboardEvent(`keydown`, { key, bubbles: true, ...init })
   const keydown = (key: string) => get_input().dispatchEvent(create_keydown(key))
 
+  // a checkbox flips its own DOM state on click, so input.checked passes even with
+  // bind:checked gone - only the written-back value proves the binding works
+  const mount_bindable_toggle = (
+    checked: boolean,
+    extra_props: Partial<ComponentProps<typeof Toggle>> = {},
+  ) => {
+    const props = $state({ checked, ...extra_props })
+    mount(Toggle, { target: document.body, props })
+    return () => [get_input().checked, props.checked]
+  }
+
   test(`toggles on click`, () => {
-    mount(Toggle, { target: document.body, props: { checked: true } })
-    const input = get_input()
-    expect(input.checked).toBe(true)
-    input.click()
-    expect(input.checked).toBe(false)
-    input.click()
-    expect(input.checked).toBe(true)
+    const state = mount_bindable_toggle(true)
+    expect(state()).toEqual([true, true])
+
+    get_input().click()
+    expect(state()).toEqual([false, false])
+
+    get_input().click()
+    expect(state()).toEqual([true, true])
   })
 
-  test(`toggles on Enter key and fires change event`, () => {
-    const onchange = vi.fn()
-    mount(Toggle, { target: document.body, props: { input_props: { onchange } } })
-    const input = get_input()
-
-    keydown(`Enter`)
-    expect(input.checked).toBe(true)
-    expect(onchange).toHaveBeenCalledWith(expect.any(Event))
-
-    keydown(`Enter`)
-    expect(input.checked).toBe(false)
-  })
-
-  test.each([`A`, `Escape`, `Tab`, `Space`])(`doesn't toggle on %s key`, (key) => {
-    mount(Toggle, { target: document.body })
-    keydown(key)
-    expect(get_input().checked).toBe(false)
-  })
-
-  test(`Enter key prevents default and calls onkeydown first`, () => {
+  test(`Enter toggles, fires change, prevents default and runs onkeydown first`, () => {
     const call_order: string[] = []
+    const onchange = vi.fn()
     const onkeydown = vi.fn(() => call_order.push(`onkeydown`))
-    mount(Toggle, {
-      target: document.body,
-      props: { onkeydown, input_props: { onclick: () => call_order.push(`click`) } },
+    const state = mount_bindable_toggle(false, {
+      onkeydown,
+      input_props: { onchange, onclick: () => call_order.push(`click`) },
     })
 
     const event = create_keydown(`Enter`, { cancelable: true })
     const prevent_default_spy = vi.spyOn(event, `preventDefault`)
     get_input().dispatchEvent(event)
 
+    expect(state()).toEqual([true, true])
+    expect(onchange).toHaveBeenCalledWith(expect.any(Event))
     expect(prevent_default_spy).toHaveBeenCalled()
     expect(onkeydown).toHaveBeenCalledWith(expect.any(KeyboardEvent))
-    expect(call_order[0]).toBe(`onkeydown`)
+    // full order, not just call_order[0]: also pins that Enter synthesizes the click
+    expect(call_order).toEqual([`onkeydown`, `click`])
+
+    keydown(`Enter`)
+    expect(state()).toEqual([false, false])
+    expect(onchange).toHaveBeenCalledTimes(2)
+  })
+
+  test.each([`A`, `Escape`, `Tab`, `Space`])(`doesn't toggle on %s key`, (key) => {
+    mount(Toggle, { target: document.body })
+    keydown(key)
+    expect(get_input().checked).toBe(false)
   })
 
   test(`applies custom class and styles`, () => {
@@ -71,18 +79,15 @@ describe(`Toggle`, () => {
   })
 
   test.each([
-    [`change`, `onchange`, () => new Event(`change`, { bubbles: true })],
-    [`blur`, `onblur`, () => new FocusEvent(`blur`)],
-    [`click`, `onclick`, null], // null means use .click()
-  ] as const)(`emits %s event`, (_, handler_prop, create_event) => {
+    [`change`, () => new Event(`change`, { bubbles: true })],
+    [`blur`, () => new FocusEvent(`blur`)],
+    [`click`, () => new MouseEvent(`click`, { bubbles: true })],
+  ] as const)(`forwards the %s handler from input_props`, (event_name, create_event) => {
     const handler = vi.fn()
-    mount(Toggle, {
-      target: document.body,
-      props: { input_props: { [handler_prop]: handler } },
-    })
-    const input = get_input()
-    if (create_event) input.dispatchEvent(create_event())
-    else input.click()
+    const input_props = { [`on${event_name}`]: handler }
+    mount(Toggle, { target: document.body, props: { input_props } })
+
+    get_input().dispatchEvent(create_event())
     expect(handler).toHaveBeenCalledOnce()
   })
 

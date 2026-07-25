@@ -14,43 +14,36 @@ import {
 } from '$lib/utils'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
-describe(`get_uuid`, () => {
-  // RFC 4122 v4: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b)
-  const uuid_v4_regex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
-  // UUID format without strict version/variant requirements
-  const uuid_format_regex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
-
-  function with_fallback<T>(fn: () => T): T {
-    const original = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)
-    // @ts-expect-error - mocking randomUUID as undefined
-    globalThis.crypto.randomUUID = undefined
-    try {
-      return fn()
-    } finally {
-      if (original) globalThis.crypto.randomUUID = original
-    }
+// RFC 4122 v4 is xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b); the timestamp+counter
+// fallback used when crypto is unavailable only guarantees the generic UUID shape
+const uuid_v4 = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/iu
+const uuid_any = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu
+test.each([
+  [`crypto`, false, uuid_v4],
+  [`fallback`, true, uuid_any],
+] as const)(`get_uuid via %s: unique valid UUIDs`, (_desc, drop_crypto, regex) => {
+  const original = globalThis.crypto?.randomUUID?.bind(globalThis.crypto)
+  // @ts-expect-error - mocking randomUUID as undefined
+  if (drop_crypto) globalThis.crypto.randomUUID = undefined
+  try {
+    const uuids = Array.from({ length: 100 }, () => get_uuid())
+    uuids.forEach((uuid) => expect(uuid).toMatch(regex))
+    expect(new Set(uuids).size).toBe(100)
+  } finally {
+    if (original) globalThis.crypto.randomUUID = original
   }
-
-  test(`generates unique UUIDs`, () => {
-    const generated_uuids = Array.from({ length: 100 }, () => get_uuid())
-    generated_uuids.forEach((uuid) => expect(uuid).toMatch(uuid_v4_regex))
-    const uuids = new Set(generated_uuids)
-    expect(uuids.size).toBe(100)
-  })
-
-  test(`fallback produces valid unique UUIDs when crypto unavailable`, () => {
-    with_fallback(() => {
-      const uuids = Array.from({ length: 100 }, () => get_uuid())
-      uuids.forEach((uuid) => expect(uuid).toMatch(uuid_format_regex))
-      expect(new Set(uuids).size).toBe(100)
-    })
-  })
 })
 
-test(`slug_to_title capitalizes Unicode slug words`, () => {
-  expect(slug_to_title(`über-café`)).toBe(`Über Café`)
+// only letters not preceded by a letter/mark/number/underscore get capitalized
+test.each([
+  [`über-café`, `Über Café`], // Unicode slug words
+  [`hello-world-again`, `Hello World Again`],
+  [`2d-plot`, `2d Plot`], // letter after a digit stays lowercase
+  [`snake_case-slug`, `Snake_case Slug`], // underscore blocks capitalization
+  [`already Capitalized`, `Already Capitalized`],
+  [``, ``],
+])(`slug_to_title(%j) returns %j`, (slug, expected) => {
+  expect(slug_to_title(slug)).toBe(expected)
 })
 
 describe(`get_label`, () => {
@@ -72,7 +65,7 @@ describe(`get_label`, () => {
         `MultiSelect: option is an object but has no label key`,
         JSON.stringify(input),
       )
-    }
+    } else expect(console.error).not.toHaveBeenCalled()
   })
 })
 
@@ -96,17 +89,22 @@ describe(`get_style`, () => {
   }
   // object styles get the same trailing-semicolon normalization as string styles;
   // partial style objects (e.g. only `selected`) are fine, but any key other than
-  // `option`/`selected` logs an error, even when a valid key is also present
+  // `option`/`selected` logs an error, even when a valid key is also present.
+  // A null/undefined key selects no sub-style but still validates the style object.
   test.each([
     [option_style, `selected`, `color: blue;`, false],
     [option_style, `option`, `color: green;`, false],
     [{ selected: `color: blue` }, `option`, ``, false],
     [{ option: `color: green` }, `selected`, ``, false],
     [{}, `option`, ``, false],
+    [option_style, null, ``, false],
+    [option_style, undefined, ``, false],
     [{ selected: `color: blue`, custom: `color: red` }, `selected`, `color: blue;`, true],
     [{ option: `color: green`, custom: `color: red` }, `option`, `color: green;`, true],
     [{ selected: `color: blue`, custom: `color: red` }, `option`, ``, true],
     [{ invalid_key: `some-style` }, `selected`, ``, true],
+    [{ custom: `color: red` }, null, ``, true],
+    [{ custom: `color: red` }, undefined, ``, true],
   ] as const)(
     `object style %j with key %s returns %j (logs error: %s)`,
     (style, key, expected, should_log_error) => {
@@ -122,20 +120,6 @@ describe(`get_style`, () => {
       } else expect(console.error).not.toHaveBeenCalled()
     },
   )
-
-  test.each([undefined, null])(`validates style objects when key is %s`, (key) => {
-    console.error = vi.fn<typeof console.error>()
-    get_style({ label: `test`, style: option_style }, key)
-    expect(console.error).not.toHaveBeenCalled()
-
-    const option = { label: `test`, style: { custom: `color: red` } }
-    // @ts-expect-error unknown style key tests runtime validation
-    get_style(option, key)
-    expect(console.error).toHaveBeenCalledWith(
-      `MultiSelect: invalid style object for option`,
-      option,
-    )
-  })
 
   test.each([
     [{ style: `color: red;` }], // string style must not leak through for unknown keys
@@ -156,6 +140,11 @@ describe(`keyboard shortcut parsing`, () => {
     [`ctrl++`, { key: `+`, ctrl: true, shift: false, alt: false, meta: false }],
     [`ctrl+shift++`, { key: `+`, ctrl: true, shift: true, alt: false, meta: false }],
     [`ctrl+`, { key: ``, ctrl: true, shift: false, alt: false, meta: false }],
+    // non-plus keys and the remaining modifiers (alt, meta, cmd alias)
+    [`k`, { key: `k`, ctrl: false, shift: false, alt: false, meta: false }],
+    [`cmd+k`, { key: `k`, ctrl: false, shift: false, alt: false, meta: true }],
+    [`Meta+Alt+X`, { key: `x`, ctrl: false, shift: false, alt: true, meta: true }],
+    [`ctrl+shift+k`, { key: `k`, ctrl: true, shift: true, alt: false, meta: false }],
   ])(`parse_shortcut(%j)`, (shortcut, expected) => {
     expect(parse_shortcut(shortcut)).toEqual(expected)
   })
@@ -165,7 +154,12 @@ describe(`keyboard shortcut parsing`, () => {
     [`ctrl++`, { key: `+`, ctrlKey: true, shiftKey: true }, true],
     [`ctrl+shift++`, { key: `+`, ctrlKey: true }, false],
     [`ctrl+`, { key: `+`, ctrlKey: true }, false],
-  ])(`matches_shortcut(%j) with plus key`, (shortcut, event_init, expected) => {
+    // the shift escape hatch is plus-only: every other modifier must match exactly
+    [`cmd+k`, { key: `K`, metaKey: true }, true], // event key is lowercased
+    [`cmd+k`, { key: `k`, metaKey: true, shiftKey: true }, false],
+    [`cmd+k`, { key: `k`, ctrlKey: true }, false],
+    [`alt+k`, { key: `k`, altKey: true }, true],
+  ])(`matches_shortcut(%j) with %j`, (shortcut, event_init, expected) => {
     const event = new KeyboardEvent(`keydown`, event_init)
     expect(matches_shortcut(event, shortcut)).toBe(expected)
   })

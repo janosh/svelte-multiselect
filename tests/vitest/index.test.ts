@@ -13,61 +13,44 @@ test(`default export from index.ts is same as component file`, () => {
 })
 
 test(`src/lib/index.ts does not re-export attachments`, () => {
-  for (const export_name of Object.keys(attachments)) {
-    expect(export_name in lib).toBe(false)
-  }
+  const attachment_names = Object.keys(attachments)
+  // without this, an empty attachments module would satisfy the filter vacuously
+  expect(attachment_names).toContain(`tooltip`)
+  expect(attachment_names.filter((export_name) => export_name in lib)).toEqual([])
 })
 
 test(`src/lib/index.ts re-exports all Svelte components`, () => {
   const components = Object.keys(import.meta.glob(`$lib/*.svelte`)).map((path) =>
     path.split(`/`).pop()?.split(`.`).shift(),
   )
-  expect(Object.keys(lib)).toEqual(expect.arrayContaining(components))
+  // an empty glob would make arrayContaining([]) trivially true
+  expect(components).toEqual(expect.arrayContaining([`MultiSelect`, `Toggle`, `Icon`]))
+  expect(components.filter((name) => !(name && name in lib))).toEqual([])
 })
 
 describe(`scroll_into_view_if_needed_polyfill`, () => {
-  type MockState = {
-    callback:
-      | ((entries: IntersectionObserverEntry[], obs: IntersectionObserver) => void)
-      | null
-    disconnect: ReturnType<typeof vi.fn<() => void>>
-    observe: ReturnType<typeof vi.fn<(element: Element) => void>>
-  }
+  type ObserverCallback = (
+    entries: IntersectionObserverEntry[],
+    obs: IntersectionObserver,
+  ) => void
 
-  let mock: MockState = {
-    callback: null,
-    disconnect: vi.fn(),
-    observe: vi.fn(),
-  }
+  const observe = vi.fn<(element: Element) => void>()
+  const disconnect = vi.fn<() => void>()
+  let notify: ObserverCallback | null = null
 
   const create_mock_observer = () => {
-    mock.disconnect = vi.fn<() => void>()
-    mock.observe = vi.fn<(element: Element) => void>()
-
-    class MockObserver {
-      constructor(
-        callback: (
-          entries: IntersectionObserverEntry[],
-          obs: IntersectionObserver,
-        ) => void,
-      ) {
-        mock.callback = callback
-      }
-      disconnect(): void {
-        mock.disconnect()
-      }
-      observe(element: Element): void {
-        mock.observe(element)
-      }
-      takeRecords(): IntersectionObserverEntry[] {
-        return []
-      }
-      unobserve(): void {}
-      root = null
-      rootMargin = ``
-      thresholds = []
-    }
-    vi.stubGlobal(`IntersectionObserver`, MockObserver)
+    observe.mockClear()
+    disconnect.mockClear()
+    vi.stubGlobal(
+      `IntersectionObserver`,
+      class {
+        observe = observe
+        disconnect = disconnect
+        constructor(callback: ObserverCallback) {
+          notify = callback
+        }
+      },
+    )
   }
 
   test.each([
@@ -87,12 +70,12 @@ describe(`scroll_into_view_if_needed_polyfill`, () => {
       element.scrollIntoView = scroll_spy
 
       const observer = scroll_into_view_if_needed_polyfill(element, center_if_needed)
-      expect(mock.observe).toHaveBeenCalledWith(element)
+      expect(observe).toHaveBeenCalledWith(element)
       // @ts-expect-error partial IntersectionObserverEntry mock
-      mock.callback?.([{ intersectionRatio: ratio }], observer)
+      notify?.([{ intersectionRatio: ratio }], observer)
 
       expect(scroll_spy.mock.calls).toEqual(expected_scroll_calls.map((call) => [call]))
-      expect(mock.disconnect).toHaveBeenCalled()
+      expect(disconnect).toHaveBeenCalled()
     },
   )
 })

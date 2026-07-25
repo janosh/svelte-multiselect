@@ -20,38 +20,25 @@ describe(`Icon`, () => {
     },
   )
 
-  test.each([
-    [
-      `class`,
-      `custom-class`,
-      (svg: SVGSVGElement) => svg.classList.contains(`custom-class`),
-      true,
-    ],
-    [
-      `style`,
-      `width: 2em;`,
-      (svg: SVGSVGElement) => svg.getAttribute(`style`),
-      `width: 2em;`,
-    ],
-    [
-      `aria-label`,
-      `Checkmark icon`,
-      (svg: SVGSVGElement) => svg.getAttribute(`aria-label`),
-      `Checkmark icon`,
-    ],
-    [`role`, `img`, (svg: SVGSVGElement) => svg.getAttribute(`role`), `img`],
-    [
-      `data-name`,
-      `disabled-icon`,
-      (svg: SVGSVGElement) => svg.getAttribute(`data-name`),
-      `disabled-icon`,
-    ],
-  ] as const)(`applies %s attribute via rest props`, (attr, value, getter, expected) => {
-    mount(Icon, { target: document.body, props: { icon: `Check`, [attr]: value } })
+  test(`applies attributes via rest props`, () => {
+    const rest_props = {
+      style: `width: 2em;`,
+      'aria-label': `Checkmark icon`,
+      role: `img`,
+      'data-name': `disabled-icon`,
+    } as const
+    mount(Icon, {
+      target: document.body,
+      props: { icon: `Check`, class: `custom-class`, ...rest_props },
+    })
+
     const svg = get_svg()
-    expect(svg).not.toBeNull()
-    if (!svg) return
-    expect(getter(svg)).toBe(expected)
+    const applied = Object.fromEntries(
+      Object.keys(rest_props).map((attr) => [attr, svg?.getAttribute(attr)]),
+    )
+    expect(applied).toEqual(rest_props)
+    // class merges with Svelte's scoped class, so it has no verbatim value to compare
+    expect(svg?.classList.contains(`custom-class`)).toBe(true)
   })
 
   test.each([`NonExistentIcon`, ``, `   `])(
@@ -66,12 +53,11 @@ describe(`Icon`, () => {
       })
 
       expect(console_error).toHaveBeenCalledWith(`Icon '${invalid_icon}' not found`)
-      expect(get_svg()?.getAttribute(`viewBox`)).toBe(icon_data.Alert.viewBox)
-      expect(get_svg()?.querySelector(`path`)?.getAttribute(`d`)).toBe(
-        icon_data.Alert.path,
-      )
-
-      console_error.mockRestore()
+      const svg = get_svg()
+      expect([
+        svg?.getAttribute(`viewBox`),
+        svg?.querySelector(`path`)?.getAttribute(`d`),
+      ]).toEqual([icon_data.Alert.viewBox, icon_data.Alert.path])
     },
   )
 })

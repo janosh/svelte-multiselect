@@ -19,7 +19,10 @@ test(`DemoNav contains all base-prefixed demo pages`, () => {
     return href && !href.startsWith(`#`) ? [href] : []
   })
 
-  expect(new Set(hrefs)).toEqual(
-    new Set([`${base}/`, ...routes.map(({ route }) => `${base}${route}`)]),
+  const expected = [`${base}/`, ...routes.map(({ route }) => `${base}${route}`)]
+  // a broken glob would empty `routes` and make both sides trivially equal
+  expect(expected).toEqual(
+    expect.arrayContaining([`${base}/basics`, `${base}/ui`, `${base}/range-select`]),
   )
+  expect(new Set(hrefs)).toEqual(new Set(expected))
 })
