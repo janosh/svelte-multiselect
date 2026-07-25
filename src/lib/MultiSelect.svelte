@@ -543,7 +543,7 @@
     selectAllScope === `matching` && Boolean(loadOptions),
   )
   let select_all_candidates = $derived(
-    selectAllScope === `matching` && !matching_scope_unavailable
+    selectAllScope === `matching` && !loadOptions
       ? get_selectable_opts(matchingOptions, true)
       : rendered_options.filter((option_item) => !is_disabled(option_item)),
   )
@@ -1402,7 +1402,7 @@
         Boolean(selectAllOption) &&
           navigable_options.length > 0 &&
           maxSelect !== 1 &&
-          !(selectAllScope === `matching` && loadOptions),
+          !matching_scope_unavailable,
         () => select_all(event),
       ) ||
       run_shortcut(event, `clear_all`, chip_navigation_enabled, () =>
@@ -1636,16 +1636,15 @@
     if (!multi_select) return false
     const visible_options = range_navigable_options
     // trust the caller's positional hint, falling back to a search when it's stale
+    // hint indexes the dropdown rows, an order-preserving subsequence of visible_options,
+    // so the real position is at or after it — searching forward from there keeps
+    // indistinguishable rows on the clicked occurrence. Scan back only if it overshot.
     const index_of = (option_to_find: Option, hint?: number | null): number => {
-      // hint indexes the dropdown rows, an order-preserving subsequence of
-      // visible_options, so the real position is at or after it. Picking the first
-      // match past the hint keeps indistinguishable rows on the clicked occurrence.
-      const matches: number[] = []
-      for (const [idx, item] of visible_options.entries()) {
-        if (is_same_option(item, option_to_find)) matches.push(idx)
-      }
-      if (hint == null) return matches[0] ?? -1
-      return matches.find((idx) => idx >= hint) ?? matches.at(-1) ?? -1
+      const from = Math.min(hint ?? 0, visible_options.length)
+      const match = (idx: number) => is_same_option(visible_options[idx], option_to_find)
+      for (let idx = from; idx < visible_options.length; idx++) if (match(idx)) return idx
+      for (let idx = from - 1; idx >= 0; idx--) if (match(idx)) return idx
+      return -1
     }
     // A row the user can't see (past maxOptions) or that has left the list can't be a
     // range endpoint. Report it unhandled so the caller still performs an ordinary add
