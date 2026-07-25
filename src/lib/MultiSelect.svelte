@@ -1508,7 +1508,7 @@
       clear_validity()
       handle_dropdown_after_select(event)
       if (resetFilterOnAdd) searchText = ``
-      last_announcement = bulk_announcement(added.length, `selected`)
+      void 0
     }
     if (added.length < unselected.length && maxSelect !== null) {
       wiggle = true
@@ -1904,6 +1904,7 @@
     const request_id = ++load_request_id
     const abort_controller = new AbortController()
     load_abort_controller = abort_controller
+    load_options_last_search = search
     load_options_loading = true
     let batch_length = 0
     try {
