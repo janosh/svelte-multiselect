@@ -1646,7 +1646,6 @@
   ): boolean {
     if (!multi_select) return false
     const visible_options = range_navigable_options
-    // trust the caller's positional hint, falling back to a search when it's stale
     // hint indexes the dropdown rows, an order-preserving subsequence of visible_options,
     // so the real position is at or after it — searching forward from there keeps
     // indistinguishable rows on the clicked occurrence. Scan back only if it overshot.
