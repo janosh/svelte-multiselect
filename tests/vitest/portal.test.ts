@@ -1,6 +1,6 @@
 import { portal_action } from '$lib/portal'
 import { tick } from 'svelte'
-import { afterEach, expect, test, vi } from 'vite-plus/test'
+import { expect, test, vi } from 'vite-plus/test'
 
 function create_fixture(in_shadow_root = false) {
   const host = document.createElement(`div`)
@@ -12,10 +12,6 @@ function create_fixture(in_shadow_root = false) {
   document.body.append(host)
   return { home, target, node, sibling }
 }
-
-afterEach(() => {
-  vi.unstubAllGlobals()
-})
 
 test(`restores from a shadow root after its anchor is removed`, async () => {
   const { target, node, sibling } = create_fixture(true)

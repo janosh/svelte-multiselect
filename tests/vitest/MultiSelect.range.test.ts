@@ -33,6 +33,11 @@ const shift_click = (row: string | HTMLLIElement | undefined): void => {
   target.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))
 }
 
+const combobox = () => doc_query<HTMLInputElement>(`input[role="combobox"]`)
+const selected_rows = () => document.querySelectorAll(`ul.selected > li`)
+const press = (key: string, init: KeyboardEventInit = {}) =>
+  combobox().dispatchEvent(new KeyboardEvent(`keydown`, { key, bubbles: true, ...init }))
+
 const select_range = async (anchor: string, target: string): Promise<void> => {
   option_row(anchor).click()
   await tick()
@@ -88,9 +93,7 @@ test(`Shift+Enter adds one option instead of extending a range`, async () => {
   await tick()
   option_row(`Gamma`).dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
   await tick()
-  doc_query<HTMLInputElement>(`input[role="combobox"]`).dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `Enter`, shiftKey: true, bubbles: true }),
-  )
+  press(`Enter`, { shiftKey: true })
   await tick()
 
   expect(onrange_select).not.toHaveBeenCalled()
@@ -100,7 +103,7 @@ test(`Shift+Enter adds one option instead of extending a range`, async () => {
     option: `Gamma`,
     selected: [`Alpha`, `Gamma`],
   })
-  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(2)
+  expect(selected_rows()).toHaveLength(2)
 })
 
 test(`Shift-click adds one visible range and one history entry`, async () => {
@@ -118,13 +121,11 @@ test(`Shift-click adds one visible range and one history entry`, async () => {
     to: `Delta`,
     selected: alpha_options,
   })
-  doc_query<HTMLInputElement>(`input[role="combobox"]`).dispatchEvent(
-    new KeyboardEvent(`keydown`, { key: `z`, ctrlKey: true, bubbles: true }),
-  )
+  press(`z`, { ctrlKey: true })
   await tick()
-  const selected_rows = document.querySelectorAll(`ul.selected > li`)
-  expect(selected_rows).toHaveLength(1)
-  expect(selected_rows[0]?.textContent).toContain(`Alpha`)
+  const rows_after_undo = selected_rows()
+  expect(rows_after_undo).toHaveLength(1)
+  expect(rows_after_undo[0]?.textContent).toContain(`Alpha`)
 })
 
 test(`Shift+Arrow selects the active range, plain arrows drop the anchor`, async () => {
@@ -133,11 +134,8 @@ test(`Shift+Arrow selects the active range, plain arrows drop the anchor`, async
     open: true,
     autoScroll: false,
   })
-  const input = doc_query<HTMLInputElement>(`input[role="combobox"]`)
   const arrow_down = async (shiftKey = false) => {
-    input.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `ArrowDown`, shiftKey, bubbles: true }),
-    )
+    press(`ArrowDown`, { shiftKey })
     await tick()
   }
 
@@ -167,7 +165,7 @@ test(`Shift-click is an ordinary click while rangeSelect is off`, async () => {
   await select_range(`Alpha`, `Delta`)
 
   expect(onrange_select).not.toHaveBeenCalled()
-  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(2)
+  expect(selected_rows()).toHaveLength(2)
 })
 
 test(`range selection skips disabled rows and obeys maxSelect`, async () => {
@@ -219,7 +217,7 @@ test(`an invalidated anchor falls back to one ordinary add`, async () => {
   option_row(`Anchor`).click()
   await tick()
   onadd.mockClear()
-  const input = doc_query<HTMLInputElement>(`input[role="combobox"]`)
+  const input = combobox()
   input.value = `Target`
   input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
   await tick()
