@@ -39,6 +39,11 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
     node.dataset.placement = place_above ? `top` : `bottom`
   }
 
+  const reposition = () => {
+    if (params.open && params.target_node) void tick().then(update_position)
+    else node.hidden = true
+  }
+
   const stop_tracking_viewport = () => {
     globalThis.removeEventListener(`scroll`, update_position, true)
     globalThis.removeEventListener(`resize`, update_position)
@@ -52,8 +57,7 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
     node.style.position = `fixed`
     globalThis.addEventListener(`scroll`, update_position, true)
     globalThis.addEventListener(`resize`, update_position)
-    if (params.open && params.target_node) void tick().then(update_position)
-    else node.hidden = true
+    reposition()
   }
 
   const deactivate = () => {
@@ -81,9 +85,7 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
       params = next_params
       if (params.active && !home_parent) activate()
       else if (!params.active && home_parent) deactivate()
-      if (!home_parent) return
-      if (params.open && params.target_node) void tick().then(update_position)
-      else node.hidden = true
+      if (home_parent) reposition()
     },
     destroy() {
       if (!home_parent) return

@@ -247,12 +247,12 @@
   let wiggle = $state(false) // controls wiggle animation when user tries to exceed maxSelect
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
   let highlighted_idx: number | null = $state(null) // index of highlighted selected item for arrow key navigation
-  // rangeSelect anchor bookkeeping. Plain (non-$state) vars since they're only read
-  // inside event handlers, never in the template or a derived. Note the anchor can't be
-  // matched by reference: matchingOptions is $bindable, so its elements are re-proxied
-  // and never === the caller's objects. That's why is_same_option compares key + label.
-  let range_anchor: Option | null = null
-  let range_anchor_idx: number | null = null
+  // rangeSelect anchor bookkeeping. A plain (non-$state) var since it's only read inside
+  // event handlers, never in the template or a derived. Note the anchor can't be matched
+  // by reference: matchingOptions is $bindable, so its elements are re-proxied and never
+  // === the caller's objects. That's why is_same_option compares key + label. idx is the
+  // last known position, a hint for relocating the option after the list shifts.
+  let range_anchor: { option: Option; idx: number | null } | null = null
 
   // maxVisibleChips: chips beyond the limit collapse into a "+N more" toggle.
   // chip_limit normalizes invalid values to null (error logged in the validation
@@ -910,10 +910,10 @@
 
   // Range selection includes a selected anchor that has left matchingOptions, while
   // preserving the grouped/sorted order and collapsed-group visibility of the dropdown.
-  const range_navigable_options = $derived.by(() => {
-    const searched = effective_options.filter(search_matches)
-    return flatten_navigable(group_options(searched))
-  })
+  const searched_options = $derived(effective_options.filter(search_matches))
+  const range_navigable_options = $derived(
+    flatten_navigable(group_options(searched_options)),
+  )
 
   let previous_active_index = activeIndex
   let previous_active_option = activeOption
@@ -1311,12 +1311,9 @@
       // Anchors on the pre-move position, so an unmodified navigation drops the anchor
       // and the next Shift+Arrow extends from where the cursor now is, not from a range
       // the user has since navigated away from.
-      if (!event?.shiftKey) {
-        range_anchor = null
-        range_anchor_idx = null
-      } else if (range_anchor === null && activeOption) {
-        range_anchor = activeOption
-        range_anchor_idx = activeIndex
+      if (!event?.shiftKey) range_anchor = null
+      else if (range_anchor === null && activeOption) {
+        range_anchor = { option: activeOption, idx: activeIndex }
       }
     }
 
@@ -1376,7 +1373,7 @@
     // Fire onactivate for keyboard navigation only (not mouse hover)
     onactivate?.({ option: activeOption, index: activeIndex })
     if (event?.shiftKey && rangeSelect && activeOption)
-      handle_option_interact(activeOption, event, activeIndex ?? undefined)
+      handle_option_interact(activeOption, event, activeIndex)
   }
 
   function run_shortcut(
@@ -1443,7 +1440,7 @@
       // != null (not truthiness) so falsy options like 0 or `` can be selected via Enter
       if (activeOption != null) {
         if (is_disabled(activeOption)) return
-        handle_option_interact(activeOption, event, activeIndex ?? undefined)
+        handle_option_interact(activeOption, event, activeIndex)
       } else if (allowUserOptions && has_search_text && !load_options_pending) {
         // user entered text but no options match, so if allowUserOptions is truthy, we create new option
         add(searchText as Option, event)
@@ -1554,8 +1551,7 @@
     }
     const seen_keys = new Set(selected_keys_set)
     const seen_labels = new Set(selected_labels_set)
-    const unique_options: Option[] = []
-    for (const option_item of options_to_filter) {
+    return options_to_filter.filter((option_item) => {
       const option_key = key(option_item)
       const option_label = norm_label(utils.get_label(option_item))
       if (
@@ -1563,12 +1559,11 @@
         seen_keys.has(option_key) ||
         (lower_dupes && seen_labels.has(option_label))
       )
-        continue
+        return false
       seen_keys.add(option_key)
       seen_labels.add(option_label)
-      unique_options.push(option_item)
-    }
-    return unique_options
+      return true
+    })
   }
 
   // Batch-add options for top-level "Select all" (selectAllScope picks the candidates)
@@ -1581,6 +1576,9 @@
     max_reached: boolean,
     all_selectable_selected: boolean,
   ) {
+    if (matching_scope_unavailable) {
+      return `Matching select-all is only available with local options`
+    }
     if (selectAllDisabledTitle === null) return ``
     const default_title =
       max_reached && !all_selectable_selected
@@ -1641,7 +1639,11 @@
 
   // Returns true only when a range was actually selected; false tells the caller to
   // fall back to an ordinary add.
-  function select_range(target: Option, event: Event, target_idx_hint?: number): boolean {
+  function select_range(
+    target: Option,
+    event: Event,
+    target_idx_hint?: number | null,
+  ): boolean {
     if (!multi_select) return false
     const visible_options = range_navigable_options
     // trust the caller's positional hint, falling back to a search when it's stale
@@ -1661,21 +1663,19 @@
     if (!rendered_options.some((item) => is_same_option(item, target))) return false
     const target_idx = index_of(target, target_idx_hint)
     if (target_idx === -1) return false
-    const anchor_idx =
-      range_anchor === null ? -1 : index_of(range_anchor, range_anchor_idx)
+    const anchor_idx = range_anchor ? index_of(range_anchor.option, range_anchor.idx) : -1
     if (anchor_idx < 0) {
       range_anchor = null
-      range_anchor_idx = null
       return false
     }
     event.stopPropagation()
-    const range_start = Math.min(anchor_idx, target_idx)
-    const range_end = Math.max(anchor_idx, target_idx)
-    const candidates = visible_options.slice(range_start, range_end + 1)
+    const candidates = visible_options.slice(
+      Math.min(anchor_idx, target_idx),
+      Math.max(anchor_idx, target_idx) + 1,
+    )
     const added = apply_bulk_add(candidates, event)
-    const anchor_option = visible_options[anchor_idx] ?? target
-    range_anchor = anchor_option
-    range_anchor_idx = anchor_idx
+    const anchor_option = visible_options[anchor_idx]
+    range_anchor = { option: anchor_option, idx: anchor_idx }
     if (added.length > 0) {
       onrangeSelect?.({ added, from: anchor_option, to: target, selected })
       onchange?.({ options: selected, type: `rangeSelect` })
@@ -1687,20 +1687,15 @@
   const handle_option_interact = (
     opt: Option,
     event: MouseEvent | KeyboardEvent,
-    option_idx?: number,
+    option_idx?: number | null,
   ) => {
     if (is_disabled(opt)) return
     // only Shift-click and Shift+Arrow extend a range, not e.g. Shift+Enter
     const extends_range =
       event.shiftKey &&
       (!(`key` in event) || event.key === `ArrowUp` || event.key === `ArrowDown`)
-    if (
-      rangeSelect &&
-      range_anchor !== null &&
-      extends_range &&
-      select_range(opt, event, option_idx)
-    )
-      return
+    // select_range reports false when there's no usable anchor, so no need to check here
+    if (rangeSelect && extends_range && select_range(opt, event, option_idx)) return
     const selected_before = selected.length
     if (keepSelectedInDropdown && !input_display) toggle_option(opt, event)
     else void add(opt, event)
@@ -1709,8 +1704,8 @@
     // refused) or a toggle-off leaves no sensible anchor, so drop it rather than let a
     // later Shift+click extend from a stale position. maxSelect===1 replaces without
     // growing selected, but multi_select is false there so ranges never run.
-    range_anchor = selected.length > selected_before ? opt : null
-    range_anchor_idx = range_anchor === null ? null : (option_idx ?? null)
+    range_anchor =
+      selected.length > selected_before ? { option: opt, idx: option_idx ?? null } : null
   }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {
@@ -2312,11 +2307,7 @@
           role="option"
           aria-selected={selected.length > 0 && all_selectable_selected}
           aria-disabled={all_selected || undefined}
-          title={matching_scope_unavailable
-            ? `Matching select-all is only available with local options`
-            : all_selected
-              ? disabled_title
-              : null}
+          title={all_selected ? disabled_title : null}
           tabindex={all_selected ? -1 : 0}
         >
           {typeof selectAllOption === `string` ? selectAllOption : `Select all`}

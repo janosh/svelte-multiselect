@@ -6,10 +6,12 @@ import { doc_query } from './index'
 
 const alpha_options = [`Alpha`, `Beta`, `Gamma`, `Delta`]
 
+const option_rows = (): HTMLLIElement[] => [
+  ...document.querySelectorAll<HTMLLIElement>(`ul.options > li[role="option"]`),
+]
+
 const option_row = (label: string): HTMLLIElement => {
-  const row = [
-    ...document.querySelectorAll<HTMLLIElement>(`ul.options > li[role="option"]`),
-  ].find((option_item) => option_item.textContent?.trim() === label)
+  const row = option_rows().find((item) => item.textContent?.trim() === label)
   if (!row) throw new Error(`Option "${label}" not found`)
   return row
 }
@@ -53,9 +55,7 @@ test(`shift-click resolves to the clicked duplicate-label row`, async () => {
 
   option_row(`Sel`).click()
   await tick()
-  const dups = [
-    ...document.querySelectorAll<HTMLLIElement>(`ul.options > li[role="option"]`),
-  ].filter((row) => row.textContent?.trim() === `Dup`)
+  const dups = option_rows().filter((row) => row.textContent?.trim() === `Dup`)
   dups[1]?.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))
   await tick()
 
@@ -201,7 +201,7 @@ test(`identical duplicates preserve the clicked occurrence`, async () => {
     key: () => `same`,
     onrangeSelect: onrange_select,
   })
-  const rows = document.querySelectorAll<HTMLLIElement>(`ul.options > li[role="option"]`)
+  const rows = option_rows()
   rows[1]?.click()
   await tick()
   rows[2]?.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))

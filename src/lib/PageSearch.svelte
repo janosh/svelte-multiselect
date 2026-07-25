@@ -7,8 +7,6 @@
   } from './types'
   import { cmd_action_matches, slug_to_title } from './utils'
 
-  type PagefindAction = CmdAction
-
   type PagefindSubResult = { title: string; url: string; plain_excerpt: string }
 
   type PagefindResultData = {
@@ -27,12 +25,12 @@
   type PagefindSearchCache = {
     query: string
     results: Promise<PagefindResult[]>
-    actions: PagefindAction[]
+    actions: CmdAction[]
     next_result_idx: number
   }
 
   type PagefindLoaderOptions = {
-    fallback_actions?: PagefindAction[]
+    fallback_actions?: CmdAction[]
     fuzzy?: boolean
     load_pagefind?: () => Promise<PagefindApi>
     navigate?: (url: string, details: PageSearchNavigateDetails) => unknown
@@ -51,10 +49,10 @@
   }
 
   const paginate_actions = (
-    actions: PagefindAction[],
+    actions: CmdAction[],
     offset: number,
     limit: number,
-  ): LoadOptionsResult<PagefindAction> => ({
+  ): LoadOptionsResult<CmdAction> => ({
     options: actions.slice(offset, offset + limit),
     hasMore: offset + limit < actions.length,
   })
@@ -80,7 +78,7 @@
     query: string,
     result: PagefindResultData,
     get_options: () => PagefindLoaderOptions,
-  ): PagefindAction[] => {
+  ): CmdAction[] => {
     const page_title = result.meta.title || page_title_from_url(result.url)
     const sections = result.sub_results.length ? result.sub_results : [undefined]
 
@@ -122,7 +120,7 @@
       search,
       offset,
       limit,
-    }: LoadOptionsParams): Promise<LoadOptionsResult<PagefindAction>> => {
+    }: LoadOptionsParams): Promise<LoadOptionsResult<CmdAction>> => {
       const {
         fallback_actions = [],
         fuzzy = false,
