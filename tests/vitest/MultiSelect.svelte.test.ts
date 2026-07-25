@@ -1,6 +1,6 @@
 // deno-lint-ignore-file no-await-in-loop
 import { readFileSync } from 'node:fs'
-import { createRawSnippet, mount, tick } from 'svelte'
+import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
@@ -4258,6 +4258,24 @@ describe(`loadOptions feature`, () => {
     resolvers[0]({ options: mock_data.slice(0, 5), hasMore: true })
     await flush_ticks()
     expect(load_options).toHaveBeenCalledTimes(1)
+  })
+
+  // The unmount abort lives in a teardown-returning $effect, whose shape is easy to
+  // misread as a missing call. This pins the behavior so a "fix" can't silently undo it.
+  test(`unmounting aborts the in-flight fetch`, async () => {
+    const { fn: load_options } = deferred_load()
+    const component = mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+    expect(load_options.mock.calls[0][0].signal?.aborted).toBe(false)
+
+    void unmount(component)
+    await tick()
+
+    expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
   })
 
   // `signal` is optional, so a consumer may ignore it. Its request then keeps running
