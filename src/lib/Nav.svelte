@@ -145,7 +145,6 @@
   function onkeydown(event: KeyboardEvent) {
     if (event.key === `Escape`) close_menus()
   }
-  const menu_keydown = $derived(chain_handlers(onkeydown, menu_props?.onkeydown))
 
   function handle_dropdown_keydown(
     event: KeyboardEvent,
@@ -329,13 +328,7 @@
     <span aria-hidden="true"></span>
   </button>
 
-  <div
-    id={panel_id}
-    class="menu"
-    class:open={is_open}
-    {...menu_props}
-    onkeydown={menu_keydown}
-  >
+  <div id={panel_id} class="menu" class:open={is_open} {...menu_props}>
     {#each routes as route, route_idx (get_route_key(route, route_idx))}
       {@const parsed_route = parse_route(route)}
       {@const formatted = format_label(parsed_route.label ?? parsed_route.href)}

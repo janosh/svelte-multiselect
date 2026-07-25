@@ -7,7 +7,7 @@
   } from './types'
   import { cmd_action_matches, slug_to_title } from './utils'
 
-  type PagefindAction = CmdAction & { url?: string }
+  type PagefindAction = CmdAction
 
   type PagefindSubResult = { title: string; url: string; plain_excerpt: string }
 
@@ -85,7 +85,6 @@
 
     return sections.map((section, section_idx) => {
       const source_url = section?.url ?? result.url
-      const url = get_options().transform_url?.(source_url) ?? source_url
       const section_title = section?.title.trim()
       const label =
         section_title && section_title !== page_title
@@ -108,14 +107,14 @@
         if (navigate) void navigate(current_url, { query, label, description })
         else globalThis.location.assign(current_url)
       }
-      return { id, label, description, url, action }
+      return { id, label, description, action }
     })
   }
 
   const create_pagefind_loader = (get_options: () => PagefindLoaderOptions) => {
     let pagefind_api_promise: Promise<PagefindApi> | undefined
     let search_cache: PagefindSearchCache | undefined
-    let previous_pagefind_source: PagefindLoaderOptions[`load_pagefind`] | string
+    let previous_pagefind_source: string | undefined
 
     return async ({
       search,
@@ -128,16 +127,18 @@
         load_pagefind,
         pagefind_path = `/pagefind/pagefind.js`,
       } = get_options()
-      const pagefind_source = load_pagefind ?? pagefind_path
+      // Key the cache on the kind of source, not on closure identity: an inline
+      // load_pagefind arrow gets a fresh identity every render, and treating that as a
+      // source change would re-import pagefind and re-run the search on each keystroke.
+      const pagefind_source = load_pagefind ? `custom-loader` : pagefind_path
       if (pagefind_source !== previous_pagefind_source) {
         pagefind_api_promise = undefined
         search_cache = undefined
         previous_pagefind_source = pagefind_source
       }
       const load_api =
-        typeof pagefind_source === `function`
-          ? pagefind_source
-          : async () => (await import(/* @vite-ignore */ pagefind_source)) as PagefindApi
+        load_pagefind ??
+        (async () => (await import(/* @vite-ignore */ pagefind_path)) as PagefindApi)
       const query = search.trim()
       if (!query) return paginate_actions(fallback_actions, offset, limit)
       const fallback_result = () =>

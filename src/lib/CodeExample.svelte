@@ -58,9 +58,6 @@
     },
   ])
   const links = { target: `_blank`, rel: `noreferrer` }
-  const toggle_code = $derived(
-    chain_handlers(() => (open = !open), button_props?.onclick),
-  )
 </script>
 
 <nav>
@@ -77,7 +74,10 @@
   {/each}
   {#if collapsible}
     {@render title?.()}
-    <button {...button_props} onclick={toggle_code}>
+    <button
+      {...button_props}
+      onclick={chain_handlers(() => (open = !open), button_props?.onclick)}
+    >
       <Icon icon={open ? `Collapse` : `Expand`} />
       {open ? `Close` : `View code`}
     </button>

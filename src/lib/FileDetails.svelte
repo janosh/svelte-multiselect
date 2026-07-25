@@ -64,7 +64,6 @@
     }
     sync_any_open()
   }
-  const handle_toggle_all = $derived(chain_handlers(toggle_all, button_props?.onclick))
 
   // Map file extensions that differ from their starry-night language flag
   const ext_to_lang: Record<string, string> = {
@@ -128,7 +127,11 @@
 </script>
 
 {#if files?.length > 1}
-  <button title={toggle_all_btn_title} {...button_props} onclick={handle_toggle_all}>
+  <button
+    title={toggle_all_btn_title}
+    {...button_props}
+    onclick={chain_handlers(toggle_all, button_props?.onclick)}
+  >
     {any_open ? `Close` : `Open`} all
   </button>
 {/if}

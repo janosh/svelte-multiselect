@@ -1,5 +1,6 @@
 import type { Option, OptionStyle } from '$lib'
 import {
+  chain_handlers,
   fuzzy_match,
   get_label,
   get_option_key,
@@ -283,5 +284,45 @@ describe(`get_option_key`, () => {
     expect(get_option_key(opt1)).toBe(obj1)
     expect(get_option_key(opt2)).toBe(obj2)
     expect(get_option_key(opt1)).not.toBe(get_option_key(opt2))
+  })
+})
+
+describe(`chain_handlers`, () => {
+  test.each([
+    [
+      [`a`, null, `b`],
+      [`a`, `b`],
+    ],
+    [[undefined, `a`], [`a`]],
+    [[null, undefined], []],
+    [
+      [`a`, `b`, `c`],
+      [`a`, `b`, `c`],
+    ],
+  ])(`runs %s in order, skipping nullish`, (names, expected) => {
+    const calls: string[] = []
+    const handlers = names.map((name) => (name == null ? name : () => calls.push(name)))
+    chain_handlers(...handlers)(new MouseEvent(`click`))
+    expect(calls).toEqual(expected)
+  })
+
+  test(`passes the same event to every handler`, () => {
+    const event = new MouseEvent(`click`)
+    const seen: unknown[] = []
+    chain_handlers(
+      (evt: MouseEvent) => seen.push(evt),
+      (evt: MouseEvent) => seen.push(evt),
+    )(event)
+    expect(seen).toEqual([event, event])
+  })
+
+  // documents a real hazard: an internal handler that throws swallows the consumer's
+  test(`a throwing handler stops the chain`, () => {
+    const later = vi.fn()
+    const boom = () => {
+      throw new Error(`boom`)
+    }
+    expect(() => chain_handlers(boom, later)(new MouseEvent(`click`))).toThrow(`boom`)
+    expect(later).not.toHaveBeenCalled()
   })
 })
