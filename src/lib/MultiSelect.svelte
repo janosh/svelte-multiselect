@@ -248,8 +248,9 @@
   let ignore_hover = $state(false) // ignore mouseover during keyboard navigation to prevent scroll-triggered hover
   let highlighted_idx: number | null = $state(null) // index of highlighted selected item for arrow key navigation
   // rangeSelect anchor bookkeeping. Plain (non-$state) vars since they're only read
-  // inside event handlers, never in the template or a derived. $state would also wrap
-  // the anchor option in a proxy, breaking identity against the caller's own objects.
+  // inside event handlers, never in the template or a derived. Note the anchor can't be
+  // matched by reference: matchingOptions is $bindable, so its elements are re-proxied
+  // and never === the caller's objects. That's why is_same_option compares key + label.
   let range_anchor: Option | null = null
   let range_anchor_idx: number | null = null
 
@@ -537,15 +538,16 @@
   let visible_navigable_count = $derived(
     Math.min(navigable_options.length, maxOptions ?? Infinity),
   )
-  let rendered_options = $derived(navigable_options.slice(0, visible_navigable_count))
+  const rendered_options = $derived(navigable_options.slice(0, visible_navigable_count))
   // `matching` scope needs the full local option set, which remote loading can't provide
-  let matching_scope_unavailable = $derived(
+  const matching_scope_unavailable = $derived(
     selectAllScope === `matching` && Boolean(loadOptions),
   )
-  let select_all_candidates = $derived(
-    selectAllScope === `matching` && !loadOptions
-      ? get_selectable_opts(matchingOptions, true)
-      : rendered_options.filter((option_item) => !is_disabled(option_item)),
+  const select_all_candidates = $derived(
+    (selectAllScope === `matching` && !loadOptions
+      ? matchingOptions
+      : rendered_options
+    ).filter((option_item) => !is_disabled(option_item)),
   )
 
   // === Virtualized dropdown rendering (flat/ungrouped option lists only) ===
@@ -901,7 +903,7 @@
 
   // Range selection includes a selected anchor that has left matchingOptions, while
   // preserving the grouped/sorted order and collapsed-group visibility of the dropdown.
-  let range_navigable_options = $derived.by(() => {
+  const range_navigable_options = $derived.by(() => {
     const searched = effective_options.filter(search_matches)
     return flatten_navigable(group_options(searched))
   })
@@ -1505,9 +1507,9 @@
     const added = unselected.slice(0, remaining)
     if (added.length > 0) {
       selected = sort_selected([...selected, ...added])
+      if (resetFilterOnAdd) searchText = ``
       clear_validity()
       handle_dropdown_after_select(event)
-      if (resetFilterOnAdd) searchText = ``
       last_announcement = bulk_announcement(added.length, `selected`)
     }
     if (added.length < unselected.length && maxSelect !== null) {
@@ -1684,9 +1686,7 @@
     // only Shift-click and Shift+Arrow extend a range, not e.g. Shift+Enter
     const extends_range =
       event.shiftKey &&
-      (event instanceof MouseEvent ||
-        event.key === `ArrowUp` ||
-        event.key === `ArrowDown`)
+      (!(`key` in event) || event.key === `ArrowUp` || event.key === `ArrowDown`)
     if (
       rangeSelect &&
       range_anchor !== null &&
@@ -1694,16 +1694,16 @@
       select_range(opt, event, option_idx)
     )
       return
+    const selected_before = selected.length
     if (keepSelectedInDropdown && !input_display) toggle_option(opt, event)
     else void add(opt, event)
     if (!rangeSelect) return
-    if (selected.some((selected_option) => is_same_option(selected_option, opt))) {
-      range_anchor = opt
-      range_anchor_idx = option_idx ?? null
-    } else if (is_same_option(range_anchor, opt)) {
-      range_anchor = null
-      range_anchor_idx = null
-    }
+    // Anchor only on an add that landed. A rejected one (maxSelect reached, duplicate
+    // refused) or a toggle-off leaves no sensible anchor, so drop it rather than let a
+    // later Shift+click extend from a stale position. maxSelect===1 replaces without
+    // growing selected, but multi_select is false there so ranges never run.
+    range_anchor = selected.length > selected_before ? opt : null
+    range_anchor_idx = range_anchor === null ? null : (option_idx ?? null)
   }
 
   function on_click_outside(event: MouseEvent | TouchEvent) {

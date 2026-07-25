@@ -899,7 +899,7 @@ Example using several snippets:
    onselectAll={({ options, scope }) => console.log(options, scope)}
    ```
 
-   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added and `scope` is the active [`selectAllScope`](#--props).
+   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added. `scope` is the active [`selectAllScope`](#--props) for the top-level "Select All", and `undefined` when a group's own select-all fired the event.
 
 1. ```ts
    onrangeSelect={({ added, from, to, selected }) => console.log(added, from, to)}

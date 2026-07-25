@@ -31,6 +31,60 @@ const select_range = async (anchor: string, target: string): Promise<void> => {
   await tick()
 }
 
+test(`backward range selects upward from the anchor`, async () => {
+  const onrange_select = vi.fn()
+  mount_multiselect({ options: alpha_options, open: true, onrangeSelect: onrange_select })
+
+  await select_range(`Delta`, `Alpha`)
+
+  expect(onrange_select.mock.calls[0][0].added).toEqual([`Alpha`, `Beta`, `Gamma`])
+})
+
+// hint indexes the dropdown rows while the lookup runs against the superset that also
+// holds already-selected rows, so a naive first-match lands on the wrong "Dup"
+test(`shift-click resolves to the clicked duplicate-label row`, async () => {
+  const options = [
+    { label: `Dup`, id: 0 },
+    { label: `Sel`, id: 1 },
+    { label: `Dup`, id: 2 },
+  ]
+  const onrange_select = vi.fn()
+  mount_multiselect({ options, open: true, onrangeSelect: onrange_select })
+
+  option_row(`Sel`).click()
+  await tick()
+  const dups = [
+    ...document.querySelectorAll<HTMLLIElement>(`ul.options > li[role="option"]`),
+  ].filter((row) => row.textContent?.trim() === `Dup`)
+  dups[1]?.dispatchEvent(new MouseEvent(`click`, { bubbles: true, shiftKey: true }))
+  await tick()
+
+  // toEqual not toBe: $bindable re-proxies options, so nothing is reference-identical
+  expect(onrange_select.mock.calls[0][0].added).toEqual([options[2]])
+  expect(onrange_select.mock.calls[0][0].to).toEqual(options[2])
+})
+
+test(`Shift+Enter adds one option instead of extending a range`, async () => {
+  const onrange_select = vi.fn()
+  mount_multiselect({
+    options: [`Alpha`, `Beta`, `Gamma`],
+    open: true,
+    onrangeSelect: onrange_select,
+  })
+
+  option_row(`Alpha`).click()
+  await tick()
+  option_row(`Gamma`).dispatchEvent(new MouseEvent(`mouseover`, { bubbles: true }))
+  await tick()
+  doc_query<HTMLInputElement>(`input[role="combobox"]`).dispatchEvent(
+    new KeyboardEvent(`keydown`, { key: `Enter`, shiftKey: true, bubbles: true }),
+  )
+  await tick()
+
+  expect(onrange_select).not.toHaveBeenCalled()
+  expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(2)
+})
+
 test(`Shift-click adds one visible range and one history entry`, async () => {
   const onrange_select = vi.fn()
   mount_multiselect({
