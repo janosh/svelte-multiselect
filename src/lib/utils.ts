@@ -69,8 +69,8 @@ export function get_style(
   }
   if (typeof option === `object` && option.style) {
     if (typeof option.style === `string`) css_str = option.style
-    if (typeof option.style === `object` && key) {
-      if (key in option.style) css_str = option.style[key] ?? ``
+    if (typeof option.style === `object`) {
+      if (key && key in option.style) css_str = option.style[key] ?? ``
       // partial style objects (e.g. only `selected`) are fine; flag any keys
       // other than the known ones, even when a valid key is also present
       const has_unknown_key = Object.keys(option.style).some(

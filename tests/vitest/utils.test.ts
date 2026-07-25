@@ -122,10 +122,18 @@ describe(`get_style`, () => {
     },
   )
 
-  test.each([undefined, null])(`no error for style object when key is %s`, (key) => {
+  test.each([undefined, null])(`validates style objects when key is %s`, (key) => {
     console.error = vi.fn<typeof console.error>()
     get_style({ label: `test`, style: option_style }, key)
     expect(console.error).not.toHaveBeenCalled()
+
+    const option = { label: `test`, style: { custom: `color: red` } }
+    // @ts-expect-error unknown style key tests runtime validation
+    get_style(option, key)
+    expect(console.error).toHaveBeenCalledWith(
+      `MultiSelect: invalid style object for option`,
+      option,
+    )
   })
 
   test.each([
