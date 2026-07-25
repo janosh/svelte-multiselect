@@ -1904,8 +1904,8 @@
     const request_id = ++load_request_id
     const abort_controller = new AbortController()
     load_abort_controller = abort_controller
-    load_options_last_search = search
     load_options_loading = true
+    let batch_length = 0
     try {
       const result = await load_options_config.fetch({
         search,
@@ -1914,6 +1914,7 @@
         signal: abort_controller.signal,
       })
       if (request_id !== load_request_id) return // stale request, discard
+      batch_length = result.options.length
       loaded_options = reset ? result.options : [...loaded_options, ...result.options]
       load_options_has_more = result.hasMore
     } catch (error) {
@@ -1931,8 +1932,12 @@
     }
     // Auto-fill: if the loaded batch doesn't overflow the dropdown, the scrollbar
     // won't appear and onscroll can never fire. Keep loading until scrollable or done.
+    // An empty batch means the next request would be identical, so stop instead of
+    // spinning to MAX_AUTO_FILL_ROUNDS against a server that reports hasMore anyway.
+    // This also keeps offset=0 meaning "reset": non-reset loads always have options.
     if (
       request_id !== load_request_id ||
+      batch_length === 0 ||
       !load_options_has_more ||
       !open ||
       !ul_options ||

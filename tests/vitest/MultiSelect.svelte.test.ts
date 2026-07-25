@@ -4260,6 +4260,29 @@ describe(`loadOptions feature`, () => {
     expect(load_options).toHaveBeenCalledTimes(1)
   })
 
+  // A server can report hasMore alongside an empty batch. Refetching the same offset
+  // can't make progress, and a non-reset load at offset 0 would break the documented
+  // cursor-pagination pattern that treats offset 0 as "reset your cursor".
+  test(`auto-fill stops on an empty batch and never reuses offset 0`, async () => {
+    const offsets: number[] = []
+    const load_options = vi.fn(async ({ offset }: LoadOptionsParams) => {
+      offsets.push(offset)
+      return { options: [] as string[], hasMore: true }
+    })
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: { fetch: load_options, batchSize: 5 }, open: true },
+    })
+    await tick()
+
+    const ul = doc_query(`ul.options`)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(400)
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(100)
+    await flush_ticks(10)
+
+    expect(offsets).toEqual([0])
+  })
+
   test(`stale fetch result discarded when search changes during load`, async () => {
     const { fn: load_options, resolvers } = deferred_load()
     vi.useFakeTimers()
