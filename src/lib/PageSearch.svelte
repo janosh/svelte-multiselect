@@ -78,14 +78,14 @@
     result_id: string,
     query: string,
     result: PagefindResultData,
-    navigate: (url: string, details: PageSearchNavigateDetails) => unknown,
-    transform_url: (url: string) => string,
+    get_options: () => PagefindLoaderOptions,
   ): PagefindAction[] => {
     const page_title = result.meta.title || page_title_from_url(result.url)
     const sections = result.sub_results.length ? result.sub_results : [undefined]
 
     return sections.map((section, section_idx) => {
-      const url = transform_url(section?.url ?? result.url)
+      const source_url = section?.url ?? result.url
+      const url = get_options().transform_url?.(source_url) ?? source_url
       const section_title = section?.title.trim()
       const label =
         section_title && section_title !== page_title
@@ -101,35 +101,43 @@
           ? `${full_description.slice(0, MAX_DESCRIPTION_LENGTH - 1).trimEnd()}…`
           : full_description
 
-      return {
-        id: `pagefind:${result_id}:${section_idx}:${url}`,
-        label,
-        description,
-        url,
-        action: () => void navigate(url, { query, label, description }),
+      const id = `pagefind:${result_id}:${section_idx}:${source_url}`
+      const action = () => {
+        const { navigate, transform_url } = get_options()
+        const current_url = transform_url?.(source_url) ?? source_url
+        if (navigate) void navigate(current_url, { query, label, description })
+        else globalThis.location.assign(current_url)
       }
+      return { id, label, description, url, action }
     })
   }
 
-  const create_pagefind_loader = ({
-    fallback_actions = [],
-    fuzzy = false,
-    load_pagefind,
-    navigate = (url) => globalThis.location.assign(url),
-    pagefind_path = `/pagefind/pagefind.js`,
-    transform_url = (url) => url,
-  }: PagefindLoaderOptions = {}) => {
+  const create_pagefind_loader = (get_options: () => PagefindLoaderOptions) => {
     let pagefind_api_promise: Promise<PagefindApi> | undefined
     let search_cache: PagefindSearchCache | undefined
-    const load_api =
-      load_pagefind ??
-      (async () => (await import(/* @vite-ignore */ pagefind_path)) as PagefindApi)
+    let previous_pagefind_source: PagefindLoaderOptions[`load_pagefind`] | string
 
     return async ({
       search,
       offset,
       limit,
     }: LoadOptionsParams): Promise<LoadOptionsResult<PagefindAction>> => {
+      const {
+        fallback_actions = [],
+        fuzzy = false,
+        load_pagefind,
+        pagefind_path = `/pagefind/pagefind.js`,
+      } = get_options()
+      const pagefind_source = load_pagefind ?? pagefind_path
+      if (pagefind_source !== previous_pagefind_source) {
+        pagefind_api_promise = undefined
+        search_cache = undefined
+        previous_pagefind_source = pagefind_source
+      }
+      const load_api =
+        typeof pagefind_source === `function`
+          ? pagefind_source
+          : async () => (await import(/* @vite-ignore */ pagefind_source)) as PagefindApi
       const query = search.trim()
       if (!query) return paginate_actions(fallback_actions, offset, limit)
       const fallback_result = () =>
@@ -170,8 +178,7 @@
                 result.id,
                 query,
                 await result.data(),
-                navigate,
-                transform_url,
+                get_options,
               ),
             ),
           )
@@ -236,19 +243,17 @@
     ...rest
   }: Props = $props()
 
-  const load_options = $derived(
-    create_pagefind_loader({
-      fallback_actions,
-      fuzzy,
-      load_pagefind,
-      navigate,
-      pagefind_path,
-      transform_url: (url) => {
-        const normalized_url = strip_html_suffix ? strip_html_extension(url) : url
-        return transform_url?.(normalized_url) ?? normalized_url
-      },
-    }),
-  )
+  const load_options = create_pagefind_loader(() => ({
+    fallback_actions,
+    fuzzy,
+    load_pagefind,
+    navigate,
+    pagefind_path,
+    transform_url: (url) => {
+      const normalized_url = strip_html_suffix ? strip_html_extension(url) : url
+      return transform_url?.(normalized_url) ?? normalized_url
+    },
+  }))
 </script>
 
 <CommandMenu
