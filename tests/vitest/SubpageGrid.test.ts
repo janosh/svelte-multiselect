@@ -3,7 +3,8 @@ import BasicsPage from '$root/src/routes/(demos)/(basics)/basics/+page.svelte'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
 
-vi.mock(`$app/paths`, () => ({ base: `/docs` }))
+// stands in for a configured base path, which is what resolve() prefixes
+vi.mock(`$app/paths`, () => ({ resolve: (path: string) => `/docs${path}` }))
 
 test(`renders tuple subpages correctly`, () => {
   mount(SubpageGrid, {

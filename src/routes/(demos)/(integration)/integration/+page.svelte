@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { base } from '$app/paths'
+  import { resolve } from '$app/paths'
   import { SubpageGrid } from '$lib'
 </script>
 
@@ -7,8 +7,8 @@
   title="Integration Overview"
   subtitle="Examples for integrating with app frameworks, persistence, and reusable behaviors."
   subpages={[
-    [`Form Actions`, `${base}/kit-form-actions`, `SvelteKit form action integration.`],
-    [`Persistent`, `${base}/persistent`, `Persist selection state across reloads.`],
-    [`Attachments`, `${base}/attachments`, `Reusable attachments and actions.`],
+    [`Form Actions`, resolve(`/kit-form-actions`), `SvelteKit form action integration.`],
+    [`Persistent`, resolve(`/persistent`), `Persist selection state across reloads.`],
+    [`Attachments`, resolve(`/attachments`), `Reusable attachments and actions.`],
   ]}
 />

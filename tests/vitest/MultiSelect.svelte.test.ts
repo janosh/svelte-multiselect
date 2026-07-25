@@ -1,11 +1,11 @@
 // deno-lint-ignore-file no-await-in-loop
 import { readFileSync } from 'node:fs'
-import { createRawSnippet, mount, tick } from 'svelte'
+import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
-import type { MultiSelectProps, PortalParams } from '$lib/types'
+import type { LoadOptionsParams, MultiSelectProps, PortalParams } from '$lib/types'
 import { get_label } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
@@ -826,7 +826,9 @@ describe(`selectedDisplay=input`, () => {
       await vi.runAllTimersAsync()
       await tick()
 
-      expect(fetch_fn).toHaveBeenCalledWith({ search: `Al`, offset: 0, limit: 50 })
+      expect(fetch_fn).toHaveBeenCalledWith(
+        expect.objectContaining({ search: `Al`, offset: 0, limit: 50 }),
+      )
     } finally {
       vi.useRealTimers()
     }
@@ -853,7 +855,9 @@ describe(`selectedDisplay=input`, () => {
       await tick()
 
       expect(fetch_fn).toHaveBeenCalledTimes(1)
-      expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
+      expect(fetch_fn).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: ``, offset: 0, limit: 50 }),
+      )
     } finally {
       vi.useRealTimers()
     }
@@ -1550,8 +1554,8 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   const default_create_option_msg = `Create this option...`
   expect(normalized_text(dropdown)).toBe(`bar baz ${default_create_option_msg}`)
 
-  // loop through the dropdown list twice
-  input.focus()
+  // loop through the dropdown list twice, wrapping past the create-option row
+  await focus_input()
   for (const [idx, expected_text] of [
     `bar`,
     `baz`,
@@ -1560,13 +1564,9 @@ test(`up/down arrow keys can traverse dropdown list even when user entered searc
   ].entries()) {
     input.dispatchEvent(fresh_key(`ArrowDown`))
     await tick()
-    const li_active = document.querySelector(`ul.options li.active`)
-    const is_expected_active = li_active?.textContent?.includes(expected_text) ?? false
-    // happy-dom does not reliably apply keyboard-active classes; Playwright covers browser behavior.
-    expect(
-      li_active === null || is_expected_active,
-      `idx=${idx} expected='${expected_text}'`,
-    ).toBe(true)
+    expect(doc_query(`ul.options li.active`).textContent, `idx=${idx}`).toContain(
+      expected_text,
+    )
   }
 })
 
@@ -2246,7 +2246,7 @@ test.each([[[1]], [[1, 2]], [[1, 2, 3]]])(
   },
 )
 
-test(`backspace does not remove items when minSelect would be violated`, () => {
+test(`backspace does not remove items when minSelect would be violated`, async () => {
   // https://github.com/janosh/svelte-multiselect/issues/327
   const options = [`Red`, `Green`, `Yellow`]
   const selected = [`Red`]
@@ -2261,6 +2261,7 @@ test(`backspace does not remove items when minSelect would be violated`, () => {
   const backspace = fresh_key(`Backspace`)
   const input = doc_query(`input[autocomplete="off"]`)
   input.dispatchEvent(backspace)
+  await tick()
 
   // The item should still be selected since minSelect=1
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red`)
@@ -3797,20 +3798,24 @@ describe(`selectAllOption feature`, () => {
     },
   )
 
-  test(`selects all, fires onselectAll and onchange events`, async () => {
+  test.each([
+    [`visible`, undefined],
+    [`matching`, 1],
+  ] as const)(`selects all %s options and fires events`, async (scope, maxOptions) => {
     const onselectAll_spy = vi.fn()
     const onchange_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
         options,
+        maxOptions,
         selectAllOption: true,
+        selectAllScope: scope,
         onselectAll: onselectAll_spy,
         onchange: onchange_spy,
       },
     })
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.click()
+    doc_query<HTMLInputElement>(`input[autocomplete]`).click()
     await tick()
     const select_all = doc_query(`ul.options > li.select-all`)
     expect(select_all.getAttribute(`aria-selected`)).toBe(`false`)
@@ -3818,7 +3823,7 @@ describe(`selectAllOption feature`, () => {
     await tick()
     expect(select_all.getAttribute(`aria-selected`)).toBe(`true`)
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
-    expect(onselectAll_spy).toHaveBeenCalledWith({ options })
+    expect(onselectAll_spy).toHaveBeenCalledWith({ options, scope })
     expect(onchange_spy).toHaveBeenCalledWith({ options, type: `selectAll` })
   })
 
@@ -3967,6 +3972,36 @@ describe(`selectAllOption feature`, () => {
       true,
       `All options already selected`,
     ],
+    [
+      `case-insensitive duplicates selected`,
+      {
+        options: [`Apple`, `apple`],
+        selected: [`Apple`],
+        duplicates: `case-insensitive`,
+      },
+      true,
+      `All options already selected`,
+    ],
+    [
+      `matching scope with loadOptions`,
+      {
+        open: true,
+        selectAllScope: `matching`,
+        loadOptions: async () => ({ options: [`a`], hasMore: false }),
+      },
+      true,
+      `Matching select-all is only available with local options`,
+    ],
+    [
+      `loaded visible options selected`,
+      {
+        open: true,
+        selected: [`a`],
+        loadOptions: async () => ({ options: [`a`], hasMore: false }),
+      },
+      true,
+      `All options already selected`,
+    ],
   ])(
     `Select All disabled state: %s`,
     async (_label, extra_props, expected_disabled, expected_title) => {
@@ -3975,8 +4010,9 @@ describe(`selectAllOption feature`, () => {
         props: { selectAllOption: true, ...extra_props },
       })
       doc_query<HTMLInputElement>(`input[autocomplete]`).click()
-      await tick()
-      const select_all_li = doc_query(`ul.options > li.select-all`)
+      const select_all_li = await vi.waitFor(() =>
+        doc_query<HTMLLIElement>(`ul.options > li.select-all`),
+      )
       expect(select_all_li.classList.contains(`disabled`)).toBe(expected_disabled)
       expect(select_all_li.getAttribute(`aria-disabled`)).toBe(
         expected_disabled ? `true` : null,
@@ -4073,7 +4109,7 @@ function deferred_load() {
   const resolvers: ((val: LoadResult) => void)[] = []
   const rejectors: ((err: Error) => void)[] = []
   const fn = vi.fn(
-    () =>
+    (_params: LoadOptionsParams) =>
       new Promise<LoadResult>((resolve, reject) => {
         resolvers.push(resolve)
         rejectors.push(reject)
@@ -4114,9 +4150,48 @@ describe(`loadOptions feature`, () => {
       await tick()
 
       expect(load_options).toHaveBeenCalledTimes(expected_calls)
-      if (expected_args) expect(load_options).toHaveBeenCalledWith(expected_args)
+      if (expected_args) {
+        expect(load_options).toHaveBeenCalledWith(expect.objectContaining(expected_args))
+      }
     },
   )
+
+  // local options must not be gated behind the network: a command palette filters its
+  // static commands on the first keystroke while remote results are still in flight
+  test(`local options match instantly and remote results append behind them`, async () => {
+    vi.useFakeTimers()
+    try {
+      const { fn: fetch_fn, resolvers } = deferred_load()
+      mount(MultiSelect, {
+        target: document.body,
+        props: {
+          options: [`Alpha`, `Beta`],
+          loadOptions: { fetch: fetch_fn, debounceMs: 500 },
+          open: true,
+        },
+      })
+      await vi.runAllTimersAsync()
+      await type_search_text(`al`)
+
+      const rendered = () =>
+        [...document.querySelectorAll(`ul.options > li[role='option']`)].map((li) =>
+          li.textContent?.trim(),
+        )
+      // no timers advanced and no fetch settled: this row can only be a local option
+      expect(rendered()).toEqual([`Alpha`])
+      expect(fetch_fn).toHaveBeenCalledOnce() // just the on-open load, typing still debounced
+
+      await vi.runAllTimersAsync() // debounce elapses, fetch fires but never settles
+      expect(rendered()).toEqual([`Alpha`])
+
+      resolvers[1]({ options: [`Remote alpha`], hasMore: false })
+      await vi.runAllTimersAsync()
+
+      expect(rendered()).toEqual([`Alpha`, `Remote alpha`])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
   test(`loadOptions shows loading indicator while loading`, async () => {
     const { fn: load_options, resolvers } = deferred_load()
@@ -4170,7 +4245,9 @@ describe(`loadOptions feature`, () => {
       await tick()
 
       expect(load_options).toHaveBeenCalledTimes(expected_calls)
-      if (last_args) expect(load_options).toHaveBeenLastCalledWith(last_args)
+      if (last_args) {
+        expect(load_options).toHaveBeenLastCalledWith(expect.objectContaining(last_args))
+      }
     },
   )
 
@@ -4217,6 +4294,105 @@ describe(`loadOptions feature`, () => {
     expect(load_options).toHaveBeenCalledTimes(1)
   })
 
+  // The unmount abort lives in a teardown-returning $effect, whose shape is easy to
+  // misread as a missing call. This pins the behavior so a "fix" can't silently undo it.
+  test(`unmounting aborts the in-flight fetch`, async () => {
+    const { fn: load_options } = deferred_load()
+    const component = mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: load_options, open: true },
+    })
+    await tick()
+    expect(load_options).toHaveBeenCalledTimes(1)
+    expect(load_options.mock.calls[0][0].signal?.aborted).toBe(false)
+
+    void unmount(component)
+    await tick()
+
+    expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
+  })
+
+  // `signal` is optional, so a consumer may ignore it. Its request then keeps running
+  // and can fail for real after being superseded — that must still be reported.
+  test(`logs a real failure from a superseded request that ignored signal`, async () => {
+    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { fn: load_options, rejectors } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      await type_search_text(`abc`, input)
+      await vi.runAllTimersAsync()
+      expect(load_options).toHaveBeenCalledTimes(2)
+      expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
+
+      rejectors[0](new Error(`HTTP 500 boom`))
+      await vi.runAllTimersAsync()
+
+      expect(console_error).toHaveBeenCalledWith(
+        `MultiSelect: loadOptions error:`,
+        expect.any(Error),
+      )
+    } finally {
+      vi.useRealTimers()
+      console_error.mockRestore()
+    }
+  })
+
+  test(`a search reset aborts an in-flight pagination request`, async () => {
+    const { fn: load_options, resolvers } = deferred_load()
+    vi.useFakeTimers()
+    try {
+      mount(MultiSelect, {
+        target: document.body,
+        props: { loadOptions: { fetch: load_options, debounceMs: 10 }, open: true },
+      })
+      await vi.runAllTimersAsync()
+      resolvers[0]({ options: mock_data.slice(0, 50), hasMore: true })
+      await vi.runAllTimersAsync()
+
+      mock_scroll_near_bottom(doc_query(`ul.options`))
+      await tick()
+      expect(load_options).toHaveBeenCalledTimes(2) // pagination now in flight
+
+      const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+      await type_search_text(`zz`, input)
+      await vi.runAllTimersAsync()
+
+      expect(load_options.mock.calls[1][0].signal?.aborted).toBe(true)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  // A server can report hasMore alongside an empty batch. Refetching the same offset
+  // can't make progress, and a non-reset load at offset 0 would break the documented
+  // cursor-pagination pattern that treats offset 0 as "reset your cursor".
+  test(`auto-fill stops on an empty batch and never reuses offset 0`, async () => {
+    const offsets: number[] = []
+    const load_options = vi.fn(async ({ offset }: LoadOptionsParams) => {
+      offsets.push(offset)
+      return { options: [] as string[], hasMore: true }
+    })
+    mount(MultiSelect, {
+      target: document.body,
+      props: { loadOptions: { fetch: load_options, batchSize: 5 }, open: true },
+    })
+    await tick()
+
+    const ul = doc_query(`ul.options`)
+    vi.spyOn(ul, `clientHeight`, `get`).mockReturnValue(400)
+    vi.spyOn(ul, `scrollHeight`, `get`).mockReturnValue(100)
+    await flush_ticks(10)
+
+    expect(offsets).toEqual([0])
+  })
+
   test(`stale fetch result discarded when search changes during load`, async () => {
     const { fn: load_options, resolvers } = deferred_load()
     vi.useFakeTimers()
@@ -4233,10 +4409,13 @@ describe(`loadOptions feature`, () => {
       await type_search_text(`xyz`, input)
       await vi.runAllTimersAsync()
       expect(load_options).toHaveBeenCalledTimes(2)
+      expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
+      // exact match, not objectContaining: pins that a signal is actually handed over
       expect(load_options).toHaveBeenLastCalledWith({
         search: `xyz`,
         offset: 0,
         limit: 50,
+        signal: expect.any(AbortSignal),
       })
 
       // Resolve the STALE first request after the new one was initiated
@@ -4304,6 +4483,7 @@ describe(`loadOptions feature`, () => {
 
     // aria-busy should clear immediately on close
     expect(input.getAttribute(`aria-busy`)).toBeNull()
+    expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
 
     // Stale fetch resolves after close — should not corrupt state
     resolvers[0]({ options: [`Result`], hasMore: false })
@@ -4373,6 +4553,7 @@ describe(`loadOptions feature`, () => {
       await flush_ticks()
     }
     const capped_count = load_options.mock.calls.length
+    expect(capped_count).toBe(21) // MAX_AUTO_FILL_ROUNDS rounds plus the on-open load
     // Auto-fill should have stopped at the cap
     resolvers[capped_count - 1]({ options: [`Capped`], hasMore: true })
     await flush_ticks()
@@ -4576,14 +4757,15 @@ describe(`loadOptions feature`, () => {
       rejectors[1](new Error(`fail`))
       await vi.runAllTimersAsync()
 
-      // Clear and retype same search — should trigger a new load for "x"
-      // because last_search was NOT updated on failure (still "")
+      // Clear and retype the same search to trigger a fresh request.
       await type_search_text(``, input)
       await vi.runAllTimersAsync()
       await type_search_text(`x`, input)
       await vi.runAllTimersAsync()
 
-      expect(load_options).toHaveBeenLastCalledWith({ search: `x`, offset: 0, limit: 50 })
+      expect(load_options).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: `x`, offset: 0, limit: 50 }),
+      )
     } finally {
       vi.useRealTimers()
       console_error.mockRestore()
@@ -4869,7 +5051,9 @@ describe(`load_options_pending`, () => {
     await tick()
     // Fresh load fires immediately; stale path would debounce (not yet called)
     expect(fetch_fn).toHaveBeenCalledTimes(3)
-    expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
+    expect(fetch_fn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: ``, offset: 0, limit: 50 }),
+    )
     // Stale "Rust Lang" result must not leak into the reopened session
     expect(document.querySelector(`ul.options`)?.textContent).not.toContain(`Rust Lang`)
   })
@@ -5117,20 +5301,19 @@ describe(`option grouping feature`, () => {
 
     const input = await focus_input()
 
-    // Navigate down - first active should be first option, not group header
+    // arrows land on real options only: the second press steps over the Genre header
+    // sitting between the ungrouped option and Rock
     input.dispatchEvent(fresh_key(`ArrowDown`))
     await tick()
+    expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(
+      `Ungrouped Option`,
+    )
 
-    const active_option = document.querySelector(`ul.options > li.active`)
-    // Check that it's not a group header if an active element exists
-    if (active_option) {
-      expect(active_option.classList.contains(`group-header`)).toBe(false)
-    }
-    // Verify no group header can become active
-    const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
-    group_headers.forEach((header) => {
-      expect(header.classList.contains(`active`)).toBe(false)
-    })
+    input.dispatchEvent(fresh_key(`ArrowDown`))
+    await tick()
+    const active_option = doc_query(`ul.options > li.active`)
+    expect(active_option.textContent?.trim()).toBe(`Rock`)
+    expect(active_option.classList.contains(`group-header`)).toBe(false)
   })
 
   test.each([
@@ -5577,12 +5760,13 @@ describe(`option grouping feature`, () => {
       await tick()
 
       const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
-      group_headers.forEach((header) => {
+      expect(group_headers).toHaveLength(2) // else the loop below asserts nothing
+      for (const header of group_headers) {
         expect(header.getAttribute(`role`)).toBe(expected_role)
         expect(header.getAttribute(`tabindex`)).toBe(expected_tabindex)
         expect(header.hasAttribute(`aria-expanded`)).toBe(has_aria_expanded)
         expect(header.getAttribute(`aria-label`)).toMatch(/^Group: /u)
-      })
+      }
 
       // For collapsible, also verify aria-expanded toggles on click
       if (collapsibleGroups) {
@@ -5879,9 +6063,10 @@ describe(`option grouping feature`, () => {
     await tick()
 
     const group_headers = document.querySelectorAll(`ul.options > li.group-header`)
-    group_headers.forEach((header) => {
+    expect(group_headers).toHaveLength(2) // else the loop below asserts nothing
+    for (const header of group_headers) {
       expect(header.classList.contains(`sticky`)).toBe(true)
-    })
+    }
   })
 
   test(`collapseAllGroups and expandAllGroups functions are bindable`, async () => {
@@ -6737,35 +6922,58 @@ describe(`history / undo-redo`, () => {
     expect(props.redo?.()).toBe(false) // nothing to redo
   })
 
-  test.each([`undo`, `redo`] as const)(
-    `%s returns false when disabled`,
-    async (method) => {
-      const props = $state<MultiSelectProps>({
-        options: [1, 2, 3],
-        history: true,
-        disabled: true,
-        [method]: undefined,
-      })
-      mount(MultiSelect, { target: document.body, props })
+  // an empty stack already returns false, so these build real history first - otherwise
+  // move_history bails on next_index < 0 and never reaches the guard under test
+  test.each([`undo`, `redo`] as const)(`%s is a no-op while disabled`, async (method) => {
+    const props = $state<MultiSelectProps>({
+      options: [1, 2, 3],
+      selected: [],
+      history: true,
+      undo: undefined,
+      redo: undefined,
+      canUndo: false,
+      canRedo: false,
+    })
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+    props.selected = [1]
+    await tick()
+    if (method === `redo`) {
+      props.undo?.() // leaves an undone state that redo could restore
       await tick()
-      expect(props[method]?.()).toBe(false)
-    },
-  )
+    }
+    const selected_before = [...(props.selected ?? [])]
+
+    props.disabled = true
+    await tick()
+
+    expect(props[method]?.()).toBe(false)
+    expect(props.selected).toEqual(selected_before)
+    expect(props.canUndo).toBe(false)
+    expect(props.canRedo).toBe(false)
+  })
 
   // false and 0 hit different branches of the max_history derivation; enabled values
   // (true, positive integers) are covered by the undo/redo behavior tests below
   test.each([false, 0] as const)(
-    `history=%s disables undo but still binds the function`,
+    `history=%s records nothing, leaving undo bound but inert`,
     async (history_val) => {
       const props = $state<MultiSelectProps>({
         options: [1, 2, 3],
+        selected: [],
         history: history_val,
         undo: undefined,
+        canUndo: false,
       })
       mount(MultiSelect, { target: document.body, props })
       await tick()
+      props.selected = [1]
+      await tick()
+
+      expect(props.canUndo).toBe(false)
       expect(props.undo).toBeInstanceOf(Function)
-      expect(props.undo?.()).toBe(false) // nothing to undo initially
+      expect(props.undo?.()).toBe(false)
+      expect(props.selected).toEqual([1]) // undo did not roll the change back
     },
   )
 
@@ -6865,21 +7073,31 @@ describe(`history / undo-redo`, () => {
 
     const props_1 = $state<MultiSelectProps>({
       options: [1, 2],
+      selected: [],
       history: true,
       undo: undefined,
     })
     const props_2 = $state<MultiSelectProps>({
       options: [`a`, `b`],
+      selected: [],
       history: true,
       undo: undefined,
+      canUndo: false,
     })
     mount(MultiSelect, { target: div1, props: props_1 })
     mount(MultiSelect, { target: div2, props: props_2 })
     await tick()
+    props_1.selected = [1]
+    props_2.selected = [`a`]
+    await tick()
 
-    expect(props_1.undo).not.toBe(props_2.undo)
-    div1.remove()
-    div2.remove()
+    props_1.undo?.()
+    await tick()
+
+    expect(props_1.selected).toEqual([])
+    // the other instance keeps both its selection and its own undoable step
+    expect(props_2.selected).toEqual([`a`])
+    expect(props_2.canUndo).toBe(true)
   })
 
   test(`undo restores previous selection state, redo restores undone state`, async () => {
@@ -6998,6 +7216,32 @@ describe(`history / undo-redo`, () => {
     props.undo?.()
     await tick()
     expect(props.selected).toEqual([1, 2])
+  })
+
+  test(`history=N caps the undo stack at N states`, async () => {
+    const props = $state<MultiSelectProps>({
+      options: [1, 2, 3, 4],
+      selected: [],
+      history: 2,
+      canUndo: false,
+      undo: undefined, // key must exist for the bindable to write back
+    })
+    mount(MultiSelect, { target: document.body, props })
+    await tick()
+
+    // three selection changes with history=2: only the last two states survive
+    for (const selection of [[1], [1, 2], [1, 2, 3]]) {
+      props.selected = selection
+      await tick()
+    }
+
+    expect(props.canUndo).toBe(true)
+    expect(props.undo?.()).toBe(true)
+    await tick()
+    expect(props.selected).toEqual([1, 2])
+    // the [1] and [] states were trimmed away — no second undo
+    expect(props.canUndo).toBe(false)
+    expect(props.undo?.()).toBe(false)
   })
 })
 
@@ -7283,7 +7527,8 @@ describe(`parse_paste`, () => {
       {
         options: [`a`, `b`, `c`, `d`],
         selected: [`a`, `b`],
-        searchText: ``,
+        // non-empty so clearing is observable, else the assertion below is tautological
+        searchText: `partial`,
         maxSelect: 3,
       },
       `c,d`,
@@ -8454,53 +8699,25 @@ test(`whitespace-only search shows all options instead of a blank dropdown`, asy
   expect(document.querySelector(`ul.options li.user-msg`)).toBeNull()
 })
 
-describe(`coverage gaps`, () => {
-  test(`history=N caps the undo stack at N states`, async () => {
-    const props = $state<MultiSelectProps>({
-      options: [1, 2, 3, 4],
-      selected: [],
-      history: 2,
-      canUndo: false,
-      undo: undefined, // key must exist for the bindable to write back
-    })
-    mount(MultiSelect, { target: document.body, props })
-    await tick()
-
-    // three selection changes with history=2: only the last two states survive
-    for (const selection of [[1], [1, 2], [1, 2, 3]]) {
-      props.selected = selection
-      await tick()
-    }
-
-    expect(props.canUndo).toBe(true)
-    expect(props.undo?.()).toBe(true)
-    await tick()
-    expect(props.selected).toEqual([1, 2])
-    // the [1] and [] states were trimmed away — no second undo
-    expect(props.canUndo).toBe(false)
-    expect(props.undo?.()).toBe(false)
+test(`sortSelected function comparator controls chip order on add`, async () => {
+  const reverse_alphabetical = (opt_1: Option, opt_2: Option) =>
+    `${get_label(opt_2)}`.localeCompare(`${get_label(opt_1)}`)
+  mount(MultiSelect, {
+    target: document.body,
+    props: {
+      options: [`a`, `b`, `c`],
+      sortSelected: reverse_alphabetical,
+      selectedOptionsDraggable: false,
+    },
   })
 
-  test(`sortSelected function comparator controls chip order on add`, async () => {
-    const reverse_alphabetical = (opt_1: Option, opt_2: Option) =>
-      `${get_label(opt_2)}`.localeCompare(`${get_label(opt_1)}`)
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: [`a`, `b`, `c`],
-        sortSelected: reverse_alphabetical,
-        selectedOptionsDraggable: false,
-      },
-    })
+  for (const label of [`a`, `c`, `b`]) {
+    const li = [
+      ...document.querySelectorAll<HTMLLIElement>(`ul.options li[role='option']`),
+    ].find((el) => el.textContent?.trim() === label)
+    li?.click()
+    await tick()
+  }
 
-    for (const label of [`a`, `c`, `b`]) {
-      const li = [
-        ...document.querySelectorAll<HTMLLIElement>(`ul.options li[role='option']`),
-      ].find((el) => el.textContent?.trim() === label)
-      li?.click()
-      await tick()
-    }
-
-    expect(normalized_text(doc_query(`ul.selected`))).toBe(`c b a`)
-  })
+  expect(normalized_text(doc_query(`ul.selected`))).toBe(`c b a`)
 })

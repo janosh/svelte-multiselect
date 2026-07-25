@@ -110,7 +110,7 @@ These are the core props you'll use in most cases:
    options?: Option[]  // required unless loadOptions is provided
    ```
 
-   Array of strings, numbers, or objects that users can select from. Objects must have a `label` property that will be displayed in the dropdown. Omit this when using `loadOptions` as the source of dynamic options.
+   Array of strings, numbers, or objects that users can select from. Objects must have a `label` property that will be displayed in the dropdown. Optional when `loadOptions` supplies the dropdown contents; if you pass both, these options are filtered client-side and listed ahead of each loaded batch (see [`loadOptions`](#advanced-props)).
 
    ```svelte
    <!-- Simple options -->
@@ -250,12 +250,14 @@ These are the core props you'll use in most cases:
    <MultiSelect loadOptions={{ fetch: myFetchFn, debounceMs: 500, batchSize: 20 }} />
    ```
 
-   The function receives `{ search, offset, limit }` and must return `{ options, hasMore }`:
+   The function receives `{ search, offset, limit, signal }` and must return `{ options, hasMore }`. `signal` is an `AbortSignal` that fires when the request is superseded by a newer search or when the component closes or unmounts. Forward it to `fetch` to cancel work in flight:
 
    ```ts
    async function load_options(params) {
-     const { search, offset, limit } = params
-     const response = await fetch(`/api/items?q=${search}&skip=${offset}&take=${limit}`)
+     const { search, offset, limit, signal } = params
+     const response = await fetch(`/api/items?q=${search}&skip=${offset}&take=${limit}`, {
+       signal,
+     })
      const { items, total } = await response.json()
      return { options: items, hasMore: offset + limit < total }
    }
@@ -271,6 +273,8 @@ These are the core props you'll use in most cases:
    | `onOpen`     | `boolean` | `true`  | Whether to load options when dropdown opens |
 
    Features automatic state management, debounced search, infinite scroll pagination, and loading indicators. See the [infinite-scroll demo](https://janosh.github.io/svelte-multiselect/infinite-scroll) for live examples.
+
+   Passing `options` alongside `loadOptions` combines both sources: the static options are filtered client-side with `filterFunc` and rendered above the loaded batches. Since they need neither the debounce nor a request, they appear on the first keystroke, which is what lets [`PageSearch`](https://janosh.github.io/svelte-multiselect/command-menu) match known routes instantly while its Pagefind index is still loading.
 
 1. ```ts
    activeIndex: number | null = null  // bindable
@@ -489,7 +493,7 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
 
    Regex pattern for input validation.
 
-### UI & Behavior Props
+### UI and Behavior Props
 
 1. ```ts
    maxOptions: number | undefined = undefined
@@ -550,6 +554,18 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    ```
 
    Adds a "Select All" option at the top of the dropdown. `true` shows default label, or pass a custom string label.
+
+1. ```ts
+   selectAllScope: 'visible' | 'matching' = 'visible'
+   ```
+
+   Which options "Select All" adds. `'visible'` (default) adds only the rows the dropdown currently renders, i.e. options in expanded groups up to the `maxOptions` limit (virtualization doesn't narrow the scope). `'matching'` adds every option matching the current search, including those in collapsed groups and beyond `maxOptions`. `'matching'` requires local `options` and is disabled when `loadOptions` is set, since the component can't know the full remote result set.
+
+1. ```ts
+   rangeSelect: boolean = false
+   ```
+
+   Whether Shift-click and Shift+Arrow select an inclusive range of options. The first plain click (or the option active before Shift+Arrow) sets the anchor, then the range spans from the anchor to the shift-targeted option. Disabled options are skipped, `maxSelect` is respected, and the whole range counts as a single undo step. Off by default since enabling it changes what Shift-click does for existing consumers.
 
 1. ```ts
    liSelectAllClass: string = ''
@@ -826,7 +842,7 @@ These reflect internal component state:
 1. `#snippet userMsg({ searchText, msgType, msg })`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
    - `searchText`: The text user typed into search input.
    - `msgType: false | 'create' | 'dupe' | 'no-match'`: `'dupe'` means user input is a duplicate of an existing option. `'create'` means user is allowed to convert their input into a new option not previously in the dropdown. `'no-match'` means user input doesn't match any dropdown items and users are not allowed to create new options. `false` means none of the above.
-   - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
+   - `msg`: Will be [`duplicateOptionMsg`](#message-props) or [`createOptionMsg`](#advanced-props) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
 1. `#snippet beforeInput({ selected, disabled, invalid, id, placeholder, open, required, searchText })`: Placed before the selected chips and search input. For arbitrary content like a search icon or prefix badge.
 1. `#snippet afterInput({ selected, disabled, invalid, id, placeholder, open, required, searchText })`: Placed after the search input. For arbitrary content like icons or temporary messages. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
@@ -882,10 +898,16 @@ Example using several snippets:
    Triggers when all selected options are removed. The `options` payload gives the options that were removed (might not be all if `minSelect` is set).
 
 1. ```ts
-   onselectAll={({ options }) => console.log(options)}
+   onselectAll={({ options, scope }) => console.log(options, scope)}
    ```
 
-   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added.
+   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added. `scope` is the active [`selectAllScope`](#ui-and-behavior-props) for the top-level "Select All", and `undefined` when a group's own select-all fired the event.
+
+1. ```ts
+   onrangeSelect={({ added, from, to, selected }) => console.log(added, from, to)}
+   ```
+
+   Triggers when a Shift-click or Shift+Arrow selects a range (requires `rangeSelect`). `added` are the newly selected options (already excluding disabled, duplicate and over-`maxSelect` ones), `from` is the anchor option, `to` is the shift-targeted option, and `selected` is the resulting selection.
 
 1. ```ts
    onreorder={({ options, previous }) => console.log(options, previous)}
@@ -897,7 +919,7 @@ Example using several snippets:
    onchange={({ type, option, options }) => console.log(type, option ?? options)}
    ```
 
-   Triggers when an option is either added (selected) or removed from selected, all selected options are removed at once, or selected options are reordered via drag-and-drop. `type` is one of `'add' | 'remove' | 'removeAll' | 'selectAll' | 'reorder'` and payload will be `option: Option` or `options: Option[]`, respectively.
+   Triggers when an option is either added (selected) or removed from selected, all selected options are removed at once, a range is selected, or selected options are reordered via drag-and-drop. `type` is one of `'add' | 'remove' | 'removeAll' | 'selectAll' | 'rangeSelect' | 'reorder'` and payload will be `option: Option` or `options: Option[]`, respectively.
 
 1. ```ts
    onopen={({ event }) => console.log(`Dropdown opened by`, event)}

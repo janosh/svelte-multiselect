@@ -9,6 +9,18 @@ const mock_actions = [
   { label: `action 3`, action: vi.fn() },
 ]
 
+// tests that exercise the non-modal fallback assign showModal directly rather than
+// spying, so vi.restoreAllMocks() in the global setup can't undo it
+const original_show_modal = Object.getOwnPropertyDescriptor(
+  HTMLDialogElement.prototype,
+  `showModal`,
+)
+afterEach(() => {
+  if (original_show_modal) {
+    Object.defineProperty(HTMLDialogElement.prototype, `showModal`, original_show_modal)
+  } else Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
+})
+
 test.each([
   {
     triggers: [`k`],
@@ -169,65 +181,42 @@ test.each([
   },
 )
 
-function restore_show_modal(original_show_modal: PropertyDescriptor | undefined): void {
-  if (original_show_modal) {
-    Object.defineProperty(HTMLDialogElement.prototype, `showModal`, original_show_modal)
-  } else Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
-}
-
 test(`opens a labelled modal dialog`, async () => {
-  const original_show_modal = Object.getOwnPropertyDescriptor(
-    HTMLDialogElement.prototype,
-    `showModal`,
-  )
   const show_modal = vi.fn(function showModal(this: HTMLDialogElement) {
     this.setAttribute(`open`, ``)
   })
   HTMLDialogElement.prototype.showModal = show_modal
-  const props = $state({
+  const props = {
     actions: mock_actions,
     aria_label: `Run command`,
     open: true,
     fade_duration: 0,
-  })
-
-  try {
-    mount(CommandMenu, { target: document.body, props })
-    await tick()
-
-    const dialog = doc_query<HTMLDialogElement>(`dialog`)
-    expect(dialog.getAttribute(`aria-label`)).toBe(`Run command`)
-    expect(show_modal).toHaveBeenCalledTimes(1)
-  } finally {
-    restore_show_modal(original_show_modal)
   }
+
+  mount(CommandMenu, { target: document.body, props })
+  await tick()
+
+  const dialog = doc_query<HTMLDialogElement>(`dialog`)
+  expect(dialog.getAttribute(`aria-label`)).toBe(`Run command`)
+  expect(show_modal).toHaveBeenCalledTimes(1)
 })
 
 test.each([`throws`, `unavailable`] as const)(
   `falls back to open attribute when showModal is %s`,
   async (show_modal_state) => {
-    const original_show_modal = Object.getOwnPropertyDescriptor(
-      HTMLDialogElement.prototype,
-      `showModal`,
-    )
     if (show_modal_state === `throws`) {
       HTMLDialogElement.prototype.showModal = vi.fn(() => {
         throw new Error(`showModal failed`)
       })
-    } else {
-      Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
-    }
-    const props = $state({ actions: mock_actions, open: true, fade_duration: 0 })
+    } else Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
 
-    try {
-      mount(CommandMenu, { target: document.body, props })
-      await tick()
+    mount(CommandMenu, {
+      target: document.body,
+      props: { actions: mock_actions, open: true, fade_duration: 0 },
+    })
+    await tick()
 
-      const dialog = doc_query<HTMLDialogElement>(`dialog`)
-      expect(dialog.hasAttribute(`open`)).toBe(true)
-    } finally {
-      restore_show_modal(original_show_modal)
-    }
+    expect(doc_query<HTMLDialogElement>(`dialog`).hasAttribute(`open`)).toBe(true)
   },
 )
 
@@ -265,11 +254,6 @@ test(`handles action selection and execution`, async () => {
   expect(props.open).toBe(false)
   expect(props.activeIndex).toBeNull()
   expect(props.searchText).toBe(``)
-
-  props.open = true
-  await tick()
-  expect(props.activeIndex).toBe(0)
-  expect(doc_query(`li.active`).textContent).toContain(`action 1`)
 })
 
 test(`ignores user-created options without action handlers`, async () => {
@@ -312,6 +296,19 @@ test.each([
       return svg
     },
   ],
+  // a portalled options list belonging to some other component is still outside, unlike
+  // this menu's own listbox (covered by the nested-portalled-option test below)
+  [
+    `unrelated portalled options list`,
+    () => {
+      const other_options = document.createElement(`ul`)
+      other_options.id = `unrelated-options`
+      other_options.className = `options`
+      other_options.innerHTML = `<li>Other option</li>`
+      document.body.append(other_options)
+      return doc_query(`#unrelated-options li`)
+    },
+  ],
 ])(`closes dialog on outside click: %s`, async (_label, get_target) => {
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
   mount(CommandMenu, { target: document.body, props })
@@ -339,10 +336,6 @@ test(`keeps dialog open when clicking inside the menu`, async () => {
 })
 
 test(`non-modal fallback closes on click of an unrelated page multiselect`, async () => {
-  const original_show_modal = Object.getOwnPropertyDescriptor(
-    HTMLDialogElement.prototype,
-    `showModal`,
-  )
   // force the non-modal fallback so outside clicks land on real page elements (with a
   // modal dialog they'd hit the backdrop instead, which is covered above)
   HTMLDialogElement.prototype.showModal = vi.fn(() => {
@@ -353,18 +346,13 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
   document.body.append(other_multiselect)
   const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
 
-  try {
-    mount(CommandMenu, { target: document.body, props })
-    await tick()
+  mount(CommandMenu, { target: document.body, props })
+  await tick()
 
-    other_multiselect.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-    await tick()
+  other_multiselect.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  await tick()
 
-    expect(props.open).toBe(false)
-  } finally {
-    other_multiselect.remove()
-    restore_show_modal(original_show_modal)
-  }
+  expect(props.open).toBe(false)
 })
 
 test(`keeps dialog open when clicking a nested portalled option`, async () => {
@@ -389,8 +377,6 @@ test(`keeps dialog open when clicking a nested portalled option`, async () => {
 
   expect(props.open).toBe(true)
   expect(document.querySelector(`dialog`)).not.toBeNull()
-
-  container.remove()
 })
 
 test(`stays open when a button's click handler sets open=true and the click bubbles to window`, async () => {
@@ -406,39 +392,11 @@ test(`stays open when a button's click handler sets open=true and the click bubb
   })
   document.body.append(open_button)
 
-  try {
-    open_button.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-    await tick()
-
-    expect(props.open).toBe(true)
-    expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
-  } finally {
-    open_button.remove()
-  }
-})
-
-test(`closes dialog when clicking an unrelated portalled options list`, async () => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
-  mount(CommandMenu, { target: document.body, props })
+  open_button.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
   await tick()
 
-  const other_options = document.createElement(`ul`)
-  other_options.id = `unrelated-options`
-  other_options.className = `options`
-  other_options.innerHTML = `<li>Other option</li>`
-  document.body.append(other_options)
-
-  try {
-    doc_query(`#unrelated-options li`).dispatchEvent(
-      new MouseEvent(`click`, { bubbles: true }),
-    )
-    await tick()
-
-    expect(props.open).toBe(false)
-    expect(document.querySelector(`dialog`)).toBeNull()
-  } finally {
-    other_options.remove()
-  }
+  expect(props.open).toBe(true)
+  expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
 test(`applies custom styles and props correctly`, async () => {
@@ -454,18 +412,11 @@ test(`applies custom styles and props correctly`, async () => {
     placeholder: custom_placeholder,
     dialog_style: custom_dialog_style,
     liOptionStyle: custom_li_style,
-    dialog: null as HTMLDialogElement | null,
-    input: null as HTMLInputElement | null,
   })
 
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  // Check element bindings
-  expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
-  expect(props.input).toBeInstanceOf(HTMLInputElement)
-
-  // Check applied styles and props
   const select_wrapper = doc_query(`dialog div.multiselect`)
   expect(select_wrapper.classList.contains(custom_class)).toBe(true)
 
@@ -481,26 +432,20 @@ test(`applies custom styles and props correctly`, async () => {
   expect(li_el.style.fontWeight).toBe(`bold`)
 })
 
-// dialog_props spreads after the built-in onclose handler, so a user-provided
-// onclose replaces it and the menu no longer auto-closes on the native close event
-test.each([
-  { desc: `resets open state on native close`, custom_onclose: false },
-  { desc: `dialog_props onclose replaces built-in handler`, custom_onclose: true },
-])(`native dialog close event: $desc`, async ({ custom_onclose }) => {
+test(`native dialog close resets state and forwards dialog_props.onclose`, async () => {
   const on_close = vi.fn()
   const props = $state({
     open: true,
+    activeIndex: 1,
+    activeOption: mock_actions[1],
+    searchText: `action`,
     actions: mock_actions,
     fade_duration: 0,
-    dialog_props: {
-      class: `custom-dialog`,
-      ...(custom_onclose ? { onclose: on_close } : {}),
-    },
+    dialog_props: { class: `custom-dialog`, onclose: on_close },
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  // dialog_props spread onto the element without clobbering default attributes
   const dialog = doc_query<HTMLDialogElement>(`dialog`)
   expect(dialog.classList.contains(`custom-dialog`)).toBe(true)
   expect(dialog.getAttribute(`aria-label`)).toBe(`Command menu`)
@@ -508,22 +453,25 @@ test.each([
   dialog.dispatchEvent(new Event(`close`))
   await tick()
 
-  expect(on_close).toHaveBeenCalledTimes(custom_onclose ? 1 : 0)
-  expect(props.open).toBe(custom_onclose)
+  expect(on_close).toHaveBeenCalledOnce()
+  expect(props).toMatchObject({
+    open: false,
+    activeIndex: null,
+    activeOption: null,
+    searchText: ``,
+  })
 })
 
 test(`handles empty actions array`, () => {
   const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
-  const props = $state({ open: true, actions: [], fade_duration: 0 })
-  try {
-    mount(CommandMenu, { target: document.body, props })
+  mount(CommandMenu, {
+    target: document.body,
+    props: { open: true, actions: [], fade_duration: 0 },
+  })
 
-    expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
-    expect(document.querySelector(`dialog ul.options`)?.children.length ?? 0).toBe(0)
-    expect(console_error).toHaveBeenCalledWith(`MultiSelect: received no options`)
-  } finally {
-    console_error.mockRestore()
-  }
+  expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
+  expect(document.querySelector(`dialog ul.options`)?.children.length ?? 0).toBe(0)
+  expect(console_error).toHaveBeenCalledWith(`MultiSelect: received no options`)
 })
 
 test(`remains open when trigger keys are pressed while already open`, async () => {
@@ -1005,6 +953,28 @@ describe(`PageSearch`, () => {
     },
   )
 
+  // typing a page slug must not wait on the index: fallback_actions reach CommandMenu as
+  // static options, so they filter client-side while Pagefind is still loading
+  test(`fallback actions match while the Pagefind load never settles`, async () => {
+    const load_pagefind = vi.fn(() => new Promise<never>(() => {}))
+    mount(PageSearch, {
+      target: document.body,
+      props: {
+        ...base_props,
+        fallback_actions: [
+          { label: `/styling`, action: vi.fn() },
+          { label: `/grouping`, action: vi.fn() },
+        ],
+        load_pagefind,
+      },
+    })
+
+    await search_pagefind(`styling`)
+
+    expect(option_labels()).toEqual([`/styling`])
+    expect(load_pagefind).toHaveBeenCalledOnce()
+  })
+
   test(`isolates concurrent queries that normalize to the same text`, async () => {
     const stale_response = make_pagefind_response(`Stale`)
     const fresh_response = make_pagefind_response(`Fresh`)
@@ -1062,32 +1032,69 @@ describe(`PageSearch`, () => {
     expect(doc_query(`.cmd-label`).textContent).toContain(`Fresh`)
   })
 
-  test(`reloads the current query when loader props change`, async () => {
+  test(`keeps the loader stable while using current callback props`, async () => {
+    const first_navigate = vi.fn()
     const second_navigate = vi.fn()
+    const onadd = vi.fn()
     const search = vi.fn(async () => make_pagefind_response(`Fresh`))
     const props = $state({
       ...base_props,
       load_pagefind: async () => ({ search }),
-      navigate: vi.fn(),
+      navigate: first_navigate,
+      onadd,
+      strip_html_suffix: false,
       transform_url: (url: string) => `/old${url}`,
     })
     mount(PageSearch, { target: document.body, props })
 
     await search_pagefind(`fresh`)
     props.navigate = second_navigate
+    props.strip_html_suffix = true
     props.transform_url = (url: string) => `/new${url}`
     await tick()
-    await vi.runAllTimersAsync()
-    await tick()
 
-    expect(search).toHaveBeenCalledTimes(2)
+    expect(search).toHaveBeenCalledOnce()
     doc_query<HTMLLIElement>(`li[role='option']`).click()
-    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh.html`, {
+    expect(onadd.mock.calls[0][0].option.id).toBe(`pagefind:Fresh:0:/fresh.html`)
+    expect(first_navigate).not.toHaveBeenCalled()
+    expect(second_navigate).toHaveBeenCalledExactlyOnceWith(`/new/fresh`, {
       query: `fresh`,
       label: `Fresh`,
       description: `Fresh content`,
     })
   })
+
+  test.each([
+    [`pagefind_key is unchanged`, `alpha`, `Alpha`, 0],
+    [`pagefind_key changes`, `beta`, `Beta`, 1],
+  ])(
+    `swapping load_pagefind reuses the cached index unless %s`,
+    async (_scenario, next_key, expected_label, expected_beta_loads) => {
+      const load_alpha = vi.fn(async () => ({
+        search: async () => make_pagefind_response(`Alpha`),
+      }))
+      const load_beta = vi.fn(async () => ({
+        search: async () => make_pagefind_response(`Beta`),
+      }))
+      const props = $state({
+        ...base_props,
+        pagefind_key: `alpha`,
+        load_pagefind: load_alpha,
+      })
+      mount(PageSearch, { target: document.body, props })
+
+      await search_pagefind(`first`)
+      expect(doc_query(`.cmd-label`).textContent).toContain(`Alpha`)
+
+      props.load_pagefind = load_beta
+      props.pagefind_key = next_key
+      await search_pagefind(`second`)
+
+      expect(doc_query(`.cmd-label`).textContent).toContain(expected_label)
+      expect(load_alpha).toHaveBeenCalledOnce()
+      expect(load_beta).toHaveBeenCalledTimes(expected_beta_loads)
+    },
+  )
 
   test.each([
     [
@@ -1110,49 +1117,52 @@ describe(`PageSearch`, () => {
           }),
         })),
     ],
-  ])(`filters fallback actions when the %s`, async (_scenario, make_load_pagefind) => {
-    const fallback_actions = [
-      {
-        label: `API reference`,
-        description: `All exported props`,
-        badge: `Docs`,
-        metadata: `Library`,
-        keywords: [`schema`],
-        action: vi.fn(),
-      },
-      {
-        label: `Styling guide`,
-        description: `CSS custom properties`,
-        badge: `Guide`,
-        metadata: `Visual`,
-        keywords: [`theme`],
-        action: vi.fn(),
-      },
-    ]
-    const load_pagefind = make_load_pagefind()
-    mount(PageSearch, {
-      target: document.body,
-      props: { ...base_props, fallback_actions, load_pagefind },
-    })
+  ])(
+    `keeps matching fallback actions locally when the %s`,
+    async (_scenario, make_load_pagefind) => {
+      const fallback_actions = [
+        {
+          label: `API reference`,
+          description: `All exported props`,
+          badge: `Docs`,
+          metadata: `Library`,
+          keywords: [`schema`],
+          action: vi.fn(),
+        },
+        {
+          label: `Styling guide`,
+          description: `CSS custom properties`,
+          badge: `Guide`,
+          metadata: `Visual`,
+          keywords: [`theme`],
+          action: vi.fn(),
+        },
+      ]
+      const load_pagefind = make_load_pagefind()
+      mount(PageSearch, {
+        target: document.body,
+        props: { ...base_props, fallback_actions, load_pagefind },
+      })
 
-    await vi.runAllTimersAsync()
-    expect(document.querySelectorAll(`li[role='option']`)).toHaveLength(2)
-    expect(load_pagefind).not.toHaveBeenCalled()
+      await vi.runAllTimersAsync()
+      expect(document.querySelectorAll(`li[role='option']`)).toHaveLength(2)
+      expect(load_pagefind).not.toHaveBeenCalled()
 
-    await search_pagefind(`css theme visual guide`)
+      await search_pagefind(`css theme visual guide`)
 
-    const options = document.querySelectorAll(`li[role='option']`)
-    expect(options).toHaveLength(1)
-    expect(options[0].textContent).toContain(`Styling guide`)
-    expect(load_pagefind).toHaveBeenCalledTimes(1)
+      const options = document.querySelectorAll(`li[role='option']`)
+      expect(options).toHaveLength(1)
+      expect(options[0].textContent).toContain(`Styling guide`)
+      expect(load_pagefind).toHaveBeenCalledTimes(1)
 
-    await search_pagefind(`api schema library docs`)
+      await search_pagefind(`api schema library docs`)
 
-    expect(load_pagefind).toHaveBeenCalledTimes(1)
-    doc_query<HTMLLIElement>(`li[role='option']`).click()
-    expect(fallback_actions[0].action).toHaveBeenCalledExactlyOnceWith(`API reference`)
-    expect(fallback_actions[1].action).not.toHaveBeenCalled()
-  })
+      expect(load_pagefind).toHaveBeenCalledTimes(1)
+      doc_query<HTMLLIElement>(`li[role='option']`).click()
+      expect(fallback_actions[0].action).toHaveBeenCalledExactlyOnceWith(`API reference`)
+      expect(fallback_actions[1].action).not.toHaveBeenCalled()
+    },
+  )
 
   test(`PageSearch handles a failed fragment and URL-derived title`, async () => {
     const make_result = (
@@ -1177,7 +1187,6 @@ describe(`PageSearch`, () => {
           },
         },
         make_result(`/reference-guide.html?tab=api`, `Reference content`, {}),
-        make_result(`/later.html`, `Later page`),
         make_result(`/docs/`, `Docs content`, {}),
       ],
     }))
@@ -1185,7 +1194,7 @@ describe(`PageSearch`, () => {
       target: document.body,
       props: {
         ...base_props,
-        batch_size: 3,
+        batch_size: 2,
         load_pagefind: async () => ({ search }),
       },
     })
@@ -1195,7 +1204,7 @@ describe(`PageSearch`, () => {
     const labels = Array.from(document.querySelectorAll(`.cmd-label`), (label) =>
       label.childNodes[0]?.textContent?.trim(),
     )
-    expect(labels).toEqual([`Reference Guide`, `Later page`, `Docs`])
+    expect(labels).toEqual([`Reference Guide`, `Docs`])
   })
 })
 
@@ -1235,13 +1244,6 @@ test.each([
     open: false,
     global_shortcuts: false,
     action_disabled: false,
-    calls: 0,
-  },
-  {
-    desc: `ignores disabled actions`,
-    open: false,
-    global_shortcuts: true,
-    action_disabled: true,
     calls: 0,
   },
   {

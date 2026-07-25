@@ -91,13 +91,14 @@ test(`syntax highlighting produces starry-night spans`, async () => {
 })
 
 test(`toggle all button opens/closes all, tracks label, and handles partial/native toggles`, async () => {
+  const onclick = vi.fn()
   const files = [`file1`, `file2`, `file3`].map((title) => ({
     title,
     content: `content of ${title}`,
   }))
   mount(FileDetails, {
     target: document.body,
-    props: { files, toggle_all_btn_title: `toggle all` },
+    props: { files, toggle_all_btn_title: `toggle all`, button_props: { onclick } },
   })
   await tick()
 
@@ -130,6 +131,7 @@ test(`toggle all button opens/closes all, tracks label, and handles partial/nati
   btn.click()
   flushSync()
   expect(open_states()).toEqual([false, false, false])
+  expect(onclick).toHaveBeenCalledTimes(3)
 })
 
 test(`toggle all label reflects pre-opened details on mount`, async () => {

@@ -5,9 +5,7 @@
     LoadOptionsResult,
     PageSearchNavigateDetails,
   } from './types'
-  import { cmd_action_matches, slug_to_title } from './utils'
-
-  type PagefindAction = CmdAction & { url?: string }
+  import { slug_to_title } from './utils'
 
   type PagefindSubResult = { title: string; url: string; plain_excerpt: string }
 
@@ -27,15 +25,14 @@
   type PagefindSearchCache = {
     query: string
     results: Promise<PagefindResult[]>
-    actions: PagefindAction[]
+    actions: CmdAction[]
     next_result_idx: number
   }
 
   type PagefindLoaderOptions = {
-    fallback_actions?: PagefindAction[]
-    fuzzy?: boolean
     load_pagefind?: () => Promise<PagefindApi>
     navigate?: (url: string, details: PageSearchNavigateDetails) => unknown
+    pagefind_key?: string
     pagefind_path?: string
     transform_url?: (url: string) => string
   }
@@ -49,14 +46,9 @@
     return `${path.replace(/\/index\.html$/, `/`).replace(/\.html$/, ``)}${suffix}`
   }
 
-  const paginate_actions = (
-    actions: PagefindAction[],
-    offset: number,
-    limit: number,
-  ): LoadOptionsResult<PagefindAction> => ({
-    options: actions.slice(offset, offset + limit),
-    hasMore: offset + limit < actions.length,
-  })
+  // fresh object per call: the returned array is assigned into MultiSelect's $state, and
+  // a shared one would hand every instance the same (deeply proxied) array
+  const no_results = (): LoadOptionsResult<CmdAction> => ({ options: [], hasMore: false })
 
   const decode_html_entities = (text: string): string => {
     const textarea = document.createElement(`textarea`)
@@ -78,14 +70,13 @@
     result_id: string,
     query: string,
     result: PagefindResultData,
-    navigate: (url: string, details: PageSearchNavigateDetails) => unknown,
-    transform_url: (url: string) => string,
-  ): PagefindAction[] => {
+    get_options: () => PagefindLoaderOptions,
+  ): CmdAction[] => {
     const page_title = result.meta.title || page_title_from_url(result.url)
     const sections = result.sub_results.length ? result.sub_results : [undefined]
 
     return sections.map((section, section_idx) => {
-      const url = transform_url(section?.url ?? result.url)
+      const source_url = section?.url ?? result.url
       const section_title = section?.title.trim()
       const label =
         section_title && section_title !== page_title
@@ -101,43 +92,55 @@
           ? `${full_description.slice(0, MAX_DESCRIPTION_LENGTH - 1).trimEnd()}…`
           : full_description
 
-      return {
-        id: `pagefind:${result_id}:${section_idx}:${url}`,
-        label,
-        description,
-        url,
-        action: () => void navigate(url, { query, label, description }),
+      const id = `pagefind:${result_id}:${section_idx}:${source_url}`
+      const action = () => {
+        const { navigate, transform_url } = get_options()
+        const current_url = transform_url?.(source_url) ?? source_url
+        if (navigate) void navigate(current_url, { query, label, description })
+        else globalThis.location.assign(current_url)
       }
+      return { id, label, description, action }
     })
   }
 
-  const create_pagefind_loader = ({
-    fallback_actions = [],
-    fuzzy = false,
-    load_pagefind,
-    navigate = (url) => globalThis.location.assign(url),
-    pagefind_path = `/pagefind/pagefind.js`,
-    transform_url = (url) => url,
-  }: PagefindLoaderOptions = {}) => {
+  const create_pagefind_loader = (get_options: () => PagefindLoaderOptions) => {
     let pagefind_api_promise: Promise<PagefindApi> | undefined
     let search_cache: PagefindSearchCache | undefined
-    const load_api =
-      load_pagefind ??
-      (async () => (await import(/* @vite-ignore */ pagefind_path)) as PagefindApi)
+    let previous_pagefind_source: string | undefined
+    let pagefind_generation = 0
 
     return async ({
       search,
       offset,
       limit,
-    }: LoadOptionsParams): Promise<LoadOptionsResult<PagefindAction>> => {
+    }: LoadOptionsParams): Promise<LoadOptionsResult<CmdAction>> => {
+      const {
+        load_pagefind,
+        pagefind_key = ``,
+        pagefind_path = `/pagefind/pagefind.js`,
+      } = get_options()
+      // Key the cache on the source, not on closure identity: an inline load_pagefind
+      // arrow gets a fresh identity every render, and treating that as a source change
+      // would re-import pagefind and re-run the search on each keystroke. Callers that
+      // swap between custom loaders over different indexes distinguish them with
+      // pagefind_key, since their identity alone can't tell one index from another.
+      const pagefind_source = load_pagefind
+        ? `custom-loader:${pagefind_key}`
+        : pagefind_path
+      if (pagefind_source !== previous_pagefind_source) {
+        pagefind_api_promise = undefined
+        search_cache = undefined
+        previous_pagefind_source = pagefind_source
+        pagefind_generation++
+      }
+      const generation = pagefind_generation
+      const load_api =
+        load_pagefind ??
+        (async () => (await import(/* @vite-ignore */ pagefind_path)) as PagefindApi)
       const query = search.trim()
-      if (!query) return paginate_actions(fallback_actions, offset, limit)
-      const fallback_result = () =>
-        paginate_actions(
-          fallback_actions.filter((action) => cmd_action_matches(action, query, fuzzy)),
-          offset,
-          limit,
-        )
+      // fallback_actions are handed to CommandMenu as static options, which match them
+      // locally without waiting on Pagefind, so this loader only returns index hits
+      if (!query) return no_results()
       try {
         if (offset === 0 || search_cache?.query !== query) {
           search_cache = {
@@ -152,7 +155,7 @@
         }
         const cache = search_cache
         const page_results = await cache.results
-        if (page_results.length === 0) return fallback_result()
+        if (page_results.length === 0) return no_results()
         const target_count = offset + limit
 
         while (
@@ -170,8 +173,7 @@
                 result.id,
                 query,
                 await result.data(),
-                navigate,
-                transform_url,
+                get_options,
               ),
             ),
           )
@@ -181,7 +183,7 @@
             ),
           )
         }
-        if (cache.actions.length === 0) return fallback_result()
+        if (cache.actions.length === 0) return no_results()
 
         return {
           options: cache.actions.slice(offset, target_count),
@@ -190,8 +192,10 @@
             cache.next_result_idx < page_results.length,
         }
       } catch {
-        pagefind_api_promise = undefined
-        return fallback_result()
+        // only retire our own loader promise: the source may have switched while this
+        // request was in flight, and the newer one has already installed its own
+        if (generation === pagefind_generation) pagefind_api_promise = undefined
+        return no_results()
       }
     }
   }
@@ -215,6 +219,8 @@
       batch_size?: number
       debounce_ms?: number
       dialog?: HTMLDialogElement | null
+      // matched locally, so these stay searchable while the Pagefind index loads
+      fallback_actions?: CmdAction[]
       input?: HTMLInputElement | null
       open?: boolean
       strip_html_suffix?: boolean
@@ -224,6 +230,7 @@
     fallback_actions = [],
     load_pagefind,
     navigate,
+    pagefind_key,
     pagefind_path,
     transform_url,
     strip_html_suffix = false,
@@ -236,19 +243,16 @@
     ...rest
   }: Props = $props()
 
-  const load_options = $derived(
-    create_pagefind_loader({
-      fallback_actions,
-      fuzzy,
-      load_pagefind,
-      navigate,
-      pagefind_path,
-      transform_url: (url) => {
-        const normalized_url = strip_html_suffix ? strip_html_extension(url) : url
-        return transform_url?.(normalized_url) ?? normalized_url
-      },
-    }),
-  )
+  const load_options = create_pagefind_loader(() => ({
+    load_pagefind,
+    navigate,
+    pagefind_key,
+    pagefind_path,
+    transform_url: (url) => {
+      const normalized_url = strip_html_suffix ? strip_html_extension(url) : url
+      return transform_url?.(normalized_url) ?? normalized_url
+    },
+  }))
 </script>
 
 <CommandMenu

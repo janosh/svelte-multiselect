@@ -9,8 +9,8 @@ beforeEach(() => {
   delete document.documentElement.dataset.theme
 })
 
-const mount_theme_toggle = async () => {
-  mount(ThemeToggle, { target: document.body })
+const mount_theme_toggle = async (onclick?: (event: MouseEvent) => unknown) => {
+  mount(ThemeToggle, { target: document.body, props: { onclick } })
   await tick()
   return doc_query<HTMLButtonElement>(`button`)
 }
@@ -57,8 +57,10 @@ test(`gracefully degrades when localStorage throws`, async () => {
 })
 
 test(`click cycles through light -> system -> dark -> light`, async () => {
+  const observed_modes: (string | null)[] = []
+  const onclick = vi.fn(() => observed_modes.push(localStorage.getItem(`theme`)))
   localStorage.setItem(`theme`, `light`)
-  const button = await mount_theme_toggle()
+  const button = await mount_theme_toggle(onclick)
   expect(applied_theme()).toEqual([`light`, `light`])
 
   for (const [stored, effective] of [
@@ -71,6 +73,9 @@ test(`click cycles through light -> system -> dark -> light`, async () => {
     expect(localStorage.getItem(`theme`)).toBe(stored)
     expect(applied_theme()).toEqual([effective, effective])
   }
+
+  expect(onclick).toHaveBeenCalledTimes(3)
+  expect(observed_modes).toEqual([`system`, `dark`, `light`])
 })
 
 test(`system mode reapplies theme when media query changes`, async () => {
