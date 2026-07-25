@@ -1084,6 +1084,38 @@ describe(`PageSearch`, () => {
   })
 
   test.each([
+    [`pagefind_key is unchanged`, `alpha`, `Alpha`, 0],
+    [`pagefind_key changes`, `beta`, `Beta`, 1],
+  ])(
+    `swapping load_pagefind reuses the cached index unless %s`,
+    async (_scenario, next_key, expected_label, expected_beta_loads) => {
+      const load_alpha = vi.fn(async () => ({
+        search: async () => make_pagefind_response(`Alpha`),
+      }))
+      const load_beta = vi.fn(async () => ({
+        search: async () => make_pagefind_response(`Beta`),
+      }))
+      const props = $state({
+        ...base_props,
+        pagefind_key: `alpha`,
+        load_pagefind: load_alpha,
+      })
+      mount(PageSearch, { target: document.body, props })
+
+      await search_pagefind(`first`)
+      expect(doc_query(`.cmd-label`).textContent).toContain(`Alpha`)
+
+      props.load_pagefind = load_beta
+      props.pagefind_key = next_key
+      await search_pagefind(`second`)
+
+      expect(doc_query(`.cmd-label`).textContent).toContain(expected_label)
+      expect(load_alpha).toHaveBeenCalledOnce()
+      expect(load_beta).toHaveBeenCalledTimes(expected_beta_loads)
+    },
+  )
+
+  test.each([
     [
       `index has no matches`,
       () => vi.fn(async () => ({ search: async () => ({ results: [] }) })),

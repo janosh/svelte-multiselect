@@ -277,9 +277,16 @@
     }
   })
 
-  let last_announcement = $state<string | null>(null)
-  const bulk_announcement = (count: number, verb: `selected` | `removed`) =>
-    `${count} option${count === 1 ? `` : `s`} ${verb}`
+  // Carries an id, not just text: assigning the same string twice leaves the live
+  // region's content unchanged, so a repeated identical message (two equal-sized range
+  // selections in a row, say) would never be announced. The id keys the rendered node.
+  let last_announcement = $state<{ text: string; id: number } | null>(null)
+  let announcement_count = 0
+  const announce = (text: string) => {
+    last_announcement = { text, id: ++announcement_count }
+  }
+  const announce_bulk = (count: number, verb: `selected` | `removed`) =>
+    announce(`${count} option${count === 1 ? `` : `s`} ${verb}`)
 
   // Clear after announcement so option counts can be announced again.
   $effect(() => {
@@ -1152,7 +1159,7 @@
 
     clear_validity()
     handle_dropdown_after_select(event)
-    last_announcement = `${utils.get_label(option_to_add)} selected`
+    announce(`${utils.get_label(option_to_add)} selected`)
     onadd?.({ option: option_to_add, selected })
     onchange?.({ option: option_to_add, type: `add` })
   }
@@ -1185,7 +1192,7 @@
 
     selected = selected.filter((_, remove_idx) => remove_idx !== idx)
     clear_validity()
-    last_announcement = `${utils.get_label(option_removed)} removed`
+    announce(`${utils.get_label(option_removed)} removed`)
     onremove?.({ option: option_removed, selected })
     onchange?.({ option: option_removed, type: `remove` })
   }
@@ -1496,7 +1503,7 @@
     // Keep the first minSelect items
     selected = selected.slice(0, keep_count)
     searchText = `` // always clear on remove all (resetFilterOnAdd only applies to add operations)
-    last_announcement = bulk_announcement(removed_options.length, `removed`)
+    announce_bulk(removed_options.length, `removed`)
     onremoveAll?.({ options: removed_options })
     onchange?.({ options: selected, type: `removeAll` })
   }
@@ -1510,7 +1517,7 @@
       if (resetFilterOnAdd) searchText = ``
       clear_validity()
       handle_dropdown_after_select(event)
-      last_announcement = bulk_announcement(added.length, `selected`)
+      announce_bulk(added.length, `selected`)
     }
     if (added.length < unselected.length && maxSelect !== null) {
       wiggle = true
@@ -1774,7 +1781,7 @@
     if (option_removed === undefined) return
     selected = []
     clear_validity()
-    last_announcement = `${utils.get_label(option_removed)} removed`
+    announce(`${utils.get_label(option_removed)} removed`)
     onremove?.({ option: option_removed, selected })
     onchange?.({ option: option_removed, type: `remove` })
   }
@@ -2499,7 +2506,7 @@
   <!-- Screen reader announcements for dropdown state, option count, and selection changes -->
   <div class="sr-only" aria-live="polite" aria-atomic="true">
     {#if last_announcement}
-      {last_announcement}
+      {#key last_announcement.id}{last_announcement.text}{/key}
     {:else if open}
       {matchingOptions.length} option{matchingOptions.length === 1 ? `` : `s`} available
     {/if}

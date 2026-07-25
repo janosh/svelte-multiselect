@@ -227,3 +227,24 @@ test(`an invalidated anchor falls back to one ordinary add`, async () => {
     selected: [`Anchor`, `Target`],
   })
 })
+
+// Two equal-sized ranges in a row yield the same text. With a plain string the live
+// region's DOM would be untouched and a screen reader would stay silent on the repeat.
+test(`an identical repeat announcement still replaces the live region node`, async () => {
+  mount_multiselect({ options: [`A`, `B`, `C`, `D`, `E`], open: true })
+  const live = doc_query(`.sr-only[aria-live="polite"]`)
+  const text_node = () =>
+    [...live.childNodes].find((node) => node.nodeType === 3 && node.textContent?.trim())
+
+  // two shift-clicks from one anchor each extend by a single option
+  await select_range(`A`, `B`)
+  expect(live.textContent?.trim()).toBe(`1 option selected`)
+  const first = text_node()
+
+  shift_click(`C`)
+  await tick()
+  expect(live.textContent?.trim()).toBe(`1 option selected`)
+
+  expect(first).toBeDefined()
+  expect(text_node()).not.toBe(first)
+})

@@ -36,6 +36,7 @@
     fuzzy?: boolean
     load_pagefind?: () => Promise<PagefindApi>
     navigate?: (url: string, details: PageSearchNavigateDetails) => unknown
+    pagefind_key?: string
     pagefind_path?: string
     transform_url?: (url: string) => string
   }
@@ -115,6 +116,7 @@
     let pagefind_api_promise: Promise<PagefindApi> | undefined
     let search_cache: PagefindSearchCache | undefined
     let previous_pagefind_source: string | undefined
+    let pagefind_generation = 0
 
     return async ({
       search,
@@ -125,17 +127,24 @@
         fallback_actions = [],
         fuzzy = false,
         load_pagefind,
+        pagefind_key = ``,
         pagefind_path = `/pagefind/pagefind.js`,
       } = get_options()
-      // Key the cache on the kind of source, not on closure identity: an inline
-      // load_pagefind arrow gets a fresh identity every render, and treating that as a
-      // source change would re-import pagefind and re-run the search on each keystroke.
-      const pagefind_source = load_pagefind ? `custom-loader` : pagefind_path
+      // Key the cache on the source, not on closure identity: an inline load_pagefind
+      // arrow gets a fresh identity every render, and treating that as a source change
+      // would re-import pagefind and re-run the search on each keystroke. Callers that
+      // swap between custom loaders over different indexes distinguish them with
+      // pagefind_key, since their identity alone can't tell one index from another.
+      const pagefind_source = load_pagefind
+        ? `custom-loader:${pagefind_key}`
+        : pagefind_path
       if (pagefind_source !== previous_pagefind_source) {
         pagefind_api_promise = undefined
         search_cache = undefined
         previous_pagefind_source = pagefind_source
+        pagefind_generation++
       }
+      const generation = pagefind_generation
       const load_api =
         load_pagefind ??
         (async () => (await import(/* @vite-ignore */ pagefind_path)) as PagefindApi)
@@ -198,7 +207,9 @@
             cache.next_result_idx < page_results.length,
         }
       } catch {
-        pagefind_api_promise = undefined
+        // only retire our own loader promise: the source may have switched while this
+        // request was in flight, and the newer one has already installed its own
+        if (generation === pagefind_generation) pagefind_api_promise = undefined
         return fallback_result()
       }
     }
@@ -232,6 +243,7 @@
     fallback_actions = [],
     load_pagefind,
     navigate,
+    pagefind_key,
     pagefind_path,
     transform_url,
     strip_html_suffix = false,
@@ -249,6 +261,7 @@
     fuzzy,
     load_pagefind,
     navigate,
+    pagefind_key,
     pagefind_path,
     transform_url: (url) => {
       const normalized_url = strip_html_suffix ? strip_html_extension(url) : url

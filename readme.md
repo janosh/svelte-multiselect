@@ -491,7 +491,7 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
 
    Regex pattern for input validation.
 
-### UI & Behavior Props
+### UI and Behavior Props
 
 1. ```ts
    maxOptions: number | undefined = undefined
@@ -840,7 +840,7 @@ These reflect internal component state:
 1. `#snippet userMsg({ searchText, msgType, msg })`: Displayed like a dropdown item when the list is empty and user is allowed to create custom options based on text input (or if the user's text input clashes with an existing option). Receives props:
    - `searchText`: The text user typed into search input.
    - `msgType: false | 'create' | 'dupe' | 'no-match'`: `'dupe'` means user input is a duplicate of an existing option. `'create'` means user is allowed to convert their input into a new option not previously in the dropdown. `'no-match'` means user input doesn't match any dropdown items and users are not allowed to create new options. `false` means none of the above.
-   - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#🔣-props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
+   - `msg`: Will be `duplicateOptionMsg` or `createOptionMsg` (see [props](#--props)) based on whether user input is a duplicate or can be created as new option. Note this snippet replaces the default UI for displaying these messages so the snippet needs to render them instead (unless purposely not showing a message).
 1. `#snippet beforeInput({ selected, disabled, invalid, id, placeholder, open, required, searchText })`: Placed before the selected chips and search input. For arbitrary content like a search icon or prefix badge.
 1. `#snippet afterInput({ selected, disabled, invalid, id, placeholder, open, required, searchText })`: Placed after the search input. For arbitrary content like icons or temporary messages. Can serve as a more dynamic, more customizable alternative to the `placeholder` prop.
 
@@ -899,7 +899,7 @@ Example using several snippets:
    onselectAll={({ options, scope }) => console.log(options, scope)}
    ```
 
-   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added. `scope` is the active [`selectAllScope`](#--props) for the top-level "Select All", and `undefined` when a group's own select-all fired the event.
+   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added. `scope` is the active [`selectAllScope`](#ui-and-behavior-props) for the top-level "Select All", and `undefined` when a group's own select-all fired the event.
 
 1. ```ts
    onrangeSelect={({ added, from, to, selected }) => console.log(added, from, to)}
