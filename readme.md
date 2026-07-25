@@ -250,12 +250,14 @@ These are the core props you'll use in most cases:
    <MultiSelect loadOptions={{ fetch: myFetchFn, debounceMs: 500, batchSize: 20 }} />
    ```
 
-   The function receives `{ search, offset, limit }` and must return `{ options, hasMore }`:
+   The function receives `{ search, offset, limit, signal }` and must return `{ options, hasMore }`. `signal` is an `AbortSignal` that fires when the request is superseded by a newer search or when the component closes or unmounts. Forward it to `fetch` to cancel work in flight:
 
    ```ts
    async function load_options(params) {
-     const { search, offset, limit } = params
-     const response = await fetch(`/api/items?q=${search}&skip=${offset}&take=${limit}`)
+     const { search, offset, limit, signal } = params
+     const response = await fetch(`/api/items?q=${search}&skip=${offset}&take=${limit}`, {
+       signal,
+     })
      const { items, total } = await response.json()
      return { options: items, hasMore: offset + limit < total }
    }
@@ -550,6 +552,18 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    ```
 
    Adds a "Select All" option at the top of the dropdown. `true` shows default label, or pass a custom string label.
+
+1. ```ts
+   selectAllScope: 'visible' | 'matching' = 'visible'
+   ```
+
+   Which options "Select All" adds. `'visible'` (default) adds only the rows the dropdown currently renders, i.e. options in expanded groups up to the `maxOptions` limit (virtualization doesn't narrow the scope). `'matching'` adds every option matching the current search, including those in collapsed groups and beyond `maxOptions`. `'matching'` requires local `options` and is disabled when `loadOptions` is set, since the component can't know the full remote result set.
+
+1. ```ts
+   rangeSelect: boolean = false
+   ```
+
+   Whether Shift-click and Shift+Arrow select an inclusive range of options. The first plain click (or the option active before Shift+Arrow) sets the anchor, then the range spans from the anchor to the shift-targeted option. Disabled options are skipped, `maxSelect` is respected, and the whole range counts as a single undo step. Off by default since enabling it changes what Shift-click does for existing consumers.
 
 1. ```ts
    liSelectAllClass: string = ''
@@ -882,10 +896,16 @@ Example using several snippets:
    Triggers when all selected options are removed. The `options` payload gives the options that were removed (might not be all if `minSelect` is set).
 
 1. ```ts
-   onselectAll={({ options }) => console.log(options)}
+   onselectAll={({ options, scope }) => console.log(options, scope)}
    ```
 
-   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added.
+   Triggers when the "Select All" option is clicked (requires `selectAllOption` to be enabled). The `options` payload contains the options that were added and `scope` is the active [`selectAllScope`](#🔣-props).
+
+1. ```ts
+   onrangeSelect={({ added, from, to, selected }) => console.log(added, from, to)}
+   ```
+
+   Triggers when a Shift-click or Shift+Arrow selects a range (requires `rangeSelect`). `added` are the newly selected options (already excluding disabled, duplicate and over-`maxSelect` ones), `from` is the anchor option, `to` is the shift-targeted option, and `selected` is the resulting selection.
 
 1. ```ts
    onreorder={({ options, previous }) => console.log(options, previous)}
@@ -897,7 +917,7 @@ Example using several snippets:
    onchange={({ type, option, options }) => console.log(type, option ?? options)}
    ```
 
-   Triggers when an option is either added (selected) or removed from selected, all selected options are removed at once, or selected options are reordered via drag-and-drop. `type` is one of `'add' | 'remove' | 'removeAll' | 'selectAll' | 'reorder'` and payload will be `option: Option` or `options: Option[]`, respectively.
+   Triggers when an option is either added (selected) or removed from selected, all selected options are removed at once, a range is selected, or selected options are reordered via drag-and-drop. `type` is one of `'add' | 'remove' | 'removeAll' | 'selectAll' | 'rangeSelect' | 'reorder'` and payload will be `option: Option` or `options: Option[]`, respectively.
 
 1. ```ts
    onopen={({ event }) => console.log(`Dropdown opened by`, event)}

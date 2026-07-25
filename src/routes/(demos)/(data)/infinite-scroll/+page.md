@@ -40,6 +40,7 @@ The component handles the required state management:
 - Loading initial options when dropdown opens
 - Loading more as user scrolls
 - Debounced search with automatic reset
+- Cancelling superseded requests through `signal`
 - Loading indicators
 
 ### REST API Example
@@ -245,6 +246,7 @@ interface LoadOptionsParams {
   search: string // Current search text
   offset: number // Number of options already loaded (for pagination)
   limit: number // Batch size to load
+  signal?: AbortSignal // Aborted when a request is superseded or closed
 }
 
 interface LoadOptionsResult<T> {
@@ -253,6 +255,42 @@ interface LoadOptionsResult<T> {
 }
 ```
 
+### Cursor-based pagination
+
+`offset` assumes offset/limit paging. APIs that hand back an opaque cursor instead
+(Slack, Stripe, GitHub GraphQL) need no extra support from the component: `loadOptions`
+is a plain function you supply, so keep the cursor in a closure and ignore `offset`.
+An `offset` of `0` marks a fresh search or a reopened dropdown, which is when to reset:
+
+```ts
+function make_load_options() {
+  let cursor: string | null = null
+
+  return async ({ search, offset, limit, signal }: LoadOptionsParams) => {
+    if (offset === 0) cursor = null
+    const params = new URLSearchParams({ q: search, limit: `${limit}` })
+    if (cursor) params.set(`cursor`, cursor)
+    const response = await fetch(`/api/items?${params}`, { signal })
+    const { items, next_cursor } = await response.json()
+    cursor = next_cursor
+    return { options: items, hasMore: Boolean(next_cursor) }
+  }
+}
+```
+
+Build it once and pass the same reference, since a new `fetch` identity resets the
+loaded batch:
+
+```svelte
+<script lang="ts">
+  const load_options = make_load_options()
+</script>
+
+<MultiSelect loadOptions={load_options} />
+```
+
 ### Error Handling
 
-If `loadOptions` throws or rejects, the error is logged to console and the component continues to function normally. The loading indicator will be hidden and users can retry by typing or scrolling.
+If `loadOptions` throws or rejects, the error is logged to console and the component
+continues to function normally. The loading indicator is hidden and users can retry by
+typing or scrolling.

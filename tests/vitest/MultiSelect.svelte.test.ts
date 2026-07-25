@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/tes
 
 import type { Option, OptionStyle } from '$lib'
 import MultiSelect from '$lib'
-import type { MultiSelectProps, PortalParams } from '$lib/types'
+import type { LoadOptionsParams, MultiSelectProps, PortalParams } from '$lib/types'
 import { get_label } from '$lib/utils'
 
 import { doc_query, type Test2WayBindProps } from './index'
@@ -826,7 +826,9 @@ describe(`selectedDisplay=input`, () => {
       await vi.runAllTimersAsync()
       await tick()
 
-      expect(fetch_fn).toHaveBeenCalledWith({ search: `Al`, offset: 0, limit: 50 })
+      expect(fetch_fn).toHaveBeenCalledWith(
+        expect.objectContaining({ search: `Al`, offset: 0, limit: 50 }),
+      )
     } finally {
       vi.useRealTimers()
     }
@@ -853,7 +855,9 @@ describe(`selectedDisplay=input`, () => {
       await tick()
 
       expect(fetch_fn).toHaveBeenCalledTimes(1)
-      expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
+      expect(fetch_fn).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: ``, offset: 0, limit: 50 }),
+      )
     } finally {
       vi.useRealTimers()
     }
@@ -3797,20 +3801,24 @@ describe(`selectAllOption feature`, () => {
     },
   )
 
-  test(`selects all, fires onselectAll and onchange events`, async () => {
+  test.each([
+    [`visible`, undefined],
+    [`matching`, 1],
+  ] as const)(`selects all %s options and fires events`, async (scope, maxOptions) => {
     const onselectAll_spy = vi.fn()
     const onchange_spy = vi.fn()
     mount(MultiSelect, {
       target: document.body,
       props: {
         options,
+        maxOptions,
         selectAllOption: true,
+        selectAllScope: scope,
         onselectAll: onselectAll_spy,
         onchange: onchange_spy,
       },
     })
-    const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-    input.click()
+    doc_query<HTMLInputElement>(`input[autocomplete]`).click()
     await tick()
     const select_all = doc_query(`ul.options > li.select-all`)
     expect(select_all.getAttribute(`aria-selected`)).toBe(`false`)
@@ -3818,7 +3826,7 @@ describe(`selectAllOption feature`, () => {
     await tick()
     expect(select_all.getAttribute(`aria-selected`)).toBe(`true`)
     expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Apple Banana Cherry Date`)
-    expect(onselectAll_spy).toHaveBeenCalledWith({ options })
+    expect(onselectAll_spy).toHaveBeenCalledWith({ options, scope })
     expect(onchange_spy).toHaveBeenCalledWith({ options, type: `selectAll` })
   })
 
@@ -3967,6 +3975,36 @@ describe(`selectAllOption feature`, () => {
       true,
       `All options already selected`,
     ],
+    [
+      `case-insensitive duplicates selected`,
+      {
+        options: [`Apple`, `apple`],
+        selected: [`Apple`],
+        duplicates: `case-insensitive`,
+      },
+      true,
+      `All options already selected`,
+    ],
+    [
+      `matching scope with loadOptions`,
+      {
+        open: true,
+        selectAllScope: `matching`,
+        loadOptions: async () => ({ options: [`a`], hasMore: false }),
+      },
+      true,
+      `Matching select-all is only available with local options`,
+    ],
+    [
+      `loaded visible options selected`,
+      {
+        open: true,
+        selected: [`a`],
+        loadOptions: async () => ({ options: [`a`], hasMore: false }),
+      },
+      true,
+      `All options already selected`,
+    ],
   ])(
     `Select All disabled state: %s`,
     async (_label, extra_props, expected_disabled, expected_title) => {
@@ -3975,8 +4013,9 @@ describe(`selectAllOption feature`, () => {
         props: { selectAllOption: true, ...extra_props },
       })
       doc_query<HTMLInputElement>(`input[autocomplete]`).click()
-      await tick()
-      const select_all_li = doc_query(`ul.options > li.select-all`)
+      const select_all_li = await vi.waitFor(() =>
+        doc_query<HTMLLIElement>(`ul.options > li.select-all`),
+      )
       expect(select_all_li.classList.contains(`disabled`)).toBe(expected_disabled)
       expect(select_all_li.getAttribute(`aria-disabled`)).toBe(
         expected_disabled ? `true` : null,
@@ -4073,7 +4112,7 @@ function deferred_load() {
   const resolvers: ((val: LoadResult) => void)[] = []
   const rejectors: ((err: Error) => void)[] = []
   const fn = vi.fn(
-    () =>
+    (_params: LoadOptionsParams) =>
       new Promise<LoadResult>((resolve, reject) => {
         resolvers.push(resolve)
         rejectors.push(reject)
@@ -4114,7 +4153,9 @@ describe(`loadOptions feature`, () => {
       await tick()
 
       expect(load_options).toHaveBeenCalledTimes(expected_calls)
-      if (expected_args) expect(load_options).toHaveBeenCalledWith(expected_args)
+      if (expected_args) {
+        expect(load_options).toHaveBeenCalledWith(expect.objectContaining(expected_args))
+      }
     },
   )
 
@@ -4170,7 +4211,9 @@ describe(`loadOptions feature`, () => {
       await tick()
 
       expect(load_options).toHaveBeenCalledTimes(expected_calls)
-      if (last_args) expect(load_options).toHaveBeenLastCalledWith(last_args)
+      if (last_args) {
+        expect(load_options).toHaveBeenLastCalledWith(expect.objectContaining(last_args))
+      }
     },
   )
 
@@ -4233,11 +4276,10 @@ describe(`loadOptions feature`, () => {
       await type_search_text(`xyz`, input)
       await vi.runAllTimersAsync()
       expect(load_options).toHaveBeenCalledTimes(2)
-      expect(load_options).toHaveBeenLastCalledWith({
-        search: `xyz`,
-        offset: 0,
-        limit: 50,
-      })
+      expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
+      expect(load_options).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: `xyz`, offset: 0, limit: 50 }),
+      )
 
       // Resolve the STALE first request after the new one was initiated
       resolvers[0]({ options: [`Stale Result`], hasMore: false })
@@ -4304,6 +4346,7 @@ describe(`loadOptions feature`, () => {
 
     // aria-busy should clear immediately on close
     expect(input.getAttribute(`aria-busy`)).toBeNull()
+    expect(load_options.mock.calls[0][0].signal?.aborted).toBe(true)
 
     // Stale fetch resolves after close — should not corrupt state
     resolvers[0]({ options: [`Result`], hasMore: false })
@@ -4576,14 +4619,15 @@ describe(`loadOptions feature`, () => {
       rejectors[1](new Error(`fail`))
       await vi.runAllTimersAsync()
 
-      // Clear and retype same search — should trigger a new load for "x"
-      // because last_search was NOT updated on failure (still "")
+      // Clear and retype the same search to trigger a fresh request.
       await type_search_text(``, input)
       await vi.runAllTimersAsync()
       await type_search_text(`x`, input)
       await vi.runAllTimersAsync()
 
-      expect(load_options).toHaveBeenLastCalledWith({ search: `x`, offset: 0, limit: 50 })
+      expect(load_options).toHaveBeenLastCalledWith(
+        expect.objectContaining({ search: `x`, offset: 0, limit: 50 }),
+      )
     } finally {
       vi.useRealTimers()
       console_error.mockRestore()
@@ -4869,7 +4913,9 @@ describe(`load_options_pending`, () => {
     await tick()
     // Fresh load fires immediately; stale path would debounce (not yet called)
     expect(fetch_fn).toHaveBeenCalledTimes(3)
-    expect(fetch_fn).toHaveBeenLastCalledWith({ search: ``, offset: 0, limit: 50 })
+    expect(fetch_fn).toHaveBeenLastCalledWith(
+      expect.objectContaining({ search: ``, offset: 0, limit: 50 }),
+    )
     // Stale "Rust Lang" result must not leak into the reopened session
     expect(document.querySelector(`ul.options`)?.textContent).not.toContain(`Rust Lang`)
   })
