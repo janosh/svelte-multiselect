@@ -1,11 +1,11 @@
 <script lang="ts">
   import { browser } from '$app/environment'
   import { afterNavigate, goto } from '$app/navigation'
-  import { base } from '$app/paths'
+  import { asset, resolve } from '$app/paths'
   import { page } from '$app/state'
+  import type { Pathname } from '$app/types'
   import { CopyButton, GitHubCorner, PageSearch, slug_to_title } from '$lib'
   import { highlight_matches } from '$lib/attachments'
-  import type { PageSearchNavigateDetails } from '$lib/types'
   import { name, repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
   import favicon from '$site/favicon.svg'
@@ -19,9 +19,12 @@
   let toc_desktop = $state(true)
   let page_search_query = $state(``)
 
+  // resolve's arg type distributes over the Pathname union, so a dynamic route can't
+  // match a single arm. Same widening as DemoNav; every demo route is param-free.
+  const resolve_path = resolve as (path: Pathname) => string
   const actions = routes.map(({ route }) => ({
     label: route,
-    action: () => goto(`${base}${route}`),
+    action: () => goto(resolve_path(route)),
   }))
   const is_home = $derived(page.route.id === `/`)
   const page_title = $derived.by(() => {
@@ -31,14 +34,6 @@
       ?.replace(/\.html$/, ``)
     return is_home || !route_slug ? `Svelte MultiSelect` : slug_to_title(route_slug)
   })
-  const navigate_from_page_search = async (
-    url: string,
-    { query }: PageSearchNavigateDetails,
-  ) => {
-    await goto(url)
-    page_search_query = ``
-    queueMicrotask(() => (page_search_query = query))
-  }
 
   afterNavigate(() => (page_search_query = ``))
 
@@ -70,9 +65,13 @@
 
 <PageSearch
   fallback_actions={actions}
-  navigate={navigate_from_page_search}
+  navigate={async (url, { query }) => {
+    await goto(url)
+    page_search_query = ``
+    queueMicrotask(() => (page_search_query = query))
+  }}
   strip_html_suffix
-  pagefind_path={`${base}/pagefind/pagefind.js`}
+  pagefind_path={asset(`/pagefind/pagefind.js`)}
 />
 
 <GitHubCorner href={repository} />

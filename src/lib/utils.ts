@@ -2,6 +2,11 @@ import type { CmdAction, Option } from './types'
 
 let uuid_counter = 0
 
+export const chain_handlers =
+  <EventType>(...handlers: (((event: EventType) => unknown) | null | undefined)[]) =>
+  (event: EventType): void =>
+    handlers.forEach((handler) => handler?.(event))
+
 // Generates a UUID for component IDs. Uses native crypto.randomUUID when available.
 // Fallback uses timestamp+counter - sufficient for DOM IDs (uniqueness, not security).
 // Cryptographic randomness is unnecessary here since these IDs are only used for
@@ -64,8 +69,8 @@ export function get_style(
   }
   if (typeof option === `object` && option.style) {
     if (typeof option.style === `string`) css_str = option.style
-    if (typeof option.style === `object` && key) {
-      if (key in option.style) css_str = option.style[key] ?? ``
+    if (typeof option.style === `object`) {
+      if (key && key in option.style) css_str = option.style[key] ?? ``
       // partial style objects (e.g. only `selected`) are fine; flag any keys
       // other than the known ones, even when a valid key is also present
       const has_unknown_key = Object.keys(option.style).some(

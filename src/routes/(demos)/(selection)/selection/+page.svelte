@@ -20,6 +20,11 @@
     [`Duplicates`, resolve(`/duplicates`), `Handle duplicate labels and options.`],
     [`Sort Selected`, resolve(`/sort-selected`), `Keep selected options sorted.`],
     [
+      `Range Select`,
+      resolve(`/range-select`),
+      `Select visible ranges with Shift-click and Shift+Arrow.`,
+    ],
+    [
       `Keep Selected`,
       resolve(`/keep-selected`),
       `Keep selected items visible in dropdown.`,

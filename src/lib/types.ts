@@ -54,12 +54,13 @@ export interface MultiSelectEvents<T extends Option = Option> {
   }) => false | T | undefined | Promise<false | T | undefined> // return false to reject, return T to transform, undefined to accept as-is (sync or async)
   onremove?: (data: { option: T; selected: T[] }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
-  onselectAll?: (data: { options: T[] }) => unknown // fires when select all is triggered
+  onselectAll?: (data: { options: T[]; scope?: SelectAllScope }) => unknown // fires when select all is triggered
+  onrangeSelect?: (data: { added: T[]; from: T; to: T; selected: T[] }) => unknown
   onreorder?: (data: { options: T[]; previous: T[] }) => unknown // fires when selected options are reordered via drag-and-drop
   onchange?: (data: {
     option?: T
     options?: T[]
-    type: `add` | `remove` | `removeAll` | `selectAll` | `reorder`
+    type: `add` | `remove` | `removeAll` | `selectAll` | `rangeSelect` | `reorder`
   }) => unknown
   onopen?: (data: { event: Event }) => unknown
   onclose?: (data: { event: Event }) => unknown
@@ -91,6 +92,7 @@ export interface LoadOptionsParams {
   search: string
   offset: number
   limit: number
+  signal?: AbortSignal
 }
 
 export interface LoadOptionsResult<T extends Option = Option> {
@@ -168,6 +170,8 @@ export interface PortalParams {
   // `top`: always above the input
   placement?: `auto` | `bottom` | `top`
 }
+
+export type SelectAllScope = `visible` | `matching`
 
 type InputEventProp = Extract<keyof HTMLInputAttributes, `on${string}`>
 export type InputProps = Omit<HTMLInputAttributes, InputEventProp>
@@ -273,6 +277,7 @@ export interface MultiSelectProps<T extends Option = Option>
   selectedDisplay?: `chips` | `input`
   sortSelected?: boolean | ((op1: T, op2: T) => number)
   selectedOptionsDraggable?: boolean
+  rangeSelect?: boolean
   style?: string | null
   ulOptionsClass?: string
   ulSelectedClass?: string
@@ -282,6 +287,7 @@ export interface MultiSelectProps<T extends Option = Option>
   portal?: PortalParams
   // Select all feature
   selectAllOption?: boolean | string // enable select all; if string, use as label
+  selectAllScope?: SelectAllScope
   selectAllDisabledTitle?:
     | string
     | ((state: {

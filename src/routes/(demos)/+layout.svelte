@@ -1,13 +1,17 @@
 <script lang="ts">
-  import { base } from '$app/paths'
+  import { resolve } from '$app/paths'
   import { page } from '$app/state'
+  import type { Pathname } from '$app/types'
   import { heading_anchors, PrevNext } from '$lib'
   import type { Snippet } from 'svelte'
   import { demo_pages } from './index'
 
   let { children }: { children?: Snippet<[]> } = $props()
 
-  const demo_paths = demo_pages.map((route) => `${base}${route}`)
+  // resolve's arg type distributes over the Pathname union, so a dynamic route can't
+  // match a single arm; every demo page is param-free
+  const resolve_path = resolve as (path: Pathname) => string
+  const demo_paths = demo_pages.map(resolve_path)
 </script>
 
 <main {@attach heading_anchors()}>

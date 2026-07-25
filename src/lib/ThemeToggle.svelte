@@ -3,6 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { tooltip, type TooltipOptions } from './attachments'
   import Icon from './Icon.svelte'
+  import { chain_handlers } from './utils'
 
   type ThemeMode = `light` | `dark` | `system`
 
@@ -66,7 +67,6 @@
 
 <button
   type="button"
-  onclick={() => apply_theme_mode(next_mode)}
   {title}
   aria-label={title}
   style:visibility={is_hydrated ? `visible` : `hidden`}
@@ -77,6 +77,7 @@
       ...tooltip_opts,
     })}
   {...rest}
+  onclick={chain_handlers(() => apply_theme_mode(next_mode), rest.onclick)}
 >
   {#if is_hydrated}
     <Icon icon={mode_icons[theme_mode]} />

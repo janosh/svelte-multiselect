@@ -11,13 +11,15 @@
 ```svelte example id="disabled-input-title"
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { base } from '$app/paths'
+  import { resolve } from '$app/paths'
+  import type { Pathname } from '$app/types'
   import { CommandMenu } from '$lib'
   import { routes } from '../../index'
 
+  const resolve_path = resolve as (path: Pathname) => string
   const actions = routes.map(({ route }) => ({
     label: route,
-    action: () => goto(`${base}${route}`),
+    action: () => goto(resolve_path(route)),
   }))
 </script>
 
@@ -27,9 +29,10 @@
 ## Site Search with Pagefind
 
 `PageSearch` wraps `CommandMenu` with full-text search over statically generated pages.
-Install `pagefind` as a development dependency, then index the rendered site after the
-application build. Run this script before previewing or deploying; when the index is absent,
-the search filters `fallback_actions`:
+`fallback_actions` are matched locally on every keystroke, so known routes show up without
+waiting on the index (and remain the only results when the index is absent). Install
+`pagefind` as a development dependency, then index the rendered site after the application
+build. Run this script before previewing or deploying:
 
 ```json
 {
@@ -42,13 +45,15 @@ the search filters `fallback_actions`:
 ```svelte example id="page-search"
 <script lang="ts">
   import { goto } from '$app/navigation'
-  import { base } from '$app/paths'
+  import { asset, resolve } from '$app/paths'
+  import type { Pathname } from '$app/types'
   import { PageSearch } from '$lib'
   import { routes } from '../../index'
 
+  const resolve_path = resolve as (path: Pathname) => string
   const fallback_actions = routes.map(({ route }) => ({
     label: route,
-    action: () => goto(`${base}${route}`),
+    action: () => goto(resolve_path(route)),
   }))
 </script>
 
@@ -56,7 +61,7 @@ the search filters `fallback_actions`:
   {fallback_actions}
   navigate={goto}
   strip_html_suffix
-  pagefind_path={`${base}/pagefind/pagefind.js`}
+  pagefind_path={asset(`/pagefind/pagefind.js`)}
   triggers={[`j`]}
   aria_label="Search documentation"
 />

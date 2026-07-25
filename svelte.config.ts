@@ -53,11 +53,6 @@ const config: Config = {
     },
 
     prerender: {
-      handleMissingId: ({ id }) => {
-        // list of ok-to-be-missing IDs
-        if ([`🔣-props`].includes(id)) return
-        throw new Error(`Missing ID: ${id}`)
-      },
       handleHttpError: ({ status, referrer, message }) => {
         // Ignore 404s from the /nav demo page which contains links to non-existent routes
         if (status === 404 && referrer === `${base_path}/nav`) return

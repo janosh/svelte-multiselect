@@ -4,6 +4,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
+  import { chain_handlers } from './utils'
 
   let {
     src = ``,
@@ -73,7 +74,10 @@
   {/each}
   {#if collapsible}
     {@render title?.()}
-    <button onclick={() => (open = !open)} {...button_props}>
+    <button
+      {...button_props}
+      onclick={chain_handlers(() => (open = !open), button_props?.onclick)}
+    >
       <Icon icon={open ? `Collapse` : `Expand`} />
       {open ? `Close` : `View code`}
     </button>
