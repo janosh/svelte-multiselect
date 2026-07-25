@@ -66,10 +66,12 @@ test(`shift-click resolves to the clicked duplicate-label row`, async () => {
 
 test(`Shift+Enter adds one option instead of extending a range`, async () => {
   const onrange_select = vi.fn()
+  const onadd = vi.fn()
   mount_multiselect({
     options: [`Alpha`, `Beta`, `Gamma`],
     open: true,
     onrangeSelect: onrange_select,
+    onadd,
   })
 
   option_row(`Alpha`).click()
@@ -82,6 +84,12 @@ test(`Shift+Enter adds one option instead of extending a range`, async () => {
   await tick()
 
   expect(onrange_select).not.toHaveBeenCalled()
+  // the active option specifically, not just "some second option": a count of 2 alone
+  // would also pass if Beta had been added instead of Gamma
+  expect(onadd).toHaveBeenLastCalledWith({
+    option: `Gamma`,
+    selected: [`Alpha`, `Gamma`],
+  })
   expect(document.querySelectorAll(`ul.selected > li`)).toHaveLength(2)
 })
 
