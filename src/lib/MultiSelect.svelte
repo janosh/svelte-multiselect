@@ -537,6 +537,7 @@
   let visible_navigable_count = $derived(
     Math.min(navigable_options.length, maxOptions ?? Infinity),
   )
+  let rendered_options = $derived(navigable_options.slice(0, visible_navigable_count))
   // `matching` scope needs the full local option set, which remote loading can't provide
   let matching_scope_unavailable = $derived(
     selectAllScope === `matching` && Boolean(loadOptions),
@@ -544,9 +545,7 @@
   let select_all_candidates = $derived(
     selectAllScope === `matching` && !matching_scope_unavailable
       ? get_selectable_opts(matchingOptions, true)
-      : navigable_options
-          .slice(0, visible_navigable_count)
-          .filter((option_item) => !is_disabled(option_item)),
+      : rendered_options.filter((option_item) => !is_disabled(option_item)),
   )
 
   // === Virtualized dropdown rendering (flat/ungrouped option lists only) ===
@@ -928,7 +927,6 @@
     ) {
       activeIndex = null
     }
-    const visible_options = navigable_options.slice(0, visible_navigable_count)
     const index_changed = activeIndex !== previous_active_index
     const option_changed = activeOption !== previous_active_option
     const filter_changed = effective_filter_text !== previous_filter_text
@@ -936,17 +934,17 @@
       const previous_option = activeOption
       let preserved_idx =
         activeIndex !== null &&
-        Object.is(visible_options[activeIndex], previous_option) &&
+        Object.is(rendered_options[activeIndex], previous_option) &&
         !is_disabled(previous_option)
           ? activeIndex
-          : visible_options.findIndex(
+          : rendered_options.findIndex(
               (candidate) =>
                 Object.is(candidate, previous_option) && !is_disabled(candidate),
             )
       const find_unique_idx = (get_key: (option: Option) => unknown) => {
         const active_key = get_key(previous_option)
         let matching_idx = -1
-        for (const [candidate_idx, candidate] of visible_options.entries()) {
+        for (const [candidate_idx, candidate] of rendered_options.entries()) {
           if (get_key(candidate) !== active_key || is_disabled(candidate)) continue
           if (matching_idx !== -1) return -1
           matching_idx = candidate_idx
@@ -958,14 +956,14 @@
         preserved_idx = find_unique_idx(active_option_fallback_key)
       activeIndex = preserved_idx === -1 ? null : preserved_idx
     }
-    const current_option = visible_options[activeIndex ?? -1]
+    const current_option = rendered_options[activeIndex ?? -1]
     const should_auto_activate =
       activeIndex === null ||
       (!option_msg_is_active &&
         (current_option === undefined || is_disabled(current_option))) ||
       (filter_changed && !option_changed)
     if (autoActiveFirstOption && should_auto_activate) {
-      const first_enabled_idx = visible_options.findIndex(
+      const first_enabled_idx = rendered_options.findIndex(
         (candidate) => !is_disabled(candidate),
       )
       activeIndex = first_enabled_idx === -1 ? null : first_enabled_idx
@@ -1475,9 +1473,9 @@
     }  // make first matching option active on any keypress while open (if no special case matched)
     else if (open && navigable_options.length > 0 && activeIndex === null) {
       // Don't stop propagation or prevent default here, allow normal character input
-      const first_enabled_idx = navigable_options
-        .slice(0, visible_navigable_count)
-        .findIndex((candidate) => !is_disabled(candidate))
+      const first_enabled_idx = rendered_options.findIndex(
+        (candidate) => !is_disabled(candidate),
+      )
       activeIndex = first_enabled_idx === -1 ? null : first_enabled_idx
     }
   }
@@ -1632,6 +1630,8 @@
       }
     }
 
+  // Returns true only when a range was actually selected; false tells the caller to
+  // fall back to an ordinary add.
   function select_range(target: Option, event: Event, target_idx_hint?: number): boolean {
     if (!multi_select) return false
     const visible_options = range_navigable_options
@@ -1640,10 +1640,12 @@
       hint != null && is_same_option(visible_options[hint], option_to_find)
         ? hint
         : visible_options.findIndex((item) => is_same_option(item, option_to_find))
-    const rendered = navigable_options.slice(0, visible_navigable_count)
-    if (!rendered.some((item) => is_same_option(item, target))) return true
+    // A row the user can't see (past maxOptions) or that has left the list can't be a
+    // range endpoint. Report it unhandled so the caller still performs an ordinary add
+    // rather than swallowing the interaction.
+    if (!rendered_options.some((item) => is_same_option(item, target))) return false
     const target_idx = index_of(target, target_idx_hint)
-    if (target_idx === -1) return true
+    if (target_idx === -1) return false
     const anchor_idx =
       range_anchor === null ? -1 : index_of(range_anchor, range_anchor_idx)
     if (anchor_idx < 0) {
