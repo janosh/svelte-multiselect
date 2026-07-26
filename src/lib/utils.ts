@@ -114,23 +114,12 @@ export function parse_shortcut(shortcut: string): {
   return { key, ctrl, shift, alt, meta }
 }
 
-// Every registered shortcut is re-parsed on every keydown. Not cached inside
-// parse_shortcut: that is public API whose callers own (and may mutate) the result.
-const MAX_PARSED_SHORTCUTS = 1000
-const parsed_shortcuts = new Map<string, ReturnType<typeof parse_shortcut>>()
-
 export function matches_shortcut(
   event: KeyboardEvent,
   shortcut: string | null | undefined,
 ): boolean {
   if (!shortcut) return false
-  let parsed = parsed_shortcuts.get(shortcut)
-  if (!parsed) {
-    if (parsed_shortcuts.size >= MAX_PARSED_SHORTCUTS) parsed_shortcuts.clear()
-    parsed = parse_shortcut(shortcut)
-    parsed_shortcuts.set(shortcut, parsed)
-  }
-  const { key, ctrl, shift, alt, meta } = parsed
+  const { key, ctrl, shift, alt, meta } = parse_shortcut(shortcut)
   // Require non-empty key to prevent "ctrl+" from matching any key with ctrl pressed
   if (!key) return false
   return (
@@ -164,8 +153,7 @@ export function values_equal(val1: unknown, val2: unknown): boolean {
   return false
 }
 
-// Runs once per option on every keystroke and each replaceAll rebuilds the whole
-// string, so skip it for the common case of no tabs, newlines or repeated spaces.
+// replaceAll rebuilds the whole string, so skip it when there is nothing to normalize
 const HAS_COLLAPSIBLE_WHITESPACE = /\s\s|[^\S ]/u
 const HAS_NON_PLAIN_WHITESPACE = /[^\S ]/u
 

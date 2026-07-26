@@ -149,27 +149,6 @@ describe(`keyboard shortcut parsing`, () => {
     expect(parse_shortcut(shortcut)).toEqual(expected)
   })
 
-  test(`parse_shortcut hands back an object the caller owns`, () => {
-    const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
-    // prime the cache matches_shortcut keeps, so a shared store would be hit next
-    expect(matches_shortcut(event, `ctrl+k`)).toBe(true)
-
-    const parsed = parse_shortcut(`ctrl+k`)
-    parsed.key = `mutated`
-    // handing out the cached object would let this poison every later parse
-    expect(parse_shortcut(`ctrl+k`).key).toBe(`k`)
-    expect(matches_shortcut(event, `ctrl+k`)).toBe(true)
-  })
-
-  test(`memoized parses stay distinct across interleaved shortcuts`, () => {
-    const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
-    const matches = () =>
-      [`ctrl+k`, `meta+k`, `ctrl+shift+k`].map((sc) => matches_shortcut(event, sc))
-    // second pass is all cache hits, where a mis-keyed cache returns a neighbour
-    expect(matches()).toEqual([true, false, false])
-    expect(matches()).toEqual([true, false, false])
-  })
-
   test.each([
     [`ctrl++`, { key: `+`, ctrlKey: true }, true],
     [`ctrl++`, { key: `+`, ctrlKey: true, shiftKey: true }, true],
