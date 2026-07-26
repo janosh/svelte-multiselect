@@ -44,6 +44,32 @@ test(`hides synchronously when open flips false`, () => {
 
   action.update({ active: true, open: false, target_node: target })
   expect(node.hidden).toBe(true)
+
+  // deactivating hands visibility back to the consumer's own markup. Latching the
+  // closed state here instead would stick: update() stops touching `hidden` once the
+  // node is home, so reopening with the portal still off could never show it again.
+  action.update({ active: false, open: false, target_node: target })
+  expect(node.hidden).toBe(false)
+
+  action.update({ active: false, open: true, target_node: target })
+  expect(node.hidden).toBe(false)
+  action.destroy()
+})
+
+// target_node is positioning only: it gates visibility while portalled, not at home
+test(`losing the target hides while portalled but not once deactivated`, () => {
+  const { home, target, node } = create_fixture()
+  const action = portal_action(node, { active: true, open: true, target_node: target })
+  expect(node.hidden).toBe(false)
+
+  // portalled with nowhere to anchor: no sane position to paint at
+  action.update({ active: true, open: true, target_node: null })
+  expect(node.hidden).toBe(true)
+
+  // back home, an open dropdown renders inline and needs no target
+  action.update({ active: false, open: true, target_node: null })
+  expect(node.parentNode).toBe(home)
+  expect(node.hidden).toBe(false)
   action.destroy()
 })
 

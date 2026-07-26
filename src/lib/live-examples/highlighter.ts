@@ -7,7 +7,6 @@ type StarryNight = {
 
 const optional_peer_error = `svelte-multiselect/live-examples requires optional peer dependency @wooorm/starry-night`
 
-// Starry-night highlighter for mdsvex
 async function create_starry_night(): Promise<StarryNight> {
   try {
     const [{ common, createStarryNight }, { default: source_svelte }] = await Promise.all(
@@ -27,7 +26,6 @@ const escape_svelte = (html: string): string =>
 // Uses common bundle (34 grammars) + Svelte
 export const starry_night = await create_starry_night()
 
-// mdsvex highlighter function
 export function starry_night_highlighter(code: string, lang?: string | null): string {
   const lang_key = lang?.toLowerCase()
   const scope = lang_key ? starry_night.flagToScope(lang_key) : undefined

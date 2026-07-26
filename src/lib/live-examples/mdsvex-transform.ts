@@ -8,9 +8,7 @@ import { starry_night } from './highlighter.ts'
 const encode_escapes = (src: string) =>
   src.replaceAll(`\``, `\\\``).replaceAll(`\${`, `\\$\{`)
 
-// Regex to find <script> block in svelte
-// Note: These patterns handle common cases but may have edge cases with nested
-// comments containing </script> strings or complex attribute syntax
+// script/style matchers; may misfire on </script> inside comments or exotic attributes
 const RE_SCRIPT_START = /<script\b(?:[^<>"']|"[^"]*"|'[^']*')*>/u
 const RE_SCRIPT_BLOCK = /<script[\s\S]*?>[\s\S]*?<\/script>/gu
 const RE_STYLE_BLOCK = /<style[\s\S]*?>[\s\S]*?<\/style>/gu
@@ -24,7 +22,7 @@ const RE_PARSE_META = /(?:\w+="(?:[^"\\]|\\.)*"|\w+=\[[^\]]*\]|\w+=[^\s"[\]]+|\w
 export const EXAMPLE_MODULE_PREFIX = `___live_example___`
 export const EXAMPLE_COMPONENT_PREFIX = `LiveExample___`
 
-// Languages that render as live Svelte components (O(1) lookup)
+// Languages that render as live Svelte components
 const LIVE_LANGUAGES = new Set([`svelte`, `html`])
 
 // Inline lang-label style for code-only examples, which are raw HTML with no
@@ -75,7 +73,6 @@ interface RemarkFile {
   cwd: string
 }
 
-// Default wrapper component
 const DEFAULT_WRAPPER = `$lib/CodeExample.svelte`
 
 type RemarkTransformer = (tree: RemarkTree, file: RemarkFile) => void
@@ -92,7 +89,6 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
 
     const filename = path.relative(file.cwd, file.filename)
 
-    // Helper to get or create a wrapper alias
     function get_wrapper_alias(wrapper: string | [string, string]): string {
       const key = JSON.stringify(wrapper)
       let entry = wrapper_imports.get(key)
@@ -127,7 +123,7 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
         const value = create_example_component(
           node.value ?? ``,
           meta,
-          is_live ? example_csr.length : -1, // -1 for code-only (no component import needed)
+          is_live ? example_csr.length : -1,
           node.lang,
           scope,
           wrapper_alias,
@@ -232,7 +228,6 @@ function create_example_component(
   const escaped_src = JSON.stringify(code)
   const escaped_meta = encode_escapes(JSON.stringify({ ...meta, lang }))
 
-  // Close and reopen <p> to avoid block-in-inline HTML nesting issues
   return `</p>
   <${wrapper_alias}
     __live_example_src={"${base64_src}"}

@@ -9,8 +9,6 @@ export const chain_handlers =
 
 // Generates a UUID for component IDs. Uses native crypto.randomUUID when available.
 // Fallback uses timestamp+counter - sufficient for DOM IDs (uniqueness, not security).
-// Cryptographic randomness is unnecessary here since these IDs are only used for
-// associating labels with inputs and ensuring unique DOM element identifiers.
 export function get_uuid(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   const hex = (Date.now().toString(16) + (uuid_counter++).toString(16)).padStart(32, `0`)
@@ -23,7 +21,6 @@ export function get_uuid(): string {
   ].join(`-`)
 }
 
-// Type guard for checking if a value is a non-null object
 export const is_object = (val: unknown): val is Record<string, unknown> =>
   typeof val === `object` && val !== null
 
@@ -32,7 +29,6 @@ export const slug_to_title = (slug: string): string =>
     .replaceAll(`-`, ` `)
     .replaceAll(/(?<![\p{L}\p{M}\p{N}_])\p{L}/gu, (letter) => letter.toUpperCase())
 
-// Type guard for checking if an option has a group key
 export const has_group = <T extends Option>(opt: T): opt is T & { group: string } =>
   is_object(opt) && typeof opt.group === `string`
 
@@ -49,15 +45,12 @@ export const get_label = (opt: Option) => {
   return `${opt}`
 }
 
-// Generate a unique key for an option, preserving value identity
-// For object options: uses value if defined, otherwise label (no case normalization)
-// For primitives: the primitive itself
+// Unique option key: value ?? label for objects, the primitive itself otherwise
 export const get_option_key = (opt: Option): unknown =>
   is_object(opt) ? (opt.value ?? get_label(opt)) : opt
 
-// This function is used extract CSS strings from a {selected, option} style
-// object to be used in the style attribute of the option.
-// If the style is a string, it will be returned as is
+// Extract a CSS string from an option's style (string or {option, selected} object).
+// Always returns a semicolon-terminated string.
 export function get_style(
   option: Option,
   key: `selected` | `option` | null | undefined = null, // undefined falls back to null via default
@@ -81,7 +74,6 @@ export function get_style(
       }
     }
   }
-  // ensure css_str ends with a semicolon
   const trimmed = css_str.trim()
   if (trimmed && !trimmed.endsWith(`;`)) css_str += `;`
   return css_str
@@ -131,6 +123,17 @@ export function matches_shortcut(
   )
 }
 
+// True when the event came from a text-entry control, where a bare key is typing
+export const is_editable_event_target = (target: EventTarget | null): boolean =>
+  target instanceof Element &&
+  target.closest(
+    `input, textarea, select, [contenteditable]:not([contenteditable="false"])`,
+  ) !== null
+
+// Alt/Ctrl/Meta make a keystroke a chord. Shift is excluded: it types capitals.
+export const is_modifier_chord = (event: KeyboardEvent): boolean =>
+  event.altKey || event.ctrlKey || event.metaKey
+
 // Compare arrays/values for equality to avoid unnecessary updates.
 // Prevents infinite loops when value/selected are bound to reactive wrappers
 // that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
@@ -146,6 +149,10 @@ export function values_equal(val1: unknown, val2: unknown): boolean {
   return false
 }
 
+// replaceAll rebuilds the whole string, so skip it when there is nothing to normalize
+const HAS_COLLAPSIBLE_WHITESPACE = /\s\s|[^\S ]/u
+const HAS_NON_PLAIN_WHITESPACE = /[^\S ]/u
+
 // Case-insensitive subsequence match: returns the indices in target_text where
 // the characters of search_text appear in order, or null if not all characters
 // can be matched. An empty search matches with no indices.
@@ -153,25 +160,26 @@ export function fuzzy_match_indices(
   search_text: string,
   target_text: string,
 ): number[] | null {
-  const search = search_text.toLowerCase().replaceAll(/\s+/gu, ` `)
-  const target = target_text.toLowerCase().replaceAll(/\s/gu, ` `)
+  // collapse runs in the search; map every whitespace char in the target to a space
+  let search = search_text.toLowerCase()
+  if (HAS_COLLAPSIBLE_WHITESPACE.test(search)) search = search.replaceAll(/\s+/gu, ` `)
+  let target = target_text.toLowerCase()
+  if (HAS_NON_PLAIN_WHITESPACE.test(target)) target = target.replaceAll(/\s/gu, ` `)
+
+  // Greedy leftmost match; pos only moves forward, so scanning stays linear.
   const indices: number[] = []
-  let [search_idx, target_idx] = [0, 0]
-
-  while (search_idx < search.length && target_idx < target.length) {
-    if (search[search_idx] === target[target_idx]) {
-      indices.push(target_idx)
-      search_idx++
-    }
-    target_idx++
+  let pos = -1
+  // by code unit, not for...of: code points emit one index per astral char, two expected
+  // oxlint-disable-next-line typescript/prefer-for-of
+  for (let search_idx = 0; search_idx < search.length; search_idx++) {
+    pos = target.indexOf(search[search_idx], pos + 1)
+    if (pos === -1) return null
+    indices.push(pos)
   }
-
-  return search_idx === search.length ? indices : null
+  return indices
 }
 
-// Fuzzy string matching function
-// Returns true if the search string can be found as a subsequence in the target string
-// e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
+// True if search is a subsequence of target, e.g. "tageoo" matches "tasks/geo-opt"
 export function fuzzy_match(search_text: string, target_text: string): boolean {
   // guard null/undefined inputs (fuzzy_match_indices would throw on .toLowerCase())
   if (search_text == null || target_text == null) return false

@@ -8,6 +8,8 @@
     cmd_action_matches,
     chain_handlers,
     format_cmd_metadata,
+    is_editable_event_target,
+    is_modifier_chord,
     matches_shortcut,
     split_shortcut,
   } from './utils'
@@ -73,7 +75,7 @@
     max_recent?: number // cap on persisted recent actions (default: 20)
   } = $props()
 
-  // === Recent actions (frecency ranking) ===
+  // === Recent actions (most-recently-used ranking) ===
   let recent_action_ids = $state<string[]>([])
 
   const get_action_id = (action: CmdAction): string => `${action.id ?? action.label}`
@@ -230,8 +232,10 @@
     const is_close_key = open && close_keys.includes(event.key)
     if (event.defaultPrevented && !is_close_key) return
     if (toggle(event)) return
-    // run action hotkeys globally while the menu is closed
     if (open || !global_shortcuts) return
+    // outside a chord the keystroke is ordinary typing, so firing the action would
+    // both run it and swallow the character
+    if (!is_modifier_chord(event) && is_editable_event_target(event.target)) return
     const action = actions.find(
       (cmd_action) =>
         !cmd_action.disabled && matches_shortcut(event, cmd_action.shortcut),

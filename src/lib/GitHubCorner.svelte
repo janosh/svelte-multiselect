@@ -19,7 +19,7 @@
     target?: `_self` | `_blank`
     color?: string | null
     fill?: string | null
-    // bottomLeft/Right look bad, shouldn't normally be used
+    // bottom-left/right look bad, shouldn't normally be used
     corner?: `top-left` | `top-right` | `bottom-left` | `bottom-right`
   } = $props()
 </script>

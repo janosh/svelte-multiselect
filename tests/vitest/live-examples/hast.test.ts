@@ -5,6 +5,9 @@ describe(`escape_html_text`, () => {
   test.each([
     [`<span>Fish & Chips</span>`, `&lt;span&gt;Fish &amp; Chips&lt;/span&gt;`],
     [`5 > 3 && 2 < 4`, `5 &gt; 3 &amp;&amp; 2 &lt; 4`],
+    // text with nothing to escape takes a fast path and must come back unchanged
+    [`const value = "plain 123"`, `const value = "plain 123"`],
+    [``, ``],
   ])(`escapes %j`, (input, expected) => {
     expect(escape_html_text(input)).toBe(expected)
   })

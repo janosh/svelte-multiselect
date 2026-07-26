@@ -45,24 +45,7 @@
 />
 ```
 
-This page is used for Playwright testing to ensure
-
-- the remove-all button
-  - removes all currently selected options from the input
-  - only appears if 2 or more elements are selected
-  - has custom title (if supplied via prop `removeAllTitle`)
-- the component can be focused
-  - which opens dropdown
-  - closes the dropdown when focus leaves the component via Tab or a click/tap outside
-  - does not close the dropdown when the input alone loses focus within the component
-- filters options to only list matches when entering text
-- accessibility
-  - input is `aria-invalid` when the component has `invalid=true`
-  - has `aria-expanded='false'` when closed
-  - has `aria-expanded='true'` when open
-  - options have `aria-selected='false'` and selected items have `aria-selected='true'`
-  - invisible `input.form-control` is `aria-hidden`
-- `closeDropdownOnSelect`: when `true`, the input is not focused when an option is selected and the dropdown is closed
+This page is the fixture for the Playwright UI tests in `tests/playwright/MultiSelect.test.ts`, which cover the remove-all button, focus and dropdown open/close behavior, filtering, and the ARIA attributes.
 
 <!-- Smooth scroll is required for arrow key navigation tests to work correctly.
 The Playwright test 'loops through the dropdown list with arrow keys' depends on this. -->

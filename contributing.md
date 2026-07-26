@@ -38,7 +38,7 @@ New features should include corresponding tests. Bug fixes should include a test
 This repo has 3 required CI checks that have to pass for every PR before merging:
 
 - tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/test.yml))
-- linting: handled by `vp lint`
+- linting and type checks: `vp check` plus `svelte-check-rs`, run as [GitHub Action](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/lint.yml)
 - docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/gh-pages.yml) through GitHub Pages
 
 ## 🆕 New release
