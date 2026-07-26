@@ -97,21 +97,36 @@ export function split_shortcut(shortcut: string): string[] {
   return parts
 }
 
-// Parse shortcut string into modifier+key parts
-export function parse_shortcut(shortcut: string): {
+type ParsedShortcut = {
   key: string
   ctrl: boolean
   shift: boolean
   alt: boolean
   meta: boolean
-} {
+}
+
+// matches_shortcut re-parses every registered shortcut on every keydown. Parsing
+// is pure and keyed by an immutable string, so memoize it - bounded so callers
+// generating shortcut strings dynamically can't grow the map without limit.
+const MAX_PARSED_SHORTCUTS = 1000
+const parsed_shortcuts = new Map<string, ParsedShortcut>()
+
+// Parse shortcut string into modifier+key parts
+export function parse_shortcut(shortcut: string): ParsedShortcut {
+  const cached = parsed_shortcuts.get(shortcut)
+  if (cached) return cached
+
   const parts = split_shortcut(shortcut)
   const key = parts.pop() ?? ``
   const ctrl = parts.includes(`ctrl`)
   const shift = parts.includes(`shift`)
   const alt = parts.includes(`alt`)
   const meta = parts.includes(`meta`) || parts.includes(`cmd`)
-  return { key, ctrl, shift, alt, meta }
+  const parsed = { key, ctrl, shift, alt, meta }
+
+  if (parsed_shortcuts.size >= MAX_PARSED_SHORTCUTS) parsed_shortcuts.clear()
+  parsed_shortcuts.set(shortcut, parsed)
+  return parsed
 }
 
 export function matches_shortcut(
@@ -146,6 +161,12 @@ export function values_equal(val1: unknown, val2: unknown): boolean {
   return false
 }
 
+// Both replaceAll calls below rebuild the whole string, so bail out before doing
+// that work: labels and command text rarely contain tabs, newlines or runs of
+// spaces, and this normalization runs once per option on every keystroke.
+const HAS_COLLAPSIBLE_WHITESPACE = /\s\s|[^\S ]/u
+const HAS_NON_PLAIN_WHITESPACE = /[^\S ]/u
+
 // Case-insensitive subsequence match: returns the indices in target_text where
 // the characters of search_text appear in order, or null if not all characters
 // can be matched. An empty search matches with no indices.
@@ -153,20 +174,26 @@ export function fuzzy_match_indices(
   search_text: string,
   target_text: string,
 ): number[] | null {
-  const search = search_text.toLowerCase().replaceAll(/\s+/gu, ` `)
-  const target = target_text.toLowerCase().replaceAll(/\s/gu, ` `)
+  // whitespace runs collapse in the search; every whitespace character in the
+  // target maps to a plain space
+  let search = search_text.toLowerCase()
+  if (HAS_COLLAPSIBLE_WHITESPACE.test(search)) search = search.replaceAll(/\s+/gu, ` `)
+  let target = target_text.toLowerCase()
+  if (HAS_NON_PLAIN_WHITESPACE.test(target)) target = target.replaceAll(/\s/gu, ` `)
+
+  // Greedy leftmost subsequence match. indexOf scans natively and the cursor only
+  // moves forward, so the total scanned length stays linear in the target.
   const indices: number[] = []
-  let [search_idx, target_idx] = [0, 0]
-
-  while (search_idx < search.length && target_idx < target.length) {
-    if (search[search_idx] === target[target_idx]) {
-      indices.push(target_idx)
-      search_idx++
-    }
-    target_idx++
+  let pos = -1
+  // indexing by code unit, not for...of: iterating code points would match an
+  // astral character as one unit and emit one index where callers expect two
+  // oxlint-disable-next-line typescript/prefer-for-of
+  for (let search_idx = 0; search_idx < search.length; search_idx++) {
+    pos = target.indexOf(search[search_idx], pos + 1)
+    if (pos === -1) return null
+    indices.push(pos)
   }
-
-  return search_idx === search.length ? indices : null
+  return indices
 }
 
 // Fuzzy string matching function

@@ -422,6 +422,8 @@ type OwnedHighlight = {
 
 const owned_highlights = new WeakMap<object, Map<string, OwnedHighlight>>()
 
+const HAS_NON_ASCII = /\P{ASCII}/u
+
 const sync_owned_highlight = (
   registry: HighlightRegistry,
   css_class: string,
@@ -493,11 +495,15 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     const node_length = original_text.length
     let original_starts: number[] | null = null
     let original_ends: number[] | null = null
+    // The check below allocates a string per character, so skip it for ASCII,
+    // which can neither be astral nor change length when lowercased.
     let needs_offset_map = false
-    for (const character of original_text) {
-      if (character.length > 1 || character.toLowerCase().length !== character.length) {
-        needs_offset_map = true
-        break
+    if (HAS_NON_ASCII.test(original_text)) {
+      for (const character of original_text) {
+        if (character.length > 1 || character.toLowerCase().length !== character.length) {
+          needs_offset_map = true
+          break
+        }
       }
     }
     if (needs_offset_map) {

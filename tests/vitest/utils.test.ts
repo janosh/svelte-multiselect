@@ -147,6 +147,22 @@ describe(`keyboard shortcut parsing`, () => {
     [`ctrl+shift+k`, { key: `k`, ctrl: true, shift: true, alt: false, meta: false }],
   ])(`parse_shortcut(%j)`, (shortcut, expected) => {
     expect(parse_shortcut(shortcut)).toEqual(expected)
+    // parses are memoized by shortcut string, so a repeat call must not return
+    // another shortcut's cached parse
+    expect(parse_shortcut(shortcut)).toEqual(expected)
+  })
+
+  test(`memoized parses stay distinct across interleaved shortcuts`, () => {
+    const shortcuts = [`ctrl+k`, `meta+k`, `ctrl+shift+k`, `k`]
+    const first_pass = shortcuts.map(parse_shortcut)
+    // re-parse in reverse: a cache keyed on anything but the string would swap results
+    expect(shortcuts.toReversed().map(parse_shortcut).toReversed()).toEqual(first_pass)
+    expect(first_pass).toEqual([
+      { key: `k`, ctrl: true, shift: false, alt: false, meta: false },
+      { key: `k`, ctrl: false, shift: false, alt: false, meta: true },
+      { key: `k`, ctrl: true, shift: true, alt: false, meta: false },
+      { key: `k`, ctrl: false, shift: false, alt: false, meta: false },
+    ])
   })
 
   test.each([
@@ -192,7 +208,13 @@ describe(`fuzzy_match`, () => {
     [`#`, `#hashtag`, true],
     [`/`, `path/to/file`, true],
     [`form submit`, `form\n submit`, true],
+    // whitespace normalization: runs collapse in the search, every whitespace
+    // character maps to a plain space in the target
     [`a  b`, `a b`, true],
+    [`a b`, `a\tb`, true],
+    [`a\tb`, `a b`, true],
+    [`a b`, `a\u00A0b`, true],
+    [`a b c`, `a\t\nb  c`, true],
     // Numbers and unicode
     [`123`, `abc123def`, true],
     [`ñ`, `niño`, true],
