@@ -2747,7 +2747,7 @@
     position: fixed;
   }
   :where(ul.options > li) {
-    padding: var(--sms-options-li-padding, 3pt 1ex);
+    padding: var(--sms-options-li-padding, 2pt 1ex);
     cursor: pointer;
     scroll-margin: var(--sms-options-scroll-margin, 100px);
     border-inline-start: 1px solid transparent;
@@ -2755,7 +2755,8 @@
   :where(ul.options .user-msg) {
     /* block needed so vertical padding applies to span */
     display: block;
-    padding: 3pt 2ex;
+    /* vertical padding tracks ul.options > li so this row is no taller than an option */
+    padding: 2pt 2ex;
   }
   :where(ul.options > li.selected) {
     background: var(
