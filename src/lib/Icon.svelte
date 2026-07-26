@@ -7,7 +7,7 @@
   const data = $derived.by(() => {
     if (!(icon in icon_data)) {
       console.error(`Icon '${icon}' not found`)
-      return icon_data.Alert // fallback
+      return icon_data.Alert
     }
     return icon_data[icon]
   })

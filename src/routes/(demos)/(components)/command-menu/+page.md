@@ -6,7 +6,7 @@
 
 ## Navigation Command Menu
 
-`<MultiSelect />` can implement a navigation command menu in 70 lines of code (50 without styles).
+`<MultiSelect />` powers a full navigation command menu. Its source is shown at the bottom of this page.
 
 ```svelte example id="disabled-input-title"
 <script lang="ts">

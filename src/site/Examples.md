@@ -254,8 +254,8 @@ value = {JSON.stringify(value) || `null`}
 />
 
 <label>
-  maxOptions <input type="range" min="0" max={30} bind:value={maxOptions} />
-  {maxOptions} <small>(0 means no limit)</small>
+  maxOptions <input type="range" min="1" max={30} bind:value={maxOptions} />
+  {maxOptions} <small>(leave undefined for no limit)</small>
 </label>
 ```
 

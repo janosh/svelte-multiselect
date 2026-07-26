@@ -1,5 +1,5 @@
 <script lang="ts">
-  // see svelte.config.js where this component is passed to live-examples remark plugin
+  // see svelte.config.ts where this component is set as the live-examples Wrapper
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import Icon from './Icon.svelte'
@@ -17,7 +17,7 @@
     button_props,
   }: {
     // src+meta are passed in by live-examples remark plugin
-    src?: string // code fence content, sadly without indentation so we prefer node?.innerText below
+    src?: string // code fence content, dedented by the remark plugin
     meta?: {
       // code fence metadata
       collapsible?: boolean // whether to show a button to expand/collapse the code

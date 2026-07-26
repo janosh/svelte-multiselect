@@ -44,8 +44,6 @@ export interface ResizableOptions {
 }
 
 // Svelte 5 attachment factory to make an element draggable
-// @param options - Configuration options for dragging behavior
-// @returns Attachment function that sets up dragging on an element
 export const draggable =
   (options: DraggableOptions = {}): Attachment =>
   (element: Element): (() => void) | undefined => {
@@ -54,7 +52,6 @@ export const draggable =
     if (!(element instanceof HTMLElement)) return undefined
     const node = element
 
-    // Use simple variables for maximum performance
     let dragging = false
     let start = { x: 0, y: 0 }
     const initial = { left: 0, top: 0 }
@@ -71,6 +68,8 @@ export const draggable =
     }
 
     function handle_mousedown(event: MouseEvent) {
+      // non-primary buttons open the context menu, which can swallow the mouseup
+      if (event.button !== 0) return
       // Only drag if mousedown is on the handle or its children
       if (!(event.target instanceof Node) || !handle?.contains?.(event.target)) return
 
@@ -83,7 +82,6 @@ export const draggable =
         initial.left = rect.left
         initial.top = rect.top
       } else {
-        // For other positioning, use offset values
         initial.left = node.offsetLeft
         initial.top = node.offsetTop
       }
@@ -98,13 +96,12 @@ export const draggable =
       globalThis.addEventListener(`mousemove`, handle_mousemove)
       globalThis.addEventListener(`mouseup`, handle_mouseup)
 
-      options.on_drag_start?.(event) // Call optional callback
+      options.on_drag_start?.(event)
     }
 
     function handle_mousemove(event: MouseEvent) {
       if (!dragging) return
 
-      // Use the exact same calculation as the fast old implementation
       const dx = event.clientX - start.x
       const dy = event.clientY - start.y
       node.style.left = `${initial.left + dx}px`
@@ -124,7 +121,7 @@ export const draggable =
       globalThis.removeEventListener(`mousemove`, handle_mousemove)
       globalThis.removeEventListener(`mouseup`, handle_mouseup)
 
-      options.on_drag_end?.(event) // Call optional callback
+      options.on_drag_end?.(event)
     }
 
     if (handle) {
@@ -132,7 +129,6 @@ export const draggable =
       handle.style.cursor = `grab`
     }
 
-    // Return cleanup function (this is the attachment pattern)
     return () => {
       globalThis.removeEventListener(`mousemove`, handle_mousemove)
       globalThis.removeEventListener(`mouseup`, handle_mouseup)
@@ -140,7 +136,7 @@ export const draggable =
       if (dragging) document.body.style.userSelect = ``
       if (handle) {
         handle.removeEventListener(`mousedown`, handle_mousedown)
-        handle.style.cursor = `` // Reset cursor
+        handle.style.cursor = ``
       }
     }
   }
@@ -196,6 +192,8 @@ export const resizable =
     }
 
     function on_mousedown(event: MouseEvent) {
+      // non-primary buttons open the context menu, which can swallow the mouseup
+      if (event.button !== 0) return
       active_edge = get_edge(event)
       if (!active_edge) return
 
@@ -292,6 +290,7 @@ export interface SortableOptions {
   disabled?: boolean
 }
 
+// Attachment making an HTML table sortable by clicking column headers (click again to flip direction)
 export const sortable =
   (options: SortableOptions = {}) =>
   (node: HTMLElement) => {
@@ -305,8 +304,6 @@ export const sortable =
 
     if (disabled) return undefined
 
-    // This action can be applied to standard HTML tables to make them sortable by
-    // clicking on column headers (and clicking again to toggle sorting direction)
     const headers = Array.from(
       node.querySelectorAll<HTMLTableCellElement>(header_selector),
     )
@@ -332,7 +329,7 @@ export const sortable =
     headers.forEach((header, idx) => {
       const original_html = header.innerHTML
       const original_style = header.getAttribute(`style`) ?? ``
-      header.style.cursor = `pointer` // add cursor pointer to headers
+      header.style.cursor = `pointer`
 
       const click_handler = () => {
         // reset all headers to unsorted state
@@ -341,10 +338,10 @@ export const sortable =
           state.header.style.cursor = `pointer`
         }
         if (idx === sort_col_idx) {
-          sort_dir *= -1 // reverse sort direction
+          sort_dir *= -1
         } else {
-          sort_col_idx = idx // set new sort column index
-          sort_dir = 1 // reset sort direction
+          sort_col_idx = idx
+          sort_dir = 1
         }
         header.classList.add(sort_dir > 0 ? asc_class : desc_class)
         Object.assign(header.style, sorted_style)
@@ -422,6 +419,8 @@ type OwnedHighlight = {
 
 const owned_highlights = new WeakMap<object, Map<string, OwnedHighlight>>()
 
+const HAS_NON_ASCII = /\P{ASCII}/u
+
 const sync_owned_highlight = (
   registry: HighlightRegistry,
   css_class: string,
@@ -493,11 +492,14 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     const node_length = original_text.length
     let original_starts: number[] | null = null
     let original_ends: number[] | null = null
+    // skip for ASCII, which is never astral nor length-changing when lowercased
     let needs_offset_map = false
-    for (const character of original_text) {
-      if (character.length > 1 || character.toLowerCase().length !== character.length) {
-        needs_offset_map = true
-        break
+    if (HAS_NON_ASCII.test(original_text)) {
+      for (const char of original_text) {
+        if (char.length > 1 || char.toLowerCase().length !== char.length) {
+          needs_offset_map = true
+          break
+        }
       }
     }
     if (needs_offset_map) {
@@ -620,7 +622,6 @@ function clear_tooltip() {
   show_timeout_owner = null
   if (hide_timeout) clearTimeout(hide_timeout)
   if (current_tooltip) {
-    // Remove aria-describedby from the trigger element
     current_tooltip.owner_element?.removeAttribute(`aria-describedby`)
     current_tooltip.remove()
     current_tooltip = null
@@ -631,7 +632,6 @@ function clear_tooltip() {
 const owns_tooltip_state = (element: HTMLElement): boolean =>
   current_tooltip?.owner_element === element || show_timeout_owner === element
 
-// Options for the tooltip attachment.
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
@@ -673,7 +673,6 @@ export const tooltip =
 
     const cleanup_functions: (() => void)[] = []
 
-    // Handle disabled option
     if (options.disabled === true) return undefined
 
     // Track current input method for 'touch-devices' option (runtime detection, not capability sniffing)
@@ -993,7 +992,7 @@ export const tooltip =
           filter: var(--tooltip-shadow, drop-shadow(0 2px 8px rgba(0,0,0,0.25))); transition: opacity 0.15s ease-out;
         `
 
-          // Apply custom styles if provided (these will override base styles due to CSS specificity)
+          // Applied after base cssText so they win, preserving any !important priority
           if (options.style) {
             const custom_style = document.createElement(`div`).style
             custom_style.cssText = options.style
@@ -1103,10 +1102,7 @@ export const tooltip =
 
       events.forEach((event, idx) => element.addEventListener(event, handlers[idx]))
 
-      // Hide tooltip when user scrolls the page (not element-level scrolls like input fields)
       globalThis.addEventListener(`scroll`, handle_scroll, true)
-
-      // Add Escape key listener to dismiss tooltip
       document.addEventListener(`keydown`, handle_keydown)
 
       // Watch for element removal from DOM to prevent orphaned tooltips
@@ -1147,7 +1143,6 @@ export const tooltip =
       }
     }
 
-    // Setup tooltip for main node and children
     const main_cleanup = setup_tooltip(node)
     if (main_cleanup) cleanup_functions.push(main_cleanup)
 
@@ -1184,16 +1179,10 @@ export const click_outside =
       if (!(target instanceof Element)) return
       const path = event.composedPath()
 
-      // Check if click target is the node or inside it
       if (path.includes(node)) return
-
-      // Check excluded selectors
       if (exclude.some((selector) => target.closest(selector))) return
 
-      // Execute callback if provided, passing node and full config
       callback?.(node, { callback, enabled, exclude })
-
-      // Dispatch custom event if click was outside
       node.dispatchEvent(new CustomEvent(`outside-click`))
     }
 

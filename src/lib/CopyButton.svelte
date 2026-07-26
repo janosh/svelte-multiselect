@@ -118,7 +118,11 @@
     try {
       await navigator.clipboard.writeText(content)
       state = `success`
-      on_copy_success(content)
+      try {
+        on_copy_success(content)
+      } catch (error) {
+        console.error(error) // the copy succeeded, so a throwing callback is not a failure
+      }
     } catch (error) {
       console.error(error)
       state = `error`

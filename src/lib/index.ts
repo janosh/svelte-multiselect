@@ -21,7 +21,6 @@ export { default as Wiggle } from './Wiggle.svelte'
 // See https://github.com/janosh/svelte-multiselect/issues/87
 // Polyfill copied from
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
-// exported for testing
 export function scroll_into_view_if_needed_polyfill(
   element: Element,
   centerIfNeeded: boolean = true,

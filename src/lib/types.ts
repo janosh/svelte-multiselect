@@ -67,7 +67,6 @@ export interface MultiSelectEvents<T extends Option = Option> {
   ongroupToggle?: (data: { group: string; collapsed: boolean }) => unknown // fires when group is collapsed/expanded
   oncollapseAll?: (data: { groups: string[] }) => unknown // fires when all groups are collapsed
   onexpandAll?: (data: { groups: string[] }) => unknown // fires when all groups are expanded
-  // Additional events for user feedback and analytics
   onsearch?: (data: { searchText: string; matchingOptions: T[] }) => unknown // fires (debounced) when search text changes
   onmaxreached?: (data: {
     selected: T[]
@@ -133,7 +132,7 @@ export type GroupHeaderProps<T extends Option = Option> = {
   collapsed: boolean
 }
 
-// Type for grouped options structure (used internally by MultiSelect)
+// shape of one option group in the dropdown
 export type GroupedOptions<T extends Option = Option> = {
   group: string | null
   options: T[]
@@ -297,7 +296,6 @@ export interface MultiSelectProps<T extends Option = Option>
       }) => string)
     | null
   liSelectAllClass?: string // CSS class for the select all <li>
-  // Dynamic options loading for large datasets (https://github.com/janosh/svelte-multiselect/discussions/342)
   // Pass a function for simple usage, or an object with config for advanced usage
   loadOptions?: LoadOptions<T>
   // Animation parameters for selected options flip animation (https://github.com/janosh/svelte-multiselect/issues/356)
@@ -308,7 +306,7 @@ export interface MultiSelectProps<T extends Option = Option>
   collapsedGroups?: Set<string> // externally controlled collapsed state (bindable)
   groupSelectAll?: boolean // add "select all" action per group header (toggles between select/deselect)
   ungroupedPosition?: `first` | `last` // where to render options without a group
-  groupSortOrder?: `none` | `asc` | `desc` | ((a: string, b: string) => number) // sort groups alphabetically
+  groupSortOrder?: `none` | `asc` | `desc` | ((a: string, b: string) => number) // group ordering, default 'none' (source order); 'asc'/'desc' sort alphabetically or pass a comparator
   searchExpandsCollapsedGroups?: boolean // auto-expand collapsed groups when search matches their options
   searchMatchesGroups?: boolean // include group name in search matching
   keyboardExpandsCollapsedGroups?: boolean // auto-expand collapsed groups when navigating with arrow keys

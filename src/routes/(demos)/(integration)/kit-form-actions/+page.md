@@ -16,12 +16,14 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
 
   let { form }: { form: ActionData } = $props()
 
+  // the action prefixes the json error with the parse message, so key off the prefix
   let err_msg = $derived(
     {
-      json: 'The email field is required',
-      array: 'The email field is required',
+      missing: 'Please select at least one color',
+      json: 'Could not parse the submitted colors',
+      array: 'Expected a list of colors',
       boring: 'Boring answer!',
-    }[form?.error as string],
+    }[(form?.error as string)?.split(':')[0]],
   )
 </script>
 
@@ -90,27 +92,32 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
 The above code needs to be in a `+page.svelte` file with the following `+page.server.ts` file in the same directory next to it.
 
 ```ts
-import { invalid } from '@sveltejs/kit'
+import { fail } from '@sveltejs/kit'
+import type { Actions } from './$types'
 
 export const actions = {
   'validate-form': async ({ request }) => {
     const data = await request.formData()
     let colors = data.get(`colors`)
 
+    if (!colors || typeof colors !== `string`) {
+      return fail(400, { colors, error: `missing` })
+    }
+
     try {
       colors = JSON.parse(colors)
-    } catch (err) {
-      return invalid(400, { colors, error: `json` })
+    } catch (error) {
+      return fail(400, { colors, error: `json: ${String(error)}` })
     }
 
     if (!Array.isArray(colors)) {
-      return invalid(400, { colors, error: `array` })
+      return fail(400, { colors, error: `array` })
     }
     if (colors.length === 1 && colors[0] === `Red`) {
-      return invalid(400, { colors, error: `boring` })
+      return fail(400, { colors, error: `boring` })
     }
 
     return { colors, success: true }
   },
-}
+} satisfies Actions
 ```

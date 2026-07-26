@@ -34,10 +34,8 @@
   // Use reactive state for node refs to avoid binding_property_non_reactive warning
   let node_refs = $state<(HTMLDetailsElement | null)[]>([])
 
-  // Whether any <details> is open (for button text). The DOM `open` property is
-  // not reactive, so this is $state synced from the native toggle event (which
-  // fires for user clicks and programmatic changes), toggle_all, and the
-  // node_refs $effect below (the toggle event doesn't fire for pre-opened details).
+  // DOM `open` isn't reactive, so track it in $state synced from the toggle event
+  // and toggle_all, plus the $effect below (toggle doesn't fire for pre-opened details)
   let any_open = $state(false)
   const sync_any_open = () => {
     any_open = node_refs.some((node) => node?.open)
@@ -45,7 +43,6 @@
 
   // Trim stale refs when files shrink and sync node_refs back to files.node for external access
   $effect(() => {
-    // Trim stale references when files array shrinks to prevent memory leaks
     if (node_refs.length > files.length) {
       node_refs.splice(files.length)
     }
@@ -88,9 +85,9 @@
   const resolve_lang = (file: File): string =>
     file.language ?? lang_from_title(file.title) ?? default_lang
 
-  // Lazy-loaded syntax highlighter using starry-night (CSS already loaded in app.css).
-  // Deliberately does NOT import from ./live-examples/highlighter.ts, which
-  // eagerly initializes starry-night with all grammars at module load.
+  // Lazy-loaded starry-night (CSS already loaded in app.css). Deliberately not
+  // imported from ./live-examples/highlighter.ts, whose top-level await initializes
+  // starry-night at module load.
   let highlighter:
     | {
         highlight: (code: string, scope: string) => HastNode

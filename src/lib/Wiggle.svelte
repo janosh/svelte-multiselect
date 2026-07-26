@@ -31,7 +31,6 @@
     spring_options,
   )
 
-  // update spring physics when options change
   $effect(() => {
     store.stiffness = spring_options.stiffness
     store.damping = spring_options.damping

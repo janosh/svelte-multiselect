@@ -192,7 +192,12 @@ describe(`fuzzy_match`, () => {
     [`#`, `#hashtag`, true],
     [`/`, `path/to/file`, true],
     [`form submit`, `form\n submit`, true],
+    // runs collapse in the search; every whitespace char maps to a space in the target
     [`a  b`, `a b`, true],
+    [`a b`, `a\tb`, true],
+    [`a\tb`, `a b`, true],
+    [`a b`, `a\u00A0b`, true],
+    [`a b c`, `a\t\nb  c`, true],
     // Numbers and unicode
     [`123`, `abc123def`, true],
     [`ñ`, `niño`, true],

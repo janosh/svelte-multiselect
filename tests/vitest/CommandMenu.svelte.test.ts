@@ -9,6 +9,17 @@ const mock_actions = [
   { label: `action 3`, action: vi.fn() },
 ]
 
+const menu_input = () => doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+
+// type into the menu's search input: set value, fire input event, flush a tick
+async function type_search(text: string): Promise<HTMLInputElement> {
+  const input = menu_input()
+  input.value = text
+  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await tick()
+  return input
+}
+
 // tests that exercise the non-modal fallback assign showModal directly rather than
 // spying, so vi.restoreAllMocks() in the global setup can't undo it
 const original_show_modal = Object.getOwnPropertyDescriptor(
@@ -19,6 +30,9 @@ afterEach(() => {
   if (original_show_modal) {
     Object.defineProperty(HTMLDialogElement.prototype, `showModal`, original_show_modal)
   } else Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
+  // recents tests write to localStorage; clear here so a failing test can't leak
+  // stored recents into the next one
+  localStorage.clear()
 })
 
 test.each([
@@ -88,7 +102,7 @@ test.each([
     )
 
     if (should_open) {
-      expect(document.activeElement).toBe(doc_query(`dialog input[autocomplete]`))
+      expect(document.activeElement).toBe(menu_input())
     }
   },
 )
@@ -145,7 +159,7 @@ test.each([`Escape`, `x`])(
       bubbles: true,
       cancelable: true,
     })
-    doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(event)
+    menu_input().dispatchEvent(event)
     await tick()
 
     expect(props.open).toBe(false)
@@ -181,42 +195,34 @@ test.each([
   },
 )
 
-test(`opens a labelled modal dialog`, async () => {
-  const show_modal = vi.fn(function showModal(this: HTMLDialogElement) {
-    this.setAttribute(`open`, ``)
-  })
-  HTMLDialogElement.prototype.showModal = show_modal
-  const props = {
-    actions: mock_actions,
-    aria_label: `Run command`,
-    open: true,
-    fade_duration: 0,
-  }
-
-  mount(CommandMenu, { target: document.body, props })
-  await tick()
-
-  const dialog = doc_query<HTMLDialogElement>(`dialog`)
-  expect(dialog.getAttribute(`aria-label`)).toBe(`Run command`)
-  expect(show_modal).toHaveBeenCalledTimes(1)
-})
-
-test.each([`throws`, `unavailable`] as const)(
-  `falls back to open attribute when showModal is %s`,
+// showModal is preferred, but a throwing or missing implementation must still end up
+// with an open, labelled dialog via the plain `open` attribute fallback
+test.each([`available`, `throws`, `unavailable`] as const)(
+  `opens a labelled dialog when showModal is %s`,
   async (show_modal_state) => {
-    if (show_modal_state === `throws`) {
-      HTMLDialogElement.prototype.showModal = vi.fn(() => {
-        throw new Error(`showModal failed`)
-      })
-    } else Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
+    const show_modal = vi.fn(function showModal(this: HTMLDialogElement) {
+      if (show_modal_state === `throws`) throw new Error(`showModal failed`)
+      this.setAttribute(`open`, ``)
+    })
+    if (show_modal_state === `unavailable`) {
+      Reflect.deleteProperty(HTMLDialogElement.prototype, `showModal`)
+    } else HTMLDialogElement.prototype.showModal = show_modal
 
     mount(CommandMenu, {
       target: document.body,
-      props: { actions: mock_actions, open: true, fade_duration: 0 },
+      props: {
+        actions: mock_actions,
+        aria_label: `Run command`,
+        open: true,
+        fade_duration: 0,
+      },
     })
     await tick()
 
-    expect(doc_query<HTMLDialogElement>(`dialog`).hasAttribute(`open`)).toBe(true)
+    const dialog = doc_query<HTMLDialogElement>(`dialog`)
+    expect(dialog.getAttribute(`aria-label`)).toBe(`Run command`)
+    expect(dialog.hasAttribute(`open`)).toBe(true)
+    expect(show_modal).toHaveBeenCalledTimes(show_modal_state === `unavailable` ? 0 : 1)
   },
 )
 
@@ -237,7 +243,7 @@ test(`handles action selection and execution`, async () => {
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  const input_el = doc_query(`dialog div.multiselect input[autocomplete]`)
+  const input_el = menu_input()
 
   // Navigate to second action and select it
   input_el.dispatchEvent(
@@ -267,14 +273,9 @@ test(`ignores user-created options without action handlers`, async () => {
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  const input_el = doc_query<HTMLInputElement>(
-    `dialog div.multiselect input[autocomplete]`,
-  )
-  input_el.value = `custom command`
-  input_el.dispatchEvent(new Event(`input`, { bubbles: true }))
-  await tick()
+  await type_search(`custom command`)
 
-  expect(() => doc_query<HTMLLIElement>(`dialog li.user-msg`).click()).not.toThrow()
+  doc_query<HTMLLIElement>(`dialog li.user-msg`).click()
   await tick()
 
   expect(action).not.toHaveBeenCalled()
@@ -326,9 +327,7 @@ test(`keeps dialog open when clicking inside the menu`, async () => {
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  doc_query(`dialog div.multiselect input[autocomplete]`).dispatchEvent(
-    new MouseEvent(`click`, { bubbles: true }),
-  )
+  menu_input().dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
   await tick()
 
   expect(props.open).toBe(true)
@@ -360,7 +359,7 @@ test(`keeps dialog open when clicking a nested portalled option`, async () => {
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+  const input = menu_input()
   const real_listbox_id = input.getAttribute(`aria-controls`)
   if (!real_listbox_id) throw new Error(`Menu input has no aria-controls listbox id`)
   const listbox_id = `${real_listbox_id}-portalled`
@@ -420,7 +419,7 @@ test(`applies custom styles and props correctly`, async () => {
   const select_wrapper = doc_query(`dialog div.multiselect`)
   expect(select_wrapper.classList.contains(custom_class)).toBe(true)
 
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
+  const input = menu_input()
   expect(input.placeholder).toBe(custom_placeholder)
 
   const dialog = doc_query<HTMLDialogElement>(`dialog`)
@@ -539,10 +538,7 @@ test.each([
     props: { open: true, actions, fuzzy, fade_duration: 0 },
   })
 
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-  input.value = search
-  input.dispatchEvent(new Event(`input`, { bubbles: true }))
-  await tick()
+  await type_search(search)
 
   const visible_options = document.querySelectorAll(`dialog ul.options li:not(.hidden)`)
   expect(visible_options).toHaveLength(expected.length)
@@ -570,9 +566,7 @@ test(`handles bindable props correctly`, async () => {
 
   expect(props.dialog).toBeInstanceOf(HTMLDialogElement)
   expect(props.input).toBeInstanceOf(HTMLInputElement)
-  expect(doc_query(`dialog input[autocomplete]`).getAttribute(`aria-label`)).toBe(
-    `Search commands`,
-  )
+  expect(menu_input().getAttribute(`aria-label`)).toBe(`Search commands`)
   expect(document.activeElement).toBe(props.input)
 })
 
@@ -592,7 +586,6 @@ test(`selects the first enabled action and preserves pointer selection across gr
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
   expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
 
   const beta_option = [...document.querySelectorAll(`li[role=option]`)].find((option) =>
@@ -615,9 +608,7 @@ test(`selects the first enabled action and preserves pointer selection across gr
   expect(props.activeIndex).toBe(1)
   expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
 
-  input.value = `alpha`
-  input.dispatchEvent(new Event(`input`, { bubbles: true }))
-  await tick()
+  await type_search(`alpha`)
   expect(doc_query(`li.active`).textContent).toContain(`Alpha`)
 })
 
@@ -692,7 +683,7 @@ test(`preserves duplicate action identity across independent key changes`, async
   await tick()
   expect(props.activeIndex).toBe(2)
 
-  doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
+  menu_input().dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
   )
   expect(rebuilt_action).toHaveBeenCalledExactlyOnceWith(`Renamed duplicate`)
@@ -746,7 +737,7 @@ test(`preserves the active action by its unique ID amid rebuilt duplicates`, asy
 
   expect(props.activeIndex).toBe(2)
   expect(doc_query(`li.active`)).toBe(active_option)
-  doc_query<HTMLInputElement>(`dialog input[autocomplete]`).dispatchEvent(
+  menu_input().dispatchEvent(
     new KeyboardEvent(`keydown`, { key: `Enter`, bubbles: true }),
   )
   expect(beta_action).toHaveBeenCalledExactlyOnceWith(`Rebuilt Beta`)
@@ -814,7 +805,6 @@ test(`renders and searches action descriptions, metadata, badges, and keywords`,
   })
   await tick()
 
-  expect(shortcut_kbd_parts()).toEqual([`Ctrl`, `⇧`, `S`])
   expect(doc_query(`.cmd-description`).textContent).toBe(`Write buffer to disk`)
   expect(doc_query(`.cmd-metadata`).textContent).toBe(`Workspace · Modified`)
   expect(doc_query(`.cmd-badge`).textContent).toBe(`File`)
@@ -824,18 +814,13 @@ test(`renders and searches action descriptions, metadata, badges, and keywords`,
   )
   expect(quit_li?.querySelector(`kbd`)).toBeNull()
 
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-  input.value = `workspace persist`
-  input.dispatchEvent(new Event(`input`, { bubbles: true }))
-  await tick()
+  await type_search(`workspace persist`)
   expect(option_labels()).toHaveLength(1)
   expect(option_labels()[0]).toContain(`save file`)
 })
 
 async function search_pagefind(query: string): Promise<void> {
-  const input = doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
-  input.value = query
-  input.dispatchEvent(new Event(`input`, { bubbles: true }))
+  await type_search(query)
   await vi.runAllTimersAsync()
   await tick()
 }
@@ -1208,18 +1193,23 @@ describe(`PageSearch`, () => {
   })
 })
 
-test(`renders plus-key shortcut hints`, async () => {
+test.each([
+  [`ctrl+shift+s`, [`Ctrl`, `⇧`, `S`]],
+  [`meta+enter`, [`⌘`, `↵`]],
+  [`ctrl++`, [`Ctrl`, `+`]], // '+' is both the separator and the key
+  [`ctrl+tab`, [`Ctrl`, `Tab`]], // segment without a symbol is title-cased
+])(`renders shortcut %s as %j`, async (shortcut, expected_parts) => {
   mount(CommandMenu, {
     target: document.body,
     props: {
       open: true,
       fade_duration: 0,
-      actions: [{ label: `zoom in`, action: vi.fn(), shortcut: `ctrl++` }],
+      actions: [{ label: `zoom in`, action: vi.fn(), shortcut }],
     },
   })
   await tick()
 
-  expect(shortcut_kbd_parts()).toEqual([`Ctrl`, `+`])
+  expect(shortcut_kbd_parts()).toEqual(expected_parts)
 })
 
 test(`plain actions without shortcut/description use default option rendering`, async () => {
@@ -1320,6 +1310,38 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
   expect(action).not.toHaveBeenCalled()
 })
 
+// Shift counts as typing, not as a chord, so neither may run nor steal the keystroke
+// inside an editable target. The plain div keeps the guard honest: without it,
+// suppressing these shortcuts everywhere would still pass.
+test.each([`n`, `shift+n`])(
+  `global shortcut %s fires only outside editable targets`,
+  (shortcut) => {
+    const action = vi.fn()
+    mount(CommandMenu, {
+      target: document.body,
+      props: { actions: [{ label: `new note`, action, shortcut }], fade_duration: 0 },
+    })
+    const press = (tag: string) => {
+      const target = document.createElement(tag)
+      document.body.append(target)
+      const event = new KeyboardEvent(`keydown`, {
+        key: `n`,
+        shiftKey: shortcut.startsWith(`shift`),
+        bubbles: true,
+        cancelable: true,
+      })
+      target.dispatchEvent(event)
+      return event.defaultPrevented
+    }
+
+    expect(press(`textarea`)).toBe(false)
+    expect(action).not.toHaveBeenCalled()
+
+    expect(press(`div`)).toBe(true)
+    expect(action).toHaveBeenCalledExactlyOnceWith(`new note`)
+  },
+)
+
 test(`global shortcuts skip disabled duplicate bindings`, async () => {
   const disabled_action = vi.fn()
   const enabled_action = vi.fn()
@@ -1364,7 +1386,7 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   expect(option_labels()).toEqual([`alpha`, `beta`, `gamma`])
 
   // trigger gamma via keyboard (ArrowDown x2 + Enter)
-  const input_el = doc_query(`dialog div.multiselect input[autocomplete]`)
+  const input_el = menu_input()
   for (let idx = 0; idx < 2; idx++) {
     input_el.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `ArrowDown`, bubbles: true }),
@@ -1381,7 +1403,6 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   props.open = true
   await tick()
   expect(option_labels()).toEqual([`gamma`, `alpha`, `beta`])
-  localStorage.removeItem(storage_key)
 })
 
 test(`recent_actions_key uses action ids for duplicate labels`, async () => {
@@ -1404,7 +1425,6 @@ test(`recent_actions_key uses action ids for duplicate labels`, async () => {
 
   expect(actions[0].action).toHaveBeenCalledExactlyOnceWith(`save`)
   expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual([`mixed`])
-  localStorage.removeItem(storage_key)
 })
 
 // pre-existing recents-storage contents -> dropdown order on initial open
@@ -1467,7 +1487,6 @@ test.each([
     await tick()
 
     expect(option_labels()).toEqual(expected_order)
-    localStorage.removeItem(storage_key)
   },
 )
 
@@ -1514,6 +1533,5 @@ test.each([
     await tick()
 
     expect(JSON.parse(localStorage.getItem(storage_key) ?? `[]`)).toEqual(expected)
-    localStorage.removeItem(storage_key)
   },
 )
