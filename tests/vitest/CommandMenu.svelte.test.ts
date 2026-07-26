@@ -1320,8 +1320,7 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
   expect(action).not.toHaveBeenCalled()
 })
 
-// Neither may steal the keystroke (nor run) mid-sentence. Shift counts as typing:
-// it is how a capital letter is entered, unlike a Ctrl/Meta/Alt chord.
+// Neither may run nor steal the keystroke. Shift counts as typing, not as a chord.
 test.each([
   [`a bare key`, `n`, {}],
   [`shift only`, `shift+n`, { shiftKey: true }],

@@ -51,18 +51,17 @@ test(`hides synchronously when open flips false`, () => {
   action.destroy()
 })
 
-// target_node is a positioning concern, so it decides visibility only while the
-// node is portalled. Once it is back home, `open` alone governs.
+// target_node is positioning only: it gates visibility while portalled, not at home
 test(`losing the target hides while portalled but not once deactivated`, () => {
   const { home, target, node } = create_fixture()
   const action = portal_action(node, { active: true, open: true, target_node: target })
   expect(node.hidden).toBe(false)
 
-  // still portalled with nowhere to anchor: there is no sane position to paint at
+  // portalled with nowhere to anchor: no sane position to paint at
   action.update({ active: true, open: true, target_node: null })
   expect(node.hidden).toBe(true)
 
-  // back in the component, an open dropdown renders inline and needs no target
+  // back home, an open dropdown renders inline and needs no target
   action.update({ active: false, open: true, target_node: null })
   expect(node.parentNode).toBe(home)
   expect(node.hidden).toBe(false)

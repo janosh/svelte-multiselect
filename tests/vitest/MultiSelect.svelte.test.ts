@@ -2547,8 +2547,7 @@ test(`remove all button does not remove items when minSelect constraint would be
 })
 
 test(`remove all button is hidden when selected.length equals minSelect`, async () => {
-  // above, selected.length <= 1 hides the button on its own, so minSelect is never
-  // the reason - here removal is blocked yet the button would still render
+  // above, selected.length <= 1 hides the button anyway; here minSelect is the reason
   mount(MultiSelect, {
     target: document.body,
     props: { options: [`Red`, `Green`], selected: [`Red`, `Green`], minSelect: 2 },
@@ -3305,8 +3304,7 @@ test.each([
 })
 
 test(`empty duplicateOptionMsg leaves no phantom navigable row`, async () => {
-  // a blank message renders nothing, so it must not stay navigable either - else
-  // ArrowDown past the last option points aria-activedescendant at a missing element
+  // a blank message renders nothing, so it must not stay navigable either
   mount(MultiSelect, {
     target: document.body,
     props: { options: [`ab`, `abc`], selected: [`ab`], duplicateOptionMsg: `` },
@@ -3316,9 +3314,8 @@ test(`empty duplicateOptionMsg leaves no phantom navigable row`, async () => {
   input.dispatchEvent(fresh_key(`ArrowDown`))
   input.dispatchEvent(fresh_key(`ArrowDown`))
   await tick()
-  // 'abc' at index 0 is the only match, so the second ArrowDown has nowhere to go.
-  // Without the fix it would advance onto the blank duplicate row and leave
-  // aria-activedescendant pointing at an element that was never rendered.
+  // 'abc' at index 0 is the only match, so the second ArrowDown has nowhere to go;
+  // without the fix it lands on the blank row and points at an unrendered element
   const active_id = input.getAttribute(`aria-activedescendant`) ?? ``
   expect(active_id).toMatch(/-opt-0$/u)
   expect(document.querySelector(`#${CSS.escape(active_id)}`)).not.toBeNull()

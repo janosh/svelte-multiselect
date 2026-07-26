@@ -1301,8 +1301,7 @@
       if (!has_search_text || input_text_is_committed || show_all_input_options)
         return null
       if (duplicates !== true && is_label_selected(searchText)) {
-        // a blank message yields no row, so report no message at all rather than an
-        // invisible one that is still navigable and still blocks the create row below
+        // a blank message must not leave a navigable row that blocks the create row
         return duplicateOptionMsg ? { type: `dupe`, msg: duplicateOptionMsg } : null
       }
       if (load_options_pending) return null

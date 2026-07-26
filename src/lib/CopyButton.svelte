@@ -123,8 +123,7 @@
       state = `error`
       on_copy_error(error, content)
     }
-    // the copy already succeeded, so a throwing callback must neither be reported as
-    // a copy failure nor derail the reset timer below
+    // the copy already succeeded, so a throwing callback is not a copy failure
     if (state === `success`) {
       try {
         on_copy_success(content)

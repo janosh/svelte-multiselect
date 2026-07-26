@@ -11,8 +11,7 @@ export interface HastNode {
   children?: HastNode[]
 }
 
-// each replaceAll below rebuilds the whole string, and most highlighted tokens
-// contain nothing to escape, so check once before doing any of that work
+// each replaceAll rebuilds the whole string, and most tokens have nothing to escape
 const HAS_ESCAPABLE = /[&<>]/u
 
 // Escape HTML special characters in text content (not for attribute values)
@@ -21,8 +20,7 @@ export const escape_html_text = (str: string): string =>
     ? str.replaceAll(`&`, `&amp;`).replaceAll(`<`, `&lt;`).replaceAll(`>`, `&gt;`)
     : str
 
-// starry-night emits one element per token, so rather than allocate an array to
-// join at each of the thousands of nodes per code block, concatenate in place
+// thousands of nodes per code block, so concatenate rather than array-and-join each
 const serialize_children = (children: HastNode[] | undefined): string => {
   let html = ``
   for (const child of children ?? []) html += hast_to_html(child)

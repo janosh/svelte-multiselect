@@ -5,8 +5,8 @@ import { doc_query } from './index'
 const preprocess = (content: string, filename?: string) =>
   heading_ids().markup({ content, filename })
 
-// Decode VLQ here rather than reuse the encoder under test, so a self-consistent but wrong
-// encoding can't pass. Returns [generated_column, source_line, source_column] per segment.
+// Decoded independently of the encoder under test, so a self-consistent but wrong
+// encoding can't pass. Yields [generated_column, source_line, source_column] per segment.
 const decode_mappings = (mappings: string): [number, number, number][][] => {
   const base64 = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
   let source_line = 0
@@ -51,8 +51,7 @@ describe(`heading_ids preprocessor`, () => {
     })
   })
 
-  // Svelte preprocessors that rewrite markup without an accurate map make every downstream
-  // diagnostic point at the wrong place; svelte-check-rs rejects such components outright.
+  // an inaccurate map sends every downstream diagnostic to the wrong place
   it.each([
     [`one heading per line`, `<h2>A</h2>\n<h2>B</h2>`],
     [`indented heading`, `<div>\n  <h2>Nested</h2>\n</div>`],
@@ -90,9 +89,8 @@ describe(`heading_ids preprocessor`, () => {
         expect(original, `line ${line_idx} col ${generated_column}`).toBe(generated)
       })
 
-      // A shifted line must close with a segment mapping its new end to the original end,
-      // else consumers resolve end-of-line positions back to the pre-shift column.
-      // Only insertions change a line's length, so differing lengths means it shifted.
+      // A shifted line (only insertions change length) must close with a segment mapping
+      // its new end to the original, else end-of-line resolves to the pre-shift column.
       if (generated_line.length !== source_line.length) {
         const last_segment = segments.at(-1)
         expect([last_segment?.[0], last_segment?.[2]], `line ${line_idx} end`).toEqual([
@@ -101,8 +99,7 @@ describe(`heading_ids preprocessor`, () => {
         ])
       }
     }
-    // every id the preprocessor added must show up as its own span, so a map that silently
-    // drops insertions can't pass by having nothing left to contradict
+    // every inserted id must appear as its own span, so dropping them can't pass
     const count_ids = (text: string) => (text.match(/ id="/gu) ?? []).length
     expect(mapped_insertions).toBe(count_ids(code) - count_ids(source))
   })

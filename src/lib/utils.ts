@@ -114,10 +114,8 @@ export function parse_shortcut(shortcut: string): {
   return { key, ctrl, shift, alt, meta }
 }
 
-// Every registered shortcut is re-parsed on every keydown, so cache the parses.
-// Deliberately not inside parse_shortcut: that is public API whose callers own
-// the object they get back and may mutate it. Bounded so callers generating
-// shortcut strings dynamically can't grow the map without limit.
+// Every registered shortcut is re-parsed on every keydown. Not cached inside
+// parse_shortcut: that is public API whose callers own (and may mutate) the result.
 const MAX_PARSED_SHORTCUTS = 1000
 const parsed_shortcuts = new Map<string, ReturnType<typeof parse_shortcut>>()
 
@@ -144,8 +142,7 @@ export function matches_shortcut(
   )
 }
 
-// True when the event originated inside a text-entry control, where a bare
-// character key is ordinary typing rather than a hotkey
+// True when the event came from a text-entry control, where a bare key is typing
 export const is_editable_event_target = (target: EventTarget | null): boolean =>
   target instanceof Element &&
   target.closest(
@@ -167,9 +164,8 @@ export function values_equal(val1: unknown, val2: unknown): boolean {
   return false
 }
 
-// Both replaceAll calls below rebuild the whole string, so bail out before doing
-// that work: labels and command text rarely contain tabs, newlines or runs of
-// spaces, and this normalization runs once per option on every keystroke.
+// Runs once per option on every keystroke and each replaceAll rebuilds the whole
+// string, so skip it for the common case of no tabs, newlines or repeated spaces.
 const HAS_COLLAPSIBLE_WHITESPACE = /\s\s|[^\S ]/u
 const HAS_NON_PLAIN_WHITESPACE = /[^\S ]/u
 
@@ -180,19 +176,16 @@ export function fuzzy_match_indices(
   search_text: string,
   target_text: string,
 ): number[] | null {
-  // whitespace runs collapse in the search; every whitespace character in the
-  // target maps to a plain space
+  // collapse runs in the search; map every whitespace char in the target to a space
   let search = search_text.toLowerCase()
   if (HAS_COLLAPSIBLE_WHITESPACE.test(search)) search = search.replaceAll(/\s+/gu, ` `)
   let target = target_text.toLowerCase()
   if (HAS_NON_PLAIN_WHITESPACE.test(target)) target = target.replaceAll(/\s/gu, ` `)
 
-  // Greedy leftmost subsequence match. indexOf scans natively and the cursor only
-  // moves forward, so the total scanned length stays linear in the target.
+  // Greedy leftmost match; pos only moves forward, so scanning stays linear.
   const indices: number[] = []
   let pos = -1
-  // indexing by code unit, not for...of: iterating code points would match an
-  // astral character as one unit and emit one index where callers expect two
+  // by code unit, not for...of: code points emit one index per astral char, two expected
   // oxlint-disable-next-line typescript/prefer-for-of
   for (let search_idx = 0; search_idx < search.length; search_idx++) {
     pos = target.indexOf(search[search_idx], pos + 1)

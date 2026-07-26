@@ -163,8 +163,7 @@ test(`calls on_copy_success with copied content`, async () => {
 })
 
 test(`a throwing on_copy_success is not reported as a copy failure`, async () => {
-  // the clipboard write already succeeded, so the callback's error must not be
-  // caught by the write's catch and flipped into the error state
+  // the write already succeeded, so its catch must not flip this into the error state
   const on_copy_error = vi.fn()
   const on_copy_success = vi.fn(() => {
     throw new Error(`analytics hook blew up`)

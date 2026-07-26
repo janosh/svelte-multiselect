@@ -151,14 +151,12 @@ describe(`keyboard shortcut parsing`, () => {
 
   test(`parse_shortcut hands back an object the caller owns`, () => {
     const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
-    // prime the parse cache matches_shortcut keeps, so the next parse_shortcut
-    // call would be a cache hit if the two ever shared storage
+    // prime the cache matches_shortcut keeps, so a shared store would be hit next
     expect(matches_shortcut(event, `ctrl+k`)).toBe(true)
 
     const parsed = parse_shortcut(`ctrl+k`)
     parsed.key = `mutated`
-    // handing out the cached object would let this mutation poison every later
-    // parse of the same shortcut, and matches_shortcut along with it
+    // handing out the cached object would let this poison every later parse
     expect(parse_shortcut(`ctrl+k`).key).toBe(`k`)
     expect(matches_shortcut(event, `ctrl+k`)).toBe(true)
   })
@@ -167,8 +165,7 @@ describe(`keyboard shortcut parsing`, () => {
     const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
     const matches = () =>
       [`ctrl+k`, `meta+k`, `ctrl+shift+k`].map((sc) => matches_shortcut(event, sc))
-    // the second pass is all cache hits, where a cache keyed on anything but the
-    // shortcut string would start handing back a neighbour's parse
+    // second pass is all cache hits, where a mis-keyed cache returns a neighbour
     expect(matches()).toEqual([true, false, false])
     expect(matches()).toEqual([true, false, false])
   })
@@ -216,8 +213,7 @@ describe(`fuzzy_match`, () => {
     [`#`, `#hashtag`, true],
     [`/`, `path/to/file`, true],
     [`form submit`, `form\n submit`, true],
-    // whitespace normalization: runs collapse in the search, every whitespace
-    // character maps to a plain space in the target
+    // runs collapse in the search; every whitespace char maps to a space in the target
     [`a  b`, `a b`, true],
     [`a b`, `a\tb`, true],
     [`a\tb`, `a b`, true],

@@ -499,12 +499,11 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     const node_length = original_text.length
     let original_starts: number[] | null = null
     let original_ends: number[] | null = null
-    // The check below allocates a string per character, so skip it for ASCII,
-    // which can neither be astral nor change length when lowercased.
+    // skip for ASCII, which is never astral nor length-changing when lowercased
     let needs_offset_map = false
     if (HAS_NON_ASCII.test(original_text)) {
-      for (const character of original_text) {
-        if (character.length > 1 || character.toLowerCase().length !== character.length) {
+      for (const char of original_text) {
+        if (char.length > 1 || char.toLowerCase().length !== char.length) {
           needs_offset_map = true
           break
         }

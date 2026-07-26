@@ -233,9 +233,8 @@
     if (toggle(event)) return
     // run action hotkeys globally while the menu is closed
     if (open || !global_shortcuts) return
-    // Outside a chord the keystroke is an ordinary character, so firing the hotkey
-    // would both run the action and swallow what the user typed. Shift is absent on
-    // purpose - it is how capital letters are typed, not a chord.
+    // Outside a chord the keystroke is ordinary typing, so firing would run the action
+    // and swallow the character. Shift is excluded: it types capitals, it is no chord.
     const is_chord = event.ctrlKey || event.metaKey || event.altKey
     if (!is_chord && is_editable_event_target(event.target)) return
     const action = actions.find(

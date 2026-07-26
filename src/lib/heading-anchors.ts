@@ -184,8 +184,7 @@ export function heading_ids() {
         }
       }
 
-      // both passes scan the whole file with a lazy [\s\S]*? body, so skip them
-      // for the many .svelte files that contain no heading at all
+      // both passes scan the whole file, so skip them when there is no heading
       if (has_heading.test(content)) {
         // Pass 1 matches line starts (.svelte); pass 2 matches after tags (mdsvex output).
         add_heading_ids(heading_regex_line_start)
