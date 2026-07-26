@@ -5,16 +5,106 @@ import { doc_query } from './index'
 const preprocess = (content: string, filename?: string) =>
   heading_ids().markup({ content, filename })
 
+// Decode VLQ here rather than reuse the encoder under test, so a self-consistent but wrong
+// encoding can't pass. Returns [generated_column, source_line, source_column] per segment.
+const decode_mappings = (mappings: string): [number, number, number][][] => {
+  const base64 = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
+  let source_line = 0
+  let source_column = 0
+  return mappings.split(`;`).map((line) => {
+    let generated_column = 0
+    return line
+      .split(`,`)
+      .filter(Boolean)
+      .map((segment) => {
+        const values: number[] = []
+        let shift = 0
+        let accumulated = 0
+        for (const char of segment) {
+          const digit = base64.indexOf(char)
+          accumulated += (digit & 31) << shift
+          if (digit & 32) shift += 5
+          else {
+            values.push(accumulated & 1 ? -(accumulated >> 1) : accumulated >> 1)
+            shift = 0
+            accumulated = 0
+          }
+        }
+        generated_column += values[0]
+        source_line += values[2]
+        source_column += values[3]
+        return [generated_column, source_line, source_column] as [number, number, number]
+      })
+  })
+}
+
 describe(`heading_ids preprocessor`, () => {
-  it(`maps original markup before and after inserted IDs`, () => {
+  it(`emits map metadata pointing at the original component`, () => {
     const source = `<h2>A</h2>\n<h2>B</h2>`
-    expect(preprocess(source, `Heading.svelte`).map).toEqual({
+    const { map } = preprocess(source, `Heading.svelte`)
+    expect(map).toEqual({
       version: 3,
       names: [],
       sources: [`Heading.svelte`],
       sourcesContent: [source],
-      mappings: `AAAA,GAAG,OAAA,OAAO;AACV,GAAG,OAAA,OAAO`,
+      mappings: expect.any(String),
     })
+  })
+
+  // Svelte preprocessors that rewrite markup without an accurate map make every downstream
+  // diagnostic point at the wrong place; svelte-check-rs rejects such components outright.
+  it.each([
+    [`one heading per line`, `<h2>A</h2>\n<h2>B</h2>`],
+    [`indented heading`, `<div>\n  <h2>Nested</h2>\n</div>`],
+    [`two headings on one line`, `<div><h2>One</h2> <h3>Two</h3></div>`],
+    [`content trailing the heading`, `<h2>Title</h2> trailing text here`],
+    [`non-ASCII heading text`, `<p>x</p>\n<h2>Über Café</h2>\n<p>after</p>`],
+    [`heading that already has an id`, `<h2 id="keep">A</h2>\n<h2>B</h2>`],
+    [`mdsvex single-line output`, `<p>a</p> <h2>First</h2> <p>b</p> <h3>Second</h3>`],
+    [`no headings at all`, `<p>nothing to do</p>\n<span>x</span>`],
+    [`script below the heading`, `<h2>Docs</h2>\n<script>\n  let count = 1\n</script>`],
+  ])(`maps every unchanged span back to its original text (%s)`, (_label, source) => {
+    const { code, map } = preprocess(source, `T.svelte`)
+    const generated_lines = code.split(`\n`)
+    const source_lines = source.split(`\n`)
+    const decoded = decode_mappings(map.mappings)
+    // else empty mappings would make the span assertions below vacuously pass
+    expect(decoded).toHaveLength(source_lines.length)
+
+    let mapped_insertions = 0
+    for (const [line_idx, segments] of decoded.entries()) {
+      const generated_line = generated_lines[line_idx]
+      const source_line = source_lines[line_idx]
+      segments.forEach(([generated_column, mapped_line, mapped_column], seg_idx) => {
+        const span_end = segments[seg_idx + 1]?.[0] ?? generated_line.length
+        const generated = generated_line.slice(generated_column, span_end)
+        // the inserted attribute is the one span with no counterpart in the original
+        if (/^ id="[^"]*"$/u.test(generated)) {
+          mapped_insertions++
+          return
+        }
+        const original = source_lines[mapped_line].slice(
+          mapped_column,
+          mapped_column + generated.length,
+        )
+        expect(original, `line ${line_idx} col ${generated_column}`).toBe(generated)
+      })
+
+      // A shifted line must close with a segment mapping its new end to the original end,
+      // else consumers resolve end-of-line positions back to the pre-shift column.
+      // Only insertions change a line's length, so differing lengths means it shifted.
+      if (generated_line.length !== source_line.length) {
+        const last_segment = segments.at(-1)
+        expect([last_segment?.[0], last_segment?.[2]], `line ${line_idx} end`).toEqual([
+          generated_line.length,
+          source_line.length,
+        ])
+      }
+    }
+    // every id the preprocessor added must show up as its own span, so a map that silently
+    // drops insertions can't pass by having nothing left to contradict
+    const count_ids = (text: string) => (text.match(/ id="/gu) ?? []).length
+    expect(mapped_insertions).toBe(count_ids(code) - count_ids(source))
   })
 
   it.each([
@@ -30,10 +120,6 @@ describe(`heading_ids preprocessor`, () => {
     ],
     // existing attributes are preserved, the id is inserted first
     [`<h2 data-id="foo">Hello</h2>`, `<h2 id="hello" data-id="foo">Hello</h2>`],
-    [
-      `<h2 class="test" data-test="foo">Title</h2>`,
-      `<h2 id="title" class="test" data-test="foo">Title</h2>`,
-    ],
     [
       `<h2 on:click={handler}>Clickable</h2>`,
       `<h2 id="clickable" on:click={handler}>Clickable</h2>`,
@@ -103,12 +189,14 @@ describe(`heading_anchors attachment`, () => {
   const anchor_selector = `a[aria-hidden="true"]`
   const tick = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-  it.each([`h2`, `h6`])(`adds anchor to %s`, (tag: string) => {
-    const container = create_container(`<${tag} id="test">Content</${tag}>`)
+  it.each([`h2`, `h6`])(`adds anchor as last child of %s`, (tag: string) => {
+    const container = create_container(`<${tag} id="test">T <span>x</span></${tag}>`)
     heading_anchors()(container)
     const anchor = container.querySelector(`${tag} ${anchor_selector}`)
     expect(anchor).toBeInstanceOf(HTMLAnchorElement)
     expect(anchor?.getAttribute(`href`)).toBe(`#test`)
+    // appended after existing children rather than prepended or replacing them
+    expect(container.querySelector(tag)?.lastElementChild).toBe(anchor)
   })
 
   it(`handles multiple headings and prevents duplicates`, () => {
@@ -120,11 +208,28 @@ describe(`heading_anchors attachment`, () => {
     expect(container.querySelectorAll(anchor_selector)).toHaveLength(3)
   })
 
-  it(`generates unique IDs for headings without them`, () => {
-    const container = create_container(`<h2>Same</h2><h3>Same</h3>`)
-    heading_anchors()(container)
-    const ids = Array.from(container.querySelectorAll(`h1, h2, h3`)).map((el) => el.id)
-    expect(ids).toEqual([`same`, `same-1`])
+  it.each([
+    [`sibling headings`, `<h2>Same</h2><h3>Same</h3>`, [`same`, `same-1`]],
+    // querySelector('#2024-roadmap') throws SyntaxError since CSS ID selectors
+    // can't start with an unescaped digit - uniqueness check must use getElementById
+    [
+      `digit-leading text (invalid as CSS ID selector)`,
+      `<h2>2024 Roadmap</h2><h3>2024 Roadmap</h3>`,
+      [`2024-roadmap`, `2024-roadmap-1`],
+    ],
+    // guards get_default_headings ordering: a direct-child heading must be processed
+    // before a grandchild in a later sibling, so the duplicate suffix lands on the grandchild
+    [
+      `direct child before a later sibling's grandchild`,
+      `<h2>Dup</h2><div><h3>Dup</h3></div>`,
+      [`dup`, `dup-1`],
+    ],
+  ])(`auto-generates unique ids: %s`, (_desc, html, expected_ids) => {
+    const container = create_container(html)
+    expect(() => heading_anchors()(container)).not.toThrow()
+    const ids = Array.from(container.querySelectorAll(`h2, h3`)).map((el) => el.id)
+    expect(ids).toEqual(expected_ids)
+    expect(container.querySelectorAll(anchor_selector)).toHaveLength(2)
   })
 
   it(`skips headings with no usable text`, () => {
@@ -133,42 +238,6 @@ describe(`heading_anchors attachment`, () => {
     const heading = doc_query(`h2`)
     expect(heading.querySelector(`a`)).toBeNull()
     expect(heading.id).toBe(``) // no id invented for text-less headings
-  })
-
-  it(`handles digit-leading heading text without throwing (invalid as CSS ID selector)`, () => {
-    // querySelector('#2024-roadmap') throws SyntaxError since CSS ID selectors
-    // can't start with an unescaped digit - uniqueness check must use getElementById
-    const container = create_container(`<h2>2024 Roadmap</h2><h3>2024 Roadmap</h3>`)
-    expect(() => heading_anchors()(container)).not.toThrow()
-    const ids = Array.from(container.querySelectorAll(`h2, h3`)).map((el) => el.id)
-    expect(ids).toEqual([`2024-roadmap`, `2024-roadmap-1`])
-    expect(container.querySelectorAll(anchor_selector)).toHaveLength(2)
-  })
-
-  it.each<[string, string, string, boolean]>([
-    [`direct child`, `<h2 id="dc">X</h2>`, `#dc`, true],
-    [`2nd-level (grandchild)`, `<div><h2 id="gc">X</h2></div>`, `#gc`, true],
-    [
-      `3rd-level (too deep)`,
-      `<div><section><h2 id="deep">X</h2></section></div>`,
-      `#deep`,
-      false,
-    ],
-  ])(`default selector: %s → matched: %s`, (_desc, html, id_sel, should_match) => {
-    const container = create_container(html)
-    heading_anchors()(container)
-    const anchor = document.querySelector(`${id_sel} ${anchor_selector}`)
-    if (should_match) expect(anchor).toBeInstanceOf(HTMLAnchorElement)
-    else expect(anchor).toBeNull()
-  })
-
-  it(`processes direct child before a later sibling's grandchild (duplicate-id order)`, () => {
-    // guards get_default_headings ordering: a direct-child heading must be processed
-    // before a grandchild in a later sibling, so the duplicate suffix lands on the grandchild
-    const container = create_container(`<h2>Dup</h2><div><h3>Dup</h3></div>`)
-    heading_anchors()(container)
-    const ids = Array.from(container.querySelectorAll(`h2, h3`)).map((el) => el.id)
-    expect(ids).toEqual([`dup`, `dup-1`])
   })
 
   it(`adds anchors to dynamically inserted headings`, async () => {
@@ -186,9 +255,7 @@ describe(`heading_anchors attachment`, () => {
   })
 
   it(`cleanup disconnects observer and stops processing`, async () => {
-    // Use isolated container with custom selector to avoid interference from other tests
-    const container = document.createElement(`div`)
-    document.body.append(container)
+    const container = create_container()
     const cleanup = heading_anchors({ selector: `h2` })(container)
     expect(cleanup).toBeTypeOf(`function`)
 
@@ -238,17 +305,6 @@ describe(`heading_anchors attachment`, () => {
     )
   })
 
-  it(`anchor has correct href, aria-hidden, and is appended last`, () => {
-    const container = create_container(
-      `<h2 id="my-heading">Test <span>Content</span></h2>`,
-    )
-    heading_anchors()(container)
-    const anchor = container.querySelector(`h2 a`)
-    expect(anchor?.getAttribute(`href`)).toBe(`#my-heading`)
-    expect(anchor?.getAttribute(`aria-hidden`)).toBe(`true`)
-    expect(container.querySelector(`h2`)?.lastElementChild?.tagName).toBe(`A`)
-  })
-
   it(`returns undefined in SSR (no document)`, () => {
     const dummy = document.createElement(`div`)
     const original = globalThis.document
@@ -266,19 +322,19 @@ describe(`heading_anchors attachment`, () => {
     }
   })
 
-  it.each([
-    [`whitespace with id`, `<h2 id="spaces">   </h2>`, undefined, `#spaces`],
-    [
-      `deeply nested with custom selector`,
-      `<div><section><h2 id="deep">X</h2></section></div>`,
-      `h2`,
-      `#deep`,
-    ],
-  ])(`%s → href %s`, (_desc, html, selector, expected_href) => {
+  const deeply_nested = `<div><section><h2 id="deep">X</h2></section></div>`
+  it.each<[string, string, string | undefined, string | null]>([
+    // the default selector uses :scope, so it reaches direct children and grandchildren only
+    [`direct child`, `<h2 id="dc">X</h2>`, undefined, `#dc`],
+    [`2nd-level (grandchild)`, `<div><h2 id="gc">X</h2></div>`, undefined, `#gc`],
+    [`3rd-level (too deep)`, deeply_nested, undefined, null],
+    [`3rd-level via custom selector`, deeply_nested, `h2`, `#deep`],
+    // an explicit id is used verbatim, even when the heading text is only whitespace
+    [`whitespace text with id`, `<h2 id="spaces">   </h2>`, undefined, `#spaces`],
+  ])(`anchors a heading: %s`, (_desc, html, selector, expected_href) => {
     const container = create_container(html)
     heading_anchors({ selector })(container)
-    expect(container.querySelector(anchor_selector)?.getAttribute(`href`)).toBe(
-      expected_href,
-    )
+    const href = container.querySelector(anchor_selector)?.getAttribute(`href`) ?? null
+    expect(href).toBe(expected_href)
   })
 })
