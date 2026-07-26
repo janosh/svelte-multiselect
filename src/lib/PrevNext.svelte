@@ -82,7 +82,7 @@
   function handle_keyup(event: KeyboardEvent) {
     if (
       !onkeyup ||
-      // Alt+Arrow is the browser's Back/Forward chord, so navigating would race with it
+      // modifier+key is a browser/OS chord (Alt+Arrow is Back/Forward), not app nav
       event.altKey ||
       event.ctrlKey ||
       event.metaKey ||

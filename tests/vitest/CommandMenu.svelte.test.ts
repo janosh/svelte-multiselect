@@ -1311,38 +1311,33 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
 })
 
 // Shift counts as typing, not as a chord, so neither may run nor steal the keystroke
-// inside an editable target. The non-editable control keeps the guard honest: without
-// it, suppressing these shortcuts everywhere would still pass.
-test.each([
-  [`a bare key`, `n`, {}],
-  [`shift only`, `shift+n`, { shiftKey: true }],
-])(
-  `global shortcut with %s fires only outside editable targets`,
-  (_label, shortcut, modifiers) => {
+// inside an editable target. The plain div keeps the guard honest: without it,
+// suppressing these shortcuts everywhere would still pass.
+test.each([`n`, `shift+n`])(
+  `global shortcut %s fires only outside editable targets`,
+  (shortcut) => {
     const action = vi.fn()
     mount(CommandMenu, {
       target: document.body,
       props: { actions: [{ label: `new note`, action, shortcut }], fade_duration: 0 },
     })
-    const textarea = document.createElement(`textarea`)
-    const plain_div = document.createElement(`div`)
-    document.body.append(textarea, plain_div)
-
-    const press = (target: HTMLElement) => {
+    const press = (tag: string) => {
+      const target = document.createElement(tag)
+      document.body.append(target)
       const event = new KeyboardEvent(`keydown`, {
         key: `n`,
-        ...modifiers,
+        shiftKey: shortcut.startsWith(`shift`),
         bubbles: true,
         cancelable: true,
       })
       target.dispatchEvent(event)
-      return event
+      return event.defaultPrevented
     }
 
-    expect(press(textarea).defaultPrevented).toBe(false)
+    expect(press(`textarea`)).toBe(false)
     expect(action).not.toHaveBeenCalled()
 
-    expect(press(plain_div).defaultPrevented).toBe(true)
+    expect(press(`div`)).toBe(true)
     expect(action).toHaveBeenCalledExactlyOnceWith(`new note`)
   },
 )

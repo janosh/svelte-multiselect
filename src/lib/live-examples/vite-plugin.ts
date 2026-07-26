@@ -56,10 +56,8 @@ function collect_nodes(tree: unknown): { src_props: AstNode[]; imports: AstNode[
     } else if (node.type === `ImportDeclaration` || node.type === `ImportExpression`) {
       imports.push(node)
     }
-    // AST nodes are mostly primitives; only objects and arrays can nest
-    for (const value of Object.values(node)) {
-      if (typeof value === `object` && value !== null) walk(value)
-    }
+    // most property values are primitives, so only recurse where nesting is possible
+    for (const value of Object.values(node)) if (is_record(value)) walk(value)
   }
   walk(tree)
   return { src_props, imports }
