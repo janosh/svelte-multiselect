@@ -1,10 +1,8 @@
 ## Selection History (Undo/Redo)
 
-Selection history is **enabled by default**, allowing users to undo and redo their selections with `Ctrl+Z` / `Cmd+Z` and `Ctrl+Shift+Z` / `Cmd+Shift+Z`. This is useful for complex selection workflows where users might want to revert changes.
+Selection history is **enabled by default** with a max of 50 entries, letting users undo and redo selections with `Ctrl+Z` / `Cmd+Z` and `Ctrl+Shift+Z` / `Cmd+Shift+Z` (platform-aware). Pass a number to customize the limit, or `false`/`0` to disable.
 
 ### Basic Usage
-
-History tracking works out of the box with a default max of 50 entries. Pass a number to customize the limit, or `false`/`0` to disable.
 
 ```svelte example
 <script lang="ts">
@@ -206,12 +204,7 @@ History tracking works out of the box with a default max of 50 entries. Pass a n
 
 ### Keyboard Shortcuts
 
-History supports platform-aware keyboard shortcuts:
-
-- **Mac**: `Cmd+Z` (undo), `Cmd+Shift+Z` (redo)
-- **Windows/Linux**: `Ctrl+Z` (undo), `Ctrl+Shift+Z` (redo)
-
-Custom shortcuts can be configured via the `shortcuts` prop:
+Override the defaults via the `shortcuts` prop:
 
 ```svelte
 <MultiSelect history={true} shortcuts={{ undo: 'alt+z', redo: 'alt+shift+z' }} />

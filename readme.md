@@ -98,13 +98,11 @@ Favorite Frontend Tools?
 
 ## 🔣 &thinsp; Props
 
-Complete reference of all props. Props are organized by importance - **Essential Props** are what you'll use most often.
+Props ordered by how often you'll reach for them.
 
 > **💡 Tip:** The `Option` type is automatically inferred from your `options` array, or you can import it: `import { type Option } from 'svelte-multiselect'`
 
 ### Essential Props
-
-These are the core props you'll use in most cases:
 
 1. ```ts
    options?: Option[]  // required unless loadOptions is provided
@@ -320,7 +318,7 @@ These are the core props you'll use in most cases:
    key: (opt: Option) => unknown
    ```
 
-   Function to determine option equality. Default compares by lowercased label.
+   Generates the identity key for an option. Default: an object's `value` if it defines one, else its `label`; primitives are their own key. No case folding — use `duplicates="case-insensitive"` for that.
 
 1. ```ts
    closeDropdownOnSelect: boolean | 'if-mobile' | 'retain-focus' = false
@@ -508,6 +506,12 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    Max number of selected chips to render before collapsing the rest into a `+N more` toggle chip (click to expand/collapse). `null` renders all chips. Keyboard chip navigation auto-expands so hidden chips can't be highlighted invisibly. Ignored in `selectedDisplay="input"` mode.
 
 1. ```ts
+   selectedDisplay: 'chips' | 'input' = 'chips'
+   ```
+
+   How selected options are shown. `'chips'` renders them as removable tags inside the input. `'input'` writes the selected label straight into the text input (combobox/datalist style) and is only valid with `maxSelect={1}`; other values log a config error and fall back to chips. See the [input-dropdown demo](https://janosh.github.io/svelte-multiselect/input-dropdown).
+
+1. ```ts
    virtualList: boolean | { itemHeight?: number; overscan?: number } = false
    ```
 
@@ -601,14 +605,14 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
 
    Available shortcuts and their defaults:
 
-   | Key          | Default                             | Action                                      |
-   | ------------ | ----------------------------------- | ------------------------------------------- |
-   | `select_all` | `'ctrl+a'`                          | Select all visible options                  |
-   | `clear_all`  | `'ctrl+shift+a'`                    | Deselect all options                        |
-   | `open`       | `null`                              | Open dropdown                               |
-   | `close`      | `null`                              | Close dropdown (Escape works by default)    |
-   | `undo`       | `'meta+z'` / `'ctrl+z'`             | Undo last selection change (platform-aware) |
-   | `redo`       | `'meta+shift+z'` / `'ctrl+shift+z'` | Redo last undone change (platform-aware)    |
+   | Key          | Default                                 | Action                                                                                                                               |
+   | ------------ | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ |
+   | `select_all` | `null`                                  | Select all visible options. Opt in with `{ select_all: 'ctrl+a' }` — off by default so it doesn't hijack the browser's native Ctrl+A |
+   | `clear_all`  | `'meta+backspace'` / `'ctrl+backspace'` | Deselect all options (only while chips are present and the search box is empty)                                                      |
+   | `open`       | `null`                                  | Open dropdown                                                                                                                        |
+   | `close`      | `null`                                  | Close dropdown (Escape works by default)                                                                                             |
+   | `undo`       | `'meta+z'` / `'ctrl+z'`                 | Undo last selection change (platform-aware)                                                                                          |
+   | `redo`       | `'meta+shift+z'` / `'ctrl+shift+z'`     | Redo last undone change (platform-aware)                                                                                             |
 
 ### Selection History (Undo/Redo)
 
@@ -683,10 +687,11 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
 <!-- deno-fmt-ignore -->
 
 1. ```ts
-   maxSelectMsg: ((current: number, max: number) => string) | null
+   maxSelectMsg: ((current: number, max: number) => string) | null = (current, max) =>
+     max > 1 ? `${current}/${max}` : ``
    ```
 
-   Function to generate "X of Y selected" message. `null` = no message.
+   Renders a `2/5` counter next to the input. The default returns an empty string when `maxSelect <= 1`. `null` = no message.
 
 ### DOM Element References (bindable)
 
@@ -826,7 +831,7 @@ These reflect internal component state:
 
 ### Bindable Props
 
-`selected`, `value`, `searchText`, `open`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`, `form_input`, `options`, `matchingOptions`, `collapsedGroups`, `collapseAllGroups`, `expandAllGroups`, `undo`, `redo`, `canUndo`, `canRedo`
+`selected`, `value`, `searchText`, `open`, `maxSelect`, `activeIndex`, `activeOption`, `invalid`, `input`, `outerDiv`, `form_input`, `options`, `matchingOptions`, `collapsedGroups`, `collapseAllGroups`, `expandAllGroups`, `undo`, `redo`, `canUndo`, `canRedo`
 
 ## 🎰 &thinsp; Snippets
 
@@ -883,7 +888,7 @@ Example using several snippets:
    oncreate={({ option }) => console.log(option)}
    ```
 
-   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `option`.
+   Triggers when a user creates a new option (when `allowUserOptions` is enabled). The created option is provided as `option`. Doubles as a validation hook: return `false` to reject the option, return a replacement option to transform it, or `undefined` to accept it as-is. May be async — paste handling awaits it.
 
 1. ```ts
    onremove={({ option, selected }) => console.log(option, selected)}
@@ -997,7 +1002,7 @@ The following example shows an alert whenever one or more options are added or r
 
 > Note: Depending on the data passed to the component the `option(s)` payload will either be objects or simple strings/numbers.
 
-This component also forwards many DOM events from the `<input>` node: `blur`, `change`, `click`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Registering listeners for these events works the same:
+This component also forwards these DOM events from the `<input>` node: `blur`, `click`, `focus`, `input`, `keydown`, `keyup`, `mousedown`, `mouseenter`, `mouseleave`, `touchcancel`, `touchend`, `touchmove`, `touchstart`. Note `onchange` is _not_ forwarded — it's reused as the custom selection-change callback documented above. Registering listeners for the forwarded events works the same:
 
 ```svelte
 <MultiSelect
@@ -1087,7 +1092,7 @@ Minimal example that changes the background color of the options dropdown:
 ```
 
 - `div.multiselect`
-  - `border: var(--sms-border, 1pt solid light-dark(lightgray, #555))`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
+  - `border: var(--sms-border, 1px solid light-dark(lightgray, #555))`: Change this to e.g. to `1px solid red` to indicate this form field is in an invalid state.
   - `border-radius: var(--sms-border-radius, 3pt)`
   - `padding: var(--sms-padding, 0 3pt)`
   - `background: var(--sms-bg, light-dark(white, #222226))`
@@ -1100,7 +1105,7 @@ Minimal example that changes the background color of the options dropdown:
 - `div.multiselect.open`
   - `z-index: var(--sms-open-z-index, 4)`: Increase this if needed to ensure the dropdown list is displayed atop all other page elements.
 - `div.multiselect:focus-within`
-  - `border: var(--sms-focus-border, 1pt solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` which in turn defaults to `cornflowerblue`.
+  - `border: var(--sms-focus-border, 1px solid var(--sms-active-color, cornflowerblue))`: Border when component has focus. Defaults to `--sms-active-color` which in turn defaults to `cornflowerblue`.
 - `div.multiselect.disabled`
   - `background: var(--sms-disabled-bg, light-dark(lightgray, #444))`: Background when in disabled state.
 - `div.multiselect input::placeholder`
@@ -1120,7 +1125,7 @@ Minimal example that changes the background color of the options dropdown:
   - `overscroll-behavior: var(--sms-options-overscroll, none)`: Whether scroll events bubble to parent elements when reaching the top/bottom of the options dropdown. See [MDN](https://developer.mozilla.org/docs/Web/CSS/overscroll-behavior).
   - `z-index: var(--sms-options-z-index, 3)`: Z-index for the dropdown options list.
   - `box-shadow: var(--sms-options-shadow, light-dark(0 0 14pt -8pt black, 0 0 14pt -4pt rgba(0, 0, 0, 0.8)))`: Box shadow of dropdown list.
-  - `border: var(--sms-options-border)`
+  - `border: var(--sms-options-border, 1px solid light-dark(lightgray, #555))`
   - `border-width: var(--sms-options-border-width, 1px)`
   - `border-radius: var(--sms-options-border-radius, 1ex)`
   - `padding: var(--sms-options-padding, 0)`
@@ -1196,7 +1201,7 @@ This simplified version of the DOM structure of the component shows where these 
     <li class={liSelectedClass}>Selected 1</li>
     <li class={liSelectedClass}>Selected 2</li>
   </ul>
-  <span class="maxSelectMsgClass">2/5 selected</span>
+  <span class="max-select-msg {maxSelectMsgClass}">2/5</span>
   <ul class="options {ulOptionsClass}">
     <li class="select-all {liSelectAllClass}">Select all</li>
     <li class={liOptionClass}>Option 1</li>

@@ -9,7 +9,7 @@
 
   type NavLinkRouteObject = NavRouteObject & { href: string }
 
-  // Props for the item snippet's render_default function context
+  // Parameter passed to the item snippet
   interface ItemSnippetParams {
     route: NavRouteObject // normalized route object
     href: string
@@ -85,7 +85,6 @@
     return () => globalThis.removeEventListener(`resize`, check_mobile)
   })
 
-  // Call onopen/onclose callbacks when menu state changes
   $effect(() => {
     if (is_open && !prev_is_open) {
       onopen?.()
@@ -97,7 +96,7 @@
 
   $effect(() => () => {
     if (hide_timeout) clearTimeout(hide_timeout)
-  }) // cleanup on destroy
+  })
 
   function close_menus() {
     if (hide_timeout) clearTimeout(hide_timeout)
@@ -159,7 +158,6 @@
       return
     }
 
-    // Check if dropdown is open (either via hover or pinned)
     const dropdown_is_open = hovered_dropdown === href || pinned_dropdown === href
     // Arrow key navigation within open dropdown
     if (dropdown_is_open && (key === `ArrowDown` || key === `ArrowUp`)) {
@@ -191,7 +189,6 @@
     if (!path) return
     if (path === `/`) return page?.url.pathname === `/` ? `page` : undefined
     // Match exact path or path followed by / to avoid partial matches
-    // e.g. /tc-periodic-v2 should not match /tc-periodic
     const pathname = page?.url.pathname
     const exact_match = pathname === path
     const prefix_match = pathname?.startsWith(`${path}/`)
@@ -213,7 +210,6 @@
     return { label, style: label ? `text-transform: capitalize` : `` }
   }
 
-  // Normalize all route formats to NavRouteObject
   function parse_route(route: NavRoute): NavLinkRouteObject {
     if (typeof route === `string`) return { href: route }
     if (Array.isArray(route)) {
@@ -239,7 +235,6 @@
     return tooltip({ ...tooltip_options, ...opts })
   }
 
-  // Handle link click with onnavigate callback
   function handle_link_click(event: MouseEvent, route: NavLinkRouteObject) {
     if (route.disabled) {
       event.preventDefault()
@@ -265,7 +260,6 @@
       link_props?.onkeydown,
     )
 
-  // Get external link attributes
   function get_external_attrs(route: NavRouteObject) {
     if (!route.external) return {}
     return { target: `_blank`, rel: `noopener noreferrer` }

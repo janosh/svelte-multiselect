@@ -21,8 +21,8 @@ const with_empty_map = (code: string): TransformResult => ({
   map: { mappings: `` },
 })
 
-// Max chars to scan after property end for trailing comma/whitespace cleanup
-const TRAILING_CLEANUP_BOUND = 50 // Generous bound - typical trailing content is ", " (2 chars)
+// chars to scan past a property for trailing comma/whitespace (typically just ", ")
+const TRAILING_CLEANUP_BOUND = 50
 
 // Apply edits in reverse order so positions stay valid
 const apply_edits = (source: string, edits: Edit[]): string =>

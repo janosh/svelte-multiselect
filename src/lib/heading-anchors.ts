@@ -4,9 +4,7 @@
 // Match headings in two contexts:
 // 1. Start of line (for .svelte files with formatted HTML)
 // 2. After > (for mdsvex output where HTML is on single line, e.g., "</p> <h2>")
-// Avoid matching inside src={...} attributes by requiring these specific contexts
-// Note: [^>]* for attributes won't match if an attribute value contains > (e.g., data-foo="a>b")
-// This edge case is rare in practice and would require significantly more complex parsing
+// Known limitation: [^>]* breaks on attribute values containing > (e.g. data-foo="a>b")
 const heading_regex_line_start =
   /^(?<indent>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/gimu
 const heading_regex_after_tag =
@@ -138,7 +136,6 @@ const slugify = (text: string): string =>
     .replaceAll(/-+/gu, `-`) // collapse multiple dashes
     .replaceAll(/^-|-$/gu, ``) // trim leading/trailing dashes
 
-/** @type {() => import('svelte/compiler').PreprocessorGroup} */
 export function heading_ids() {
   return {
     name: `heading-ids`,
@@ -186,7 +183,6 @@ export function heading_ids() {
 
       // both passes scan the whole file, so skip them when there is no heading
       if (has_heading.test(content)) {
-        // Pass 1 matches line starts (.svelte); pass 2 matches after tags (mdsvex output).
         add_heading_ids(heading_regex_line_start)
         add_heading_ids(heading_regex_after_tag)
       }
@@ -196,7 +192,6 @@ export function heading_ids() {
   }
 }
 
-// SVG link icon for heading anchors
 const link_svg = `<svg width="16" height="16" viewBox="0 0 16 16" aria-label="Link to heading" role="img"><path d="M7.775 3.275a.75.75 0 0 0 1.06 1.06l1.25-1.25a2 2 0 1 1 2.83 2.83l-2.5 2.5a2 2 0 0 1-2.83 0 .75.75 0 0 0-1.06 1.06 3.5 3.5 0 0 0 4.95 0l2.5-2.5a3.5 3.5 0 0 0-4.95-4.95l-1.25 1.25zm-4.69 9.64a2 2 0 0 1 0-2.83l2.5-2.5a2 2 0 0 1 2.83 0 .75.75 0 0 0 1.06-1.06 3.5 3.5 0 0 0-4.95 0l-2.5 2.5a3.5 3.5 0 0 0 4.95 4.95l1.25-1.25a.75.75 0 0 0-1.06-1.06l-1.25 1.25a2 2 0 0 1-2.83 0z" fill="currentColor"/></svg>`
 
 export interface HeadingAnchorsOptions {
@@ -209,7 +204,6 @@ export interface HeadingAnchorsOptions {
   icon_svg?: string
 }
 
-// Add anchor link to a single heading element
 function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): void {
   if (heading.querySelector(`a[aria-hidden="true"]`)) return
   if (!heading.id) {
@@ -239,7 +233,6 @@ const get_default_headings = (node: Element): Element[] =>
   ])
 
 // Svelte 5 attachment that adds anchor links to headings within a container
-// Uses MutationObserver to handle dynamically added headings
 export const heading_anchors =
   (options: HeadingAnchorsOptions = {}) =>
   (node: Element): (() => void) | undefined => {
@@ -251,7 +244,6 @@ export const heading_anchors =
       ? () => Array.from(node.querySelectorAll(selector))
       : () => get_default_headings(node)
 
-    // Process existing headings
     for (const heading of get_headings()) {
       add_anchor_to_heading(heading, icon_svg)
     }
