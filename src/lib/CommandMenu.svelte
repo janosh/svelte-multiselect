@@ -233,10 +233,11 @@
     if (toggle(event)) return
     // run action hotkeys globally while the menu is closed
     if (open || !global_shortcuts) return
-    // a modifier-free hotkey is an ordinary character while typing, so firing it would
-    // both run the action and swallow the keystroke
-    const has_modifier = event.ctrlKey || event.metaKey || event.altKey
-    if (!has_modifier && is_editable_event_target(event.target)) return
+    // Outside a chord the keystroke is an ordinary character, so firing the hotkey
+    // would both run the action and swallow what the user typed. Shift is absent on
+    // purpose - it is how capital letters are typed, not a chord.
+    const is_chord = event.ctrlKey || event.metaKey || event.altKey
+    if (!is_chord && is_editable_event_target(event.target)) return
     const action = actions.find(
       (cmd_action) =>
         !cmd_action.disabled && matches_shortcut(event, cmd_action.shortcut),

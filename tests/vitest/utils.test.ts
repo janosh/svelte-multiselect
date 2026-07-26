@@ -164,17 +164,13 @@ describe(`keyboard shortcut parsing`, () => {
   })
 
   test(`memoized parses stay distinct across interleaved shortcuts`, () => {
-    const shortcuts = [`ctrl+k`, `meta+k`, `ctrl+shift+k`]
     const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
-    // repeat so every lookup past the first round is a cache hit - a cache keyed
-    // on anything but the shortcut string would start returning the wrong parse
-    for (let round = 0; round < 3; round++) {
-      expect(shortcuts.map((shortcut) => matches_shortcut(event, shortcut))).toEqual([
-        true,
-        false,
-        false,
-      ])
-    }
+    const matches = () =>
+      [`ctrl+k`, `meta+k`, `ctrl+shift+k`].map((sc) => matches_shortcut(event, sc))
+    // the second pass is all cache hits, where a cache keyed on anything but the
+    // shortcut string would start handing back a neighbour's parse
+    expect(matches()).toEqual([true, false, false])
+    expect(matches()).toEqual([true, false, false])
   })
 
   test.each([

@@ -1320,53 +1320,34 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
   expect(action).not.toHaveBeenCalled()
 })
 
-test(`modifier-free global shortcut does not fire while typing in a text field`, () => {
-  // a bare "n" hotkey must not steal the keystroke (nor run) when the user is typing
-  const action = vi.fn()
-  mount(CommandMenu, {
-    target: document.body,
-    props: { actions: [{ label: `new note`, action, shortcut: `n` }], fade_duration: 0 },
-  })
-  const textarea = document.createElement(`textarea`)
-  document.body.append(textarea)
+// Neither may steal the keystroke (nor run) mid-sentence. Shift counts as typing:
+// it is how a capital letter is entered, unlike a Ctrl/Meta/Alt chord.
+test.each([
+  [`a bare key`, `n`, {}],
+  [`shift only`, `shift+n`, { shiftKey: true }],
+])(
+  `global shortcut with %s does not fire while typing`,
+  (_label, shortcut, modifiers) => {
+    const action = vi.fn()
+    mount(CommandMenu, {
+      target: document.body,
+      props: { actions: [{ label: `new note`, action, shortcut }], fade_duration: 0 },
+    })
+    const textarea = document.createElement(`textarea`)
+    document.body.append(textarea)
 
-  const event = new KeyboardEvent(`keydown`, {
-    key: `n`,
-    bubbles: true,
-    cancelable: true,
-  })
-  textarea.dispatchEvent(event)
+    const event = new KeyboardEvent(`keydown`, {
+      key: `n`,
+      ...modifiers,
+      bubbles: true,
+      cancelable: true,
+    })
+    textarea.dispatchEvent(event)
 
-  expect(action).not.toHaveBeenCalled()
-  expect(event.defaultPrevented).toBe(false)
-})
-
-test(`shift-only global shortcut does not fire while typing in a text field`, () => {
-  // Shift is how you type a capital letter, so a shift+<key> hotkey is still an
-  // ordinary keystroke in a text field and must not be treated as a modifier that
-  // opts the event out of the editable-target guard
-  const action = vi.fn()
-  mount(CommandMenu, {
-    target: document.body,
-    props: {
-      actions: [{ label: `new note`, action, shortcut: `shift+n` }],
-      fade_duration: 0,
-    },
-  })
-  const textarea = document.createElement(`textarea`)
-  document.body.append(textarea)
-
-  const event = new KeyboardEvent(`keydown`, {
-    key: `n`,
-    shiftKey: true,
-    bubbles: true,
-    cancelable: true,
-  })
-  textarea.dispatchEvent(event)
-
-  expect(action).not.toHaveBeenCalled()
-  expect(event.defaultPrevented).toBe(false)
-})
+    expect(action).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+  },
+)
 
 test(`global shortcuts skip disabled duplicate bindings`, async () => {
   const disabled_action = vi.fn()
