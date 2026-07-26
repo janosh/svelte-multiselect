@@ -51,6 +51,24 @@ test(`hides synchronously when open flips false`, () => {
   action.destroy()
 })
 
+// target_node is a positioning concern, so it decides visibility only while the
+// node is portalled. Once it is back home, `open` alone governs.
+test(`losing the target hides while portalled but not once deactivated`, () => {
+  const { home, target, node } = create_fixture()
+  const action = portal_action(node, { active: true, open: true, target_node: target })
+  expect(node.hidden).toBe(false)
+
+  // still portalled with nowhere to anchor: there is no sane position to paint at
+  action.update({ active: true, open: true, target_node: null })
+  expect(node.hidden).toBe(true)
+
+  // back in the component, an open dropdown renders inline and needs no target
+  action.update({ active: false, open: true, target_node: null })
+  expect(node.parentNode).toBe(home)
+  expect(node.hidden).toBe(false)
+  action.destroy()
+})
+
 test(`destroy detaches viewport listeners only when portalled`, () => {
   const { home, target, node } = create_fixture()
   const remove_spy = vi.spyOn(globalThis, `removeEventListener`)
