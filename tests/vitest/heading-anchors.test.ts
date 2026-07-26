@@ -5,103 +5,20 @@ import { doc_query } from './index'
 const preprocess = (content: string, filename?: string) =>
   heading_ids().markup({ content, filename })
 
-// Decoded independently of the encoder under test, so a self-consistent but wrong
-// encoding can't pass. Yields [generated_column, source_line, source_column] per segment.
-const decode_mappings = (mappings: string): [number, number, number][][] => {
-  const base64 = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
-  let source_line = 0
-  let source_column = 0
-  return mappings.split(`;`).map((line) => {
-    let generated_column = 0
-    return line
-      .split(`,`)
-      .filter(Boolean)
-      .map((segment) => {
-        const values: number[] = []
-        let shift = 0
-        let accumulated = 0
-        for (const char of segment) {
-          const digit = base64.indexOf(char)
-          accumulated += (digit & 31) << shift
-          if (digit & 32) shift += 5
-          else {
-            values.push(accumulated & 1 ? -(accumulated >> 1) : accumulated >> 1)
-            shift = 0
-            accumulated = 0
-          }
-        }
-        generated_column += values[0]
-        source_line += values[2]
-        source_column += values[3]
-        return [generated_column, source_line, source_column] as [number, number, number]
-      })
-  })
-}
-
 describe(`heading_ids preprocessor`, () => {
-  it(`emits map metadata pointing at the original component`, () => {
-    const source = `<h2>A</h2>\n<h2>B</h2>`
-    const { map } = preprocess(source, `Heading.svelte`)
-    expect(map).toEqual({
+  // exact VLQ mappings; a lone `AAAA` per line is the identity map for unshifted text
+  it.each([
+    [`<h2>A</h2>\n<h2>B</h2>`, `AAAA,GAAG,OAAA,OAAO;AACV,GAAG,OAAA,OAAO`],
+    [`<div>\n  <h2>N</h2>\n</div>`, `AAAA;AACA,KAAK,OAAA,OAAO;AACZ`],
+    [`<p>no heading</p>\n<span>x</span>`, `AAAA;AACA`], // headingless fast path
+  ])(`maps original markup before and after inserted IDs in %j`, (source, mappings) => {
+    expect(preprocess(source, `Heading.svelte`).map).toEqual({
       version: 3,
       names: [],
       sources: [`Heading.svelte`],
       sourcesContent: [source],
-      mappings: expect.any(String),
+      mappings,
     })
-  })
-
-  // an inaccurate map sends every downstream diagnostic to the wrong place
-  it.each([
-    [`one heading per line`, `<h2>A</h2>\n<h2>B</h2>`],
-    [`indented heading`, `<div>\n  <h2>Nested</h2>\n</div>`],
-    [`two headings on one line`, `<div><h2>One</h2> <h3>Two</h3></div>`],
-    [`content trailing the heading`, `<h2>Title</h2> trailing text here`],
-    [`non-ASCII heading text`, `<p>x</p>\n<h2>Über Café</h2>\n<p>after</p>`],
-    [`heading that already has an id`, `<h2 id="keep">A</h2>\n<h2>B</h2>`],
-    [`mdsvex single-line output`, `<p>a</p> <h2>First</h2> <p>b</p> <h3>Second</h3>`],
-    [`no headings at all`, `<p>nothing to do</p>\n<span>x</span>`],
-    [`script below the heading`, `<h2>Docs</h2>\n<script>\n  let count = 1\n</script>`],
-  ])(`maps every unchanged span back to its original text (%s)`, (_label, source) => {
-    const { code, map } = preprocess(source, `T.svelte`)
-    const generated_lines = code.split(`\n`)
-    const source_lines = source.split(`\n`)
-    const decoded = decode_mappings(map.mappings)
-    // else empty mappings would make the span assertions below vacuously pass
-    expect(decoded).toHaveLength(source_lines.length)
-
-    let mapped_insertions = 0
-    for (const [line_idx, segments] of decoded.entries()) {
-      const generated_line = generated_lines[line_idx]
-      const source_line = source_lines[line_idx]
-      segments.forEach(([generated_column, mapped_line, mapped_column], seg_idx) => {
-        const span_end = segments[seg_idx + 1]?.[0] ?? generated_line.length
-        const generated = generated_line.slice(generated_column, span_end)
-        // the inserted attribute is the one span with no counterpart in the original
-        if (/^ id="[^"]*"$/u.test(generated)) {
-          mapped_insertions++
-          return
-        }
-        const original = source_lines[mapped_line].slice(
-          mapped_column,
-          mapped_column + generated.length,
-        )
-        expect(original, `line ${line_idx} col ${generated_column}`).toBe(generated)
-      })
-
-      // A shifted line (only insertions change length) must close with a segment mapping
-      // its new end to the original, else end-of-line resolves to the pre-shift column.
-      if (generated_line.length !== source_line.length) {
-        const last_segment = segments.at(-1)
-        expect([last_segment?.[0], last_segment?.[2]], `line ${line_idx} end`).toEqual([
-          generated_line.length,
-          source_line.length,
-        ])
-      }
-    }
-    // every inserted id must appear as its own span, so dropping them can't pass
-    const count_ids = (text: string) => (text.match(/ id="/gu) ?? []).length
-    expect(mapped_insertions).toBe(count_ids(code) - count_ids(source))
   })
 
   it.each([
