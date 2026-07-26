@@ -223,7 +223,8 @@ describe(`heading_anchors attachment`, () => {
     ],
   ])(`auto-generates unique ids: %s`, (_desc, html, expected_ids) => {
     const container = create_container(html)
-    expect(() => heading_anchors()(container)).not.toThrow()
+    // a throw here fails the test on its own, so no not.toThrow() wrapper needed
+    heading_anchors()(container)
     const ids = Array.from(container.querySelectorAll(`h2, h3`)).map((el) => el.id)
     expect(ids).toEqual(expected_ids)
     expect(container.querySelectorAll(anchor_selector)).toHaveLength(2)
