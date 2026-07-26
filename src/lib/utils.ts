@@ -9,8 +9,6 @@ export const chain_handlers =
 
 // Generates a UUID for component IDs. Uses native crypto.randomUUID when available.
 // Fallback uses timestamp+counter - sufficient for DOM IDs (uniqueness, not security).
-// Cryptographic randomness is unnecessary here since these IDs are only used for
-// associating labels with inputs and ensuring unique DOM element identifiers.
 export function get_uuid(): string {
   if (globalThis.crypto?.randomUUID) return globalThis.crypto.randomUUID()
   const hex = (Date.now().toString(16) + (uuid_counter++).toString(16)).padStart(32, `0`)
@@ -23,7 +21,6 @@ export function get_uuid(): string {
   ].join(`-`)
 }
 
-// Type guard for checking if a value is a non-null object
 export const is_object = (val: unknown): val is Record<string, unknown> =>
   typeof val === `object` && val !== null
 
@@ -32,7 +29,6 @@ export const slug_to_title = (slug: string): string =>
     .replaceAll(`-`, ` `)
     .replaceAll(/(?<![\p{L}\p{M}\p{N}_])\p{L}/gu, (letter) => letter.toUpperCase())
 
-// Type guard for checking if an option has a group key
 export const has_group = <T extends Option>(opt: T): opt is T & { group: string } =>
   is_object(opt) && typeof opt.group === `string`
 
@@ -49,15 +45,12 @@ export const get_label = (opt: Option) => {
   return `${opt}`
 }
 
-// Generate a unique key for an option, preserving value identity
-// For object options: uses value if defined, otherwise label (no case normalization)
-// For primitives: the primitive itself
+// Unique option key: value ?? label for objects, the primitive itself otherwise
 export const get_option_key = (opt: Option): unknown =>
   is_object(opt) ? (opt.value ?? get_label(opt)) : opt
 
-// This function is used extract CSS strings from a {selected, option} style
-// object to be used in the style attribute of the option.
-// If the style is a string, it will be returned as is
+// Extract a CSS string from an option's style (string or {option, selected} object).
+// Always returns a semicolon-terminated string.
 export function get_style(
   option: Option,
   key: `selected` | `option` | null | undefined = null, // undefined falls back to null via default
@@ -81,7 +74,6 @@ export function get_style(
       }
     }
   }
-  // ensure css_str ends with a semicolon
   const trimmed = css_str.trim()
   if (trimmed && !trimmed.endsWith(`;`)) css_str += `;`
   return css_str
@@ -138,6 +130,10 @@ export const is_editable_event_target = (target: EventTarget | null): boolean =>
     `input, textarea, select, [contenteditable]:not([contenteditable="false"])`,
   ) !== null
 
+// Alt/Ctrl/Meta make a keystroke a chord. Shift is excluded: it types capitals.
+export const is_modifier_chord = (event: KeyboardEvent): boolean =>
+  event.altKey || event.ctrlKey || event.metaKey
+
 // Compare arrays/values for equality to avoid unnecessary updates.
 // Prevents infinite loops when value/selected are bound to reactive wrappers
 // that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
@@ -183,9 +179,7 @@ export function fuzzy_match_indices(
   return indices
 }
 
-// Fuzzy string matching function
-// Returns true if the search string can be found as a subsequence in the target string
-// e.g., "tageoo" matches "tasks/geo-opt" because t-a-g-e-o-o appears in order
+// True if search is a subsequence of target, e.g. "tageoo" matches "tasks/geo-opt"
 export function fuzzy_match(search_text: string, target_text: string): boolean {
   // guard null/undefined inputs (fuzzy_match_indices would throw on .toLowerCase())
   if (search_text == null || target_text == null) return false

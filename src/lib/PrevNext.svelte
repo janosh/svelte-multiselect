@@ -1,7 +1,7 @@
 <script lang="ts" generics="Item extends [string, unknown] = [string, unknown]">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { is_editable_event_target } from './utils'
+  import { is_editable_event_target, is_modifier_chord } from './utils'
 
   type NavItem = Item | [string, string]
   type SnippetProps = { item: NavItem; index: number | null; total: number }
@@ -82,10 +82,8 @@
   function handle_keyup(event: KeyboardEvent) {
     if (
       !onkeyup ||
-      // modifier+key is a browser/OS chord (Alt+Arrow is Back/Forward), not app nav
-      event.altKey ||
-      event.ctrlKey ||
-      event.metaKey ||
+      // a browser/OS chord (Alt+Arrow is Back/Forward), not app navigation
+      is_modifier_chord(event) ||
       is_editable_event_target(event.target) ||
       items_arr.length < min_items ||
       !prev ||
@@ -101,9 +99,9 @@
       ? [globalThis.scrollX, globalThis.scrollY]
       : [0, 0]
     const goto = globalThis.history[replace_state ? `replaceState` : `pushState`]
-    goto.call(globalThis.history, {}, ``, to) // Navigate using appropriate history method
+    goto.call(globalThis.history, {}, ``, to)
 
-    if (no_scroll) globalThis.scrollTo(scroll_x, scroll_y) // Restore scroll position if needed
+    if (no_scroll) globalThis.scrollTo(scroll_x, scroll_y)
   }
 </script>
 

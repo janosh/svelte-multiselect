@@ -118,18 +118,15 @@
     try {
       await navigator.clipboard.writeText(content)
       state = `success`
+      try {
+        on_copy_success(content)
+      } catch (error) {
+        console.error(error) // the copy succeeded, so a throwing callback is not a failure
+      }
     } catch (error) {
       console.error(error)
       state = `error`
       on_copy_error(error, content)
-    }
-    // the copy already succeeded, so a throwing callback is not a copy failure
-    if (state === `success`) {
-      try {
-        on_copy_success(content)
-      } catch (error) {
-        console.error(error)
-      }
     }
     if (reset_sec <= 0) return
     reset_timeout = setTimeout(() => {
