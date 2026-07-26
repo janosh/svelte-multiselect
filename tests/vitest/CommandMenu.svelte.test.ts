@@ -1320,6 +1320,27 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
   expect(action).not.toHaveBeenCalled()
 })
 
+test(`modifier-free global shortcut does not fire while typing in a text field`, () => {
+  // a bare "n" hotkey must not steal the keystroke (nor run) when the user is typing
+  const action = vi.fn()
+  mount(CommandMenu, {
+    target: document.body,
+    props: { actions: [{ label: `new note`, action, shortcut: `n` }], fade_duration: 0 },
+  })
+  const textarea = document.createElement(`textarea`)
+  document.body.append(textarea)
+
+  const event = new KeyboardEvent(`keydown`, {
+    key: `n`,
+    bubbles: true,
+    cancelable: true,
+  })
+  textarea.dispatchEvent(event)
+
+  expect(action).not.toHaveBeenCalled()
+  expect(event.defaultPrevented).toBe(false)
+})
+
 test(`global shortcuts skip disabled duplicate bindings`, async () => {
   const disabled_action = vi.fn()
   const enabled_action = vi.fn()

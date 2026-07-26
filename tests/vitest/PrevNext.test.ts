@@ -12,8 +12,14 @@ describe(`PrevNext`, () => {
   let scrollToSpy: ReturnType<typeof vi.fn>
   const link_hrefs = () =>
     [...target.querySelectorAll(`a`)].map((link) => link.getAttribute(`href`))
-  const keyup = (key: string, event_target: EventTarget = globalThis) =>
-    event_target.dispatchEvent(new KeyboardEvent(`keyup`, { key, bubbles: true }))
+  const keyup = (
+    key: string,
+    event_target: EventTarget = globalThis,
+    init: KeyboardEventInit = {},
+  ) =>
+    event_target.dispatchEvent(
+      new KeyboardEvent(`keyup`, { key, bubbles: true, ...init }),
+    )
   // clearing document.body leaves <svelte:window> keyup listeners attached, so leaked
   // instances keep navigating and skew call counts
   const mounted: Record<string, unknown>[] = []
@@ -88,15 +94,19 @@ describe(`PrevNext`, () => {
     expect(pushStateSpy).not.toHaveBeenCalled() // replace_state defaults to true
   })
 
-  test.each([
+  test.each<[string, ComponentProps<typeof PrevNext>, string, KeyboardEventInit?]>([
     // the first two press a mapped key, so they fail if their guard stops working
     [`onkeyup=null`, { items, current: `page2`, onkeyup: null }, `ArrowLeft`],
     [`too few items`, { items: [`page1`, `page2`], current: `page1` }, `ArrowLeft`],
     [`unmapped key`, { items, current: `page2` }, `Home`],
-  ])(`keyboard navigation ignores %s`, (_label, props, key) => {
+    // Alt+ArrowLeft is the browser Back shortcut, so navigating too races with it
+    [`Alt+ArrowLeft`, { items, current: `page2` }, `ArrowLeft`, { altKey: true }],
+    [`Ctrl+ArrowLeft`, { items, current: `page2` }, `ArrowLeft`, { ctrlKey: true }],
+    [`Meta+ArrowRight`, { items, current: `page2` }, `ArrowRight`, { metaKey: true }],
+  ])(`keyboard navigation ignores %s`, (_label, props, key, init) => {
     mount_prev_next(props)
 
-    keyup(key)
+    keyup(key, globalThis, init)
 
     for (const spy of [replaceStateSpy, pushStateSpy, scrollToSpy]) {
       expect(spy).not.toHaveBeenCalled()

@@ -8,6 +8,7 @@
     cmd_action_matches,
     chain_handlers,
     format_cmd_metadata,
+    is_editable_event_target,
     matches_shortcut,
     split_shortcut,
   } from './utils'
@@ -232,6 +233,10 @@
     if (toggle(event)) return
     // run action hotkeys globally while the menu is closed
     if (open || !global_shortcuts) return
+    // a modifier-free hotkey is an ordinary character while typing, so firing it would
+    // both run the action and swallow the keystroke
+    const has_modifier = event.ctrlKey || event.metaKey || event.altKey
+    if (!has_modifier && is_editable_event_target(event.target)) return
     const action = actions.find(
       (cmd_action) =>
         !cmd_action.disabled && matches_shortcut(event, cmd_action.shortcut),

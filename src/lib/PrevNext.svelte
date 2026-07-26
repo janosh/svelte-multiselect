@@ -1,6 +1,7 @@
 <script lang="ts" generics="Item extends [string, unknown] = [string, unknown]">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import { is_editable_event_target } from './utils'
 
   type NavItem = Item | [string, string]
   type SnippetProps = { item: NavItem; index: number | null; total: number }
@@ -78,15 +79,13 @@
     }
   })
 
-  const is_editable_event_target = (target: EventTarget | null): boolean =>
-    target instanceof Element &&
-    target.closest(
-      `input, textarea, select, [contenteditable]:not([contenteditable="false"])`,
-    ) !== null
-
   function handle_keyup(event: KeyboardEvent) {
     if (
       !onkeyup ||
+      // Alt+Arrow is the browser's Back/Forward chord, so navigating would race with it
+      event.altKey ||
+      event.ctrlKey ||
+      event.metaKey ||
       is_editable_event_target(event.target) ||
       items_arr.length < min_items ||
       !prev ||

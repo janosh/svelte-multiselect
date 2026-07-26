@@ -146,6 +146,14 @@ export function matches_shortcut(
   )
 }
 
+// True when the event originated inside a text-entry control, where a bare
+// character key is ordinary typing rather than a hotkey
+export const is_editable_event_target = (target: EventTarget | null): boolean =>
+  target instanceof Element &&
+  target.closest(
+    `input, textarea, select, [contenteditable]:not([contenteditable="false"])`,
+  ) !== null
+
 // Compare arrays/values for equality to avoid unnecessary updates.
 // Prevents infinite loops when value/selected are bound to reactive wrappers
 // that clone arrays on assignment (e.g. Superforms, Svelte stores). See issue #309.
