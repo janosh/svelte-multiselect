@@ -71,6 +71,8 @@ export const draggable =
     }
 
     function handle_mousedown(event: MouseEvent) {
+      // non-primary buttons open the context menu, which can swallow the mouseup
+      if (event.button !== 0) return
       // Only drag if mousedown is on the handle or its children
       if (!(event.target instanceof Node) || !handle?.contains?.(event.target)) return
 
@@ -196,6 +198,8 @@ export const resizable =
     }
 
     function on_mousedown(event: MouseEvent) {
+      // non-primary buttons open the context menu, which can swallow the mouseup
+      if (event.button !== 0) return
       active_edge = get_edge(event)
       if (!active_edge) return
 

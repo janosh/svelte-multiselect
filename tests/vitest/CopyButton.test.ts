@@ -162,6 +162,26 @@ test(`calls on_copy_success with copied content`, async () => {
   expect(onclick).toHaveBeenCalledOnce()
 })
 
+test(`a throwing on_copy_success is not reported as a copy failure`, async () => {
+  // the clipboard write already succeeded, so the callback's error must not be
+  // caught by the write's catch and flipped into the error state
+  const on_copy_error = vi.fn()
+  const on_copy_success = vi.fn(() => {
+    throw new Error(`analytics hook blew up`)
+  })
+  const console_error_spy = vi.spyOn(console, `error`).mockImplementation(() => void 0)
+  const { copy_button } = mount_copy_button({
+    content: `hello`,
+    on_copy_success,
+    on_copy_error,
+  })
+  await click_copy_button(copy_button)
+  expect(on_copy_error).not.toHaveBeenCalled()
+  expect(copy_button.textContent).toContain(`success`)
+  expect(console_error_spy).toHaveBeenCalledOnce()
+  console_error_spy.mockRestore()
+})
+
 test(`calls on_copy_error with error and content`, async () => {
   const copy_error = new Error(`clipboard failed`)
   const on_copy_error = vi.fn()

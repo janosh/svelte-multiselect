@@ -44,6 +44,10 @@ test(`hides synchronously when open flips false`, () => {
 
   action.update({ active: true, open: false, target_node: target })
   expect(node.hidden).toBe(true)
+
+  // deactivating must not un-hide a dropdown that is still closed
+  action.update({ active: false, open: false, target_node: target })
+  expect(node.hidden).toBe(true)
   action.destroy()
 })
 

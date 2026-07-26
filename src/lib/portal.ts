@@ -75,7 +75,7 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
       node.style.removeProperty(property)
     }
     delete node.dataset.placement
-    node.hidden = false
+    node.hidden = !params.open
     home_parent = null
     home_anchor = null
   }

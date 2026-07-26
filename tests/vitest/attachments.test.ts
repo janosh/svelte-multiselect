@@ -10,8 +10,8 @@ import {
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
-const mouse_event = (type: string, clientX: number, clientY: number) =>
-  new MouseEvent(type, { clientX, clientY, bubbles: true })
+const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
+  new MouseEvent(type, { clientX, clientY, button, bubbles: true })
 
 const create_element = (tag = `div`, styles: Partial<CSSStyleDeclaration> = {}) => {
   const element = document.createElement(tag)
@@ -1042,6 +1042,18 @@ describe(`draggable`, () => {
     expect(element.style.cursor).toBe(``)
   })
 
+  it(`should not start dragging on a non-primary mouse button`, () => {
+    // the context menu can swallow the mouseup, leaving the element stuck to the cursor
+    const element = create_element()
+    element.style.position = `fixed`
+    mock_rect(element, { left: 10, top: 20 })
+    draggable({})(element)
+
+    element.dispatchEvent(mouse_event(`mousedown`, 5, 5, 2))
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 50, 50))
+    expect([element.style.left, element.style.top]).toEqual([``, ``])
+  })
+
   it(`should not set up dragging when disabled`, () => {
     const element = create_element()
     element.style.position = `fixed`
@@ -1739,6 +1751,16 @@ describe(`resizable`, () => {
       globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
     },
   )
+
+  it(`should not start resizing on a non-primary mouse button`, () => {
+    const element = create_box()
+    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
+    const on_resize_start = vi.fn()
+    resizable({ on_resize_start })(element)
+
+    element.dispatchEvent(mouse_event(`mousedown`, 195, 75, 2))
+    expect(on_resize_start).not.toHaveBeenCalled()
+  })
 
   it(`should fire on_resize_start, on_resize, and on_resize_end callbacks`, () => {
     const element = create_box()
