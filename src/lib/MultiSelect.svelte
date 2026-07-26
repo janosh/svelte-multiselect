@@ -1301,7 +1301,9 @@
       if (!has_search_text || input_text_is_committed || show_all_input_options)
         return null
       if (duplicates !== true && is_label_selected(searchText)) {
-        return { type: `dupe`, msg: duplicateOptionMsg }
+        // a blank message yields no row, so report no message at all rather than an
+        // invisible one that is still navigable and still blocks the create row below
+        return duplicateOptionMsg ? { type: `dupe`, msg: duplicateOptionMsg } : null
       }
       if (load_options_pending) return null
       if (allowUserOptions && resolved_create_msg) {
@@ -2164,7 +2166,7 @@
           {/if}
           {#if !disabled && can_remove}
             {@render remove_btn(
-              (event) => remove(option, event),
+              (event) => remove(option, event, idx),
               `${removeBtnTitle} ${utils.get_label(option)}`,
               { option, isRemoveAll: false },
             )}
@@ -2265,7 +2267,7 @@
         </span>
       </Wiggle>
     {/if}
-    {#if maxSelect !== 1 && selected.length > 1}
+    {#if maxSelect !== 1 && selected.length > 1 && can_remove}
       {@render remove_btn(remove_all, removeAllTitle, { isRemoveAll: true })}
     {/if}
   {/if}

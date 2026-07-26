@@ -2430,6 +2430,28 @@ describe(`arrow key navigation between selected items`, () => {
     expect(selected_items()[1]?.textContent).toContain(`Blue`)
   })
 
+  test(`chip remove button removes the clicked occurrence with duplicates`, async () => {
+    // both chips share a key, so remove() must use the chip's index instead of findIndex
+    const [first, second] = [
+      { label: `Red`, tag: 1 },
+      { label: `Red`, tag: 2 },
+    ]
+    let removed: unknown
+    mount(MultiSelect, {
+      target: document.body,
+      props: {
+        options: [first, second],
+        selected: [first, second],
+        duplicates: true,
+        onremove: ({ option }: { option: unknown }) => (removed = option),
+      },
+    })
+    document.querySelectorAll<HTMLElement>(`ul.selected li button.remove`)[1]?.click()
+    await tick()
+    // toStrictEqual not toBe: Svelte hands the callback a $state proxy of the option
+    expect(removed).toStrictEqual(second)
+  })
+
   test(`re-focusing input clears highlight`, async () => {
     const input = setup()
     input.dispatchEvent(press(`ArrowLeft`))
@@ -2522,6 +2544,16 @@ test(`remove all button does not remove items when minSelect constraint would be
 
   // The first item should still be selected since minSelect=1
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(`Red`)
+})
+
+test(`remove all button is hidden when selected.length equals minSelect`, async () => {
+  // above, selected.length <= 1 hides the button on its own, so minSelect is never
+  // the reason - here removal is blocked yet the button would still render
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [`Red`, `Green`], selected: [`Red`, `Green`], minSelect: 2 },
+  })
+  expect(document.querySelector(`button.remove-all`)).toBeNull()
 })
 
 class DataTransfer {
@@ -3270,6 +3302,26 @@ test.each([
   await type_search_text(is_dupe_test ? `foo` : `nonexistent`, input)
 
   expect(document.querySelector(`.user-msg`)).toBeNull()
+})
+
+test(`empty duplicateOptionMsg leaves no phantom navigable row`, async () => {
+  // a blank message renders nothing, so it must not stay navigable either - else
+  // ArrowDown past the last option points aria-activedescendant at a missing element
+  mount(MultiSelect, {
+    target: document.body,
+    props: { options: [`ab`, `abc`], selected: [`ab`], duplicateOptionMsg: `` },
+  })
+  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
+  await type_search_text(`ab`, input)
+  input.dispatchEvent(fresh_key(`ArrowDown`))
+  input.dispatchEvent(fresh_key(`ArrowDown`))
+  await tick()
+  // 'abc' at index 0 is the only match, so the second ArrowDown has nowhere to go.
+  // Without the fix it would advance onto the blank duplicate row and leave
+  // aria-activedescendant pointing at an element that was never rendered.
+  const active_id = input.getAttribute(`aria-activedescendant`) ?? ``
+  expect(active_id).toMatch(/-opt-0$/u)
+  expect(document.querySelector(`#${CSS.escape(active_id)}`)).not.toBeNull()
 })
 
 test.each([[0], [1], [5], [undefined]])(
