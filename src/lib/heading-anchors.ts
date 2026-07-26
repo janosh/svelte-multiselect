@@ -11,6 +11,8 @@ const heading_regex_line_start =
   /^(?<indent>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/gimu
 const heading_regex_after_tag =
   /(?<=>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
+// Cheap precondition for both regexes above: no `<h1`..`<h6` means no match.
+const has_heading = /<h[1-6]/iu
 
 type TextInsertion = { index: number; text: string }
 
@@ -114,6 +116,8 @@ function insert_with_source_map(
 // Remove Svelte expressions handling nested braces (e.g., {fn({a: 1})})
 // Treats unmatched } as literal text to avoid dropping content
 function strip_svelte_expressions(str: string): string {
+  // no expression to strip means the char-by-char rebuild below is a no-op
+  if (!str.includes(`{`)) return str
   let result = ``
   let depth = 0
   for (const char of str) {
@@ -180,9 +184,13 @@ export function heading_ids() {
         }
       }
 
-      // Pass 1 matches line starts (.svelte); pass 2 matches after tags (mdsvex output).
-      add_heading_ids(heading_regex_line_start)
-      add_heading_ids(heading_regex_after_tag)
+      // both passes scan the whole file with a lazy [\s\S]*? body, so skip them
+      // for the many .svelte files that contain no heading at all
+      if (has_heading.test(content)) {
+        // Pass 1 matches line starts (.svelte); pass 2 matches after tags (mdsvex output).
+        add_heading_ids(heading_regex_line_start)
+        add_heading_ids(heading_regex_after_tag)
+      }
 
       return insert_with_source_map(content, insertions, filename)
     },
