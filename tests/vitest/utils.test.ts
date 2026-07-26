@@ -147,22 +147,34 @@ describe(`keyboard shortcut parsing`, () => {
     [`ctrl+shift+k`, { key: `k`, ctrl: true, shift: true, alt: false, meta: false }],
   ])(`parse_shortcut(%j)`, (shortcut, expected) => {
     expect(parse_shortcut(shortcut)).toEqual(expected)
-    // parses are memoized by shortcut string, so a repeat call must not return
-    // another shortcut's cached parse
-    expect(parse_shortcut(shortcut)).toEqual(expected)
+  })
+
+  test(`parse_shortcut hands back an object the caller owns`, () => {
+    const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
+    // prime the parse cache matches_shortcut keeps, so the next parse_shortcut
+    // call would be a cache hit if the two ever shared storage
+    expect(matches_shortcut(event, `ctrl+k`)).toBe(true)
+
+    const parsed = parse_shortcut(`ctrl+k`)
+    parsed.key = `mutated`
+    // handing out the cached object would let this mutation poison every later
+    // parse of the same shortcut, and matches_shortcut along with it
+    expect(parse_shortcut(`ctrl+k`).key).toBe(`k`)
+    expect(matches_shortcut(event, `ctrl+k`)).toBe(true)
   })
 
   test(`memoized parses stay distinct across interleaved shortcuts`, () => {
-    const shortcuts = [`ctrl+k`, `meta+k`, `ctrl+shift+k`, `k`]
-    const first_pass = shortcuts.map(parse_shortcut)
-    // re-parse in reverse: a cache keyed on anything but the string would swap results
-    expect(shortcuts.toReversed().map(parse_shortcut).toReversed()).toEqual(first_pass)
-    expect(first_pass).toEqual([
-      { key: `k`, ctrl: true, shift: false, alt: false, meta: false },
-      { key: `k`, ctrl: false, shift: false, alt: false, meta: true },
-      { key: `k`, ctrl: true, shift: true, alt: false, meta: false },
-      { key: `k`, ctrl: false, shift: false, alt: false, meta: false },
-    ])
+    const shortcuts = [`ctrl+k`, `meta+k`, `ctrl+shift+k`]
+    const event = new KeyboardEvent(`keydown`, { key: `k`, ctrlKey: true })
+    // repeat so every lookup past the first round is a cache hit - a cache keyed
+    // on anything but the shortcut string would start returning the wrong parse
+    for (let round = 0; round < 3; round++) {
+      expect(shortcuts.map((shortcut) => matches_shortcut(event, shortcut))).toEqual([
+        true,
+        false,
+        false,
+      ])
+    }
   })
 
   test.each([

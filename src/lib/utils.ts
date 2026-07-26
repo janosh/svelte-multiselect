@@ -97,44 +97,42 @@ export function split_shortcut(shortcut: string): string[] {
   return parts
 }
 
-type ParsedShortcut = {
+// Parse shortcut string into modifier+key parts
+export function parse_shortcut(shortcut: string): {
   key: string
   ctrl: boolean
   shift: boolean
   alt: boolean
   meta: boolean
-}
-
-// matches_shortcut re-parses every registered shortcut on every keydown. Parsing
-// is pure and keyed by an immutable string, so memoize it - bounded so callers
-// generating shortcut strings dynamically can't grow the map without limit.
-const MAX_PARSED_SHORTCUTS = 1000
-const parsed_shortcuts = new Map<string, ParsedShortcut>()
-
-// Parse shortcut string into modifier+key parts
-export function parse_shortcut(shortcut: string): ParsedShortcut {
-  const cached = parsed_shortcuts.get(shortcut)
-  if (cached) return cached
-
+} {
   const parts = split_shortcut(shortcut)
   const key = parts.pop() ?? ``
   const ctrl = parts.includes(`ctrl`)
   const shift = parts.includes(`shift`)
   const alt = parts.includes(`alt`)
   const meta = parts.includes(`meta`) || parts.includes(`cmd`)
-  const parsed = { key, ctrl, shift, alt, meta }
-
-  if (parsed_shortcuts.size >= MAX_PARSED_SHORTCUTS) parsed_shortcuts.clear()
-  parsed_shortcuts.set(shortcut, parsed)
-  return parsed
+  return { key, ctrl, shift, alt, meta }
 }
+
+// Every registered shortcut is re-parsed on every keydown, so cache the parses.
+// Deliberately not inside parse_shortcut: that is public API whose callers own
+// the object they get back and may mutate it. Bounded so callers generating
+// shortcut strings dynamically can't grow the map without limit.
+const MAX_PARSED_SHORTCUTS = 1000
+const parsed_shortcuts = new Map<string, ReturnType<typeof parse_shortcut>>()
 
 export function matches_shortcut(
   event: KeyboardEvent,
   shortcut: string | null | undefined,
 ): boolean {
   if (!shortcut) return false
-  const { key, ctrl, shift, alt, meta } = parse_shortcut(shortcut)
+  let parsed = parsed_shortcuts.get(shortcut)
+  if (!parsed) {
+    if (parsed_shortcuts.size >= MAX_PARSED_SHORTCUTS) parsed_shortcuts.clear()
+    parsed = parse_shortcut(shortcut)
+    parsed_shortcuts.set(shortcut, parsed)
+  }
+  const { key, ctrl, shift, alt, meta } = parsed
   // Require non-empty key to prevent "ctrl+" from matching any key with ctrl pressed
   if (!key) return false
   return (
