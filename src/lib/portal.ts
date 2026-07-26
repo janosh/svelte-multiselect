@@ -75,7 +75,8 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
       node.style.removeProperty(property)
     }
     delete node.dataset.placement
-    node.hidden = !params.open
+    // hand visibility back to the consumer's CSS: update() won't re-sync once home
+    node.hidden = false
     home_parent = null
     home_anchor = null
   }

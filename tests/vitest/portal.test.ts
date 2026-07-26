@@ -45,9 +45,14 @@ test(`hides synchronously when open flips false`, () => {
   action.update({ active: true, open: false, target_node: target })
   expect(node.hidden).toBe(true)
 
-  // deactivating must not un-hide a dropdown that is still closed
+  // deactivating hands visibility back to the consumer's own markup. Latching the
+  // closed state here instead would stick: update() stops touching `hidden` once the
+  // node is home, so reopening with the portal still off could never show it again.
   action.update({ active: false, open: false, target_node: target })
-  expect(node.hidden).toBe(true)
+  expect(node.hidden).toBe(false)
+
+  action.update({ active: false, open: true, target_node: target })
+  expect(node.hidden).toBe(false)
   action.destroy()
 })
 
