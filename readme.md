@@ -90,12 +90,13 @@ This package was called `svelte-multiselect` up to v11. Swap it out:
 npm uninstall svelte-multiselect && npm install -D svelte-widgets
 ```
 
-Then rewrite the imports. Matching on the opening quote keeps prose and GitHub URLs
-untouched, and covers every subpath (`/attachments`, `/utils`, `/types`,
-`/heading-anchors`, `/live-examples`) along with the bare import:
+Then rewrite the imports. Matching on the opening quote (all three kinds) keeps prose and
+GitHub URLs untouched, and covers every subpath (`/attachments`, `/utils`, `/types`,
+`/heading-anchors`, `/live-examples`) along with the bare import. It skips `.md`
+deliberately: in markdown a backtick-quoted mention is usually prose, not an import.
 
 ```sh
-find src -type f \( -name '*.svelte' -o -name '*.ts' -o -name '*.js' \) -exec perl -pi -e "s{(['\"])svelte-multiselect}{\$1svelte-widgets}g" {} +
+find src -type f \( -name '*.svelte' -o -name '*.ts' -o -name '*.js' \) -exec perl -pi -e "s{(['\"\`])svelte-multiselect}{\$1svelte-widgets}g" {} +
 ```
 
 Three things the rewrite cannot do for you: `CmdPalette` is now `CommandMenu`,
