@@ -920,8 +920,8 @@ describe(`tooltip`, () => {
 })
 
 describe(`click_outside`, () => {
-  const dispatch_click = (target: Element, path: EventTarget[] = []) => {
-    const event = new Event(`click`, { bubbles: true })
+  const dispatch_press = (target: Element, path: EventTarget[] = []) => {
+    const event = new Event(`pointerdown`, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
       value: () =>
@@ -946,7 +946,7 @@ describe(`click_outside`, () => {
     const path = is_outside
       ? []
       : [element, document.body, document.documentElement, document, globalThis]
-    dispatch_click(target, path)
+    dispatch_press(target, path)
 
     expect(callback).toHaveBeenCalledTimes(expected_calls)
   })
@@ -965,13 +965,13 @@ describe(`click_outside`, () => {
     const callback = vi.fn()
     click_outside({ callback, exclude: [`.modal`, `.popover`] })(element)
 
-    dispatch_click(excluded1)
-    dispatch_click(excluded2)
-    dispatch_click(nested)
+    dispatch_press(excluded1)
+    dispatch_press(excluded2)
+    dispatch_press(nested)
     expect(callback).not.toHaveBeenCalled()
 
     // control: proves the silence above is the exclude list, not a dead listener
-    dispatch_click(create_element())
+    dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
@@ -982,7 +982,7 @@ describe(`click_outside`, () => {
 
     const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
     document.body.append(svg)
-    dispatch_click(svg)
+    dispatch_press(svg)
 
     expect(callback).toHaveBeenCalledTimes(1)
   })
@@ -992,7 +992,7 @@ describe(`click_outside`, () => {
     const listener = vi.fn()
     element.addEventListener(`outside-click`, listener)
     click_outside({})(element) // no callback
-    dispatch_click(create_element())
+    dispatch_press(create_element())
     expect(listener).toHaveBeenCalled()
   })
 
@@ -1001,12 +1001,73 @@ describe(`click_outside`, () => {
     const callback = vi.fn()
     const cleanup = click_outside({ callback })(element)
 
-    dispatch_click(create_element())
+    dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1)
 
     cleanup?.()
-    dispatch_click(create_element())
+    dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1) // Still 1, not called again
+  })
+
+  it(`dismisses on the press, not on a following click`, () => {
+    const element = create_element()
+    const callback = vi.fn()
+    click_outside({ callback })(element)
+
+    const outside = create_element()
+    dispatch_press(outside)
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    // right-clicks and OS-captured drags never send this click, hence pointerdown
+    outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`scope confines exclude matches to one subtree`, () => {
+    const [own_scope, own_trigger, other_trigger] = [
+      create_element(),
+      create_element(),
+      create_element(),
+    ]
+    own_trigger.className = `trigger`
+    other_trigger.className = `trigger`
+    own_scope.append(own_trigger)
+
+    const element = create_element()
+    const callback = vi.fn()
+    click_outside({ callback, exclude: [`.trigger`], scope: own_scope })(element)
+
+    dispatch_press(own_trigger)
+    expect(callback).not.toHaveBeenCalled()
+
+    // Same selector, another instance's trigger: it must not shield this surface
+    dispatch_press(other_trigger)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([true, false])(`escape reports focus_inside=%s`, (focus_inside) => {
+    const element = create_element()
+    const inner = create_element()
+    element.append(inner)
+    const focus_target = focus_inside ? inner : create_element()
+    focus_target.setAttribute(`tabindex`, `0`)
+    focus_target.focus()
+
+    const callback = vi.fn()
+    click_outside({ callback, escape: true })(element)
+    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][2]).toEqual({ focus_inside, via: `escape` })
+  })
+
+  it(`ignores Escape unless asked, so existing keydown chains keep their order`, () => {
+    const element = create_element()
+    const callback = vi.fn()
+    click_outside({ callback })(element)
+
+    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    expect(callback).not.toHaveBeenCalled()
   })
 })
 

@@ -35,10 +35,11 @@ describe(`Nav`, () => {
     el.dispatchEvent(new FocusEvent(`focusin`, { bubbles: true }))
   const focus_out = (el: Element, relatedTarget: EventTarget | null) =>
     el.dispatchEvent(new FocusEvent(`focusout`, { bubbles: true, relatedTarget }))
+  // the attachment dismisses on the press, not the click
   const click_outside = async () => {
     const outside = document.createElement(`div`)
     document.body.append(outside)
-    outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true, cancelable: true }))
+    outside.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
     await tick()
     outside.remove()
   }
