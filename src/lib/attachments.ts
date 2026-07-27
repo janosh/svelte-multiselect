@@ -1216,20 +1216,20 @@ export const click_outside =
 
     if (!enabled) return undefined // Early return avoids registering unused listener
 
-    const inside_nodes = inside.filter((item) => item instanceof Element)
+    const inside_nodes = [node, ...inside.filter((item) => item instanceof Element)]
     // Empty entries would make the joined selector invalid and throw on every press
     const inside_selector = inside
       .filter((item): item is string => typeof item === `string` && item !== ``)
       .join(`,`)
     // `path` is empty for the focus check, which has no event to walk
     const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
-      if (path.includes(node)) return true
-      // Element (not HTMLElement) so clicks on SVG elements still count; .closest
-      // below exists on all Elements
-      if (!(target instanceof Element)) return false
-      if (node.contains(target)) return true
-      if (inside_nodes.some((el) => path.includes(el) || el.contains(target))) return true
-      const match = inside_selector ? target.closest(inside_selector) : null
+      const node_target = target instanceof Node ? target : null
+      if (inside_nodes.some((el) => path.includes(el) || el.contains(node_target))) {
+        return true
+      }
+      // Element (not HTMLElement) so a press on an SVG child still matches a selector
+      if (!inside_selector || !(target instanceof Element)) return false
+      const match = target.closest(inside_selector)
       return Boolean(match) && (!scope || scope.contains(match))
     }
 
@@ -1287,7 +1287,6 @@ export interface FloatOptions extends PositionOptions {
   // `absolute` survives that at the cost of adding page scroll to every update.
   strategy?: `fixed` | `absolute`
   match_width?: boolean // size the floating box to the anchor, for dropdowns
-  on_position?: (placement: Placement) => void
 }
 
 // Park an element next to an anchor and keep it there while the page moves.
@@ -1301,7 +1300,6 @@ export const float =
       enabled = true,
       strategy = `fixed`,
       match_width = false,
-      on_position,
       ...position_options
     } = options
     if (!enabled || !anchor || !(node instanceof HTMLElement)) return undefined
@@ -1325,7 +1323,6 @@ export const float =
         top: `${top + scroll_y}px`,
       })
       node.dataset.placement = placement
-      on_position?.(placement)
     }
 
     update()
@@ -1410,6 +1407,11 @@ const is_tabbable = (element: Element): boolean => {
 
 const register_trap_layer = key_layer_stack((event) => event.key === `Tab`)
 
+// Element has no focus(), so narrow to the two that do
+const focus_element = (element: Element | null | undefined) => {
+  if (element instanceof HTMLElement || element instanceof SVGElement) element.focus()
+}
+
 // Keep Tab inside a surface and hand focus back when it closes. Pair with
 // click_outside: that one decides when a surface goes away, this one decides where
 // the keyboard is while it is up and where it lands afterwards.
@@ -1441,7 +1443,7 @@ export const focus_trap =
         node.tabIndex = -1
         added_tabindex = true
       }
-      if (target instanceof HTMLElement || target instanceof SVGElement) target.focus()
+      focus_element(target)
     }
 
     const on_tab = (event: KeyboardEvent) => {
@@ -1471,7 +1473,6 @@ export const focus_trap =
       // Don't yank focus if the user already placed it elsewhere. A closing surface
       // usually leaves focus on body, which counts as ours to hand back.
       if (!holds_focus() && document.activeElement !== document.body) return
-      const target = restore ?? focus_origin
-      if (target instanceof HTMLElement || target instanceof SVGElement) target.focus()
+      focus_element(restore ?? focus_origin)
     }
   }

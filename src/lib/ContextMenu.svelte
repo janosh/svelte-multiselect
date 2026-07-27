@@ -3,7 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { click_outside, float, focus_trap } from './attachments'
   import type { CmdAction } from './types'
-  import { split_shortcut } from './utils'
+  import { format_shortcut } from './utils'
 
   interface Props extends HTMLAttributes<HTMLMenuElement> {
     actions: CmdAction[]
@@ -36,7 +36,6 @@
   }
 
   function run(action: CmdAction) {
-    if (action.disabled) return
     at = null
     action.action(action.label)
     on_select?.(action)
@@ -74,7 +73,7 @@
             <span>{action.label}</span>
             {#if action.shortcut}
               <span aria-hidden="true">
-                {#each split_shortcut(action.shortcut) as part, idx (idx)}
+                {#each format_shortcut(action.shortcut) as part, idx (idx)}
                   <kbd>{part}</kbd>
                 {/each}
               </span>

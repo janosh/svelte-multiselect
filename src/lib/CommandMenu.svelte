@@ -9,8 +9,8 @@
     cmd_action_matches,
     chain_handlers,
     format_cmd_metadata,
+    format_shortcut,
     run_hotkeys,
-    split_shortcut,
   } from './utils'
 
   // MultiSelect's option snippet param (option + idx/selected/active/disabled)
@@ -154,34 +154,6 @@
         (rank.get(get_action_id(right_action)) ?? actions.length),
     )
   })
-
-  // === Shortcut display ===
-  // Map shortcut segments to display symbols (deterministic across platforms)
-  const key_symbols: Record<string, string> = {
-    meta: `⌘`,
-    cmd: `⌘`,
-    shift: `⇧`,
-    alt: `⌥`,
-    ctrl: `Ctrl`,
-    enter: `↵`,
-    backspace: `⌫`,
-    delete: `⌦`,
-    escape: `Esc`,
-    arrowup: `↑`,
-    arrowdown: `↓`,
-    arrowleft: `←`,
-    arrowright: `→`,
-  }
-  const format_shortcut = (shortcut: string): string[] =>
-    split_shortcut(shortcut).map((part) => {
-      const key_segment = part.trim().toLowerCase()
-      // title-case unknown multi-char segments, upper-case single chars (empty stays empty)
-      const title_case = key_segment.charAt(0).toUpperCase() + key_segment.slice(1)
-      return (
-        key_symbols[key_segment] ??
-        (key_segment.length > 1 ? title_case : key_segment.toUpperCase())
-      )
-    })
 
   // Dynamic actions may contain metadata not present in the static action list.
   const has_action_meta = $derived(

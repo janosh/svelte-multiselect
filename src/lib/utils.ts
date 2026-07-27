@@ -209,8 +209,37 @@ export function matches_shortcut(
 const is_apple_platform = (): boolean =>
   /mac|iphone|ipad|ipod/iu.test(globalThis.navigator?.userAgent ?? ``)
 
-export const resolve_mod = (shortcut: string): string =>
+const resolve_mod = (shortcut: string): string =>
   shortcut.replaceAll(/\bmod\b/giu, is_apple_platform() ? `meta` : `ctrl`)
+
+// Shortcut segments as display symbols, shared by CommandMenu and ContextMenu.
+// Only `mod` reads the platform; every other segment renders the same everywhere.
+const key_symbols: Record<string, string> = {
+  meta: `⌘`,
+  cmd: `⌘`,
+  shift: `⇧`,
+  alt: `⌥`,
+  ctrl: `Ctrl`,
+  enter: `↵`,
+  backspace: `⌫`,
+  delete: `⌦`,
+  escape: `Esc`,
+  arrowup: `↑`,
+  arrowdown: `↓`,
+  arrowleft: `←`,
+  arrowright: `→`,
+}
+
+export const format_shortcut = (shortcut: string): string[] =>
+  split_shortcut(resolve_mod(shortcut)).map((part) => {
+    const key_segment = part.trim().toLowerCase()
+    // title-case unknown multi-char segments, upper-case single chars (empty stays empty)
+    const title_case = key_segment.charAt(0).toUpperCase() + key_segment.slice(1)
+    return (
+      key_symbols[key_segment] ??
+      (key_segment.length > 1 ? title_case : key_segment.toUpperCase())
+    )
+  })
 
 export type Hotkey = {
   keys: string | string[] // e.g. `mod+k`, `ctrl+shift+p`, `Escape`

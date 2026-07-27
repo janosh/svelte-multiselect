@@ -52,12 +52,24 @@ describe(`ContextMenu`, () => {
       `Copy`,
       `Delete`,
     ])
-    expect([...items()[0].querySelectorAll(`kbd`)].map((key) => key.textContent)).toEqual(
-      [`mod`, `c`],
-    )
     // float anchored the menu on the pointer rather than on any element
     const { position, left, top } = doc_query(`menu[role="menu"]`).style
     expect([position, left, top]).toEqual([`fixed`, `120px`, `240px`])
+  })
+
+  test.each([
+    [`Macintosh; Intel Mac OS X 10_15`, [`⌘`, `C`]],
+    [`X11; Linux x86_64`, [`Ctrl`, `C`]],
+  ])(`renders mod as the platform's key (%s)`, async (user_agent, expected) => {
+    Object.defineProperty(globalThis.navigator, `userAgent`, {
+      value: user_agent,
+      configurable: true,
+    })
+    await open_menu()
+
+    expect([...items()[0].querySelectorAll(`kbd`)].map((key) => key.textContent))
+      .toEqual(expected)
+    Reflect.deleteProperty(globalThis.navigator, `userAgent`)
   })
 
   test(`choosing an action runs it and closes, disabled ones do neither`, async () => {

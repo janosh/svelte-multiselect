@@ -76,7 +76,6 @@
     bind:this={surface}
     id={surface_id}
     role="dialog"
-    aria-modal="false"
     {...rest}
     class="popover {rest.class ?? ``}"
     {@attach float({ anchor, placement, align, offset, padding, match_width, strategy })}
