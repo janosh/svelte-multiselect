@@ -1,6 +1,7 @@
 import type { Snippet } from 'svelte'
 import type { FlipParams } from 'svelte/animate'
 import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
+import type { IconName } from './icons'
 
 export type Option = string | number | ObjectOption
 
@@ -383,3 +384,20 @@ export type OpenChangeEvent = {
 export type OpenChangeHandler = (event: OpenChangeEvent) => void
 export type SlugifyHeading = (node: HTMLHeadingElement, idx: number) => string
 export type TocHeadingData = { id: string; level: number; title: string }
+
+// === Footer ===
+export interface FooterLink {
+  href: string
+  label: string
+  icon?: IconName
+  title?: string
+  external?: boolean // adds target=_blank and rel=noopener noreferrer
+}
+
+// === ContributorList ===
+// structural, so a GitHub API response satisfies it without a cast
+export interface Contributor {
+  login: string
+  avatar_url: string
+  html_url: string
+}

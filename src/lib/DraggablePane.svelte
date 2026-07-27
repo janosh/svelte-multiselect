@@ -1,0 +1,392 @@
+<script lang="ts">
+  import { onDestroy, type Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
+  import type { ResizableOptions } from './attachments'
+  import { click_outside, draggable, resizable, tooltip } from './attachments'
+  import Icon from './Icon.svelte'
+  import type { IconName } from './icons'
+
+  type CloseVia = `toggle` | `button` | `pointer` | `escape`
+  // Handed to the children snippet so content can react to the pane's own chrome —
+  // a plot pausing its animation while the pane is being dragged over it, say.
+  type PaneState = {
+    show: boolean
+    show_controls: boolean
+    has_been_dragged: boolean
+    dragging: boolean
+  }
+
+  interface Props {
+    show?: boolean
+    children: Snippet<[PaneState]>
+    toggle_props?: HTMLAttributes<HTMLButtonElement>
+    open_icon?: IconName
+    closed_icon?: IconName
+    icon_style?: string
+    // Gap between the toggle button's bottom-right corner and the pane's
+    offset?: { x?: number; y?: number }
+    max_width?: string
+    pane_props?: HTMLAttributes<HTMLDivElement>
+    // Only Escape and the close button dismiss it — a press outside is ignored, for a
+    // pane the user keeps open while working on what it sits over
+    persistent?: boolean
+    resize?: `both` | `width` | `height` | `none`
+    // `fixed` renders relative to the viewport so the pane escapes overflow-clipping
+    // ancestors (cards, tables) and caps its height to the space below its top edge
+    position?: `absolute` | `fixed`
+    on_close?: (detail: { via: CloseVia }) => void
+    on_drag_start?: () => void
+    toggle_btn?: HTMLButtonElement | null
+    pane?: HTMLDivElement | null
+    has_been_dragged?: boolean
+    dragging?: boolean
+  }
+
+  let {
+    show = $bindable(false),
+    children,
+    toggle_props = {},
+    open_icon = `Cross`,
+    closed_icon = `Expand`,
+    icon_style = ``,
+    offset = { x: 5, y: 5 },
+    max_width = `450px`,
+    pane_props = {},
+    persistent = false,
+    resize = `none`,
+    position = `absolute`,
+    on_close,
+    on_drag_start,
+    toggle_btn = $bindable(null),
+    pane = $bindable(null),
+    has_been_dragged = $bindable(false),
+    dragging = $bindable(false),
+  }: Props = $props()
+
+  const viewport_margin_px = 8
+  // How much of the pane stays on screen when the toggle sits near the bottom edge.
+  // Without it a low toggle parks the pane in the last few pixels of the viewport.
+  const min_reachable_height_px = 180
+  // Doubles as `resizable`'s handle_size and as the padding reserved for it, so the
+  // grab zone never overlaps content or the content area's own scrollbar
+  const resize_gutter_px = 8
+  // Where the pane sits at mount, before it is anchored under its toggle
+  const fallback_position = { left: 50, top: 50 }
+
+  // Both a drag and a resize opt the pane out of automatic repositioning and reveal
+  // the reset button that opts it back in
+  const show_controls = $derived(has_been_dragged)
+
+  const resize_edges: ResizableOptions[`edges`] = $derived(
+    resize === `width`
+      ? [`right`]
+      : resize === `height`
+        ? [`bottom`]
+        : [`right`, `bottom`],
+  )
+  const gutter = (side: `width` | `height`) =>
+    resize === `both` || resize === side ? `${resize_gutter_px}px` : null
+
+  const close_pane = (via: CloseVia) => {
+    show = false
+    on_close?.({ via })
+  }
+
+  // Where the pane sits when it has not been dragged: under the toggle, right edges
+  // aligned. Fixed panes additionally stay inside the viewport.
+  const anchor_position = (): { left: number; top: number } => {
+    if (!toggle_btn) return fallback_position
+    const toggle_rect = toggle_btn.getBoundingClientRect()
+    const pane_width = pane?.getBoundingClientRect().width || 450
+    const offset_x = offset.x ?? 5
+    const offset_y = offset.y ?? 5
+
+    if (position === `fixed`) {
+      return {
+        left: Math.max(
+          viewport_margin_px,
+          Math.min(
+            toggle_rect.right - pane_width + offset_x,
+            globalThis.innerWidth - pane_width - viewport_margin_px,
+          ),
+        ),
+        top: Math.max(
+          viewport_margin_px,
+          Math.min(
+            toggle_rect.bottom + offset_y,
+            globalThis.innerHeight - min_reachable_height_px - viewport_margin_px,
+          ),
+        ),
+      }
+    }
+
+    const ancestor_rect = toggle_btn.offsetParent?.getBoundingClientRect()
+    // No positioned ancestor means the pane is placed against the document
+    if (!ancestor_rect) {
+      return {
+        left: toggle_rect.right - pane_width + offset_x + globalThis.scrollX,
+        top: toggle_rect.bottom + offset_y + globalThis.scrollY,
+      }
+    }
+    return {
+      left: toggle_rect.right - ancestor_rect.left - pane_width + offset_x,
+      top: toggle_rect.bottom - ancestor_rect.top + offset_y,
+    }
+  }
+
+  // Move the pane back under the toggle and drop manual size overrides. A fixed pane
+  // must not extend past the bottom viewport edge, so --pane-viewport-clamp (min()'d
+  // with --pane-max-height in CSS) is rewritten on every move, or a reset after a drag
+  // plus a window resize would keep a stale cap. No minimum needed: anchor_position
+  // already clamps the top so min_reachable_height_px of space remains below it.
+  const position_pane = () => {
+    if (!pane) return
+    // Clear the manual size first so anchor_position() measures the natural width
+    pane.style.width = ``
+    pane.style.height = ``
+    const { left, top } = anchor_position()
+    Object.assign(pane.style, {
+      left: `${left}px`,
+      top: `${top}px`,
+      right: `auto`,
+      bottom: `auto`,
+    })
+    if (position === `fixed`) {
+      const available = globalThis.innerHeight - top - viewport_margin_px
+      pane.style.setProperty(`--pane-viewport-clamp`, `${Math.max(0, available)}px`)
+    }
+  }
+
+  const reset_position = () => {
+    position_pane()
+    has_been_dragged = false
+  }
+
+  const reanchor = () => {
+    if (show && toggle_btn && !has_been_dragged) position_pane()
+  }
+  $effect(reanchor)
+
+  let resize_timeout: ReturnType<typeof setTimeout> | undefined
+  onDestroy(() => clearTimeout(resize_timeout))
+  // Debounced, and reanchor re-checks on the trailing edge: the pane may have been
+  // dragged or closed during the wait, either of which cancels the reposition
+  const handle_viewport_resize = () => {
+    clearTimeout(resize_timeout)
+    resize_timeout = setTimeout(reanchor, 50)
+  }
+</script>
+
+<svelte:window onresize={handle_viewport_resize} />
+
+<button
+  type="button"
+  bind:this={toggle_btn}
+  {...toggle_props}
+  aria-expanded={show}
+  onclick={() => (show ? close_pane(`toggle`) : (show = true))}
+  class={[`pane-toggle`, toggle_props.class]}
+  {@attach tooltip({
+    content: toggle_props.title ?? (show ? `Close pane` : `Open pane`),
+  })}
+>
+  <Icon icon={show ? open_icon : closed_icon} style={icon_style} />
+</button>
+
+<div
+  bind:this={pane}
+  role="dialog"
+  aria-label="Draggable pane"
+  aria-modal="false"
+  data-resize={resize}
+  data-dragging={dragging}
+  style:position
+  style:max-width={max_width}
+  style:top="{fallback_position.top}px"
+  style:left="{fallback_position.left}px"
+  style:display={show ? `grid` : `none`}
+  style:padding-right={gutter(`width`)}
+  style:padding-bottom={gutter(`height`)}
+  {...pane_props}
+  class={[`draggable-pane`, show && `pane-open`, pane_props.class]}
+  {@attach draggable({
+    handle_selector: `.drag-handle`,
+    on_drag_start: () => {
+      has_been_dragged = true
+      dragging = true
+      on_drag_start?.()
+    },
+    on_drag_end: () => (dragging = false),
+  })}
+  {@attach resizable({
+    disabled: resize === `none`,
+    edges: resize_edges,
+    min_width: 200,
+    min_height: 100,
+    handle_size: resize_gutter_px,
+    on_resize_start: () => (has_been_dragged = true),
+  })}
+  {@attach click_outside({
+    enabled: show,
+    inside: [toggle_btn],
+    escape: true,
+    // Escape always dismisses; a press outside is what `persistent` suppresses
+    callback: (_node, _config, { via }) => {
+      if (via === `escape` || !persistent) close_pane(via)
+    },
+  })}
+>
+  <div class="control-tab">
+    <!-- inline rather than <Icon>: icons.ts has no drag-grip or reset glyph -->
+    <span class="drag-handle" aria-hidden="true">
+      <svg viewBox="0 0 16 16" fill="currentColor" style="width: 100%; height: 100%">
+        {#each [3, 8, 13] as row_y (row_y)}
+          <circle cx="6" cy={row_y} r="1.4" />
+          <circle cx="10" cy={row_y} r="1.4" />
+        {/each}
+      </svg>
+    </span>
+    {#if show_controls}
+      <button
+        type="button"
+        class="reset-button"
+        title="Reset pane position"
+        aria-label="Reset pane position"
+        onclick={reset_position}
+      >
+        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%">
+          <path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z" />
+        </svg>
+      </button>
+      <button
+        type="button"
+        class="close-button"
+        title="Close pane"
+        aria-label="Close pane"
+        onclick={() => close_pane(`button`)}
+      >
+        <Icon icon="Cross" style="width: 100%; height: 100%" />
+      </button>
+    {/if}
+  </div>
+  <div class="pane-content">
+    {@render children({ show, show_controls, has_been_dragged, dragging })}
+  </div>
+  {#if resize === `both`}
+    <!-- purely an affordance: the grab zone is the gutter, owned by `resizable` -->
+    <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
+      <line x1="9" y1="1" x2="1" y2="9" />
+      <line x1="9" y1="4" x2="4" y2="9" />
+      <line x1="9" y1="7" x2="7" y2="9" />
+    </svg>
+  {/if}
+</div>
+
+<style>
+  button.pane-toggle {
+    box-sizing: border-box;
+    display: flex;
+    place-items: center;
+    padding: var(--pane-toggle-padding, 2pt);
+    border-radius: var(--pane-toggle-border-radius, var(--border-radius, 3pt));
+    background-color: transparent;
+    transition: var(--pane-toggle-transition, background-color 0.2s);
+    font-size: var(--pane-toggle-font-size, 0.875rem);
+    &:hover {
+      background-color: color-mix(in srgb, currentColor 8%, transparent);
+    }
+  }
+  div.draggable-pane {
+    /* position comes from style:position, default absolute so it scrolls with the page */
+    box-sizing: border-box;
+    display: grid;
+    /* one in-flow child; minmax(0, 1fr) lets it scroll instead of overflowing once
+       the pane has a definite height from a resize or the viewport clamp */
+    grid-template-rows: minmax(0, 1fr);
+    text-align: left;
+    width: var(--pane-width, 28em);
+    max-width: var(--pane-max-width, 80cqw);
+    min-height: var(--pane-min-height, auto);
+    /* --pane-viewport-clamp (set for position="fixed") keeps a pane whose toggle sits
+       low on screen above the bottom viewport edge */
+    max-height: min(var(--pane-max-height, 80vh), var(--pane-viewport-clamp, 200vh));
+    overflow: visible; /* the control tab protrudes past the pane's right border */
+    background: var(--pane-bg, var(--page-bg, light-dark(white, black)));
+    border: var(
+      --pane-border,
+      1px solid light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.15))
+    );
+    border-radius: var(--pane-border-radius, var(--border-radius, 3pt));
+    box-shadow: var(
+      --pane-box-shadow,
+      light-dark(0 4px 20px -4px rgba(0, 0, 0, 0.15), 0 8px 16px -4px rgba(0, 0, 0, 0.3))
+    );
+    z-index: var(--pane-z-index, 10);
+    /* position is deliberately not transitioned, which would make dragging sluggish */
+    transition:
+      opacity 0.3s,
+      background-color 0.3s,
+      border-color 0.3s,
+      box-shadow 0.3s;
+    .pane-content {
+      padding: var(--pane-padding, 1ex);
+      display: grid;
+      gap: var(--pane-gap, 4pt);
+      box-sizing: border-box;
+      min-height: 0; /* or the row refuses to shrink below its content */
+      overflow-x: var(--pane-overflow-x, hidden);
+      overflow-y: var(--pane-overflow-y, auto);
+      overscroll-behavior: contain;
+    }
+    .control-tab {
+      position: absolute;
+      top: 6px;
+      right: -1px;
+      transform: translateX(100%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 1px;
+      padding: 3px 2px;
+      background: inherit;
+      border: inherit;
+      border-left: none;
+      border-radius: 0 5px 5px 0;
+      z-index: var(--pane-control-tab-z-index, 1);
+      > * {
+        width: 1.1em;
+        height: 1.1em;
+        padding: 1px;
+        box-sizing: border-box;
+        display: flex;
+        place-items: center;
+        border: none;
+        border-radius: 3px;
+        background: none;
+        opacity: 0.5;
+        &:hover {
+          opacity: 0.8;
+          background-color: color-mix(in srgb, currentColor 15%, transparent);
+        }
+      }
+      /* .drag-handle's own cursor is inline, set by `draggable` */
+      button {
+        cursor: pointer;
+      }
+    }
+    .resize-grip {
+      position: absolute;
+      bottom: 1px;
+      right: 1px;
+      width: 10px;
+      height: 10px;
+      opacity: 0.3;
+      pointer-events: none; /* the gutter underneath belongs to `resizable` */
+      line {
+        stroke: currentColor;
+        stroke-width: 1.5;
+        stroke-linecap: round;
+      }
+    }
+  }
+</style>

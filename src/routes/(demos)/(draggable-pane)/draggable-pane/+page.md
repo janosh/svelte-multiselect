@@ -1,0 +1,104 @@
+## DraggablePane
+
+A toggle button and the floating panel it opens. Drag it by the grip on its tab, resize
+it from the gutter along its right and bottom edges, and reset it back under the toggle
+once you have moved it. It composes three attachments rather than reimplementing them:
+[`draggable`](attachments#draggable) moves it, `resizable` sizes it, and
+[`click_outside`](attachments#click_outside) takes it away.
+
+Use it for anything that hangs off a control in the corner of a widget — export
+options, plot controls, a settings panel — where a modal would be too heavy and a
+dropdown too small.
+
+```svelte example id="draggable-pane-basic"
+<script lang="ts">
+  import DraggablePane from '$lib/DraggablePane.svelte'
+  import { Toggle } from '$lib'
+
+  let show = $state(false)
+  let persistent = $state(false)
+  let resize = $state<`both` | `width` | `height` | `none`>(`both`)
+  let last_close = $state(``)
+</script>
+
+<div style="display: flex; gap: 2em; align-items: center; flex-wrap: wrap">
+  <label>
+    Resize
+    <select bind:value={resize}>
+      {#each [`both`, `width`, `height`, `none`] as mode (mode)}<option>{mode}</option
+        >{/each}
+    </select>
+  </label>
+  <label>Persistent <Toggle bind:checked={persistent} /></label>
+  {#if last_close}<small>last closed via <code>{last_close}</code></small>{/if}
+</div>
+
+<div
+  style="position: relative; height: 22em; margin: 1em 0; padding: 6pt; border: 1px dashed gray; border-radius: 5pt"
+>
+  <div style="display: flex; justify-content: flex-end">
+    <DraggablePane
+      bind:show
+      {persistent}
+      {resize}
+      on_close={({ via }) => (last_close = via)}
+      toggle_props={{ title: `Pane options` }}
+    >
+      {#snippet children({ has_been_dragged, dragging })}
+        <h4 style="margin: 0">Pane options</h4>
+        <label>Name <input placeholder="type something" /></label>
+        <label>Amount <input type="range" /></label>
+        <p style="margin: 0; font-size: 0.85em; opacity: 0.7">
+          dragged: {has_been_dragged} · dragging: {dragging}
+        </p>
+      {/snippet}
+    </DraggablePane>
+  </div>
+</div>
+```
+
+The `children` snippet receives `{ show, show_controls, has_been_dragged, dragging }`,
+so content can react to the pane's own chrome — pausing an animation while the pane is
+being dragged over it, for instance.
+
+### Persistent panes
+
+`persistent` drops the press-outside dismissal only. Escape still closes the pane, as
+does the close button that appears on its tab once you move it, so there is always a way
+out. Escape is layered: a pane opened from inside a dialog closes before the dialog
+does.
+
+### Positioning
+
+`position="absolute"` (the default) places the pane against the nearest positioned
+ancestor, so it scrolls with the page. `position="fixed"` measures against the viewport
+instead, which escapes an `overflow: hidden` ancestor and clamps the pane's top edge so
+at least 180px of it stays reachable, capping `--pane-viewport-clamp` to the space that
+remains below.
+
+```svelte example id="draggable-pane-fixed"
+<script lang="ts">
+  import DraggablePane from '$lib/DraggablePane.svelte'
+</script>
+
+<div
+  style="height: 6em; overflow: hidden; border: 1px dashed gray; border-radius: 5pt; padding: 6pt; display: flex; justify-content: flex-end"
+>
+  <DraggablePane position="fixed" resize="height" max_width="320px">
+    {#snippet children()}
+      <p style="margin: 0">This pane escapes the clipped box its toggle lives in.</p>
+    {/snippet}
+  </DraggablePane>
+</div>
+```
+
+### Styling
+
+Everything hangs off CSS custom properties on the pane: `--pane-bg`, `--pane-border`,
+`--pane-border-radius`, `--pane-box-shadow`, `--pane-width`, `--pane-max-width`,
+`--pane-min-height`, `--pane-max-height`, `--pane-padding`, `--pane-gap`,
+`--pane-z-index`, plus `--pane-toggle-*` for the button. `pane_props` and `toggle_props`
+spread onto the two elements for anything else.
+
+The pane also carries `data-resize` and `data-dragging`, so content underneath can react
+without a prop — `[data-dragging='true'] canvas { pointer-events: none }`, say.

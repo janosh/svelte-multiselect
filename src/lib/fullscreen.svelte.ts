@@ -1,0 +1,72 @@
+import { get_bg_color } from './attachments'
+
+export type FullscreenSyncOptions = {
+  // the element that goes fullscreen; sync is inert until this resolves
+  get_wrapper: () => HTMLElement | undefined
+  get_fullscreen: () => boolean
+  set_fullscreen: (fullscreen: boolean) => void
+  // CSS variable painted on the wrapper with the page background, e.g. `--struct-bg-fullscreen`
+  get_bg_css_var?: () => string | undefined
+  on_change?: (fullscreen: boolean) => void
+  on_request_error?: (error: unknown) => void
+}
+
+// Page background as an explicit color. `get_bg_color` walks body then html — themes
+// usually paint body — and the OS color scheme decides when both are transparent.
+export function get_page_background(
+  fallback_dark = `#1a1a1a`,
+  fallback_light = `#ffffff`,
+): string {
+  if (typeof document === `undefined`) return ``
+  const page_bg = get_bg_color(document.body)
+  if (page_bg) return page_bg
+  const prefers_dark = matchMedia(`(prefers-color-scheme: dark)`).matches
+  return prefers_dark ? fallback_dark : fallback_light
+}
+
+// Two-way sync between a bindable `fullscreen` flag and the browser's fullscreen state,
+// scoped to one wrapper element. Creates $effects, so call during component init.
+export function sync_fullscreen(opts: FullscreenSyncOptions): void {
+  // flag -> browser
+  $effect(() => {
+    const wrapper = opts.get_wrapper()
+    if (!wrapper) return
+    const fullscreen = opts.get_fullscreen()
+    const fullscreen_element = document.fullscreenElement
+
+    if (fullscreen && fullscreen_element !== wrapper) {
+      wrapper.requestFullscreen().catch((error: unknown) => {
+        console.error(`requestFullscreen failed for`, wrapper, error)
+        opts.on_request_error?.(error)
+      })
+    } else if (!fullscreen && fullscreen_element === wrapper) {
+      document.exitFullscreen().catch((error: unknown) => {
+        console.error(`exitFullscreen failed for`, wrapper, error)
+      })
+    }
+
+    // a fullscreened element inherits nothing from the page and would render on black
+    if (fullscreen) {
+      const bg_css_var = opts.get_bg_css_var?.() ?? `--fullscreen-bg`
+      wrapper.style.setProperty(bg_css_var, get_page_background())
+    }
+  })
+
+  // browser -> flag, covering Esc, F11 and programmatic exits
+  $effect(() => {
+    const wrapper = opts.get_wrapper()
+    if (!wrapper) return () => {}
+
+    const handle_change = () => {
+      // key the flag to this wrapper: comparing against document.fullscreenElement alone
+      // would flip every mounted flag whenever any element goes fullscreen, and each
+      // flipped flag then fires its own requestFullscreen
+      const is_fullscreen = document.fullscreenElement === wrapper
+      if (is_fullscreen === opts.get_fullscreen()) return
+      opts.set_fullscreen(is_fullscreen)
+      opts.on_change?.(is_fullscreen)
+    }
+    document.addEventListener(`fullscreenchange`, handle_change)
+    return () => document.removeEventListener(`fullscreenchange`, handle_change)
+  })
+}
