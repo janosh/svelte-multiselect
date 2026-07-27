@@ -50,6 +50,9 @@
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     on_change?: (selected: Value | Value[] | null) => void
     tooltip_placement?: `top` | `bottom` | `left` | `right`
+    // a div cannot legally sit inside phrasing content, so a group rendered in a
+    // heading or a paragraph needs to be a span
+    as?: string
   } & (
       | { multiple?: false; selected?: Value | null }
       | { multiple: true; selected?: Value[] }
@@ -65,6 +68,7 @@
     option,
     on_change,
     tooltip_placement = `bottom`,
+    as = `div`,
     ...rest
   }: Props = $props()
 
@@ -126,8 +130,9 @@
   }
 </script>
 
-<div {...rest} class={[`button-group`, rest.class]}>
-  <div
+<svelte:element this={as} {...rest} class={[`button-group`, rest.class]}>
+  <!-- span, not div: it is display: flex either way and stays valid when `as` is a span -->
+  <span
     class="options"
     role={multiple ? `group` : `radiogroup`}
     aria-label={label}
@@ -155,7 +160,7 @@
         {/if}
       </button>
     {/each}
-  </div>
+  </span>
   {#if sort_order}
     <button
       type="button"
@@ -167,7 +172,7 @@
       {sort_order === `asc` ? `↑` : `↓`}
     </button>
   {/if}
-</div>
+</svelte:element>
 
 <style>
   .button-group {
@@ -194,7 +199,11 @@
       color: var(--btn-group-btn-color, inherit);
       border: var(--btn-group-btn-border, 1px solid transparent);
       border-radius: var(--btn-group-btn-radius, 3pt);
-      font: inherit;
+      /* longhands rather than the `font` shorthand, which would also set weight and
+         style: this selector outranks a consumer's own `button {}` rule, so the
+         shorthand silently overrode their global button typography */
+      font-family: var(--btn-group-btn-font-family, inherit);
+      font-size: var(--btn-group-btn-font-size, inherit);
       cursor: pointer;
     }
     button:hover:not(:disabled) {

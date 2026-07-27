@@ -1,4 +1,5 @@
 import ButtonGroup from '$lib/ButtonGroup.svelte'
+import button_group_source from '$lib/ButtonGroup.svelte?raw'
 import type { ComponentProps } from 'svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
@@ -84,12 +85,23 @@ describe(`ButtonGroup`, () => {
   ] as const)(
     `multiple=%s uses %s semantics`,
     (multiple, group_role, button_role, used_attr, unused_attr) => {
-      const buttons = mount_group({
-        options: letters,
-        multiple,
-        label: `Greek letters`,
-        selected: multiple ? [`beta`] : `beta`,
-      })
+      // `multiple` discriminates the props union, so it has to reach mount_group as a
+      // literal; passing the loop variable widens it to boolean and matches neither arm
+      const buttons = mount_group(
+        multiple
+          ? {
+              options: letters,
+              multiple: true,
+              label: `Greek letters`,
+              selected: [`beta`],
+            }
+          : {
+              options: letters,
+              multiple: false,
+              label: `Greek letters`,
+              selected: `beta`,
+            },
+      )
 
       const group = doc_query(`.options`)
       expect(group.getAttribute(`role`)).toBe(group_role)
@@ -347,5 +359,27 @@ describe(`ButtonGroup`, () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  // `as` exists so a group can sit in a heading or paragraph, where a div is invalid.
+  // The inner options wrapper has to follow, or the root is legal and its child isn't.
+  test.each([
+    [`div`, undefined],
+    [`span`, `span` as const],
+  ])(`renders a %s root with a phrasing-safe options wrapper`, (expected_tag, as) => {
+    mount_group({ options: [`alpha`], ...(as ? { as } : {}) })
+
+    expect(doc_query(`.button-group`).tagName.toLowerCase()).toBe(expected_tag)
+    expect(doc_query(`.options`).tagName.toLowerCase()).toBe(`span`)
+  })
+
+  // The `font` shorthand would also set weight and style, and since `.button-group
+  // button` outranks a consumer's own `button {}` rule it silently overrode their
+  // global button typography. Asserted against the source because happy-dom drops
+  // nested CSS rules, so the mounted stylesheet reports `.button-group {}` as empty.
+  test(`leaves font-weight and font-style to the consumer`, () => {
+    const styles = button_group_source.slice(button_group_source.indexOf(`<style>`))
+    expect(styles).toMatch(/font-family:\s*var\(--btn-group-btn-font-family/u)
+    expect(styles).not.toMatch(/[^-]font:\s*inherit/u)
   })
 })

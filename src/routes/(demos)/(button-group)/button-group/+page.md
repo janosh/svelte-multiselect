@@ -91,5 +91,13 @@ selection, and every colour is a `--btn-group-*` custom property.
 Everything themable hangs off `--btn-group-*`: `gap`, `padding`, `bg`, `border`,
 `radius` on the container, and `btn-padding`, `btn-radius`, `btn-bg`, `btn-color`,
 `btn-hover-bg`, `btn-active-bg`, `btn-active-color`, `btn-active-border-color`,
-`btn-disabled-opacity` on the buttons. The component lays its buttons out in a wrapping
-flex row and takes no position of its own, so placing it is the call site's job.
+`btn-disabled-opacity`, `btn-font-family`, `btn-font-size` on the buttons. The component
+lays its buttons out in a wrapping flex row and takes no position of its own, so placing
+it is the call site's job.
+
+Font weight and style are deliberately not set, so your own `button {}` rule still wins.
+Only family and size are inherited, since a button's user-agent font would otherwise look
+wrong inside body text.
+
+The root is a `<div>`. Pass `as="span"` where a div would be invalid, such as inside a
+heading or a paragraph.
