@@ -29,7 +29,6 @@ document with `headingSelector`, so it lists those headings rather than the page
     headingSelector=".toc-demo-doc h3"
     breakpoint={0}
     title="On this page"
-    --toc-mobile-btn-display="none"
     style="position: static; width: 14em"
   />
 </div>

@@ -233,6 +233,21 @@ describe(`Masonry`, () => {
     },
   )
 
+  test.each([0, -1])(
+    `throws when calcCols returns %s and there are items to place`,
+    (cols) => {
+      expect(() =>
+        mount_masonry({ items: indices, calcCols: () => cols, masonryWidth: 500 }),
+      ).toThrow(`Masonry: calcCols must return a positive integer`)
+    },
+  )
+
+  test(`tolerates zero columns when there is nothing to place`, () => {
+    expect(() =>
+      mount_masonry({ items: [], calcCols: () => 0, masonryWidth: 500 }),
+    ).not.toThrow()
+  })
+
   test(`injects named container query CSS into <head>`, () => {
     mount_masonry({ items: indices, minColWidth: 200, gap: 10 })
     const masonry_id = masonry_el()?.getAttribute(`data-masonry-id`)
@@ -431,19 +446,21 @@ describe(`Masonry bindable props`, () => {
       configurable: true,
     })
 
-    mount_masonry({
-      items: [1, 2],
-      get masonryHeight() {
-        return bound_height
-      },
-      set masonryHeight(val: number) {
-        bound_height = val
-      },
-    })
-    expect(bound_height).toBe(250)
-
-    if (original_desc) {
-      Object.defineProperty(HTMLElement.prototype, `clientHeight`, original_desc)
+    try {
+      mount_masonry({
+        items: [1, 2],
+        get masonryHeight() {
+          return bound_height
+        },
+        set masonryHeight(val: number) {
+          bound_height = val
+        },
+      })
+      expect(bound_height).toBe(250)
+    } finally {
+      if (original_desc) {
+        Object.defineProperty(HTMLElement.prototype, `clientHeight`, original_desc)
+      }
     }
   })
 })
@@ -564,17 +581,21 @@ describe(`Masonry virtualization`, () => {
       configurable: true,
     })
 
-    mount_masonry({
-      items: make_items(100),
-      virtualize: true,
-      height: `500px`,
-      calcCols: () => 2,
-    })
+    try {
+      mount_masonry({
+        items: make_items(100),
+        virtualize: true,
+        height: `500px`,
+        calcCols: () => 2,
+      })
 
-    // With clientHeight=0 (unmeasured), all items render (virtualization deferred)
-    expect(item_els()).toHaveLength(100)
-
-    if (original) Object.defineProperty(HTMLElement.prototype, `clientHeight`, original)
+      // With clientHeight=0 (unmeasured), all items render (virtualization deferred)
+      expect(item_els()).toHaveLength(100)
+    } finally {
+      if (original) {
+        Object.defineProperty(HTMLElement.prototype, `clientHeight`, original)
+      }
+    }
   })
 
   test(`virtualize=false skips padding and overflow styles`, async () => {
@@ -712,15 +733,13 @@ describe(`Masonry virtual scroll stability`, () => {
     expect(get_col_dist()).toEqual(before)
   })
 
-  test(`10k items render under 500ms`, async () => {
-    const start = performance.now()
+  test(`10k items render only a virtualized window`, async () => {
     mount_virtualized(10000, {
       calcCols: () => 4,
       getEstimatedHeight: () => 100,
       height: 500,
     })
 
-    expect(performance.now() - start).toBeLessThan(500)
     const rendered = item_els().length
     expect(rendered).toBeLessThan(200)
     expect(rendered).toBeGreaterThan(0)

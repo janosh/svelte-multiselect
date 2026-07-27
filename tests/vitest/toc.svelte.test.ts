@@ -254,7 +254,7 @@ describe(`Toc`, () => {
   test(`replaceState uses the raw id while the link href is URL-encoded`, async () => {
     set_body(`<h2 id="sec:1">Section</h2>`)
     const replace_state_mock = vi.spyOn(history, `replaceState`)
-    Element.prototype.scrollIntoView = vi.fn<Element[`scrollIntoView`]>()
+    vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(() => {})
 
     mount_toc()
     await tick()
@@ -387,7 +387,9 @@ describe(`Toc`, () => {
       mock_active_heading(`first`)
       const replace_state_mock = vi.spyOn(history, `replaceState`)
       const scroll_into_view_mock = vi.fn<Element[`scrollIntoView`]>()
-      Element.prototype.scrollIntoView = scroll_into_view_mock
+      vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(
+        scroll_into_view_mock,
+      )
 
       mount_toc({
         tocItem: createRawSnippet<[HTMLHeadingElement]>((heading) => ({
@@ -439,7 +441,9 @@ describe(`Toc`, () => {
     set_body(`<h2 id="intro">Intro</h2>`)
     const replace_state_mock = vi.spyOn(history, `replaceState`)
     const scroll_into_view_mock = vi.fn<Element[`scrollIntoView`]>()
-    Element.prototype.scrollIntoView = scroll_into_view_mock
+    vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(
+      scroll_into_view_mock,
+    )
 
     mount_toc()
     await tick()
@@ -482,7 +486,7 @@ describe(`Toc`, () => {
     [`headingSelector`, `[`, { headingSelector: `[` }],
     [`excludeSelector`, `((`, { excludeSelector: `((` }],
   ])(`warns once and hides for invalid %s`, async (selector_name, selector, props) => {
-    document.body.innerHTML = `<h2>Visible heading</h2>`
+    set_body(`<h2>Visible heading</h2>`)
     const warn_mock = vi.spyOn(console, `warn`).mockImplementation(() => {})
 
     mount_toc({ warnOnEmpty: true, ...props })
@@ -537,12 +541,12 @@ describe(`Toc`, () => {
   })
 
   test(`subheadings are indented`, async () => {
-    document.body.innerHTML = `
+    set_body(`
       <h1>Heading 1</h1>
       <h2>Heading 2</h2>
       <h3>Heading 3</h3>
       <h4>Heading 4</h4>
-    `
+    `)
 
     mount_toc()
     await tick()
@@ -701,7 +705,7 @@ describe(`Toc`, () => {
     set_headings(2)
     set_window_width(1200)
     mock_active_heading(`heading-1`)
-    Element.prototype.scrollIntoView = vi.fn<Element[`scrollIntoView`]>()
+    vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(() => {})
     const replace_mock = vi.spyOn(history, `replaceState`)
 
     mount_toc()
@@ -729,7 +733,7 @@ describe(`Toc`, () => {
   })
 
   test(`only the active ToC item carries aria-current="location"`, async () => {
-    document.body.innerHTML = `<h2 id="a">Heading 1</h2><h2 id="b">Heading 2</h2>`
+    set_body(`<h2 id="a">Heading 1</h2><h2 id="b">Heading 2</h2>`)
     mount_toc()
     await tick()
 
@@ -759,7 +763,9 @@ describe(`Toc`, () => {
       set_headings(2)
 
       const scroll_into_view_mock = vi.fn<Element[`scrollIntoView`]>()
-      Element.prototype.scrollIntoView = scroll_into_view_mock
+      vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(
+        scroll_into_view_mock,
+      )
       const replace_state_mock = vi.spyOn(history, `replaceState`)
 
       // breakpoint above the jsdom window width forces mobile mode, where open=true is
@@ -813,7 +819,9 @@ describe(`Toc`, () => {
   test(`mutation observer tracks headings added and removed after mount`, async () => {
     set_body(`<div id="content"><h2 id="initial">Initial Heading</h2></div>`)
     const scroll_into_view_mock = vi.fn<Element[`scrollIntoView`]>()
-    Element.prototype.scrollIntoView = scroll_into_view_mock
+    vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(
+      scroll_into_view_mock,
+    )
 
     mount_toc()
     await tick()
@@ -966,9 +974,7 @@ describe(`Toc`, () => {
     beforeEach(() => {
       set_headings(3)
       scroll_mock.mockClear()
-      Element.prototype.scrollIntoView = function (arg) {
-        scroll_mock(arg)
-      }
+      vi.spyOn(Element.prototype, `scrollIntoView`).mockImplementation(scroll_mock)
     })
 
     test.each([
@@ -1323,7 +1329,7 @@ describe(`Element Prop Bags`, () => {
   ])(
     `uses expected selector specificity for $rule_name`,
     async ({ declaration_pattern, expects_where, selector_pattern = /.*/ }) => {
-      document.body.innerHTML = `<h2>Heading 1</h2><h3>Heading 2</h3>`
+      set_body(`<h2>Heading 1</h2><h3>Heading 2</h3>`)
 
       mount_toc()
       await tick()

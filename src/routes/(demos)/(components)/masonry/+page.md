@@ -11,9 +11,7 @@ tightest result, at the cost of items jumping around.
 
 ```svelte example id="masonry-basic"
 <script lang="ts">
-  import { Masonry } from '$lib'
-  import { order_options } from '$lib/utils'
-  import type { MasonryOrder } from '$lib/utils'
+  import { Masonry, type MasonryOrder, order_options } from '$lib'
 
   let order = $state<MasonryOrder>(`balanced-stable`)
   let n_items = $state(12)

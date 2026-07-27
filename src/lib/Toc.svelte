@@ -467,6 +467,12 @@
     return () => observer.disconnect()
   })
 
+  // clear_scroll_target writes component state, so a pending fallback must not outlive
+  // the component. The flash timer only strips a class off a detached node, so it can run.
+  $effect(() => () => {
+    if (scroll_target_timeout) clearTimeout(scroll_target_timeout)
+  })
+
   function set_active_heading() {
     // if we're in a programmatic scroll (click/keyboard initiated), keep the target active
     // until scrollend fires to prevent highlighting intermediate headings during smooth scroll

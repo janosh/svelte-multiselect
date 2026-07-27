@@ -232,8 +232,18 @@
         `Masonry: initialCols must be a positive integer when provided, received ${initialCols}.`,
       )
     }
-    if (masonryWidth > 0) return calcCols(masonryWidth, minColWidth, gap)
-    if (initialCols === undefined) return calcCols(1920, minColWidth, gap)
+    // distribute() builds one array per column, so fewer than one leaves nowhere to put
+    // an item. Zero is fine with no items, which is what the default calcCols returns.
+    const checked = (cols: number) => {
+      if (items.length > 0 && cols < 1) {
+        throw new Error(
+          `Masonry: calcCols must return a positive integer, received ${cols}.`,
+        )
+      }
+      return cols
+    }
+    if (masonryWidth > 0) return checked(calcCols(masonryWidth, minColWidth, gap))
+    if (initialCols === undefined) return checked(calcCols(1920, minColWidth, gap))
     return Math.min(items.length, initialCols)
   })
 
