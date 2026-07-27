@@ -1,6 +1,8 @@
 export * from './heading-anchors'
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CommandMenu } from './CommandMenu.svelte'
+export { default as ContextMenu } from './ContextMenu.svelte'
+export { default as Popover } from './Popover.svelte'
 export { default as PageSearch } from './PageSearch.svelte'
 export { default as CodeExample } from './CodeExample.svelte'
 export { default as CopyButton } from './CopyButton.svelte'

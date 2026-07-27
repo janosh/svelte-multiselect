@@ -1,5 +1,6 @@
 import type { Attachment } from 'svelte/attachments'
-import { fuzzy_match_indices, get_uuid } from './utils'
+import type { Hotkey, Placement, PositionOptions } from './utils'
+import { compute_position, fuzzy_match_indices, get_uuid, run_hotkeys } from './utils'
 // Computed CSS lengths resolve to `<number>px`; strip the unit so Number() can coerce.
 // Empty and non-px values (e.g. `none`, `0.5rem`) yield NaN so callers can apply fallbacks.
 const css_px = (css_length: string): number => {
@@ -743,7 +744,6 @@ export const tooltip =
       })
       observer.observe(element, { attributes: true, attributeFilter: tooltip_attrs })
 
-      type Placement = `top` | `right` | `bottom` | `left`
       const opposite: Record<Placement, Placement> = {
         top: `bottom`,
         bottom: `top`,
@@ -832,11 +832,9 @@ export const tooltip =
           const box_adjust =
             computed.boxSizing === `border-box` ? 0 : padding_h + border_h
           const style = tooltip_el.style
-          const raw = tooltip_el.getAttribute(`data-placement`) ?? ``
-          const requested_placement: Placement =
-            raw === `top` || raw === `right` || raw === `bottom` || raw === `left`
-              ? raw
-              : `bottom`
+          // The configured side, never the resolved one: data-placement carries the
+          // outcome for styling, and reading it back would make a flip permanent.
+          const requested_placement: Placement = options.placement ?? `bottom`
 
           // Save styles, measure single-line width with wrapping disabled
           const saved = {
@@ -903,60 +901,17 @@ export const tooltip =
           }
 
           // Position tooltip after width adjustment so centering uses final dimensions
-          const rect = trigger.getBoundingClientRect()
-          const tooltip_rect = tooltip_el.getBoundingClientRect()
-          const margin = options.offset ?? 12
-
-          const center_h = rect.left + rect.width / 2 - tooltip_rect.width / 2
-          const center_v = rect.top + rect.height / 2 - tooltip_rect.height / 2
-
-          const position_by_placement: Record<Placement, { top: number; left: number }> =
-            {
-              top: { top: rect.top - tooltip_rect.height - margin, left: center_h },
-              bottom: { top: rect.bottom + margin, left: center_h },
-              left: { top: center_v, left: rect.left - tooltip_rect.width - margin },
-              right: { top: center_v, left: rect.right + margin },
-            }
-
-          const fallback_order: Record<Placement, Placement[]> = {
-            bottom: [`bottom`, `top`, `right`, `left`],
-            top: [`top`, `bottom`, `right`, `left`],
-            right: [`right`, `left`, `bottom`, `top`],
-            left: [`left`, `right`, `bottom`, `top`],
-          }
-
-          const min_padding = 8
-          const { innerWidth, innerHeight } = globalThis
-
-          const get_overflow = ({ top, left }: { top: number; left: number }) =>
-            Math.max(0, min_padding - top) +
-            Math.max(0, min_padding - left) +
-            Math.max(0, top + tooltip_rect.height + min_padding - innerHeight) +
-            Math.max(0, left + tooltip_rect.width + min_padding - innerWidth)
-
-          let chosen_placement = requested_placement
-          let best_overflow = Infinity
-          for (const candidate of fallback_order[requested_placement]) {
-            const overflow = get_overflow(position_by_placement[candidate])
-            if (overflow < best_overflow) {
-              chosen_placement = candidate
-              best_overflow = overflow
-            }
-            if (overflow === 0) break
-          }
+          const { top, left, placement } = compute_position(
+            trigger.getBoundingClientRect(),
+            tooltip_el.getBoundingClientRect(),
+            { placement: requested_placement, offset: options.offset ?? 12, padding: 8 },
+          )
 
           // Persist final placement for downstream styling.
-          tooltip_el.setAttribute(`data-placement`, chosen_placement)
-          sync_arrow_styles(tooltip_el, chosen_placement)
+          tooltip_el.setAttribute(`data-placement`, placement)
+          sync_arrow_styles(tooltip_el, placement)
 
-          let { top, left } = position_by_placement[chosen_placement]
-
-          // Keep in viewport
-          const max_left = innerWidth - tooltip_rect.width - min_padding
-          left = Math.max(min_padding, Math.min(left, max_left))
-          const max_top = innerHeight - tooltip_rect.height - min_padding
-          top = Math.max(min_padding, Math.min(top, max_top))
-
+          // The tooltip is absolutely positioned on the body, so add page scroll
           style.left = `${left + globalThis.scrollX}px`
           style.top = `${top + globalThis.scrollY}px`
           style.opacity =
@@ -1159,36 +1114,363 @@ export const tooltip =
     return () => cleanup_functions.forEach((cleanup) => cleanup())
   }
 
-export type ClickOutsideConfig<T extends HTMLElement> = {
-  enabled?: boolean
-  exclude?: string[]
-  callback?: (node: T, config: ClickOutsideConfig<T>) => void
+export type DismissDetail = {
+  // Whether focus sat inside the node, so an Escape dismissal can hand focus back
+  // to the trigger instead of stranding it on a removed element
+  focus_inside: boolean
+  via: `pointer` | `escape`
+  event: Event // the press or keydown behind the dismissal, to forward to consumers
 }
 
+export type ClickOutsideConfig<T extends HTMLElement> = {
+  enabled?: boolean
+  // Regions that count as inside though they sit outside the node: the trigger above
+  // all, whose own click toggles the surface right after this runs, and portalled
+  // content the node no longer contains. Elements beat selectors where you hold a
+  // reference — they cannot collide with another instance's markup.
+  inside?: (Element | string | null | undefined)[]
+  // Confines the selector entries of `inside` to one subtree, so a second instance
+  // of the same component cannot shield this one's surface with its own trigger
+  scope?: Element | null
+  escape?: boolean // dismiss on Escape as well, reporting where focus was
+  // `release` waits for the click, for a surface floating over something draggable:
+  // starting a pan or an orbit behind it should not make it vanish under the cursor.
+  // It gives back the right-click, titlebar-drag and drag-release cases below.
+  dismiss_on?: `press` | `release`
+  callback?: (node: T, config: ClickOutsideConfig<T>, detail: DismissDetail) => void
+}
+
+// Layered keys: only the innermost surface hears one, so Escape closes a dropdown
+// inside a modal and leaves the modal standing, and a dialog opened from a dialog
+// owns Tab. Layers register in attach order, which matches nesting in practice.
+// Capture phase so a handler calling stopPropagation cannot suppress them.
+type KeyLayer = (event: KeyboardEvent) => void
+
+const key_layer_stack = (wants: (event: KeyboardEvent) => boolean) => {
+  const layers: KeyLayer[] = []
+  const handle = (event: KeyboardEvent) => {
+    if (!event.defaultPrevented && wants(event)) layers.at(-1)?.(event)
+  }
+  return (layer: KeyLayer) => {
+    if (layers.length === 0) document.addEventListener(`keydown`, handle, true)
+    layers.push(layer)
+    return () => {
+      const idx = layers.indexOf(layer)
+      if (idx !== -1) layers.splice(idx, 1)
+      if (layers.length === 0) document.removeEventListener(`keydown`, handle, true)
+    }
+  }
+}
+
+// isComposing: Escape cancels an IME composition, it is not a dismissal
+const register_escape_layer = key_layer_stack(
+  (event) => event.key === `Escape` && !event.isComposing,
+)
+
+// A press on a scrollbar reports the scrolling element as its target, which usually
+// sits outside the surface. Without this, reaching for the page scrollbar would
+// dismiss the very dropdown the user is scrolling toward.
+const is_scrollbar_press = (event: Event): boolean => {
+  const target = event.target
+  if (!(event instanceof MouseEvent) || !(target instanceof Element)) return false
+  const root = document.documentElement
+  // Page scrollbars: the root's client box excludes them, so viewport coordinates
+  // beyond it land in the gutter. Zero sizes mean no layout (jsdom), not a hit.
+  if (target === root || target === document.body) {
+    return (
+      (root.clientWidth > 0 && event.clientX > root.clientWidth) ||
+      (root.clientHeight > 0 && event.clientY > root.clientHeight)
+    )
+  }
+  const rect = target.getBoundingClientRect()
+  // clientWidth/Height are 0 for non-scrollable boxes (inline elements above all),
+  // hence the overflow check — otherwise every press right of such a box looks like
+  // a scrollbar hit and silently suppresses dismissal.
+  return (
+    (target.scrollHeight > target.clientHeight &&
+      event.clientX > rect.left + target.clientWidth) ||
+    (target.scrollWidth > target.clientWidth &&
+      event.clientY > rect.top + target.clientHeight)
+  )
+}
+
+// Dismiss a surface when a press lands outside it. Listens for `pointerdown`, not
+// `click`: a right-click fires no click at all, a press that hands a drag to the OS
+// (a custom titlebar) never produces one either, and a drag released outside reports
+// its click on the nearest common ancestor, dismissing a surface the user was only
+// resizing. Capture phase so a handler calling stopPropagation cannot suppress
+// dismissal; composedPath survives shadow DOM and targets detached mid-dispatch.
 export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) =>
   (node: T): (() => void) | undefined => {
-    const { callback, enabled = true, exclude = [] } = config
+    const {
+      callback,
+      enabled = true,
+      inside = [],
+      scope,
+      escape = false,
+      dismiss_on = `press`,
+    } = config
 
     if (!enabled) return undefined // Early return avoids registering unused listener
 
-    function handle_click(event: MouseEvent) {
-      const { target } = event
-      // Element (not HTMLElement) so clicks on SVG elements still count; .closest
-      // below exists on all Elements
-      if (!(target instanceof Element)) return
-      const path = event.composedPath()
-
-      if (path.includes(node)) return
-      if (exclude.some((selector) => target.closest(selector))) return
-
-      callback?.(node, { callback, enabled, exclude })
-      node.dispatchEvent(new CustomEvent(`outside-click`))
+    const inside_nodes = [node, ...inside.filter((item) => item instanceof Element)]
+    // Empty entries would make the joined selector invalid and throw on every press
+    const inside_selector = inside
+      .filter((item): item is string => typeof item === `string` && item !== ``)
+      .join(`,`)
+    // `path` is empty for the focus check, which has no event to walk
+    const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
+      const node_target = target instanceof Node ? target : null
+      if (inside_nodes.some((el) => path.includes(el) || el.contains(node_target))) {
+        return true
+      }
+      // Element (not HTMLElement) so a press on an SVG child still matches a selector
+      if (!inside_selector || !(target instanceof Element)) return false
+      const match = target.closest(inside_selector)
+      return Boolean(match) && (!scope || scope.contains(match))
     }
 
-    document.addEventListener(`click`, handle_click, true)
+    // document.activeElement reports the outermost shadow host, so descend the focus
+    // chain: the host may be inside the node (containment settles it at the first
+    // step) or the node may itself live in that shadow tree alongside the focus.
+    const focus_is_inside = (): boolean => {
+      let active = document.activeElement
+      while (active) {
+        if (is_inside(active)) return true
+        active = active.shadowRoot?.activeElement ?? null
+      }
+      return false
+    }
+
+    const dismiss = (detail: DismissDetail) => {
+      callback?.(node, config, detail)
+      node.dispatchEvent(new CustomEvent(`dismiss`, { detail }))
+    }
+
+    const handle_press = (event: Event) => {
+      const path = event.composedPath()
+      if (is_scrollbar_press(event) || is_inside(event.target, path)) return
+      // A press never restores focus — the user already picked where it lands
+      dismiss({ focus_inside: false, via: `pointer`, event })
+    }
+
+    const on_escape = (event: KeyboardEvent) => {
+      // Safe to swallow the key: only the innermost layer gets here, so no outer
+      // surface is waiting on it. Cancelling the default keeps a native <dialog>
+      // around the surface open until a second Escape, once this layer is gone.
+      event.preventDefault()
+      event.stopPropagation()
+      dismiss({ focus_inside: focus_is_inside(), via: `escape`, event })
+    }
+
+    const press_event = dismiss_on === `press` ? `pointerdown` : `click`
+    document.addEventListener(press_event, handle_press, true)
+    const unregister_escape = escape ? register_escape_layer(on_escape) : undefined
 
     return () => {
-      document.removeEventListener(`click`, handle_click, true)
+      document.removeEventListener(press_event, handle_press, true)
+      unregister_escape?.()
+    }
+  }
+
+export type AnchorRect = { top: number; left: number; bottom: number; right: number }
+
+export interface FloatOptions extends PositionOptions {
+  // A rect instead of an element covers anchors with no markup: the pointer position
+  // a context menu opens at, a text selection, a cell in a canvas.
+  anchor?: Element | AnchorRect | null
+  enabled?: boolean
+  // `fixed` needs no scroll bookkeeping but is clipped by an ancestor's transform;
+  // `absolute` survives that at the cost of adding page scroll to every update.
+  strategy?: `fixed` | `absolute`
+  match_width?: boolean // size the floating box to the anchor, for dropdowns
+}
+
+// Park an element next to an anchor and keep it there while the page moves.
+// Geometry comes from compute_position, the same one the tooltip and the portalled
+// dropdown use, so all three flip and shift alike.
+export const float =
+  (options: FloatOptions = {}) =>
+  (node: Element): (() => void) | undefined => {
+    const {
+      anchor,
+      enabled = true,
+      strategy = `fixed`,
+      match_width = false,
+      ...position_options
+    } = options
+    if (!enabled || !anchor || !(node instanceof HTMLElement)) return undefined
+
+    const update = () => {
+      // Out of flow before measuring: an in-flow surface is a sibling that pushes the
+      // very anchor it is about to measure, which lands it half its height off.
+      node.style.position = strategy
+      const anchor_rect =
+        anchor instanceof Element ? anchor.getBoundingClientRect() : anchor
+      if (match_width) node.style.width = `${anchor_rect.right - anchor_rect.left}px`
+      const { top, left, placement } = compute_position(
+        anchor_rect,
+        node.getBoundingClientRect(),
+        position_options,
+      )
+      const [scroll_x, scroll_y] =
+        strategy === `absolute` ? [globalThis.scrollX, globalThis.scrollY] : [0, 0]
+      Object.assign(node.style, {
+        left: `${left + scroll_x}px`,
+        top: `${top + scroll_y}px`,
+      })
+      node.dataset.placement = placement
+    }
+
+    update()
+    // capture: a scroll in any ancestor moves the anchor, and scroll does not bubble
+    globalThis.addEventListener(`scroll`, update, true)
+    globalThis.addEventListener(`resize`, update)
+    // the floating box can grow after mount (async content, a filtered list)
+    const observer = new ResizeObserver(update)
+    observer.observe(node)
+    if (anchor instanceof Element) observer.observe(anchor)
+
+    return () => {
+      globalThis.removeEventListener(`scroll`, update, true)
+      globalThis.removeEventListener(`resize`, update)
+      observer.disconnect()
+    }
+  }
+
+export interface HotkeyOptions {
+  bindings: Hotkey[]
+  // Listen on the document rather than the node, for shortcuts that work anywhere.
+  // Node-scoped is the default so a shortcut dies with the surface that owns it.
+  global?: boolean
+  enabled?: boolean
+}
+
+// Declarative keybindings. Matching lives in run_hotkeys so components that already
+// own a window listener (CommandMenu) share the same semantics without an element.
+export const hotkey =
+  (options: HotkeyOptions) =>
+  (node: Element): (() => void) | undefined => {
+    const { bindings, global = false, enabled = true } = options
+    if (!enabled || bindings.length === 0) return undefined
+
+    const target: EventTarget = global ? document : node
+    const handle = (event: Event) => {
+      if (event instanceof KeyboardEvent) run_hotkeys(event, bindings)
+    }
+    target.addEventListener(`keydown`, handle)
+    return () => target.removeEventListener(`keydown`, handle)
+  }
+
+export interface FocusTrapOptions {
+  enabled?: boolean
+  // What to focus on activation: an element, a selector resolved within the node, or
+  // `false` to leave focus where it is. Defaults to the first tabbable descendant.
+  initial?: Element | string | false
+  // Where focus returns on teardown. Defaults to whatever held it on activation;
+  // `false` leaves focus alone, for a trigger the surface itself removed.
+  restore?: Element | false
+  // Further containers the trap covers, for portalled parts of the same surface
+  include?: (Element | null | undefined)[]
+}
+
+// Exported so surfaces can find their own trigger to hand focus back to
+export const tabbable_selector = [
+  `a[href]`,
+  `area[href]`,
+  `button`,
+  `input`,
+  `select`,
+  `textarea`,
+  `summary`,
+  `iframe`,
+  `object`,
+  `embed`,
+  `audio[controls]`,
+  `video[controls]`,
+  `[contenteditable]:not([contenteditable=false])`,
+  `[tabindex]`,
+].join(`,`)
+
+// Visibility read from computed style rather than measured boxes: test DOMs skip
+// layout, so getClientRects would report every candidate as hidden and empty the trap.
+const is_tabbable = (element: Element): boolean => {
+  if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return false
+  if (element.closest(`[inert],[hidden],[disabled]`)) return false
+  if (Number(element.getAttribute(`tabindex`) ?? 0) < 0) return false
+  const style = getComputedStyle(element)
+  return style.display !== `none` && style.visibility !== `hidden`
+}
+
+const register_trap_layer = key_layer_stack((event) => event.key === `Tab`)
+
+// Element has no focus(), so narrow to the two that do
+const focus_element = (element: Element | null | undefined) => {
+  if (element instanceof HTMLElement || element instanceof SVGElement) element.focus()
+}
+
+// Keep Tab inside a surface and hand focus back when it closes. Pair with
+// click_outside: that one decides when a surface goes away, this one decides where
+// the keyboard is while it is up and where it lands afterwards.
+export const focus_trap =
+  (options: FocusTrapOptions = {}) =>
+  (node: Element): (() => void) | undefined => {
+    const { enabled = true, initial, restore, include = [] } = options
+    if (!enabled || !(node instanceof HTMLElement)) return undefined
+
+    const containers = [node, ...include.filter((el) => el instanceof Element)]
+    // Recollected per keystroke: menus grow, filter and disable items while open
+    const tabbables = (): HTMLElement[] =>
+      containers.flatMap((parent) =>
+        [...parent.querySelectorAll<HTMLElement>(tabbable_selector)].filter(is_tabbable),
+      )
+    const holds_focus = () =>
+      containers.some((container) => container.contains(document.activeElement))
+
+    const focus_origin = document.activeElement
+    // The node itself is the fallback focus target, so it needs to accept focus.
+    // Track whether we added tabindex so cleanup can leave the markup as it was.
+    let added_tabindex = false
+
+    if (initial !== false) {
+      const requested =
+        typeof initial === `string` ? node.querySelector(initial) : initial
+      const target = requested ?? tabbables()[0] ?? node
+      if (target === node && !node.hasAttribute(`tabindex`)) {
+        node.tabIndex = -1
+        added_tabindex = true
+      }
+      focus_element(target)
+    }
+
+    const on_tab = (event: KeyboardEvent) => {
+      // This is a document-wide capture layer, so without this guard a trap that was
+      // never given focus still confiscates every Tab on the page and drags focus in.
+      // Nav hits that: pinning a submenu leaves focus on the toggle outside it.
+      if (!holds_focus()) return
+      const items = tabbables()
+      event.preventDefault() // even with nothing to focus, Tab must not leave
+      if (items.length === 0) return
+      const step = event.shiftKey ? -1 : 1
+      const active = document.activeElement
+      const idx = active instanceof HTMLElement ? items.indexOf(active) : -1
+      // Focus on the container itself rather than an item enters at the edge Tab
+      // would have reached first
+      const edge = event.shiftKey ? items.at(-1) : items[0]
+      const next = idx === -1 ? edge : items[(idx + step + items.length) % items.length]
+      next?.focus()
+    }
+
+    const unregister = register_trap_layer(on_tab)
+
+    return () => {
+      unregister()
+      if (added_tabindex) node.removeAttribute(`tabindex`)
+      if (restore === false) return
+      // Don't yank focus if the user already placed it elsewhere. A closing surface
+      // usually leaves focus on body, which counts as ours to hand back.
+      if (!holds_focus() && document.activeElement !== document.body) return
+      focus_element(restore ?? focus_origin)
     }
   }

@@ -1052,14 +1052,38 @@ This package also provides subpath exports for utilities used by the component:
 
 ```ts
 import {
-  click_outside,
+  click_outside, // dismiss a surface when a press lands outside it
   draggable,
+  float, // park an element next to an anchor and keep it there
+  focus_trap, // keep Tab inside a surface, hand focus back when it closes
   highlight_matches,
+  hotkey, // declarative keybindings, `mod` maps to Cmd or Ctrl
   sortable,
   tooltip,
 } from 'svelte-multiselect/attachments'
-import { fuzzy_match, get_label } from 'svelte-multiselect/utils'
+import { compute_position, fuzzy_match, get_label } from 'svelte-multiselect/utils'
 import { heading_anchors } from 'svelte-multiselect/heading-anchors'
+```
+
+`Popover` and `ContextMenu` compose these three: a surface positioned by `float`,
+dismissed by `click_outside` (on the press, so a right-click closes it too) and
+keyboard-scoped by `focus_trap`.
+
+```svelte
+<script lang="ts">
+  import { ContextMenu, Popover } from 'svelte-multiselect'
+</script>
+
+<Popover placement="bottom" align="start">
+  {#snippet trigger(props)}
+    <button {...props}>Options</button>
+  {/snippet}
+  <p>Anything you like in here.</p>
+</Popover>
+
+<ContextMenu actions={[{ label: `Reload`, action: () => location.reload() }]}>
+  <div>Right-click anywhere in this region</div>
+</ContextMenu>
 ```
 
 See [src/lib/live-examples/readme.md](https://github.com/janosh/svelte-multiselect/blob/-/src/lib/live-examples/readme.md) for optional live-example helpers.
