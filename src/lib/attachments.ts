@@ -1314,12 +1314,9 @@ export const float =
         node.getBoundingClientRect(),
         position_options,
       )
-      const [scroll_x, scroll_y] =
-        strategy === `absolute` ? [globalThis.scrollX, globalThis.scrollY] : [0, 0]
-      Object.assign(node.style, {
-        left: `${left + scroll_x}px`,
-        top: `${top + scroll_y}px`,
-      })
+      const scrolled = strategy === `absolute`
+      node.style.left = `${left + (scrolled ? globalThis.scrollX : 0)}px`
+      node.style.top = `${top + (scrolled ? globalThis.scrollY : 0)}px`
       node.dataset.placement = placement
     }
 
@@ -1453,8 +1450,7 @@ export const focus_trap =
       event.preventDefault() // even with nothing to focus, Tab must not leave
       if (items.length === 0) return
       const step = event.shiftKey ? -1 : 1
-      const active = document.activeElement
-      const idx = active instanceof HTMLElement ? items.indexOf(active) : -1
+      const idx = items.findIndex((item) => item === document.activeElement)
       // Focus on the container itself rather than an item enters at the edge Tab
       // would have reached first
       const edge = event.shiftKey ? items.at(-1) : items[0]
