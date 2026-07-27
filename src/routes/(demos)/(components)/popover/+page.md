@@ -55,7 +55,7 @@ scroll, and `match_width` sizes the surface to the trigger for dropdown-like men
 ### `ContextMenu`
 
 Right-click a region to replace the browser's own menu. Actions are
-[`CmdAction`](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/types.ts)s,
+[`CmdAction`](https://github.com/janosh/svelte-widgets/blob/main/src/lib/types.ts)s,
 the same shape `CommandMenu` takes, so a command can appear in both.
 
 ```svelte example id="context-menu-basic"

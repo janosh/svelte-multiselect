@@ -1,6 +1,6 @@
 ## Option Grouping
 
-Group related options together with visual headers. Add a `group` key to option objects and they're automatically grouped with section headers. Requested in [GitHub issue #135](https://github.com/janosh/svelte-multiselect/issues/135).
+Group related options together with visual headers. Add a `group` key to option objects and they're automatically grouped with section headers. Requested in [GitHub issue #135](https://github.com/janosh/svelte-widgets/issues/135).
 
 ### Basic Grouping
 

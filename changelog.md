@@ -1,5 +1,26 @@
 # Changelog
 
+## [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
+
+> 27 July 2026
+
+- Add `Popover` and `ContextMenu` components plus `float`, `focus_trap` and `hotkey` attachments, with Escape closing one layer at a time [`#431`](https://github.com/janosh/svelte-widgets/pull/431)
+- Absorb `svelte-toc` and `svelte-bricks`: `Toc` and `Masonry` ship here now, with their test suites and `svelte-widgets/Toc.svelte` / `svelte-widgets/Masonry.svelte` subpath exports
+- Add Pagefind-powered `PageSearch` and expand `CommandMenu` with async action loading, navigation and match highlighting [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
+- Add `rangeSelect` for Shift-click and Shift+Arrow range selection, an `onrangeSelect` event and a `selectAllScope` of `visible` or `matching` [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
+- Pass an `AbortSignal` to `loadOptions` and abort superseded searches [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
+- Speed up hot paths: 2.4x option filtering on 2000 labels, 7.0x hotkey matching on 500 actions, 3.9x syntax-highlight HTML [`#430`](https://github.com/janosh/svelte-widgets/pull/430)
+- Chain consumer event handlers instead of letting props clobber them, so `onclick`/`onkeydown`/`onclose` no longer disable `CopyButton`, `ThemeToggle`, `FileDetails`, `CodeExample`, `CommandMenu` and `Nav` internals [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
+- Ignore modifier-free `CommandMenu` hotkeys while focus sits in a text field [`#430`](https://github.com/janosh/svelte-widgets/pull/430)
+- Fix the dropdown portal refusing to activate inside a shadow root and throwing `NotFoundError` on teardown [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
+- Validate `OptionStyle` objects even when no style key is passed [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
+- Add a `svelte-widgets/types` subpath export [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
+- Strengthen tests that could not fail across the vitest suite [`79625e0`](https://github.com/janosh/svelte-widgets/commit/79625e0)
+- **Breaking:** Rename the package from `svelte-multiselect` to `svelte-widgets`, restarting versioning at v1.0.0. `MultiSelect` is now one of 17 components, so imports become `svelte-widgets` and subpaths like `svelte-widgets/attachments`. Everything below v1.0.0 in this changelog was released as `svelte-multiselect`
+- **Breaking:** Deprecate `svelte-toc` and `svelte-bricks`. Replace `import Toc from 'svelte-toc'` with `import { Toc } from 'svelte-widgets'` and `import Masonry from 'svelte-bricks'` with `import { Masonry } from 'svelte-widgets'`. Their console warnings now name the component (`Toc received invalid …`, `Masonry: …`) rather than the old package
+- **Breaking:** Rename `CmdPalette` to `CommandMenu` and `PagefindPalette` to `PageSearch`. The old names are removed [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
+- **Breaking:** `click_outside` dismisses on `pointerdown` rather than `click`, `exclude`/`include` merge into `inside`, `trigger` becomes `dismiss_on: press | release`, the `outside-click` event becomes `dismiss`, and `callback` gains a `{ focus_inside, via, event }` detail [`#431`](https://github.com/janosh/svelte-widgets/pull/431)
+
 ## [v11.8.0](https://github.com/janosh/svelte-multiselect/compare/v11.7.2...v11.8.0)
 
 > 9 July 2026

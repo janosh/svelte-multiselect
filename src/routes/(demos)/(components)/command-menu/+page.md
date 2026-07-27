@@ -76,8 +76,8 @@ navigation and apply `highlight_matches` to the destination content:
 ```svelte
 <script lang="ts">
   import { afterNavigate, goto } from '$app/navigation'
-  import { highlight_matches } from 'svelte-multiselect/attachments'
-  import type { PageSearchNavigateDetails } from 'svelte-multiselect/types'
+  import { highlight_matches } from 'svelte-widgets/attachments'
+  import type { PageSearchNavigateDetails } from 'svelte-widgets/types'
 
   let highlight_query = $state(``)
 

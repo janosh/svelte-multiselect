@@ -1,19 +1,21 @@
 {
-  "name": "svelte-multiselect",
-  "version": "11.8.0",
-  "description": "Svelte multi-select component",
+  "name": "svelte-widgets",
+  "version": "1.0.0",
+  "description": "Accessible, keyboard-friendly Svelte components and attachments",
   "keywords": [
+    "command-palette",
+    "components",
     "form",
     "input",
     "multi-select",
-    "single-select",
+    "popover",
     "svelte"
   ],
-  "homepage": "https://janosh.github.io/svelte-multiselect",
-  "bugs": "https://github.com/janosh/svelte-multiselect/issues",
+  "homepage": "https://janosh.github.io/svelte-widgets",
+  "bugs": "https://github.com/janosh/svelte-widgets/issues",
   "license": "MIT",
   "author": "Janosh Riebesell <janosh.riebesell@gmail.com>",
-  "repository": "https://github.com/janosh/svelte-multiselect",
+  "repository": "https://github.com/janosh/svelte-widgets",
   "files": [
     "dist"
   ],
@@ -26,6 +28,11 @@
       "svelte": "./dist/CommandMenu.svelte",
       "default": "./dist/CommandMenu.svelte"
     },
+    "./Masonry.svelte": {
+      "types": "./dist/Masonry.svelte.d.ts",
+      "svelte": "./dist/Masonry.svelte",
+      "default": "./dist/Masonry.svelte"
+    },
     "./MultiSelect.svelte": {
       "types": "./dist/MultiSelect.svelte.d.ts",
       "svelte": "./dist/MultiSelect.svelte",
@@ -35,6 +42,11 @@
       "types": "./dist/PageSearch.svelte.d.ts",
       "svelte": "./dist/PageSearch.svelte",
       "default": "./dist/PageSearch.svelte"
+    },
+    "./Toc.svelte": {
+      "types": "./dist/Toc.svelte.d.ts",
+      "svelte": "./dist/Toc.svelte",
+      "default": "./dist/Toc.svelte"
     },
     ".": {
       "types": "./dist/index.d.ts",
@@ -89,7 +101,6 @@
     "mdsvex": "^0.12.8",
     "pagefind": "^1.5.2",
     "svelte": "^5.56.7",
-    "svelte-toc": "^0.7.0",
     "typescript": "^6.0.3",
     "vite": "^8.1.5",
     "vite-plus": "0.2.5"

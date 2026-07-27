@@ -195,7 +195,7 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
 
 ```svelte example
 <script lang="ts">
-  // for https://github.com/janosh/svelte-multiselect/issues/249
+  // for https://github.com/janosh/svelte-widgets/issues/249
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'
 

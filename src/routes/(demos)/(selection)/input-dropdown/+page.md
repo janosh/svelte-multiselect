@@ -2,7 +2,7 @@
 
 Use `selectedDisplay="input"` with `maxSelect={1}` for a `<datalist>`-like
 autocomplete field backed by the existing dropdown
-([discussion #221](https://github.com/janosh/svelte-multiselect/discussions/221)).
+([discussion #221](https://github.com/janosh/svelte-widgets/discussions/221)).
 The visible input is editable: `searchText` mirrors what the user sees and, when
 the component has a `name`, is what the form submits. `value`/`selected` only
 update once an option is committed (clicked or activated via `Enter`). Editing

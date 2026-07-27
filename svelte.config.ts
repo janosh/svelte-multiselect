@@ -43,7 +43,7 @@ const config: Config = {
     alias: {
       $root: `.`,
       $site: `./src/site`,
-      'svelte-multiselect': `./src/lib`,
+      'svelte-widgets': `./src/lib`,
     },
 
     prerender: {

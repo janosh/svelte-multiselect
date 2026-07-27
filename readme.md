@@ -1,22 +1,22 @@
 <h1 align="center">
-  <img src="https://raw.githubusercontent.com/janosh/svelte-multiselect/main/src/site/favicon.svg" alt="Svelte MultiSelect" height="60" width="60">
-  <br class="hide-in-docs"> Svelte MultiSelect
+  <img src="https://raw.githubusercontent.com/janosh/svelte-widgets/main/src/site/favicon.svg" alt="Svelte Widgets" height="60" width="60">
+  <br class="hide-in-docs"> Svelte Widgets
 </h1>
 
 <h4 align="center">
 
-[![Tests](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml)
-[![GitHub Pages](https://github.com/janosh/svelte-multiselect/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/janosh/svelte-multiselect/actions/workflows/gh-pages.yml)
-[![NPM version](https://img.shields.io/npm/v/svelte-multiselect?logo=NPM&color=purple)](https://npmjs.com/package/svelte-multiselect)
-[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-multiselect/peer/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/packages/svelte/CHANGELOG.md)
+[![Tests](https://github.com/janosh/svelte-widgets/actions/workflows/test.yml/badge.svg)](https://github.com/janosh/svelte-widgets/actions/workflows/test.yml)
+[![GitHub Pages](https://github.com/janosh/svelte-widgets/actions/workflows/gh-pages.yml/badge.svg)](https://github.com/janosh/svelte-widgets/actions/workflows/gh-pages.yml)
+[![NPM version](https://img.shields.io/npm/v/svelte-widgets?logo=NPM&color=purple)](https://npmjs.com/package/svelte-widgets)
+[![Needs Svelte version](https://img.shields.io/npm/dependency-version/svelte-widgets/peer/svelte?color=teal&logo=Svelte&label=Svelte)](https://github.com/sveltejs/svelte/blob/master/packages/svelte/CHANGELOG.md)
 [![Playground](https://img.shields.io/badge/Svelte-Playground-blue?label=Try%20it!)](https://svelte.dev/playground/a5a14b8f15d64cb083b567292480db05)
-[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
+[![Open in StackBlitz](https://img.shields.io/badge/Open%20in-StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-widgets)
 
 </h4>
 
 <p align="center"><strong>
-  Keyboard-friendly, accessible and highly customizable multi-select component.
-  <a class="hide-in-docs" href="https://janosh.github.io/svelte-multiselect">View the docs</a>
+  Keyboard-friendly, accessible and highly customizable Svelte components.
+  <a class="hide-in-docs" href="https://janosh.github.io/svelte-widgets">View the docs</a>
 </strong></p>
 
 <slot name="examples" />
@@ -41,14 +41,14 @@
 ## 🔨 &thinsp; Installation
 
 ```sh
-npm install --dev svelte-multiselect
+npm install --dev svelte-widgets
 ```
 
 ## 📙 &thinsp; Usage
 
 ```svelte
 <script>
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
 
   const ui_libs = [`Svelte`, `React`, `Vue`, `Angular`, `...`]
 
@@ -100,7 +100,7 @@ Favorite Frontend Tools?
 
 Props ordered by how often you'll reach for them.
 
-> **💡 Tip:** The `Option` type is automatically inferred from your `options` array, or you can import it: `import { type Option } from 'svelte-multiselect'`
+> **💡 Tip:** The `Option` type is automatically inferred from your `options` array, or you can import it: `import { type Option } from 'svelte-widgets'`
 
 ### Essential Props
 
@@ -270,9 +270,9 @@ Props ordered by how often you'll reach for them.
    | `batchSize`  | `number`  | `50`    | Number of options to load per batch         |
    | `onOpen`     | `boolean` | `true`  | Whether to load options when dropdown opens |
 
-   Features automatic state management, debounced search, infinite scroll pagination, and loading indicators. See the [infinite-scroll demo](https://janosh.github.io/svelte-multiselect/infinite-scroll) for live examples.
+   Features automatic state management, debounced search, infinite scroll pagination, and loading indicators. See the [infinite-scroll demo](https://janosh.github.io/svelte-widgets/infinite-scroll) for live examples.
 
-   Passing `options` alongside `loadOptions` combines both sources: the static options are filtered client-side with `filterFunc` and rendered above the loaded batches. Since they need neither the debounce nor a request, they appear on the first keystroke, which is what lets [`PageSearch`](https://janosh.github.io/svelte-multiselect/command-menu) match known routes instantly while its Pagefind index is still loading.
+   Passing `options` alongside `loadOptions` combines both sources: the static options are filtered client-side with `filterFunc` and rendered above the loaded batches. Since they need neither the debounce nor a request, they appear on the first keystroke, which is what lets [`PageSearch`](https://janosh.github.io/svelte-widgets/command-menu) match known routes instantly while its Pagefind index is still loading.
 
 1. ```ts
    activeIndex: number | null = null  // bindable
@@ -361,7 +361,7 @@ Group related options together with visual headers. Add a `group` key to your op
 <MultiSelect {options} collapsibleGroups groupSelectAll />
 ```
 
-See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) for live examples.
+See the [grouping demo](https://janosh.github.io/svelte-widgets/grouping) for live examples.
 
 1. ```ts
    collapsibleGroups: boolean = false
@@ -509,7 +509,7 @@ See the [grouping demo](https://janosh.github.io/svelte-multiselect/grouping) fo
    selectedDisplay: 'chips' | 'input' = 'chips'
    ```
 
-   How selected options are shown. `'chips'` renders them as removable tags inside the input. `'input'` writes the selected label straight into the text input (combobox/datalist style) and is only valid with `maxSelect={1}`; other values log a config error and fall back to chips. See the [input-dropdown demo](https://janosh.github.io/svelte-multiselect/input-dropdown).
+   How selected options are shown. `'chips'` renders them as removable tags inside the input. `'input'` writes the selected label straight into the text input (combobox/datalist style) and is only valid with `maxSelect={1}`; other values log a config error and fall back to chips. See the [input-dropdown demo](https://janosh.github.io/svelte-widgets/input-dropdown).
 
 1. ```ts
    virtualList: boolean | { itemHeight?: number; overscan?: number } = false
@@ -1027,9 +1027,9 @@ const options = [42, 69]
 // type Option = number
 ```
 
-The inferred type of `Option` is used to enforce type-safety on derived props like `selected` as well as snippets. E.g. you'll get an error when trying to use a snippet that expects a string if your options are objects (see [this comment](https://github.com/janosh/svelte-multiselect/pull/189/files#r1058853697) for example screenshots).
+The inferred type of `Option` is used to enforce type-safety on derived props like `selected` as well as snippets. E.g. you'll get an error when trying to use a snippet that expects a string if your options are objects (see [this comment](https://github.com/janosh/svelte-widgets/pull/189/files#r1058853697) for example screenshots).
 
-You can also import [the types this component uses](https://github.com/janosh/svelte-multiselect/blob/main/src/lib/index.ts) for downstream applications:
+You can also import [the types this component uses](https://github.com/janosh/svelte-widgets/blob/main/src/lib/index.ts) for downstream applications:
 
 ```ts
 import {
@@ -1043,7 +1043,7 @@ import {
   MultiSelectSnippets,
   ObjectOption,
   Option,
-} from 'svelte-multiselect'
+} from 'svelte-widgets'
 ```
 
 ### Subpath Exports
@@ -1060,9 +1060,9 @@ import {
   hotkey, // declarative keybindings, `mod` maps to Cmd or Ctrl
   sortable,
   tooltip,
-} from 'svelte-multiselect/attachments'
-import { compute_position, fuzzy_match, get_label } from 'svelte-multiselect/utils'
-import { heading_anchors } from 'svelte-multiselect/heading-anchors'
+} from 'svelte-widgets/attachments'
+import { compute_position, fuzzy_match, get_label } from 'svelte-widgets/utils'
+import { heading_anchors } from 'svelte-widgets/heading-anchors'
 ```
 
 `Popover` and `ContextMenu` compose these three: a surface positioned by `float`,
@@ -1071,7 +1071,7 @@ keyboard-scoped by `focus_trap`.
 
 ```svelte
 <script lang="ts">
-  import { ContextMenu, Popover } from 'svelte-multiselect'
+  import { ContextMenu, Popover } from 'svelte-widgets'
 </script>
 
 <Popover placement="bottom" align="start">
@@ -1086,7 +1086,7 @@ keyboard-scoped by `focus_trap`.
 </ContextMenu>
 ```
 
-See [src/lib/live-examples/readme.md](https://github.com/janosh/svelte-multiselect/blob/-/src/lib/live-examples/readme.md) for optional live-example helpers.
+See [src/lib/live-examples/readme.md](https://github.com/janosh/svelte-widgets/blob/-/src/lib/live-examples/readme.md) for optional live-example helpers.
 
 ## ✨ &thinsp; Styling
 

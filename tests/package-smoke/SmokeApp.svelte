@@ -4,14 +4,14 @@
     fuzzy_match,
     MultiSelect as NamedSelect,
     PageSearch,
-  } from 'svelte-multiselect'
-  import DirectCommandMenu from 'svelte-multiselect/CommandMenu.svelte'
-  import DirectMultiSelect from 'svelte-multiselect/MultiSelect.svelte'
-  import DirectPageSearch from 'svelte-multiselect/PageSearch.svelte'
-  import type { Option } from 'svelte-multiselect'
-  import { click_outside } from 'svelte-multiselect/attachments'
-  import type { CmdAction } from 'svelte-multiselect/types'
-  import { get_label } from 'svelte-multiselect/utils'
+  } from 'svelte-widgets'
+  import DirectCommandMenu from 'svelte-widgets/CommandMenu.svelte'
+  import DirectMultiSelect from 'svelte-widgets/MultiSelect.svelte'
+  import DirectPageSearch from 'svelte-widgets/PageSearch.svelte'
+  import type { Option } from 'svelte-widgets'
+  import { click_outside } from 'svelte-widgets/attachments'
+  import type { CmdAction } from 'svelte-widgets/types'
+  import { get_label } from 'svelte-widgets/utils'
 
   const options: Option[] = [`One`, { label: `Two`, value: 2 }]
   const actions: CmdAction[] = [{ label: `Open`, action: () => undefined }]

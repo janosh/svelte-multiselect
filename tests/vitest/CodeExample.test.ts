@@ -59,10 +59,10 @@ test.each([
     {
       collapsible: true,
       github: true,
-      repo: `https://github.com/janosh/svelte-multiselect`,
+      repo: `https://github.com/janosh/svelte-widgets`,
       file: `src/lib/CodeExample.svelte`,
     },
-    `https://github.com/janosh/svelte-multiselect/blob/-/src/lib/CodeExample.svelte`,
+    `https://github.com/janosh/svelte-widgets/blob/-/src/lib/CodeExample.svelte`,
   ],
 ] as const)(
   `renders the %s link in nav and hides the unconfigured one`,
@@ -97,7 +97,7 @@ test.each([
   ],
   [`string`, { github: `docs/example.svelte` }, `docs/example.svelte`],
 ])(`github: %s links to its blob path`, (_label, github_meta, expected_path) => {
-  const repo = `https://github.com/janosh/svelte-multiselect`
+  const repo = `https://github.com/janosh/svelte-widgets`
   const meta = { repo, ...github_meta }
   mount(CodeExample, { target: document.body, props: { meta, src } })
 

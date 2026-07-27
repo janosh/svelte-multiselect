@@ -37,7 +37,7 @@ This example shows how to combine MultiSelect with `sessionStorage` to persist t
 
 ## Array Cloning Infinite Loop Prevention (Issue #309)
 
-Tests that binding to reactive wrappers (Svelte stores, Superforms, etc.) that clone arrays on assignment doesn't cause infinite loops. See [issue #309](https://github.com/janosh/svelte-multiselect/issues/309).
+Tests that binding to reactive wrappers (Svelte stores, Superforms, etc.) that clone arrays on assignment doesn't cause infinite loops. See [issue #309](https://github.com/janosh/svelte-widgets/issues/309).
 
 ```svelte example id="store-binding"
 <script lang="ts">
