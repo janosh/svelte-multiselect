@@ -17,6 +17,9 @@ describe(`Nav`, () => {
   const parent_other: NavRoute[] = [...single_dropdown_route, [`/other`, [`/other`]]]
   // two submenu links, so Tab/ArrowDown have somewhere to move
   const two_child_route: NavRoute[] = [[`/p`, [`/p`, `/p/child1`, `/p/child2`]]]
+  const one_child_route: NavRoute[] = [[`/p`, [`/p`, `/p/1`]]]
+  // no hover cooldown, so a menu still open afterwards is open because it was pinned
+  const pinned_props = { routes: two_child_route, dropdown_cooldown: 0 }
   const mount_nav = (props: ComponentProps<typeof Nav>) =>
     mount(Nav, { target: document.body, props })
   const click = (el?: Element | null) => {
@@ -56,6 +59,14 @@ describe(`Nav`, () => {
     const dropdown_menu = dropdown.querySelector<HTMLElement>(`[data-submenu]`)
     assert(dropdown_menu !== null, `No dropdown menu found`)
     return { dropdown, dropdown_menu }
+  }
+  // mounts a nav with a single dropdown and hands back the parts most tests need
+  const mount_dropdown = (props: Partial<ComponentProps<typeof Nav>> = {}) => {
+    mount_nav({ routes: single_dropdown_route, ...props })
+    const { dropdown, dropdown_menu } = query_dropdown_elements()
+    const toggle = dropdown.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
+    assert(toggle !== null, `No dropdown toggle found`)
+    return { dropdown, dropdown_menu, toggle }
   }
   // all dropdowns with their submenus (for multi-dropdown tests)
   const query_all_dropdowns = () =>
@@ -167,14 +178,12 @@ describe(`Nav`, () => {
   })
 
   test(`click outside closes burger menu and dropdowns, inside click does not`, async () => {
-    mount_nav({ routes: single_dropdown_route })
+    const { dropdown_menu, toggle } = mount_dropdown()
     const burger_button = doc_query(`.burger`)
-    const toggle_button = doc_query(`[data-dropdown-toggle]`)
-    const { dropdown_menu } = query_dropdown_elements()
 
     // Open burger menu and dropdown
     await click(burger_button)
-    await click(toggle_button)
+    await click(toggle)
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
     expect(is_visible(dropdown_menu)).toBe(true)
 
@@ -195,8 +204,7 @@ describe(`Nav`, () => {
     [`menu panel`, (_dropdown: Element, menu: Element) => menu],
   ])(`dropdown opens/closes via mouse hover on %s`, async (_desc, get_target) => {
     vi.useFakeTimers()
-    mount_nav({ routes: single_dropdown_route })
-    const { dropdown, dropdown_menu } = query_dropdown_elements()
+    const { dropdown, dropdown_menu } = mount_dropdown()
     const target = get_target(dropdown, dropdown_menu)
     expect(is_visible(dropdown_menu)).toBe(false)
 
@@ -211,10 +219,10 @@ describe(`Nav`, () => {
   })
 
   test(`parent link and toggle button work independently`, async () => {
-    mount_nav({ routes: [[`/p`, [`/p`, `/p/c`]]] })
-    const { dropdown, dropdown_menu } = query_dropdown_elements()
+    const { dropdown, dropdown_menu, toggle } = mount_dropdown({
+      routes: [[`/p`, [`/p`, `/p/c`]]],
+    })
     const parent_link = dropdown.querySelector<HTMLElement>(`div:first-child > a`)
-    const toggle = doc_query(`[data-dropdown-toggle]`)
 
     await click(parent_link)
     expect(is_visible(dropdown_menu)).toBe(false)
@@ -309,9 +317,10 @@ describe(`Nav`, () => {
 
   test(`keyboard navigation: Enter/Space/ArrowDown open, arrows navigate, Escape closes`, async () => {
     const link_props = { onkeydown: vi.fn() }
-    mount_nav({ routes: [[`/p`, [`/p`, `/p/1`, `/p/2`]]], link_props })
-    const toggle_button = doc_query(`[data-dropdown-toggle]`)
-    const { dropdown_menu: menu } = query_dropdown_elements()
+    const { dropdown_menu: menu, toggle: toggle_button } = mount_dropdown({
+      routes: two_child_route,
+      link_props,
+    })
 
     // Enter/Space/ArrowDown all open and focus first item
     for (const open_key of [`Enter`, ` `, `ArrowDown`]) {
@@ -344,8 +353,7 @@ describe(`Nav`, () => {
   })
 
   test(`dropdown focus behavior`, async () => {
-    mount_nav({ routes: [[`/p`, [`/p`, `/p/1`]]] })
-    const { dropdown, dropdown_menu: menu } = query_dropdown_elements()
+    const { dropdown, dropdown_menu: menu } = mount_dropdown({ routes: one_child_route })
 
     focus_in(dropdown)
     await tick()
@@ -412,9 +420,9 @@ describe(`Nav`, () => {
   })
 
   test(`dropdown accessibility uses native navigation links and labelled toggles`, () => {
-    mount_nav({ routes: [[`/docs`, [`/docs`, `/docs/intro`]]] })
-
-    const { dropdown, dropdown_menu } = query_dropdown_elements()
+    const { dropdown, dropdown_menu, toggle } = mount_dropdown({
+      routes: [[`/docs`, [`/docs`, `/docs/intro`]]],
+    })
     const links = [...dropdown_menu.querySelectorAll(`a`)]
     // parent /docs is filtered out of the submenu
     expect(links.map((link) => link.getAttribute(`href`))).toEqual([`/docs/intro`])
@@ -422,7 +430,6 @@ describe(`Nav`, () => {
     const roles = [dropdown, dropdown_menu, ...links].map((el) => el.getAttribute(`role`))
     expect(roles).toEqual([null, null, null])
 
-    const toggle = doc_query(`[data-dropdown-toggle]`)
     expect([
       toggle.tagName,
       toggle.getAttribute(`aria-label`),
@@ -780,9 +787,7 @@ describe(`Nav`, () => {
   describe(`pinned dropdown feature`, () => {
     test(`click toggles pinned state and aria-expanded`, async () => {
       // cooldown 0 so an unpinned dropdown would hide within one macrotask
-      mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 0 })
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
-      const toggle = doc_query(`[data-dropdown-toggle]`)
+      const { dropdown, dropdown_menu, toggle } = mount_dropdown({ dropdown_cooldown: 0 })
 
       expect(is_visible(dropdown_menu)).toBe(false)
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
@@ -806,8 +811,7 @@ describe(`Nav`, () => {
       afterEach(() => vi.useRealTimers())
 
       test.each([0, 100])(`cooldown=%dms closes after timeout`, async (cooldown) => {
-        mount_nav({ routes: single_dropdown_route, dropdown_cooldown: cooldown })
-        const { dropdown, dropdown_menu } = query_dropdown_elements()
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: cooldown })
 
         mouse_enter(dropdown)
         await tick()
@@ -823,8 +827,7 @@ describe(`Nav`, () => {
       })
 
       test(`multiple rapid enter/leave cycles reset cooldown each time`, async () => {
-        mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 100 })
-        const { dropdown, dropdown_menu } = query_dropdown_elements()
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 100 })
 
         for (let idx = 0; idx < 3; idx++) {
           mouse_enter(dropdown)
@@ -843,8 +846,7 @@ describe(`Nav`, () => {
         [`re-entering menu`, (_dropdown: Element, menu: Element) => mouse_enter(menu)],
         [`keyboard focus`, (dropdown: Element) => focus_in(dropdown)],
       ])(`%s during cooldown cancels hide`, async (_desc, reinteract) => {
-        mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 150 })
-        const { dropdown, dropdown_menu } = query_dropdown_elements()
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 150 })
 
         mouse_enter(dropdown)
         await tick()
@@ -857,8 +859,7 @@ describe(`Nav`, () => {
       })
 
       test(`pinned dropdown ignores cooldown on mouseleave`, async () => {
-        mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 150 })
-        const { dropdown, dropdown_menu } = query_dropdown_elements()
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 150 })
         const toggle = dropdown.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
 
         await click(toggle)
@@ -909,9 +910,8 @@ describe(`Nav`, () => {
       ],
       [`Escape key`, escape],
     ])(`pinned dropdown closes on %s`, async (_trigger, close_action) => {
-      mount_nav({ routes: single_dropdown_route })
-      const { dropdown_menu } = query_dropdown_elements()
-      await click(doc_query(`[data-dropdown-toggle]`))
+      const { dropdown_menu, toggle } = mount_dropdown()
+      await click(toggle)
       expect(is_visible(dropdown_menu)).toBe(true)
       await close_action(dropdown_menu)
       expect(is_visible(dropdown_menu)).toBe(false)
@@ -941,9 +941,7 @@ describe(`Nav`, () => {
     test.each([`Enter`, ` `, `ArrowDown`])(
       `keyboard %s pins dropdown open`,
       async (key) => {
-        mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 0 })
-        const { dropdown, dropdown_menu } = query_dropdown_elements()
-        const toggle = doc_query(`[data-dropdown-toggle]`)
+        const { dropdown, dropdown_menu, toggle } = mount_dropdown({ dropdown_cooldown: 0 })
 
         keydown(key, toggle)
         await next_task()
@@ -957,9 +955,7 @@ describe(`Nav`, () => {
     )
 
     test(`ArrowDown navigates within pinned dropdown after mouse leave`, async () => {
-      mount_nav({ routes: two_child_route, dropdown_cooldown: 0 })
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
-      const toggle = doc_query(`[data-dropdown-toggle]`)
+      const { dropdown, dropdown_menu, toggle } = mount_dropdown(pinned_props)
 
       await click(toggle) // pin open, then leave with the mouse
       expect(is_visible(dropdown_menu)).toBe(true)
@@ -976,9 +972,7 @@ describe(`Nav`, () => {
     })
 
     test(`Escape on a submenu link closes it for good and restores focus`, async () => {
-      mount_nav({ routes: two_child_route, dropdown_cooldown: 0 })
-      const { dropdown_menu } = query_dropdown_elements()
-      const toggle = doc_query(`[data-dropdown-toggle]`)
+      const { dropdown_menu, toggle } = mount_dropdown(pinned_props)
 
       await click(toggle)
       const first_link = doc_query<HTMLAnchorElement>(`[data-submenu] a`)
@@ -992,8 +986,7 @@ describe(`Nav`, () => {
     })
 
     test(`Tab cycles within a pinned submenu instead of leaving it`, async () => {
-      mount_nav({ routes: two_child_route, dropdown_cooldown: 0 })
-      const { dropdown_menu } = query_dropdown_elements()
+      const { dropdown_menu } = mount_dropdown(pinned_props)
 
       await click(doc_query(`[data-dropdown-toggle]`))
       const links = [...dropdown_menu.querySelectorAll(`a`)]
@@ -1007,8 +1000,7 @@ describe(`Nav`, () => {
     })
 
     test(`pinned dropdown stays open on focus out`, async () => {
-      mount_nav({ routes: two_child_route })
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
+      const { dropdown, dropdown_menu } = mount_dropdown({ routes: two_child_route })
 
       await click(doc_query(`[data-dropdown-toggle]`))
       expect(is_visible(dropdown_menu)).toBe(true)
@@ -1028,12 +1020,9 @@ describe(`Nav`, () => {
 
     test(`pinned state clears when burger menu closes`, async () => {
       set_window_width(500)
-      mount_nav({ routes: single_dropdown_route, breakpoint: 767 })
+      const { dropdown_menu, toggle } = mount_dropdown({ breakpoint: 767 })
       await tick()
-
       const burger = doc_query(`.burger`)
-      const { dropdown_menu } = query_dropdown_elements()
-      const toggle = doc_query(`[data-dropdown-toggle]`)
 
       await click(burger)
       await click(toggle)
@@ -1070,8 +1059,7 @@ describe(`Nav`, () => {
 
     // Open dropdown and enter the panel, returning elements for assertions
     const open_and_enter_panel = async () => {
-      mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 50 })
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
+      const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 50 })
       mouse_enter(dropdown)
       await tick()
       mouse_enter(dropdown_menu)
@@ -1182,18 +1170,17 @@ describe(`Nav`, () => {
     afterEach(() => vi.unstubAllGlobals())
 
     test(`mouse hover does not open dropdowns on mobile touch devices`, async () => {
-      vi.stubGlobal(`ontouchstart`, () => {}) // makes 'ontouchstart' in globalThis true
+      vi.stubGlobal(`ontouchstart`, () => {}) // makes `ontouchstart` in globalThis true
       set_window_width(500)
-      mount_nav({ routes: single_dropdown_route })
+      const { dropdown, dropdown_menu, toggle } = mount_dropdown()
       await tick()
 
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
       mouse_enter(dropdown)
       await tick()
       expect(is_visible(dropdown_menu)).toBe(false)
 
       // explicit toggle click still opens the dropdown on touch devices
-      await click(doc_query(`[data-dropdown-toggle]`))
+      await click(toggle)
       expect(is_visible(dropdown_menu)).toBe(true)
     })
 
@@ -1201,10 +1188,9 @@ describe(`Nav`, () => {
       vi.useFakeTimers()
       vi.stubGlobal(`ontouchstart`, () => {})
       // desktop width: hover-open is only blocked when touch AND mobile
-      mount_nav({ routes: single_dropdown_route, dropdown_cooldown: 0 })
+      const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 0 })
       await tick()
 
-      const { dropdown, dropdown_menu } = query_dropdown_elements()
       mouse_enter(dropdown)
       await tick()
       expect(is_visible(dropdown_menu)).toBe(true)

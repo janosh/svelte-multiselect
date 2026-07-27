@@ -56,7 +56,9 @@ describe(`get_label`, () => {
     [undefined, `undefined`, false],
     [{ value: 42, name: `Test` }, undefined, true],
   ])(`handles option %j correctly`, (input, expected, should_log_error) => {
-    console.error = vi.fn<typeof console.error>()
+    // spyOn, not assignment: only a spy is undone by the suite's restoreAllMocks,
+    // otherwise console.error stays mocked for every later test in the file
+    vi.spyOn(console, `error`).mockImplementation(() => {})
     // @ts-expect-error testing runtime behavior with non-Option types
     const result = get_label(input)
     expect(result).toBe(expected)
@@ -109,7 +111,7 @@ describe(`get_style`, () => {
   ] as const)(
     `object style %j with key %s returns %j (logs error: %s)`,
     (style, key, expected, should_log_error) => {
-      console.error = vi.fn<typeof console.error>()
+      vi.spyOn(console, `error`).mockImplementation(() => {})
       const option = { label: `test`, style }
       // @ts-expect-error style objects with unknown keys test runtime validation
       expect(get_style(option, key)).toBe(expected)
@@ -126,7 +128,7 @@ describe(`get_style`, () => {
     [{ style: `color: red;` }], // string style must not leak through for unknown keys
     [{ style: option_style }],
   ])(`logs error and returns empty string for invalid key with style %j`, (option) => {
-    console.error = vi.fn<typeof console.error>()
+    vi.spyOn(console, `error`).mockImplementation(() => {})
     // @ts-expect-error invalid key
     expect(get_style(option, `invalid_key`)).toBe(``)
     expect(console.error).toHaveBeenCalledWith(
@@ -235,7 +237,6 @@ describe(`is_object`, () => {
 describe(`has_group`, () => {
   test.each([
     [{ label: `Test`, group: `Group1` }, true],
-    [{ label: `Test`, group: `Frontend` }, true],
     [{ label: `Test`, group: `` }, true], // empty string is still a string
     [{ label: `Test` }, false],
     [{ label: `Test`, group: undefined }, false],
@@ -256,8 +257,6 @@ describe(`get_option_key`, () => {
     // Object options with value - returns value directly (preserves identity)
     [{ label: `Apple`, value: 1 }, 1],
     [{ label: `Apple`, value: `uuid-123` }, `uuid-123`],
-    [{ label: `pd`, value: `uuid-1` }, `uuid-1`],
-    [{ label: `PD`, value: `uuid-2` }, `uuid-2`],
     // Object options without value - falls back to label
     [{ label: `Apple` }, `Apple`],
     [{ label: `Apple`, value: undefined }, `Apple`],
@@ -379,10 +378,6 @@ describe(`chain_handlers`, () => {
     ],
     [[undefined, `a`], [`a`]],
     [[null, undefined], []],
-    [
-      [`a`, `b`, `c`],
-      [`a`, `b`, `c`],
-    ],
   ])(`runs %s in order, skipping nullish`, (names, expected) => {
     const calls: string[] = []
     const handlers = names.map((name) => (name == null ? name : () => calls.push(name)))

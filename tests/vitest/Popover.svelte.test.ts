@@ -36,12 +36,18 @@ describe(`Popover`, () => {
     expect(document.activeElement).toBe(doc_query(`[data-testid="popover-item"]`))
   })
 
-  test(`keeps its own id so a consumer's cannot break the aria linkage`, async () => {
-    mount_popover({ id: `consumer-id` })
+  // both live after the {...rest} spread, so a consumer prop cannot clobber the aria
+  // linkage or drop the .popover class every bit of the styling hangs off
+  test(`keeps its own id and class alongside a consumer's`, async () => {
+    mount_popover({ id: `consumer-id`, class: `consumer-class` })
     trigger().click()
     await tick()
 
-    expect(surface()?.id).toBe(trigger().getAttribute(`aria-controls`))
+    const dialog = doc_query(`[role="dialog"]`)
+    expect(dialog.id).toBe(trigger().getAttribute(`aria-controls`))
+    // svelte adds its own scoping hash, so check membership not the whole list
+    expect(dialog.classList.contains(`popover`)).toBe(true)
+    expect(dialog.classList.contains(`consumer-class`)).toBe(true)
   })
 
   // The wrapper around the trigger snippet is `display: contents` and measures 0x0,
@@ -82,46 +88,42 @@ describe(`Popover`, () => {
     expect(document.activeElement).toBe(trigger())
   })
 
-  test(`pressing the trigger closes instead of reopening on the same gesture`, async () => {
-    mount_popover()
+  test(`presses inside leave it open, so the trigger click can close it`, async () => {
+    const on_close = vi.fn()
+    mount_popover({ on_close })
     trigger().click()
     await tick()
 
-    // the press counts as inside, so only the click that follows acts
+    // the trigger sits in click_outside's inside list and the item is in the surface,
+    // so neither press dismisses and only the click that follows acts
     press(trigger())
+    press(doc_query(`[data-testid="popover-item"]`))
     await tick()
     expect(surface()).not.toBeNull()
+    expect(on_close).not.toHaveBeenCalled()
 
     trigger().click()
     await tick()
     expect(surface()).toBeNull()
+    expect(on_close).toHaveBeenCalledWith({ via: `trigger` })
   })
 
-  test(`a press inside the surface leaves it open`, async () => {
-    mount_popover()
+  test(`escape: false leaves Escape to the consumer`, async () => {
+    mount_popover({ escape: false })
     trigger().click()
     await tick()
 
-    press(doc_query(`[data-testid="popover-item"]`))
+    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
     await tick()
     expect(surface()).not.toBeNull()
   })
 
-  test.each([
-    [`escape: false`, { escape: false }],
-    [`trap_focus: false`, { trap_focus: false }],
-  ] as const)(`%s opts out`, async (_desc, options) => {
-    mount_popover(options)
+  test(`trap_focus: false leaves focus where it was`, async () => {
+    mount_popover({ trap_focus: false })
     trigger().focus()
     trigger().click()
     await tick()
 
-    if (`trap_focus` in options) {
-      expect(document.activeElement).toBe(trigger()) // focus stayed put
-      return
-    }
-    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
-    await tick()
-    expect(surface()).not.toBeNull()
+    expect(document.activeElement).toBe(trigger())
   })
 })

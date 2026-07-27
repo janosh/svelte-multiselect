@@ -1,3 +1,4 @@
+import type { FocusTrapOptions } from '$lib/attachments'
 import {
   click_outside,
   draggable,
@@ -341,11 +342,6 @@ describe(`tooltip`, () => {
       trigger_tooltip(element)
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
-  })
-
-  describe(`Configuration Options`, () => {
-    beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
 
     it(`should handle disabled option`, () => {
       const [element, cleanup] = attach_tooltip(`Disabled tooltip`, { disabled: true })
@@ -399,6 +395,12 @@ describe(`tooltip`, () => {
   })
 
   describe(`Event Handling and Cleanup`, () => {
+    it(`should handle an invalid element gracefully`, () => {
+      const attach = tooltip()
+      // @ts-expect-error testing a null input
+      expect(attach(null)).toBeUndefined()
+    })
+
     it(`should restore original title on cleanup`, () => {
       const element = create_element()
       element.title = `Original title`
@@ -438,14 +440,6 @@ describe(`tooltip`, () => {
       cleanup?.()
       expect(element.getAttribute(`title`)).toBe(`Late title`)
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
-    })
-  })
-
-  describe(`Error Handling`, () => {
-    it(`should handle an invalid element gracefully`, () => {
-      const attach = tooltip()
-      // @ts-expect-error testing a null input
-      expect(attach(null)).toBeUndefined()
     })
   })
 
@@ -550,7 +544,7 @@ describe(`tooltip`, () => {
     })
   })
 
-  describe(`New Features`, () => {
+  describe(`Placement, Styling and Content`, () => {
     beforeEach(() => vi.useFakeTimers())
 
     it.each([
@@ -1238,10 +1232,20 @@ describe(`hotkey`, () => {
     return event
   }
 
+  // a global binding outlives document.body.innerHTML = '', so dispose every one
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+  const attach_hotkey = (options: Parameters<typeof hotkey>[0], node = create_element()) => {
+    const cleanup = hotkey(options)(node)
+    if (cleanup) cleanups.push(cleanup)
+    return { node, cleanup }
+  }
+
   it(`fires on the node it is attached to, not on the rest of the page`, () => {
-    const node = create_element()
     const handler = vi.fn()
-    const cleanup = hotkey({ bindings: [{ keys: `ctrl+k`, handler }] })(node)
+    const { node, cleanup } = attach_hotkey({ bindings: [{ keys: `ctrl+k`, handler }] })
 
     const event = keydown(node, `k`, { ctrlKey: true })
     expect(handler).toHaveBeenCalledTimes(1)
@@ -1257,26 +1261,23 @@ describe(`hotkey`, () => {
 
   it(`global listens anywhere on the page`, () => {
     const handler = vi.fn()
-    const cleanup = hotkey({ bindings: [{ keys: `ctrl+k`, handler }], global: true })(
-      create_element(),
-    )
+    attach_hotkey({ bindings: [{ keys: `ctrl+k`, handler }], global: true })
 
     keydown(create_element(), `k`, { ctrlKey: true })
     expect(handler).toHaveBeenCalledTimes(1)
-    cleanup?.()
   })
 
   it(`leaves bare keys to text fields unless told otherwise`, () => {
     const input = create_element(`input`)
     const [typed, forced, chord] = [vi.fn(), vi.fn(), vi.fn()]
-    const cleanup = hotkey({
+    attach_hotkey({
       global: true,
       bindings: [
         { keys: `/`, handler: typed },
         { keys: `?`, handler: forced, allow_in_inputs: true },
         { keys: `ctrl+/`, handler: chord },
       ],
-    })(create_element())
+    })
 
     keydown(input, `/`)
     expect(typed).not.toHaveBeenCalled() // the user is typing a slash
@@ -1286,26 +1287,23 @@ describe(`hotkey`, () => {
 
     keydown(input, `/`, { ctrlKey: true })
     expect(chord).toHaveBeenCalledTimes(1) // a chord is never typing
-    cleanup?.()
   })
 
   it(`runs the first enabled match only and can leave the default alone`, () => {
-    const node = create_element()
     const [off, first, second] = [vi.fn(), vi.fn(), vi.fn()]
-    const cleanup = hotkey({
+    const { node } = attach_hotkey({
       bindings: [
         { keys: `ctrl+k`, handler: off, enabled: false },
         { keys: [`ctrl+j`, `ctrl+k`], handler: first, prevent_default: false },
         { keys: `ctrl+k`, handler: second },
       ],
-    })(node)
+    })
 
     const event = keydown(node, `k`, { ctrlKey: true })
     expect(off).not.toHaveBeenCalled()
     expect(first).toHaveBeenCalledTimes(1)
     expect(second).not.toHaveBeenCalled()
     expect(event.defaultPrevented).toBe(false)
-    cleanup?.()
   })
 
   it.each([
@@ -1316,9 +1314,8 @@ describe(`hotkey`, () => {
       value: user_agent,
       configurable: true,
     })
-    const node = create_element()
     const handler = vi.fn()
-    const cleanup = hotkey({ bindings: [{ keys: `mod+k`, handler }] })(node)
+    const { node } = attach_hotkey({ bindings: [{ keys: `mod+k`, handler }] })
 
     keydown(node, `k`, other)
     expect(handler).not.toHaveBeenCalled()
@@ -1326,25 +1323,25 @@ describe(`hotkey`, () => {
     keydown(node, `k`, matching)
     expect(handler).toHaveBeenCalledTimes(1)
 
-    cleanup?.()
     Reflect.deleteProperty(globalThis.navigator, `userAgent`)
   })
 
   it(`stays quiet mid IME composition and when disabled`, () => {
     const node = create_element()
     const handler = vi.fn()
-    expect(
-      hotkey({ bindings: [{ keys: `ctrl+k`, handler }], enabled: false })(node),
-    ).toBeUndefined()
+    const { cleanup } = attach_hotkey(
+      { bindings: [{ keys: `ctrl+k`, handler }], enabled: false },
+      node,
+    )
+    expect(cleanup).toBeUndefined()
     keydown(node, `k`, { ctrlKey: true })
     expect(handler).not.toHaveBeenCalled()
 
-    const cleanup = hotkey({ bindings: [{ keys: `Enter`, handler }] })(node)
+    attach_hotkey({ bindings: [{ keys: `Enter`, handler }] }, node)
     keydown(node, `Enter`, { isComposing: true })
     expect(handler).not.toHaveBeenCalled()
     keydown(node, `Enter`)
     expect(handler).toHaveBeenCalledTimes(1)
-    cleanup?.()
   })
 })
 
@@ -1359,19 +1356,32 @@ describe(`focus_trap`, () => {
     return { surface, buttons }
   }
 
-  const press_tab = (shiftKey = false) =>
-    document.dispatchEvent(
-      new KeyboardEvent(`keydown`, {
-        key: `Tab`,
-        bubbles: true,
-        cancelable: true,
-        shiftKey,
-      }),
-    )
+  // returned so callers can assert the browser still gets its Tab
+  const press_tab = (shiftKey = false) => {
+    const event = new KeyboardEvent(`keydown`, {
+      key: `Tab`,
+      bubbles: true,
+      cancelable: true,
+      shiftKey,
+    })
+    document.dispatchEvent(event)
+    return event
+  }
+
+  // the trap layer stack is module-global, so a leaked trap steers a later test's Tab
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+  const attach_trap = (surface: HTMLElement, options: FocusTrapOptions = {}) => {
+    const cleanup = focus_trap(options)(surface)
+    if (cleanup) cleanups.push(cleanup)
+    return cleanup
+  }
 
   it(`focuses the first tabbable, then cycles Tab both ways past the ends`, () => {
     const { surface, buttons } = make_surface()
-    const cleanup = focus_trap()(surface)
+    attach_trap(surface)
     expect(document.activeElement).toBe(buttons[0])
 
     press_tab()
@@ -1381,7 +1391,6 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(buttons[0]) // wrapped past the last
     press_tab(true)
     expect(document.activeElement).toBe(buttons[2]) // and back past the first
-    cleanup?.()
   })
 
   it(`skips candidates the keyboard cannot reach`, () => {
@@ -1392,11 +1401,10 @@ describe(`focus_trap`, () => {
     reachable.href = `#target`
     surface.append(reachable)
 
-    const cleanup = focus_trap()(surface)
+    attach_trap(surface)
     expect(document.activeElement).toBe(buttons[0])
     press_tab()
     expect(document.activeElement).toBe(reachable)
-    cleanup?.()
   })
 
   it.each([
@@ -1408,9 +1416,8 @@ describe(`focus_trap`, () => {
     const outside = create_element(`button`)
     outside.focus()
 
-    const cleanup = focus_trap({ initial })(surface)
+    attach_trap(surface, { initial })
     expect(document.activeElement).toBe(initial === false ? outside : buttons[2])
-    cleanup?.()
   })
 
   it(`hands focus back to where it came from, or to a named element`, () => {
@@ -1441,8 +1448,8 @@ describe(`focus_trap`, () => {
   it(`gives Tab to the innermost trap only`, () => {
     const outer = make_surface()
     const inner = make_surface()
-    const cleanup_outer = focus_trap()(outer.surface)
-    const cleanup_inner = focus_trap()(inner.surface)
+    attach_trap(outer.surface)
+    const cleanup_inner = attach_trap(inner.surface)
     expect(document.activeElement).toBe(inner.buttons[0])
 
     press_tab()
@@ -1453,7 +1460,6 @@ describe(`focus_trap`, () => {
     outer.buttons[0].focus()
     press_tab()
     expect(document.activeElement).toBe(outer.buttons[1])
-    cleanup_outer?.()
   })
 
   // The trap listens on the document, so a surface that was never given focus must
@@ -1464,16 +1470,10 @@ describe(`focus_trap`, () => {
     const outside = create_element(`button`)
     outside.focus()
 
-    const cleanup = focus_trap({ initial: false })(surface)
+    attach_trap(surface, { initial: false })
     expect(document.activeElement).toBe(outside) // initial: false kept focus put
 
-    const event = new KeyboardEvent(`keydown`, {
-      key: `Tab`,
-      bubbles: true,
-      cancelable: true,
-    })
-    document.dispatchEvent(event)
-
+    const event = press_tab()
     expect(document.activeElement).toBe(outside) // not dragged into the surface
     expect(event.defaultPrevented).toBe(false) // the browser still gets its Tab
 
@@ -1481,7 +1481,6 @@ describe(`focus_trap`, () => {
     buttons[0].focus()
     press_tab()
     expect(document.activeElement).toBe(buttons[1])
-    cleanup?.()
   })
 
   it(`covers portalled parts of the same surface via include`, () => {
@@ -1490,11 +1489,10 @@ describe(`focus_trap`, () => {
     const portalled_button = document.createElement(`button`)
     portalled.append(portalled_button)
 
-    const cleanup = focus_trap({ include: [null, portalled] })(surface)
+    attach_trap(surface, { include: [null, portalled] })
     expect(document.activeElement).toBe(buttons[0])
     press_tab()
     expect(document.activeElement).toBe(portalled_button)
-    cleanup?.()
   })
 
   it(`does nothing when disabled`, () => {
@@ -1510,10 +1508,16 @@ describe(`focus_trap`, () => {
 })
 
 describe(`draggable`, () => {
+  // fixed positioning makes the attachment read getBoundingClientRect, which mock_rect
+  // controls; the offset* fallback path has its own case below
+  const create_fixed_box = (rect = { left: 10, top: 20 }) => {
+    const element = create_element(`div`, { position: `fixed` })
+    mock_rect(element, rect)
+    return element
+  }
+
   it(`should update position, callbacks, cursor, and userSelect while dragging`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 10, top: 20 })
+    const element = create_fixed_box()
     const [on_drag_start, on_drag, on_drag_end] = [vi.fn(), vi.fn(), vi.fn()]
 
     const cleanup = draggable({ on_drag_start, on_drag, on_drag_end })(element)
@@ -1543,9 +1547,7 @@ describe(`draggable`, () => {
 
   it(`should not start dragging on a non-primary mouse button`, () => {
     // the context menu can swallow the mouseup, leaving the element stuck to the cursor
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 10, top: 20 })
+    const element = create_fixed_box()
     draggable({})(element)
 
     element.dispatchEvent(mouse_event(`mousedown`, 5, 5, 2))
@@ -1554,9 +1556,7 @@ describe(`draggable`, () => {
   })
 
   it(`should not set up dragging when disabled`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 10, top: 20 })
+    const element = create_fixed_box()
     const cleanup = draggable({ disabled: true })(element)
     expect(cleanup).toBeUndefined()
     expect(element.style.cursor).toBe(``)
@@ -1578,9 +1578,7 @@ describe(`draggable`, () => {
   })
 
   it(`should only drag when event originates from handle_selector`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
+    const element = create_fixed_box({ left: 0, top: 0 })
 
     const handle = document.createElement(`div`)
     handle.className = `drag-handle`
@@ -1636,9 +1634,7 @@ describe(`draggable`, () => {
   })
 
   it(`should reset body userSelect and cursor when cleaned up mid-drag`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
+    const element = create_fixed_box({ left: 0, top: 0 })
 
     const cleanup = draggable()(element)
     element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
@@ -2187,7 +2183,12 @@ describe(`sortable`, () => {
 })
 
 describe(`resizable`, () => {
-  const create_box = () => create_element(`div`, { width: `200px`, height: `150px` })
+  // every case resizes the same 200x150 box unless it needs its own position
+  const create_box = (rect = { left: 0, top: 0, width: 200, height: 150 }) => {
+    const element = create_element(`div`, { width: `200px`, height: `150px` })
+    mock_rect(element, rect)
+    return element
+  }
 
   it.each([
     [`right`, undefined, 195, 75, `ew-resize`],
@@ -2198,7 +2199,6 @@ describe(`resizable`, () => {
     `should apply resize cursor on %s edge hover`,
     (_edge, edges, clientX, clientY, expected_cursor) => {
       const element = create_box()
-      mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
       resizable(edges ? { edges: [...edges] } : {})(element)
 
       element.dispatchEvent(mouse_event(`mousemove`, clientX, clientY))
@@ -2209,7 +2209,6 @@ describe(`resizable`, () => {
 
   it(`should use custom handle_size and reset the cursor away from edges`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const cleanup = resizable({ handle_size: 20 })(element)
 
     element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
@@ -2239,7 +2238,6 @@ describe(`resizable`, () => {
       expected_value,
     ) => {
       const element = create_box()
-      mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
       resizable(options)(element)
 
       element.dispatchEvent(mouse_event(`mousedown`, start_client_x, start_client_y))
@@ -2253,7 +2251,6 @@ describe(`resizable`, () => {
 
   it(`should not start resizing on a non-primary mouse button`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     resizable({ on_resize_start })(element)
 
@@ -2263,7 +2260,6 @@ describe(`resizable`, () => {
 
   it(`should fire on_resize_start, on_resize, and on_resize_end callbacks`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
 
     const on_resize_start = vi.fn()
     const on_resize = vi.fn()
@@ -2320,8 +2316,7 @@ describe(`resizable`, () => {
       [drag_client_x, drag_client_y],
       expected_styles,
     ) => {
-      const element = create_box()
-      mock_rect(element, rect)
+      const element = create_box(rect)
       resizable({ edges: [_edge] })(element)
 
       element.dispatchEvent(mouse_event(`mousedown`, start_client_x, start_client_y))
@@ -2337,7 +2332,6 @@ describe(`resizable`, () => {
 
   it(`should do nothing when disabled`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     const cleanup = resizable({ disabled: true, on_resize_start })(element)
 
@@ -2378,7 +2372,6 @@ describe(`resizable`, () => {
   ])(`position %s initializes as %s`, (initial_position, expected_position) => {
     const element = create_box()
     element.style.position = initial_position
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
 
     resizable()(element)
 
@@ -2387,7 +2380,6 @@ describe(`resizable`, () => {
 
   it(`should not start resizing when clicking outside edge areas`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     resizable({ on_resize_start })(element)
 
@@ -2410,7 +2402,6 @@ describe(`resizable`, () => {
 
   it(`should reset body userSelect when cleaned up mid-resize`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize = vi.fn()
 
     const cleanup = resizable({ on_resize })(element)

@@ -1,10 +1,12 @@
 import { ContextMenu } from '$lib'
 import type { CmdAction } from '$lib/types'
-import { mount, tick, unmount } from 'svelte'
+import type { ComponentProps } from 'svelte'
+import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 describe(`ContextMenu`, () => {
+  type MenuProps = Partial<Omit<ComponentProps<typeof ContextMenu>, `actions`>>
   const make_actions = (): CmdAction[] => [
     { label: `Copy`, action: vi.fn(), shortcut: `mod+c` },
     { label: `Delete`, action: vi.fn(), disabled: true },
@@ -15,7 +17,7 @@ describe(`ContextMenu`, () => {
   afterEach(() => {
     for (const app of mounted.splice(0)) void unmount(app)
   })
-  const mount_menu = (actions: CmdAction[], extra = {}) => {
+  const mount_menu = (actions: CmdAction[], extra: MenuProps = {}) => {
     const props = $state({ actions, ...extra })
     mounted.push(mount(ContextMenu, { target: document.body, props }))
   }
@@ -30,7 +32,7 @@ describe(`ContextMenu`, () => {
     return event
   }
   // mounts a menu and right-clicks the page to open it, returning the contextmenu event
-  const open_menu = async (actions = make_actions(), extra = {}) => {
+  const open_menu = async (actions = make_actions(), extra: MenuProps = {}) => {
     mount_menu(actions, extra)
     const event = right_click(document.body)
     await tick()
@@ -41,7 +43,7 @@ describe(`ContextMenu`, () => {
     Array.from(document.querySelectorAll<HTMLButtonElement>(`[role="menuitem"]`))
 
   test(`a right-click opens the menu at the pointer, replacing the native one`, async () => {
-    mount_menu(make_actions())
+    mount_menu(make_actions(), { class: `consumer-class` })
     expect(menu()).toBeNull()
 
     const event = right_click(document.body)
@@ -53,8 +55,41 @@ describe(`ContextMenu`, () => {
       `Delete`,
     ])
     // float anchored the menu on the pointer rather than on any element
-    const { position, left, top } = doc_query(`menu[role="menu"]`).style
+    const surface = doc_query(`menu[role="menu"]`)
+    const { position, left, top } = surface.style
     expect([position, left, top]).toEqual([`fixed`, `120px`, `240px`])
+    // .context-menu comes after the {...rest} spread, so a consumer class adds to the
+    // styling hook instead of replacing it
+    expect(surface.classList.contains(`context-menu`)).toBe(true)
+    expect(surface.classList.contains(`consumer-class`)).toBe(true)
+  })
+
+  // with a region, svelte:body's handler is dropped, so the rest of the page keeps
+  // the browser's own menu
+  test(`a children region scopes the right-click to itself`, async () => {
+    const children = createRawSnippet(() => ({
+      render: () => `<div data-testid="region">region</div>`,
+    }))
+    mount_menu(make_actions(), { children })
+
+    const outside = right_click(document.body)
+    await tick()
+    expect(menu()).toBeNull()
+    expect(outside.defaultPrevented).toBe(false)
+
+    right_click(doc_query(`[data-testid="region"]`))
+    await tick()
+    expect(menu()).not.toBeNull()
+  })
+
+  test(`an item snippet replaces the default label and shortcut markup`, async () => {
+    const item = createRawSnippet<[{ action: CmdAction }]>((get_params) => ({
+      render: () => `<span data-testid="custom">${get_params().action.label}!</span>`,
+    }))
+    await open_menu(make_actions(), { item })
+
+    expect(items().map((btn) => btn.textContent?.trim())).toEqual([`Copy!`, `Delete!`])
+    expect(document.querySelector(`kbd`)).toBeNull() // default shortcut markup is gone
   })
 
   test.each([
@@ -75,16 +110,19 @@ describe(`ContextMenu`, () => {
 
   test(`choosing an action runs it and closes, disabled ones do neither`, async () => {
     const actions = make_actions()
-    await open_menu(actions)
+    const on_select = vi.fn()
+    await open_menu(actions, { on_select })
 
     items()[1].click() // disabled
     await tick()
     expect(actions[1].action).not.toHaveBeenCalled()
+    expect(on_select).not.toHaveBeenCalled()
     expect(menu()).not.toBeNull()
 
     items()[0].click()
     await tick()
     expect(actions[0].action).toHaveBeenCalledWith(`Copy`)
+    expect(on_select).toHaveBeenCalledWith(actions[0])
     expect(menu()).toBeNull()
   })
 
