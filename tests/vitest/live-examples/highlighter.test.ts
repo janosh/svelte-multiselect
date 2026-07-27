@@ -175,14 +175,22 @@ describe(`create_highlighter`, () => {
     )
   })
 
-  test(`default grammars match the eager starry_night instance`, async () => {
-    const default_highlighter = create_highlighter()
-    expect(await default_highlighter.highlight_block(`const x = 1`, `ts`)).toBe(
-      starry_night_highlighter(`const x = 1`, `ts`),
-    )
-    expect((await default_highlighter.ready()).flagToScope(`svelte`)).toBe(
-      `source.svelte`,
-    )
+  // starry-night's index re-exports the 34-grammar `common` bundle with no subpath to
+  // reach it separately, so one mention here would pin ~1.3 MB into the chunk of every
+  // consumer that brings its own grammars. Defaulting belongs in highlighter.ts.
+  test(`never references starry-night's common bundle`, async () => {
+    const source = (await import(`$lib/live-examples/create-highlighter.ts?raw`)).default
+    // comments stripped: this file explains the rule in prose, which would match too
+    const code = source
+      .replaceAll(/\/\*[\s\S]*?\*\//gu, ``)
+      .replaceAll(/^[^\n]*\/\/.*$/gmu, ``)
+    expect(code).toContain(`createStarryNight`)
+    expect(code).not.toContain(`common`)
+  })
+
+  test(`the eager instance still resolves the default grammars`, async () => {
+    expect(starry_night_highlighter(`const x = 1`, `ts`)).toContain(`highlight-ts`)
+    expect(starry_night.flagToScope(`svelte`)).toBe(`source.svelte`)
   })
 
   test(`defers loading until first use, then reports missing peer dependency`, async () => {

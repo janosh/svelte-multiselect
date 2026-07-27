@@ -21,19 +21,17 @@ export type Highlighter = {
   highlight_block: (code: string, lang?: string | null) => Promise<string>
 }
 
-const optional_peer_error = `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`
+// exported so highlighter.ts reports the same thing when its default grammars fail
+export const optional_peer_error = `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`
 
-const create_instance = async (
-  grammars: readonly Grammar[] | undefined,
-): Promise<StarryNight> => {
+// Deliberately never reads starry-night's `common` export. Its index re-exports the
+// 34-grammar bundle, and there is no subpath to reach it separately, so a single
+// mention anywhere in this module pins ~1.3 MB into the chunk of every consumer that
+// supplies its own grammars. Defaulting lives in highlighter.ts instead.
+const create_instance = async (grammars: readonly Grammar[]): Promise<StarryNight> => {
   try {
-    const { common, createStarryNight } = await import(`@wooorm/starry-night`)
-    // the Svelte grammar ships separately, so only fetch it when defaulting
-    const resolved = grammars ?? [
-      ...common,
-      (await import(`@wooorm/starry-night/source.svelte`)).default,
-    ]
-    return await createStarryNight(resolved)
+    const { createStarryNight } = await import(`@wooorm/starry-night`)
+    return await createStarryNight(grammars)
   } catch (cause) {
     throw new Error(optional_peer_error, { cause })
   }
@@ -68,10 +66,11 @@ export const render_block = (
   return `<pre class="${class_name}"><code>${html}</code></pre>`
 }
 
-// Grammars default to the common bundle (34) + Svelte. Nothing is loaded until the first
-// call to ready()/highlight()/highlight_block(); the instance is cached after that,
-// including a rejection, so a missing peer dependency isn't retried on every call.
-export const create_highlighter = (grammars?: readonly Grammar[]): Highlighter => {
+// Nothing is loaded until the first call to ready()/highlight()/highlight_block(); the
+// instance is cached after that, including a rejection, so a missing peer dependency
+// isn't retried on every call. For the common bundle plus Svelte, import `starry_night`
+// from `svelte-widgets/live-examples` rather than passing those grammars here.
+export const create_highlighter = (grammars: readonly Grammar[]): Highlighter => {
   let instance: Promise<StarryNight> | undefined
   const ready = (): Promise<StarryNight> => (instance ??= create_instance(grammars))
   return {

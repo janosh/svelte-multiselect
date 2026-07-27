@@ -37,7 +37,7 @@
 <script lang="ts" generics="Value extends string = string">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { tooltip } from './attachments'
+  import { tooltip, type TooltipOptions } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
 
@@ -49,6 +49,9 @@
     sort_order?: `asc` | `desc` | null
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     on_change?: (selected: Value | Value[] | null) => void
+    // `content` comes from each option's own `tooltip`; the rest is yours, which is
+    // what lets a consumer opt into allow_html for rich tooltips
+    tooltip_options?: Omit<TooltipOptions, `content`>
     tooltip_placement?: `top` | `bottom` | `left` | `right`
     // a div cannot legally sit inside phrasing content, so a group rendered in a
     // heading or a paragraph needs to be a span
@@ -67,6 +70,7 @@
     sort_order = $bindable(null),
     option,
     on_change,
+    tooltip_options,
     tooltip_placement = `bottom`,
     as = `div`,
     ...rest
@@ -149,7 +153,11 @@
         disabled={disabled || opt.disabled}
         data-value={opt.value}
         onclick={() => select(opt.value)}
-        {@attach tooltip({ content: opt.tooltip, placement: tooltip_placement })}
+        {@attach tooltip({
+          placement: tooltip_placement,
+          ...tooltip_options,
+          content: opt.tooltip,
+        })}
       >
         {#if option}
           {@render option({ option: opt, selected: is_selected })}

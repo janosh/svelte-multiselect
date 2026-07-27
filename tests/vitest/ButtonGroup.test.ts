@@ -361,6 +361,23 @@ describe(`ButtonGroup`, () => {
     }
   })
 
+  // without a pass-through, tooltip content is escaped, which blocks any consumer whose
+  // option tooltips are rich text
+  test(`tooltip_options reaches the tooltip, so allow_html works`, async () => {
+    vi.useFakeTimers()
+    try {
+      const options: Option[] = [{ value: `a`, tooltip: `<strong>bold</strong>` }]
+      const buttons = mount_group({ options, tooltip_options: { allow_html: true } })
+      await tick()
+
+      buttons[0].dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.runAllTimers()
+      expect(doc_query(`.tooltip-content`).innerHTML).toContain(`<strong>bold</strong>`)
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   // `as` exists so a group can sit in a heading or paragraph, where a div is invalid.
   // The inner options wrapper has to follow, or the root is legal and its child isn't.
   test.each([

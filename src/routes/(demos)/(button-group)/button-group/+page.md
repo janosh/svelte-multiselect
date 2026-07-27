@@ -101,3 +101,7 @@ wrong inside body text.
 
 The root is a `<div>`. Pass `as="span"` where a div would be invalid, such as inside a
 heading or a paragraph.
+
+Per-option tooltips come from each option's `tooltip` field. `tooltip_options` forwards
+everything else to the [`tooltip`](/attachments#tooltip) attachment, so
+`tooltip_options={{ allow_html: true }}` renders rich content instead of escaping it.
