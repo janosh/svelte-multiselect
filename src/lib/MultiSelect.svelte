@@ -2620,7 +2620,8 @@
     border: none;
     outline: none;
     background: none;
-    flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
+    /* this + next line fix https://github.com/janosh/svelte-widgets/issues/12 */
+    flex: 1;
     min-width: 2em;
     /* ensure input uses text color and not --sms-selected-text-color */
     color: var(--sms-text-color, light-dark(#222, #eee));
