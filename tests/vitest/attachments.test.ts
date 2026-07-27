@@ -1,12 +1,18 @@
-import type { FocusTrapOptions } from '$lib/attachments'
+import type { ContrastOptions, FocusTrapOptions } from '$lib/attachments'
 import {
   click_outside,
+  contrast_color,
+  dismiss_on_outside_press,
   draggable,
   float,
   focus_trap,
+  forward_window_keydown,
+  get_bg_color,
   get_html_sort_value,
   highlight_matches,
   hotkey,
+  pick_contrast_color,
+  portal,
   resizable,
   sortable,
   tooltip,
@@ -1229,6 +1235,120 @@ describe(`click_outside`, () => {
     press_escape()
     expect(callback).not.toHaveBeenCalled()
   })
+
+  it(`resolves a scope function per press, for a bind:this still null at setup`, () => {
+    const [own_scope, own_trigger, other_trigger] = [
+      create_element(),
+      create_element(),
+      create_element(),
+    ]
+    own_trigger.className = `trigger`
+    other_trigger.className = `trigger`
+    own_scope.append(own_trigger)
+
+    // null while the surface's first render is still pending, so the selector is
+    // unconstrained — a plain `scope` prop would have been captured null forever
+    let scope_el: Element | null = null
+    const { callback } = attach_outside({ inside: [`.trigger`], scope: () => scope_el })
+
+    dispatch_press(other_trigger)
+    expect(callback).not.toHaveBeenCalled()
+
+    scope_el = own_scope
+    dispatch_press(own_trigger)
+    expect(callback).not.toHaveBeenCalled()
+    dispatch_press(other_trigger) // now out of scope, so it no longer shields
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe(`dismiss_on_outside_press`, () => {
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+
+  const press = (target: Element) =>
+    target.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+
+  const listen = (options: Parameters<typeof dismiss_on_outside_press>[0] = {}) => {
+    const callback = vi.fn()
+    const cleanup = dismiss_on_outside_press({ callback, ...options })
+    cleanups.push(cleanup)
+    return { callback, cleanup }
+  }
+
+  // One listener over several disjoint menus in a panel, which is exactly what the
+  // attachment cannot express: a wrapper around them all would count every press
+  // between them as inside.
+  it(`without a node, inside alone decides membership`, () => {
+    const panel = create_element()
+    const [menu_a, menu_b] = [create_element(), create_element()]
+    const panel_filler = create_element()
+    for (const menu of [menu_a, menu_b]) menu.className = `header-menu-root`
+    panel.append(menu_a, panel_filler, menu_b)
+
+    const { callback } = listen({ inside: [`.header-menu-root`] })
+
+    press(menu_a)
+    press(menu_b)
+    expect(callback).not.toHaveBeenCalled()
+
+    // between the two menus but still inside the panel: an attached surface would
+    // have to count this as inside, a node-less listener must not
+    press(panel_filler)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`dispatches no dismiss event and still calls back without a node`, () => {
+    const document_listener = vi.fn()
+    document.addEventListener(`dismiss`, document_listener)
+    const { callback } = listen()
+
+    expect(() => press(create_element())).not.toThrow()
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0]).toMatchObject({ via: `pointer` })
+    expect(document_listener).not.toHaveBeenCalled()
+    document.removeEventListener(`dismiss`, document_listener)
+  })
+
+  it(`escape reports focus_inside from the inside selectors alone`, () => {
+    const menu = create_element()
+    menu.className = `header-menu-root`
+    const focusable = document.createElement(`button`)
+    menu.append(focusable)
+    focusable.focus()
+
+    const { callback } = listen({ inside: [`.header-menu-root`], escape: true })
+    document.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true, cancelable: true }),
+    )
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][0]).toMatchObject({ focus_inside: true, via: `escape` })
+  })
+
+  it(`disabled registers no listener and returns a callable cleanup`, () => {
+    const { callback, cleanup } = listen({ enabled: false })
+
+    press(create_element())
+    expect(callback).not.toHaveBeenCalled()
+    expect(() => cleanup()).not.toThrow()
+  })
+
+  it(`a node passed in still counts as inside and receives the dismiss event`, () => {
+    const node = create_element()
+    const dismiss_listener = vi.fn()
+    node.addEventListener(`dismiss`, dismiss_listener)
+    const { callback } = listen({ node })
+
+    press(node)
+    expect(callback).not.toHaveBeenCalled()
+
+    press(create_element())
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(dismiss_listener).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe(`hotkey`, () => {
@@ -1714,6 +1834,9 @@ describe(`highlight_matches`, () => {
     )
   })
 
+  // the timing cases below opt into fake timers individually, so undo it centrally
+  afterEach(() => vi.useRealTimers())
+
   const get_highlight_ranges = (): Range[] => {
     const highlight = mock_css_highlights.get(`highlight-match`) as
       | { ranges?: Range[] }
@@ -1903,25 +2026,21 @@ describe(`highlight_matches`, () => {
 
   it(`supports timed highlights and opt-in range effects`, async () => {
     vi.useFakeTimers()
-    try {
-      mock_element.textContent = `PageSearch result`
-      const effect_cleanup = vi.fn()
+    mock_element.textContent = `PageSearch result`
+    const effect_cleanup = vi.fn()
 
-      const cleanup = highlight_matches({
-        query: `PageSearch`,
-        duration_ms: 50,
-        on_highlight: () => effect_cleanup,
-      })(mock_element)
+    const cleanup = highlight_matches({
+      query: `PageSearch`,
+      duration_ms: 50,
+      on_highlight: () => effect_cleanup,
+    })(mock_element)
 
-      await vi.advanceTimersByTimeAsync(50)
-      expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
-      expect(effect_cleanup).toHaveBeenCalledOnce()
+    await vi.advanceTimersByTimeAsync(50)
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+    expect(effect_cleanup).toHaveBeenCalledOnce()
 
-      cleanup?.()
-      expect(effect_cleanup).toHaveBeenCalledOnce()
-    } finally {
-      vi.useRealTimers()
-    }
+    cleanup?.()
+    expect(effect_cleanup).toHaveBeenCalledOnce()
   })
 
   it(`removes highlights when range effect setup or cleanup throws`, () => {
@@ -2002,6 +2121,87 @@ describe(`highlight_matches`, () => {
           ? previous
           : undefined,
     )
+  })
+
+  it(`observe_mutations: false freezes the highlight at attach time`, async () => {
+    mock_element.textContent = `nothing here`
+    const cleanup = highlight_matches({
+      query: `PageSearch`,
+      observe_mutations: false,
+    })(mock_element)
+
+    mock_element.textContent = `PageSearch excerpt`
+    await Promise.resolve()
+
+    expect(get_highlight_ranges()).toHaveLength(0)
+    cleanup?.()
+  })
+
+  it(`debounced observation coalesces a burst into one re-run`, async () => {
+    vi.useFakeTimers()
+    mock_element.textContent = `nothing here`
+    const on_highlight = vi.fn()
+    const cleanup = highlight_matches({
+      query: `line`,
+      on_highlight,
+      observe_mutations: { debounce_ms: 50, max_wait_ms: 1000 },
+    })(mock_element)
+    expect(on_highlight).toHaveBeenCalledTimes(1) // the initial run
+
+    for (const idx of [1, 2, 3]) {
+      mock_element.append(document.createTextNode(` line ${idx}`))
+      await vi.advanceTimersByTimeAsync(20) // shorter than debounce_ms
+    }
+    expect(on_highlight).toHaveBeenCalledTimes(1) // still nothing but the initial run
+
+    await vi.advanceTimersByTimeAsync(50)
+    expect(on_highlight).toHaveBeenCalledTimes(2)
+    expect(get_highlight_ranges()).toHaveLength(3)
+    cleanup?.()
+  })
+
+  it(`max_wait_ms forces a re-run through a burst that never pauses`, async () => {
+    vi.useFakeTimers()
+    mock_element.textContent = `nothing here`
+    const on_highlight = vi.fn()
+    const cleanup = highlight_matches({
+      query: `line`,
+      on_highlight,
+      observe_mutations: { debounce_ms: 50, max_wait_ms: 120 },
+    })(mock_element)
+
+    // a mutation every 40 ms would reset a plain debounce forever
+    for (const idx of [1, 2, 3, 4]) {
+      mock_element.append(document.createTextNode(` line ${idx}`))
+      await vi.advanceTimersByTimeAsync(40)
+    }
+
+    expect(on_highlight).toHaveBeenCalledTimes(2) // initial run plus the capped one
+    cleanup?.()
+  })
+
+  it(`cleanup drops a pending debounced re-run`, async () => {
+    vi.useFakeTimers()
+    mock_element.textContent = `nothing here`
+    const on_highlight = vi.fn()
+    const cleanup = highlight_matches({
+      query: `line`,
+      on_highlight,
+      observe_mutations: { debounce_ms: 50 },
+    })(mock_element)
+
+    mock_element.append(document.createTextNode(` line 1`))
+    await vi.advanceTimersByTimeAsync(10)
+    expect(vi.getTimerCount()).toBe(1)
+
+    cleanup?.()
+    // disarmed, not merely ignored: a live timer holds the closure (and, in node,
+    // the event loop) until it fires
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect(on_highlight).toHaveBeenCalledTimes(1)
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
   })
 
   it(`cleanup removes only its own highlight entry`, () => {
@@ -2504,5 +2704,265 @@ describe(`float`, () => {
     const node = create_element()
     expect(float({ anchor: anchor_rect, ...options })(node)).toBeUndefined()
     expect(node.style.position).toBe(``)
+  })
+})
+
+describe(`portal`, () => {
+  // home has siblings on both sides, so restoring to the wrong index is visible
+  const setup = () => {
+    const home = create_element()
+    const target = create_element()
+    const [before, node, after] = [
+      document.createElement(`i`),
+      document.createElement(`b`),
+      document.createElement(`u`),
+    ]
+    home.append(before, node, after)
+    return { home, target, node }
+  }
+
+  it(`moves the node into the target and restores its position on teardown`, () => {
+    const { home, target, node } = setup()
+
+    const cleanup = portal(target)(node)
+
+    expect(node.parentElement).toBe(target)
+    expect(home.innerHTML).toBe(`<i></i><!--portal--><u></u>`) // anchor holds the spot
+
+    cleanup?.()
+    expect(node.parentElement).toBe(home)
+    expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`) // back between its siblings
+    expect(target.childNodes).toHaveLength(0)
+  })
+
+  it(`restores between siblings added while it was away`, () => {
+    const { home, target, node } = setup()
+    const cleanup = portal(target)(node)
+
+    home.append(document.createElement(`s`))
+    cleanup?.()
+
+    expect(home.innerHTML).toBe(`<i></i><b></b><u></u><s></s>`)
+  })
+
+  it.each([
+    [`null target`, null],
+    [`undefined target`, undefined],
+  ] as const)(`%s leaves the node where it is`, (_desc, target) => {
+    const { home, node } = setup()
+
+    expect(portal(target)(node)).toBeUndefined()
+    expect(node.parentElement).toBe(home)
+    expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`)
+  })
+
+  it(`does not reorder when the target is already the parent`, () => {
+    const { home, node } = setup()
+
+    expect(portal(home)(node)).toBeUndefined()
+    expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`) // not appended after <u>
+  })
+
+  it(`removes the node instead of stranding it when its anchor is gone`, () => {
+    const { home, target, node } = setup()
+    const cleanup = portal(target)(node)
+
+    home.innerHTML = `` // the block that owned the node tore its markup down
+    cleanup?.()
+
+    expect(node.parentElement).toBeNull()
+    expect(target.childNodes).toHaveLength(0)
+  })
+
+  it(`restores into a detached home rather than dropping the node`, () => {
+    const { home, target, node } = setup()
+    const cleanup = portal(target)(node)
+
+    home.remove() // whole subtree detached, anchor still marks the spot inside it
+    cleanup?.()
+
+    expect(node.parentElement).toBe(home)
+    expect(target.childNodes).toHaveLength(0)
+  })
+})
+
+describe(`contrast_color`, () => {
+  it.each([
+    [`light rgb background`, `rgb(255, 255, 255)`, `black`],
+    [`dark rgb background`, `rgb(20, 20, 20)`, `white`],
+    [`space-separated rgb`, `rgb(255 255 255)`, `black`],
+    [`rgba with alpha`, `rgba(10, 10, 10, 0.9)`, `white`],
+    [`six-digit hex`, `#ffffff`, `black`],
+    [`three-digit hex`, `#111`, `white`],
+    [`eight-digit hex`, `#ffffffcc`, `black`],
+  ])(`picks contrast text for a %s`, (_desc, bg_color, expected) => {
+    expect(pick_contrast_color({ bg_color })).toBe(expected)
+  })
+
+  // Perceived brightness weights green ×0.587, red ×0.299 and blue ×0.114, so the
+  // same channel value reads very differently. A plain channel average would land
+  // all three of these on 0.333 and give one answer for the lot.
+  it.each([
+    [`green`, `rgb(0, 255, 0)`, `black`],
+    [`red`, `rgb(255, 0, 0)`, `white`],
+    [`blue`, `rgb(0, 0, 255)`, `white`],
+  ])(`weighs channels perceptually: full %s`, (_desc, bg_color, expected) => {
+    expect(pick_contrast_color({ bg_color, luminance_threshold: 0.5 })).toBe(expected)
+  })
+
+  it.each<[string, ContrastOptions, string]>([
+    [`custom choices`, { bg_color: `#000`, choices: [`#222`, `#eee`] }, `#eee`],
+    // white's luminance is 1, so a threshold above it flips even white to dark text
+    [`custom threshold`, { bg_color: `#fff`, luminance_threshold: 1.5 }, `white`],
+    [`empty bg treated as a white page`, { bg_color: `` }, `black`],
+    [`no bg treated as a white page`, {}, `black`],
+  ])(`honors %s`, (_desc, options, expected) => {
+    expect(pick_contrast_color(options)).toBe(expected)
+  })
+
+  it.each([`red`, `oklch(0.7 0.1 200)`, `#12345`, `rgb(1, 2)`, `rgb(a, b, c)`])(
+    `throws on the unparsable color %s`,
+    (bg_color) => {
+      expect(() => pick_contrast_color({ bg_color })).toThrow(/cannot read color/u)
+    },
+  )
+
+  it(`walks past transparent ancestors to the first painted background`, () => {
+    const painted = create_element(`div`, { backgroundColor: `rgb(10, 10, 10)` })
+    const middle = document.createElement(`div`)
+    const node = document.createElement(`span`)
+    painted.append(middle)
+    middle.append(node)
+
+    expect(get_bg_color(node)).toBe(`rgb(10, 10, 10)`)
+
+    const cleanup = contrast_color()(node)
+    expect(node.style.color).toBe(`white`)
+    cleanup?.()
+  })
+
+  it(`treats a fully transparent chain as no background at all`, () => {
+    const node = create_element(`div`, { backgroundColor: `rgba(0, 0, 0, 0)` })
+
+    expect(get_bg_color(node)).toBe(``)
+    // …and a page with nothing painted behind it is assumed white
+    const cleanup = contrast_color()(node)
+    expect(node.style.color).toBe(`black`)
+    cleanup?.()
+  })
+
+  it(`bg_color skips the ancestor walk and cleanup restores the inline color`, () => {
+    const node = create_element(`div`, {
+      backgroundColor: `rgb(255, 255, 255)`,
+      color: `rebeccapurple`,
+    })
+
+    const cleanup = contrast_color({ bg_color: `rgb(0, 0, 0)` })(node)
+    expect(node.style.color).toBe(`white`) // the ancestor white would have said black
+
+    cleanup?.()
+    expect(node.style.color).toBe(`rebeccapurple`)
+  })
+})
+
+describe(`forward_window_keydown`, () => {
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+    document.body.innerHTML = ``
+  })
+
+  const attach = (handled = true, options: { enabled?: boolean } = {}) => {
+    const node = create_element()
+    const handle = vi.fn(() => handled)
+    const cleanup = forward_window_keydown({ handle, ...options })(node)
+    if (cleanup) cleanups.push(cleanup)
+    return { node, handle, cleanup }
+  }
+
+  const hover = (node: Element) =>
+    node.dispatchEvent(new PointerEvent(`pointerenter`, { bubbles: false }))
+  const unhover = (node: Element) =>
+    node.dispatchEvent(new PointerEvent(`pointerleave`, { bubbles: false }))
+  const press_key = (key = `f`) => {
+    const event = new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true })
+    globalThis.dispatchEvent(event)
+    return event
+  }
+
+  it(`forwards only while hovered`, () => {
+    const { node, handle } = attach()
+
+    press_key()
+    expect(handle).not.toHaveBeenCalled() // never hovered, so this key is not ours
+
+    hover(node)
+    press_key()
+    expect(handle).toHaveBeenCalledTimes(1)
+
+    unhover(node)
+    press_key()
+    expect(handle).toHaveBeenCalledTimes(1)
+  })
+
+  it(`two hovered-by-turns components never both answer one key`, () => {
+    const first = attach()
+    const second = attach()
+
+    hover(first.node)
+    press_key()
+    expect(first.handle).toHaveBeenCalledTimes(1)
+    expect(second.handle).not.toHaveBeenCalled()
+
+    unhover(first.node)
+    hover(second.node)
+    press_key()
+    expect(first.handle).toHaveBeenCalledTimes(1)
+    expect(second.handle).toHaveBeenCalledTimes(1)
+  })
+
+  it(`leaves keys to a focused input even while hovered`, () => {
+    const { node, handle } = attach()
+    hover(node)
+    const input = document.createElement(`input`)
+    document.body.append(input)
+    input.focus()
+
+    press_key()
+    expect(handle).not.toHaveBeenCalled()
+
+    input.blur() // focus falls back to body, so hover decides again
+    press_key()
+    expect(handle).toHaveBeenCalledTimes(1)
+  })
+
+  it.each([
+    [`suppresses the browser default when handled`, true, true],
+    [`leaves the default alone when unhandled`, false, false],
+  ])(`%s`, (_desc, handled, expected_prevented) => {
+    const { node } = attach(handled)
+    hover(node)
+
+    expect(press_key().defaultPrevented).toBe(expected_prevented)
+  })
+
+  it(`disabled attaches nothing`, () => {
+    const { node, handle, cleanup } = attach(true, { enabled: false })
+
+    expect(cleanup).toBeUndefined()
+    hover(node)
+    press_key()
+    expect(handle).not.toHaveBeenCalled()
+  })
+
+  it(`cleanup stops forwarding`, () => {
+    const { node, handle, cleanup } = attach()
+    hover(node)
+    press_key()
+    expect(handle).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    press_key()
+    expect(handle).toHaveBeenCalledTimes(1)
   })
 })

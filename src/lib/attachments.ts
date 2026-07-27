@@ -1,4 +1,5 @@
 import type { Attachment } from 'svelte/attachments'
+import { create_burst_debounce, sync_owned_highlight } from './text-search'
 import type { Hotkey, Placement, PositionOptions } from './utils'
 import { compute_position, fuzzy_match_indices, get_uuid, run_hotkeys } from './utils'
 // Computed CSS lengths resolve to `<number>px`; strip the unit so Number() can coerce.
@@ -6,18 +7,6 @@ import { compute_position, fuzzy_match_indices, get_uuid, run_hotkeys } from './
 const css_px = (css_length: string): number => {
   const trimmed = css_length.trim()
   return trimmed ? Number(trimmed.replace(/px$/, ``)) : NaN
-}
-
-// Type definitions for CSS highlight API (experimental)
-declare global {
-  interface CSS {
-    highlights: HighlightRegistry
-  }
-  interface HighlightRegistry extends Map<string, Highlight> {
-    clear(): void
-    delete(key: string): boolean
-    set(key: string, value: Highlight): this
-  }
 }
 
 export interface DraggableOptions {
@@ -410,50 +399,16 @@ export type HighlightOptions = {
   duration_ms?: number
   scroll_to_match?: false | ScrollIntoViewOptions
   on_highlight?: (context: { node: HTMLElement; ranges: Range[] }) => unknown
+  // Re-run when the subtree changes, so consumers stop hand-rolling an observer
+  // around this. `true` re-runs on the mutation microtask; `false` freezes the
+  // highlight at whatever the DOM held on attach. An object coalesces bursts: the
+  // re-run lands `debounce_ms` after the last mutation but no later than
+  // `max_wait_ms` after the first of the burst, so a stream of appended log lines
+  // still refreshes at a steady rate instead of never settling.
+  observe_mutations?: boolean | { debounce_ms?: number; max_wait_ms?: number }
 }
-
-type OwnedHighlight = {
-  owners: Map<symbol, Range[]>
-  previous?: Highlight
-  installed?: Highlight
-}
-
-const owned_highlights = new WeakMap<object, Map<string, OwnedHighlight>>()
 
 const HAS_NON_ASCII = /\P{ASCII}/u
-
-const sync_owned_highlight = (
-  registry: HighlightRegistry,
-  css_class: string,
-  owner: symbol,
-  ranges?: Range[],
-): void => {
-  let classes = owned_highlights.get(registry)
-  if (!classes) {
-    if (!ranges) return
-    classes = new Map()
-    owned_highlights.set(registry, classes)
-  }
-  let state = classes.get(css_class)
-  if (!state) {
-    if (!ranges) return
-    state = { owners: new Map(), previous: registry.get(css_class) }
-    classes.set(css_class, state)
-  }
-  if (ranges) state.owners.set(owner, ranges)
-  else state.owners.delete(owner)
-  const current = registry.get(css_class)
-  if (state.owners.size === 0) {
-    classes.delete(css_class)
-    if (current !== state.installed) return
-    if (state.previous) registry.set(css_class, state.previous)
-    else registry.delete(css_class)
-    return
-  }
-  if (state.installed && current !== state.installed) return
-  state.installed = new Highlight(...[...state.owners.values()].flat())
-  registry.set(css_class, state.installed)
-}
 
 export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) => {
   const {
@@ -465,6 +420,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     duration_ms,
     scroll_to_match = { behavior: `smooth`, block: `center` },
     on_highlight,
+    observe_mutations = true,
   } = ops
 
   const search = query.trim().toLowerCase().replaceAll(/\s+/gu, ` `)
@@ -576,16 +532,20 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
           ? () => next_effect_cleanup()
           : undefined
     } finally {
-      if (active)
+      if (active && observe_mutations !== false)
         observer.observe(node, { childList: true, subtree: true, characterData: true })
     }
   }
 
-  const observer = new MutationObserver(update_highlight)
+  const debounce = typeof observe_mutations === `object` ? observe_mutations : undefined
+  const { trigger, cancel } = create_burst_debounce(update_highlight, debounce)
+
+  const observer = new MutationObserver(debounce ? trigger : update_highlight)
   const cleanup = () => {
     if (!active) return
     active = false
     if (timeout !== undefined) clearTimeout(timeout)
+    cancel()
     observer.disconnect()
     const final_effect_cleanup = effect_cleanup
     effect_cleanup = undefined
@@ -1122,7 +1082,7 @@ export type DismissDetail = {
   event: Event // the press or keydown behind the dismissal, to forward to consumers
 }
 
-export type ClickOutsideConfig<T extends HTMLElement> = {
+export type DismissConfig = {
   enabled?: boolean
   // Regions that count as inside though they sit outside the node: the trigger above
   // all, whose own click toggles the surface right after this runs, and portalled
@@ -1130,14 +1090,27 @@ export type ClickOutsideConfig<T extends HTMLElement> = {
   // reference — they cannot collide with another instance's markup.
   inside?: (Element | string | null | undefined)[]
   // Confines the selector entries of `inside` to one subtree, so a second instance
-  // of the same component cannot shield this one's surface with its own trigger
-  scope?: Element | null
+  // of the same component cannot shield this one's surface with its own trigger.
+  // Resolved per press when a function, for a `bind:this` still null at setup time.
+  scope?: Element | null | (() => Element | null | undefined)
   escape?: boolean // dismiss on Escape as well, reporting where focus was
   // `release` waits for the click, for a surface floating over something draggable:
   // starting a pan or an orbit behind it should not make it vanish under the cursor.
   // It gives back the right-click, titlebar-drag and drag-release cases below.
   dismiss_on?: `press` | `release`
+}
+
+export type ClickOutsideConfig<T extends HTMLElement> = DismissConfig & {
   callback?: (node: T, config: ClickOutsideConfig<T>, detail: DismissDetail) => void
+}
+
+export type DismissOptions = DismissConfig & {
+  // The surface, where a single element is one: it counts as inside and receives the
+  // `dismiss` event. Leave it out and `inside` becomes the whole membership test,
+  // which is what lets one listener cover several surfaces with no shared wrapper —
+  // wrapping them would make every press between them count as inside.
+  node?: Element | null
+  callback?: (detail: DismissDetail) => void
 }
 
 // Layered keys: only the innermost surface hears one, so Escape closes a dropdown
@@ -1200,78 +1173,96 @@ const is_scrollbar_press = (event: Event): boolean => {
 // its click on the nearest common ancestor, dismissing a surface the user was only
 // resizing. Capture phase so a handler calling stopPropagation cannot suppress
 // dismissal; composedPath survives shadow DOM and targets detached mid-dispatch.
+//
+// A plain function rather than only the `click_outside` attachment below, because a
+// surface need not be one element: `node` is optional, and without it `inside` alone
+// says what is inside. Set up from an effect for those cases.
+export const dismiss_on_outside_press = (options: DismissOptions = {}): (() => void) => {
+  const {
+    node,
+    callback,
+    enabled = true,
+    inside = [],
+    scope,
+    escape = false,
+    dismiss_on = `press`,
+  } = options
+
+  if (!enabled) return () => {} // Early return avoids registering unused listener
+
+  const inside_nodes = [node, ...inside].filter((item) => item instanceof Element)
+  // Empty entries would make the joined selector invalid and throw on every press
+  const inside_selector = inside
+    .filter((item): item is string => typeof item === `string` && item !== ``)
+    .join(`,`)
+  // `path` is empty for the focus check, which has no event to walk
+  const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
+    const node_target = target instanceof Node ? target : null
+    if (inside_nodes.some((el) => path.includes(el) || el.contains(node_target))) {
+      return true
+    }
+    // Element (not HTMLElement) so a press on an SVG child still matches a selector
+    if (!inside_selector || !(target instanceof Element)) return false
+    const match = target.closest(inside_selector)
+    if (!match) return false
+    const resolved_scope = typeof scope === `function` ? scope() : scope
+    return !resolved_scope || resolved_scope.contains(match)
+  }
+
+  // document.activeElement reports the outermost shadow host, so descend the focus
+  // chain: the host may be inside the node (containment settles it at the first
+  // step) or the node may itself live in that shadow tree alongside the focus.
+  const focus_is_inside = (): boolean => {
+    let active = document.activeElement
+    while (active) {
+      if (is_inside(active)) return true
+      active = active.shadowRoot?.activeElement ?? null
+    }
+    return false
+  }
+
+  const dismiss = (detail: DismissDetail) => {
+    callback?.(detail)
+    node?.dispatchEvent(new CustomEvent(`dismiss`, { detail }))
+  }
+
+  const handle_press = (event: Event) => {
+    const path = event.composedPath()
+    if (is_scrollbar_press(event) || is_inside(event.target, path)) return
+    // A press never restores focus — the user already picked where it lands
+    dismiss({ focus_inside: false, via: `pointer`, event })
+  }
+
+  const on_escape = (event: KeyboardEvent) => {
+    // Safe to swallow the key: only the innermost layer gets here, so no outer
+    // surface is waiting on it. Cancelling the default keeps a native <dialog>
+    // around the surface open until a second Escape, once this layer is gone.
+    event.preventDefault()
+    event.stopPropagation()
+    dismiss({ focus_inside: focus_is_inside(), via: `escape`, event })
+  }
+
+  const press_event = dismiss_on === `press` ? `pointerdown` : `click`
+  document.addEventListener(press_event, handle_press, true)
+  const unregister_escape = escape ? register_escape_layer(on_escape) : undefined
+
+  return () => {
+    document.removeEventListener(press_event, handle_press, true)
+    unregister_escape?.()
+  }
+}
+
+// The attachment form: the element it is attached to is the surface, so containment
+// covers everything under it and `inside` is left for the trigger and portalled parts.
 export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) =>
   (node: T): (() => void) | undefined => {
-    const {
-      callback,
-      enabled = true,
-      inside = [],
-      scope,
-      escape = false,
-      dismiss_on = `press`,
-    } = config
-
-    if (!enabled) return undefined // Early return avoids registering unused listener
-
-    const inside_nodes = [node, ...inside.filter((item) => item instanceof Element)]
-    // Empty entries would make the joined selector invalid and throw on every press
-    const inside_selector = inside
-      .filter((item): item is string => typeof item === `string` && item !== ``)
-      .join(`,`)
-    // `path` is empty for the focus check, which has no event to walk
-    const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
-      const node_target = target instanceof Node ? target : null
-      if (inside_nodes.some((el) => path.includes(el) || el.contains(node_target))) {
-        return true
-      }
-      // Element (not HTMLElement) so a press on an SVG child still matches a selector
-      if (!inside_selector || !(target instanceof Element)) return false
-      const match = target.closest(inside_selector)
-      return Boolean(match) && (!scope || scope.contains(match))
-    }
-
-    // document.activeElement reports the outermost shadow host, so descend the focus
-    // chain: the host may be inside the node (containment settles it at the first
-    // step) or the node may itself live in that shadow tree alongside the focus.
-    const focus_is_inside = (): boolean => {
-      let active = document.activeElement
-      while (active) {
-        if (is_inside(active)) return true
-        active = active.shadowRoot?.activeElement ?? null
-      }
-      return false
-    }
-
-    const dismiss = (detail: DismissDetail) => {
-      callback?.(node, config, detail)
-      node.dispatchEvent(new CustomEvent(`dismiss`, { detail }))
-    }
-
-    const handle_press = (event: Event) => {
-      const path = event.composedPath()
-      if (is_scrollbar_press(event) || is_inside(event.target, path)) return
-      // A press never restores focus — the user already picked where it lands
-      dismiss({ focus_inside: false, via: `pointer`, event })
-    }
-
-    const on_escape = (event: KeyboardEvent) => {
-      // Safe to swallow the key: only the innermost layer gets here, so no outer
-      // surface is waiting on it. Cancelling the default keeps a native <dialog>
-      // around the surface open until a second Escape, once this layer is gone.
-      event.preventDefault()
-      event.stopPropagation()
-      dismiss({ focus_inside: focus_is_inside(), via: `escape`, event })
-    }
-
-    const press_event = dismiss_on === `press` ? `pointerdown` : `click`
-    document.addEventListener(press_event, handle_press, true)
-    const unregister_escape = escape ? register_escape_layer(on_escape) : undefined
-
-    return () => {
-      document.removeEventListener(press_event, handle_press, true)
-      unregister_escape?.()
-    }
+    if (config.enabled === false) return undefined
+    return dismiss_on_outside_press({
+      ...config,
+      node,
+      callback: (detail) => config.callback?.(node, config, detail),
+    })
   }
 
 export type AnchorRect = { top: number; left: number; bottom: number; right: number }
@@ -1333,6 +1324,27 @@ export const float =
       globalThis.removeEventListener(`scroll`, update, true)
       globalThis.removeEventListener(`resize`, update)
       observer.disconnect()
+    }
+  }
+
+// Teleport an element into `target` and put it back on teardown, marking where it
+// belongs with a comment node so the original position survives siblings coming and
+// going. Lets a surface escape an ancestor that would clip it (`overflow: hidden`) or
+// trap its `position: fixed` (any `transform`), and lets a component offer its chrome
+// for placement in a host's toolbar without duplicating the markup.
+// Pairs with `float`: portal moves an element, float places it.
+export const portal =
+  (target: Element | null | undefined): Attachment =>
+  (node: Element): (() => void) | undefined => {
+    if (!target || target === node.parentNode) return undefined
+    const anchor = node.ownerDocument.createComment(`portal`)
+    node.before(anchor)
+    target.append(node)
+    return () => {
+      // Original parent already gone: replaceWith would be a no-op and strand the
+      // node inside the target, outliving the markup that owns it.
+      if (anchor.parentNode) anchor.replaceWith(node)
+      else node.remove()
     }
   }
 
@@ -1477,5 +1489,131 @@ export const focus_trap =
       // usually leaves focus on body, which counts as ours to hand back.
       if (!holds_focus() && document.activeElement !== document.body) return
       focus_element(restore ?? focus_origin)
+    }
+  }
+
+export interface ContrastOptions {
+  // Skips the ancestor walk where the background behind the node is already known
+  bg_color?: string
+  luminance_threshold?: number
+  choices?: [string, string] // [on light background, on dark background]
+}
+
+// Only the forms getComputedStyle returns (`rgb()`/`rgba()`, either comma- or
+// space-separated) plus hex for hand-passed colors. Named colors and every other CSS
+// color function would want a full parser, which is not worth a dependency here.
+const RGB_COLOR = /^rgba?\((?<channels>[^)]+)\)$/iu
+const HEX_COLOR = /^#(?<digits>[\da-f]+)$/iu
+
+const parse_color = (color: string): [number, number, number, number] | null => {
+  const trimmed = color.trim()
+  const channels = RGB_COLOR.exec(trimmed)?.groups?.channels
+  if (channels) {
+    const parts = channels
+      .split(/[\s,/]+/u)
+      .filter(Boolean)
+      .map(Number)
+    if (parts.length < 3 || parts.slice(0, 4).some(Number.isNaN)) return null
+    return [parts[0], parts[1], parts[2], parts[3] ?? 1]
+  }
+  const digits = HEX_COLOR.exec(trimmed)?.groups?.digits
+  if (!digits) return null
+  const stride = digits.length < 6 ? 1 : 2 // #rgb(a) spells each channel once
+  if (digits.length !== stride * 3 && digits.length !== stride * 4) return null
+  const channel = (idx: number) => {
+    const slice = digits.slice(idx * stride, idx * stride + stride)
+    return Number.parseInt(stride === 1 ? slice + slice : slice, 16)
+  }
+  return [
+    channel(0),
+    channel(1),
+    channel(2),
+    digits.length === stride * 4 ? channel(3) / 255 : 1,
+  ]
+}
+
+// Human-perceived brightness on 0..1, from https://stackoverflow.com/a/596243
+const luminance = (color: string): number => {
+  const parsed = parse_color(color)
+  if (!parsed) {
+    throw new Error(
+      `pick_contrast_color: cannot read color \`${color}\`, expected rgb()/rgba() or hex`,
+    )
+  }
+  const [red, green, blue] = parsed
+  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+}
+
+// Nearest ancestor background that is not fully transparent, or `` when every one of
+// them is — a node's own background is usually transparent, so the color that decides
+// readability belongs to some container further up.
+export const get_bg_color = (element: Element | null): string => {
+  for (let node = element; node; node = node.parentElement) {
+    const bg_color = getComputedStyle(node).backgroundColor
+    if ((parse_color(bg_color)?.[3] ?? 0) > 0) return bg_color
+  }
+  return ``
+}
+
+export const pick_contrast_color = (options: ContrastOptions = {}): string => {
+  const { bg_color, luminance_threshold = 0.7, choices = [`black`, `white`] } = options
+  // Nothing opaque behind the node: it shows through to the white a page starts as
+  const background = bg_color?.trim() ? bg_color : `#fff`
+  return luminance(background) > luminance_threshold ? choices[0] : choices[1]
+}
+
+// Set text color to whichever of `choices` reads better on the background actually
+// behind the node. For text over a value-driven fill (a heatmap cell, a color swatch)
+// where no single hard-coded color stays legible across the scale.
+export const contrast_color =
+  (options: ContrastOptions = {}) =>
+  (node: Element): (() => void) | undefined => {
+    if (!(node instanceof HTMLElement)) return undefined
+    const previous_color = node.style.color
+    const bg_color = options.bg_color ?? get_bg_color(node)
+    node.style.color = pick_contrast_color({ ...options, bg_color })
+    return () => {
+      node.style.color = previous_color
+    }
+  }
+
+export interface ForwardWindowKeydownOptions {
+  // Report `true` for a key you took, and the browser default (page scroll, quick
+  // find) is suppressed here instead of at every call site.
+  handle: (event: KeyboardEvent) => boolean
+  enabled?: boolean
+}
+
+// Hand a component the page's keydowns while the pointer is over it and nothing holds
+// focus. Several viewers can then share one set of shortcuts without all of them
+// answering at once, and none of them takes a key from a focused input — all without
+// the user having to click a viewer first. Complements `hotkey`, which binds to an
+// element or the document and arbitrates by focus alone.
+export const forward_window_keydown =
+  (options: ForwardWindowKeydownOptions) =>
+  (node: Element): (() => void) | undefined => {
+    const { handle, enabled = true } = options
+    if (!enabled) return undefined
+
+    let hovered = false
+    const on_enter = () => (hovered = true)
+    const on_leave = () => (hovered = false)
+    const on_keydown = (event: Event) => {
+      if (!hovered || !(event instanceof KeyboardEvent)) return
+      // Focus anywhere real means the user is aiming keys there, whatever the pointer
+      // happens to be over. Only body (or nothing) leaves hover to decide.
+      const { activeElement, body } = node.ownerDocument
+      if (activeElement && activeElement !== body) return
+      if (handle(event)) event.preventDefault()
+    }
+
+    node.addEventListener(`pointerenter`, on_enter)
+    node.addEventListener(`pointerleave`, on_leave)
+    globalThis.addEventListener(`keydown`, on_keydown)
+
+    return () => {
+      node.removeEventListener(`pointerenter`, on_enter)
+      node.removeEventListener(`pointerleave`, on_leave)
+      globalThis.removeEventListener(`keydown`, on_keydown)
     }
   }
