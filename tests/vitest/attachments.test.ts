@@ -951,11 +951,19 @@ describe(`click_outside`, () => {
     return event
   }
 
+  // document.body.innerHTML = '' leaves click_outside's document capture listeners
+  // and Escape layers behind, which would decide later tests' assertions
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+
   // attaches click_outside to a fresh element wired to a spy callback
   const attach_outside = (config: Parameters<typeof click_outside>[0] = {}) => {
     const element = create_element()
     const callback = vi.fn()
     const cleanup = click_outside({ callback, ...config })(element)
+    if (cleanup) cleanups.push(cleanup)
     return { element, callback, cleanup }
   }
 
@@ -1011,7 +1019,8 @@ describe(`click_outside`, () => {
     const element = create_element()
     const listener = vi.fn()
     element.addEventListener(`dismiss`, listener)
-    click_outside({})(element) // no callback
+    const cleanup = click_outside({})(element) // no callback
+    if (cleanup) cleanups.push(cleanup)
     dispatch_press(create_element())
     expect(listener).toHaveBeenCalled()
   })
@@ -1187,6 +1196,7 @@ describe(`click_outside`, () => {
 
     const callback = vi.fn()
     const cleanup = click_outside({ callback, escape: true })(surface)
+    if (cleanup) cleanups.push(cleanup)
     const event = press_escape()
 
     expect(callback.mock.calls[0][2]).toEqual({
@@ -1194,7 +1204,6 @@ describe(`click_outside`, () => {
       via: `escape`,
       event,
     })
-    cleanup?.()
   })
 
   // A surface over a pannable plot or a 3D viewport wants release semantics:

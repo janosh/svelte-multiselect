@@ -36,6 +36,14 @@ describe(`Popover`, () => {
     expect(document.activeElement).toBe(doc_query(`[data-testid="popover-item"]`))
   })
 
+  test(`keeps its own id so a consumer's cannot break the aria linkage`, async () => {
+    mount_popover({ id: `consumer-id` })
+    trigger().click()
+    await tick()
+
+    expect(surface()?.id).toBe(trigger().getAttribute(`aria-controls`))
+  })
+
   // The wrapper around the trigger snippet is `display: contents` and measures 0x0,
   // so anchoring to it would pin every popover to the viewport corner
   test(`positions against the trigger, not the wrapper around it`, async () => {

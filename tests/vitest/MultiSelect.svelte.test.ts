@@ -8586,7 +8586,8 @@ test(`press on the portalled dropdown does not close it`, async () => {
     open: true,
     portal: { active: true },
   })
-  mount(MultiSelect, { target: document.body, props })
+  // unmount for real: clearing innerHTML would leave the document press listener
+  const app = mount(MultiSelect, { target: document.body, props })
   await tick()
 
   const portalled = doc_query<HTMLUListElement>(`body > ul.options`)
@@ -8601,6 +8602,7 @@ test(`press on the portalled dropdown does not close it`, async () => {
   await tick()
   expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(false)
   outside.remove()
+  await unmount(app)
 })
 
 test(`searchExpandsCollapsedGroups: manually collapsed group stays collapsed until the search changes`, async () => {

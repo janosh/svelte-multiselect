@@ -67,8 +67,9 @@ describe(`ContextMenu`, () => {
     })
     await open_menu()
 
-    expect([...items()[0].querySelectorAll(`kbd`)].map((key) => key.textContent))
-      .toEqual(expected)
+    expect([...items()[0].querySelectorAll(`kbd`)].map((key) => key.textContent)).toEqual(
+      expected,
+    )
     Reflect.deleteProperty(globalThis.navigator, `userAgent`)
   })
 

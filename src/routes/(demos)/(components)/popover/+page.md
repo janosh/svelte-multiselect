@@ -1,8 +1,8 @@
 ## Popover & ContextMenu
 
-Two surfaces built from the same three attachments: [`float`](/attachments#float) puts
-them where they fit, [`click_outside`](/attachments#click_outside) takes them away, and
-[`focus_trap`](/attachments#focus_trap) owns the keyboard while they are up.
+Two surfaces built from the same three attachments: [`float`](attachments#float) puts
+them where they fit, [`click_outside`](attachments#click_outside) takes them away, and
+[`focus_trap`](attachments#focus_trap) owns the keyboard while they are up.
 
 ### `Popover`
 

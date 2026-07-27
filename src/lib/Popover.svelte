@@ -74,9 +74,9 @@
 {#if open}
   <div
     bind:this={surface}
-    id={surface_id}
     role="dialog"
     {...rest}
+    id={surface_id}
     class="popover {rest.class ?? ``}"
     {@attach float({ anchor, placement, align, offset, padding, match_width, strategy })}
     {@attach click_outside({
