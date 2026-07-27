@@ -92,8 +92,8 @@ test.each([
   ],
   [
     `true + meta.filename (set by mdsvex transform)`,
-    { github: true, filename: `src/routes/(demos)/(integration)/attachments/+page.md` },
-    `src/routes/(demos)/(integration)/attachments/+page.md`,
+    { github: true, filename: `src/routes/(demos)/(attachments)/attachments/+page.md` },
+    `src/routes/(demos)/(attachments)/attachments/+page.md`,
   ],
   [`string`, { github: `docs/example.svelte` }, `docs/example.svelte`],
 ])(`github: %s links to its blob path`, (_label, github_meta, expected_path) => {

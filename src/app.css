@@ -99,7 +99,6 @@ pre {
     font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
   }
 }
-/* Typography */
 h1 {
   display: flex;
   align-items: center;
@@ -151,7 +150,6 @@ blockquote {
     margin-bottom: 0;
   }
 }
-/* Form validation */
 div.multiselect.invalid {
   border-color: light-dark(#c33, #f66) !important;
 }

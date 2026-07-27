@@ -2,6 +2,7 @@ import type { FocusTrapOptions } from '$lib/attachments'
 import {
   click_outside,
   draggable,
+  float,
   focus_trap,
   get_html_sort_value,
   highlight_matches,
@@ -1415,6 +1416,25 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(reachable)
   })
 
+  // an <a href> inside an <svg> is focusable and matches tabbable_selector, but it is an
+  // SVGElement, so looking the active element up with a HTMLElement-typed indexOf misses
+  // it and Tab jumps back to the edge instead of stepping to the neighbour
+  it(`steps past an SVG focusable instead of jumping to the edge`, () => {
+    const { surface, buttons } = make_surface()
+    const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
+    const svg_link = document.createElementNS(`http://www.w3.org/2000/svg`, `a`)
+    svg_link.setAttribute(`href`, `#target`)
+    svg.append(svg_link)
+    buttons[0].after(svg)
+
+    attach_trap(surface)
+    svg_link.focus()
+    expect(document.activeElement).toBe(svg_link)
+
+    press_tab()
+    expect(document.activeElement).toBe(buttons[1])
+  })
+
   it.each([
     [`a selector`, `.wanted`],
     [`no initial focus`, false],
@@ -2424,5 +2444,65 @@ describe(`resizable`, () => {
 
     globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
     expect(on_resize).not.toHaveBeenCalled()
+  })
+})
+
+describe(`float`, () => {
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+
+  // anchor as a bare rect, so no element geometry has to be mocked for the anchor
+  const anchor_rect = { top: 100, bottom: 140, left: 60, right: 200 }
+
+  const attach_float = (options: Parameters<typeof float>[0] = {}) => {
+    const node = create_element()
+    mock_rect(node, { left: 0, top: 0, width: 50, height: 20 })
+    const cleanup = float({ anchor: anchor_rect, ...options })(node)
+    if (cleanup) cleanups.push(cleanup)
+    return node
+  }
+
+  it.each([
+    [`fixed`, `fixed`, 0, 0],
+    // absolute is measured against the document, so page scroll has to be added back
+    [`absolute`, `absolute`, 400, 700],
+  ] as const)(
+    `%s strategy positions relative to the right origin`,
+    (_desc, strategy, scroll_x, scroll_y) => {
+      cleanups.push(stub_prop(globalThis, `scrollX`, scroll_x))
+      cleanups.push(stub_prop(globalThis, `scrollY`, scroll_y))
+
+      const node = attach_float({ strategy, placement: `bottom`, align: `start` })
+
+      expect(node.style.position).toBe(strategy)
+      // bottom placement sits below the anchor, start aligns the left edges
+      expect(node.style.top).toBe(`${140 + scroll_y}px`)
+      expect(node.style.left).toBe(`${60 + scroll_x}px`)
+    },
+  )
+
+  it(`match_width sizes the surface to the anchor`, () => {
+    expect(attach_float({ match_width: true }).style.width).toBe(`140px`) // 200 - 60
+    expect(attach_float().style.width).toBe(``)
+  })
+
+  it(`records the resolved placement and repositions on scroll`, () => {
+    const node = attach_float({ placement: `bottom` })
+    expect(node.dataset.placement).toBe(`bottom`)
+
+    node.style.top = `0px`
+    globalThis.dispatchEvent(new Event(`scroll`))
+    expect(node.style.top).toBe(`140px`)
+  })
+
+  it.each([
+    [`disabled`, { enabled: false }],
+    [`no anchor`, { anchor: null }],
+  ] as const)(`%s attaches nothing`, (_desc, options) => {
+    const node = create_element()
+    expect(float({ anchor: anchor_rect, ...options })(node)).toBeUndefined()
+    expect(node.style.position).toBe(``)
   })
 })

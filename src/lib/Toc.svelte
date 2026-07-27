@@ -663,6 +663,11 @@
   bind:this={aside}
   hidden={hide}
   aria-hidden={hide || intersecting}
+  {@attach (node) => {
+    // while intersecting the aside is only opacity: 0, so without inert it stays in the
+    // tab order while aria-hidden tells assistive tech it is gone
+    node.toggleAttribute(`inert`, intersecting)
+  }}
 >
   {#if !open && !desktop && headings.length >= minItems}
     <button

@@ -63,10 +63,13 @@ const mock_observer: ResizeObserver = {
 
 globalThis.ResizeObserver = class ResizeObserver implements ResizeObserver {
   private readonly callback: ResizeObserverCallback
+  // disconnect() must untrack everything this instance observed, like the real API
+  private readonly targets = new Set<Element>()
   constructor(callback: ResizeObserverCallback) {
     this.callback = callback
   }
   observe(target: Element): void {
+    this.targets.add(target)
     resize_observers.set(target, this.callback)
     Object.defineProperty(target, `offsetHeight`, {
       value: measured_height(target),
@@ -75,9 +78,13 @@ globalThis.ResizeObserver = class ResizeObserver implements ResizeObserver {
     this.callback([mock_resize_entry(target)], this)
   }
   unobserve(target: Element): void {
+    this.targets.delete(target)
     resize_observers.delete(target)
   }
-  disconnect(): void {}
+  disconnect(): void {
+    for (const target of this.targets) resize_observers.delete(target)
+    this.targets.clear()
+  }
 }
 
 function create_mock_animation(): Animation {
@@ -169,7 +176,7 @@ describe(`Masonry`, () => {
   )
 
   test(`warns if maxColWidth < minColWidth`, () => {
-    console.warn = vi.fn<typeof console.warn>()
+    vi.spyOn(console, `warn`).mockImplementation(() => {})
     mount_masonry({ items: indices, minColWidth: 50, maxColWidth: 40 })
     expect(console.warn).toHaveBeenCalledWith(
       `Masonry: maxColWidth (40) < minColWidth (50).`,
@@ -233,7 +240,7 @@ describe(`Masonry`, () => {
     },
   )
 
-  test.each([0, -1])(
+  test.each([0, -1, 1.5, Number.NaN])(
     `throws when calcCols returns %s and there are items to place`,
     (cols) => {
       expect(() =>
@@ -460,6 +467,9 @@ describe(`Masonry bindable props`, () => {
     } finally {
       if (original_desc) {
         Object.defineProperty(HTMLElement.prototype, `clientHeight`, original_desc)
+      } else {
+        // nothing to restore means we added the property, so take it back off
+        Reflect.deleteProperty(HTMLElement.prototype, `clientHeight`)
       }
     }
   })
@@ -489,7 +499,7 @@ describe(`Masonry default rendering`, () => {
 
 describe(`Masonry virtualization`, () => {
   test(`warns exactly once if virtualize=true without height prop`, () => {
-    console.warn = vi.fn<typeof console.warn>()
+    vi.spyOn(console, `warn`).mockImplementation(() => {})
     mount_masonry({ items: indices, virtualize: true })
     expect(console.warn).toHaveBeenCalledExactlyOnceWith(
       `Masonry: virtualize=true requires a height prop. Falling back to 400px.`,
@@ -594,6 +604,9 @@ describe(`Masonry virtualization`, () => {
     } finally {
       if (original) {
         Object.defineProperty(HTMLElement.prototype, `clientHeight`, original)
+      } else {
+        // nothing to restore means we added the property, so take it back off
+        Reflect.deleteProperty(HTMLElement.prototype, `clientHeight`)
       }
     }
   })
@@ -743,6 +756,15 @@ describe(`Masonry virtual scroll stability`, () => {
     const rendered = item_els().length
     expect(rendered).toBeLessThan(200)
     expect(rendered).toBeGreaterThan(0)
+  })
+
+  // A 0 estimate is meaningless, same as in get_height, so it has to fall through to the
+  // 150 default. With `??` the estimate stays 0, prefix sums are gaps alone and the window
+  // swells: 58 items render instead of 14.
+  test(`a zero getEstimatedHeight falls back to the default rather than collapsing`, () => {
+    mount_virtualized(500, { getEstimatedHeight: () => 0, height: 500 })
+
+    expect(item_els().length).toBeLessThan(30)
   })
 })
 

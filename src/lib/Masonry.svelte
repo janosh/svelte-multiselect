@@ -235,7 +235,9 @@
     // distribute() builds one array per column, so fewer than one leaves nowhere to put
     // an item. Zero is fine with no items, which is what the default calcCols returns.
     const checked = (cols: number) => {
-      if (items.length > 0 && cols < 1) {
+      // a fractional count is just as broken: Array.from truncates the column array while
+      // `idx % n_cols` in row-first keeps producing the untruncated index
+      if (items.length > 0 && (!Number.isInteger(cols) || cols < 1)) {
         throw new Error(
           `Masonry: calcCols must return a positive integer, received ${cols}.`,
         )
@@ -329,7 +331,9 @@
     items_to_cols.map((col) => {
       let sum = 0
       return col.map(({ item }) => {
-        sum += (virtualize ? (getEstimatedHeight?.(item) ?? 150) : get_height(item)) + gap
+        // `||` for the same reason as get_height: a 0 estimate is meaningless, and `??`
+        // here would collapse the scroll window to gaps alone
+        sum += (virtualize ? getEstimatedHeight?.(item) || 150 : get_height(item)) + gap
         return sum
       })
     }),

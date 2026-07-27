@@ -21,14 +21,7 @@
   }
 </script>
 
-<Masonry
-  {items}
-  animate={false}
-  calcCols={() => n_cols}
-  idKey="id"
-  masonryWidth={500}
-  {order}
->
+<Masonry {items} animate={false} calcCols={() => n_cols} idKey="id" {order}>
   {#snippet children({ item })}
     <AppendRenderProbe {events} {item} />
   {/snippet}

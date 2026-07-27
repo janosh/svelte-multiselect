@@ -1141,10 +1141,14 @@ describe(`hideOnIntersect`, () => {
     const { aside, b2 } = await setup_banners(() => `.banner`)
     await scroll()
     expect(is_intersecting(aside)).toBe(true)
+    // opacity: 0 alone would leave the links tabbable while aria-hidden hides them from
+    // assistive tech, so the subtree has to be inert for as long as it is invisible
+    expect(aside.hasAttribute(`inert`)).toBe(true)
 
     mock_bounding_rect(b2, { top: 500, bottom: 600, left: 0, right: 1200 })
     await scroll()
     expect(is_intersecting(aside)).toBe(false)
+    expect(aside.hasAttribute(`inert`)).toBe(false)
   })
 })
 
