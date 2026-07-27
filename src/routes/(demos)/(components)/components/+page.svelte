@@ -9,5 +9,10 @@
   subpages={[
     [`Nav`, resolve(`/nav`), `Configurable navigation component patterns.`],
     [`CommandMenu`, resolve(`/command-menu`), `Command menu built on MultiSelect.`],
+    [
+      `Popover & ContextMenu`,
+      resolve(`/popover`),
+      `Floating surfaces built from the dismissal, focus and positioning attachments.`,
+    ],
   ]}
 />

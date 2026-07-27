@@ -12,6 +12,9 @@
   --text: light-dark(#222, #ccc);
   --text-muted: light-dark(#666, #999);
   --surface: light-dark(#fff, rgba(255, 255, 255, 0.05));
+  /* a step darker than --bg so the footer reads as its own band. Deliberately neutral
+     (equal channels): any blue here fights the cornflower --accent sitting on top. */
+  --footer-bg: light-dark(#ebebeb, #0b0b0b);
   --border: light-dark(#ddd, rgba(255, 255, 255, 0.15));
   --pre-bg: light-dark(rgba(0, 0, 20, 0.03), rgba(0, 0, 0, 0.3));
 

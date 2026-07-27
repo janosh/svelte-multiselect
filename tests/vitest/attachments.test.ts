@@ -1,14 +1,17 @@
+import type { FocusTrapOptions } from '$lib/attachments'
 import {
   click_outside,
   draggable,
+  focus_trap,
   get_html_sort_value,
   highlight_matches,
+  hotkey,
   resizable,
   sortable,
   tooltip,
 } from '$lib/attachments'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { doc_query } from './index'
+import { doc_query, stub_prop } from './index'
 
 const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
   new MouseEvent(type, { clientX, clientY, button, bubbles: true })
@@ -339,11 +342,6 @@ describe(`tooltip`, () => {
       trigger_tooltip(element)
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
-  })
-
-  describe(`Configuration Options`, () => {
-    beforeEach(() => vi.useFakeTimers())
-    afterEach(() => vi.useRealTimers())
 
     it(`should handle disabled option`, () => {
       const [element, cleanup] = attach_tooltip(`Disabled tooltip`, { disabled: true })
@@ -397,6 +395,12 @@ describe(`tooltip`, () => {
   })
 
   describe(`Event Handling and Cleanup`, () => {
+    it(`should handle an invalid element gracefully`, () => {
+      const attach = tooltip()
+      // @ts-expect-error testing a null input
+      expect(attach(null)).toBeUndefined()
+    })
+
     it(`should restore original title on cleanup`, () => {
       const element = create_element()
       element.title = `Original title`
@@ -436,14 +440,6 @@ describe(`tooltip`, () => {
       cleanup?.()
       expect(element.getAttribute(`title`)).toBe(`Late title`)
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
-    })
-  })
-
-  describe(`Error Handling`, () => {
-    it(`should handle an invalid element gracefully`, () => {
-      const attach = tooltip()
-      // @ts-expect-error testing a null input
-      expect(attach(null)).toBeUndefined()
     })
   })
 
@@ -548,7 +544,7 @@ describe(`tooltip`, () => {
     })
   })
 
-  describe(`New Features`, () => {
+  describe(`Placement, Styling and Content`, () => {
     beforeEach(() => vi.useFakeTimers())
 
     it.each([
@@ -853,14 +849,19 @@ describe(`tooltip`, () => {
       globalThis.MutationObserver = MockMutationObserver
       window.MutationObserver = MockMutationObserver
 
+      const restore_size = mock_tooltip_size(120, 60)
+      const restore_viewport = mock_viewport(300, 180) // no room below the trigger
       try {
         const element = create_element()
         element.title = `initial tooltip`
-        mock_bounds(element)
-        setup_tooltip(element, { delay: 0 })
+        mock_bounds(element, { left: 100, top: 120, width: 40, height: 20 })
+        setup_tooltip(element, { delay: 0, placement: `bottom` })
         trigger_tooltip(element)
         expect(doc_query(`.tooltip-content`).textContent).toBe(`initial tooltip`)
+        expect(doc_query(`.custom-tooltip`).getAttribute(`data-placement`)).toBe(`top`)
 
+        // both sides fit again; the first restore still holds the real viewport
+        mock_viewport(300, 300)
         element.setAttribute(`aria-label`, `updated tooltip`)
         // only the fields the attachment reads; the rest of MutationRecord is unused
         const record = {
@@ -869,9 +870,15 @@ describe(`tooltip`, () => {
           target: element,
         } as unknown as MutationRecord
         mutation_callbacks[0]?.([record], new MockMutationObserver(() => {}))
+        vi.runAllTimers() // flush the rAF the reposition runs in
 
         expect(doc_query(`.tooltip-content`).textContent).toBe(`updated tooltip`)
+        // reposition starts from the configured side again; reading back the resolved
+        // data-placement would have pinned it to `top` for the rest of its life
+        expect(doc_query(`.custom-tooltip`).getAttribute(`data-placement`)).toBe(`bottom`)
       } finally {
+        restore_viewport()
+        restore_size()
         globalThis.MutationObserver = original_mutation_observer
         window.MutationObserver = original_mutation_observer
       }
@@ -920,8 +927,15 @@ describe(`tooltip`, () => {
 })
 
 describe(`click_outside`, () => {
-  const dispatch_click = (target: Element, path: EventTarget[] = []) => {
-    const event = new Event(`click`, { bubbles: true })
+  const dispatch_press = (
+    target: Element,
+    path: EventTarget[] = [],
+    kind = `pointerdown`,
+  ) => {
+    // a real PointerEvent so the scrollbar guard (MouseEvent-only) actually runs here
+    const event = kind.startsWith(`pointer`)
+      ? new PointerEvent(kind, { bubbles: true })
+      : new Event(kind, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
       value: () =>
@@ -933,56 +947,78 @@ describe(`click_outside`, () => {
     return event
   }
 
+  // returns the event so callers can assert on identity or defaultPrevented
+  const press_escape = (init: KeyboardEventInit = {}) => {
+    const event = new KeyboardEvent(`keydown`, {
+      key: `Escape`,
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    })
+    document.dispatchEvent(event)
+    return event
+  }
+
+  // document.body.innerHTML = '' leaves click_outside's document capture listeners
+  // and Escape layers behind, which would decide later tests' assertions
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+
+  // attaches click_outside to a fresh element wired to a spy callback
+  const attach_outside = (config: Parameters<typeof click_outside>[0] = {}) => {
+    const element = create_element()
+    const callback = vi.fn()
+    const cleanup = click_outside({ callback, ...config })(element)
+    if (cleanup) cleanups.push(cleanup)
+    return { element, callback, cleanup }
+  }
+
   it.each([
     [`outside click`, true, true, 1],
     [`inside click`, false, true, 0],
     [`disabled`, true, false, 0],
   ])(`%s triggers callback %s times`, (_desc, is_outside, enabled, expected_calls) => {
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback, enabled })(element)
+    const { element, callback } = attach_outside({ enabled })
 
     const target = is_outside ? create_element() : element
     const path = is_outside
       ? []
       : [element, document.body, document.documentElement, document, globalThis]
-    dispatch_click(target, path)
+    dispatch_press(target, path)
 
     expect(callback).toHaveBeenCalledTimes(expected_calls)
   })
 
-  it(`should handle exclude selectors (single, multiple, nested)`, () => {
-    const element = create_element()
-    const [excluded1, excluded2, nested] = [
+  it(`inside selectors keep matching regions from dismissing (single, multiple, nested)`, () => {
+    const [modal, popover, nested] = [
       create_element(),
       create_element(),
       create_element(),
     ]
-    excluded1.className = `modal`
-    excluded2.className = `popover`
-    excluded1.append(nested)
+    modal.className = `modal`
+    popover.className = `popover`
+    modal.append(nested)
 
-    const callback = vi.fn()
-    click_outside({ callback, exclude: [`.modal`, `.popover`] })(element)
+    const { callback } = attach_outside({ inside: [`.modal`, `.popover`] })
 
-    dispatch_click(excluded1)
-    dispatch_click(excluded2)
-    dispatch_click(nested)
+    dispatch_press(modal)
+    dispatch_press(popover)
+    dispatch_press(nested)
     expect(callback).not.toHaveBeenCalled()
 
-    // control: proves the silence above is the exclude list, not a dead listener
-    dispatch_click(create_element())
+    // control: proves the silence above is the inside list, not a dead listener
+    dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
   it(`should trigger on clicks landing on SVG elements outside the node`, () => {
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback })(element)
+    const { callback } = attach_outside()
 
     const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
     document.body.append(svg)
-    dispatch_click(svg)
+    dispatch_press(svg)
 
     expect(callback).toHaveBeenCalledTimes(1)
   })
@@ -990,31 +1026,506 @@ describe(`click_outside`, () => {
   it(`should dispatch custom event without a callback`, () => {
     const element = create_element()
     const listener = vi.fn()
-    element.addEventListener(`outside-click`, listener)
-    click_outside({})(element) // no callback
-    dispatch_click(create_element())
+    element.addEventListener(`dismiss`, listener)
+    const cleanup = click_outside({})(element) // no callback
+    if (cleanup) cleanups.push(cleanup)
+    dispatch_press(create_element())
     expect(listener).toHaveBeenCalled()
   })
 
   it(`cleanup stops triggering callbacks`, () => {
-    const element = create_element()
-    const callback = vi.fn()
-    const cleanup = click_outside({ callback })(element)
+    const { callback, cleanup } = attach_outside()
 
-    dispatch_click(create_element())
+    dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1)
 
     cleanup?.()
-    dispatch_click(create_element())
+    dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1) // Still 1, not called again
+  })
+
+  it(`dismisses on the press, not on a following click`, () => {
+    const { callback } = attach_outside()
+
+    const outside = create_element()
+    const event = dispatch_press(outside)
+    expect(callback).toHaveBeenCalledTimes(1)
+    // the press comes along so consumers can forward it to their own onclose
+    expect(callback.mock.calls[0][2]).toEqual({
+      focus_inside: false,
+      via: `pointer`,
+      event,
+    })
+
+    // right-clicks and OS-captured drags never send this click, hence pointerdown
+    outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`scope confines inside selectors to one subtree`, () => {
+    const [own_scope, own_trigger, other_trigger] = [
+      create_element(),
+      create_element(),
+      create_element(),
+    ]
+    own_trigger.className = `trigger`
+    other_trigger.className = `trigger`
+    own_scope.append(own_trigger)
+
+    const { callback } = attach_outside({ inside: [`.trigger`], scope: own_scope })
+
+    dispatch_press(own_trigger)
+    expect(callback).not.toHaveBeenCalled()
+
+    // Same selector, another instance's trigger: it must not shield this surface
+    dispatch_press(other_trigger)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`an element in inside counts as part of the surface`, () => {
+    const portalled = create_element() // sibling in body, no longer a descendant
+    const nested = document.createElement(`button`)
+    portalled.append(nested)
+
+    // null entries are the norm: the portal target binds after the first render
+    const { callback } = attach_outside({ inside: [null, portalled] })
+
+    dispatch_press(portalled)
+    dispatch_press(nested)
+    expect(callback).not.toHaveBeenCalled()
+
+    dispatch_press(create_element())
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`escape dismisses only the innermost layer`, () => {
+    const outer = attach_outside({ escape: true })
+    const inner = attach_outside({ escape: true })
+
+    press_escape()
+    expect(inner.callback).toHaveBeenCalledTimes(1)
+    expect(outer.callback).not.toHaveBeenCalled()
+
+    // with the inner surface gone, the next Escape reaches the one behind it
+    inner.cleanup?.()
+    press_escape()
+    expect(inner.callback).toHaveBeenCalledTimes(1)
+    expect(outer.callback).toHaveBeenCalledTimes(1)
+    outer.cleanup?.()
+  })
+
+  it(`escape stops at the top layer instead of reaching page handlers`, () => {
+    const page_handler = vi.fn()
+    document.addEventListener(`keydown`, page_handler)
+    const { cleanup } = attach_outside({ escape: true })
+
+    const event = press_escape()
+
+    expect(page_handler).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true) // a native <dialog> stays open
+
+    cleanup?.()
+    press_escape()
+    expect(page_handler).toHaveBeenCalledTimes(1)
+    document.removeEventListener(`keydown`, page_handler)
+  })
+
+  it(`ignores a press on the page scrollbar`, () => {
+    const { callback } = attach_outside()
+
+    // no layout in the test DOM, so give the root a client box the gutter sits outside of
+    const root = document.documentElement
+    cleanups.push(
+      stub_prop(root, `clientWidth`, 800),
+      stub_prop(root, `clientHeight`, 600),
+    )
+    const press = (clientX: number, clientY: number) =>
+      document.body.dispatchEvent(
+        new PointerEvent(`pointerdown`, { bubbles: true, clientX, clientY }),
+      )
+
+    press(820, 300) // vertical scrollbar gutter
+    press(400, 620) // horizontal scrollbar gutter
+    expect(callback).not.toHaveBeenCalled()
+
+    press(400, 300) // control: same target inside the client box does dismiss
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`ignores Escape that is only ending an IME composition`, () => {
+    const { callback, cleanup } = attach_outside({ escape: true })
+
+    press_escape({ isComposing: true })
+    expect(callback).not.toHaveBeenCalled()
+
+    press_escape()
+    expect(callback).toHaveBeenCalledTimes(1)
+    cleanup?.()
+  })
+
+  it(`tolerates an empty inside selector instead of throwing on every press`, () => {
+    // a trailing empty entry makes the joined selector invalid, which would throw
+    // out of the capture listener for every press anywhere on the page
+    const { callback, cleanup } = attach_outside({ inside: [`.modal`, ``] })
+
+    expect(() => dispatch_press(create_element())).not.toThrow()
+    expect(callback).toHaveBeenCalledTimes(1)
+    cleanup?.()
+  })
+
+  it.each([true, false])(`escape reports focus_inside=%s`, (focus_inside) => {
+    const { element, callback, cleanup } = attach_outside({ escape: true })
+    const inner = create_element()
+    element.append(inner)
+    const focus_target = focus_inside ? inner : create_element()
+    focus_target.setAttribute(`tabindex`, `0`)
+    focus_target.focus()
+
+    const event = press_escape()
+
+    expect(callback).toHaveBeenCalledTimes(1)
+    expect(callback.mock.calls[0][2]).toEqual({ focus_inside, via: `escape`, event })
+    cleanup?.()
+  })
+
+  // A surface living inside a shadow tree: document.activeElement reports the host,
+  // which the surface does not contain, so only descending the chain finds the focus
+  it(`escape sees focus on a node that shares the surface's shadow tree`, () => {
+    const host = create_element()
+    const surface = document.createElement(`div`)
+    const inner = document.createElement(`button`)
+    surface.append(inner)
+    host.attachShadow({ mode: `open` }).append(surface)
+    inner.focus()
+
+    const callback = vi.fn()
+    const cleanup = click_outside({ callback, escape: true })(surface)
+    if (cleanup) cleanups.push(cleanup)
+    const event = press_escape()
+
+    expect(callback.mock.calls[0][2]).toEqual({
+      focus_inside: true,
+      via: `escape`,
+      event,
+    })
+  })
+
+  // A surface over a pannable plot or a 3D viewport wants release semantics:
+  // pressing to start a drag behind it should not make it vanish under the cursor.
+  it(`dismiss_on: 'release' waits for the click and ignores the press`, () => {
+    const { callback } = attach_outside({ dismiss_on: `release` })
+
+    dispatch_press(create_element())
+    expect(callback).not.toHaveBeenCalled()
+
+    dispatch_press(create_element(), [], `click`)
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`ignores Escape unless asked, so existing keydown chains keep their order`, () => {
+    const { callback } = attach_outside()
+
+    press_escape()
+    expect(callback).not.toHaveBeenCalled()
+  })
+})
+
+describe(`hotkey`, () => {
+  const keydown = (target: EventTarget, key: string, modifiers = {}) => {
+    const event = new KeyboardEvent(`keydown`, {
+      key,
+      bubbles: true,
+      cancelable: true,
+      ...modifiers,
+    })
+    target.dispatchEvent(event)
+    return event
+  }
+
+  // a global binding outlives document.body.innerHTML = '', so dispose every one
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+  const attach_hotkey = (
+    options: Parameters<typeof hotkey>[0],
+    node = create_element(),
+  ) => {
+    const cleanup = hotkey(options)(node)
+    if (cleanup) cleanups.push(cleanup)
+    return { node, cleanup }
+  }
+
+  it(`fires on the node it is attached to, not on the rest of the page`, () => {
+    const handler = vi.fn()
+    const { node, cleanup } = attach_hotkey({ bindings: [{ keys: `ctrl+k`, handler }] })
+
+    const event = keydown(node, `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(event.defaultPrevented).toBe(true)
+
+    keydown(create_element(), `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    keydown(node, `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it(`global listens anywhere on the page`, () => {
+    const handler = vi.fn()
+    attach_hotkey({ bindings: [{ keys: `ctrl+k`, handler }], global: true })
+
+    keydown(create_element(), `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it(`leaves bare keys to text fields unless told otherwise`, () => {
+    const input = create_element(`input`)
+    const [typed, forced, chord] = [vi.fn(), vi.fn(), vi.fn()]
+    attach_hotkey({
+      global: true,
+      bindings: [
+        { keys: `/`, handler: typed },
+        { keys: `?`, handler: forced, allow_in_inputs: true },
+        { keys: `ctrl+/`, handler: chord },
+      ],
+    })
+
+    keydown(input, `/`)
+    expect(typed).not.toHaveBeenCalled() // the user is typing a slash
+
+    keydown(input, `?`)
+    expect(forced).toHaveBeenCalledTimes(1)
+
+    keydown(input, `/`, { ctrlKey: true })
+    expect(chord).toHaveBeenCalledTimes(1) // a chord is never typing
+  })
+
+  it(`runs the first enabled match only and can leave the default alone`, () => {
+    const [off, first, second] = [vi.fn(), vi.fn(), vi.fn()]
+    const { node } = attach_hotkey({
+      bindings: [
+        { keys: `ctrl+k`, handler: off, enabled: false },
+        { keys: [`ctrl+j`, `ctrl+k`], handler: first, prevent_default: false },
+        { keys: `ctrl+k`, handler: second },
+      ],
+    })
+
+    const event = keydown(node, `k`, { ctrlKey: true })
+    expect(off).not.toHaveBeenCalled()
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(second).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+  })
+
+  it.each([
+    [`Macintosh; Intel Mac OS X 10_15`, { metaKey: true }, { ctrlKey: true }],
+    [`X11; Linux x86_64`, { ctrlKey: true }, { metaKey: true }],
+  ])(`mod follows the platform (%s)`, (user_agent, matching, other) => {
+    cleanups.push(stub_prop(globalThis.navigator, `userAgent`, user_agent))
+    const handler = vi.fn()
+    const { node } = attach_hotkey({ bindings: [{ keys: `mod+k`, handler }] })
+
+    keydown(node, `k`, other)
+    expect(handler).not.toHaveBeenCalled()
+
+    keydown(node, `k`, matching)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it(`stays quiet mid IME composition and when disabled`, () => {
+    const node = create_element()
+    const handler = vi.fn()
+    const { cleanup } = attach_hotkey(
+      { bindings: [{ keys: `ctrl+k`, handler }], enabled: false },
+      node,
+    )
+    expect(cleanup).toBeUndefined()
+    keydown(node, `k`, { ctrlKey: true })
+    expect(handler).not.toHaveBeenCalled()
+
+    attach_hotkey({ bindings: [{ keys: `Enter`, handler }] }, node)
+    keydown(node, `Enter`, { isComposing: true })
+    expect(handler).not.toHaveBeenCalled()
+    keydown(node, `Enter`)
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe(`focus_trap`, () => {
+  const make_surface = (count = 3) => {
+    const surface = create_element()
+    const buttons = Array.from({ length: count }, () => {
+      const button = document.createElement(`button`)
+      surface.append(button)
+      return button
+    })
+    return { surface, buttons }
+  }
+
+  // returned so callers can assert the browser still gets its Tab
+  const press_tab = (shiftKey = false) => {
+    const event = new KeyboardEvent(`keydown`, {
+      key: `Tab`,
+      bubbles: true,
+      cancelable: true,
+      shiftKey,
+    })
+    document.dispatchEvent(event)
+    return event
+  }
+
+  // the trap layer stack is module-global, so a leaked trap steers a later test's Tab
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+  const attach_trap = (surface: HTMLElement, options: FocusTrapOptions = {}) => {
+    const cleanup = focus_trap(options)(surface)
+    if (cleanup) cleanups.push(cleanup)
+    return cleanup
+  }
+
+  it(`focuses the first tabbable, then cycles Tab both ways past the ends`, () => {
+    const { surface, buttons } = make_surface()
+    attach_trap(surface)
+    expect(document.activeElement).toBe(buttons[0])
+
+    press_tab()
+    expect(document.activeElement).toBe(buttons[1])
+    press_tab()
+    press_tab()
+    expect(document.activeElement).toBe(buttons[0]) // wrapped past the last
+    press_tab(true)
+    expect(document.activeElement).toBe(buttons[2]) // and back past the first
+  })
+
+  it(`skips candidates the keyboard cannot reach`, () => {
+    const { surface, buttons } = make_surface()
+    buttons[1].disabled = true
+    buttons[2].tabIndex = -1
+    const reachable = document.createElement(`a`)
+    reachable.href = `#target`
+    surface.append(reachable)
+
+    attach_trap(surface)
+    expect(document.activeElement).toBe(buttons[0])
+    press_tab()
+    expect(document.activeElement).toBe(reachable)
+  })
+
+  it.each([
+    [`a selector`, `.wanted`],
+    [`no initial focus`, false],
+  ] as const)(`initial: %s`, (_desc, initial) => {
+    const { surface, buttons } = make_surface()
+    buttons[2].className = `wanted`
+    const outside = create_element(`button`)
+    outside.focus()
+
+    attach_trap(surface, { initial })
+    expect(document.activeElement).toBe(initial === false ? outside : buttons[2])
+  })
+
+  it(`hands focus back to where it came from, or to a named element`, () => {
+    const trigger = create_element(`button`)
+    trigger.focus()
+    const { surface } = make_surface()
+    focus_trap()(surface)?.()
+    expect(document.activeElement).toBe(trigger)
+
+    const elsewhere = create_element(`button`)
+    focus_trap({ restore: elsewhere })(surface)?.()
+    expect(document.activeElement).toBe(elsewhere)
+  })
+
+  it(`leaves focus alone when the user already moved it out`, () => {
+    const trigger = create_element(`button`)
+    trigger.focus()
+    const { surface } = make_surface()
+    const cleanup = focus_trap()(surface)
+
+    const elsewhere = create_element(`button`)
+    elsewhere.focus()
+    cleanup?.()
+
+    expect(document.activeElement).toBe(elsewhere)
+  })
+
+  it(`gives Tab to the innermost trap only`, () => {
+    const outer = make_surface()
+    const inner = make_surface()
+    attach_trap(outer.surface)
+    const cleanup_inner = attach_trap(inner.surface)
+    expect(document.activeElement).toBe(inner.buttons[0])
+
+    press_tab()
+    expect(document.activeElement).toBe(inner.buttons[1])
+
+    // the outer trap takes over once the inner surface is gone
+    cleanup_inner?.()
+    outer.buttons[0].focus()
+    press_tab()
+    expect(document.activeElement).toBe(outer.buttons[1])
+  })
+
+  // The trap listens on the document, so a surface that was never given focus must
+  // not confiscate Tab from the rest of the page. Nav pins a submenu while focus
+  // stays on the toggle outside it, and Tab there has to keep walking the page.
+  it(`leaves Tab alone while focus sits outside the trap`, () => {
+    const { surface, buttons } = make_surface()
+    const outside = create_element(`button`)
+    outside.focus()
+
+    attach_trap(surface, { initial: false })
+    expect(document.activeElement).toBe(outside) // initial: false kept focus put
+
+    const event = press_tab()
+    expect(document.activeElement).toBe(outside) // not dragged into the surface
+    expect(event.defaultPrevented).toBe(false) // the browser still gets its Tab
+
+    // once focus is inside, the trap takes over again
+    buttons[0].focus()
+    press_tab()
+    expect(document.activeElement).toBe(buttons[1])
+  })
+
+  it(`covers portalled parts of the same surface via include`, () => {
+    const { surface, buttons } = make_surface(1)
+    const portalled = create_element() // moved to body, no longer a descendant
+    const portalled_button = document.createElement(`button`)
+    portalled.append(portalled_button)
+
+    attach_trap(surface, { include: [null, portalled] })
+    expect(document.activeElement).toBe(buttons[0])
+    press_tab()
+    expect(document.activeElement).toBe(portalled_button)
+  })
+
+  it(`does nothing when disabled`, () => {
+    const { surface } = make_surface()
+    const outside = create_element(`button`)
+    outside.focus()
+
+    expect(focus_trap({ enabled: false })(surface)).toBeUndefined()
+    expect(document.activeElement).toBe(outside)
+    press_tab()
+    expect(document.activeElement).toBe(outside)
   })
 })
 
 describe(`draggable`, () => {
+  // fixed positioning makes the attachment read getBoundingClientRect, which mock_rect
+  // controls; the offset* fallback path has its own case below
+  const create_fixed_box = (rect = { left: 10, top: 20 }) => {
+    const element = create_element(`div`, { position: `fixed` })
+    mock_rect(element, rect)
+    return element
+  }
+
   it(`should update position, callbacks, cursor, and userSelect while dragging`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 10, top: 20 })
+    const element = create_fixed_box()
     const [on_drag_start, on_drag, on_drag_end] = [vi.fn(), vi.fn(), vi.fn()]
 
     const cleanup = draggable({ on_drag_start, on_drag, on_drag_end })(element)
@@ -1044,9 +1555,7 @@ describe(`draggable`, () => {
 
   it(`should not start dragging on a non-primary mouse button`, () => {
     // the context menu can swallow the mouseup, leaving the element stuck to the cursor
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 10, top: 20 })
+    const element = create_fixed_box()
     draggable({})(element)
 
     element.dispatchEvent(mouse_event(`mousedown`, 5, 5, 2))
@@ -1055,9 +1564,7 @@ describe(`draggable`, () => {
   })
 
   it(`should not set up dragging when disabled`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 10, top: 20 })
+    const element = create_fixed_box()
     const cleanup = draggable({ disabled: true })(element)
     expect(cleanup).toBeUndefined()
     expect(element.style.cursor).toBe(``)
@@ -1079,9 +1586,7 @@ describe(`draggable`, () => {
   })
 
   it(`should only drag when event originates from handle_selector`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
+    const element = create_fixed_box({ left: 0, top: 0 })
 
     const handle = document.createElement(`div`)
     handle.className = `drag-handle`
@@ -1137,9 +1642,7 @@ describe(`draggable`, () => {
   })
 
   it(`should reset body userSelect and cursor when cleaned up mid-drag`, () => {
-    const element = create_element()
-    element.style.position = `fixed`
-    mock_rect(element, { left: 0, top: 0 })
+    const element = create_fixed_box({ left: 0, top: 0 })
 
     const cleanup = draggable()(element)
     element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
@@ -1688,7 +2191,12 @@ describe(`sortable`, () => {
 })
 
 describe(`resizable`, () => {
-  const create_box = () => create_element(`div`, { width: `200px`, height: `150px` })
+  // every case resizes the same 200x150 box unless it needs its own position
+  const create_box = (rect = { left: 0, top: 0, width: 200, height: 150 }) => {
+    const element = create_element(`div`, { width: `200px`, height: `150px` })
+    mock_rect(element, rect)
+    return element
+  }
 
   it.each([
     [`right`, undefined, 195, 75, `ew-resize`],
@@ -1699,7 +2207,6 @@ describe(`resizable`, () => {
     `should apply resize cursor on %s edge hover`,
     (_edge, edges, clientX, clientY, expected_cursor) => {
       const element = create_box()
-      mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
       resizable(edges ? { edges: [...edges] } : {})(element)
 
       element.dispatchEvent(mouse_event(`mousemove`, clientX, clientY))
@@ -1710,7 +2217,6 @@ describe(`resizable`, () => {
 
   it(`should use custom handle_size and reset the cursor away from edges`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const cleanup = resizable({ handle_size: 20 })(element)
 
     element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
@@ -1740,7 +2246,6 @@ describe(`resizable`, () => {
       expected_value,
     ) => {
       const element = create_box()
-      mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
       resizable(options)(element)
 
       element.dispatchEvent(mouse_event(`mousedown`, start_client_x, start_client_y))
@@ -1754,7 +2259,6 @@ describe(`resizable`, () => {
 
   it(`should not start resizing on a non-primary mouse button`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     resizable({ on_resize_start })(element)
 
@@ -1764,7 +2268,6 @@ describe(`resizable`, () => {
 
   it(`should fire on_resize_start, on_resize, and on_resize_end callbacks`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
 
     const on_resize_start = vi.fn()
     const on_resize = vi.fn()
@@ -1821,8 +2324,7 @@ describe(`resizable`, () => {
       [drag_client_x, drag_client_y],
       expected_styles,
     ) => {
-      const element = create_box()
-      mock_rect(element, rect)
+      const element = create_box(rect)
       resizable({ edges: [_edge] })(element)
 
       element.dispatchEvent(mouse_event(`mousedown`, start_client_x, start_client_y))
@@ -1838,7 +2340,6 @@ describe(`resizable`, () => {
 
   it(`should do nothing when disabled`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     const cleanup = resizable({ disabled: true, on_resize_start })(element)
 
@@ -1879,7 +2380,6 @@ describe(`resizable`, () => {
   ])(`position %s initializes as %s`, (initial_position, expected_position) => {
     const element = create_box()
     element.style.position = initial_position
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
 
     resizable()(element)
 
@@ -1888,7 +2388,6 @@ describe(`resizable`, () => {
 
   it(`should not start resizing when clicking outside edge areas`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize_start = vi.fn()
     resizable({ on_resize_start })(element)
 
@@ -1911,7 +2410,6 @@ describe(`resizable`, () => {
 
   it(`should reset body userSelect when cleaned up mid-resize`, () => {
     const element = create_box()
-    mock_rect(element, { left: 0, top: 0, width: 200, height: 150 })
     const on_resize = vi.fn()
 
     const cleanup = resizable({ on_resize })(element)

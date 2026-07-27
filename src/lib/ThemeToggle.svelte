@@ -9,9 +9,11 @@
 
   let {
     tooltip: tooltip_opts = {},
+    icon_props = {},
     ...rest
   }: HTMLAttributes<HTMLButtonElement> & {
     tooltip?: TooltipOptions | false
+    icon_props?: HTMLAttributes<SVGSVGElement>
   } = $props()
 
   const system_preference = (): `light` | `dark` =>
@@ -80,7 +82,11 @@
   onclick={chain_handlers(() => apply_theme_mode(next_mode), rest.onclick)}
 >
   {#if is_hydrated}
-    <Icon icon={mode_icons[theme_mode]} />
+    <Icon
+      icon={mode_icons[theme_mode]}
+      {...icon_props}
+      style="transform: scale(1.5); {icon_props?.style ?? ``}"
+    />
   {/if}
 </button>
 

@@ -24,7 +24,8 @@
     position: relative;
     left: calc(-1 * var(--page-pad));
     box-sizing: border-box;
-    background: var(--surface);
+    background: var(--footer-bg);
+    border-top: 1px solid var(--border);
     text-align: center;
   }
   footer > a {
