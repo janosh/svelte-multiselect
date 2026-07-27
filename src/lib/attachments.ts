@@ -1159,36 +1159,75 @@ export const tooltip =
     return () => cleanup_functions.forEach((cleanup) => cleanup())
   }
 
-export type ClickOutsideConfig<T extends HTMLElement> = {
-  enabled?: boolean
-  exclude?: string[]
-  callback?: (node: T, config: ClickOutsideConfig<T>) => void
+export type ClickOutsideDetail = {
+  // Whether focus sat inside the node, so an Escape dismissal can hand focus back
+  // to the trigger instead of stranding it on a removed element
+  focus_inside: boolean
+  via: `pointer` | `escape`
 }
 
+export type ClickOutsideConfig<T extends HTMLElement> = {
+  enabled?: boolean
+  // Regions that count as inside though they sit outside the node — the trigger
+  // above all, whose own click toggles the surface right after this runs
+  exclude?: string[]
+  // Confines `exclude` matches to one subtree, so a second instance of the same
+  // component cannot shield this one's surface with its own trigger
+  scope?: Element | null
+  escape?: boolean // dismiss on Escape as well, reporting where focus was
+  callback?: (node: T, config: ClickOutsideConfig<T>, detail: ClickOutsideDetail) => void
+}
+
+// Dismiss a surface when a press lands outside it. Listens for `pointerdown`, not
+// `click`: a right-click fires no click at all, a press that hands a drag to the OS
+// (a custom titlebar) never produces one either, and a drag released outside reports
+// its click on the nearest common ancestor, dismissing a surface the user was only
+// resizing. Capture phase so a handler calling stopPropagation cannot suppress
+// dismissal; composedPath survives shadow DOM and targets detached mid-dispatch.
 export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) =>
   (node: T): (() => void) | undefined => {
-    const { callback, enabled = true, exclude = [] } = config
+    const { callback, enabled = true, exclude = [], scope, escape = false } = config
 
     if (!enabled) return undefined // Early return avoids registering unused listener
 
-    function handle_click(event: MouseEvent) {
-      const { target } = event
+    const exclude_selector = exclude.join(`,`)
+    // `path` is empty for the focus check, which has no event to walk
+    const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
+      if (path.includes(node)) return true
       // Element (not HTMLElement) so clicks on SVG elements still count; .closest
       // below exists on all Elements
-      if (!(target instanceof Element)) return
-      const path = event.composedPath()
-
-      if (path.includes(node)) return
-      if (exclude.some((selector) => target.closest(selector))) return
-
-      callback?.(node, { callback, enabled, exclude })
-      node.dispatchEvent(new CustomEvent(`outside-click`))
+      if (!(target instanceof Element)) return false
+      if (node.contains(target)) return true
+      if (!exclude_selector) return false
+      const match = target.closest(exclude_selector)
+      return Boolean(match) && (!scope || scope.contains(match))
     }
 
-    document.addEventListener(`click`, handle_click, true)
+    const dismiss = (detail: ClickOutsideDetail) => {
+      callback?.(node, config, detail)
+      node.dispatchEvent(new CustomEvent(`outside-click`, { detail }))
+    }
+
+    function handle_press(event: PointerEvent) {
+      // A press never restores focus — the user already picked where it lands
+      if (!is_inside(event.target, event.composedPath())) {
+        dismiss({ focus_inside: false, via: `pointer` })
+      }
+    }
+
+    function handle_keydown(event: KeyboardEvent) {
+      if (event.key !== `Escape` || event.defaultPrevented) return
+      event.preventDefault()
+      event.stopPropagation()
+      dismiss({ focus_inside: is_inside(document.activeElement), via: `escape` })
+    }
+
+    document.addEventListener(`pointerdown`, handle_press, true)
+    if (escape) document.addEventListener(`keydown`, handle_keydown, true)
 
     return () => {
-      document.removeEventListener(`click`, handle_click, true)
+      document.removeEventListener(`pointerdown`, handle_press, true)
+      document.removeEventListener(`keydown`, handle_keydown, true)
     }
   }

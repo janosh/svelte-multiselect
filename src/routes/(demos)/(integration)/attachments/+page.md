@@ -378,6 +378,13 @@ receives ranges without the CSS Highlight API and reruns when observed content c
 </style>
 ```
 
+Dismissal happens on `pointerdown`, not `click`, so a right-click or a press the OS
+turns into a window drag still closes the surface. Pass `scope` to confine `exclude`
+matches to one subtree when several instances of a component share trigger selectors,
+and `escape: true` to also dismiss on Escape. `callback` receives
+`(node, config, detail)` where `detail` is `{ focus_inside, via }` — `focus_inside`
+tells an Escape handler whether to move focus back to the trigger.
+
 ### `sortable`
 
 ```svelte example id="attachments-sortable"
