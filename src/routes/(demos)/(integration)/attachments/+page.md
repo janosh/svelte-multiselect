@@ -7,6 +7,9 @@ Exported from `svelte-multiselect/attachments`:
 - [`sortable`](#sortable)
 - [`highlight_matches`](#highlight_matches)
 - [`click_outside`](#click_outside)
+- [`focus_trap`](#focus_trap)
+- [`hotkey`](#hotkey)
+- [`float`](#float)
 
 ### `tooltip`
 
@@ -335,7 +338,8 @@ receives ranges without the CSS Highlight API and reruns when observed content c
     <div
       class="dropdown"
       {@attach click_outside({
-        exclude: ['.toggle'],
+        inside: ['.toggle'],
+        escape: true,
         callback: () => (open_menu = false),
       })}
     >
@@ -343,7 +347,7 @@ receives ranges without the CSS Highlight API and reruns when observed content c
         <li><a href="#one">First</a></li>
         <li><a href="#two">Second</a></li>
         <li>
-          <a href="#noop" class="toggle">Clicking me won’t close (excluded)</a>
+          <a href="#noop" class="toggle">Clicking me won’t close (counts as inside)</a>
         </li>
       </ul>
     </div>
@@ -379,11 +383,126 @@ receives ranges without the CSS Highlight API and reruns when observed content c
 ```
 
 Dismissal happens on `pointerdown`, not `click`, so a right-click or a press the OS
-turns into a window drag still closes the surface. Pass `scope` to confine `exclude`
-matches to one subtree when several instances of a component share trigger selectors,
-and `escape: true` to also dismiss on Escape. `callback` receives
-`(node, config, detail)` where `detail` is `{ focus_inside, via }` — `focus_inside`
-tells an Escape handler whether to move focus back to the trigger.
+turns into a window drag still closes the surface. Presses that land in a scrollbar
+gutter are ignored, so reaching for the scrollbar does not close what you are
+scrolling toward. A surface floating over something draggable can pass
+`dismiss_on: 'release'` to wait for the click instead, so starting a pan behind it
+does not make it vanish mid-drag.
+
+Pass `inside` for regions that count as inside though they sit outside the node:
+elements for portalled content the node no longer contains, selectors for triggers.
+`scope` confines the selector entries to one subtree when several instances of a
+component share trigger selectors, and `escape: true` also dismisses on Escape. Escape
+dismisses one surface at a time — the most recently attached one — so a dropdown
+inside a modal closes the dropdown and leaves the modal standing.
+
+`callback` receives `(node, config, detail)` and the node also fires a `dismiss`
+event carrying the same `detail` of `{ focus_inside, via, event }`. `focus_inside`
+tells an Escape handler whether to move focus back to the trigger, and `event` is the
+press or keydown behind the dismissal, to forward to your own close handler.
+
+### `focus_trap`
+
+Keeps Tab inside a surface and hands the keyboard back when it closes — the other half
+of what `click_outside` starts. Nested traps stack like Escape layers: only the
+innermost one steers Tab.
+
+```svelte example id="attachments-focus-trap"
+<script lang="ts">
+  import { click_outside, focus_trap } from '$lib/attachments'
+
+  let open = $state(false)
+  let trigger = $state<HTMLButtonElement | null>(null)
+</script>
+
+<button bind:this={trigger} onclick={() => (open = true)}>Open panel</button>
+
+{#if open}
+  <div
+    role="dialog"
+    aria-label="Trapped panel"
+    style="display: grid; gap: 6pt; max-width: 20em; margin-top: 1ex; padding: 1ex 1em; border: 1px solid gray; border-radius: 5pt"
+    {@attach focus_trap({ restore: trigger })}
+    {@attach click_outside({ escape: true, callback: () => (open = false) })}
+  >
+    <input placeholder="Tab cycles between these" />
+    <input placeholder="…and never leaves the panel" />
+    <button onclick={() => (open = false)}>Close</button>
+  </div>
+{/if}
+```
+
+`initial` picks the entry point (an element, a selector, or `false` to leave focus
+alone) and `restore` the exit point, defaulting to whatever held focus when the trap
+went up. `include` extends the trap over portalled parts of the same surface.
+
+### `hotkey`
+
+Declarative keybindings over the same matcher `CommandMenu` uses. `mod` is Cmd on Apple
+keyboards and Ctrl elsewhere. Bare keys stay out of the way while you type in a field;
+chords always fire.
+
+```svelte example id="attachments-hotkey"
+<script lang="ts">
+  import { hotkey } from '$lib/attachments'
+
+  let log = $state<string[]>([])
+  const record = (label: string) => (log = [label, ...log].slice(0, 5))
+</script>
+
+<div
+  style="display: grid; gap: 6pt"
+  {@attach hotkey({
+    global: true,
+    bindings: [
+      { keys: `mod+b`, handler: () => record(`bold`) },
+      { keys: [`?`, `shift+/`], handler: () => record(`help`) },
+      { keys: `Enter`, handler: () => record(`submit`), allow_in_inputs: true },
+    ],
+  })}
+>
+  <input placeholder="mod+b works here, ? does not, Enter does" />
+  <ol>
+    {#each log as entry, idx (idx)}<li>{entry}</li>{/each}
+  </ol>
+</div>
+```
+
+Pass `global: false` (the default) to scope a binding to the node it is attached to, so
+a shortcut dies with the surface that owns it.
+
+### `float`
+
+Parks an element next to an anchor and keeps it there while the page scrolls or
+resizes. The geometry — flip to the side that fits, then shift to stay on screen —
+comes from `compute_position` in `svelte-multiselect/utils`, which the tooltip and the
+portalled dropdown also use. The anchor can be a plain rect instead of an element,
+which is how `ContextMenu` hangs a menu off the pointer.
+
+```svelte example id="attachments-float"
+<script lang="ts">
+  import { float } from '$lib/attachments'
+  import type { Placement } from '$lib/utils'
+
+  let anchor = $state<HTMLElement | null>(null)
+  let placement = $state<Placement>(`bottom`)
+</script>
+
+<select bind:value={placement}>
+  {#each [`top`, `right`, `bottom`, `left`] as side (side)}<option>{side}</option>{/each}
+</select>
+
+<div style="display: grid; place-items: center; height: 12em">
+  <span bind:this={anchor} style="padding: 1ex 1em; border: 1px dashed gray">anchor</span>
+</div>
+
+<div
+  style="background: teal; color: white; padding: 2pt 6pt; border-radius: 4pt"
+  {@attach float({ anchor, placement, offset: 8, padding: 8 })}
+>
+  floating
+</div>
+```
 
 ### `sortable`
 

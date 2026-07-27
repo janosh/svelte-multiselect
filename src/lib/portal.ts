@@ -1,5 +1,6 @@
 import { tick } from 'svelte'
 import type { PortalParams } from './types'
+import { compute_position } from './utils'
 
 type PortalActionParams = PortalParams & { open: boolean }
 
@@ -24,21 +25,21 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
     node.style.width = `${rect.width}px`
     node.hidden = false
     const dropdown_height = node.offsetHeight
-    const space_below = globalThis.innerHeight - rect.bottom
-    const place_above =
-      placement === `top` ||
-      (placement === `auto` &&
-        dropdown_height > 0 &&
-        // kept as an addition rather than `dropdown_height > space_below`: the two are
-        // algebraically equal but can round apart by an ULP at an exact fit
-        rect.bottom + dropdown_height > globalThis.innerHeight &&
-        rect.top > space_below)
-    if (place_above) {
+    // Only ever above or below: a dropdown beside its input is not a dropdown. Height
+    // 0 means the list has not rendered yet, so there is nothing to fit — stay below.
+    // No shift: the list scrolls, and sliding it up would cover the input.
+    const can_flip = placement === `auto` && dropdown_height > 0
+    const { placement: chosen } = compute_position(
+      rect,
+      { width: rect.width, height: dropdown_height },
+      { placement, align: `start`, flip: can_flip && [`bottom`, `top`], shift: false },
+    )
+    if (chosen === `top`) {
       // oxlint-disable-next-line unicorn/prefer-number-coercion -- computed CSS lengths include units
       const margin_top = Number.parseFloat(getComputedStyle(node).marginTop) || 0
       node.style.top = `${Math.max(0, rect.top - dropdown_height - margin_top)}px`
     } else node.style.top = `${rect.bottom}px`
-    node.dataset.placement = place_above ? `top` : `bottom`
+    node.dataset.placement = chosen
   }
 
   const reposition = () => {

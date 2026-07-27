@@ -5,7 +5,7 @@
   import { flip } from 'svelte/animate'
   import type { FocusEventHandler } from 'svelte/elements'
   import { SvelteSet } from 'svelte/reactivity'
-  import { highlight_matches } from './attachments'
+  import { click_outside, highlight_matches } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
   import { portal_action } from './portal'
@@ -1691,14 +1691,6 @@
       selected.length > selected_before ? { option: opt, idx: option_idx ?? null } : null
   }
 
-  function on_click_outside(event: MouseEvent | TouchEvent) {
-    if (!outerDiv || !(event.target instanceof Node)) return
-    if (outerDiv.contains(event.target)) return
-    // portalled dropdown lives outside outerDiv
-    if (portal_params?.active && ul_options?.contains(event.target)) return
-    close_dropdown(event)
-  }
-
   // === Drag, input, and paste handlers ===
   let drag_idx: number | null = $state(null)
   // chip index captured on dragstart: the authoritative drag source. Drops whose
@@ -2065,8 +2057,6 @@
   </button>
 {/snippet}
 
-<svelte:window onclick={on_click_outside} ontouchstart={on_click_outside} />
-
 <!-- svelte-ignore a11y_no_static_element_interactions -- the nested combobox input owns the interactive ARIA semantics -->
 <div
   bind:this={outerDiv}
@@ -2077,6 +2067,12 @@
   class:input-display={input_display}
   class="multiselect {outerDivClass} {rest.class ?? ``}"
   onmouseup={open_dropdown}
+  {@attach click_outside({
+    enabled: open,
+    // a portalled dropdown is no longer a descendant of this div
+    inside: [ul_options],
+    callback: (_node, _config, { event }) => close_dropdown(event),
+  })}
   title={disabled ? disabledInputTitle : null}
   data-id={id}
   tabindex="-1"

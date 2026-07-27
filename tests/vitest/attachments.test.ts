@@ -1,8 +1,10 @@
 import {
   click_outside,
   draggable,
+  focus_trap,
   get_html_sort_value,
   highlight_matches,
+  hotkey,
   resizable,
   sortable,
   tooltip,
@@ -920,8 +922,12 @@ describe(`tooltip`, () => {
 })
 
 describe(`click_outside`, () => {
-  const dispatch_press = (target: Element, path: EventTarget[] = []) => {
-    const event = new Event(`pointerdown`, { bubbles: true })
+  const dispatch_press = (
+    target: Element,
+    path: EventTarget[] = [],
+    kind = `pointerdown`,
+  ) => {
+    const event = new Event(kind, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
       value: () =>
@@ -933,14 +939,32 @@ describe(`click_outside`, () => {
     return event
   }
 
+  // returns the event so callers can assert on identity or defaultPrevented
+  const press_escape = (init: KeyboardEventInit = {}) => {
+    const event = new KeyboardEvent(`keydown`, {
+      key: `Escape`,
+      bubbles: true,
+      cancelable: true,
+      ...init,
+    })
+    document.dispatchEvent(event)
+    return event
+  }
+
+  // attaches click_outside to a fresh element wired to a spy callback
+  const attach_outside = (config: Parameters<typeof click_outside>[0] = {}) => {
+    const element = create_element()
+    const callback = vi.fn()
+    const cleanup = click_outside({ callback, ...config })(element)
+    return { element, callback, cleanup }
+  }
+
   it.each([
     [`outside click`, true, true, 1],
     [`inside click`, false, true, 0],
     [`disabled`, true, false, 0],
   ])(`%s triggers callback %s times`, (_desc, is_outside, enabled, expected_calls) => {
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback, enabled })(element)
+    const { element, callback } = attach_outside({ enabled })
 
     const target = is_outside ? create_element() : element
     const path = is_outside
@@ -951,34 +975,30 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(expected_calls)
   })
 
-  it(`should handle exclude selectors (single, multiple, nested)`, () => {
-    const element = create_element()
-    const [excluded1, excluded2, nested] = [
+  it(`inside selectors keep matching regions from dismissing (single, multiple, nested)`, () => {
+    const [modal, popover, nested] = [
       create_element(),
       create_element(),
       create_element(),
     ]
-    excluded1.className = `modal`
-    excluded2.className = `popover`
-    excluded1.append(nested)
+    modal.className = `modal`
+    popover.className = `popover`
+    modal.append(nested)
 
-    const callback = vi.fn()
-    click_outside({ callback, exclude: [`.modal`, `.popover`] })(element)
+    const { callback } = attach_outside({ inside: [`.modal`, `.popover`] })
 
-    dispatch_press(excluded1)
-    dispatch_press(excluded2)
+    dispatch_press(modal)
+    dispatch_press(popover)
     dispatch_press(nested)
     expect(callback).not.toHaveBeenCalled()
 
-    // control: proves the silence above is the exclude list, not a dead listener
+    // control: proves the silence above is the inside list, not a dead listener
     dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
   it(`should trigger on clicks landing on SVG elements outside the node`, () => {
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback })(element)
+    const { callback } = attach_outside()
 
     const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
     document.body.append(svg)
@@ -990,16 +1010,14 @@ describe(`click_outside`, () => {
   it(`should dispatch custom event without a callback`, () => {
     const element = create_element()
     const listener = vi.fn()
-    element.addEventListener(`outside-click`, listener)
+    element.addEventListener(`dismiss`, listener)
     click_outside({})(element) // no callback
     dispatch_press(create_element())
     expect(listener).toHaveBeenCalled()
   })
 
   it(`cleanup stops triggering callbacks`, () => {
-    const element = create_element()
-    const callback = vi.fn()
-    const cleanup = click_outside({ callback })(element)
+    const { callback, cleanup } = attach_outside()
 
     dispatch_press(create_element())
     expect(callback).toHaveBeenCalledTimes(1)
@@ -1010,20 +1028,24 @@ describe(`click_outside`, () => {
   })
 
   it(`dismisses on the press, not on a following click`, () => {
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback })(element)
+    const { callback } = attach_outside()
 
     const outside = create_element()
-    dispatch_press(outside)
+    const event = dispatch_press(outside)
     expect(callback).toHaveBeenCalledTimes(1)
+    // the press comes along so consumers can forward it to their own onclose
+    expect(callback.mock.calls[0][2]).toEqual({
+      focus_inside: false,
+      via: `pointer`,
+      event,
+    })
 
     // right-clicks and OS-captured drags never send this click, hence pointerdown
     outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it(`scope confines exclude matches to one subtree`, () => {
+  it(`scope confines inside selectors to one subtree`, () => {
     const [own_scope, own_trigger, other_trigger] = [
       create_element(),
       create_element(),
@@ -1033,9 +1055,7 @@ describe(`click_outside`, () => {
     other_trigger.className = `trigger`
     own_scope.append(own_trigger)
 
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback, exclude: [`.trigger`], scope: own_scope })(element)
+    const { callback } = attach_outside({ inside: [`.trigger`], scope: own_scope })
 
     dispatch_press(own_trigger)
     expect(callback).not.toHaveBeenCalled()
@@ -1045,29 +1065,438 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
+  it(`an element in inside counts as part of the surface`, () => {
+    const portalled = create_element() // sibling in body, no longer a descendant
+    const nested = document.createElement(`button`)
+    portalled.append(nested)
+
+    // null entries are the norm: the portal target binds after the first render
+    const { callback } = attach_outside({ inside: [null, portalled] })
+
+    dispatch_press(portalled)
+    dispatch_press(nested)
+    expect(callback).not.toHaveBeenCalled()
+
+    dispatch_press(create_element())
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  it(`escape dismisses only the innermost layer`, () => {
+    const outer = attach_outside({ escape: true })
+    const inner = attach_outside({ escape: true })
+
+    press_escape()
+    expect(inner.callback).toHaveBeenCalledTimes(1)
+    expect(outer.callback).not.toHaveBeenCalled()
+
+    // with the inner surface gone, the next Escape reaches the one behind it
+    inner.cleanup?.()
+    press_escape()
+    expect(inner.callback).toHaveBeenCalledTimes(1)
+    expect(outer.callback).toHaveBeenCalledTimes(1)
+    outer.cleanup?.()
+  })
+
+  it(`escape stops at the top layer instead of reaching page handlers`, () => {
+    const page_handler = vi.fn()
+    document.addEventListener(`keydown`, page_handler)
+    const { cleanup } = attach_outside({ escape: true })
+
+    const event = press_escape()
+
+    expect(page_handler).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true) // a native <dialog> stays open
+
+    cleanup?.()
+    press_escape()
+    expect(page_handler).toHaveBeenCalledTimes(1)
+    document.removeEventListener(`keydown`, page_handler)
+  })
+
+  it(`ignores a press on the page scrollbar`, () => {
+    const { callback } = attach_outside()
+
+    // jsdom does no layout, so give the root a client box the gutter can sit outside
+    const root = document.documentElement
+    for (const [prop, value] of [
+      [`clientWidth`, 800],
+      [`clientHeight`, 600],
+    ] as const) {
+      Object.defineProperty(root, prop, { value, configurable: true })
+    }
+    const press = (clientX: number, clientY: number) =>
+      document.body.dispatchEvent(
+        new PointerEvent(`pointerdown`, { bubbles: true, clientX, clientY }),
+      )
+
+    press(820, 300) // vertical scrollbar gutter
+    press(400, 620) // horizontal scrollbar gutter
+    expect(callback).not.toHaveBeenCalled()
+
+    press(400, 300) // control: same target inside the client box does dismiss
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    for (const prop of [`clientWidth`, `clientHeight`]) Reflect.deleteProperty(root, prop)
+  })
+
+  it(`ignores Escape that is only ending an IME composition`, () => {
+    const { callback, cleanup } = attach_outside({ escape: true })
+
+    press_escape({ isComposing: true })
+    expect(callback).not.toHaveBeenCalled()
+
+    press_escape()
+    expect(callback).toHaveBeenCalledTimes(1)
+    cleanup?.()
+  })
+
+  it(`tolerates an empty inside selector instead of throwing on every press`, () => {
+    // a trailing empty entry makes the joined selector invalid, which would throw
+    // out of the capture listener for every press anywhere on the page
+    const { callback, cleanup } = attach_outside({ inside: [`.modal`, ``] })
+
+    expect(() => dispatch_press(create_element())).not.toThrow()
+    expect(callback).toHaveBeenCalledTimes(1)
+    cleanup?.()
+  })
+
   it.each([true, false])(`escape reports focus_inside=%s`, (focus_inside) => {
-    const element = create_element()
+    const { element, callback, cleanup } = attach_outside({ escape: true })
     const inner = create_element()
     element.append(inner)
     const focus_target = focus_inside ? inner : create_element()
     focus_target.setAttribute(`tabindex`, `0`)
     focus_target.focus()
 
-    const callback = vi.fn()
-    click_outside({ callback, escape: true })(element)
-    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    const event = press_escape()
 
     expect(callback).toHaveBeenCalledTimes(1)
-    expect(callback.mock.calls[0][2]).toEqual({ focus_inside, via: `escape` })
+    expect(callback.mock.calls[0][2]).toEqual({ focus_inside, via: `escape`, event })
+    cleanup?.()
+  })
+
+  // A surface living inside a shadow tree: document.activeElement reports the host,
+  // which the surface does not contain, so only descending the chain finds the focus
+  it(`escape sees focus on a node that shares the surface's shadow tree`, () => {
+    const host = create_element()
+    const surface = document.createElement(`div`)
+    const inner = document.createElement(`button`)
+    surface.append(inner)
+    host.attachShadow({ mode: `open` }).append(surface)
+    inner.focus()
+
+    const callback = vi.fn()
+    const cleanup = click_outside({ callback, escape: true })(surface)
+    const event = press_escape()
+
+    expect(callback.mock.calls[0][2]).toEqual({
+      focus_inside: true,
+      via: `escape`,
+      event,
+    })
+    cleanup?.()
+  })
+
+  // A surface over a pannable plot or a 3D viewport wants release semantics:
+  // pressing to start a drag behind it should not make it vanish under the cursor.
+  it(`dismiss_on: 'release' waits for the click and ignores the press`, () => {
+    const { callback } = attach_outside({ dismiss_on: `release` })
+
+    dispatch_press(create_element())
+    expect(callback).not.toHaveBeenCalled()
+
+    dispatch_press(create_element(), [], `click`)
+    expect(callback).toHaveBeenCalledTimes(1)
   })
 
   it(`ignores Escape unless asked, so existing keydown chains keep their order`, () => {
-    const element = create_element()
-    const callback = vi.fn()
-    click_outside({ callback })(element)
+    const { callback } = attach_outside()
 
-    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+    press_escape()
     expect(callback).not.toHaveBeenCalled()
+  })
+})
+
+describe(`hotkey`, () => {
+  const keydown = (target: EventTarget, key: string, modifiers = {}) => {
+    const event = new KeyboardEvent(`keydown`, {
+      key,
+      bubbles: true,
+      cancelable: true,
+      ...modifiers,
+    })
+    target.dispatchEvent(event)
+    return event
+  }
+
+  it(`fires on the node it is attached to, not on the rest of the page`, () => {
+    const node = create_element()
+    const handler = vi.fn()
+    const cleanup = hotkey({ bindings: [{ keys: `ctrl+k`, handler }] })(node)
+
+    const event = keydown(node, `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+    expect(event.defaultPrevented).toBe(true)
+
+    keydown(create_element(), `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    keydown(node, `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
+
+  it(`global listens anywhere on the page`, () => {
+    const handler = vi.fn()
+    const cleanup = hotkey({ bindings: [{ keys: `ctrl+k`, handler }], global: true })(
+      create_element(),
+    )
+
+    keydown(create_element(), `k`, { ctrlKey: true })
+    expect(handler).toHaveBeenCalledTimes(1)
+    cleanup?.()
+  })
+
+  it(`leaves bare keys to text fields unless told otherwise`, () => {
+    const input = create_element(`input`)
+    const [typed, forced, chord] = [vi.fn(), vi.fn(), vi.fn()]
+    const cleanup = hotkey({
+      global: true,
+      bindings: [
+        { keys: `/`, handler: typed },
+        { keys: `?`, handler: forced, allow_in_inputs: true },
+        { keys: `ctrl+/`, handler: chord },
+      ],
+    })(create_element())
+
+    keydown(input, `/`)
+    expect(typed).not.toHaveBeenCalled() // the user is typing a slash
+
+    keydown(input, `?`)
+    expect(forced).toHaveBeenCalledTimes(1)
+
+    keydown(input, `/`, { ctrlKey: true })
+    expect(chord).toHaveBeenCalledTimes(1) // a chord is never typing
+    cleanup?.()
+  })
+
+  it(`runs the first enabled match only and can leave the default alone`, () => {
+    const node = create_element()
+    const [off, first, second] = [vi.fn(), vi.fn(), vi.fn()]
+    const cleanup = hotkey({
+      bindings: [
+        { keys: `ctrl+k`, handler: off, enabled: false },
+        { keys: [`ctrl+j`, `ctrl+k`], handler: first, prevent_default: false },
+        { keys: `ctrl+k`, handler: second },
+      ],
+    })(node)
+
+    const event = keydown(node, `k`, { ctrlKey: true })
+    expect(off).not.toHaveBeenCalled()
+    expect(first).toHaveBeenCalledTimes(1)
+    expect(second).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(false)
+    cleanup?.()
+  })
+
+  it.each([
+    [`Macintosh; Intel Mac OS X 10_15`, { metaKey: true }, { ctrlKey: true }],
+    [`X11; Linux x86_64`, { ctrlKey: true }, { metaKey: true }],
+  ])(`mod follows the platform (%s)`, (user_agent, matching, other) => {
+    Object.defineProperty(globalThis.navigator, `userAgent`, {
+      value: user_agent,
+      configurable: true,
+    })
+    const node = create_element()
+    const handler = vi.fn()
+    const cleanup = hotkey({ bindings: [{ keys: `mod+k`, handler }] })(node)
+
+    keydown(node, `k`, other)
+    expect(handler).not.toHaveBeenCalled()
+
+    keydown(node, `k`, matching)
+    expect(handler).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    Reflect.deleteProperty(globalThis.navigator, `userAgent`)
+  })
+
+  it(`stays quiet mid IME composition and when disabled`, () => {
+    const node = create_element()
+    const handler = vi.fn()
+    expect(
+      hotkey({ bindings: [{ keys: `ctrl+k`, handler }], enabled: false })(node),
+    ).toBeUndefined()
+    keydown(node, `k`, { ctrlKey: true })
+    expect(handler).not.toHaveBeenCalled()
+
+    const cleanup = hotkey({ bindings: [{ keys: `Enter`, handler }] })(node)
+    keydown(node, `Enter`, { isComposing: true })
+    expect(handler).not.toHaveBeenCalled()
+    keydown(node, `Enter`)
+    expect(handler).toHaveBeenCalledTimes(1)
+    cleanup?.()
+  })
+})
+
+describe(`focus_trap`, () => {
+  const make_surface = (count = 3) => {
+    const surface = create_element()
+    const buttons = Array.from({ length: count }, () => {
+      const button = document.createElement(`button`)
+      surface.append(button)
+      return button
+    })
+    return { surface, buttons }
+  }
+
+  const press_tab = (shiftKey = false) =>
+    document.dispatchEvent(
+      new KeyboardEvent(`keydown`, {
+        key: `Tab`,
+        bubbles: true,
+        cancelable: true,
+        shiftKey,
+      }),
+    )
+
+  it(`focuses the first tabbable, then cycles Tab both ways past the ends`, () => {
+    const { surface, buttons } = make_surface()
+    const cleanup = focus_trap()(surface)
+    expect(document.activeElement).toBe(buttons[0])
+
+    press_tab()
+    expect(document.activeElement).toBe(buttons[1])
+    press_tab()
+    press_tab()
+    expect(document.activeElement).toBe(buttons[0]) // wrapped past the last
+    press_tab(true)
+    expect(document.activeElement).toBe(buttons[2]) // and back past the first
+    cleanup?.()
+  })
+
+  it(`skips candidates the keyboard cannot reach`, () => {
+    const { surface, buttons } = make_surface()
+    buttons[1].disabled = true
+    buttons[2].tabIndex = -1
+    const reachable = document.createElement(`a`)
+    reachable.href = `#target`
+    surface.append(reachable)
+
+    const cleanup = focus_trap()(surface)
+    expect(document.activeElement).toBe(buttons[0])
+    press_tab()
+    expect(document.activeElement).toBe(reachable)
+    cleanup?.()
+  })
+
+  it.each([
+    [`a selector`, `.wanted`],
+    [`no initial focus`, false],
+  ] as const)(`initial: %s`, (_desc, initial) => {
+    const { surface, buttons } = make_surface()
+    buttons[2].className = `wanted`
+    const outside = create_element(`button`)
+    outside.focus()
+
+    const cleanup = focus_trap({ initial })(surface)
+    expect(document.activeElement).toBe(initial === false ? outside : buttons[2])
+    cleanup?.()
+  })
+
+  it(`hands focus back to where it came from, or to a named element`, () => {
+    const trigger = create_element(`button`)
+    trigger.focus()
+    const { surface } = make_surface()
+    focus_trap()(surface)?.()
+    expect(document.activeElement).toBe(trigger)
+
+    const elsewhere = create_element(`button`)
+    focus_trap({ restore: elsewhere })(surface)?.()
+    expect(document.activeElement).toBe(elsewhere)
+  })
+
+  it(`leaves focus alone when the user already moved it out`, () => {
+    const trigger = create_element(`button`)
+    trigger.focus()
+    const { surface } = make_surface()
+    const cleanup = focus_trap()(surface)
+
+    const elsewhere = create_element(`button`)
+    elsewhere.focus()
+    cleanup?.()
+
+    expect(document.activeElement).toBe(elsewhere)
+  })
+
+  it(`gives Tab to the innermost trap only`, () => {
+    const outer = make_surface()
+    const inner = make_surface()
+    const cleanup_outer = focus_trap()(outer.surface)
+    const cleanup_inner = focus_trap()(inner.surface)
+    expect(document.activeElement).toBe(inner.buttons[0])
+
+    press_tab()
+    expect(document.activeElement).toBe(inner.buttons[1])
+
+    // the outer trap takes over once the inner surface is gone
+    cleanup_inner?.()
+    outer.buttons[0].focus()
+    press_tab()
+    expect(document.activeElement).toBe(outer.buttons[1])
+    cleanup_outer?.()
+  })
+
+  // The trap listens on the document, so a surface that was never given focus must
+  // not confiscate Tab from the rest of the page. Nav pins a submenu while focus
+  // stays on the toggle outside it, and Tab there has to keep walking the page.
+  it(`leaves Tab alone while focus sits outside the trap`, () => {
+    const { surface, buttons } = make_surface()
+    const outside = create_element(`button`)
+    outside.focus()
+
+    const cleanup = focus_trap({ initial: false })(surface)
+    expect(document.activeElement).toBe(outside) // initial: false kept focus put
+
+    const event = new KeyboardEvent(`keydown`, {
+      key: `Tab`,
+      bubbles: true,
+      cancelable: true,
+    })
+    document.dispatchEvent(event)
+
+    expect(document.activeElement).toBe(outside) // not dragged into the surface
+    expect(event.defaultPrevented).toBe(false) // the browser still gets its Tab
+
+    // once focus is inside, the trap takes over again
+    buttons[0].focus()
+    press_tab()
+    expect(document.activeElement).toBe(buttons[1])
+    cleanup?.()
+  })
+
+  it(`covers portalled parts of the same surface via include`, () => {
+    const { surface, buttons } = make_surface(1)
+    const portalled = create_element() // moved to body, no longer a descendant
+    const portalled_button = document.createElement(`button`)
+    portalled.append(portalled_button)
+
+    const cleanup = focus_trap({ include: [null, portalled] })(surface)
+    expect(document.activeElement).toBe(buttons[0])
+    press_tab()
+    expect(document.activeElement).toBe(portalled_button)
+    cleanup?.()
+  })
+
+  it(`does nothing when disabled`, () => {
+    const { surface } = make_surface()
+    const outside = create_element(`button`)
+    outside.focus()
+
+    expect(focus_trap({ enabled: false })(surface)).toBeUndefined()
+    expect(document.activeElement).toBe(outside)
+    press_tab()
+    expect(document.activeElement).toBe(outside)
   })
 })
 

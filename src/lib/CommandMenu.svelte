@@ -4,13 +4,12 @@
   import { fade } from 'svelte/transition'
   import MultiSelect from './MultiSelect.svelte'
   import type { CmdAction, MultiSelectProps } from './types'
+  import type { Hotkey } from './utils'
   import {
     cmd_action_matches,
     chain_handlers,
     format_cmd_metadata,
-    is_editable_event_target,
-    is_modifier_chord,
-    matches_shortcut,
+    run_hotkeys,
     split_shortcut,
   } from './utils'
 
@@ -212,16 +211,28 @@
     search_text = ``
   }
 
-  function toggle(event: KeyboardEvent): boolean {
-    const should_open =
-      !open && triggers.includes(event.key) && (event.metaKey || event.ctrlKey)
-    const should_close = open && close_keys.includes(event.key)
-    if (!should_open && !should_close) return false
-    event.preventDefault()
-    if (should_open) open = true
-    else close_menu()
-    return true
-  }
+  // Cmd and Ctrl both open the menu on every platform, so `mod` is too narrow here
+  const open_shortcuts = $derived(
+    triggers.flatMap((key) => [`meta+${key}`, `ctrl+${key}`]),
+  )
+  const toggle_bindings = $derived<Hotkey[]>([
+    { keys: open_shortcuts, handler: () => (open = true), enabled: !open },
+    // Escape has to work while the search input has focus, hence allow_in_inputs
+    { keys: close_keys, handler: close_menu, enabled: open, allow_in_inputs: true },
+  ])
+  // Bare action shortcuts stay inert while the menu is up: there the keyboard
+  // belongs to the search input. An action without a shortcut has no keys to match.
+  const key_bindings = $derived<Hotkey[]>([
+    ...toggle_bindings,
+    ...actions.map((action) => ({
+      keys: action.shortcut ?? ``,
+      enabled: global_shortcuts && !open && !action.disabled,
+      handler: () => {
+        record_recent(action)
+        action.action(action.label)
+      },
+    })),
+  ])
 
   function handle_dialog_cancel(event: DialogEvent) {
     if (!close_keys.includes(`Escape`)) event.preventDefault()
@@ -229,21 +240,9 @@
   }
 
   function handle_window_keydown(event: KeyboardEvent) {
-    const is_close_key = open && close_keys.includes(event.key)
-    if (event.defaultPrevented && !is_close_key) return
-    if (toggle(event)) return
-    if (open || !global_shortcuts) return
-    // outside a chord the keystroke is ordinary typing, so firing the action would
-    // both run it and swallow the character
-    if (!is_modifier_chord(event) && is_editable_event_target(event.target)) return
-    const action = actions.find(
-      (cmd_action) =>
-        !cmd_action.disabled && matches_shortcut(event, cmd_action.shortcut),
-    )
-    if (!action) return
-    event.preventDefault()
-    record_recent(action)
-    action.action(action.label)
+    // a close key still lands after another handler already called preventDefault
+    if (event.defaultPrevented && !(open && close_keys.includes(event.key))) return
+    run_hotkeys(event, key_bindings)
   }
 
   function close_if_outside(event: MouseEvent) {
@@ -327,7 +326,7 @@
       key={get_action_key}
       onadd={trigger_action_and_close}
       onkeydown={(event) => {
-        toggle(event)
+        run_hotkeys(event, toggle_bindings)
         onkeydown?.(event)
       }}
       option={option_snippet ?? (has_action_meta ? action_item : undefined)}

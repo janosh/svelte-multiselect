@@ -1,6 +1,7 @@
 import type { Option, OptionStyle } from '$lib'
 import {
   chain_handlers,
+  compute_position,
   fuzzy_match,
   get_label,
   get_option_key,
@@ -283,6 +284,90 @@ describe(`get_option_key`, () => {
     expect(get_option_key(opt1)).toBe(obj1)
     expect(get_option_key(opt2)).toBe(obj2)
     expect(get_option_key(opt1)).not.toBe(get_option_key(opt2))
+  })
+})
+
+describe(`compute_position`, () => {
+  const viewport = (width: number, height: number) => {
+    const sizes = { innerWidth: width, innerHeight: height }
+    for (const [prop, value] of Object.entries(sizes)) {
+      Object.defineProperty(globalThis, prop, { value, writable: true })
+    }
+  }
+  const rect = (top: number, height: number, left = 100, width = 200) => ({
+    top,
+    left,
+    bottom: top + height,
+    right: left + width,
+  })
+
+  test(`keeps the preferred side when the box fits`, () => {
+    viewport(1000, 800)
+    const box = { width: 200, height: 100 }
+    const placed = compute_position(rect(100, 30), box, {
+      placement: `bottom`,
+      offset: 8,
+    })
+    expect(placed).toEqual({ top: 138, left: 100, placement: `bottom` })
+  })
+
+  test(`flips to the side with room, and centre vs start line up differently`, () => {
+    viewport(1000, 800)
+    const anchor = rect(700, 30) // only 70px below, 700px above
+    const box = { width: 300, height: 200 }
+
+    const centered = compute_position(anchor, box, { placement: `bottom` })
+    expect(centered.placement).toBe(`top`)
+    expect(centered.top).toBe(500) // 700 - 200
+    expect(centered.left).toBe(50) // centred on an anchor spanning 100..300
+
+    const aligned = compute_position(anchor, box, { placement: `bottom`, align: `start` })
+    expect(aligned.left).toBe(100) // flush with the anchor's left edge
+  })
+
+  test(`shift pulls the box back inside the viewport, padding included`, () => {
+    viewport(400, 800)
+    const anchor = rect(100, 30, 380, 20) // near the right edge
+    const box = { width: 300, height: 100 }
+
+    // flip off, else the box would simply move to the anchor's left where it fits
+    const opts = { placement: `bottom`, padding: 8, flip: false } as const
+    expect(compute_position(anchor, box, opts).left).toBe(92) // 400 - 300 - 8
+    // centred, hanging off the right edge
+    expect(compute_position(anchor, box, { ...opts, shift: false }).left).toBe(240)
+  })
+
+  // The portalled dropdown used to carry its own above/below rule. Its replacement
+  // has to agree everywhere, including with the anchor scrolled out of view.
+  test(`reproduces the dropdown's above/below rule across a grid`, () => {
+    const view_height = 800
+    viewport(1000, view_height)
+    const legacy_place_above = (
+      anchor: { top: number; bottom: number },
+      height: number,
+    ) =>
+      height > 0 &&
+      anchor.bottom + height > view_height &&
+      anchor.top > view_height - anchor.bottom
+
+    const mismatches: string[] = []
+    for (const top of [-200, -30, 0, 50, 400, 700, 780, 900]) {
+      for (const anchor_height of [0, 30, 120]) {
+        for (const box_height of [1, 50, 200, 600, 1200]) {
+          const anchor = rect(top, anchor_height)
+          const { placement } = compute_position(
+            anchor,
+            { width: 200, height: box_height },
+            { placement: `auto`, align: `start`, flip: [`bottom`, `top`], shift: false },
+          )
+          const expected = legacy_place_above(anchor, box_height) ? `top` : `bottom`
+          if (placement !== expected) {
+            mismatches.push(`top=${top} h=${anchor_height} box=${box_height}`)
+          }
+        }
+      }
+    }
+    expect(mismatches).toEqual([])
   })
 })
 

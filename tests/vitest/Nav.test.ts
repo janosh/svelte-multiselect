@@ -15,6 +15,8 @@ describe(`Nav`, () => {
     [`/second`, [`/second`, `/second/child`]],
   ]
   const parent_other: NavRoute[] = [...single_dropdown_route, [`/other`, [`/other`]]]
+  // two submenu links, so Tab/ArrowDown have somewhere to move
+  const two_child_route: NavRoute[] = [[`/p`, [`/p`, `/p/child1`, `/p/child2`]]]
   const mount_nav = (props: ComponentProps<typeof Nav>) =>
     mount(Nav, { target: document.body, props })
   const click = (el?: Element | null) => {
@@ -955,8 +957,7 @@ describe(`Nav`, () => {
     )
 
     test(`ArrowDown navigates within pinned dropdown after mouse leave`, async () => {
-      const routes: NavRoute[] = [[`/p`, [`/p`, `/p/child1`, `/p/child2`]]]
-      mount_nav({ routes, dropdown_cooldown: 0 })
+      mount_nav({ routes: two_child_route, dropdown_cooldown: 0 })
       const { dropdown, dropdown_menu } = query_dropdown_elements()
       const toggle = doc_query(`[data-dropdown-toggle]`)
 
@@ -974,8 +975,39 @@ describe(`Nav`, () => {
       expect(document.activeElement).toBe(dropdown_menu.querySelector(`a`))
     })
 
+    test(`Escape on a submenu link closes it for good and restores focus`, async () => {
+      mount_nav({ routes: two_child_route, dropdown_cooldown: 0 })
+      const { dropdown_menu } = query_dropdown_elements()
+      const toggle = doc_query(`[data-dropdown-toggle]`)
+
+      await click(toggle)
+      const first_link = doc_query<HTMLAnchorElement>(`[data-submenu] a`)
+      first_link.focus()
+      keydown(`Escape`, first_link)
+      await next_task()
+
+      expect(document.activeElement).toBe(toggle)
+      // handing focus back lands on the toggle, whose focusin must not reopen it
+      expect(is_visible(dropdown_menu)).toBe(false)
+    })
+
+    test(`Tab cycles within a pinned submenu instead of leaving it`, async () => {
+      mount_nav({ routes: two_child_route, dropdown_cooldown: 0 })
+      const { dropdown_menu } = query_dropdown_elements()
+
+      await click(doc_query(`[data-dropdown-toggle]`))
+      const links = [...dropdown_menu.querySelectorAll(`a`)]
+      expect(links).toHaveLength(2)
+
+      links[0].focus()
+      keydown(`Tab`, links[0])
+      expect(document.activeElement).toBe(links[1])
+      keydown(`Tab`, links[1])
+      expect(document.activeElement).toBe(links[0])
+    })
+
     test(`pinned dropdown stays open on focus out`, async () => {
-      mount_nav({ routes: [[`/p`, [`/p`, `/p/child1`, `/p/child2`]]] })
+      mount_nav({ routes: two_child_route })
       const { dropdown, dropdown_menu } = query_dropdown_elements()
 
       await click(doc_query(`[data-dropdown-toggle]`))

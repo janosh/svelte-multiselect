@@ -79,6 +79,88 @@ export function get_style(
   return css_str
 }
 
+// === Floating geometry ===
+// "Pick a side that fits, then stay on screen": tooltip, portalled dropdown, `float`.
+
+export type Placement = `top` | `right` | `bottom` | `left`
+
+export type PositionOptions = {
+  placement?: Placement | `auto` // `auto` prefers bottom, then flips
+  // `start` lines the floating box up with the anchor's edge (dropdowns), `center`
+  // centres it on the anchor (tooltips)
+  align?: `center` | `start`
+  offset?: number // gap between anchor and floating box
+  padding?: number // closest the floating box may come to a viewport edge
+  // `true` tries the opposite side then the perpendicular ones; pass an explicit
+  // list to keep a dropdown from ever landing beside its input
+  flip?: boolean | Placement[]
+  shift?: boolean // slide along the viewport edge rather than overflow it
+}
+
+const FLIP_ORDER: Record<Placement, Placement[]> = {
+  bottom: [`bottom`, `top`, `right`, `left`],
+  top: [`top`, `bottom`, `right`, `left`],
+  right: [`right`, `left`, `bottom`, `top`],
+  left: [`left`, `right`, `bottom`, `top`],
+}
+
+// Viewport coordinates; callers add scroll offsets when positioning absolutely.
+export function compute_position(
+  anchor: { top: number; left: number; bottom: number; right: number },
+  floating: { width: number; height: number },
+  options: PositionOptions = {},
+): { top: number; left: number; placement: Placement } {
+  const {
+    placement = `bottom`,
+    align = `center`,
+    offset = 0,
+    padding = 0,
+    flip = true,
+    shift = true,
+  } = options
+  const { innerWidth, innerHeight } = globalThis
+  const requested = placement === `auto` ? `bottom` : placement
+  const anchor_width = anchor.right - anchor.left
+  const anchor_height = anchor.bottom - anchor.top
+  // Cross-axis offset: the side being tried only fixes the main axis
+  const cross_x =
+    align === `start` ? anchor.left : anchor.left + (anchor_width - floating.width) / 2
+  const cross_y =
+    align === `start` ? anchor.top : anchor.top + (anchor_height - floating.height) / 2
+
+  const coords: Record<Placement, { top: number; left: number }> = {
+    top: { top: anchor.top - floating.height - offset, left: cross_x },
+    bottom: { top: anchor.bottom + offset, left: cross_x },
+    left: { top: cross_y, left: anchor.left - floating.width - offset },
+    right: { top: cross_y, left: anchor.right + offset },
+  }
+
+  const overflow = ({ top, left }: { top: number; left: number }) =>
+    Math.max(0, padding - top) +
+    Math.max(0, padding - left) +
+    Math.max(0, top + floating.height + padding - innerHeight) +
+    Math.max(0, left + floating.width + padding - innerWidth)
+
+  let chosen = requested
+  if (flip !== false) {
+    let least_overflow = Infinity
+    for (const candidate of Array.isArray(flip) ? flip : FLIP_ORDER[requested]) {
+      const candidate_overflow = overflow(coords[candidate])
+      if (candidate_overflow < least_overflow) {
+        chosen = candidate
+        least_overflow = candidate_overflow
+      }
+    }
+  }
+
+  let { top, left } = coords[chosen]
+  if (shift) {
+    left = Math.max(padding, Math.min(left, innerWidth - floating.width - padding))
+    top = Math.max(padding, Math.min(top, innerHeight - floating.height - padding))
+  }
+  return { top, left, placement: chosen }
+}
+
 export function split_shortcut(shortcut: string): string[] {
   const parts = shortcut
     .toLowerCase()
@@ -121,6 +203,41 @@ export function matches_shortcut(
     event.altKey === alt &&
     event.metaKey === meta
   )
+}
+
+// `mod` is Cmd on Apple keyboards and Ctrl everywhere else, so one binding covers both
+const is_apple_platform = (): boolean =>
+  /mac|iphone|ipad|ipod/iu.test(globalThis.navigator?.userAgent ?? ``)
+
+export const resolve_mod = (shortcut: string): string =>
+  shortcut.replaceAll(/\bmod\b/giu, is_apple_platform() ? `meta` : `ctrl`)
+
+export type Hotkey = {
+  keys: string | string[] // e.g. `mod+k`, `ctrl+shift+p`, `Escape`
+  handler: (event: KeyboardEvent) => void
+  enabled?: boolean
+  // Bare keys are ignored while typing in a text field, where they are just
+  // characters. Chords always fire. Set true for keys that must work either way.
+  allow_in_inputs?: boolean
+  prevent_default?: boolean // default true
+}
+
+// Runs the first binding whose shortcut matches and reports whether one fired.
+// Shared by the `hotkey` attachment and components that own a window listener.
+export function run_hotkeys(event: KeyboardEvent, bindings: Hotkey[]): boolean {
+  if (event.isComposing) return false // mid-IME the keystroke belongs to the editor
+  // Outside a chord a bare key in a text field is ordinary typing, not a shortcut
+  const typing = !is_modifier_chord(event) && is_editable_event_target(event.target)
+  for (const binding of bindings) {
+    if (binding.enabled === false) continue
+    const keys = Array.isArray(binding.keys) ? binding.keys : [binding.keys]
+    if (!keys.some((key) => matches_shortcut(event, resolve_mod(key)))) continue
+    if (typing && !binding.allow_in_inputs) continue
+    if (binding.prevent_default !== false) event.preventDefault()
+    binding.handler(event)
+    return true
+  }
+  return false
 }
 
 // True when the event came from a text-entry control, where a bare key is typing
