@@ -1,5 +1,11 @@
 // Live examples - transforms ```svelte example code blocks into rendered components
 // with syntax highlighting and live preview
+export {
+  create_highlighter,
+  type Grammar,
+  type Highlighter,
+  type StarryNight,
+} from './create-highlighter.ts'
 export { hast_to_html } from './hast.ts'
 export { starry_night, starry_night_highlighter } from './highlighter.ts'
 export {

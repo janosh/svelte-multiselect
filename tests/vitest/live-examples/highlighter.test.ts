@@ -1,5 +1,8 @@
 // Tests for starry-night syntax highlighter
+import { create_highlighter } from '$lib/live-examples/create-highlighter'
 import { starry_night, starry_night_highlighter } from '$lib/live-examples/highlighter'
+import grammar_typst from '@wooorm/starry-night/source.typst'
+import grammar_latex from '@wooorm/starry-night/text.tex.latex'
 import { describe, expect, test, vi } from 'vite-plus/test'
 
 describe(`starry_night.flagToScope`, () => {
@@ -135,5 +138,76 @@ describe(`starry_night_highlighter`, () => {
       expect(result).toContain(`&#123;`)
       expect(result).toContain(`&#125;`)
     })
+  })
+})
+
+describe(`create_highlighter`, () => {
+  // Typst and LaTeX are outside the common bundle, mirroring the diagrams docs site
+  const custom = create_highlighter([grammar_latex, grammar_typst])
+  const typst_html = `<span class="pl-k">#let</span> <span class="pl-smi">x</span> <span class="pl-k">= </span><span class="pl-c1">1</span>`
+
+  test(`highlights a language outside the common bundle`, async () => {
+    expect(starry_night.flagToScope(`typ`)).toBeUndefined()
+    expect(await custom.highlight(`#let x = 1`, `typ`)).toBe(typst_html)
+    expect(await custom.highlight(`#let x = 1`, `TYP`)).toBe(typst_html)
+    expect(await custom.highlight(`\\emph{hi}`, `tex`)).toContain(`<span class="pl-`)
+  })
+
+  test(`registers only the grammars it was given and caches the instance`, async () => {
+    const instance = await custom.ready()
+    expect(await custom.ready()).toBe(instance)
+    expect(create_highlighter([grammar_typst])).not.toBe(custom)
+    expect(instance.flagToScope(`typ`)).toBe(`source.typst`)
+    // would resolve if the factory silently fell back to the common bundle
+    for (const flag of [`py`, `ts`, `svelte`]) {
+      expect(instance.flagToScope(flag)).toBeUndefined()
+    }
+  })
+
+  test(`highlight_block wraps in the same markup as starry_night_highlighter`, async () => {
+    expect(await custom.highlight_block(`#let x = 1`, `TYP`)).toBe(
+      `<pre class="highlight highlight-typ"><code>${typst_html}</code></pre>`,
+    )
+    // unknown language falls back to escaped plain text, wrapped and unwrapped
+    expect(await custom.highlight(`<a>{x}</a>`, `py`)).toBe(`&lt;a&gt;{x}&lt;/a&gt;`)
+    expect(await custom.highlight_block(`<a>{x}</a>`, `py`)).toBe(
+      `<pre class="highlight"><code>&lt;a&gt;&#123;x&#125;&lt;/a&gt;</code></pre>`,
+    )
+  })
+
+  test(`default grammars match the eager starry_night instance`, async () => {
+    const default_highlighter = create_highlighter()
+    expect(await default_highlighter.highlight_block(`const x = 1`, `ts`)).toBe(
+      starry_night_highlighter(`const x = 1`, `ts`),
+    )
+    expect((await default_highlighter.ready()).flagToScope(`svelte`)).toBe(
+      `source.svelte`,
+    )
+  })
+
+  test(`defers loading until first use, then reports missing peer dependency`, async () => {
+    vi.resetModules()
+    let load_count = 0
+    vi.doMock(`@wooorm/starry-night`, () => {
+      load_count += 1
+      throw new Error(`Cannot find package '@wooorm/starry-night'`)
+    })
+
+    // importing the module must not touch the peer dependency, unlike highlighter.ts
+    const { create_highlighter: create } = await import(
+      `$lib/live-examples/create-highlighter`
+    )
+    const highlighter = create([grammar_typst])
+    // a timer flushes every pending microtask, so an eagerly started load would show up
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(load_count).toBe(0)
+
+    const peer_error = `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`
+    await expect(highlighter.ready()).rejects.toThrow(peer_error)
+    await expect(highlighter.highlight(`#let x = 1`, `typ`)).rejects.toThrow(peer_error)
+    expect(load_count).toBe(1) // failed load is cached, not retried
+
+    vi.doUnmock(`@wooorm/starry-night`)
+    vi.resetModules()
   })
 })
