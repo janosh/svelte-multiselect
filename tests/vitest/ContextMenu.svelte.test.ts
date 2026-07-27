@@ -132,6 +132,31 @@ describe(`ContextMenu`, () => {
     expect(document.activeElement).toBe(three)
   })
 
+  // reachable by clicking menu chrome rather than an item: focus leaves the list, and
+  // every key used to enter at the first item regardless of which end it pointed at
+  test.each([
+    [`End`, 2],
+    [`ArrowUp`, 2],
+    [`Home`, 0],
+    [`ArrowDown`, 0],
+  ] as const)(
+    `%s enters the list at the right end when focus sits outside it`,
+    async (key, expected_idx) => {
+      await open_menu(
+        [`One`, `Two`, `Three`].map((label) => ({ label, action: vi.fn() })),
+      )
+      const menu_el = doc_query(`menu[role="menu"]`)
+      ;(document.activeElement as HTMLElement | null)?.blur()
+
+      menu_el.dispatchEvent(
+        new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true }),
+      )
+      await tick()
+
+      expect(document.activeElement).toBe(items()[expected_idx])
+    },
+  )
+
   test(`choosing an action runs it and closes, disabled ones do neither`, async () => {
     const actions = make_actions()
     const on_select = vi.fn()

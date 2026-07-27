@@ -1,6 +1,6 @@
 # Live Examples
 
-The optional `svelte-multiselect/live-examples` subpath provides the mdsvex
+The optional `svelte-widgets/live-examples` subpath provides the mdsvex
 remark transform, Vite plugin, and code highlighter used by the documentation's
 live code examples.
 

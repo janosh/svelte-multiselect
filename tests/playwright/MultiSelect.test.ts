@@ -29,7 +29,7 @@ async function goto_persistent(page: Page): Promise<void> {
 }
 
 // Issue #309: Array cloning by reactive wrappers (stores, Superforms) caused infinite loops
-// https://github.com/janosh/svelte-multiselect/issues/309
+// https://github.com/janosh/svelte-widgets/issues/309
 test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => {
   await goto_persistent(page)
 
@@ -48,7 +48,7 @@ test(`array cloning infinite loop prevention (issue #309)`, async ({ page }) => 
 })
 
 test.describe(`input`, () => {
-  // https://github.com/janosh/svelte-multiselect/issues/289
+  // https://github.com/janosh/svelte-widgets/issues/289
   test(`programmatic focus opens dropdown`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const dropdown = page.locator(`#foods div.multiselect > ul.options`)
@@ -75,7 +75,7 @@ test.describe(`input`, () => {
     await expect(dropdown).toBeHidden()
   })
 
-  // https://github.com/janosh/svelte-multiselect/issues/423
+  // https://github.com/janosh/svelte-widgets/issues/423
   test(`retain-focus keeps input focused after mouse selection`, async ({ page }) => {
     await page.goto(`/ui`, { waitUntil: `networkidle` })
     const input = page.locator(`#retain-focus input[autocomplete]`)
@@ -100,7 +100,7 @@ test.describe(`input`, () => {
 })
 
 test.describe(`multiselect`, () => {
-  // https://github.com/janosh/svelte-multiselect/issues/111
+  // https://github.com/janosh/svelte-widgets/issues/111
   test(`loops through dropdown list with arrow keys making each option active in turn`, async ({
     page,
   }) => {
@@ -124,7 +124,7 @@ test.describe(`multiselect`, () => {
     await expect(active_option).toHaveText(foods.at(-1) ?? ``)
   })
 
-  // https://github.com/janosh/svelte-multiselect/issues/357
+  // https://github.com/janosh/svelte-widgets/issues/357
   test(`keyboard nav ignores scroll-triggered mouseover but re-enables on mouse movement`, async ({
     page,
   }) => {
@@ -175,7 +175,7 @@ test.describe(`multiselect`, () => {
   })
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/176
+// https://github.com/janosh/svelte-widgets/issues/176
 test(`browser drag reorders selected options`, async ({ page }) => {
   await goto_persistent(page)
   const selected = page.locator(`#languages ul.selected`)
@@ -563,7 +563,7 @@ test(`input width minimizes when options are selected`, async ({ page }) => {
 })
 
 // Issue #380: CSS class specificity - user classes should override component defaults
-// https://github.com/janosh/svelte-multiselect/issues/380
+// https://github.com/janosh/svelte-widgets/issues/380
 test(`component buttons are styled correctly with border: none`, async ({ page }) => {
   await page.goto(`/css-classes`, { waitUntil: `networkidle` })
 

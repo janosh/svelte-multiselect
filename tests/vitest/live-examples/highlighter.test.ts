@@ -34,7 +34,7 @@ describe(`starry_night_highlighter`, () => {
     })
 
     await expect(import(`$lib/live-examples/highlighter`)).rejects.toThrow(
-      `svelte-multiselect/live-examples requires optional peer dependency @wooorm/starry-night`,
+      `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`,
     )
 
     vi.doUnmock(`@wooorm/starry-night`)
