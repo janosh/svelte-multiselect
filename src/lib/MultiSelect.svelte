@@ -1784,7 +1784,7 @@
   }
 
   // Override input's focus method to ensure dropdown opens on programmatic focus
-  // https://github.com/janosh/svelte-multiselect/issues/289
+  // https://github.com/janosh/svelte-widgets/issues/289
   $effect(() => {
     if (!input) return
 
@@ -1805,7 +1805,7 @@
   const handle_input_blur: FocusEventHandler<HTMLInputElement> = (event) => {
     // For portalled dropdowns, don't close on blur since clicks on portalled elements
     // will cause blur but we want to allow the click to register first
-    // (otherwise mobile touch event is unable to select options https://github.com/janosh/svelte-multiselect/issues/335)
+    // (otherwise mobile touch event is unable to select options https://github.com/janosh/svelte-widgets/issues/335)
     if (
       !portal_params?.active &&
       (!(event.relatedTarget instanceof Node) || !outerDiv?.contains(event.relatedTarget))
@@ -1852,7 +1852,7 @@
   }
 
   // reset form validation when required prop changes
-  // https://github.com/janosh/svelte-multiselect/issues/285
+  // https://github.com/janosh/svelte-widgets/issues/285
   $effect.pre(() => {
     void required // register as dependency so validity resets when it changes
     form_input?.setCustomValidity(``)
@@ -2494,7 +2494,7 @@
   }
 
   /* Use :where() for elements with user-overridable class props (outerDivClass, ulSelectedClass, liSelectedClass)
-     so user-provided classes take precedence. See: https://github.com/janosh/svelte-multiselect/issues/380 */
+     so user-provided classes take precedence. See: https://github.com/janosh/svelte-widgets/issues/380 */
   :where(div.multiselect) {
     position: relative;
     align-items: center;
@@ -2620,7 +2620,8 @@
     border: none;
     outline: none;
     background: none;
-    flex: 1; /* this + next line fix issue #12 https://git.io/JiDe3 */
+    /* this + next line fix https://github.com/janosh/svelte-widgets/issues/12 */
+    flex: 1;
     min-width: 2em;
     /* ensure input uses text color and not --sms-selected-text-color */
     color: var(--sms-text-color, light-dark(#222, #eee));

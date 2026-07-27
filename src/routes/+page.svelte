@@ -12,7 +12,7 @@
   let contributors = $state<Contributor[]>([])
 
   onMount(() => {
-    const url = `https://api.github.com/repos/janosh/svelte-multiselect/contributors?per_page=100`
+    const url = `https://api.github.com/repos/janosh/svelte-widgets/contributors?per_page=100`
     fetch(url)
       .then((res) => (res.ok ? res.json() : Promise.reject(res.status)))
       .then(

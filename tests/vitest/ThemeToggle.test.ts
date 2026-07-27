@@ -36,15 +36,18 @@ test(`initial render stays hidden until hydration`, async () => {
   await tick()
   expect(button.style.visibility).toBe(`visible`)
   expect(applied_theme()).toEqual([`dark`, `dark`])
-  // sized here rather than in CSS, where Icon's own scoped rule wins
+  // scaled inline rather than in CSS, where Icon's own scoped rule would win
   const icon = doc_query<SVGSVGElement>(`button svg`)
-  expect([icon.style.width, icon.style.height]).toEqual([`1.2em`, `1.2em`])
+  expect(icon.style.transform).toBe(`scale(1.5)`)
 })
 
-test(`icon_props override the default icon size`, async () => {
+// icon_props.style is appended after the default transform rather than replacing it, so
+// a caller-supplied size lands on the element but still gets scaled: 2em renders at 3em
+test(`icon_props.style is appended after the default transform`, async () => {
   await mount_theme_toggle({ icon_props: { style: `width: 2em; height: 2em` } })
   const icon = doc_query<SVGSVGElement>(`button svg`)
   expect([icon.style.width, icon.style.height]).toEqual([`2em`, `2em`])
+  expect(icon.style.transform).toBe(`scale(1.5)`)
 })
 
 test.each([

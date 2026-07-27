@@ -179,7 +179,7 @@ test(`applies DOM attributes to input node`, () => {
   expect(input?.pattern).toBe(pattern)
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/354
+// https://github.com/janosh/svelte-widgets/issues/354
 test.each([
   [`Pick a number`, ``],
   [{ text: `Pick a number`, persistent: true }, `Pick a number`],
@@ -235,7 +235,7 @@ test(`applies custom classes for styling through CSS frameworks`, async () => {
   }
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/111
+// https://github.com/janosh/svelte-widgets/issues/111
 test(`arrow down makes first option active`, async () => {
   mount(MultiSelect, {
     target: document.body,
@@ -253,7 +253,7 @@ test(`arrow down makes first option active`, async () => {
   expect(active_option.textContent?.trim()).toBe(`1`)
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/112
+// https://github.com/janosh/svelte-widgets/issues/112
 test(`can select 1st and last option with arrow and enter key`, async () => {
   let selected: Option[] = []
   mount(Test2WayBind, {
@@ -984,7 +984,7 @@ test(`formSerialize customizes chip-mode form values`, async () => {
 })
 
 test(`toggling required after invalid form submission allows submitting`, async () => {
-  // https://github.com/janosh/svelte-multiselect/issues/285
+  // https://github.com/janosh/svelte-widgets/issues/285
   const form = document.createElement(`form`)
   document.body.append(form)
 
@@ -1559,7 +1559,7 @@ test.each([undefined, `Custom no options message`])(
   },
 )
 
-// https://github.com/janosh/svelte-multiselect/issues/183
+// https://github.com/janosh/svelte-widgets/issues/183
 test(`arrow keys traverse matching options and the create-option row in both directions`, async () => {
   const create_msg = `Create this option...` // component default
   mount(MultiSelect, {
@@ -1832,7 +1832,7 @@ test.each([2, 10])(
   },
 )
 
-// https://github.com/janosh/svelte-multiselect/issues/353
+// https://github.com/janosh/svelte-widgets/issues/353
 test.each([
   {
     name: `stays closed when can_remove is true`,
@@ -2175,7 +2175,7 @@ test(`can remove user-created selected option which is not in dropdown list`, as
   expect(doc_query(`ul.selected`).textContent?.trim()).toBe(``)
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/409
+// https://github.com/janosh/svelte-widgets/issues/409
 // whitespace-only input must never be added as an option (was converted to 0 via Number("  "))
 test.each<[string, MultiSelectProps]>([
   [`string options`, { options: [`a`, `b`], allowUserOptions: true }],
@@ -2199,7 +2199,7 @@ test.each<[string, MultiSelectProps]>([
   expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/409
+// https://github.com/janosh/svelte-widgets/issues/409
 // with loadOptions returning [], effective_options[0] is undefined which triggered Number coercion
 // pressing Enter twice also triggered each_key_duplicate since both resolved to key 0
 test(`whitespace-only input rejected with loadOptions (root cause path)`, async () => {
@@ -2266,7 +2266,7 @@ test.each([[[1]], [[1, 2]], [[1, 2, 3]]])(
 )
 
 test(`backspace does not remove items when minSelect would be violated`, async () => {
-  // https://github.com/janosh/svelte-multiselect/issues/327
+  // https://github.com/janosh/svelte-widgets/issues/327
   const options = [`Red`, `Green`, `Yellow`]
   const selected = [`Red`]
   const [minSelect, maxSelect] = [1, 1]
@@ -2603,8 +2603,8 @@ async function drag_chip(source_idx: number, target_idx: number) {
   await tick()
 }
 
-// https://github.com/janosh/svelte-multiselect/issues/176 (reorder)
-// https://github.com/janosh/svelte-multiselect/issues/371 (onreorder/onchange events)
+// https://github.com/janosh/svelte-widgets/issues/176 (reorder)
+// https://github.com/janosh/svelte-widgets/issues/371 (onreorder/onchange events)
 test(`dragging selected options across each other reorders them and fires onreorder + onchange`, async () => {
   const options = [1, 2, 3]
   const [onreorder_spy, onchange_spy] = [vi.fn(), vi.fn()]
@@ -4126,7 +4126,7 @@ function deferred_load() {
   return { fn, resolvers, rejectors }
 }
 
-// Dynamic options loading tests (https://github.com/janosh/svelte-multiselect/discussions/342)
+// Dynamic options loading tests (https://github.com/janosh/svelte-widgets/discussions/342)
 describe(`loadOptions feature`, () => {
   const mock_data = Array.from({ length: 100 }, (_, idx) => `Option ${idx + 1}`)
 
@@ -4259,7 +4259,7 @@ describe(`loadOptions feature`, () => {
     },
   )
 
-  // https://github.com/janosh/svelte-multiselect/issues/412
+  // https://github.com/janosh/svelte-widgets/issues/412
   test(`auto-fills when small batchSize doesn't overflow dropdown`, async () => {
     const { fn: load_options, resolvers } = deferred_load()
     mount(MultiSelect, {
@@ -4752,7 +4752,7 @@ describe(`loadOptions feature`, () => {
   })
 })
 
-// https://github.com/janosh/svelte-multiselect/discussions/401
+// https://github.com/janosh/svelte-widgets/discussions/401
 // User messages during async loading: create/no-match suppressed, dupe allowed
 test.each([
   {
@@ -4844,7 +4844,7 @@ test(`createOptionMsg shows immediately with static options`, async () => {
   )
 })
 
-// https://github.com/janosh/svelte-multiselect/pull/403#issuecomment-4106385445
+// https://github.com/janosh/svelte-widgets/pull/403#issuecomment-4106385445
 describe(`load_options_pending`, () => {
   const create_deferred_fetch = () => {
     const { fn, resolvers } = deferred_load()
@@ -5011,7 +5011,7 @@ describe(`load_options_pending`, () => {
   })
 })
 
-// https://github.com/janosh/svelte-multiselect/issues/369
+// https://github.com/janosh/svelte-widgets/issues/369
 describe(`binding update event count`, () => {
   test(`onchange fires 0 times on init and exactly once per selection`, async () => {
     const onchange_spy = vi.fn()
@@ -5164,7 +5164,7 @@ describe(`CSS static analysis`, () => {
   })
 })
 
-// Option grouping feature tests (https://github.com/janosh/svelte-multiselect/issues/135)
+// Option grouping feature tests (https://github.com/janosh/svelte-widgets/issues/135)
 describe(`option grouping feature`, () => {
   const grouped_options = [
     { label: `Rock`, group: `Genre` },
@@ -7192,7 +7192,7 @@ describe(`history / undo-redo`, () => {
 })
 
 // Regression test for issue #391: case-variant labels should not crash
-// https://github.com/janosh/svelte-multiselect/issues/391
+// https://github.com/janosh/svelte-widgets/issues/391
 describe(`case-variant labels (issue #391)`, () => {
   const object_options = [
     { label: `pd`, value: `uuid-1` },

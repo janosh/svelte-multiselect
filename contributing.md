@@ -2,15 +2,15 @@
 
 ## 🙋 How can I help?
 
-Pull requests to improve docs, test coverage, or examples are welcome. Before implementing a new feature, submit an issue to discuss project fit. The [issues labeled `help wanted`](https://github.com/janosh/svelte-multiselect/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are also available for contributions. Incomplete work can be submitted as a draft PR for others to continue.
+Pull requests to improve docs, test coverage, or examples are welcome. Before implementing a new feature, submit an issue to discuss project fit. The [issues labeled `help wanted`](https://github.com/janosh/svelte-widgets/issues?q=is%3Aissue+is%3Aopen+label%3A%22help+wanted%22) are also available for contributions. Incomplete work can be submitted as a draft PR for others to continue.
 
 ## 🚀 Submit a PR
 
 To submit a pull request, clone the repo, install dependencies and start the dev server to see changes as you make them.
 
 ```sh
-git clone https://github.com/janosh/svelte-multiselect
-cd svelte-multiselect
+git clone https://github.com/janosh/svelte-widgets
+cd svelte-widgets
 npm install
 npm run dev
 ```
@@ -35,11 +35,12 @@ New features should include corresponding tests. Bug fixes should include a test
 
 ## ✅ CI checks
 
-This repo has 3 required CI checks that have to pass for every PR before merging:
+These CI checks have to pass for every PR before merging:
 
-- tests: run as [GitHub Action](https://github.com/janosh/svelte-multiselect/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/test.yml))
-- linting and type checks: `vp check` plus `svelte-check-rs`, run as [GitHub Action](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/lint.yml)
-- docs: [continuous deployment](https://github.com/janosh/svelte-multiselect/blob/main/.github/workflows/gh-pages.yml) through GitHub Pages
+- tests: run as [GitHub Action](https://github.com/janosh/svelte-widgets/actions/workflows/test.yml) ([workflow code](https://github.com/janosh/svelte-widgets/blob/main/.github/workflows/test.yml))
+- linting and type checks: `vp check` plus `svelte-check-rs`, run as [GitHub Action](https://github.com/janosh/svelte-widgets/blob/main/.github/workflows/lint.yml)
+- links: [lychee](https://github.com/janosh/svelte-widgets/blob/main/.github/workflows/link-check.yml) over every markdown, Svelte and TS file
+- docs: [continuous deployment](https://github.com/janosh/svelte-widgets/blob/main/.github/workflows/gh-pages.yml) through GitHub Pages
 
 ## 🆕 New release
 
@@ -69,4 +70,7 @@ Push the release commit and tag to `origin/main`:
 git push && git push --tags
 ```
 
-Finally, [publish a new release on GitHub](https://github.com/janosh/svelte-multiselect/releases/new).
+Finally, [publish a new release on GitHub](https://github.com/janosh/svelte-widgets/releases/new).
+Publishing the release triggers [`publish.yml`](https://github.com/janosh/svelte-widgets/blob/main/.github/workflows/publish.yml),
+which pushes the package to npm through trusted publishing (OIDC), so no manual
+`npm publish` is needed.

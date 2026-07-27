@@ -16,4 +16,7 @@ jobs:
       - name: Discover broken links
         uses: lycheeverse/lychee-action@v2
         with:
-          args: --exclude '%7B' --exclude '^file://' --root-dir . --accept 100..=103,200..=299,403,429,502,503 -- ./**/*.{md,svelte,ts}
+          # Skip links into our own deployed docs: those pages come from this repo's
+          # build, so checking them against the live site fails any PR that adds one
+          # until it merges and deploys. The prerender crawl already validates them.
+          args: --exclude '%7B' --exclude '^file://' --exclude '^https://janosh\.github\.io/svelte-widgets' --root-dir . --accept 100..=103,200..=299,403,429,502,503 -- ./**/*.{md,svelte,ts}

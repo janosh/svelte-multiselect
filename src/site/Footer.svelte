@@ -5,7 +5,7 @@
 <footer>
   <a href="{repository}/discussions/200">
     <svg><use href="#material-symbols-auto-awesome" /></svg>
-    Multiselect Showcase
+    Showcase
   </a>
   <a href="{repository}/blob/-/src/routes/(demos)/+layout.svelte">
     <svg><use href="#carbon-edit" /></svg>

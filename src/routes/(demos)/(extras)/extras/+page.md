@@ -1,0 +1,184 @@
+## Extras
+
+The small components that ship alongside the headline ones. Each is a named export from
+the package root:
+
+```svelte
+<script>
+  import { CircleSpinner, Icon, ThemeToggle, Toggle } from 'svelte-widgets'
+</script>
+```
+
+### `Toggle`
+
+A checkbox styled as a switch. `checked` is bindable and the children snippet receives it,
+so the label can react to the state. Everything else spreads onto the wrapping `<label>`.
+
+```svelte example id="toggle-demo"
+<script lang="ts">
+  import { Toggle } from '$lib'
+
+  let notifications = $state(true)
+  let telemetry = $state(false)
+</script>
+
+<div style="display: flex; flex-direction: column; gap: 8pt">
+  <Toggle bind:checked={notifications} style="gap: 8pt">
+    {#snippet children({ checked })}
+      Notifications <em>({checked ? `on` : `off`})</em>
+    {/snippet}
+  </Toggle>
+
+  <Toggle
+    bind:checked={telemetry}
+    style="gap: 8pt"
+    --toggle-background="forestgreen"
+    --toggle-knob-width="4em"
+  >
+    Telemetry (custom CSS vars)
+  </Toggle>
+</div>
+```
+
+### `ThemeToggle`
+
+Cycles light → system → dark → light, writes the choice to `localStorage.theme` and sets
+`colorScheme` plus `data-theme` on `<html>`. It renders nothing until mounted so SSR can't
+flash the wrong icon. The one in this site's nav bar is the same component.
+
+```svelte example id="theme-toggle-demo"
+<script lang="ts">
+  import { ThemeToggle } from '$lib'
+</script>
+
+<ThemeToggle
+  style="font-size: 2em"
+  tooltip={{ placement: `right` }}
+  icon_props={{ style: `color: var(--accent)` }}
+/>
+```
+
+### `Icon`
+
+Renders one path from the bundled icon set at `1em` square, inheriting `currentColor`. An
+unknown name logs an error and falls back to `Alert`.
+
+```svelte example id="icon-demo"
+<script lang="ts">
+  import { Icon } from '$lib'
+  import { icon_data } from '$lib/icons'
+</script>
+
+<div style="display: flex; flex-wrap: wrap; gap: 1em">
+  {#each Object.keys(icon_data) as icon (icon)}
+    <span style="display: flex; align-items: center; gap: 4pt">
+      <Icon {icon} style="font-size: 1.5em" />
+      <code>{icon}</code>
+    </span>
+  {/each}
+</div>
+```
+
+### `CircleSpinner`
+
+A dependency-free loading indicator. `size`, `color` and `duration` are plain CSS strings,
+so any unit works.
+
+```svelte example id="spinner-demo"
+<script lang="ts">
+  import { CircleSpinner } from '$lib'
+</script>
+
+<CircleSpinner />
+<CircleSpinner size="2em" color="tomato" />
+<CircleSpinner size="3em" color="mediumseagreen" duration="0.6s" />
+```
+
+### `FileDetails`
+
+A list of collapsible `<details>`, one per file, with a button that opens or closes all of
+them at once. Content is syntax-highlighted using `language` (or `default_lang`).
+
+```svelte example id="file-details-demo"
+<script lang="ts">
+  import { FileDetails } from '$lib'
+
+  const files = [
+    {
+      title: `+page.svelte`,
+      content: `<script>\n  import { Toggle } from 'svelte-widgets'\n<\/script>\n\n<Toggle />`,
+    },
+    {
+      title: `vite.config.ts`,
+      content: `export default { plugins: [] }`,
+      language: `ts`,
+    },
+  ]
+</script>
+
+<FileDetails {files} />
+```
+
+### `PrevNext`
+
+Sequential navigation with wraparound. Pass `items` as hrefs or `[href, label]` tuples and
+the `current` href; arrow keys navigate too unless you pass `onkeyup={null}`. The links at
+the bottom of every demo page on this site are a `PrevNext` fed by the demo route list.
+
+```svelte example id="prev-next-demo"
+<script lang="ts">
+  import { PrevNext } from '$lib'
+
+  // relative hrefs so the links survive the docs site's base path
+  const chapters = [
+    [`toc`, `Toc`],
+    [`masonry`, `Masonry`],
+    [`popover`, `Popover`],
+  ]
+</script>
+
+<PrevNext items={chapters} current="masonry" onkeyup={null} />
+```
+
+### `SubpageGrid`
+
+A card grid for linking to child pages, built from `[title, href, description]` tuples.
+The [MultiSelect overview](multiselect) is one.
+
+```svelte
+<SubpageGrid
+  title="MultiSelect Overview"
+  subtitle="Keyboard-friendly, accessible multi-select."
+  subpages={[
+    [`Form`, `/form`, `Form integration and native validation behavior.`],
+    [`Events`, `/events`, `Event callbacks and payloads.`],
+  ]}
+/>
+```
+
+### `GitHubCorner`
+
+The animated Octocat ribbon, `position: fixed` in a corner of the viewport. The one in the
+top right of this page links to this repo.
+
+```svelte
+<GitHubCorner href="https://github.com/janosh/svelte-widgets" corner="top-right" />
+```
+
+Colors come from `--github-corner-bg` and `--github-corner-color`, or the `fill` and
+`color` props for one-off overrides.
+
+### `CodeExample`
+
+The wrapper the [live-examples plugin](https://github.com/janosh/svelte-widgets/blob/-/src/lib/live-examples/readme.md)
+mounts around every runnable code fence in these docs. Every "View code" button on this
+site is one. Set it up once in `svelte.config.ts` rather than using it directly:
+
+```ts
+import { CodeExample } from 'svelte-widgets'
+
+export default { Wrapper: CodeExample }
+```
+
+Fence metadata drives it: `collapsible` hides the source behind a button, `code_above`
+puts the source before the rendered example, and `repl`/`github` add external links.
