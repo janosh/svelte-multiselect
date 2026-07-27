@@ -1,0 +1,58 @@
+## Masonry
+
+A masonry grid that balances items across as many columns as the container can fit. It
+measures each item, so rows of uneven height pack tightly instead of leaving the gaps a
+plain CSS grid would.
+
+`order` decides how items land in columns. `balanced-stable` (the default) sends each new
+item to the shortest column and never moves one that is already placed, which is what you
+want for feeds that append. `balanced` re-packs everything on every change for the
+tightest result, at the cost of items jumping around.
+
+```svelte example id="masonry-basic"
+<script lang="ts">
+  import { Masonry } from '$lib'
+  import { order_options } from '$lib/utils'
+  import type { MasonryOrder } from '$lib/utils'
+
+  let order = $state<MasonryOrder>(`balanced-stable`)
+  let n_items = $state(12)
+  const items = $derived(
+    Array.from({ length: n_items }, (_, idx) => ({
+      id: idx,
+      // deterministic pseudo-random heights so the packing is visible but stable
+      height: 40 + ((idx * 37) % 90),
+    })),
+  )
+</script>
+
+<label>
+  Order
+  <select bind:value={order}>
+    {#each order_options as option (option)}<option>{option}</option>{/each}
+  </select>
+</label>
+<label>
+  Items <input type="number" min="1" max="40" bind:value={n_items} style="width: 4em" />
+</label>
+
+<Masonry {items} {order} minColWidth={120} gap={10} style="margin-top: 1em">
+  {#snippet children({ item })}
+    <div
+      style="height: {item.height}px; display: grid; place-items: center; border-radius:
+      4pt; background: var(--surface); border: 1px solid var(--border)"
+    >
+      {item.id}
+    </div>
+  {/snippet}
+</Masonry>
+```
+
+### Virtualization
+
+Set `virtualize` with a `height` to render only the items near the viewport. Useful past a
+few hundred items, where the DOM node count starts to cost more than the measuring does.
+
+```svelte
+<Masonry {items} virtualize height={600} overscan={5} />
+```

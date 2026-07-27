@@ -86,7 +86,7 @@ export interface MultiSelectEvents<T extends Option = Option> {
   onredo?: (data: { previous: T[]; current: T[] }) => unknown // fires when redo is triggered
 }
 
-// Dynamic options loading (https://github.com/janosh/svelte-multiselect/discussions/342)
+// Dynamic options loading (https://github.com/janosh/svelte-widgets/discussions/342)
 export interface LoadOptionsParams {
   search: string
   offset: number
@@ -197,7 +197,7 @@ export interface MultiSelectProps<T extends Option = Option>
       }) => string)
     | null
   allowUserOptions?: boolean | `append`
-  allowEmpty?: boolean // added for https://github.com/janosh/svelte-multiselect/issues/192
+  allowEmpty?: boolean // added for https://github.com/janosh/svelte-widgets/issues/192
   autocomplete?: HTMLInputAttributes[`autocomplete`]
   autoScroll?: boolean
   breakpoint?: number // any screen with more horizontal pixels is considered desktop, below is mobile
@@ -298,10 +298,10 @@ export interface MultiSelectProps<T extends Option = Option>
   liSelectAllClass?: string // CSS class for the select all <li>
   // Pass a function for simple usage, or an object with config for advanced usage
   loadOptions?: LoadOptions<T>
-  // Animation parameters for selected options flip animation (https://github.com/janosh/svelte-multiselect/issues/356)
+  // Animation parameters for selected options flip animation (https://github.com/janosh/svelte-widgets/issues/356)
   // Set { duration: 0 } to disable animation
   selectedFlipParams?: FlipParams
-  // Option grouping feature (https://github.com/janosh/svelte-multiselect/issues/135)
+  // Option grouping feature (https://github.com/janosh/svelte-widgets/issues/135)
   collapsibleGroups?: boolean // enable click-to-collapse groups
   collapsedGroups?: Set<string> // externally controlled collapsed state (bindable)
   groupSelectAll?: boolean // add "select all" action per group header (toggles between select/deselect)
@@ -365,3 +365,21 @@ export type NavRouteObject = {
 // - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs/intro"])
 // - NavRouteObject: full object with all options
 export type NavRoute = string | [string, string] | [string, string[]] | NavRouteObject
+
+// === Toc ===
+export type CollapseMode = boolean | `h${2 | 3 | 4 | 5 | 6}`
+export type OpenChangeTrigger =
+  | `button`
+  | `escape`
+  | `outside-click`
+  | `programmatic`
+  | `tab`
+  | `toc-item`
+export type OpenChangeEvent = {
+  open: boolean
+  desktop: boolean
+  trigger: OpenChangeTrigger
+}
+export type OpenChangeHandler = (event: OpenChangeEvent) => void
+export type SlugifyHeading = (node: HTMLHeadingElement, idx: number) => string
+export type TocHeadingData = { id: string; level: number; title: string }

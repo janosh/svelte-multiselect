@@ -14,5 +14,7 @@
       resolve(`/popover`),
       `Floating surfaces built from the dismissal, focus and positioning attachments.`,
     ],
+    [`Masonry`, resolve(`/masonry`), `Column-balancing masonry grid with SSR support.`],
+    [`Toc`, resolve(`/toc`), `Sticky table of contents that finds its own headings.`],
   ]}
 />

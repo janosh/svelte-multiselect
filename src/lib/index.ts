@@ -9,10 +9,12 @@ export { default as CopyButton } from './CopyButton.svelte'
 export { default as FileDetails } from './FileDetails.svelte'
 export { default as GitHubCorner } from './GitHubCorner.svelte'
 export { default as Icon } from './Icon.svelte'
+export { default as Masonry } from './Masonry.svelte'
 export { default, default as MultiSelect } from './MultiSelect.svelte'
 export { default as Nav } from './Nav.svelte'
 export { default as PrevNext } from './PrevNext.svelte'
 export { default as SubpageGrid } from './SubpageGrid.svelte'
+export { default as Toc } from './Toc.svelte'
 export { default as Toggle } from './Toggle.svelte'
 export { default as ThemeToggle } from './ThemeToggle.svelte'
 export type * from './types'
@@ -20,7 +22,7 @@ export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'
 
 // Firefox lacks support for scrollIntoViewIfNeeded (https://caniuse.com/scrollintoviewifneeded).
-// See https://github.com/janosh/svelte-multiselect/issues/87
+// See https://github.com/janosh/svelte-widgets/issues/87
 // Polyfill copied from
 // https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
 export function scroll_into_view_if_needed_polyfill(
