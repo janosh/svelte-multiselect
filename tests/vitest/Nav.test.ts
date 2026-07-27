@@ -811,7 +811,9 @@ describe(`Nav`, () => {
       afterEach(() => vi.useRealTimers())
 
       test.each([0, 100])(`cooldown=%dms closes after timeout`, async (cooldown) => {
-        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: cooldown })
+        const { dropdown, dropdown_menu } = mount_dropdown({
+          dropdown_cooldown: cooldown,
+        })
 
         mouse_enter(dropdown)
         await tick()
@@ -941,7 +943,9 @@ describe(`Nav`, () => {
     test.each([`Enter`, ` `, `ArrowDown`])(
       `keyboard %s pins dropdown open`,
       async (key) => {
-        const { dropdown, dropdown_menu, toggle } = mount_dropdown({ dropdown_cooldown: 0 })
+        const { dropdown, dropdown_menu, toggle } = mount_dropdown({
+          dropdown_cooldown: 0,
+        })
 
         keydown(key, toggle)
         await next_task()

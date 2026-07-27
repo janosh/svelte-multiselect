@@ -1237,7 +1237,10 @@ describe(`hotkey`, () => {
   afterEach(() => {
     for (const cleanup of cleanups.splice(0)) cleanup()
   })
-  const attach_hotkey = (options: Parameters<typeof hotkey>[0], node = create_element()) => {
+  const attach_hotkey = (
+    options: Parameters<typeof hotkey>[0],
+    node = create_element(),
+  ) => {
     const cleanup = hotkey(options)(node)
     if (cleanup) cleanups.push(cleanup)
     return { node, cleanup }
