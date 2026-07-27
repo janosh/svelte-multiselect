@@ -44,6 +44,31 @@
 npm install --dev svelte-widgets
 ```
 
+## 🚚 &thinsp; Migrating from `svelte-multiselect`
+
+This package was called `svelte-multiselect` up to v11. Swap it out:
+
+```sh
+npm uninstall svelte-multiselect && npm install -D svelte-widgets
+```
+
+Then rewrite the imports. Matching on the opening quote keeps prose and GitHub URLs
+untouched, and covers every subpath (`/attachments`, `/utils`, `/types`,
+`/heading-anchors`, `/live-examples`) along with the bare import:
+
+```sh
+find src -type f \( -name '*.svelte' -o -name '*.ts' -o -name '*.js' \) -exec perl -pi -e "s{(['\"])svelte-multiselect}{\$1svelte-widgets}g" {} +
+```
+
+Three things the rewrite cannot do for you: `CmdPalette` is now `CommandMenu`,
+`PagefindPalette` is now `PageSearch`, and `click_outside` changed shape (it dismisses on
+`pointerdown`, and `exclude`/`include` merged into one `inside` option). See the
+[changelog](changelog.md) for the details.
+
+Coming from `svelte-toc` or `svelte-bricks` instead? Those are now `Toc` and `Masonry`
+here, so the same swap applies with `import { Toc } from 'svelte-widgets'` and
+`import { Masonry } from 'svelte-widgets'`.
+
 ## 📙 &thinsp; Usage
 
 ```svelte
