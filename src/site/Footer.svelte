@@ -1,5 +1,7 @@
-<script>
+<script lang="ts">
   import { repository } from '$root/package.json'
+
+  let { edit_href }: { edit_href: string } = $props()
 </script>
 
 <footer>
@@ -7,7 +9,7 @@
     <svg><use href="#material-symbols-auto-awesome" /></svg>
     Showcase
   </a>
-  <a href="{repository}/blob/-/src/routes/(demos)/+layout.svelte">
+  <a href={edit_href}>
     <svg><use href="#carbon-edit" /></svg>
     Edit this page
   </a>

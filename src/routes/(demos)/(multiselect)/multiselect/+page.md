@@ -62,6 +62,250 @@ Favorite Frontend Tools?
 <MultiSelect bind:selected options={ui_libs} />
 ```
 
+## Examples
+
+<label for="color">Pick one color <span>single-select with <code>maxSelect={1}</code></span></label>
+
+```svelte example
+<script lang="ts">
+  import MultiSelect from '$lib'
+
+  const colors: string[] = ['Red', 'Green', 'Blue', 'Yellow', 'Purple']
+  let value: string | null = $state(null)
+</script>
+
+<MultiSelect
+  id="color"
+  bind:value
+  options={colors}
+  maxSelect={1}
+  placeholder="Choose a color..."
+/>
+
+<p>You selected: {JSON.stringify(value)}</p>
+```
+
+<label for="countries">Where have you lived? <span>options prop as array of objects</span></label>
+
+```svelte example
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+  import type { ObjectOption } from '$lib/types'
+
+  interface Country extends ObjectOption {
+    value: string
+    continent: string
+  }
+
+  const countries: Country[] = [
+    { label: 'United States', value: 'US', continent: 'North America' },
+    { label: 'Canada', value: 'CA', continent: 'North America' },
+    { label: 'United Kingdom', value: 'UK', continent: 'Europe' },
+    { label: 'Germany', value: 'DE', continent: 'Europe' },
+    { label: 'Japan', value: 'JP', continent: 'Asia' },
+  ]
+  let selected: Country[] = $state([])
+</script>
+
+<MultiSelect
+  id="countries"
+  bind:selected
+  options={countries}
+  placeholder="Select countries..."
+/>
+
+<p>Selected countries: {selected.map((c) => c.label).join(', ')}</p>
+<p>Country codes: {selected.map((c) => c.value).join(', ')}</p>
+```
+
+<label for="skills">Add your skills (you can define new ones) <span>user-created options</span></label>
+
+```svelte example
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+
+  const initial_tags: string[] = ['JavaScript', 'Svelte', 'TypeScript']
+  let selected: string[] = $state([])
+</script>
+
+<MultiSelect
+  bind:selected
+  options={initial_tags}
+  allowUserOptions="append"
+  placeholder="Type to add skills..."
+/>
+
+<p>Your skills: {JSON.stringify(selected)}</p>
+```
+
+<label for="fav-languages">Favorite programming languages? <span>multi-select with custom snippet</span></label>
+
+```svelte example collapsible
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+  import { languages } from '$site/options'
+  import { LanguageSnippet } from '$site'
+
+  let selected: string[] = $state([])
+</script>
+
+<MultiSelect
+  id="fav-languages"
+  options={languages}
+  placeholder="Take your pick..."
+  bind:selected
+>
+  {#snippet children({ idx, option })}
+    <LanguageSnippet {idx} {option} gap="1ex" />
+  {/snippet}
+</MultiSelect>
+
+selected = {JSON.stringify(selected) || `[]`}
+```
+
+<label for="fav-ml-tool">Favorite machine learning framework? <span>single-select with loading indicator on text input</span></label>
+
+```svelte example collapsible
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+  import type { ObjectOption } from '$lib/types'
+  import { ml_libs } from '$site/options'
+
+  let value: ObjectOption | null = $state(null)
+  let searchText: string = $state('')
+  let loading: boolean = $state(false)
+  $effect(() => {
+    loading = Boolean(searchText)
+    // perform some fetch/database request here to get list of options matching searchText
+    // options = await fetch(`https://example.com?search=${searchText}`)
+    setTimeout(async () => {
+      loading = false
+    }, 1000)
+  })
+</script>
+
+<MultiSelect
+  id="fav-ml-tool"
+  maxSelect={1}
+  maxSelectMsg={(current, max) => `${current} of ${max} selected`}
+  options={ml_libs}
+  bind:searchText
+  bind:value
+  {loading}
+  placeholder="Favorite machine learning tool?"
+/>
+
+value = {JSON.stringify(value) || `null`}
+```
+
+<label for="confetti-select">Chance of Confetti <span>max select with custom filter function and callback on item selection</span></label>
+
+```svelte example collapsible
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+  import type { ObjectOption } from '$lib/types'
+  import { frontend_libs } from '$site/options'
+  import { Confetti, RepoSnippet } from '$site'
+
+  const filter_func = (op: ObjectOption, searchText: string): boolean => {
+    if (!searchText) return true
+    const search = searchText.toLowerCase()
+    const label_match = String(op.label).toLowerCase().includes(search)
+    const lang_match = String(op.lang).toLowerCase().includes(search)
+    return label_match || lang_match
+  }
+
+  let show_confetti: boolean = $state(false)
+</script>
+
+<MultiSelect
+  id="confetti-select"
+  options={frontend_libs}
+  maxSelect={4}
+  placeholder="Favorite web framework?"
+  filterFunc={filter_func}
+  onadd={(event) => {
+    if (event.option.label === `Svelte`) {
+      show_confetti = true
+      setTimeout(() => (show_confetti = false), 3000)
+    }
+  }}
+>
+  {#snippet option({ idx, option, selected })}
+    <RepoSnippet {idx} {option} style={selected ? `opacity: 0.5` : ``} />
+  {/snippet}
+</MultiSelect>
+{#if show_confetti}
+  <Confetti />
+{/if}
+```
+
+<label for="color-select">Color select <span>with form submission</span></label>
+
+```svelte example collapsible
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+  import { colors } from '$site/options'
+  import { ColorSnippet } from '$site'
+
+  let selected: string[] = $state([])
+</script>
+
+<form
+  onsubmit={(event) => {
+    event.preventDefault()
+    alert(`You selected '${selected.join(`, `)}'`)
+  }}
+>
+  <MultiSelect
+    id="color-select"
+    options={colors}
+    bind:selected
+    placeholder="Pick some colors..."
+    allowUserOptions="append"
+    required
+  >
+    {#snippet children({ idx, option })}
+      <ColorSnippet {idx} {option} />
+    {/snippet}
+  </MultiSelect>
+  <button>submit</button>
+  (due to passing <code>required={true}</code> here, form submission will abort if
+  Multiselect is empty)
+  <p>
+    Also sets
+    <code>allowUserOptions="append"</code> to allow adding custom colors.
+  </p>
+</form>
+```
+
+<label for="home-country">What country are you from? <span><code>minSelect=1</code> means no <code>x</code> button to remove the selected option</span></label>
+
+```svelte example collapsible
+<script lang="ts">
+  import MultiSelect from 'svelte-widgets'
+  import { countries } from '$site/options'
+
+  // required={1} means form validation will prevent submission if no option selected
+  let maxOptions: number = $state(10)
+</script>
+
+<MultiSelect
+  id="home-country"
+  options={countries}
+  required={1}
+  minSelect={1}
+  maxSelect={1}
+  {maxOptions}
+  selected={[`Canada`]}
+/>
+
+<label>
+  maxOptions <input type="range" min="1" max={30} bind:value={maxOptions} />
+  {maxOptions} <small>(leave undefined for no limit)</small>
+</label>
+```
+
 ## Mental model
 
 | Prop            | Purpose                                                | Value                                                                               |
@@ -1016,14 +1260,14 @@ This component also forwards these DOM events from the `<input>` node: `blur`, `
 The type of `options` is inferred automatically from the data you pass. E.g.
 
 ```ts
-const options = [
-   { label: `foo`, value: 42 }
-   { label: `bar`, value: 69 }
+const obj_options = [
+  { label: `foo`, value: 42 },
+  { label: `bar`, value: 69 },
 ]
 // type Option = { label: string, value: number }
-const options = [`foo`, `bar`]
+const str_options = [`foo`, `bar`]
 // type Option = string
-const options = [42, 69]
+const num_options = [42, 69]
 // type Option = number
 ```
 
@@ -1246,3 +1490,17 @@ The following `:global()` CSS selectors provide fine-grained control over every 
   /* the "Select All" option at the top of the dropdown */
 }
 ```
+
+<style>
+  label {
+    display: flex;
+    margin: 1em 0 1ex;
+    align-items: center;
+    gap: 5pt;
+    font-weight: normal;
+  }
+  label span {
+    font-weight: 100;
+    margin-left: 1em;
+  }
+</style>

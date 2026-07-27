@@ -1,6 +1,6 @@
 ## Hook up Multiselect to SvelteKit form action incl. form validation
 
-This example shows the SvelteKit form action way of handling MultiSelect fields in form submission events. If you're not interested in [progressively enhanced forms](https://kit.svelte.dev/docs/form-actions#progressive-enhancement) (i.e. supporting no-JS browsers) take a look at the [JS form example](form) instead.
+This example shows the SvelteKit form action way of handling MultiSelect fields in form submission events. If you're not interested in [progressively enhanced forms](https://svelte.dev/docs/kit/form-actions#progressive-enhancement) (i.e. supporting no-JS browsers) take a look at the [JS form example](form) instead.
 
 > This example only works when running the dev server locally because it needs
 > a server to respond to the form's POST request and this documentation site is only static
@@ -100,18 +100,20 @@ export const actions = {
     const data = await request.formData()
     let colors = data.get(`colors`)
 
+    // failure branches return an empty array so the client can always bind the
+    // result to MultiSelect's `selected` prop without type checks
     if (!colors || typeof colors !== `string`) {
-      return fail(400, { colors, error: `missing` })
+      return fail(400, { colors: [], error: `missing` })
     }
 
     try {
       colors = JSON.parse(colors)
     } catch (error) {
-      return fail(400, { colors, error: `json: ${String(error)}` })
+      return fail(400, { colors: [], error: `json: ${String(error)}` })
     }
 
     if (!Array.isArray(colors)) {
-      return fail(400, { colors, error: `array` })
+      return fail(400, { colors: [], error: `array` })
     }
     if (colors.length === 1 && colors[0] === `Red`) {
       return fail(400, { colors, error: `boring` })

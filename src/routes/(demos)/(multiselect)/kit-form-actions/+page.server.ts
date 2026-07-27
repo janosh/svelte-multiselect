@@ -10,21 +10,23 @@ export const _actions = {
     const data = await request.formData()
     let colors = data.get(`colors`)
 
+    // failure branches return an empty array so the client can always bind the
+    // result to MultiSelect's `selected` prop without type checks
     if (!colors || typeof colors !== `string`) {
-      return fail(400, { colors, error: `missing` })
+      return fail(400, { colors: [], error: `missing` })
     }
 
     try {
       colors = JSON.parse(colors)
     } catch (error) {
       return fail(400, {
-        colors,
+        colors: [],
         error: `json: ${String(error)}`,
       })
     }
 
     if (!Array.isArray(colors)) {
-      return fail(400, { colors, error: `array` })
+      return fail(400, { colors: [], error: `array` })
     }
     if (colors.length === 1 && colors[0] === `Red`) {
       return fail(400, { colors, error: `boring` })

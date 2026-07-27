@@ -639,3 +639,24 @@ test.describe(`schemeless-dark-page text-color readability`, () => {
     ).toBe(readable)
   })
 })
+
+// the /form demo previews the submitted FormData; spreading it into JSON.stringify()
+// silently dropped every field but the first (extra entries land in the replacer/space args)
+test(`form demo previews every submitted FormData field`, async ({ page }) => {
+  await page.goto(`/form`, { waitUntil: `networkidle` })
+
+  await page.locator(`form input[autocomplete]`).click()
+  for (const color of [`Red`, `Green`]) await page.click(`ul.options >> text=${color}`)
+  await page.keyboard.press(`Escape`) // dropdown would otherwise cover the submit button
+  await page.getByRole(`button`, { name: `Submit` }).click()
+
+  // the page also renders the example's source in a <pre>, so match on content
+  const json_preview = page.locator(`pre code`).filter({ hasText: /^\{"martian-flag"/u })
+  await expect(json_preview).toHaveCount(1)
+  expect(JSON.parse((await json_preview.textContent()) ?? ``)).toEqual({
+    'martian-flag': `["Red","Green"]`,
+  })
+  await expect(
+    page.locator(`pre code`).filter({ hasText: /^\["Red","Green"\]$/u }),
+  ).toHaveCount(1)
+})
