@@ -2,7 +2,7 @@
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import type { TooltipOptions } from './attachments'
-  import { click_outside, tooltip } from './attachments'
+  import { click_outside, focus_trap, tooltip } from './attachments'
   import Icon from './Icon.svelte'
   import type { NavRoute, NavRouteObject } from './types'
   import { chain_handlers, get_uuid } from './utils'
@@ -254,6 +254,14 @@
       (event: MouseEvent) => handle_link_click(event, route),
       link_props?.onclick,
     )
+  // Tabbing onto the toggle must not open the submenu: the toggle is also where focus
+  // lands when a dismissed submenu hands it back, which would reopen what the user
+  // just closed. Enter/Space/ArrowDown open it.
+  const dropdown_focusin_handler = (href: string) => (event: FocusEvent) => {
+    const { target } = event
+    if (target instanceof Element && target.closest(`[data-dropdown-toggle]`)) return
+    open_dropdown(href)
+  }
   const dropdown_item_keydown_handler = (parent_href: string) =>
     chain_handlers(
       (event: KeyboardEvent) => handle_dropdown_item_keydown(event, parent_href),
@@ -360,7 +368,7 @@
           data-href={parsed_route.href}
           onmouseenter={() => open_dropdown(parsed_route.href, true)}
           onmouseleave={() => schedule_hide(parsed_route.href, is_pinned)}
-          onfocusin={() => open_dropdown(parsed_route.href)}
+          onfocusin={dropdown_focusin_handler(parsed_route.href)}
           onfocusout={(event: FocusEvent) => {
             if (
               event.relatedTarget instanceof Node &&
@@ -429,6 +437,11 @@
                 return
               schedule_hide(parsed_route.href, is_pinned)
             }}
+            {@attach focus_trap({
+              enabled: is_pinned, // only a pinned submenu owns the keyboard
+              initial: false, // toggle_dropdown already picks the entry point
+              restore: dropdown_toggle(parsed_route.href) ?? false,
+            })}
           >
             {#each filtered_sub_routes as child_href (child_href)}
               {@const child_formatted = format_label(child_href, true)}

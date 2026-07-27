@@ -9,6 +9,14 @@ export function doc_query<T extends Element = HTMLElement>(selector: string): T 
   return node
 }
 
+// Shadows a prototype getter (navigator.userAgent, documentElement.clientWidth) with
+// an own value property. Returns the undo, which callers must register for teardown so
+// a failed assertion cannot leak the stub into later tests.
+export const stub_prop = (target: object, prop: string, value: unknown) => {
+  Object.defineProperty(target, prop, { value, configurable: true })
+  return () => Reflect.deleteProperty(target, prop)
+}
+
 export type Test2WayBindProps = MultiSelectProps & {
   onActiveIndexChanged?: (data: MultiSelectProps[`activeIndex`]) => unknown
   onActiveOptionChanged?: (data: MultiSelectProps[`activeOption`]) => unknown

@@ -8577,6 +8577,34 @@ test(`toggling portal.active at runtime portals and un-portals the dropdown`, as
   expect(back_inside.dataset.placement).toBeUndefined()
 })
 
+// The click_outside attachment receives `inside: [ul_options]`, which is undefined
+// until bind:this lands. Attachments re-run on reactive reads, so the portalled list
+// must count as inside once bound — otherwise pressing it would close the dropdown.
+test(`press on the portalled dropdown does not close it`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [1, 2, 3],
+    open: true,
+    portal: { active: true },
+  })
+  // unmount for real: clearing innerHTML would leave the document press listener
+  const app = mount(MultiSelect, { target: document.body, props })
+  await tick()
+
+  const portalled = doc_query<HTMLUListElement>(`body > ul.options`)
+  portalled.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+  await tick()
+  expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(true)
+
+  // control: a press with no relation to the component does close it
+  const outside = document.createElement(`div`)
+  document.body.append(outside)
+  outside.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+  await tick()
+  expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(false)
+  outside.remove()
+  await unmount(app)
+})
+
 test(`searchExpandsCollapsedGroups: manually collapsed group stays collapsed until the search changes`, async () => {
   mount(MultiSelect, {
     target: document.body,
