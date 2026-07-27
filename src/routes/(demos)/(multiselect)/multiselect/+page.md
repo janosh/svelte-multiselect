@@ -1,65 +1,47 @@
 <script lang="ts">
   import { resolve } from '$app/paths'
-  import { SubpageGrid } from '$lib'
+  import { slug_to_title, SubpageGrid } from '$lib'
+  import { demo_labels } from '../..'
+
+  // card titles and hrefs are derived from the slug so they can't drift from the nav
+  const descriptions: Record<string, string> = {
+    form: `Form integration and native validation behavior.`,
+    'kit-form-actions': `Progressively enhanced SvelteKit form actions.`,
+    persistent: `Persist selection across page reloads with sessionStorage.`,
+    events: `Event callbacks and payloads.`,
+    disabled: `Disabled options and disabled component states.`,
+    grouping: `Grouped options, sticky headers, and group actions.`,
+    'infinite-scroll': `Incremental loading with loadOptions.`,
+    'min-max-select': `Use maxSelect and required constraints.`,
+    'input-dropdown': `Single-select editable input with dropdown suggestions.`,
+    duplicates: `Handle duplicate labels and options.`,
+    'sort-selected': `Keep selected options sorted.`,
+    'range-select': `Select visible ranges with Shift-click and Shift+Arrow.`,
+    'keep-selected': `Keep selected items visible in dropdown.`,
+    'allow-user-options': `Create options from user input.`,
+    history: `Undo/redo and selection history behavior.`,
+    ui: `Core UI controls and visual states.`,
+    'css-classes': `Class-based styling hooks.`,
+    snippets: `Custom rendering with snippets.`,
+    'parse-labels-as-html': `Render option labels as HTML.`,
+    portal: `Portaled dropdown rendering and layering.`,
+  }
+  // resolve's arg type distributes over the Pathname union, so a slug built at runtime
+  // can't match a single arm; every demo route is param-free
+  const resolve_path = resolve as (path: string) => string
+  const subpages = Object.entries(descriptions).map(
+    ([slug, description]): [string, string, string] => [
+      demo_labels[`/${slug}`] ?? slug_to_title(slug),
+      resolve_path(`/${slug}`),
+      description,
+    ],
+  )
 </script>
 
 <SubpageGrid
 title="MultiSelect"
 subtitle="Keyboard-friendly, accessible multi-select with grouping, async loading, and deep styling hooks."
-subpages={[
-[`Form`, resolve(`/form`), `Form integration and native validation behavior.`],
-[
-`Form Actions`,
-resolve(`/kit-form-actions`),
-`Progressively enhanced SvelteKit form actions.`,
-],
-[
-`Persistent`,
-resolve(`/persistent`),
-`Persist selection across page reloads with sessionStorage.`,
-],
-[`Events`, resolve(`/events`), `Event callbacks and payloads.`],
-[`Disabled`, resolve(`/disabled`), `Disabled options and disabled component states.`],
-[
-`Grouping`,
-resolve(`/grouping`),
-`Grouped options, sticky headers, and group actions.`,
-],
-[
-`Infinite Scroll`,
-resolve(`/infinite-scroll`),
-`Incremental loading with loadOptions.`,
-],
-[
-`Min/Max Select`,
-resolve(`/min-max-select`),
-`Use maxSelect and required constraints.`,
-],
-[
-`Input Dropdown`,
-resolve(`/input-dropdown`),
-`Use a single-select editable input with dropdown suggestions.`,
-],
-[`Duplicates`, resolve(`/duplicates`), `Handle duplicate labels and options.`],
-[`Sort Selected`, resolve(`/sort-selected`), `Keep selected options sorted.`],
-[
-`Range Select`,
-resolve(`/range-select`),
-`Select visible ranges with Shift-click and Shift+Arrow.`,
-],
-[
-`Keep Selected`,
-resolve(`/keep-selected`),
-`Keep selected items visible in dropdown.`,
-],
-[`User Options`, resolve(`/allow-user-options`), `Create options from user input.`],
-[`History`, resolve(`/history`), `Undo/redo and selection history behavior.`],
-[`UI`, resolve(`/ui`), `Core UI controls and visual states.`],
-[`CSS Classes`, resolve(`/css-classes`), `Class-based styling hooks.`],
-[`Snippets`, resolve(`/snippets`), `Custom rendering with snippets.`],
-[`HTML Labels`, resolve(`/parse-labels-as-html`), `Render option labels as HTML.`],
-[`Portal`, resolve(`/portal`), `Portaled dropdown rendering and layering.`],
-]}
+{subpages}
 />
 
 ## Quick start

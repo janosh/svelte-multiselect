@@ -35,7 +35,7 @@ so the label can react to the state. Everything else spreads onto the wrapping `
     --toggle-background="forestgreen"
     --toggle-knob-width="4em"
   >
-    {#snippet children()}Telemetry (custom CSS vars){/snippet}
+    Telemetry (custom CSS vars)
   </Toggle>
 </div>
 ```
