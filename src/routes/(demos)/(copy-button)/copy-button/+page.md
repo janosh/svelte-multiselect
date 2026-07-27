@@ -1,8 +1,12 @@
 ## CopyButton
 
-One compact internal demo for `CopyButton`, kept outside the main demo navigation. It uses a
-single interactive example to cover ready/success/error states, disabled behavior, empty-content
-guard, and reset timing.
+Copy-to-clipboard button that cycles through `ready`, `success` and `error` states and
+resets itself after `reset_sec`. Bind `state` to observe it, or pass `labels` to swap the
+icon and tooltip per state. This docs site mounts one in `global` mode, which attaches a
+button to every code block.
+
+The example below covers all three states plus disabled behavior, the empty-content guard,
+and reset timing.
 
 ```svelte example
 <script lang="ts">

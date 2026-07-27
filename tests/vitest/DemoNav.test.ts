@@ -2,7 +2,7 @@
 import { DemoNav } from '$site'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
-import { routes } from '../../src/routes/(demos)'
+import { demo_labels, routes } from '../../src/routes/(demos)'
 
 const base = `/docs`
 vi.mock(`$app/paths`, () => ({
@@ -22,7 +22,15 @@ test(`DemoNav contains all base-prefixed demo pages`, () => {
   const expected = [`${base}/`, ...routes.map(({ route }) => `${base}${route}`)]
   // a broken glob would empty `routes` and make both sides trivially equal
   expect(expected).toEqual(
-    expect.arrayContaining([`${base}/basics`, `${base}/ui`, `${base}/range-select`]),
+    expect.arrayContaining([`${base}/multiselect`, `${base}/ui`, `${base}/range-select`]),
   )
   expect(new Set(hrefs)).toEqual(new Set(expected))
+
+  // Nav resolves custom labels from route.label for top-level items but from the href for
+  // dropdown children, so a group label taken from the wrong source silently regresses to
+  // slug casing (`Multiselect`, `Command Menu`)
+  const link_text = new Set(
+    Array.from(document.querySelectorAll(`nav a`), (link) => link.textContent?.trim()),
+  )
+  for (const label of Object.values(demo_labels)) expect(link_text).toContain(label)
 })

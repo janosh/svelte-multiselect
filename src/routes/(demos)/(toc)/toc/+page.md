@@ -29,7 +29,7 @@ document with `headingSelector`, so it lists those headings rather than the page
     headingSelector=".toc-demo-doc h3"
     breakpoint={0}
     title="On this page"
-    style="position: static; width: 14em"
+    asideProps={{ style: `position: static; width: 14em` }}
   />
 </div>
 ```

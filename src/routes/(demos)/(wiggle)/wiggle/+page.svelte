@@ -11,6 +11,16 @@
   let damping = $state(0.1)
 </script>
 
+<h2>Wiggle</h2>
+
+<p>
+  Wraps its children in a spring-animated wrapper that shakes once whenever <code
+    >wiggle</code
+  >
+  flips to <code>true</code> and resets itself when the spring settles. Bind
+  <code>wiggle</code> to trigger it from anywhere. Drag the sliders to tune the motion.
+</p>
+
 <button type="button" class="demo" onclick={() => (wiggle = true)}>
   <Wiggle
     bind:wiggle

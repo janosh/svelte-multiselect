@@ -12,7 +12,7 @@
   import type { Snippet } from 'svelte'
   // eslint-disable-next-line import/no-unassigned-import -- global route styles
   import '../app.css'
-  import { routes } from './(demos)'
+  import { demo_labels, routes } from './(demos)'
 
   let { children }: { children?: Snippet<[]> } = $props()
   let toc_desktop = $state(true)
@@ -31,7 +31,8 @@
       .split(`/`)
       .findLast(Boolean)
       ?.replace(/\.html$/, ``)
-    return is_home || !route_slug ? `Svelte MultiSelect` : slug_to_title(route_slug)
+    if (is_home || !route_slug) return `Svelte Widgets`
+    return demo_labels[`/${route_slug}`] ?? slug_to_title(route_slug)
   })
 
   afterNavigate(() => (page_search_query = ``))
@@ -57,7 +58,7 @@
 
 {#if !is_home}
   <h1>
-    <img src={favicon} alt={name} height="50" width="50" />&ensp;Svelte MultiSelect
+    <img src={favicon} alt={name} height="50" width="50" />&ensp;Svelte Widgets
   </h1>
   <DemoNav --nav-item-padding="1pt 4pt" />
 {/if}
@@ -89,22 +90,21 @@
   {@render children?.()}
 </div>
 
-{#if is_home}
-  <Toc
-    headingSelector="main > :where(h2, h3)"
-    breakpoint={1500}
-    bind:desktop={toc_desktop}
-    asideProps={{
-      style: toc_desktop
-        ? `position: fixed; right: 2em; font-size: 0.7rem; max-width: 17rem;`
-        : ``,
-    }}
-    openButtonProps={{ style: `display: flex; padding: 3px;` }}
-    --toc-mobile-bg="light-dark(#fff, #222226)"
-    --toc-padding="1em 0 1em 1em"
-    --toc-active-color="var(--accent)"
-  />
-{/if}
+<Toc
+  headingSelector="main > :where(h2, h3)"
+  breakpoint={1500}
+  minItems={5}
+  bind:desktop={toc_desktop}
+  asideProps={{
+    style: toc_desktop
+      ? `position: fixed; right: 2em; font-size: 0.7rem; max-width: 17rem;`
+      : ``,
+  }}
+  openButtonProps={{ style: `display: flex; padding: 3px;` }}
+  --toc-mobile-bg="light-dark(#fff, #222226)"
+  --toc-padding="1em 0 1em 1em"
+  --toc-active-color="var(--accent)"
+/>
 
 <Footer />
 

@@ -4,7 +4,7 @@
   import type { Pathname } from '$app/types'
   import { Nav, ThemeToggle } from '$lib'
   import type { ComponentProps } from 'svelte'
-  import { demo_nav_routes } from '../routes/(demos)'
+  import { demo_labels, demo_nav_routes } from '../routes/(demos)'
 
   let props: Partial<ComponentProps<typeof Nav>> = $props()
 
@@ -15,7 +15,8 @@
       : {
           ...route,
           href: resolve_path(route.href),
-          children: route.children.map(resolve_path),
+          // single-page groups carry no children, see routes/(demos)/index.ts
+          ...(route.children && { children: route.children.map(resolve_path) }),
         },
   )
 
@@ -30,17 +31,12 @@
   menu_props={{ style: `gap: 10pt` }}
   labels={{
     [resolve_path(`/`)]: `Home`,
-    [resolve_path(`/ui`)]: `UI`,
-    [resolve_path(`/css-classes`)]: `CSS Classes`,
-    [resolve_path(`/kit-form-actions`)]: `Form Actions`,
-    [resolve_path(`/command-menu`)]: `CommandMenu`,
-    [resolve_path(`/min-max-select`)]: `Min/Max`,
-    [resolve_path(`/input-dropdown`)]: `Input Dropdown`,
-    [resolve_path(`/allow-user-options`)]: `User Options`,
-    [resolve_path(`/sort-selected`)]: `Sort Selected`,
-    [resolve_path(`/keep-selected`)]: `Keep Selected`,
-    [resolve_path(`/parse-labels-as-html`)]: `HTML Labels`,
-    [resolve_path(`/infinite-scroll`)]: `Infinite Scroll`,
+    ...Object.fromEntries(
+      Object.entries(demo_labels).map(([route, label]) => [
+        resolve_path(route as Pathname),
+        label,
+      ]),
+    ),
     ...(props.labels ?? {}),
   }}
 >

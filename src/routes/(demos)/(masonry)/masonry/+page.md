@@ -54,3 +54,8 @@ few hundred items, where the DOM node count starts to cost more than the measuri
 ```svelte
 <Masonry {items} virtualize height={600} overscan={5} />
 ```
+
+Two things change while virtualizing, because off-screen items are never measured:
+`order` is forced to `row-first`, and the FLIP animation is switched off. Scroll position
+is driven entirely by `getEstimatedHeight` (default 150px), so the closer that is to your
+real item heights, the better the scrollbar behaves.
