@@ -14,9 +14,17 @@
 - Ignore modifier-free `CommandMenu` hotkeys while focus sits in a text field [`#430`](https://github.com/janosh/svelte-widgets/pull/430)
 - Fix the dropdown portal refusing to activate inside a shadow root and throwing `NotFoundError` on teardown [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
 - Validate `OptionStyle` objects even when no style key is passed [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
+- Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control replacing six hand-rolled copies across five repos), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed`
+- Add `portal`, `contrast_color` and `forward_window_keydown` attachments, bringing the total to thirteen
+- Add headless modules behind their own subpaths: `svelte-widgets/toast-queue`, `/dialogs`, `/fullscreen`, `/clipboard`, `/print`, `/file-drop` and `/text-search`, the last matching across inline markup where `highlight_matches` walks text nodes one at a time
+- Add shortcut rebinding for "customize shortcuts" UIs: `event_to_combo`, `normalize_combo` and `sanitize_shortcut_overrides` turn a keydown into a canonical combo and resolve collisions
+- Add sections to `ContextMenu`: `actions` accepts `CmdSection` entries rendered as an ARIA `group` of `menuitemradio` items with a selected value per section
+- Add a `create_highlighter(grammars)` factory and a `svelte-widgets/live-examples/create-highlighter` subpath, so consumers can pick their own grammars without the barrel's eager top-level await of 34 grammars
+- Add nine icons: `Changelog`, `Contact`, `DragIndicator`, `Fullscreen`, `FullscreenExit`, `Issues`, `Reset`, `RSS` and `Settings`
+- Fix `parse_shortcut` never resolving the `mod` token, which made `matches_shortcut(event, 'mod+z')` match a bare `z` with no modifier held. Only `run_hotkeys` was unaffected, since it pre-resolved at the call site. This also makes `space` matchable for the first time
 - Add a `svelte-widgets/types` subpath export [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
 - Strengthen tests that could not fail across the vitest suite [`79625e0`](https://github.com/janosh/svelte-widgets/commit/79625e0)
-- **Breaking:** Rename the package from `svelte-multiselect` to `svelte-widgets`, restarting versioning at v1.0.0. `MultiSelect` is now one of 19 components, so imports become `svelte-widgets` and subpaths like `svelte-widgets/attachments`. Everything below v1.0.0 in this changelog was released as `svelte-multiselect`
+- **Breaking:** Rename the package from `svelte-multiselect` to `svelte-widgets`, restarting versioning at v1.0.0. `MultiSelect` is now one of 27 components, so imports become `svelte-widgets` and subpaths like `svelte-widgets/attachments`. Everything below v1.0.0 in this changelog was released as `svelte-multiselect`
 - **Breaking:** Deprecate `svelte-toc` and `svelte-bricks`. Replace `import Toc from 'svelte-toc'` with `import { Toc } from 'svelte-widgets'` and `import Masonry from 'svelte-bricks'` with `import { Masonry } from 'svelte-widgets'`. Their console warnings now name the component (`Toc received invalid …`, `Masonry: …`) rather than the old package
 - **Breaking:** Rename `CmdPalette` to `CommandMenu` and `PagefindPalette` to `PageSearch`. The old names are removed [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
 - **Breaking:** `click_outside` dismisses on `pointerdown` rather than `click`, `exclude`/`include` merge into `inside`, `trigger` becomes `dismiss_on: press | release`, the `outside-click` event becomes `dismiss`, and `callback` gains a `{ focus_inside, via, event }` detail [`#431`](https://github.com/janosh/svelte-widgets/pull/431)
@@ -242,7 +250,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 24 October 2024
 
-- update `MultiSelect.svelte` for Svelte5 compatibility [`#293`](https://github.com/janosh/svelte-widgets/pull/293)
+- update `MultiSelect.svelte` for Svelte 5 compatibility [`#293`](https://github.com/janosh/svelte-widgets/pull/293)
 
 ## [v10.3.0](https://github.com/janosh/svelte-widgets/compare/v10.2.0...v10.3.0)
 
