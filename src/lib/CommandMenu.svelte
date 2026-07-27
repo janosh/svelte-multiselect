@@ -148,7 +148,7 @@
         .filter((recent_id) => current_ids.has(recent_id))
         .map((action_id, idx) => [action_id, idx]),
     )
-    return [...actions].toSorted(
+    return actions.toSorted(
       (left_action, right_action) =>
         (rank.get(get_action_id(left_action)) ?? actions.length) -
         (rank.get(get_action_id(right_action)) ?? actions.length),
@@ -210,6 +210,8 @@
     if (!close_keys.includes(`Escape`)) event.preventDefault()
     dialog_props?.oncancel?.(event)
   }
+
+  const run_toggle_hotkeys = (event: KeyboardEvent) => run_hotkeys(event, toggle_bindings)
 
   function handle_window_keydown(event: KeyboardEvent) {
     // a close key still lands after another handler already called preventDefault
@@ -297,10 +299,7 @@
       {placeholder}
       key={get_action_key}
       onadd={trigger_action_and_close}
-      onkeydown={(event) => {
-        run_hotkeys(event, toggle_bindings)
-        onkeydown?.(event)
-      }}
+      onkeydown={chain_handlers(run_toggle_hotkeys, onkeydown)}
       option={option_snippet ?? (has_action_meta ? action_item : undefined)}
       --sms-bg="var(--sms-options-bg)"
       --sms-width="var(--cmd-width, min(38rem, 90vw))"

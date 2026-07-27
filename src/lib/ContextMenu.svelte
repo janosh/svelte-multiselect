@@ -57,9 +57,12 @@
     const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>(selector)]
     if (items.length === 0) return
     event.preventDefault()
-    // focus outside the list enters at the first item, whichever key got us here
+    // With focus outside the list the steppers already land where the key implies:
+    // ArrowDown and Home on the first item, End on the last. Only ArrowUp needs nudging,
+    // since stepping back from -1 would stop one short of the end.
     const idx = items.findIndex((menu_item) => menu_item === document.activeElement)
-    items[idx === -1 ? 0 : step(idx, items.length)]?.focus()
+    const from = idx === -1 && event.key === `ArrowUp` ? 0 : idx
+    items[step(from, items.length)]?.focus()
   }
 </script>
 

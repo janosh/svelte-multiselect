@@ -4,7 +4,7 @@
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
 
   const fruits: string[] = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
   let selected: string[] = $state([])
@@ -40,7 +40,7 @@
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
   import type { ObjectOption } from '$lib/types'
 
   interface Country extends ObjectOption {
@@ -73,7 +73,7 @@
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
 
   const initial_tags: string[] = ['JavaScript', 'Svelte', 'TypeScript']
   let selected: string[] = $state([])
@@ -95,7 +95,7 @@
 
 ```svelte example collapsible
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
@@ -120,7 +120,7 @@ selected = {JSON.stringify(selected) || `[]`}
 
 ```svelte example collapsible
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
   import type { ObjectOption } from '$lib/types'
   import { ml_libs } from '$site/options'
 
@@ -155,7 +155,7 @@ value = {JSON.stringify(value) || `null`}
 
 ```svelte example collapsible
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
   import type { ObjectOption } from '$lib/types'
   import { frontend_libs } from '$site/options'
   import { Confetti, RepoSnippet } from '$site'
@@ -197,7 +197,7 @@ value = {JSON.stringify(value) || `null`}
 
 ```svelte example collapsible
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
   import { colors } from '$site/options'
   import { ColorSnippet } from '$site'
 
@@ -236,7 +236,7 @@ value = {JSON.stringify(value) || `null`}
 
 ```svelte example collapsible
 <script lang="ts">
-  import MultiSelect from 'svelte-multiselect'
+  import MultiSelect from 'svelte-widgets'
   import { countries } from '$site/options'
 
   // required={1} means form validation will prevent submission if no option selected

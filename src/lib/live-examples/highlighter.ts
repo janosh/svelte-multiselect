@@ -5,7 +5,7 @@ type StarryNight = {
   highlight: (value: string, scope: string) => HastNode
 }
 
-const optional_peer_error = `svelte-multiselect/live-examples requires optional peer dependency @wooorm/starry-night`
+const optional_peer_error = `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`
 
 async function create_starry_night(): Promise<StarryNight> {
   try {

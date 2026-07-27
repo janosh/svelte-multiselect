@@ -30,10 +30,6 @@ export default {
     setupFiles: [`tests/vitest/setup.ts`],
   },
 
-  optimizeDeps: {
-    exclude: [`svelte-toc`],
-  },
-
   resolve: {
     conditions: process.env.TEST ? [`browser`] : undefined,
   },

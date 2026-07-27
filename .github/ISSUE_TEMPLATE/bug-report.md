@@ -10,7 +10,7 @@ A concise description of what's going wrong.
 
 Start from any of these templates and paste the link of your finished repro into this issue.
 
-[![Playground](https://img.shields.io/badge/Svelte-Playground-blue?label=Svelte)](https://svelte.dev/playground/a5a14b8f15d64cb083b567292480db05) [![Open in StackBlitz](https://img.shields.io/badge/StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-multiselect)
+[![Playground](https://img.shields.io/badge/Svelte-Playground-blue?label=Svelte)](https://svelte.dev/playground/a5a14b8f15d64cb083b567292480db05) [![Open in StackBlitz](https://img.shields.io/badge/StackBlitz-darkblue?logo=stackblitz)](https://stackblitz.com/github/janosh/svelte-widgets)
 
 Steps to reproduce the problem:
 

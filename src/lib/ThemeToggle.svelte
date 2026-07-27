@@ -85,7 +85,7 @@
     <Icon
       icon={mode_icons[theme_mode]}
       {...icon_props}
-      style="transform: scale(1.5); {icon_props?.style ?? ``}"
+      style="transform: scale(1.5); {icon_props.style ?? ``}"
     />
   {/if}
 </button>

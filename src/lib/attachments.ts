@@ -1314,12 +1314,9 @@ export const float =
         node.getBoundingClientRect(),
         position_options,
       )
-      const [scroll_x, scroll_y] =
-        strategy === `absolute` ? [globalThis.scrollX, globalThis.scrollY] : [0, 0]
-      Object.assign(node.style, {
-        left: `${left + scroll_x}px`,
-        top: `${top + scroll_y}px`,
-      })
+      const add_page_scroll = strategy === `absolute`
+      node.style.left = `${left + (add_page_scroll ? globalThis.scrollX : 0)}px`
+      node.style.top = `${top + (add_page_scroll ? globalThis.scrollY : 0)}px`
       node.dataset.placement = placement
     }
 
@@ -1393,10 +1390,15 @@ export const tabbable_selector = [
   `[tabindex]`,
 ].join(`,`)
 
+// tabbable_selector matches SVG too (an <a href> inside an <svg> is focusable), and only
+// these two have focus(), so this is the narrowing every candidate has to pass
+const is_focusable = (element: unknown): element is HTMLElement | SVGElement =>
+  element instanceof HTMLElement || element instanceof SVGElement
+
 // Visibility read from computed style rather than measured boxes: test DOMs skip
 // layout, so getClientRects would report every candidate as hidden and empty the trap.
 const is_tabbable = (element: Element): boolean => {
-  if (!(element instanceof HTMLElement) && !(element instanceof SVGElement)) return false
+  if (!is_focusable(element)) return false
   if (element.closest(`[inert],[hidden],[disabled]`)) return false
   if (Number(element.getAttribute(`tabindex`) ?? 0) < 0) return false
   const style = getComputedStyle(element)
@@ -1405,9 +1407,8 @@ const is_tabbable = (element: Element): boolean => {
 
 const register_trap_layer = key_layer_stack((event) => event.key === `Tab`)
 
-// Element has no focus(), so narrow to the two that do
 const focus_element = (element: Element | null | undefined) => {
-  if (element instanceof HTMLElement || element instanceof SVGElement) element.focus()
+  if (is_focusable(element)) element.focus()
 }
 
 // Keep Tab inside a surface and hand focus back when it closes. Pair with
@@ -1421,9 +1422,11 @@ export const focus_trap =
 
     const containers = [node, ...include.filter((el) => el instanceof Element)]
     // Recollected per keystroke: menus grow, filter and disable items while open
-    const tabbables = (): HTMLElement[] =>
+    const tabbables = (): (HTMLElement | SVGElement)[] =>
       containers.flatMap((parent) =>
-        [...parent.querySelectorAll<HTMLElement>(tabbable_selector)].filter(is_tabbable),
+        [...parent.querySelectorAll(tabbable_selector)]
+          .filter(is_focusable)
+          .filter(is_tabbable),
       )
     const holds_focus = () =>
       containers.some((container) => container.contains(document.activeElement))
@@ -1453,8 +1456,10 @@ export const focus_trap =
       event.preventDefault() // even with nothing to focus, Tab must not leave
       if (items.length === 0) return
       const step = event.shiftKey ? -1 : 1
+      // findIndex over indexOf so an SVG focusable still matches: tabbable_selector
+      // admits them and they are not HTMLElement, which indexOf's typing would demand
       const active = document.activeElement
-      const idx = active instanceof HTMLElement ? items.indexOf(active) : -1
+      const idx = items.findIndex((item) => item === active)
       // Focus on the container itself rather than an item enters at the edge Tab
       // would have reached first
       const edge = event.shiftKey ? items.at(-1) : items[0]
