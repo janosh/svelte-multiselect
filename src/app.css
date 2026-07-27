@@ -12,8 +12,8 @@
   --text: light-dark(#222, #ccc);
   --text-muted: light-dark(#666, #999);
   --surface: light-dark(#fff, rgba(255, 255, 255, 0.05));
-  /* a step darker than --bg so the footer reads as its own band. Deliberately neutral
-     (equal channels): any blue here fights the cornflower --accent sitting on top. */
+  /* a step darker than --bg so the footer reads as its own band, and neutral (equal
+     channels) so it does not fight the cornflower --accent sitting on top */
   --footer-bg: light-dark(#ebebeb, #0b0b0b);
   --border: light-dark(#ddd, rgba(255, 255, 255, 0.15));
   --pre-bg: light-dark(rgba(0, 0, 20, 0.03), rgba(0, 0, 0, 0.3));
@@ -62,15 +62,13 @@ main {
   max-width: var(--main-max-width);
   margin: 0 auto 3em;
 }
-/* Links */
 a {
   color: var(--accent);
   text-decoration: none;
+  &:hover {
+    color: var(--accent-hover);
+  }
 }
-a:hover {
-  color: var(--accent-hover);
-}
-/* Buttons */
 button {
   color: inherit;
   background: var(--surface);
@@ -78,11 +76,10 @@ button {
   border-radius: 3pt;
   padding: 0.25em 0.5em;
   cursor: pointer;
+  &:hover {
+    background: light-dark(#eee, rgba(255, 255, 255, 0.15));
+  }
 }
-button:hover {
-  background: light-dark(#eee, rgba(255, 255, 255, 0.15));
-}
-/* Code */
 code {
   padding: 0.1em 0.3em;
   border-radius: 3pt;
@@ -94,13 +91,13 @@ pre {
   padding: 1ex 1em;
   border-radius: 5pt;
   background: var(--pre-bg);
-}
-pre code {
-  display: block;
-  overflow-x: auto;
-  background: transparent;
-  padding: 0;
-  font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
+  code {
+    display: block;
+    overflow-x: auto;
+    background: transparent;
+    padding: 0;
+    font-size: clamp(0.75rem, 0.7rem + 0.3vw, 0.875rem);
+  }
 }
 /* Typography */
 h1 {
@@ -113,26 +110,23 @@ h1 {
 }
 :is(h2, h3, h4, h5, h6) {
   scroll-margin-top: 60px;
+  &:target {
+    color: var(--accent); /* highlight on fragment navigation */
+  }
+  /* anchor links from the heading_anchors attachment, revealed on hover */
+  a[aria-hidden='true'] {
+    margin-left: 0.5em;
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  &:hover a[aria-hidden='true'] {
+    opacity: 1;
+  }
 }
-/* Highlight heading on fragment navigation */
-:is(h2, h3, h4, h5, h6):target {
-  color: var(--accent);
-}
-/* Heading anchor links (heading_anchors attachment) */
-:is(h2, h3, h4, h5, h6) a[aria-hidden='true'] {
-  margin-left: 0.5em;
-  opacity: 0;
-  transition: opacity 0.2s;
-}
-:is(h2, h3, h4, h5, h6):hover a[aria-hidden='true'] {
-  opacity: 1;
-}
-/* Labels */
 label {
   font-weight: 600;
   cursor: pointer;
 }
-/* Tables */
 table {
   border-collapse: collapse;
   width: 100%;
@@ -145,18 +139,17 @@ table {
 tbody tr:nth-child(odd) {
   background: var(--surface);
 }
-/* Blockquotes */
 blockquote {
   margin: 1em 0;
   padding: 0.5em 1em;
   border-left: 3px solid var(--accent);
   background: var(--surface);
-}
-blockquote > :first-child {
-  margin-top: 0;
-}
-blockquote > :last-child {
-  margin-bottom: 0;
+  > :first-child {
+    margin-top: 0;
+  }
+  > :last-child {
+    margin-bottom: 0;
+  }
 }
 /* Form validation */
 div.multiselect.invalid {
