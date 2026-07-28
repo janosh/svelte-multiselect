@@ -39,7 +39,8 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 {#if form_data}
   Received form data:
   <pre><code>{JSON.stringify(Object.fromEntries(form_data))}</code></pre>
-  Raw value of<code>form_data.get(name)</code>:
+  Raw value of
+  <code>form_data.get(name)</code>:
   <pre><code>{form_data.get(name)}</code></pre>
 {/if}
 

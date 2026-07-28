@@ -130,6 +130,7 @@ Favorite Frontend Tools?
 
 <MultiSelect
   bind:selected
+  id="skills"
   options={initial_tags}
   allowUserOptions="append"
   placeholder="Type to add skills..."

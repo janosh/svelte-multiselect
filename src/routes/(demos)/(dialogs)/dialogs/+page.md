@@ -18,8 +18,8 @@ Two details carry their weight:
 - **`dismiss_id` decides what Escape means.** A dismissal resolves with that id, never with
   the accented choice, so a stray keypress is never read as consent.
 
-Choices are arbitrary in number. `ask_confirm(message, title)` is the two-button shorthand
-and resolves to a boolean.
+Choices are arbitrary in number. `ask_confirm(message, title, confirm_label = 'OK')` is the
+two-button shorthand and resolves to a boolean.
 
 ```svelte example id="confirm-dialog-demo"
 <script lang="ts">
