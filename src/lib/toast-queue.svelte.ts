@@ -428,6 +428,11 @@ export class ToastStore<Priority extends string = ToastPriority> {
   get priorities(): readonly Priority[] {
     return this.#queue.priorities
   }
+  // The rungs that stay up until dismissed, so `<Toast assertive={...} />` can be pointed
+  // at them: a toast held on screen while announced politely defeats both rules
+  get sticky_priorities(): readonly Priority[] {
+    return this.#sticky_priorities
+  }
   // Everything the queue is holding, visible one first
   get items(): readonly ToastItem<Priority>[] {
     const { active, pending } = this.#queue
@@ -534,4 +539,10 @@ export class ToastStore<Priority extends string = ToastPriority> {
 
 // Default store, so `toast.show(...)` works from anywhere without threading an instance
 // through props. Pass your own to <Toast store={...} /> when a page needs its own queue.
+//
+// Client-only. Importing it is inert — nothing is queued and no timer runs until a toast
+// is shown — but module scope on a server is per-process, not per-request, so a toast
+// shown during SSR would render into other users' responses and count down against a
+// queue they share. Show toasts from event handlers or onMount, or give the server
+// request its own `new ToastStore()`.
 export const toast = new ToastStore()

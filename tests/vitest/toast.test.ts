@@ -453,6 +453,9 @@ describe(`ToastStore`, () => {
   test(`destroy drops the queue and its timer but keeps the ladder and ids`, () => {
     fake_clock()
     const store = new ToastStore({ priorities: hive_ladder })
+    // construction stays inert, which is what makes the module-scoped `toast` safe to
+    // import during SSR: nothing is scheduled until something is shown
+    expect(vi.getTimerCount()).toBe(0)
     const stale_id = store.show(`a`)
     store.destroy()
 
@@ -533,6 +536,21 @@ describe(`<Toast />`, () => {
     expect(polite().textContent).not.toContain(`watching src/`)
   })
 
+  test(`a custom sticky_priorities decides urgency too`, async () => {
+    // `action` is sticky here but not one of the ladder's top two, so the two rules only
+    // agree if urgency reads the store's sticky set rather than recomputing slice(-2)
+    const store = new ToastStore({
+      priorities: hive_ladder,
+      sticky_priorities: [`action`],
+    })
+    mounted.push(mount(Toast, { target: document.body, props: { store } }))
+    store.show(`rebase needed`, { priority: `action` })
+    await tick()
+
+    expect(assertive().textContent).toContain(`rebase needed`)
+    expect(polite().textContent).not.toContain(`rebase needed`)
+  })
+
   test(`the waiting count is rendered with a spelled-out label`, async () => {
     const store = render()
     store.show(`a`)
@@ -607,13 +625,27 @@ describe(`<Toast />`, () => {
     },
   )
 
-  test(`consumer attributes survive alongside the component's own`, () => {
-    render({ class: `mine`, id: `notifications` })
+  test(`consumer attributes survive alongside the component's own`, async () => {
+    fake_clock()
+    const onpointerenter = vi.fn()
+    // Svelte 5 accepts objects and arrays here; interpolating `class` into a string
+    // instead of merging the ClassValue flattens this one to `[object Object]`
+    const consumer_class = [`mine`, { flagged: true }]
+    const store = render({ class: consumer_class, id: `notifications`, onpointerenter })
 
     const stack = doc_query(`.toast-stack`)
     expect(stack.id).toBe(`notifications`)
-    expect(stack.classList.contains(`mine`)).toBe(true)
-    expect(stack.classList.contains(`toast-stack`)).toBe(true)
+    const classes = [...stack.classList].filter((name) => !name.startsWith(`svelte-`))
+    expect(classes.toSorted()).toEqual([`flagged`, `mine`, `toast-stack`])
+
+    // the spread lands before our own pointer handlers, so without chaining theirs is
+    // dropped — and ours must still pause the countdown
+    store.show(`a`, { duration_ms: 1000 })
+    await tick()
+    stack.dispatchEvent(new PointerEvent(`pointerenter`))
+    expect(onpointerenter).toHaveBeenCalledOnce()
+    vi.advanceTimersByTime(5000)
+    expect(store.active?.message).toBe(`a`)
   })
 
   // Both suspensions bank the unspent remainder rather than restarting the clock, and
@@ -701,16 +733,19 @@ describe(`<Toast />`, () => {
   })
 
   // every route out of the toast unmounts the button holding focus, so each one has to
-  // hand the user's place back rather than dropping focus on <body>
-  test.each([
+  // hand the user's place back rather than dropping it on <body> — unless the user got
+  // there first, when reclaiming the origin would yank them out of where they went
+  test.each<[string, (store: ToastStore) => void, boolean?]>([
     [`the action button`, () => doc_query<HTMLButtonElement>(`.toast-action`).click()],
     [`the dismiss button`, () => doc_query<HTMLButtonElement>(`.toast-dismiss`).click()],
     [`Escape`, () => doc_query(`.toast-dismiss`).dispatchEvent(escape_key())],
     // no click to hang the restore off: the queue empties from under the toast
     [`a store-driven clear`, (store: ToastStore) => store.clear()],
-  ])(`%s hands focus back to where the hotkey took it from`, async (_label, close) => {
+    [`a clear after the user tabbed away`, (store: ToastStore) => store.clear(), true],
+  ])(`%s leaves focus where the user expects it`, async (_label, close, moved_on) => {
     const opener = document.createElement(`button`)
-    document.body.append(opener)
+    const elsewhere = document.createElement(`button`)
+    document.body.append(opener, elsewhere)
     const store = render()
     store.show(`a`, { action: { label: `Undo` } })
     await tick()
@@ -718,27 +753,38 @@ describe(`<Toast />`, () => {
     opener.focus()
     press_focus_hotkey()
     expect(document.activeElement).not.toBe(opener)
+    if (moved_on) elsewhere.focus()
 
     close(store)
     await tick()
     await tick() // restore_focus waits a tick for the toast to leave the DOM
 
     expect(store.active).toBeNull()
-    expect(document.activeElement).toBe(opener)
+    expect(document.activeElement).toBe(moved_on ? elsewhere : opener)
     opener.remove()
+    elsewhere.remove()
   })
 
-  test(`Escape dismisses only once the keyboard is inside the toast`, async () => {
-    const store = render()
-    store.show(`a`)
-    await tick()
+  // Escape is scoped to the stack, so a press anywhere else on the page is none of the
+  // toast's business, and gated on `dismissible` — with no close button rendered it
+  // would otherwise be the one way left to shut a toast declared undismissable.
+  test.each([
+    [true, undefined],
+    [false, `a`],
+  ] as const)(
+    `Escape inside the toast dismisses when dismissible=%s`,
+    async (dismissible, left_on_screen) => {
+      const store = render({ dismissible })
+      store.show(`a`)
+      await tick()
 
-    document.body.dispatchEvent(escape_key())
-    await tick()
-    expect(store.active?.message).toBe(`a`)
+      document.body.dispatchEvent(escape_key())
+      await tick()
+      expect(store.active?.message).toBe(`a`)
 
-    doc_query(`.toast-dismiss`).dispatchEvent(escape_key())
-    await tick()
-    expect(store.active).toBeNull()
-  })
+      doc_query(`.toast`).dispatchEvent(escape_key())
+      await tick()
+      expect(store.active?.message).toBe(left_on_screen)
+    },
+  )
 })

@@ -4,6 +4,7 @@
   import { hotkey } from './attachments'
   import { toast as default_store } from './toast-queue.svelte.ts'
   import type { ToastItem, ToastPosition, ToastStore } from './toast-queue.svelte.ts'
+  import { chain_handlers } from './utils'
 
   // Priorities are widened to `string` throughout: the component renders whatever
   // ladder its store was built with and never ranks anything itself.
@@ -17,7 +18,7 @@
     // toast lives at the end of the DOM and Tab may be a long way from it. `null` opts out.
     focus_hotkey?: string | string[] | null
     // Rendered into the assertive live region, interrupting whatever is being read.
-    // Defaults to the ladder's top two, the same rungs stickiness holds open.
+    // Defaults to the store's sticky priorities, so urgency tracks what stays on screen.
     assertive?: readonly string[]
     dismiss_label?: string
     children?: Snippet<[ToastItem<string>]>
@@ -42,20 +43,21 @@
   let focused = $state(false)
 
   const active = $derived(store.active)
-  // hardcoding the original five here let a custom ladder's top rung stay on screen until
-  // dismissed while being announced politely, so the two rules read from one source
-  const assertive_priorities = $derived(assertive ?? store.priorities.slice(-2))
+  // read off the store's own sticky set, not a second copy of its top-two rule: a toast
+  // held on screen until dismissed has to interrupt, or it can sit there unread. Deriving
+  // it here let a custom sticky_priorities be announced politely while never leaving.
+  const assertive_priorities = $derived(assertive ?? store.sticky_priorities)
   const is_assertive = $derived(
     active !== null && assertive_priorities.includes(active.priority),
   )
 
-  const sync_pause = () => {
-    if (hovered || focused) store.pause()
-    else store.resume()
-  }
-  // pause_on_hover gates entering only: a hover that got through still clears on leave
+  // `hovered` records where the pointer is; pause_on_hover is policy applied on top, so
+  // flipping the prop over an already-hovered stack takes effect without a fresh enter
+  const should_pause = $derived((hovered && pause_on_hover) || focused)
+  // Called straight from the handlers, not left to the effect below: an effect flushes a
+  // microtask later, and a toast whose timer expires in between is already gone.
+  const sync_pause = () => (should_pause ? store.pause() : store.resume())
   const set_hovered = (value: boolean) => {
-    if (value && !pause_on_hover) return
     hovered = value
     sync_pause()
   }
@@ -63,15 +65,16 @@
     focused = value
     sync_pause()
   }
-  // A toast promoted while the pointer or keyboard is still on the stack has no enter
-  // event to pause it, so it would start counting down under a reader who never left.
+  // Covers what the handlers cannot: a toast promoted under a pointer that never left has
+  // no enter event, and flipping pause_on_hover fires none at all. pause()/resume() both
+  // early-return when there is nothing to do, so the queue change they cause settles.
   $effect(() => {
-    if (active && (hovered || focused)) untrack(() => store.pause())
+    void should_pause // pinned as a dependency, so a bare prop flip re-runs this too
+    if (active) untrack(sync_pause)
   })
 
-  // Where the keyboard was before focus_hotkey pulled it into the toast. Removing the
-  // toast unmounts the button holding focus, which would otherwise drop it on <body>
-  // and lose the user's place on the page.
+  // Where the keyboard was before focus_hotkey pulled it in: removing the toast unmounts
+  // the button holding focus, which would otherwise drop it on <body>.
   let focus_origin: HTMLElement | null = null
 
   const focus_toast = () => {
@@ -90,7 +93,10 @@
     focus_origin = null
     if (!origin) return
     await tick() // the toast that had focus is gone only after the DOM catches up
-    if (!stack?.contains(document.activeElement)) origin.focus()
+    // Only reclaim focus the toast still holds, or that its removal dropped on <body>:
+    // once the user has tabbed elsewhere, yanking them back is worse than not restoring.
+    const holder = document.activeElement ?? document.body
+    if (holder === document.body || stack?.contains(holder)) origin.focus()
   }
 
   // The buttons below restore focus themselves, since dismissing one toast can promote
@@ -116,9 +122,10 @@
       : [],
   )
   // Scoped to the stack, so Escape only dismisses when the keyboard is already in the
-  // toast — a global Escape would fight every dialog on the page for the same key.
+  // toast — a global Escape would fight every dialog for the same key. Gated on
+  // `dismissible` too, or it stays the one way to close a toast declared undismissable.
   const escape_binding = $derived(
-    active ? [{ keys: `Escape`, handler: () => dismiss(active.id) }] : [],
+    active && dismissible ? [{ keys: `Escape`, handler: () => dismiss(active.id) }] : [],
   )
 </script>
 
@@ -161,12 +168,12 @@ is just as unreliable. -->
 <div
   bind:this={stack}
   {...rest}
-  class="toast-stack {rest.class ?? ``}"
+  class={[`toast-stack`, rest.class]}
   data-position={position}
-  onpointerenter={() => set_hovered(true)}
-  onpointerleave={() => set_hovered(false)}
-  onfocusin={() => set_focused(true)}
-  onfocusout={() => set_focused(false)}
+  onpointerenter={chain_handlers(() => set_hovered(true), rest.onpointerenter)}
+  onpointerleave={chain_handlers(() => set_hovered(false), rest.onpointerleave)}
+  onfocusin={chain_handlers(() => set_focused(true), rest.onfocusin)}
+  onfocusout={chain_handlers(() => set_focused(false), rest.onfocusout)}
   {@attach hotkey({ bindings, global: true })}
   {@attach hotkey({ bindings: escape_binding })}
 >
