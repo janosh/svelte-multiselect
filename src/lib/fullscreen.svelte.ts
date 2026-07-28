@@ -49,11 +49,11 @@ export function sync_fullscreen(opts: FullscreenSyncOptions): void {
       })
     }
 
-    // a fullscreened element inherits nothing from the page and would render on black
-    if (fullscreen) {
-      const bg_css_var = opts.get_bg_css_var?.() ?? `--fullscreen-bg`
-      wrapper.style.setProperty(bg_css_var, get_page_background())
-    }
+    // a fullscreened element inherits nothing from the page and would render on black.
+    // Dropped again on the way out so a later theme switch cannot be read off a stale value.
+    const bg_css_var = opts.get_bg_css_var?.() ?? `--fullscreen-bg`
+    if (fullscreen) wrapper.style.setProperty(bg_css_var, get_page_background())
+    else wrapper.style.removeProperty(bg_css_var)
   })
 
   // browser -> flag, covering Esc, F11 and programmatic exits

@@ -13,6 +13,7 @@ import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vite-
 // test lives entirely in the source, not in the fakes.
 let fullscreen_element: Element | null = null
 let request_calls: Element[] = []
+const mounted: Record<string, unknown>[] = []
 
 // browsers fire fullscreenchange once the request settles, so dispatch off a microtask
 const set_fullscreen_element = (element: Element | null): Promise<void> => {
@@ -45,6 +46,8 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  // clearing document.body does not undo a button's fullscreenchange subscription
+  for (const component of mounted.splice(0)) void unmount(component)
   Reflect.deleteProperty(document, `fullscreenElement`)
   Reflect.deleteProperty(Element.prototype, `requestFullscreen`)
   Reflect.deleteProperty(document, `exitFullscreen`)
@@ -72,6 +75,7 @@ const mount_button = (props: ButtonProps = {}) => {
       ...props,
     },
   })
+  mounted.push(component)
   const button = wrapper.querySelector(`button`)
   assert(button !== null, `FullscreenButton rendered no button`)
   return { wrapper, flag, button, component }
@@ -263,7 +267,9 @@ describe(`fullscreen background`, () => {
   ])(
     `get_page_background falls back to prefers-color-scheme (dark=%s)`,
     (dark, expected) => {
-      vi.mocked(globalThis.matchMedia).mockReturnValue({
+      // Once: vi.restoreAllMocks leaves vi.fn() mocks alone, so a lasting return value
+      // would follow setup.ts's matchMedia into every later test
+      vi.mocked(globalThis.matchMedia).mockReturnValueOnce({
         matches: dark,
       } as MediaQueryList)
       expect(get_page_background()).toBe(expected)
@@ -284,6 +290,13 @@ describe(`fullscreen background`, () => {
       await settle()
 
       expect(wrapper.style.getPropertyValue(css_var)).toBe(`rgb(7, 8, 9)`)
+
+      // and dropped on the way out: kept, it would still read the pre-switch colour
+      // after a theme change, until the next entry happened to refresh it
+      button.click()
+      await settle()
+
+      expect(wrapper.style.getPropertyValue(css_var)).toBe(``)
     },
   )
 })
@@ -294,6 +307,7 @@ describe(`button rendering`, () => {
       icons: { enter: `Check`, exit: `Cross` },
       labels: { enter: `Grow`, exit: `Shrink` },
       class: `my-btn`,
+      'aria-pressed': true, // spread before the real one, so it loses
     })
 
     expect([...button.classList]).toEqual(
@@ -301,7 +315,7 @@ describe(`button rendering`, () => {
     )
     expect(button.title).toBe(`Grow`)
     expect(button.getAttribute(`aria-label`)).toBe(`Grow`)
-    expect(button.getAttribute(`aria-pressed`)).toBe(`false`)
+    expect(button.getAttribute(`aria-pressed`)).toBe(`false`) // not the consumer's true
     expect(icon_path(button)).toBe(icon_data.Check.path)
   })
 

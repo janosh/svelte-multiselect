@@ -46,8 +46,8 @@
   type="button"
   title={label}
   aria-label={label}
-  aria-pressed={fullscreen}
   {...rest}
+  aria-pressed={fullscreen}
   class={[`fullscreen-btn`, rest.class]}
   onclick={chain_handlers(() => (fullscreen = !fullscreen), rest.onclick)}
 >
