@@ -85,20 +85,6 @@ const icon_path = (button: HTMLElement): string | null =>
   button.querySelector(`svg path`)?.getAttribute(`d`) ?? null
 
 describe(`per-wrapper isolation`, () => {
-  test(`one wrapper entering fullscreen leaves another wrapper's flag alone`, async () => {
-    const first = mount_button()
-    const second = mount_button()
-
-    first.button.click()
-    await settle()
-
-    expect(document.fullscreenElement).toBe(first.wrapper)
-    expect(get(first.flag)).toBe(true)
-    expect(get(second.flag)).toBe(false)
-    // a flipped flag on the second button would fire its own requestFullscreen
-    expect(request_calls).toEqual([first.wrapper])
-  })
-
   test(`an unrelated element going fullscreen flips no flag`, async () => {
     const first = mount_button()
     const second = mount_button()
@@ -119,6 +105,11 @@ describe(`per-wrapper isolation`, () => {
 
     first.button.click()
     await settle()
+    expect(document.fullscreenElement).toBe(first.wrapper)
+    expect(get(first.flag)).toBe(true)
+    expect(get(second.flag)).toBe(false)
+    expect(request_calls).toEqual([first.wrapper])
+
     second.button.click()
     await settle()
 
@@ -239,8 +230,6 @@ describe(`flag <-> browser sync`, () => {
   })
 
   test(`sync_fullscreen throws outside an effect context`, () => {
-    // guards against the module being imported into plain script code, where the two
-    // $effects would never be created and the sync would silently do nothing
     expect(() =>
       sync_fullscreen({
         get_wrapper: () => undefined,

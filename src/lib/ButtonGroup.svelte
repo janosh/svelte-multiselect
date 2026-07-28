@@ -12,8 +12,7 @@
     loading?: boolean // trailing spinner, e.g. while this option's data loads
   }
 
-  // The shapes segmented controls are written with in the wild: bare values, a
-  // value-to-label record, [value, label] pairs, or full option objects
+  // The shapes segmented controls are written with in the wild
   export type ButtonGroupOptions<Value extends string = string> =
     | readonly Value[]
     | Readonly<Record<Value, string>>
@@ -55,7 +54,6 @@
     // and an aria-required-children violation. Prefer non-focusable content, or accept
     // the tradeoff knowingly — the sort arrow sits outside the group for this reason.
     option_suffix?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
-    on_change?: (selected: Value | Value[]) => void
     // `content` comes from each option's own `tooltip`; the rest is yours, which is
     // what lets a consumer opt into allow_html for rich tooltips
     tooltip_options?: Omit<TooltipOptions, `content`>
@@ -63,9 +61,15 @@
     // a div cannot legally sit inside phrasing content, so a group rendered in a
     // heading or a paragraph needs to be a span
     as?: string
+    // on_change rides the discriminant: a single-select consumer's handler takes one
+    // value, so widening it to Value | Value[] made their own callbacks unassignable
   } & (
-      | { multiple?: false; selected?: Value | null }
-      | { multiple: true; selected?: Value[] }
+      | {
+          multiple?: false
+          selected?: Value | null
+          on_change?: (selected: Value) => void
+        }
+      | { multiple: true; selected?: Value[]; on_change?: (selected: Value[]) => void }
     )
 
   let {
@@ -87,7 +91,8 @@
   const option_list = $derived(
     (Array.isArray(options) ? options : Object.entries(options)).map(to_option<Value>),
   )
-  // buttons the keyboard can reach, in render order, so DOM and option indices line up
+  // buttons the keyboard can reach, in render order: the roving stop below falls back
+  // to the first of them
   const enabled_options = $derived(
     disabled ? [] : option_list.filter((opt) => !opt.disabled),
   )
@@ -112,7 +117,9 @@
       if (selected === value) return // re-picking the checked radio changes nothing
       selected = value
     }
-    on_change?.(selected)
+    // The discriminated union is right for consumers, but TS cannot correlate it with
+    // the `multiple` local, so the call is widened back to what this branch just set
+    ;(on_change as ((selected: Value | Value[]) => void) | undefined)?.(selected)
   }
 
   function handle_keydown(event: KeyboardEvent) {

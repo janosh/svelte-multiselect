@@ -45,7 +45,6 @@ describe(`Footer`, () => {
       const anchor = doc_query<HTMLAnchorElement>(`footer nav a`)
       expect(anchor.getAttribute(`href`)).toBe(link.href)
       expect(anchor.textContent?.trim()).toBe(link.label)
-      // icon comes from this package's own Icon, so an icon link gains an inline svg
       expect(Boolean(anchor.querySelector(`svg`))).toBe(has_icon)
       expect(anchor.getAttribute(`target`)).toBe(target)
       expect(anchor.getAttribute(`rel`)).toBe(rel)
@@ -102,7 +101,6 @@ describe(`Footer`, () => {
     expect(doc_query(`[data-testid="copyright"]`).textContent).toBe(`© 2026`)
   })
 
-  // the escape hatch for icon sets this package doesn't bundle
   test(`an item snippet replaces the default anchor`, () => {
     const item = createRawSnippet<[{ link: FooterLink }]>((get_params) => ({
       render: () => `<a href="${get_params().link.href}" data-custom>custom</a>`,
@@ -111,6 +109,6 @@ describe(`Footer`, () => {
 
     expect(anchors().map((anchor) => anchor.textContent)).toEqual([`custom`])
     expect(doc_query(`footer nav a`).hasAttribute(`data-custom`)).toBe(true)
-    expect(document.querySelector(`footer svg`)).toBeNull() // default markup is gone
+    expect(document.querySelector(`footer svg`)).toBeNull()
   })
 })

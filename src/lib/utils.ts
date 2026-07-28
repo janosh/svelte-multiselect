@@ -32,8 +32,7 @@ export const slug_to_title = (slug: string): string =>
 export const has_group = <T extends Option>(opt: T): opt is T & { group: string } =>
   is_object(opt) && typeof opt.group === `string`
 
-// Get the label key from an option object or the option itself
-// if it's a string or number
+// Label of an object option, or the primitive option stringified
 export const get_label = (opt: Option) => {
   if (is_object(opt)) {
     if (opt.label === undefined) {
@@ -50,10 +49,10 @@ export const get_option_key = (opt: Option): unknown =>
   is_object(opt) ? (opt.value ?? get_label(opt)) : opt
 
 // Extract a CSS string from an option's style (string or {option, selected} object).
-// Always returns a semicolon-terminated string.
+// A non-empty result is semicolon-terminated.
 export function get_style(
   option: Option,
-  key: `selected` | `option` | null | undefined = null, // undefined falls back to null via default
+  key: `selected` | `option` | null | undefined = null,
 ) {
   let css_str = ``
   if (key !== null && key !== `selected` && key !== `option`) {
@@ -80,7 +79,7 @@ export function get_style(
 }
 
 // === Floating geometry ===
-// "Pick a side that fits, then stay on screen": tooltip, portalled dropdown, `float`.
+// "Pick a side that fits, then stay on screen", shared by every floating surface.
 
 export type Placement = `top` | `right` | `bottom` | `left`
 
@@ -185,7 +184,6 @@ export function split_shortcut(shortcut: string): string[] {
   return parts
 }
 
-// Parse shortcut string into modifier+key parts
 export function parse_shortcut(shortcut: string): {
   key: string
   ctrl: boolean
@@ -220,7 +218,7 @@ export function matches_shortcut(
   )
 }
 
-// Shortcut segments as display symbols, shared by CommandMenu and ContextMenu.
+// Shortcut segments as display symbols.
 // Only `mod` reads the platform; every other segment renders the same everywhere.
 const key_symbols: Record<string, string> = {
   meta: `⌘`,

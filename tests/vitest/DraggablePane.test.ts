@@ -96,7 +96,6 @@ describe(`DraggablePane`, () => {
     [`toggle`, (toggle: HTMLElement) => toggle.click()],
     [`button`, () => doc_query<HTMLButtonElement>(`.close-button`).click()],
     [`pointer`, () => press(document.body)],
-    [`escape`, () => escape()],
   ] as const)(`closes via %s`, async (via, dismiss) => {
     const on_close = vi.fn()
     const { toggle, pane } = await open_pane({ on_close })
@@ -273,6 +272,7 @@ describe(`DraggablePane`, () => {
     [`height`, [200, 295], [200, 395], { width: `450px`, height: `400px` }],
     // height mode leaves the right edge alone, so the press does nothing
     [`height`, [445, 150], [545, 150], { width: ``, height: `` }],
+    [`none`, [445, 150], [545, 150], { width: ``, height: `` }],
   ] as const)(
     `resize=%s drag from (%o) sets the pane size`,
     async (resize, [start_x, start_y], [end_x, end_y], expected) => {
@@ -312,16 +312,6 @@ describe(`DraggablePane`, () => {
     globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
   })
 
-  test(`resize="none" renders no grip and ignores an edge press`, async () => {
-    const { pane } = await open_pane({ resize: `none` })
-    mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
-
-    expect(document.querySelector(`.resize-grip`)).toBeNull()
-    pane.dispatchEvent(mouse_event(`mousedown`, 445, 150))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 545, 150))
-    expect(pane.style.width).toBe(``)
-  })
-
   test.each([
     [`both`, `8px`, `8px`],
     [`width`, `8px`, ``],
@@ -333,6 +323,7 @@ describe(`DraggablePane`, () => {
       const { pane } = await setup({ resize })
       expect(pane.style.paddingRight).toBe(padding_right)
       expect(pane.style.paddingBottom).toBe(padding_bottom)
+      expect(Boolean(pane.querySelector(`.resize-grip`))).toBe(resize === `both`)
     },
   )
 

@@ -1,8 +1,6 @@
 import { make_config } from '$lib/vite-config'
 import { expect, test } from 'vite-plus/test'
 
-// Sections merge one level deep, so overriding a single glob or option leaves the rest
-// of that section — and every other section — on the shared defaults.
 test(`overrides merge into their section without dropping the rest`, () => {
   const defaults = make_config()
   const merged = make_config({ staged: { '*': `codespell` }, fmt: { printWidth: 95 } })
@@ -16,10 +14,7 @@ test(`overrides merge into their section without dropping the rest`, () => {
   ).toEqual([`static/**`])
 })
 
-// Lint's object members merge a second level down, unlike every other section. `rules` is
-// where it really bites — naming one rule used to hand back a config holding only that
-// rule, dropping 150-odd others — but `options` and `categories` share the mechanism, and
-// a wholesale overwrite of either passes every other test in this file.
+// Lint's object members merge a second level down, unlike every other section.
 test.each([
   [`rules`, { 'no-var': `off` }],
   [`options`, { typeCheck: false }],
@@ -28,21 +23,14 @@ test.each([
   const defaults = make_config()
   const merged = make_config({ lint: { [member]: override } })
 
-  expect(merged.lint[member]).toEqual({ ...defaults.lint[member], ...override })
-  // and nothing else moved. Without this, dropping the `...base.lint` spread from
-  // make_config still passes: the three object members are rebuilt from base either way,
-  // so only plugins, ignorePatterns and overrides would go missing.
   expect(merged.lint).toEqual({
     ...defaults.lint,
     [member]: { ...defaults.lint[member], ...override },
   })
 })
 
-// The defaults are module-level objects, so a result sharing their nested maps would let
-// one project mutate the config every later call hands out.
 test(`a returned config owns its nested state`, () => {
-  // a deep snapshot: a plain make_config() would alias the very objects mutated below
-  // when they are shared, making the comparison vacuous
+  // Snapshot first; comparing another aliased result after mutation would be vacuous.
   const before = structuredClone(make_config())
   const mine = make_config()
   mine.lint.rules[`no-var`] = `off` // a nested map

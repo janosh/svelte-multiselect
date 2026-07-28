@@ -69,6 +69,7 @@ test(`directories are expanded depth-first, keeping their listed order`, async (
   const src_dir = dir_entry(`src`, [file_entry(`index.ts`), lib_dir])
   const tree = dir_entry(`project`, [
     file_entry(`readme.md`),
+    dir_entry(`empty`, []),
     src_dir,
     file_entry(`package.json`),
   ])
@@ -95,12 +96,6 @@ test(`a directory larger than one readEntries batch is drained fully`, async () 
 
   // a fresh reader restarts the listing, so a second drop is not silently empty
   expect(await files_from_data_transfer(drop([big_dir]))).toHaveLength(250)
-})
-
-test(`an empty directory contributes nothing`, async () => {
-  const dropped = drop([dir_entry(`empty`, []), file_entry(`a.txt`)])
-
-  expect(names(await files_from_data_transfer(dropped))).toEqual([`a.txt`])
 })
 
 // Entries are unreadable outside the drop event and absent on synthetic drops, where

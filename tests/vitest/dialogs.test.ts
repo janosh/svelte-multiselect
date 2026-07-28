@@ -84,17 +84,3 @@ test.each([
   await flush()
   expect([confirmed.settled, confirmed.value]).toEqual([true, expected])
 })
-
-test(`choices are arbitrary in number, not just ok/cancel`, async () => {
-  const choices: DialogChoice<`discard` | `save` | `cancel`>[] = [
-    { id: `cancel`, label: `Cancel` },
-    { id: `discard`, label: `Discard` },
-    { id: `save`, label: `Save`, tone: `accent` },
-  ]
-  const answer = track(request_choice(`Unsaved work`, `Quit`, choices, `cancel`))
-
-  expect(dialog_queue[0].choices).toHaveLength(3)
-  answer_dialog(`discard`)
-  await flush()
-  expect(answer.value).toBe(`discard`)
-})

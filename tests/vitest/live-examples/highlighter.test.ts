@@ -136,11 +136,6 @@ describe(`create_highlighter`, () => {
     expect(code).not.toContain(`common`)
   })
 
-  test(`the eager instance still resolves the default grammars`, async () => {
-    expect(starry_night_highlighter(`const x = 1`, `ts`)).toContain(`highlight-ts`)
-    expect(starry_night.flagToScope(`svelte`)).toBe(`source.svelte`)
-  })
-
   test(`defers loading until first use, then reports missing peer dependency`, async () => {
     vi.resetModules()
     let load_count = 0

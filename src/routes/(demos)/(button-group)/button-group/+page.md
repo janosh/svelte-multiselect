@@ -67,6 +67,7 @@ selection, and every colour is a `--btn-group-*` custom property.
     ts: `TypeScript`,
     css: `CSS`,
   }
+  const tag_counts: Record<string, number> = { svelte: 12, kit: 8, ts: 17, css: 5 }
   let active = $state([`svelte`])
 </script>
 
@@ -81,57 +82,17 @@ selection, and every colour is a `--btn-group-*` custom property.
     {opt.label}
     <span style="opacity: 0.6">{selected ? `×` : `+`}</span>
   {/snippet}
+  {#snippet option_suffix({ option: opt })}
+    <span style="padding-right: 6pt; opacity: 0.6">{tag_counts[opt.value]}</span>
+  {/snippet}
 </ButtonGroup>
 
 <p>filters: {active.length ? active.join(`, `) : `none`}</p>
 ```
 
-### Trailing affordances
-
-`option` replaces a button's contents, so whatever it renders lands _inside_ the
-`<button>` — wrong for a link or another button, since interactive content may not nest.
 `option_suffix` renders as a **sibling** instead, wrapped with the button in a `.option`
-span that becomes the visual pill, so the affordance sits inside the border while the
-button keeps the padding and still toggles when you click the pill's edges. Give the
-slotted element its own trailing padding; the component does not guess at spacing for
-content it did not render.
-
-The wrapper only appears when you pass the snippet. Without it the buttons stay direct
-children of `.options`, so `.options > button` selectors keep matching.
-
-One caveat in single-select mode, where the group is a `radiogroup`: ARIA says a
-radiogroup owns only radios, so focusable slotted content is both an extra tab stop
-between the options and a spec violation. The example below accepts that knowingly, since
-a per-option docs link is the case the prop was added for. Non-focusable content — a
-badge, a count, an icon — has no such caveat, and neither does `multiple` mode.
-
-```svelte example id="button-group-suffix"
-<script lang="ts">
-  import ButtonGroup from '$lib/ButtonGroup.svelte'
-
-  const metrics: Record<string, string> = { f1: `F1`, mae: `MAE`, rmsd: `RMSD` }
-  const docs: Record<string, string> = {
-    f1: `https://wikipedia.org/wiki/F-score`,
-    mae: `https://wikipedia.org/wiki/Mean_absolute_error`,
-    rmsd: `https://wikipedia.org/wiki/Root-mean-square_deviation`,
-  }
-  let metric = $state(`f1`)
-</script>
-
-<ButtonGroup options={metrics} bind:selected={metric} label="Rank models by">
-  {#snippet option_suffix({ option: opt })}
-    <a
-      href={docs[opt.value]}
-      target="_blank"
-      rel="noreferrer"
-      aria-label="About {opt.label}"
-      style="padding-right: 6pt; text-decoration: none">ⓘ</a
-    >
-  {/snippet}
-</ButtonGroup>
-
-<p>ranking by <code>{metric}</code></p>
-```
+span, as shown by the counts above. Prefer non-interactive suffixes in single-select
+`radiogroup` mode; a focusable suffix adds a non-radio tab stop.
 
 ### Styling
 

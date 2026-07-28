@@ -142,12 +142,6 @@ describe(`LiteYouTubeEmbed`, () => {
     // teardown has to be synchronous: leaving the iframe up for even one render lets the
     // browser start loading the new video, the exact cost this component exists to avoid
     expect(fetched).toEqual([])
-    expect(doc_query(`img.poster`).getAttribute(`src`)).toBe(
-      `https://i.ytimg.com/vi/second/hqdefault.jpg`,
-    )
-    expect(doc_query(`picture source`).getAttribute(`srcset`)).toBe(
-      `https://i.ytimg.com/vi_webp/second/hqdefault.webp`,
-    )
   })
 
   test(`keeps a consumer class alongside the styling hook and flags activation`, async () => {

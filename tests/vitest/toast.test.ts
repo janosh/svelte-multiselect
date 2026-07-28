@@ -43,15 +43,6 @@ const fake_clock = () => {
 }
 
 describe(`toast queue reducer`, () => {
-  test(`promotes the first toast and queues the rest in insertion order`, () => {
-    let queue = create_toast_queue()
-    for (const message of [`a`, `b`, `c`]) queue = add(queue, message).queue
-
-    expect(queue.active?.message).toBe(`a`)
-    expect(messages(queue.pending)).toEqual([`b`, `c`])
-    expect(queue.active?.seq).toBe(1)
-  })
-
   test.each([
     [`error`, true],
     [`warning`, true],
@@ -353,13 +344,16 @@ describe(`ToastStore`, () => {
     const store = new ToastStore()
     const first_id = store.show(`a`)
     store.show(`b`)
+    store.show(`c`)
 
     expect(store.active?.id).toBe(first_id)
-    expect(messages(store.pending)).toEqual([`b`])
-    expect(messages(store.items)).toEqual([`a`, `b`])
+    expect(store.active?.seq).toBe(1)
+    expect(messages(store.pending)).toEqual([`b`, `c`])
+    expect(messages(store.items)).toEqual([`a`, `b`, `c`])
 
     store.dismiss(first_id)
     expect(store.active?.message).toBe(`b`)
+    expect(messages(store.pending)).toEqual([`c`])
   })
 
   // The top two rungs of whichever ladder the store was built with are sticky; anything

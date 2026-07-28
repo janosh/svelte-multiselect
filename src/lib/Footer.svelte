@@ -4,7 +4,6 @@
   import Icon from './Icon.svelte'
   import type { FooterLink } from './types'
 
-  // Site footer: a centered row of icon+label links above whatever children render.
   let {
     links = [],
     item,

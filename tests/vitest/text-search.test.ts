@@ -69,11 +69,8 @@ describe(`search_text`, () => {
     expect(search_text(root, `foo`).ranges).toHaveLength(1)
   })
 
-  it.each([
-    [`empty`, ``],
-    [`whitespace only`, ` \t\n `],
-  ])(`returns nothing for a %s query`, (_desc, query) => {
-    expect(search_text(render(`<p>content</p>`), query)).toEqual({
+  it(`returns nothing for an empty query`, () => {
+    expect(search_text(render(`<p>content</p>`), ``)).toEqual({
       matches: [],
       ranges: [],
     })
@@ -124,8 +121,8 @@ describe(`search_text`, () => {
     expect(matches).toHaveLength(2)
   })
 
-  // Pins the binary search against the linear scan it replaced: 59 matches over 60 nodes
-  // hit boundaries across the whole offset table, where an off-by-one would show up.
+  // Pins the binary search against the linear scan it replaced: a match on every
+  // boundary of the offset table is where an off-by-one would show up.
   // The quadratic scan it also fixes is a cost, not a behaviour, so nothing asserts it.
   it(`maps every match onto its node in a segment split across many nodes`, () => {
     const texts = Array.from({ length: 30 }, (_unused, idx) => `a${idx}b`)

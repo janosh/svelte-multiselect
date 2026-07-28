@@ -1,8 +1,12 @@
 <script lang="ts">
-  // Renders whatever question dialogs.svelte.ts has queued. Mount once, high in the
-  // tree, so any part of the app can ask without owning a modal of its own.
+  // Mount once high in the app tree; it renders the head of the shared dialog queue.
+  import type { HTMLDialogAttributes } from 'svelte/elements'
   import { focus_trap } from './attachments'
   import { answer_dialog, dialog_queue } from './dialogs.svelte'
+  import { chain_handlers } from './utils'
+
+  // An app mounting this alongside its own dialogs needs its card class on the element
+  let { ...rest }: Omit<HTMLDialogAttributes, `children`> = $props()
 
   const request = $derived(dialog_queue[0])
   let dialog_el = $state<HTMLDialogElement | null>(null)
@@ -19,15 +23,16 @@
 
 <dialog
   bind:this={dialog_el}
-  class="confirm-dialog"
+  {...rest}
+  class={[`confirm-dialog`, rest.class]}
   aria-labelledby="confirm-dialog-title"
   {@attach focus_trap({ enabled: Boolean(request) })}
-  onclose={() => {
+  onclose={chain_handlers(() => {
     // Escape and backdrop clicks land here. Answering already shifted the queue, so the
     // close that follows sees no request and resolves nothing.
     if (request) answer_dialog(request.dismiss_id)
-  }}
-  onclick={(event) => {
+  }, rest.onclose)}
+  onclick={chain_handlers((event: MouseEvent & { currentTarget: HTMLDialogElement }) => {
     // Clicks on the ::backdrop target the dialog element itself, but so do clicks on the
     // dialog's own padding, so the pointer has to be outside the box to count as a dismiss
     if (event.target !== event.currentTarget) return
@@ -35,7 +40,7 @@
     const { clientX, clientY } = event
     const outside = clientX < left || clientX > right || clientY < top || clientY > bottom
     if (outside) event.currentTarget.close()
-  }}
+  }, rest.onclick)}
 >
   {#if request}
     <h2 id="confirm-dialog-title">{request.title}</h2>

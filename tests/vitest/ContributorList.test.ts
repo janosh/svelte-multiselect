@@ -47,10 +47,13 @@ describe(`ContributorList`, () => {
     // lazy avatars from reflowing the row as they land
     expect([links[0].target, links[0].rel]).toEqual([`_blank`, `noopener noreferrer`])
     expect([avatars[0].alt, avatars[0].width, avatars[0].height]).toEqual([``, 60, 60])
+
+    document.body.innerHTML = ``
+    await mount_list({ contributors: [] })
+    expect(document.querySelector(`ul`)).not.toBeNull()
+    expect(document.querySelector(`li`)).toBeNull()
   })
 
-  // the hand-rolled hover label this port replaced is gone; the shared tooltip
-  // attachment renders the username instead
   test(`hovering an avatar shows the login in a tooltip`, async () => {
     await mount_list()
     expect(document.querySelector(`.custom-tooltip`)).toBeNull()
@@ -58,8 +61,6 @@ describe(`ContributorList`, () => {
     hover(doc_query(`ul li a`))
     expect(document.querySelectorAll(`.custom-tooltip`)).toHaveLength(1)
     expect(doc_query(`.tooltip-content`).textContent).toBe(`janosh`)
-    // no sibling <span> label: the old markup is deleted, not merely hidden
-    expect(document.querySelector(`ul li > span`)).toBeNull()
   })
 
   test(`tooltip_options reach the attachment`, async () => {
@@ -67,7 +68,6 @@ describe(`ContributorList`, () => {
 
     hover(doc_query(`ul li:last-child a`))
     expect(doc_query(`.tooltip-content`).textContent).toBe(`octocat`)
-    // the options themselves, not just the content the component sets on its own
     expect(doc_query(`.custom-tooltip`).style.color).toBe(`teal`)
     expect(document.querySelector(`.custom-tooltip-arrow`)).toBeNull()
   })
@@ -78,14 +78,5 @@ describe(`ContributorList`, () => {
 
     const { width, height, borderRadius } = getComputedStyle(doc_query(`ul li img`))
     expect([width, height, borderRadius]).toEqual([`40px`, `40px`, `50%`])
-  })
-
-  test.each([
-    [`empty list`, [], 0],
-    [`single contributor`, [contributors[0]], 1],
-  ])(`renders %s`, async (_desc, list, expected_count) => {
-    await mount_list({ contributors: list })
-    expect(document.querySelectorAll(`ul li`)).toHaveLength(expected_count)
-    expect(document.querySelector(`ul`)).not.toBeNull()
   })
 })

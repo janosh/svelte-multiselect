@@ -49,30 +49,13 @@ below every real tier, which is how a stray name silently inverts a queue. Reque
 name no priority land on `default_priority` — `info` where the ladder has that rung,
 required where it does not — and the top two rungs stay up until dismissed unless
 `sticky_priorities` says otherwise. The accent stripe is keyed off `data-priority`, so
-custom tiers can be coloured from your own CSS.
+custom tiers can be coloured from your own CSS:
 
-```svelte example id="toast-custom-ladder"
-<script lang="ts">
-  import Toast from '$lib/Toast.svelte'
-  import { ToastStore } from '$lib/toast-queue.svelte.ts'
-
-  // `action` for undo prompts, `watch` for file-watch notices: neither is a `success`
-  // or a `warning`, and both have to outrank a plain `info`
-  const store = new ToastStore({
-    priorities: [`progress`, `info`, `action`, `watch`, `error`],
-  })
-</script>
-
-<div style="display: flex; gap: 6pt; flex-wrap: wrap">
-  {#each store.priorities as priority (priority)}
-    <button onclick={() => store.show(`A ${priority} notification`, { priority })}>
-      {priority}
-    </button>
-  {/each}
-  <button onclick={() => store.clear()}>clear</button>
-</div>
-
-<Toast {store} />
+```ts
+const store = new ToastStore({
+  priorities: [`progress`, `info`, `action`, `watch`, `error`],
+})
+store.show(`Watching for changes`, { priority: `watch` })
 ```
 
 ### Actions, dedupe and overflow

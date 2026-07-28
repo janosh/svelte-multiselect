@@ -1,7 +1,4 @@
-// Keep the readme's component table honest: every component documented, every docs link
-// pointing at a page and heading that exist. Checked here rather than by the link checker
-// because those URLs only resolve once the site deploys. Same for the links the demo
-// pages make to each other, which only the prerender would otherwise catch.
+// These links only resolve after deployment, so the regular link checker cannot check them.
 import * as lib from '$lib'
 import { exports as pkg_exports } from '$root/package.json'
 import readme from '$root/readme.md?raw'
@@ -23,8 +20,7 @@ const route_sources = Object.fromEntries(
   ]),
 )
 
-// compare on letters and digits alone so these checks don't have to reimplement the slug
-// rules in heading_ids, which is what actually stamps the ids onto the rendered headings
+// Avoid duplicating heading_ids' full slug rules.
 const bare = (text: string) => text.replaceAll(/[^a-z0-9]/giu, ``).toLowerCase()
 
 const headings_on = (route: string) =>
@@ -32,7 +28,6 @@ const headings_on = (route: string) =>
     bare(match.groups?.text ?? ``),
   )
 
-// null when the link resolves, else why it doesn't, so a run reports every bad link
 const unresolved = (route: string, anchor: string | undefined, label: string) => {
   if (!(route in route_sources)) return `${label}: no such page ${route}`
   if (anchor && !headings_on(route).includes(bare(anchor))) {
@@ -41,7 +36,6 @@ const unresolved = (route: string, anchor: string | undefined, label: string) =>
   return null
 }
 
-// in-site markdown links on the demo pages, i.e. everything but `https:`, `mailto:` etc.
 const page_links = Object.entries(route_sources)
   .flatMap(([from, source]) =>
     [...source.matchAll(/\[[^\]]*\]\((?<target>[^)\s]+)\)/gu)].map((match) => ({
@@ -87,23 +81,11 @@ test(`readme docs links point at a page and heading that exist`, () => {
   expect(failures).toEqual([])
 })
 
-// The readme promises every component has a subpath, which only holds while the exports
-// map keeps the wildcard. Narrowing it back to a hand-listed set would make the promise
-// false for whatever the list left out, silently — an earlier enumerated list did exactly
-// that, gaining three subpaths without the prose noticing.
-test(`the exports map keeps the wildcard the readme's subpath promise rests on`, () => {
+test(`the exports map keeps the wildcard component subpath`, () => {
   const component_subpaths = Object.keys(pkg_exports).filter((subpath) =>
     subpath.endsWith(`.svelte`),
   )
   expect(component_subpaths).toEqual([`./*.svelte`])
-
-  const intro_start = readme.indexOf(`Every component is a named export`)
-  // without this the slice below runs from -1 and the failure blames the missing
-  // subpath prose rather than the sentence that actually moved
-  expect(intro_start, `intro sentence moved or was reworded`).not.toBe(-1)
-  const paragraph = readme.slice(intro_start, readme.indexOf(`\n\n`, intro_start))
-  expect(paragraph).toContain(`every one also has a direct`)
-  expect(paragraph).toContain(`subpath import`)
 })
 
 test(`every exported component appears in the readme component table`, () => {

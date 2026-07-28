@@ -4,7 +4,7 @@
 
 > 27 July 2026
 
-- Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control replacing six hand-rolled copies across five repos), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed`
+- Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control, generalized from the hand-rolled ones those repos each grew), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed`
 - Add `portal`, `contrast_color` and `forward_window_keydown` attachments, bringing the total to thirteen
 - Add headless modules behind their own subpaths: `svelte-widgets/toast-queue`, `/dialogs`, `/fullscreen`, `/clipboard`, `/print`, `/file-drop` and `/text-search`, the last matching across inline markup where `highlight_matches` walks text nodes one at a time. It skips `script`, `style` and `noscript` so a find-in-page never steps onto text that renders nowhere, and treats text either side of one as continuous
 - Add shortcut rebinding for "customize shortcuts" UIs: `event_to_combo`, `normalize_combo` and `sanitize_shortcut_overrides` turn a keydown into a canonical combo and resolve collisions
@@ -16,6 +16,9 @@
 - Add `dismiss` and `trigger` to `ContextMenu`. `dismiss` merges over the default `{ escape: true }` and reaches the whole `click_outside` config, so a trigger that toggles can ask for `dismiss_on: 'release'` instead of being closed by its own press. `trigger: 'none'` installs no right-click handler at all, for a consumer driving `at` itself
 - Add `root`, `on_escape` and `recapture` to `focus_trap`. `root` follows `click_outside`'s `scope` shape and is resolved per keystroke, so a trap can cover an inner dialog while a sibling backdrop stays out of the Tab cycle. `on_escape` registers on the existing layer stack, so a trap inside a modal closes only itself. All three are opt-in
 - Add a configurable priority ladder to the toast queue: `create_toast_queue({ priorities })` takes an ordered list and every type is generic over it, so a consumer's own tiers rank correctly instead of falling below everything. An unknown priority now throws rather than ranking `-1`, and `create_toast_queue` takes an options object instead of a bare `max_pending`
+- Add `sideEffects` to the manifest, listing only `dist/index.js`, which patches `Element.prototype.scrollIntoViewIfNeeded` on import. Every other module is pure, so a bundler can now drop the components a consumer never imports instead of keeping the whole barrel
+- Add an `svelte-widgets/icons` subpath and re-export `icon_data` and `IconName` from the root. `IconName` types the public props of `Icon`, `ButtonGroup`, `DraggablePane` and `FullscreenButton`, but no export let a consumer name it
+- Drop `vite-plus` from `peerDependencies`. It appears in no emitted JavaScript, only as two `import type` lines in `vite-config.d.ts`, and the sole thing referencing it is `svelte-widgets/vite-config`, which nobody can use without already depending on vite-plus
 - Fix `parse_shortcut` never resolving the `mod` token, which made `matches_shortcut(event, 'mod+z')` match a bare `z` with no modifier held. Only `run_hotkeys` was unaffected, since it pre-resolved at the call site. This also makes `space` matchable for the first time
 - Fix `highlight_matches` and `highlight_ranges` overwriting each other when they share a CSS highlight name. They keep one store now, so the name holds the union of their ranges until the last owner releases
 - Fix `svelte-widgets/Toast.svelte` failing to resolve its store when installed from npm: the packaging step rewrote `.ts` import specifiers in `.js` and `.d.ts` files but not in `.svelte` files

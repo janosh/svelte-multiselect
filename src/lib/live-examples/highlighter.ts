@@ -21,7 +21,6 @@ const load_default_grammars = async () => {
   }
 }
 
-// Shared instance, grammars loaded once at build time
 export const starry_night: StarryNight = await create_highlighter(
   await load_default_grammars(),
 ).ready()

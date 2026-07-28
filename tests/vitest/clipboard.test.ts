@@ -45,21 +45,11 @@ test(`re-copying a key restarts its timer without touching the others`, async ()
   await vi.advanceTimersByTimeAsync(100)
   await copy(`a`, `first`) // 900ms into `first`'s original window
 
+  expect([...copied].toSorted()).toEqual([`first`, `second`])
   await vi.advanceTimersByTimeAsync(900)
   expect([...copied]).toEqual([`first`]) // `second` expired on its own schedule
   await vi.advanceTimersByTimeAsync(100)
   expect([...copied]).toEqual([])
-})
-
-test(`keys are independent`, async () => {
-  const { copied, copy } = create_clipboard_feedback(1000)
-  await copy(`a`, `first`)
-  await vi.advanceTimersByTimeAsync(500)
-  await copy(`b`, `second`)
-
-  expect([...copied].toSorted()).toEqual([`first`, `second`])
-  await vi.advanceTimersByTimeAsync(500)
-  expect([...copied]).toEqual([`second`])
 })
 
 test(`a failed write throws when no on_error handler is given`, async () => {

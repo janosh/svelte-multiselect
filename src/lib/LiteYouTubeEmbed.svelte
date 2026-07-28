@@ -84,20 +84,18 @@
     max-width: 720px;
     aspect-ratio: 16 / 9;
   }
-  .lite-youtube > iframe {
-    width: 100%;
-    height: 100%;
-    position: absolute;
-    top: 0;
-    left: 0;
-    border: 0;
-  }
+  .lite-youtube > iframe,
   .poster {
     width: 100%;
     height: 100%;
     position: absolute;
     top: 0;
     left: 0;
+  }
+  .lite-youtube > iframe {
+    border: 0;
+  }
+  .poster {
     object-fit: cover;
   }
   .lite-youtube > .play-btn {

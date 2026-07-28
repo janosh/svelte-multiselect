@@ -55,7 +55,7 @@ export interface MultiSelectEvents<T extends Option = Option> {
   }) => false | T | undefined | Promise<false | T | undefined> // return false to reject, return T to transform, undefined to accept as-is (sync or async)
   onremove?: (data: { option: T; selected: T[] }) => unknown
   onremoveAll?: (data: { options: T[] }) => unknown
-  onselectAll?: (data: { options: T[]; scope?: SelectAllScope }) => unknown // fires when select all is triggered
+  onselectAll?: (data: { options: T[]; scope?: SelectAllScope }) => unknown
   onrangeSelect?: (data: { added: T[]; from: T; to: T; selected: T[] }) => unknown
   onreorder?: (data: { options: T[]; previous: T[] }) => unknown // fires when selected options are reordered via drag-and-drop
   onchange?: (data: {
@@ -65,9 +65,9 @@ export interface MultiSelectEvents<T extends Option = Option> {
   }) => unknown
   onopen?: (data: { event: Event }) => unknown
   onclose?: (data: { event: Event }) => unknown
-  ongroupToggle?: (data: { group: string; collapsed: boolean }) => unknown // fires when group is collapsed/expanded
-  oncollapseAll?: (data: { groups: string[] }) => unknown // fires when all groups are collapsed
-  onexpandAll?: (data: { groups: string[] }) => unknown // fires when all groups are expanded
+  ongroupToggle?: (data: { group: string; collapsed: boolean }) => unknown
+  oncollapseAll?: (data: { groups: string[] }) => unknown
+  onexpandAll?: (data: { groups: string[] }) => unknown
   onsearch?: (data: { searchText: string; matchingOptions: T[] }) => unknown // fires (debounced) when search text changes
   onmaxreached?: (data: {
     selected: T[]
@@ -83,8 +83,8 @@ export interface MultiSelectEvents<T extends Option = Option> {
   }) => unknown
   onactivate?: (data: { option: T | null; index: number | null }) => unknown // fires on keyboard navigation through options
   // History/undo-redo events
-  onundo?: (data: { previous: T[]; current: T[] }) => unknown // fires when undo is triggered
-  onredo?: (data: { previous: T[]; current: T[] }) => unknown // fires when redo is triggered
+  onundo?: (data: { previous: T[]; current: T[] }) => unknown
+  onredo?: (data: { previous: T[]; current: T[] }) => unknown
 }
 
 // Dynamic options loading (https://github.com/janosh/svelte-widgets/discussions/342)
@@ -297,7 +297,6 @@ export interface MultiSelectProps<T extends Option = Option>
       }) => string)
     | null
   liSelectAllClass?: string // CSS class for the select all <li>
-  // Pass a function for simple usage, or an object with config for advanced usage
   loadOptions?: LoadOptions<T>
   // Animation parameters for selected options flip animation (https://github.com/janosh/svelte-widgets/issues/356)
   // Set { duration: 0 } to disable animation

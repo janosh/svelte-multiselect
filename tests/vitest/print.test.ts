@@ -65,12 +65,19 @@ test(`overlapping prints restore the title the first one found`, () => {
 })
 
 test(`without a filename the title is left alone`, () => {
+  const add_listener = vi.spyOn(globalThis, `addEventListener`)
   document.title = `Untouched`
   print_element(make_target(500))
 
   expect(document.title).toBe(`Untouched`)
   expect(print_styles()).toHaveLength(0) // single_page is opt-in
   expect(print_spy).toHaveBeenCalledTimes(1)
+  expect(add_listener).not.toHaveBeenCalledWith(
+    `afterprint`,
+    expect.any(Function),
+    expect.anything(),
+  )
+  add_listener.mockRestore()
 })
 
 test.each([

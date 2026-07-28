@@ -24,7 +24,7 @@ export const create_clipboard_feedback = (
   const timers = new SvelteMap<string, ReturnType<typeof setTimeout>>()
 
   const clear = (key?: string): void => {
-    for (const timer_key of key === undefined ? [...timers.keys()] : [key]) {
+    for (const timer_key of key === undefined ? timers.keys() : [key]) {
       clearTimeout(timers.get(timer_key))
       timers.delete(timer_key)
       copied.delete(timer_key)

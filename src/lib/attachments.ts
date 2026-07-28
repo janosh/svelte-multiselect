@@ -36,7 +36,6 @@ export interface ResizableOptions {
   on_resize_end?: ResizeCallback
 }
 
-// Svelte 5 attachment factory to make an element draggable
 export const draggable =
   (options: DraggableOptions = {}): Attachment =>
   (element: Element): (() => void) | undefined => {
@@ -63,7 +62,6 @@ export const draggable =
     function handle_mousedown(event: MouseEvent) {
       // non-primary buttons open the context menu, which can swallow the mouseup
       if (event.button !== 0) return
-      // Only drag if mousedown is on the handle or its children
       if (!(event.target instanceof Node) || !handle?.contains?.(event.target)) return
 
       dragging = true
@@ -306,7 +304,6 @@ export const sortable =
       original_html: string
       original_style: string
     }
-    // Store original state for cleanup
     const header_state: HeaderState[] = []
     const restore_header = ({ header, original_html, original_style }: HeaderState) => {
       // Restore innerHTML (not textContent) to preserve child markup like icons
@@ -381,7 +378,6 @@ export const sortable =
       header_state.push({ header, handler: click_handler, original_html, original_style })
     })
 
-    // Return cleanup function that fully restores original state
     return () => {
       for (const state of header_state) {
         state.header.removeEventListener(`click`, state.handler)
@@ -690,16 +686,13 @@ export const tooltip =
             }
           }
           if (options.content) continue // custom content takes precedence
-          // Only update content if non-empty
           if (!new_content) continue
           content = new_content
-          // Only update tooltip if this element owns it
           if (current_tooltip?.owner_element === element) {
             const content_el =
               current_tooltip.querySelector<HTMLElement>(`.tooltip-content`)
             if (content_el) {
               render_tooltip_content(content_el, content, options)
-              // Re-run sizing/positioning after content change
               resize_and_position_tooltip(current_tooltip, element)
             }
           }
@@ -883,7 +876,6 @@ export const tooltip =
       }
 
       function show_tooltip() {
-        // Skip tooltip on touch input when 'touch-devices' option is set
         if (options.disabled === `touch-devices` && last_pointer_type === `touch`) return
 
         clear_tooltip()

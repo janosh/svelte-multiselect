@@ -73,7 +73,6 @@
       : section.selected === (action.id ?? action.label)
 
   function open_at(event: MouseEvent) {
-    // an empty section contributes nothing, so a menu of them has nothing to show
     if (disabled || all_empty) return
     event.preventDefault() // replace the browser's own menu
     at = { x: event.clientX, y: event.clientY }
@@ -88,8 +87,8 @@
   }
 
   // Arrow keys are how a role="menu" is walked; focus_trap only owns Tab. Disabled
-  // items are skipped rather than focused-and-inert, and the ends wrap.
-  // Arrows only, no horizontal: a vertical menu leaves Left/Right to the page
+  // items are skipped rather than focused-and-inert, and the ends wrap. No horizontal
+  // stepping: a vertical menu leaves Left/Right to the page.
   function handle_menu_keys(event: KeyboardEvent) {
     if (!(event.currentTarget instanceof HTMLElement)) return
     const selector = `[role^=menuitem]:not(:disabled)` // menuitem and menuitemradio alike

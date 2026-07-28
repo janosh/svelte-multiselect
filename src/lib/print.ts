@@ -67,9 +67,6 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
     style?.remove()
   }
 
-  // afterprint covers both outcomes: the dialog is dismissed the same way whether the
-  // user saved a PDF or cancelled, and until then the swapped title has to stand.
-  globalThis.addEventListener(`afterprint`, cleanup, { once: true })
   if (filename !== undefined && !title_swap_in_flight) {
     restore_title = document.title
     title_swap_in_flight = true
@@ -94,9 +91,10 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
     document.head.append(style)
   }
 
-  // nothing was swapped or injected when neither option is set, so there is nothing for
-  // the watchdog to undo and no reason to pin a closure over `node` for a minute
+  // No setup means no listener/watchdog needs to retain `node`.
   if (restore_title !== null || style) {
+    // afterprint covers both saving and cancelling the print dialog.
+    globalThis.addEventListener(`afterprint`, cleanup, { once: true })
     watchdog = setTimeout(cleanup, AFTERPRINT_TIMEOUT_MS)
   }
   // A print() that throws never fires afterprint, so the swapped title and the injected

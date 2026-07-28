@@ -15,6 +15,7 @@ export { default as Footer } from './Footer.svelte'
 export { default as FullscreenButton } from './FullscreenButton.svelte'
 export { default as GitHubCorner } from './GitHubCorner.svelte'
 export { default as Icon } from './Icon.svelte'
+export { icon_data, type IconName } from './icons'
 export { default as LiteYouTubeEmbed } from './LiteYouTubeEmbed.svelte'
 export { default as Masonry } from './Masonry.svelte'
 export { default, default as MultiSelect } from './MultiSelect.svelte'
@@ -46,7 +47,7 @@ export function scroll_into_view_if_needed_polyfill(
   })
   observer.observe(element)
 
-  return observer // return for testing
+  return observer
 }
 
 if (

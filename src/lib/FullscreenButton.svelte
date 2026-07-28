@@ -8,13 +8,13 @@
 
   let {
     fullscreen = $bindable(false),
-    wrapper = undefined,
+    wrapper,
     bg_css_var = `--fullscreen-bg`,
     icons = { enter: `Expand`, exit: `Collapse` },
     labels = { enter: `Enter fullscreen`, exit: `Exit fullscreen` },
-    on_change = undefined,
-    on_request_error = undefined,
-    children = undefined,
+    on_change,
+    on_request_error,
+    children,
     ...rest
   }: Omit<HTMLButtonAttributes, `children`> & {
     fullscreen?: boolean

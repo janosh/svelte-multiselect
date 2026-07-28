@@ -225,7 +225,22 @@ describe(`shortcut rebinding`, () => {
     [linux, { key: `Escape` }, `escape`], // bare keys are combos too
   ])(`event_to_combo on %s`, (user_agent, init, expected) => {
     stub_prop(globalThis.navigator, `userAgent`, user_agent)
-    expect(event_to_combo(keydown(init))).toBe(expected)
+    const event = keydown(init)
+    const combo = event_to_combo(event)
+    expect(combo).toBe(expected)
+    if (expected === `mod+k`) {
+      expect(event_to_combo(event, { mod: false })).toBe(
+        user_agent === mac ? `meta+k` : `ctrl+k`,
+      )
+    }
+    // A rebinding UI must emit a canonical combo that matches the keydown it recorded.
+    for (const round_trip of [combo, event_to_combo(event, { mod: false })]) {
+      assert(round_trip !== null)
+      expect(round_trip.split(`+`)).not.toContain(``)
+      expect(matches_shortcut(event, round_trip)).toBe(true)
+      expect(normalize_combo(round_trip)).toBe(round_trip)
+      expect(format_shortcut(round_trip)).not.toContain(``)
+    }
   })
 
   test.each([[`Meta`], [`Control`], [`Alt`], [`Shift`], [`CapsLock`], [`AltGraph`]])(
@@ -234,45 +249,6 @@ describe(`shortcut rebinding`, () => {
       expect(event_to_combo(keydown({ key, shiftKey: true }))).toBeNull()
     },
   )
-
-  test.each([
-    [mac, { key: `k`, metaKey: true }, `meta+k`],
-    [linux, { key: `k`, ctrlKey: true }, `ctrl+k`],
-  ])(
-    `event_to_combo({ mod: false }) records the physical modifier on %s`,
-    (ua, init, exp) => {
-      stub_prop(globalThis.navigator, `userAgent`, ua)
-      expect(event_to_combo(keydown(init), { mod: false })).toBe(exp)
-    },
-  )
-
-  // the load-bearing property: whatever a rebinding UI records must match the very
-  // keystroke that produced it, on the platform it was recorded on and via the token
-  // form that survives a split on `+`
-  test.each([
-    [mac, { key: `k`, metaKey: true }],
-    [mac, { key: `K`, metaKey: true, shiftKey: true }],
-    [mac, { key: `k`, ctrlKey: true }],
-    [linux, { key: `k`, ctrlKey: true }],
-    [linux, { key: `k`, ctrlKey: true, altKey: true, shiftKey: true }],
-    [linux, { key: `,`, ctrlKey: true }],
-    [linux, { key: `+`, ctrlKey: true }],
-    [linux, { key: ` `, ctrlKey: true }],
-    [linux, { key: `ArrowLeft`, altKey: true }],
-    [linux, { key: `Escape` }],
-  ])(`a keydown round-trips through event_to_combo on %s`, (user_agent, init) => {
-    stub_prop(globalThis.navigator, `userAgent`, user_agent)
-    const event = keydown(init)
-    for (const options of [{ mod: true }, { mod: false }]) {
-      const combo = event_to_combo(event, options)
-      assert(combo !== null)
-      expect(combo.split(`+`)).not.toContain(``) // no segment lost to a split on `+`
-      expect(matches_shortcut(event, combo)).toBe(true)
-      // and a canonical combo is already canonical
-      expect(normalize_combo(combo)).toBe(combo)
-      expect(format_shortcut(combo)).not.toContain(``)
-    }
-  })
 
   test.each([
     [`Ctrl+Shift+K`, `ctrl+shift+k`], // case folded

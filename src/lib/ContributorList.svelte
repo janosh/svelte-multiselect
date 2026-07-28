@@ -23,7 +23,7 @@
         aria-label={login}
         {@attach tooltip({ ...tooltip_options, content: login })}
       >
-        <!-- below the fold, so lazy; sized up front, so a late arrival can't reflow -->
+        <!-- Lazy avatar loading; intrinsic size prevents late layout shifts. -->
         <img src={avatar_url} alt="" width="60" height="60" loading="lazy" />
       </a>
     </li>

@@ -25,6 +25,10 @@
     toggle_props?: HTMLAttributes<HTMLButtonElement>
     open_icon?: IconName
     closed_icon?: IconName
+    // Sizing the bundled icon is the common case; reach for `toggle` only to replace it
+    icon_style?: string
+    // Renders the toggle button on its own, for a pane the page opens some other way
+    show_pane?: boolean
     // Gap between the toggle button's bottom-right corner and the pane's
     offset?: { x?: number; y?: number }
     max_width?: string
@@ -51,6 +55,8 @@
     toggle_props = {},
     open_icon = `Cross`,
     closed_icon = `Expand`,
+    icon_style,
+    show_pane = true,
     offset = { x: 5, y: 5 },
     max_width = `450px`,
     pane_props = {},
@@ -72,13 +78,14 @@
   // Doubles as `resizable`'s handle_size and as the padding reserved for it, so the
   // grab zone never overlaps content or the content area's own scrollbar
   const resize_gutter_px = 8
-  // Where the pane sits at mount, before it is anchored under its toggle
   const fallback_position = { left: 50, top: 50 }
 
-  // Both a drag and a resize opt the pane out of automatic repositioning and reveal
-  // the reset button that opts it back in
-  const show_controls = $derived(has_been_dragged)
-  const pane_state = $derived({ show, show_controls, has_been_dragged, dragging })
+  const pane_state = $derived({
+    show,
+    show_controls: has_been_dragged,
+    has_been_dragged,
+    dragging,
+  })
 
   // an empty list is also what disables the attachment below, so the edges and the
   // disabled flag cannot drift apart
@@ -193,92 +200,94 @@
   {#if toggle}
     {@render toggle(pane_state)}
   {:else}
-    <Icon icon={show ? open_icon : closed_icon} />
+    <Icon icon={show ? open_icon : closed_icon} style={icon_style} />
   {/if}
 </button>
 
 <!-- toc-exclude keeps pane headings out of a page's Toc: this is floating chrome. The
 aria-label sits before the spread, so a page with several panes renames them via pane_props -->
-<div
-  bind:this={pane}
-  aria-label="Draggable pane"
-  {...pane_props}
-  role="dialog"
-  aria-modal="false"
-  data-resize={resize}
-  data-dragging={dragging}
-  style:position
-  style:max-width={max_width}
-  style:top="{fallback_position.top}px"
-  style:left="{fallback_position.left}px"
-  style:display={show ? `grid` : `none`}
-  style:padding-right={gutter(`width`)}
-  style:padding-bottom={gutter(`height`)}
-  class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
-  {@attach draggable({
-    handle_selector: `.drag-handle`,
-    on_drag_start: () => {
-      has_been_dragged = true
-      dragging = true
-      on_drag_start?.()
-    },
-    on_drag_end: () => (dragging = false),
-  })}
-  {@attach resizable({
-    disabled: resize_edges.length === 0,
-    edges: resize_edges,
-    min_width: 200,
-    min_height: 100,
-    handle_size: resize_gutter_px,
-    on_resize_start: () => (has_been_dragged = true),
-  })}
-  {@attach click_outside({
-    enabled: show,
-    inside: [toggle_btn],
-    escape: true,
-    // Escape always dismisses; a press outside is what `persistent` suppresses
-    callback: (_node, _config, { via }) => {
-      if (via === `escape` || !persistent) close_pane(via)
-    },
-  })}
->
-  <div class="control-tab">
-    <span class="drag-handle" aria-hidden="true">
-      <Icon icon="DragIndicator" style="width: 100%; height: 100%" />
-    </span>
-    {#if show_controls}
-      <button
-        type="button"
-        class="reset-button"
-        title="Reset pane position"
-        aria-label="Reset pane position"
-        onclick={reset_position}
-      >
-        <Icon icon="Reset" style="width: 100%; height: 100%" />
-      </button>
-      <button
-        type="button"
-        class="close-button"
-        title="Close pane"
-        aria-label="Close pane"
-        onclick={() => close_pane(`button`)}
-      >
-        <Icon icon="Cross" style="width: 100%; height: 100%" />
-      </button>
+{#if show_pane}
+  <div
+    bind:this={pane}
+    aria-label="Draggable pane"
+    {...pane_props}
+    role="dialog"
+    aria-modal="false"
+    data-resize={resize}
+    data-dragging={dragging}
+    style:position
+    style:max-width={max_width}
+    style:top="{fallback_position.top}px"
+    style:left="{fallback_position.left}px"
+    style:display={show ? `grid` : `none`}
+    style:padding-right={gutter(`width`)}
+    style:padding-bottom={gutter(`height`)}
+    class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
+    {@attach draggable({
+      handle_selector: `.drag-handle`,
+      on_drag_start: () => {
+        has_been_dragged = true
+        dragging = true
+        on_drag_start?.()
+      },
+      on_drag_end: () => (dragging = false),
+    })}
+    {@attach resizable({
+      disabled: resize_edges.length === 0,
+      edges: resize_edges,
+      min_width: 200,
+      min_height: 100,
+      handle_size: resize_gutter_px,
+      on_resize_start: () => (has_been_dragged = true),
+    })}
+    {@attach click_outside({
+      enabled: show,
+      inside: [toggle_btn],
+      escape: true,
+      // Escape always dismisses; a press outside is what `persistent` suppresses
+      callback: (_node, _config, { via }) => {
+        if (via === `escape` || !persistent) close_pane(via)
+      },
+    })}
+  >
+    <div class="control-tab">
+      <span class="drag-handle" aria-hidden="true">
+        <Icon icon="DragIndicator" style="width: 100%; height: 100%" />
+      </span>
+      {#if has_been_dragged}
+        <button
+          type="button"
+          class="reset-button"
+          title="Reset pane position"
+          aria-label="Reset pane position"
+          onclick={reset_position}
+        >
+          <Icon icon="Reset" style="width: 100%; height: 100%" />
+        </button>
+        <button
+          type="button"
+          class="close-button"
+          title="Close pane"
+          aria-label="Close pane"
+          onclick={() => close_pane(`button`)}
+        >
+          <Icon icon="Cross" style="width: 100%; height: 100%" />
+        </button>
+      {/if}
+    </div>
+    <div class="pane-content">
+      {@render children(pane_state)}
+    </div>
+    {#if resize === `both`}
+      <!-- purely an affordance: the grab zone is the gutter, owned by `resizable` -->
+      <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
+        <line x1="9" y1="1" x2="1" y2="9" />
+        <line x1="9" y1="4" x2="4" y2="9" />
+        <line x1="9" y1="7" x2="7" y2="9" />
+      </svg>
     {/if}
   </div>
-  <div class="pane-content">
-    {@render children(pane_state)}
-  </div>
-  {#if resize === `both`}
-    <!-- purely an affordance: the grab zone is the gutter, owned by `resizable` -->
-    <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
-      <line x1="9" y1="1" x2="1" y2="9" />
-      <line x1="9" y1="4" x2="4" y2="9" />
-      <line x1="9" y1="7" x2="7" y2="9" />
-    </svg>
-  {/if}
-</div>
+{/if}
 
 <style>
   button.pane-toggle {
@@ -297,7 +306,6 @@ aria-label sits before the spread, so a page with several panes renames them via
   div.draggable-pane {
     /* position comes from style:position, default absolute so it scrolls with the page */
     box-sizing: border-box;
-    display: grid;
     /* one in-flow child; minmax(0, 1fr) lets it scroll instead of overflowing once
        the pane has a definite height from a resize or the viewport clamp */
     grid-template-rows: minmax(0, 1fr);

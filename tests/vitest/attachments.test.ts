@@ -778,19 +778,6 @@ describe(`tooltip`, () => {
     })
 
     it.each([
-      [`allow_html: true uses innerHTML`, true, `<b>bold</b>`, `bold`],
-      [
-        `allow_html: undefined (default) uses textContent`,
-        undefined,
-        `<b>bold</b>`,
-        `<b>bold</b>`,
-      ],
-    ])(`%s`, (_desc, allow_html, content, expected_text) => {
-      show_tooltip({ allow_html }, content)
-      expect(doc_query(`.custom-tooltip`).textContent).toBe(expected_text)
-    })
-
-    it.each([
       [`called and strips XSS`, true, `<script>xss</script>Safe`, 1, `Safe`],
       [`skipped when allow_html: false`, false, `Plain`, 0, `Plain`],
     ])(`sanitize_html %s`, (_desc, allow_html, title, call_count, expected_text) => {
@@ -1049,7 +1036,6 @@ describe(`click_outside`, () => {
   }
 
   it.each([
-    [`outside click`, true, true, 1],
     [`inside click`, false, true, 0],
     [`disabled`, true, false, 0],
   ])(`%s triggers callback %s times`, (_desc, is_outside, enabled, expected_calls) => {

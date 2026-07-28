@@ -24,10 +24,6 @@ export type Highlighter = {
 // exported so highlighter.ts reports the same thing when its default grammars fail
 export const optional_peer_error = `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`
 
-// Deliberately never reads starry-night's `common` export. Its index re-exports the
-// 34-grammar bundle, and there is no subpath to reach it separately, so a single
-// mention anywhere in this module pins ~1.3 MB into the chunk of every consumer that
-// supplies its own grammars. Defaulting lives in highlighter.ts instead.
 const create_instance = async (grammars: readonly Grammar[]): Promise<StarryNight> => {
   // only the import is guarded: a grammar that fails to compile is a caller's bad input,
   // not an absent peer dependency, and must not be reported as one
@@ -37,7 +33,6 @@ const create_instance = async (grammars: readonly Grammar[]): Promise<StarryNigh
   return createStarryNight(grammars)
 }
 
-// Escape characters that would be interpreted as Svelte template syntax
 const escape_svelte = (html: string): string =>
   html.replaceAll(`{`, `&#123;`).replaceAll(`}`, `&#125;`)
 
@@ -69,10 +64,7 @@ export const render_block = (
   return `<pre class="${class_name}"><code>${render_html(instance, code, lang_key)}</code></pre>`
 }
 
-// Nothing is loaded until the first call to ready()/highlight()/highlight_block(); the
-// instance is cached after that, including a rejection, so a missing peer dependency
-// isn't retried on every call. For the common bundle plus Svelte, import `starry_night`
-// from `svelte-widgets/live-examples` rather than passing those grammars here.
+// Initialization is lazy and cached, including a rejection.
 export const create_highlighter = (grammars: readonly Grammar[]): Highlighter => {
   let instance: Promise<StarryNight> | undefined
   const ready = (): Promise<StarryNight> => (instance ??= create_instance(grammars))

@@ -16,14 +16,12 @@ export type SharedConfig = {
   }
   fmt: NonNullable<UserConfig[`fmt`]>
   build: NonNullable<UserConfig[`build`]>
-  // lint-n lets a whole staged config be one function; ours is always a glob map, and
+  // lint-staged lets a whole staged config be one function; ours is always a glob map, and
   // vite-plus JSON.stringifies it to reach its Rust side, where a function is dropped
   staged: Extract<NonNullable<UserConfig[`staged`]>, Record<string, unknown>>
 }
 
-// Rules that are simply on, grouped in the order they were adopted; the grouping is
-// review history and carries no runtime meaning. A word each rather than a line each, so
-// the seventeen that carry an option or a reason are not buried under 137 that do not.
+// Keep simple enabled rules compact so configured rules and exceptions remain visible.
 const error_rules = [
   // extra rules not in the enabled categories
   `no-template-curly-in-string no-constructor-return default-param-last guard-for-in

@@ -59,7 +59,7 @@ export function sync_fullscreen(opts: FullscreenSyncOptions): void {
   // browser -> flag, covering Esc, F11 and programmatic exits
   $effect(() => {
     const wrapper = opts.get_wrapper()
-    if (!wrapper) return () => {}
+    if (!wrapper) return undefined
 
     const handle_change = () => {
       // key the flag to this wrapper: comparing against document.fullscreenElement alone

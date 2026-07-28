@@ -102,7 +102,6 @@ beforeEach(() => {
   mock_height = 100
 })
 
-// Helper for virtualization tests
 const mount_virtualized = (count: number, overrides = {}) => {
   document.body.innerHTML = ``
   mount_masonry({
