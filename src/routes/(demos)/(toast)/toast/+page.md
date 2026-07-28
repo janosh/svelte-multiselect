@@ -7,7 +7,10 @@ one that matters nor scroll past before it has been read.
 The queue is a pure reducer — `enqueue_toast`, `dismiss_toast`, `expire_toasts`,
 `activate_toast_action` — and `ToastStore` is the reactive wrapper around it that owns
 the expiry timer. `toast` is a ready-made store, so `toast.show('Saved')` works from
-anywhere; pass `store` to `<Toast />` when a page wants its own queue.
+anywhere; pass `store` to `<Toast />` when a page wants its own queue. The reducer stands
+on its own — every function takes a queue and returns the next one plus the lifecycle
+effects it produced — so an app that wants its own timers and rendering can hold the
+queue in `$state.raw` and drive it directly.
 
 ### Priorities
 
@@ -27,6 +30,41 @@ seconds.
 
 <div style="display: flex; gap: 6pt; flex-wrap: wrap">
   {#each TOAST_PRIORITIES as priority (priority)}
+    <button onclick={() => store.show(`A ${priority} notification`, { priority })}>
+      {priority}
+    </button>
+  {/each}
+  <button onclick={() => store.clear()}>clear</button>
+</div>
+
+<Toast {store} />
+```
+
+### A ladder of your own
+
+Those five are only the default. Rank is array position, so pass your own ordered list as
+`priorities` to `create_toast_queue` or `ToastStore` and the types follow from it: `show`
+accepts exactly the names you listed, and an unrecognized one throws rather than ranking
+below every real tier, which is how a stray name silently inverts a queue. Requests that
+name no priority land on `default_priority` — `info` where the ladder has that rung,
+required where it does not — and the top two rungs stay up until dismissed unless
+`sticky_priorities` says otherwise. The accent stripe is keyed off `data-priority`, so
+custom tiers can be coloured from your own CSS.
+
+```svelte example id="toast-custom-ladder"
+<script lang="ts">
+  import Toast from '$lib/Toast.svelte'
+  import { ToastStore } from '$lib/toast-queue.svelte.ts'
+
+  // `action` for undo prompts, `watch` for file-watch notices: neither is a `success`
+  // or a `warning`, and both have to outrank a plain `info`
+  const store = new ToastStore({
+    priorities: [`progress`, `info`, `action`, `watch`, `error`],
+  })
+</script>
+
+<div style="display: flex; gap: 6pt; flex-wrap: wrap">
+  {#each store.priorities as priority (priority)}
     <button onclick={() => store.show(`A ${priority} notification`, { priority })}>
       {priority}
     </button>

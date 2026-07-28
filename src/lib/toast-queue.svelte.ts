@@ -20,27 +20,49 @@ export type ToastPosition =
   | `bottom-center`
   | `bottom-right`
 
-// Rank is array position: a later priority outranks an earlier one and preempts it.
-const priority_rank = (priority: ToastPriority): number =>
-  TOAST_PRIORITIES.indexOf(priority)
+// Rank is array position: a later priority outranks an earlier one and preempts it. The
+// ladder is per queue and every type here is generic over it, so a consumer can name
+// their own tiers and still have them type-check. An unlisted name would rank -1, below
+// every real tier, silently inverting the queue — a bug to surface, not a lowest rung.
+const priority_rank = <Priority extends string>(
+  priorities: readonly Priority[],
+  priority: Priority,
+): number => {
+  const rank = priorities.indexOf(priority)
+  if (rank === -1) {
+    const ladder = priorities.join(`, `)
+    throw new Error(`Unknown toast priority \`${priority}\`, expected one of [${ladder}]`)
+  }
+  return rank
+}
 
 // Soft cap on waiting toasts. Soft because an unactioned action is never dropped.
 export const DEFAULT_MAX_PENDING = 3
 export const DEFAULT_TOAST_DURATION_MS = 5000
-// A warning or error the user never saw is a bug report waiting to happen, so the top
-// two ranks stay up until dismissed while the lower ones time out on their own.
-export const STICKY_PRIORITIES: readonly ToastPriority[] = [`warning`, `error`]
+// Where a request that names no priority lands, on any ladder that has this rung
+const DEFAULT_TOAST_PRIORITY = `info`
 
+// A warning or error the user never saw is a bug report waiting to happen, so the top
+// two ranks of any ladder stay up until dismissed while the lower ones time out.
+export const STICKY_PRIORITIES: readonly ToastPriority[] = TOAST_PRIORITIES.slice(-2)
+
+// Both callbacks take the widened item rather than the queue's own ladder, which keeps
+// ToastItem covariant in its priority type: a parameter typed to the narrow ladder makes
+// ToastItem<'watch' | ...> unassignable to ToastItem<string> and would pin <Toast /> and
+// every other consumer of a toast to a single ladder.
 export interface ToastAction {
   label: string
-  on_click?: (toast: ToastItem) => void
+  on_click?: (toast: ToastItem<string>) => void
 }
 
-export type ToastCloseHandler = (toast: ToastItem, reason: ToastLifecycleReason) => void
+export type ToastCloseHandler = (
+  toast: ToastItem<string>,
+  reason: ToastLifecycleReason,
+) => void
 
-export interface ToastRequest {
+export interface ToastRequest<Priority extends string = ToastPriority> {
   message: string
-  priority?: ToastPriority
+  priority?: Priority
   // Absolute wall-clock deadline. Keeps counting down while the toast waits its turn,
   // for notices that go stale on their own schedule rather than after N seconds seen.
   expires_at_ms?: number | null
@@ -53,12 +75,12 @@ export interface ToastRequest {
   on_close?: ToastCloseHandler
 }
 
-export interface ToastItem {
+export interface ToastItem<Priority extends string = ToastPriority> {
   id: string
   // Insertion order, breaking ties between toasts created in the same millisecond
   seq: number
   message: string
-  priority: ToastPriority
+  priority: Priority
   created_at_ms: number
   expires_at_ms: number | null
   visible_duration_ms?: number
@@ -67,39 +89,51 @@ export interface ToastItem {
   on_close?: ToastCloseHandler
 }
 
-export interface ToastQueue {
-  active: ToastItem | null
-  pending: readonly ToastItem[]
+export interface ToastQueue<Priority extends string = ToastPriority> {
+  active: ToastItem<Priority> | null
+  pending: readonly ToastItem<Priority>[]
   next_id: number
   max_pending: number
+  // Carried on the queue rather than passed to each call, so every transition ranks by
+  // the same ladder and a queue stays self-describing when handed around.
+  priorities: readonly Priority[]
+  default_priority: Priority
 }
 
-export interface ToastLifecycleEffect {
+export interface ToastQueueOptions<Priority extends string = ToastPriority> {
+  max_pending?: number
+  // Ordered lowest rank first. Defaults to TOAST_PRIORITIES.
+  priorities?: readonly Priority[]
+  // NoInfer so a stray name is rejected against the ladder instead of widening it
+  default_priority?: NoInfer<Priority>
+}
+
+export interface ToastLifecycleEffect<Priority extends string = ToastPriority> {
   reason: ToastLifecycleReason
-  toast: ToastItem
+  toast: ToastItem<Priority>
 }
 
-export interface ToastQueueTransition {
-  queue: ToastQueue
-  effects: readonly ToastLifecycleEffect[]
+export interface ToastQueueTransition<Priority extends string = ToastPriority> {
+  queue: ToastQueue<Priority>
+  effects: readonly ToastLifecycleEffect<Priority>[]
 }
 
-export interface EnqueueToastTransition extends ToastQueueTransition {
+export interface EnqueueToastTransition<
+  Priority extends string = ToastPriority,
+> extends ToastQueueTransition<Priority> {
   toast_id: string
   deduplicated: boolean
 }
 
-const compare_toasts = (left: ToastItem, right: ToastItem): number =>
-  priority_rank(right.priority) - priority_rank(left.priority) ||
-  left.created_at_ms - right.created_at_ms ||
-  left.seq - right.seq
-
-const is_expired = (toast: ToastItem, now_ms: number): boolean =>
+const is_expired = (toast: ToastItem<string>, now_ms: number): boolean =>
   toast.expires_at_ms !== null && toast.expires_at_ms <= now_ms
 
 // Bank the unspent part of a visibility budget. A toast pushed back into the queue has
 // not been read, so its clock stops until it is on screen again.
-export const pause_visibility_timeout = (toast: ToastItem, now_ms: number): ToastItem =>
+export const pause_visibility_timeout = <Priority extends string>(
+  toast: ToastItem<Priority>,
+  now_ms: number,
+): ToastItem<Priority> =>
   toast.visible_duration_ms === undefined
     ? toast
     : {
@@ -111,29 +145,38 @@ export const pause_visibility_timeout = (toast: ToastItem, now_ms: number): Toas
             : Math.max(0, toast.expires_at_ms - now_ms),
       }
 
-export const start_visibility_timeout = (toast: ToastItem, now_ms: number): ToastItem =>
+export const start_visibility_timeout = <Priority extends string>(
+  toast: ToastItem<Priority>,
+  now_ms: number,
+): ToastItem<Priority> =>
   toast.visible_duration_ms === undefined
     ? toast
     : { ...toast, expires_at_ms: now_ms + toast.visible_duration_ms }
 
-const rebalance_queue = (queue: ToastQueue, now_ms: number): ToastQueueTransition => {
+const rebalance_queue = <Priority extends string>(
+  queue: ToastQueue<Priority>,
+  now_ms: number,
+): ToastQueueTransition<Priority> => {
   let { active } = queue
+  const rank = (toast: ToastItem<Priority>) =>
+    priority_rank(queue.priorities, toast.priority)
+  const highest_first = (left: ToastItem<Priority>, right: ToastItem<Priority>) =>
+    rank(right) - rank(left) ||
+    left.created_at_ms - right.created_at_ms ||
+    left.seq - right.seq
   const pending = queue.pending.map((toast) => pause_visibility_timeout(toast, now_ms))
-  pending.sort(compare_toasts)
+  pending.sort(highest_first)
   if (!active) {
     const promoted = pending.shift()
     active = promoted ? start_visibility_timeout(promoted, now_ms) : null
-  } else if (
-    pending[0] &&
-    priority_rank(pending[0].priority) > priority_rank(active.priority)
-  ) {
+  } else if (pending[0] && rank(pending[0]) > rank(active)) {
     const [next_up] = pending.splice(0, 1)
     pending.push(pause_visibility_timeout(active, now_ms))
-    pending.sort(compare_toasts)
+    pending.sort(highest_first)
     active = start_visibility_timeout(next_up, now_ms)
   }
 
-  const overflow: ToastItem[] = []
+  const overflow: ToastItem<Priority>[] = []
   while (pending.length > queue.max_pending) {
     // An unseen action must remain available even if actions temporarily push
     // the queue above the soft cap; only non-destructive notices may overflow.
@@ -147,11 +190,11 @@ const rebalance_queue = (queue: ToastQueue, now_ms: number): ToastQueueTransitio
   }
 }
 
-const remove_toast = (
-  queue: ToastQueue,
+const remove_toast = <Priority extends string>(
+  queue: ToastQueue<Priority>,
   toast_id: string,
   now_ms: number,
-): [ToastQueue, ToastItem | null] => {
+): [ToastQueue<Priority>, ToastItem<Priority> | null] => {
   const { active } = queue
   if (active?.id === toast_id) {
     return [rebalance_queue({ ...queue, active: null }, now_ms).queue, active]
@@ -163,16 +206,48 @@ const remove_toast = (
   return [{ ...queue, pending }, toast]
 }
 
-export const create_toast_queue = (
-  max_pending: number = DEFAULT_MAX_PENDING,
-): ToastQueue => ({ active: null, pending: [], next_id: 1, max_pending })
+export const create_toast_queue = <const Priority extends string = ToastPriority>(
+  options: ToastQueueOptions<Priority> = {},
+): ToastQueue<Priority> => {
+  const { max_pending = DEFAULT_MAX_PENDING } = options
+  // Priority defaults to exactly the element type of TOAST_PRIORITIES, but that
+  // correlation is invisible from inside a generic body, hence the widen-then-narrow
+  const priorities: readonly Priority[] =
+    options.priorities ?? (TOAST_PRIORITIES as readonly string[] as readonly Priority[])
+  const ladder = priorities.join(`, `)
+  const duplicate = priorities.find((entry, idx) => priorities.indexOf(entry) !== idx)
+  if (duplicate !== undefined) {
+    throw new Error(`Toast priority \`${duplicate}\` is listed twice in [${ladder}]`)
+  }
+  const default_priority =
+    options.default_priority ??
+    priorities.find((entry) => entry === DEFAULT_TOAST_PRIORITY)
+  if (default_priority === undefined) {
+    throw new Error(
+      `Toast ladder [${ladder}] has no \`${DEFAULT_TOAST_PRIORITY}\` rung, so create_toast_queue needs an explicit default_priority`,
+    )
+  }
+  if (!priorities.includes(default_priority)) {
+    throw new Error(
+      `Toast default_priority \`${default_priority}\` is not in the ladder [${ladder}]`,
+    )
+  }
+  return {
+    active: null,
+    pending: [],
+    next_id: 1,
+    max_pending,
+    priorities,
+    default_priority,
+  }
+}
 
-export const expire_toasts = (
-  queue: ToastQueue,
+export const expire_toasts = <Priority extends string>(
+  queue: ToastQueue<Priority>,
   now_ms: number,
-): ToastQueueTransition => {
+): ToastQueueTransition<Priority> => {
   const expired = [queue.active, ...queue.pending].filter(
-    (toast): toast is ToastItem => toast !== null && is_expired(toast, now_ms),
+    (toast): toast is ToastItem<Priority> => toast !== null && is_expired(toast, now_ms),
   )
   if (expired.length === 0) return { queue, effects: [] }
 
@@ -184,15 +259,20 @@ export const expire_toasts = (
   }
 }
 
-export const enqueue_toast = (
-  queue: ToastQueue,
-  request: ToastRequest,
+export const enqueue_toast = <Priority extends string>(
+  queue: ToastQueue<Priority>,
+  // NoInfer so the queue's ladder types the request rather than the request widening
+  // the ladder, which would let an off-ladder priority past the compiler
+  request: ToastRequest<NoInfer<Priority>>,
   now_ms: number,
-): EnqueueToastTransition => {
+): EnqueueToastTransition<Priority> => {
   const expired_transition = expire_toasts(queue, now_ms)
   queue = expired_transition.queue
   const effects = [...expired_transition.effects]
-  const priority = request.priority ?? `info`
+  const priority = request.priority ?? queue.default_priority
+  // Rank eagerly: a lone toast is promoted without ever being compared, so an unknown
+  // priority would otherwise sit in the queue until a second toast exposed it.
+  const rank = priority_rank(queue.priorities, priority)
   const expires_at_ms = request.expires_at_ms ?? null
   const dedupe_key = request.dedupe_key ?? request.message
   const existing = [queue.active, ...queue.pending].find(
@@ -201,11 +281,11 @@ export const enqueue_toast = (
 
   if (existing) {
     const request_is_lower_priority =
-      priority_rank(priority) < priority_rank(existing.priority)
+      rank < priority_rank(queue.priorities, existing.priority)
 
     // A lower-priority repeat only refreshes the text; the higher-priority
     // original keeps its priority, timing, and action.
-    const updated: ToastItem = request_is_lower_priority
+    const updated: ToastItem<Priority> = request_is_lower_priority
       ? { ...existing, message: request.message }
       : {
           ...existing,
@@ -216,7 +296,7 @@ export const enqueue_toast = (
           visible_duration_ms: request.visible_duration_ms,
           on_close: request.on_close,
         }
-    let transition: ToastQueueTransition
+    let transition: ToastQueueTransition<Priority>
     if (is_expired(updated, now_ms)) {
       const [without_existing] = remove_toast(queue, existing.id, now_ms)
       transition = {
@@ -242,7 +322,7 @@ export const enqueue_toast = (
     }
   }
 
-  const toast: ToastItem = {
+  const toast: ToastItem<Priority> = {
     id: `toast-${queue.next_id}`,
     seq: queue.next_id,
     message: request.message,
@@ -255,7 +335,7 @@ export const enqueue_toast = (
     on_close: request.on_close,
   }
   const next_id = queue.next_id + 1
-  const transition: ToastQueueTransition = is_expired(toast, now_ms)
+  const transition: ToastQueueTransition<Priority> = is_expired(toast, now_ms)
     ? { queue: { ...queue, next_id }, effects: [{ reason: `timeout`, toast }] }
     : rebalance_queue({ ...queue, next_id, pending: [...queue.pending, toast] }, now_ms)
   return {
@@ -266,11 +346,11 @@ export const enqueue_toast = (
   }
 }
 
-export const dismiss_toast = (
-  queue: ToastQueue,
+export const dismiss_toast = <Priority extends string>(
+  queue: ToastQueue<Priority>,
   toast_id: string,
   now_ms: number,
-): ToastQueueTransition => {
+): ToastQueueTransition<Priority> => {
   const expired_transition = expire_toasts(queue, now_ms)
   const [next_queue, dismissed] = remove_toast(expired_transition.queue, toast_id, now_ms)
   return {
@@ -281,11 +361,11 @@ export const dismiss_toast = (
   }
 }
 
-export const activate_toast_action = (
-  queue: ToastQueue,
+export const activate_toast_action = <Priority extends string>(
+  queue: ToastQueue<Priority>,
   toast_id: string,
   now_ms: number,
-): ToastQueueTransition => {
+): ToastQueueTransition<Priority> => {
   // A click already dispatched by the browser wins over a delayed expiry
   // timer. Remove the target first, then expire unrelated queue items.
   const toast =
@@ -303,42 +383,55 @@ export const activate_toast_action = (
 
 // === Reactive store ===
 
-export type ToastOptions = Omit<ToastRequest, `message` | `visible_duration_ms`> & {
+export type ToastOptions<Priority extends string = ToastPriority> = Omit<
+  ToastRequest<Priority>,
+  `message` | `visible_duration_ms`
+> & {
   // Counts only while the toast is on screen, so a hover or a higher-priority
   // interruption does not eat the reading time. `null` stays up until dismissed.
   duration_ms?: number | null
 }
 
-export interface ToastStoreOptions {
-  max_pending?: number
+export interface ToastStoreOptions<
+  Priority extends string = ToastPriority,
+> extends ToastQueueOptions<Priority> {
   duration_ms?: number
+  // Priorities that stay up until dismissed. Defaults to the ladder's top two.
+  sticky_priorities?: readonly Priority[]
 }
 
-export class ToastStore {
-  #queue: ToastQueue = $state.raw(create_toast_queue())
+export class ToastStore<Priority extends string = ToastPriority> {
+  #queue: ToastQueue<Priority>
   #timer: ReturnType<typeof setTimeout> | undefined
   readonly #default_duration_ms: number
+  readonly #sticky_priorities: readonly Priority[]
 
-  constructor(options: ToastStoreOptions = {}) {
-    this.#queue = create_toast_queue(options.max_pending)
+  constructor(options: ToastStoreOptions<Priority> = {}) {
+    this.#queue = $state.raw(create_toast_queue<Priority>(options))
     this.#default_duration_ms = options.duration_ms ?? DEFAULT_TOAST_DURATION_MS
+    this.#sticky_priorities =
+      options.sticky_priorities ?? this.#queue.priorities.slice(-2)
   }
 
-  get active(): ToastItem | null {
+  get active(): ToastItem<Priority> | null {
     return this.#queue.active
   }
-  get pending(): readonly ToastItem[] {
+  get pending(): readonly ToastItem<Priority>[] {
     return this.#queue.pending
   }
+  // The ladder this store ranks by, lowest first
+  get priorities(): readonly Priority[] {
+    return this.#queue.priorities
+  }
   // Everything the queue is holding, visible one first
-  get items(): readonly ToastItem[] {
+  get items(): readonly ToastItem<Priority>[] {
     const { active, pending } = this.#queue
     return active ? [active, ...pending] : pending
   }
 
-  show(message: string, options: ToastOptions = {}): string {
-    const { duration_ms, priority = `info`, ...request } = options
-    const default_duration_ms = STICKY_PRIORITIES.includes(priority)
+  show(message: string, options: ToastOptions<Priority> = {}): string {
+    const { duration_ms, priority = this.#queue.default_priority, ...request } = options
+    const default_duration_ms = this.#sticky_priorities.includes(priority)
       ? null
       : this.#default_duration_ms
     // `null` is a deliberate "stays until dismissed", so ?? would read it as absent
@@ -369,10 +462,10 @@ export class ToastStore {
   }
 
   // Dismisses everything matching, defaulting to the whole queue
-  clear(predicate: (toast: ToastItem) => boolean = () => true): void {
+  clear(predicate: (toast: ToastItem<Priority>) => boolean = () => true): void {
     const now_ms = Date.now()
     let queue = this.#queue
-    const effects: ToastLifecycleEffect[] = []
+    const effects: ToastLifecycleEffect<Priority>[] = []
     for (const { id } of this.items.filter(predicate)) {
       const transition = dismiss_toast(queue, id, now_ms)
       queue = transition.queue
@@ -402,13 +495,16 @@ export class ToastStore {
     this.#apply({ queue: { ...this.#queue, active: resumed }, effects: [] })
   }
 
-  // Drops the pending timer and every toast, for teardown between tests or routes
+  // Drops the pending timer and every toast without firing on_close, for teardown
+  // between tests or routes; clear() first if a consumer relies on on_close. The id
+  // counter carries over, so an id held from before teardown cannot address a toast
+  // shown after it.
   destroy(): void {
     clearTimeout(this.#timer)
-    this.#queue = create_toast_queue(this.#queue.max_pending)
+    this.#queue = { ...this.#queue, active: null, pending: [] }
   }
 
-  #apply(transition: ToastQueueTransition): void {
+  #apply(transition: ToastQueueTransition<Priority>): void {
     this.#queue = transition.queue
     this.#schedule()
     // Dispatched after the queue is committed so a handler that enqueues a follow-up

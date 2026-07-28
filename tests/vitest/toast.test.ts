@@ -6,28 +6,36 @@ import {
   dismiss_toast,
   enqueue_toast,
   expire_toasts,
-  type ToastCloseHandler,
-  type ToastItem,
-  type ToastLifecycleEffect,
-  type ToastQueue,
-  type ToastRequest,
+  TOAST_PRIORITIES,
   ToastStore,
+} from '$lib/toast-queue.svelte.ts'
+import type {
+  ToastCloseHandler,
+  ToastItem,
+  ToastLifecycleEffect,
+  ToastPriority,
+  ToastQueue,
+  ToastRequest,
 } from '$lib/toast-queue.svelte.ts'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const undo = { label: `Undo` }
+// The ladder this queue was extracted from: `action` for undo prompts, `watch` for
+// file-watch notices. Neither name exists on the default five, which ranked them -1.
+const hive_ladder = [`progress`, `info`, `action`, `watch`, `error`] as const
 
 // Insertion helper: every reducer case builds its queue by enqueueing at a known clock
-const add = (
-  queue: ToastQueue,
+const add = <Priority extends string>(
+  queue: ToastQueue<Priority>,
   message: string,
-  request: Partial<ToastRequest> = {},
+  request: Partial<ToastRequest<NoInfer<Priority>>> = {},
   now_ms = 0,
 ) => enqueue_toast(queue, { message, ...request }, now_ms)
 
-const messages = (toasts: readonly ToastItem[]) => toasts.map((toast) => toast.message)
+const messages = (toasts: readonly ToastItem<string>[]) =>
+  toasts.map((toast) => toast.message)
 
 const fake_clock = () => {
   vi.useFakeTimers()
@@ -152,7 +160,7 @@ describe(`toast queue reducer`, () => {
     })
 
     test(`max_pending is per queue`, () => {
-      let queue = create_toast_queue(1)
+      let queue = create_toast_queue({ max_pending: 1 })
       for (const message of [`a`, `b`, `c`]) queue = add(queue, message).queue
 
       expect(queue.active?.message).toBe(`a`)
@@ -248,6 +256,72 @@ describe(`toast queue reducer`, () => {
 
     expect(transition.effects).toEqual([])
     expect(transition.queue.active?.message).toBe(`a`)
+  })
+
+  describe(`custom priority ladder`, () => {
+    test(`ranks by the supplied order`, () => {
+      let queue = create_toast_queue({ priorities: hive_ladder })
+      expect(queue.priorities).toEqual(hive_ladder)
+
+      // each arrival outranks the visible one and pushes it back into the queue
+      for (const priority of [`info`, `action`, `watch`] as const) {
+        queue = add(queue, priority, { priority }).queue
+      }
+      expect(queue.active?.message).toBe(`watch`)
+      expect(messages(queue.pending)).toEqual([`action`, `info`])
+
+      // and the bottom rung stays at the bottom rather than sinking below nothing
+      queue = add(queue, `progress`, { priority: `progress` }).queue
+      expect(queue.active?.message).toBe(`watch`)
+      expect(messages(queue.pending)).toEqual([`action`, `info`, `progress`])
+    })
+
+    test(`unprioritized requests land on default_priority`, () => {
+      expect(create_toast_queue().priorities).toEqual(TOAST_PRIORITIES)
+      expect(create_toast_queue().default_priority).toBe(`info`)
+
+      // a ladder without an `info` rung has to name its own
+      const queue = create_toast_queue({
+        priorities: [`low`, `high`],
+        default_priority: `low`,
+      })
+      expect(add(queue, `plain`).queue.active?.priority).toBe(`low`)
+    })
+
+    test.each([
+      [
+        `an unknown priority, which would otherwise rank below everything`,
+        () =>
+          add<ToastPriority>(create_toast_queue(), `mystery`, {
+            // @ts-expect-error off-ladder priorities are a type error first; the throw is
+            // the backstop for callers who reach the queue from untyped JS or JSON
+            priority: `action`,
+          }),
+        `Unknown toast priority \`action\`, expected one of [progress, info, success, warning, error]`,
+      ],
+      [
+        `a ladder with no \`info\` rung and no default_priority`,
+        () => create_toast_queue({ priorities: [`low`, `high`] }),
+        `Toast ladder [low, high] has no \`info\` rung`,
+      ],
+      [
+        `a default_priority off the ladder`,
+        () =>
+          create_toast_queue({
+            priorities: [`low`, `high`],
+            // @ts-expect-error NoInfer pins the ladder, so `mid` cannot widen it
+            default_priority: `mid`,
+          }),
+        `Toast default_priority \`mid\` is not in the ladder [low, high]`,
+      ],
+      [
+        `a repeated rung, whose rank would be ambiguous`,
+        () => create_toast_queue({ priorities: [`low`, `high`, `low`] }),
+        `Toast priority \`low\` is listed twice in [low, high, low]`,
+      ],
+    ])(`%s is rejected`, (_desc, act, message) => {
+      expect(act).toThrow(message)
+    })
   })
 })
 
@@ -354,14 +428,33 @@ describe(`ToastStore`, () => {
     expect(store.items).toEqual([])
   })
 
-  test(`destroy drops the queue and its pending timer`, () => {
+  test(`stickiness defaults to the ladder's top two`, () => {
     fake_clock()
-    const store = new ToastStore()
-    store.show(`a`)
+    const store = new ToastStore({ priorities: hive_ladder })
+    store.show(`undo delete`, { priority: `action` }) // a rung below the top two
+
+    vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS)
+    expect(store.active).toBeNull()
+
+    store.show(`watching src/`, { priority: `watch` })
+    vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS * 2)
+    expect(store.active?.message).toBe(`watching src/`)
+  })
+
+  test(`destroy drops the queue and its timer but keeps the ladder and ids`, () => {
+    fake_clock()
+    const store = new ToastStore({ priorities: hive_ladder })
+    const stale_id = store.show(`a`)
     store.destroy()
 
     expect(store.items).toEqual([])
     expect(vi.getTimerCount()).toBe(0)
+    expect(store.priorities).toEqual(hive_ladder)
+
+    // ids stay monotonic across teardown, so a stale one can't hit a fresh toast
+    expect(store.show(`b`)).not.toBe(stale_id)
+    store.dismiss(stale_id)
+    expect(messages(store.items)).toEqual([`b`])
   })
 })
 
@@ -379,6 +472,11 @@ describe(`<Toast />`, () => {
   }
   const polite = () => doc_query(`[aria-live="polite"]`)
   const assertive = () => doc_query(`[aria-live="assertive"]`)
+  const escape_key = () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })
+  const press_focus_hotkey = () =>
+    document.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `t`, altKey: true, bubbles: true }),
+    )
 
   test(`both live regions are mounted before any toast exists`, () => {
     render()
@@ -411,18 +509,38 @@ describe(`<Toast />`, () => {
     expect(used.getAttribute(`aria-atomic`)).toBe(`true`)
   })
 
+  test(`a store built on a custom ladder drives the component`, async () => {
+    // mounted with typed props rather than through `render`, so this also pins that a
+    // narrowly-typed ToastStore is accepted where the component declares any ladder
+    const store = new ToastStore({ priorities: hive_ladder })
+    mounted.push(mount(Toast, { target: document.body, props: { store } }))
+    store.show(`watching src/`, { priority: `watch` })
+    await tick()
+
+    expect(doc_query(`.toast`).dataset.priority).toBe(`watch`)
+    expect(polite().textContent).toContain(`watching src/`)
+  })
+
   test(`the waiting count is rendered with a spelled-out label`, async () => {
     const store = render()
     store.show(`a`)
     store.show(`b`)
     await tick()
 
-    expect(doc_query(`.toast-pending`).getAttribute(`aria-label`)).toBe(
+    // the badge itself is hidden: aria-atomic reads the whole card, so an aria-label on
+    // the badge would splice its wording into the message instead of adding to it
+    const badge = doc_query(`.toast-pending`)
+    expect(badge.getAttribute(`aria-hidden`)).toBe(`true`)
+    expect(badge.getAttribute(`aria-label`)).toBeNull()
+    expect(badge.textContent).toBe(`+1`)
+    expect(doc_query(`.toast .sr-only`).textContent?.trim()).toBe(
       `1 more notification pending`,
     )
+
     store.show(`c`)
     await tick()
-    expect(doc_query(`.toast-pending`).getAttribute(`aria-label`)).toBe(
+    expect(doc_query(`.toast-pending`).textContent).toBe(`+2`)
+    expect(doc_query(`.toast .sr-only`).textContent?.trim()).toBe(
       `2 more notifications pending`,
     )
   })
@@ -556,10 +674,34 @@ describe(`<Toast />`, () => {
     store.show(`a`, { action: { label: `Undo` } })
     await tick()
 
-    document.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `t`, altKey: true, bubbles: true }),
-    )
+    press_focus_hotkey()
     expect(document.activeElement).toBe(doc_query(`.toast-action`))
+  })
+
+  // every route out of the toast unmounts the button holding focus, so each one has to
+  // hand the user's place back rather than dropping focus on <body>
+  test.each([
+    [`the action button`, () => doc_query<HTMLButtonElement>(`.toast-action`).click()],
+    [`the dismiss button`, () => doc_query<HTMLButtonElement>(`.toast-dismiss`).click()],
+    [`Escape`, () => doc_query(`.toast-dismiss`).dispatchEvent(escape_key())],
+  ])(`%s hands focus back to where the hotkey took it from`, async (_label, close) => {
+    const opener = document.createElement(`button`)
+    document.body.append(opener)
+    const store = render()
+    store.show(`a`, { action: { label: `Undo` } })
+    await tick()
+
+    opener.focus()
+    press_focus_hotkey()
+    expect(document.activeElement).not.toBe(opener)
+
+    close()
+    await tick()
+    await tick() // restore_focus waits a tick for the toast to leave the DOM
+
+    expect(store.active).toBeNull()
+    expect(document.activeElement).toBe(opener)
+    opener.remove()
   })
 
   test(`Escape dismisses only once the keyboard is inside the toast`, async () => {
@@ -567,12 +709,11 @@ describe(`<Toast />`, () => {
     store.show(`a`)
     await tick()
 
-    const escape = () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })
-    document.body.dispatchEvent(escape())
+    document.body.dispatchEvent(escape_key())
     await tick()
     expect(store.active?.message).toBe(`a`)
 
-    doc_query(`.toast-dismiss`).dispatchEvent(escape())
+    doc_query(`.toast-dismiss`).dispatchEvent(escape_key())
     await tick()
     expect(store.active).toBeNull()
   })

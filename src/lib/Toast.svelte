@@ -1,17 +1,14 @@
 <script lang="ts">
-  import { type Snippet, untrack } from 'svelte'
+  import { type Snippet, tick, untrack } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { hotkey } from './attachments'
-  import {
-    toast as default_store,
-    type ToastItem,
-    type ToastPosition,
-    type ToastPriority,
-    type ToastStore,
-  } from './toast-queue.svelte.ts'
+  import { toast as default_store } from './toast-queue.svelte.ts'
+  import type { ToastItem, ToastPosition, ToastStore } from './toast-queue.svelte.ts'
 
+  // Priorities are widened to `string` throughout: the component renders whatever
+  // ladder its store was built with and never ranks anything itself.
   interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children`> {
-    store?: ToastStore
+    store?: ToastStore<string>
     position?: ToastPosition
     dismissible?: boolean
     // Hovering suspends the countdown. Focus always does, hover or not.
@@ -20,9 +17,9 @@
     // toast lives at the end of the DOM and Tab may be a long way from it. `null` opts out.
     focus_hotkey?: string | string[] | null
     // Rendered into the assertive live region, interrupting whatever is being read
-    assertive?: readonly ToastPriority[]
+    assertive?: readonly string[]
     dismiss_label?: string
-    children?: Snippet<[ToastItem]>
+    children?: Snippet<[ToastItem<string>]>
   }
 
   let {
@@ -66,25 +63,52 @@
     if (active && (hovered || focused)) untrack(() => store.pause())
   })
 
+  // Where the keyboard was before focus_hotkey pulled it into the toast. Removing the
+  // toast unmounts the button holding focus, which would otherwise drop it on <body>
+  // and lose the user's place on the page.
+  let focus_origin: HTMLElement | null = null
+
+  const focus_toast = () => {
+    const first_button = stack?.querySelector(`button`)
+    if (!first_button) return
+    const previous = document.activeElement
+    // a second press while already inside the toast must not overwrite the real origin
+    if (!stack?.contains(previous)) {
+      focus_origin = previous instanceof HTMLElement ? previous : null
+    }
+    first_button.focus()
+  }
+
+  const restore_focus = async () => {
+    const origin = focus_origin
+    focus_origin = null
+    if (!origin) return
+    await tick() // the toast that had focus is gone only after the DOM catches up
+    if (!stack?.contains(document.activeElement)) origin.focus()
+  }
+
+  const dismiss = (id: string) => {
+    store.dismiss(id)
+    restore_focus()
+  }
+  const run_action = (id: string) => {
+    store.run_action(id)
+    restore_focus()
+  }
+
   const bindings = $derived(
     focus_hotkey?.length
-      ? [
-          {
-            keys: focus_hotkey,
-            allow_in_inputs: true,
-            handler: () => stack?.querySelector(`button`)?.focus(),
-          },
-        ]
+      ? [{ keys: focus_hotkey, allow_in_inputs: true, handler: focus_toast }]
       : [],
   )
   // Scoped to the stack, so Escape only dismisses when the keyboard is already in the
   // toast — a global Escape would fight every dialog on the page for the same key.
   const escape_binding = $derived(
-    active ? [{ keys: `Escape`, handler: () => store.dismiss(active.id) }] : [],
+    active ? [{ keys: `Escape`, handler: () => dismiss(active.id) }] : [],
   )
 </script>
 
-{#snippet toast_card(item: ToastItem)}
+{#snippet toast_card(item: ToastItem<string>)}
   {@const count = store.pending.length}
   <div class="toast" data-priority={item.priority}>
     {#if children}
@@ -93,18 +117,15 @@
       <span class="toast-message" style="min-width: 0">{item.message}</span>
     {/if}
     {#if count > 0}
-      <span
-        class="toast-pending"
-        aria-label="{count} more {count === 1 ? `notification` : `notifications`} pending"
-        >+{count}</span
-      >
+      <!-- aria-atomic makes the region read the whole card, so an aria-label here would
+      splice the badge's wording into the message. The count is announced separately. -->
+      <span class="toast-pending" aria-hidden="true">+{count}</span>
+      <span class="sr-only">
+        {count} more {count === 1 ? `notification` : `notifications`} pending
+      </span>
     {/if}
     {#if item.action}
-      <button
-        class="toast-action"
-        type="button"
-        onclick={() => store.run_action(item.id)}
-      >
+      <button class="toast-action" type="button" onclick={() => run_action(item.id)}>
         {item.action.label}
       </button>
     {/if}
@@ -113,7 +134,7 @@
         class="toast-dismiss"
         type="button"
         aria-label={dismiss_label}
-        onclick={() => store.dismiss(item.id)}>&times;</button
+        onclick={() => dismiss(item.id)}>&times;</button
       >
     {/if}
   </div>
@@ -208,6 +229,17 @@ is just as unreliable. -->
       margin-left: auto;
       opacity: 0.7;
       font-size: 0.85em;
+    }
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip-path: inset(50%);
+      white-space: nowrap;
+      border: 0;
     }
     .toast-dismiss {
       background: none;
