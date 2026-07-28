@@ -156,7 +156,8 @@ describe(`create_highlighter`, () => {
   test(`registers only the grammars it was given and caches the instance`, async () => {
     const instance = await custom.ready()
     expect(await custom.ready()).toBe(instance)
-    expect(create_highlighter([grammar_typst])).not.toBe(custom)
+    // a second factory builds its own instance rather than sharing a module-level one
+    expect(await create_highlighter([grammar_typst]).ready()).not.toBe(instance)
     expect(instance.flagToScope(`typ`)).toBe(`source.typst`)
     // would resolve if the factory silently fell back to the common bundle
     for (const flag of [`py`, `ts`, `svelte`]) {
@@ -168,8 +169,12 @@ describe(`create_highlighter`, () => {
     expect(await custom.highlight_block(`#let x = 1`, `TYP`)).toBe(
       `<pre class="highlight highlight-typ"><code>${typst_html}</code></pre>`,
     )
-    // unknown language falls back to escaped plain text, wrapped and unwrapped
-    expect(await custom.highlight(`<a>{x}</a>`, `py`)).toBe(`&lt;a&gt;{x}&lt;/a&gt;`)
+    // unknown language falls back to escaped plain text, wrapped and unwrapped. Braces
+    // are escaped either way: unwrapped output goes into the same mdsvex markup, where a
+    // literal `{` would be read as the start of a Svelte expression.
+    expect(await custom.highlight(`<a>{x}</a>`, `py`)).toBe(
+      `&lt;a&gt;&#123;x&#125;&lt;/a&gt;`,
+    )
     expect(await custom.highlight_block(`<a>{x}</a>`, `py`)).toBe(
       `<pre class="highlight"><code>&lt;a&gt;&#123;x&#125;&lt;/a&gt;</code></pre>`,
     )

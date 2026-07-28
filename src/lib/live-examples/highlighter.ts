@@ -1,9 +1,9 @@
 import {
-  type StarryNight,
   create_highlighter,
   optional_peer_error,
   render_block,
 } from './create-highlighter.ts'
+import type { StarryNight } from './create-highlighter.ts'
 
 // The common bundle of 34 grammars plus Svelte, which ships separately. This `common`
 // read lives here rather than in create-highlighter.ts because starry-night's index

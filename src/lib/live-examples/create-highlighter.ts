@@ -41,14 +41,18 @@ const create_instance = async (grammars: readonly Grammar[]): Promise<StarryNigh
 const escape_svelte = (html: string): string =>
   html.replaceAll(`{`, `&#123;`).replaceAll(`}`, `&#125;`)
 
-// Falls back to plain escaped code when the language is missing or unsupported
+// Falls back to plain escaped code when the language is missing or unsupported. Braces
+// are escaped on both paths: this HTML is written into mdsvex/Svelte markup, where a
+// stray `{` opens an expression, and highlight() hands it straight to the caller.
 const render_html = (
   instance: StarryNight,
   code: string,
   lang: string | null | undefined,
 ): string => {
   const scope = lang ? instance.flagToScope(lang) : undefined
-  return scope ? hast_to_html(instance.highlight(code, scope)) : escape_html_text(code)
+  return escape_svelte(
+    scope ? hast_to_html(instance.highlight(code, scope)) : escape_html_text(code),
+  )
 }
 
 export const render_block = (
@@ -62,8 +66,7 @@ export const render_block = (
     lang_key && instance.flagToScope(lang_key)
       ? `highlight highlight-${lang_key}`
       : `highlight`
-  const html = escape_svelte(render_html(instance, code, lang_key))
-  return `<pre class="${class_name}"><code>${html}</code></pre>`
+  return `<pre class="${class_name}"><code>${render_html(instance, code, lang_key)}</code></pre>`
 }
 
 // Nothing is loaded until the first call to ready()/highlight()/highlight_block(); the
