@@ -285,7 +285,7 @@
   {@const is_disabled = Boolean(parsed_route.disabled)}
   {#if is_disabled}
     <span
-      class="disabled {parsed_route.class ?? ``}"
+      class={[`disabled`, parsed_route.class]}
       style={`${formatted.style}; ${parsed_route.style ?? ``}`}
       aria-disabled="true"
       {@attach item_tooltip}>{@html formatted.label}</span
@@ -382,7 +382,7 @@
           <div>
             {#if parsed_route.disabled}
               <span
-                class="disabled {parsed_route.class ?? ``}"
+                class={[`disabled`, parsed_route.class]}
                 style={`${formatted.style}; ${parsed_route.style ?? ``}`}
                 aria-disabled="true"
                 {@attach item_tooltip}>{@html formatted.label}</span

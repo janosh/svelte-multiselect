@@ -1016,14 +1016,14 @@ This component also forwards these DOM events from the `<input>` node: `blur`, `
 The type of `options` is inferred automatically from the data you pass. E.g.
 
 ```ts
-const options = [
-   { label: `foo`, value: 42 }
-   { label: `bar`, value: 69 }
+const obj_options = [
+  { label: `foo`, value: 42 },
+  { label: `bar`, value: 69 },
 ]
 // type Option = { label: string, value: number }
-const options = [`foo`, `bar`]
+const str_options = [`foo`, `bar`]
 // type Option = string
-const options = [42, 69]
+const num_options = [42, 69]
 // type Option = number
 ```
 

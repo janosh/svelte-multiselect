@@ -255,3 +255,28 @@ test(`empty title renders details without summary`, () => {
   expect(document.querySelector(`details`)).toBeInstanceOf(HTMLDetailsElement)
   expect(document.querySelector(`summary`)).toBeNull()
 })
+
+test(`duplicate titles render and keep their open state across inserts`, async () => {
+  const files = $state([
+    { title: `index.ts`, content: `export const a = 1` },
+    { title: `index.ts`, content: `export const b = 2` },
+  ])
+  mount_files({ files })
+  await tick()
+
+  const all_details = () => [...document.querySelectorAll(`details`)]
+  const open_states = () => all_details().map((el) => el.open)
+  expect(all_text(`details pre code`)).toEqual([
+    `export const a = 1`,
+    `export const b = 2`,
+  ])
+  all_details()[1].open = true
+  await tick()
+  expect(open_states()).toEqual([false, true])
+
+  files.unshift({ title: `z.ts`, content: `const z = 0` })
+  await tick()
+
+  expect(all_text(`details > summary`)).toHaveLength(3)
+  expect(open_states()).toEqual([false, false, true])
+})

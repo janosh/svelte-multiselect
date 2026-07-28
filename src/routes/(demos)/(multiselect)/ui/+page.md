@@ -7,14 +7,12 @@
   import MultiSelect from '$lib'
   import { foods } from '$site/options'
 
-  function random_color(): string {
-    const [r, g, b] = Array.from([1, 2, 3], (_) => Math.floor(Math.random() * 255))
-    return `rgba(${r}, ${g}, ${b}, 0.3)`
-  }
+  // golden-angle hue rotation gives distinct colors that stay identical
+  // between prerender and hydration (Math.random() would not)
   let options = $derived(
-    foods.map((label) => ({
+    foods.map((label, idx) => ({
       label,
-      style: `background-color: ${random_color()}`,
+      style: `background-color: hsla(${(idx * 137.5) % 360}, 70%, 50%, 0.3)`,
     })),
   )
 </script>

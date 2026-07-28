@@ -1,38 +1,29 @@
-import { type HastNode, escape_html_text, hast_to_html } from './hast.ts'
+import {
+  create_highlighter,
+  optional_peer_error,
+  render_block,
+} from './create-highlighter.ts'
+import type { StarryNight } from './create-highlighter.ts'
 
-type StarryNight = {
-  flagToScope: (flag: string) => string | undefined
-  highlight: (value: string, scope: string) => HastNode
-}
-
-const optional_peer_error = `svelte-widgets/live-examples requires optional peer dependency @wooorm/starry-night`
-
-async function create_starry_night(): Promise<StarryNight> {
+// The common bundle of 34 grammars plus Svelte, which ships separately. This `common`
+// read lives here rather than in create-highlighter.ts because starry-night's index
+// re-exports the bundle with no subpath to reach it on its own, so mentioning it there
+// would pin ~1.3 MB into the chunk of every consumer that brings its own grammars.
+const load_default_grammars = async () => {
   try {
-    const [{ common, createStarryNight }, { default: source_svelte }] = await Promise.all(
-      [import(`@wooorm/starry-night`), import(`@wooorm/starry-night/source.svelte`)],
-    )
-    return await createStarryNight([...common, source_svelte])
+    const [{ common }, { default: svelte_grammar }] = await Promise.all([
+      import(`@wooorm/starry-night`),
+      import(`@wooorm/starry-night/source.svelte`),
+    ])
+    return [...common, svelte_grammar]
   } catch (cause) {
     throw new Error(optional_peer_error, { cause })
   }
 }
 
-// Escape characters that would be interpreted as Svelte template syntax
-const escape_svelte = (html: string): string =>
-  html.replaceAll(`{`, `&#123;`).replaceAll(`}`, `&#125;`)
+export const starry_night: StarryNight = await create_highlighter(
+  await load_default_grammars(),
+).ready()
 
-// Shared starry-night instance (grammars loaded once at build time)
-// Uses common bundle (34 grammars) + Svelte
-export const starry_night = await create_starry_night()
-
-export function starry_night_highlighter(code: string, lang?: string | null): string {
-  const lang_key = lang?.toLowerCase()
-  const scope = lang_key ? starry_night.flagToScope(lang_key) : undefined
-  // fall back to plain escaped code when the language is missing or unsupported
-  const html = escape_svelte(
-    scope ? hast_to_html(starry_night.highlight(code, scope)) : escape_html_text(code),
-  )
-  const class_name = scope ? `highlight highlight-${lang_key}` : `highlight`
-  return `<pre class="${class_name}"><code>${html}</code></pre>`
-}
+export const starry_night_highlighter = (code: string, lang?: string | null): string =>
+  render_block(starry_night, code, lang)

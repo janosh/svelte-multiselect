@@ -89,6 +89,8 @@ the same shape `CommandMenu` takes, so a command can appear in both.
 Arrow keys walk the items (skipping disabled ones and wrapping at both ends), Home and
 End jump to either end, Tab stays inside, and Escape or a press anywhere else closes.
 
-Drop the region and the whole page qualifies. Bind `at` to open the menu yourself from
-a long-press or a keyboard shortcut, and pass an `item` snippet to render rows your own
-way.
+Drop the region and the whole page qualifies, `trigger="none"` neither — bind `at` and
+open the menu yourself from a long-press, a keyboard shortcut or a trigger that must
+record _what_ was clicked. `dismiss` merges over the default `{ escape: true }` to reach
+the whole [`click_outside`](attachments#click_outside) config, and an `item` snippet
+renders rows your own way.

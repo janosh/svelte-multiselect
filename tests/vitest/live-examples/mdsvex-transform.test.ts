@@ -1,4 +1,3 @@
-// Tests for mdsvex-transform.ts - the remark plugin that transforms code blocks
 import remark, {
   EXAMPLE_COMPONENT_PREFIX,
   EXAMPLE_MODULE_PREFIX,
@@ -6,7 +5,7 @@ import remark, {
 import { Buffer } from 'node:buffer'
 import { describe, expect, test } from 'vite-plus/test'
 
-// Minimal types for testing
+// only the mdast fields this plugin reads, so trees can be written out inline
 interface TestNode {
   type: string
   lang?: string
@@ -20,7 +19,6 @@ interface TestTree {
   children: TestNode[]
 }
 
-// Helpers
 const create_tree = (children: TestNode[] = []): TestTree => ({ type: `root`, children })
 const create_code_node = (lang: string, value: string, meta = ``): TestNode => ({
   type: `code`,
@@ -33,7 +31,6 @@ const create_file = (filename = `/project/src/test.md`, cwd = `/project`) => ({
   cwd,
 })
 
-// Find script node in tree (repeated pattern)
 const find_script_node = (tree: TestTree): string | undefined => {
   const node = tree.children.find(
     (n) => n.type === `html` && n.value?.includes(`<script>`),
@@ -41,7 +38,6 @@ const find_script_node = (tree: TestTree): string | undefined => {
   return node?.value
 }
 
-// Get first example text value
 const get_example_value = (tree: TestTree): string => {
   const node = tree.children[0]
   return node.children?.[0]?.value ?? ``

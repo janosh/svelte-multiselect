@@ -1,4 +1,3 @@
-// Tests for the Confetti animation component
 import Confetti from '$site/Confetti.svelte'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'

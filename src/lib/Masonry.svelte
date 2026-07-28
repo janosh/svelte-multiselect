@@ -4,7 +4,7 @@
   import { flip } from 'svelte/animate'
   import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
-  import type { MasonryOrder } from './utils'
+  import { chain_handlers, type MasonryOrder } from './utils'
 
   type ItemId = string | number
   type ItemRecord = { id: ItemId; idx: number; item: Item }
@@ -395,14 +395,14 @@
   bind:clientWidth={masonryWidth}
   bind:clientHeight={masonryHeight}
   bind:this={div}
-  onscroll={virtualize ? on_scroll : undefined}
   style:gap="{gap}px"
   style:overflow-y={virtualize ? `auto` : undefined}
   style:height={virtualize ? css_height : undefined}
   {...rest}
+  onscroll={chain_handlers(virtualize ? on_scroll : undefined, rest.onscroll)}
   style="display: flex; width: 100%; justify-content: center; box-sizing: border-box; {rest.style ??
     ``}"
-  class="masonry {rest.class ?? ``}"
+  class={[`masonry`, rest.class]}
   data-masonry-id={masonry_id}
 >
   {#each items_to_cols as col, col_idx (col_idx)}
@@ -410,7 +410,7 @@
     {@const visible_items = can_virtualize ? col.slice(start, end) : col}
     <div
       {...columnProps}
-      class="col col-{col_idx} {columnProps.class ?? ``}"
+      class={[`col`, `col-${col_idx}`, columnProps.class]}
       style:display="grid"
       style:flex="1 1 0"
       style:min-width="0"

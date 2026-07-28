@@ -1,8 +1,8 @@
 ## How to acquire form data in submission handler
 
-This example shows the JavaScript way of handling MultiSelect fields in form submission events. If you're using SvelteKit, you may want check out [this example](kit-form-actions) on to use [form actions](https://kit.svelte.dev/docs/form-actions) instead (which works even in browsers with JS disabled).
+This example shows the JavaScript way of handling MultiSelect fields in form submission events. If you're using SvelteKit, you may want to check out [this example](kit-form-actions) to use [form actions](https://svelte.dev/docs/kit/form-actions) instead (which works even in browsers with JS disabled).
 
-> Hint: Use<code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
+> Hint: Use <code>JSON.parse()</code> to convert the string value passed to form submit handler back to array.
 
 ```svelte example
 <script lang="ts">
@@ -38,8 +38,9 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 
 {#if form_data}
   Received form data:
-  <pre><code>{JSON.stringify(...form_data)}</code></pre>
-  After JSON parsing<code>form_data.get(field_name)</code>:
+  <pre><code>{JSON.stringify(Object.fromEntries(form_data))}</code></pre>
+  Raw value of
+  <code>form_data.get(name)</code>:
   <pre><code>{form_data.get(name)}</code></pre>
 {/if}
 

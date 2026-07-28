@@ -77,7 +77,7 @@
     role="dialog"
     {...rest}
     id={surface_id}
-    class="popover {rest.class ?? ``}"
+    class={[`popover`, rest.class]}
     {@attach float({ anchor, placement, align, offset, padding, match_width, strategy })}
     {@attach click_outside({
       inside: [trigger_wrapper],

@@ -1,4 +1,6 @@
 import type { Attachment } from 'svelte/attachments'
+import type { TextMutationOptions, TextSearchNodeFilter } from './text-search'
+import { create_burst_debounce, sync_owned_highlight } from './text-search'
 import type { Hotkey, Placement, PositionOptions } from './utils'
 import { compute_position, fuzzy_match_indices, get_uuid, run_hotkeys } from './utils'
 // Computed CSS lengths resolve to `<number>px`; strip the unit so Number() can coerce.
@@ -8,17 +10,7 @@ const css_px = (css_length: string): number => {
   return trimmed ? Number(trimmed.replace(/px$/, ``)) : NaN
 }
 
-// Type definitions for CSS highlight API (experimental)
-declare global {
-  interface CSS {
-    highlights: HighlightRegistry
-  }
-  interface HighlightRegistry extends Map<string, Highlight> {
-    clear(): void
-    delete(key: string): boolean
-    set(key: string, value: Highlight): this
-  }
-}
+const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 
 export interface DraggableOptions {
   handle_selector?: string
@@ -44,7 +36,6 @@ export interface ResizableOptions {
   on_resize_end?: ResizeCallback
 }
 
-// Svelte 5 attachment factory to make an element draggable
 export const draggable =
   (options: DraggableOptions = {}): Attachment =>
   (element: Element): (() => void) | undefined => {
@@ -71,7 +62,6 @@ export const draggable =
     function handle_mousedown(event: MouseEvent) {
       // non-primary buttons open the context menu, which can swallow the mouseup
       if (event.button !== 0) return
-      // Only drag if mousedown is on the handle or its children
       if (!(event.target instanceof Node) || !handle?.contains?.(event.target)) return
 
       dragging = true
@@ -173,9 +163,6 @@ export const resizable =
     let active_edge: string | null = null
     let start = { x: 0, y: 0 }
     let initial = { width: 0, height: 0, left: 0, top: 0 }
-
-    const clamp = (val: number, min: number, max: number) =>
-      Math.max(min, Math.min(max, val))
 
     if (getComputedStyle(node).position === `static`) node.style.position = `relative`
 
@@ -317,7 +304,6 @@ export const sortable =
       original_html: string
       original_style: string
     }
-    // Store original state for cleanup
     const header_state: HeaderState[] = []
     const restore_header = ({ header, original_html, original_style }: HeaderState) => {
       // Restore innerHTML (not textContent) to preserve child markup like icons
@@ -392,7 +378,6 @@ export const sortable =
       header_state.push({ header, handler: click_handler, original_html, original_style })
     })
 
-    // Return cleanup function that fully restores original state
     return () => {
       for (const state of header_state) {
         state.header.removeEventListener(`click`, state.handler)
@@ -405,55 +390,21 @@ export type HighlightOptions = {
   query?: string
   disabled?: boolean
   fuzzy?: boolean
-  node_filter?: (node: Node) => number
+  node_filter?: TextSearchNodeFilter
   css_class?: string
   duration_ms?: number
   scroll_to_match?: false | ScrollIntoViewOptions
   on_highlight?: (context: { node: HTMLElement; ranges: Range[] }) => unknown
+  // Re-run when the subtree changes, so consumers stop hand-rolling an observer
+  // around this. `true` re-runs on the mutation microtask; `false` freezes the
+  // highlight at whatever the DOM held on attach. An object coalesces bursts: the
+  // re-run lands `debounce_ms` after the last mutation but no later than
+  // `max_wait_ms` after the first of the burst, so a stream of appended log lines
+  // still refreshes at a steady rate instead of never settling.
+  observe_mutations?: boolean | TextMutationOptions
 }
-
-type OwnedHighlight = {
-  owners: Map<symbol, Range[]>
-  previous?: Highlight
-  installed?: Highlight
-}
-
-const owned_highlights = new WeakMap<object, Map<string, OwnedHighlight>>()
 
 const HAS_NON_ASCII = /\P{ASCII}/u
-
-const sync_owned_highlight = (
-  registry: HighlightRegistry,
-  css_class: string,
-  owner: symbol,
-  ranges?: Range[],
-): void => {
-  let classes = owned_highlights.get(registry)
-  if (!classes) {
-    if (!ranges) return
-    classes = new Map()
-    owned_highlights.set(registry, classes)
-  }
-  let state = classes.get(css_class)
-  if (!state) {
-    if (!ranges) return
-    state = { owners: new Map(), previous: registry.get(css_class) }
-    classes.set(css_class, state)
-  }
-  if (ranges) state.owners.set(owner, ranges)
-  else state.owners.delete(owner)
-  const current = registry.get(css_class)
-  if (state.owners.size === 0) {
-    classes.delete(css_class)
-    if (current !== state.installed) return
-    if (state.previous) registry.set(css_class, state.previous)
-    else registry.delete(css_class)
-    return
-  }
-  if (state.installed && current !== state.installed) return
-  state.installed = new Highlight(...[...state.owners.values()].flat())
-  registry.set(css_class, state.installed)
-}
 
 export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) => {
   const {
@@ -465,12 +416,16 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     duration_ms,
     scroll_to_match = { behavior: `smooth`, block: `center` },
     on_highlight,
+    observe_mutations = true,
   } = ops
 
   const search = query.trim().toLowerCase().replaceAll(/\s+/gu, ` `)
   // if disabled or empty query, this instance owns no highlight
   if (!search || disabled) return undefined
-  const highlight_registry = globalThis.CSS?.highlights
+  // both halves of the CSS Custom Highlight API are needed, same as highlight_ranges
+  // checks: a registry without the constructor would throw in sync_owned_highlight
+  const highlight_registry =
+    typeof globalThis.Highlight === `function` ? globalThis.CSS?.highlights : undefined
   const highlight_owner = Symbol(css_class)
   const substring_pattern = new RegExp(
     search.replaceAll(/[.*+?^${}()|[\]\\]/gu, `\\$&`).replaceAll(` `, `\\s+`),
@@ -576,16 +531,20 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
           ? () => next_effect_cleanup()
           : undefined
     } finally {
-      if (active)
+      if (active && observe_mutations !== false)
         observer.observe(node, { childList: true, subtree: true, characterData: true })
     }
   }
 
-  const observer = new MutationObserver(update_highlight)
+  const debounce = typeof observe_mutations === `object` ? observe_mutations : undefined
+  const { trigger, cancel } = create_burst_debounce(update_highlight, debounce)
+
+  const observer = new MutationObserver(debounce ? trigger : update_highlight)
   const cleanup = () => {
     if (!active) return
     active = false
     if (timeout !== undefined) clearTimeout(timeout)
+    cancel()
     observer.disconnect()
     const final_effect_cleanup = effect_cleanup
     effect_cleanup = undefined
@@ -727,16 +686,13 @@ export const tooltip =
             }
           }
           if (options.content) continue // custom content takes precedence
-          // Only update content if non-empty
           if (!new_content) continue
           content = new_content
-          // Only update tooltip if this element owns it
           if (current_tooltip?.owner_element === element) {
             const content_el =
               current_tooltip.querySelector<HTMLElement>(`.tooltip-content`)
             if (content_el) {
               render_tooltip_content(content_el, content, options)
-              // Re-run sizing/positioning after content change
               resize_and_position_tooltip(current_tooltip, element)
             }
           }
@@ -920,7 +876,6 @@ export const tooltip =
       }
 
       function show_tooltip() {
-        // Skip tooltip on touch input when 'touch-devices' option is set
         if (options.disabled === `touch-devices` && last_pointer_type === `touch`) return
 
         clear_tooltip()
@@ -1122,7 +1077,7 @@ export type DismissDetail = {
   event: Event // the press or keydown behind the dismissal, to forward to consumers
 }
 
-export type ClickOutsideConfig<T extends HTMLElement> = {
+export type DismissConfig = {
   enabled?: boolean
   // Regions that count as inside though they sit outside the node: the trigger above
   // all, whose own click toggles the surface right after this runs, and portalled
@@ -1130,14 +1085,27 @@ export type ClickOutsideConfig<T extends HTMLElement> = {
   // reference — they cannot collide with another instance's markup.
   inside?: (Element | string | null | undefined)[]
   // Confines the selector entries of `inside` to one subtree, so a second instance
-  // of the same component cannot shield this one's surface with its own trigger
-  scope?: Element | null
+  // of the same component cannot shield this one's surface with its own trigger.
+  // Resolved per press when a function, for a `bind:this` still null at setup time.
+  scope?: Element | null | (() => Element | null | undefined)
   escape?: boolean // dismiss on Escape as well, reporting where focus was
   // `release` waits for the click, for a surface floating over something draggable:
   // starting a pan or an orbit behind it should not make it vanish under the cursor.
   // It gives back the right-click, titlebar-drag and drag-release cases below.
   dismiss_on?: `press` | `release`
+}
+
+export type ClickOutsideConfig<T extends HTMLElement> = DismissConfig & {
   callback?: (node: T, config: ClickOutsideConfig<T>, detail: DismissDetail) => void
+}
+
+export type DismissOptions = DismissConfig & {
+  // The surface, where a single element is one: it counts as inside and receives the
+  // `dismiss` event. Leave it out and `inside` becomes the whole membership test,
+  // which is what lets one listener cover several surfaces with no shared wrapper —
+  // wrapping them would make every press between them count as inside.
+  node?: Element | null
+  callback?: (detail: DismissDetail) => void
 }
 
 // Layered keys: only the innermost surface hears one, so Escape closes a dropdown
@@ -1200,78 +1168,96 @@ const is_scrollbar_press = (event: Event): boolean => {
 // its click on the nearest common ancestor, dismissing a surface the user was only
 // resizing. Capture phase so a handler calling stopPropagation cannot suppress
 // dismissal; composedPath survives shadow DOM and targets detached mid-dispatch.
+//
+// A plain function rather than only the `click_outside` attachment below, because a
+// surface need not be one element: `node` is optional, and without it `inside` alone
+// says what is inside. Set up from an effect for those cases.
+export const dismiss_on_outside_press = (options: DismissOptions = {}): (() => void) => {
+  const {
+    node,
+    callback,
+    enabled = true,
+    inside = [],
+    scope,
+    escape = false,
+    dismiss_on = `press`,
+  } = options
+
+  if (!enabled) return () => {} // Early return avoids registering unused listener
+
+  const inside_nodes = [node, ...inside].filter((item) => item instanceof Element)
+  // Empty entries would make the joined selector invalid and throw on every press
+  const inside_selector = inside
+    .filter((item): item is string => typeof item === `string` && item !== ``)
+    .join(`,`)
+  // `path` is empty for the focus check, which has no event to walk
+  const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
+    const node_target = target instanceof Node ? target : null
+    if (inside_nodes.some((el) => path.includes(el) || el.contains(node_target))) {
+      return true
+    }
+    // Element (not HTMLElement) so a press on an SVG child still matches a selector
+    if (!inside_selector || !(target instanceof Element)) return false
+    const match = target.closest(inside_selector)
+    if (!match) return false
+    const resolved_scope = typeof scope === `function` ? scope() : scope
+    return !resolved_scope || resolved_scope.contains(match)
+  }
+
+  // document.activeElement reports the outermost shadow host, so descend the focus
+  // chain: the host may be inside the node (containment settles it at the first
+  // step) or the node may itself live in that shadow tree alongside the focus.
+  const focus_is_inside = (): boolean => {
+    let active = document.activeElement
+    while (active) {
+      if (is_inside(active)) return true
+      active = active.shadowRoot?.activeElement ?? null
+    }
+    return false
+  }
+
+  const dismiss = (detail: DismissDetail) => {
+    callback?.(detail)
+    node?.dispatchEvent(new CustomEvent(`dismiss`, { detail }))
+  }
+
+  const handle_press = (event: Event) => {
+    const path = event.composedPath()
+    if (is_scrollbar_press(event) || is_inside(event.target, path)) return
+    // A press never restores focus — the user already picked where it lands
+    dismiss({ focus_inside: false, via: `pointer`, event })
+  }
+
+  const on_escape = (event: KeyboardEvent) => {
+    // Safe to swallow the key: only the innermost layer gets here, so no outer
+    // surface is waiting on it. Cancelling the default keeps a native <dialog>
+    // around the surface open until a second Escape, once this layer is gone.
+    event.preventDefault()
+    event.stopPropagation()
+    dismiss({ focus_inside: focus_is_inside(), via: `escape`, event })
+  }
+
+  const press_event = dismiss_on === `press` ? `pointerdown` : `click`
+  document.addEventListener(press_event, handle_press, true)
+  const unregister_escape = escape ? register_escape_layer(on_escape) : undefined
+
+  return () => {
+    document.removeEventListener(press_event, handle_press, true)
+    unregister_escape?.()
+  }
+}
+
+// The attachment form: the element it is attached to is the surface, so containment
+// covers everything under it and `inside` is left for the trigger and portalled parts.
 export const click_outside =
   <T extends HTMLElement>(config: ClickOutsideConfig<T> = {}) =>
   (node: T): (() => void) | undefined => {
-    const {
-      callback,
-      enabled = true,
-      inside = [],
-      scope,
-      escape = false,
-      dismiss_on = `press`,
-    } = config
-
-    if (!enabled) return undefined // Early return avoids registering unused listener
-
-    const inside_nodes = [node, ...inside.filter((item) => item instanceof Element)]
-    // Empty entries would make the joined selector invalid and throw on every press
-    const inside_selector = inside
-      .filter((item): item is string => typeof item === `string` && item !== ``)
-      .join(`,`)
-    // `path` is empty for the focus check, which has no event to walk
-    const is_inside = (target: EventTarget | null, path: EventTarget[] = []): boolean => {
-      const node_target = target instanceof Node ? target : null
-      if (inside_nodes.some((el) => path.includes(el) || el.contains(node_target))) {
-        return true
-      }
-      // Element (not HTMLElement) so a press on an SVG child still matches a selector
-      if (!inside_selector || !(target instanceof Element)) return false
-      const match = target.closest(inside_selector)
-      return Boolean(match) && (!scope || scope.contains(match))
-    }
-
-    // document.activeElement reports the outermost shadow host, so descend the focus
-    // chain: the host may be inside the node (containment settles it at the first
-    // step) or the node may itself live in that shadow tree alongside the focus.
-    const focus_is_inside = (): boolean => {
-      let active = document.activeElement
-      while (active) {
-        if (is_inside(active)) return true
-        active = active.shadowRoot?.activeElement ?? null
-      }
-      return false
-    }
-
-    const dismiss = (detail: DismissDetail) => {
-      callback?.(node, config, detail)
-      node.dispatchEvent(new CustomEvent(`dismiss`, { detail }))
-    }
-
-    const handle_press = (event: Event) => {
-      const path = event.composedPath()
-      if (is_scrollbar_press(event) || is_inside(event.target, path)) return
-      // A press never restores focus — the user already picked where it lands
-      dismiss({ focus_inside: false, via: `pointer`, event })
-    }
-
-    const on_escape = (event: KeyboardEvent) => {
-      // Safe to swallow the key: only the innermost layer gets here, so no outer
-      // surface is waiting on it. Cancelling the default keeps a native <dialog>
-      // around the surface open until a second Escape, once this layer is gone.
-      event.preventDefault()
-      event.stopPropagation()
-      dismiss({ focus_inside: focus_is_inside(), via: `escape`, event })
-    }
-
-    const press_event = dismiss_on === `press` ? `pointerdown` : `click`
-    document.addEventListener(press_event, handle_press, true)
-    const unregister_escape = escape ? register_escape_layer(on_escape) : undefined
-
-    return () => {
-      document.removeEventListener(press_event, handle_press, true)
-      unregister_escape?.()
-    }
+    if (config.enabled === false) return undefined
+    return dismiss_on_outside_press({
+      ...config,
+      node,
+      callback: (detail) => config.callback?.(node, config, detail),
+    })
   }
 
 export type AnchorRect = { top: number; left: number; bottom: number; right: number }
@@ -1336,6 +1322,27 @@ export const float =
     }
   }
 
+// Teleport an element into `target` and put it back on teardown, marking where it
+// belongs with a comment node so the original position survives siblings coming and
+// going. Lets a surface escape an ancestor that would clip it (`overflow: hidden`) or
+// trap its `position: fixed` (any `transform`), and lets a component offer its chrome
+// for placement in a host's toolbar without duplicating the markup.
+// Pairs with `float`: portal moves an element, float places it.
+export const portal =
+  (target: Element | null | undefined): Attachment =>
+  (node: Element): (() => void) | undefined => {
+    if (!target || target === node.parentNode) return undefined
+    const anchor = node.ownerDocument.createComment(`portal`)
+    node.before(anchor)
+    target.append(node)
+    return () => {
+      // Original parent already gone: replaceWith would be a no-op and strand the
+      // node inside the target, outliving the markup that owns it.
+      if (anchor.parentNode) anchor.replaceWith(node)
+      else node.remove()
+    }
+  }
+
 export interface HotkeyOptions {
   bindings: Hotkey[]
   // Listen on the document rather than the node, for shortcuts that work anywhere.
@@ -1362,7 +1369,7 @@ export const hotkey =
 
 export interface FocusTrapOptions {
   enabled?: boolean
-  // What to focus on activation: an element, a selector resolved within the node, or
+  // What to focus on activation: an element, a selector resolved within the root, or
   // `false` to leave focus where it is. Defaults to the first tabbable descendant.
   initial?: Element | string | false
   // Where focus returns on teardown. Defaults to whatever held it on activation;
@@ -1370,6 +1377,18 @@ export interface FocusTrapOptions {
   restore?: Element | false
   // Further containers the trap covers, for portalled parts of the same surface
   include?: (Element | null | undefined)[]
+  // Narrows the trap to a descendant, for a node that wraps the surface together with
+  // siblings Tab must not reach — a modal's backdrop button above all. Resolved per
+  // keystroke like `click_outside`'s `scope`: a selector picks up markup rendered after
+  // setup, a function covers a `bind:this` still null then. Falls back to the node.
+  root?: Element | string | null | (() => Element | null | undefined)
+  // Escape handler, on the same layer stack `click_outside` uses, so only the innermost
+  // trap hears the key. Omit and Escape passes through untouched.
+  on_escape?: (event: KeyboardEvent) => void
+  // Pull focus back to where it last sat inside whenever something outside takes it.
+  // Off by default: a trap that re-runs per state change (ConfirmDialog, once per
+  // queued question) has to be able to hand focus over, and recapture would fight it.
+  recapture?: boolean
 }
 
 // Exported so surfaces can find their own trigger to hand focus back to
@@ -1397,7 +1416,7 @@ const is_focusable = (element: unknown): element is HTMLElement | SVGElement =>
 
 // Visibility read from computed style rather than measured boxes: test DOMs skip
 // layout, so getClientRects would report every candidate as hidden and empty the trap.
-const is_tabbable = (element: Element): boolean => {
+const is_tabbable = (element: Element): element is HTMLElement | SVGElement => {
   if (!is_focusable(element)) return false
   if (element.closest(`[inert],[hidden],[disabled]`)) return false
   if (Number(element.getAttribute(`tabindex`) ?? 0) < 0) return false
@@ -1405,7 +1424,11 @@ const is_tabbable = (element: Element): boolean => {
   return style.display !== `none` && style.visibility !== `hidden`
 }
 
-const register_trap_layer = key_layer_stack((event) => event.key === `Tab`)
+// isComposing for the same reason the Escape layer above filters it: Tab cycles IME
+// candidates mid-composition, and swallowing it there eats the user's word choice
+const register_trap_layer = key_layer_stack(
+  (event) => event.key === `Tab` && !event.isComposing,
+)
 
 const focus_element = (element: Element | null | undefined) => {
   if (is_focusable(element)) element.focus()
@@ -1417,35 +1440,88 @@ const focus_element = (element: Element | null | undefined) => {
 export const focus_trap =
   (options: FocusTrapOptions = {}) =>
   (node: Element): (() => void) | undefined => {
-    const { enabled = true, initial, restore, include = [] } = options
+    const {
+      enabled = true,
+      initial,
+      restore,
+      include = [],
+      root,
+      on_escape,
+      recapture = false,
+    } = options
     if (!enabled || !(node instanceof HTMLElement)) return undefined
 
-    const containers = [node, ...include.filter((el) => el instanceof Element)]
+    const extra_containers = include.filter((el) => el instanceof Element)
+    const resolve_root = (): Element =>
+      (typeof root === `function`
+        ? root()
+        : typeof root === `string`
+          ? node.querySelector(root)
+          : root) ?? node
+    // The node stays the containment boundary while `root` only narrows what Tab cycles.
+    // Narrowing both would make a focusable sibling of the root — the backdrop button in
+    // a modal, which a click focuses — read as outside: Tab would stop being trapped and
+    // teardown would skip the focus restore.
+    const containers = (): Element[] => [node, ...extra_containers]
+    const tab_scopes = (): Element[] => [resolve_root(), ...extra_containers]
     // Recollected per keystroke: menus grow, filter and disable items while open
     const tabbables = (): (HTMLElement | SVGElement)[] =>
-      containers.flatMap((parent) =>
-        [...parent.querySelectorAll(tabbable_selector)]
-          .filter(is_focusable)
-          .filter(is_tabbable),
+      tab_scopes().flatMap((parent) =>
+        [...parent.querySelectorAll(tabbable_selector)].filter(is_tabbable),
       )
-    const holds_focus = () =>
-      containers.some((container) => container.contains(document.activeElement))
+    const is_inside = (target: unknown): target is Element =>
+      target instanceof Element && containers().some((el) => el.contains(target))
+    const holds_focus = () => is_inside(document.activeElement)
 
     const focus_origin = document.activeElement
-    // The node itself is the fallback focus target, so it needs to accept focus.
-    // Track whether we added tabindex so cleanup can leave the markup as it was.
-    let added_tabindex = false
+    // The root itself is the fallback focus target, so it needs to accept focus.
+    // Track where we added tabindex so cleanup can leave the markup as it was. A set
+    // because a recapture can resolve a root the last one did not, and all get put back.
+    const tabindex_added_to = new Set<Element>()
+    let last_inside: Element | null = null
+    let trap_active = true
 
-    if (initial !== false) {
+    // `initial: false` keeps focus put by never reaching focus_into at setup, but a
+    // recapture has to land somewhere, so there it only means "no entry point named"
+    const wanted = initial === false ? undefined : initial
+
+    const focus_into = () => {
+      const root_el = resolve_root()
+      // Only a recapture focusin ever sets `last_inside`, so this is that path's
+      // preference: focus goes back where it sat, not to the trap's entry point.
+      const preferred = is_inside(last_inside) ? last_inside : null
       const requested =
-        typeof initial === `string` ? node.querySelector(initial) : initial
-      const target = requested ?? tabbables()[0] ?? node
-      if (target === node && !node.hasAttribute(`tabindex`)) {
-        node.tabIndex = -1
-        added_tabindex = true
+        typeof wanted === `string` ? root_el.querySelector(wanted) : wanted
+      const target = preferred ?? requested ?? tabbables()[0] ?? root_el
+      if (target === root_el && !root_el.hasAttribute(`tabindex`)) {
+        root_el.setAttribute(`tabindex`, `-1`)
+        tabindex_added_to.add(root_el)
       }
       focus_element(target)
     }
+
+    const on_focusin = (event: FocusEvent) => {
+      if (is_inside(event.target)) last_inside = event.target
+    }
+
+    // Deferred to a microtask: focus sits on body between one element losing it and
+    // the next taking it, so answering at event time would recapture on every step
+    // within the trap. Only focus leaving the trap is the trap's business, hence the
+    // containment check, and `trap_active` covers the microtask a teardown outruns.
+    const on_focusout = (event: FocusEvent) => {
+      if (!is_inside(event.target)) return
+      queueMicrotask(() => {
+        if (trap_active && !holds_focus()) focus_into()
+      })
+    }
+
+    // Registered before the initial focus so `last_inside` starts out recorded
+    if (recapture) {
+      document.addEventListener(`focusin`, on_focusin)
+      document.addEventListener(`focusout`, on_focusout)
+    }
+
+    if (initial !== false) focus_into()
 
     const on_tab = (event: KeyboardEvent) => {
       // This is a document-wide capture layer, so without this guard a trap that was
@@ -1468,14 +1544,417 @@ export const focus_trap =
     }
 
     const unregister = register_trap_layer(on_tab)
+    // Swallowing the key is the same bargain dismiss_on_outside_press strikes above
+    const unregister_escape = on_escape
+      ? register_escape_layer((event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          on_escape(event)
+        })
+      : undefined
 
     return () => {
+      trap_active = false
       unregister()
-      if (added_tabindex) node.removeAttribute(`tabindex`)
+      unregister_escape?.()
+      document.removeEventListener(`focusin`, on_focusin)
+      document.removeEventListener(`focusout`, on_focusout)
+      for (const element of tabindex_added_to) element.removeAttribute(`tabindex`)
       if (restore === false) return
       // Don't yank focus if the user already placed it elsewhere. A closing surface
       // usually leaves focus on body, which counts as ours to hand back.
       if (!holds_focus() && document.activeElement !== document.body) return
       focus_element(restore ?? focus_origin)
+    }
+  }
+
+export interface ContrastOptions {
+  // Skips the ancestor walk where the background behind the node is already known
+  bg_color?: string
+  luminance_threshold?: number
+  choices?: [string, string] // [on light background, on dark background]
+}
+
+// === CSS color parsing ===
+// A color authored in a wide-gamut or perceptual space keeps that space in its computed
+// value — `getComputedStyle` hands back `oklch(…)`, `lab(…)` or `color(display-p3 …)`
+// verbatim rather than an sRGB approximation — so reading only `rgb()`/`rgba()` would
+// take a painted ancestor for a transparent one. Everything below converts to sRGB.
+// Not covered: named colors and `color-mix()`, neither of which a computed value can
+// carry (`color-mix()` resolves to a color in its interpolation space at computed-value
+// time). Both are rejected, and callers passing a color by hand get the error.
+const RGB_COLOR = /^rgba?\((?<channels>[^)]+)\)$/iu
+const HEX_COLOR = /^#(?<digits>[\da-f]+)$/iu
+const COLOR_FN = /^(?<name>oklch|oklab|lch|lab|hsla?|hwb|color)\((?<args>[^)]*)\)$/iu
+
+type Triple = [number, number, number]
+
+const dot3 = (matrix: readonly number[], [x_val, y_val, z_val]: Triple): Triple => [
+  matrix[0] * x_val + matrix[1] * y_val + matrix[2] * z_val,
+  matrix[3] * x_val + matrix[4] * y_val + matrix[5] * z_val,
+  matrix[6] * x_val + matrix[7] * y_val + matrix[8] * z_val,
+]
+
+// `none` is a real component value meaning "missing", and behaves as zero here
+const parse_component = (token: string, percent_ref: number): number => {
+  if (token.toLowerCase() === `none`) return 0
+  if (token.endsWith(`%`)) return (Number(token.slice(0, -1)) / 100) * percent_ref
+  return Number(token)
+}
+// hsl/hwb take `50` and `50%` to mean the same thing
+const parse_percentage = (token: string): number =>
+  parse_component(token, 1) / (token.endsWith(`%`) ? 1 : 100)
+// alpha is a 0..1 number or a percentage, and absent means opaque
+const parse_alpha = (token: string | undefined): number =>
+  token === undefined ? 1 : clamp(parse_component(token, 1))
+// Junk anywhere in a component reaches here as NaN, so one check at the end rejects
+// the whole color rather than every parse site having to guard
+const finite_rgba = (
+  rgb: Triple,
+  alpha: number,
+): [number, number, number, number] | null => {
+  const parsed: [number, number, number, number] = [...rgb, alpha]
+  return parsed.every(Number.isFinite) ? parsed : null
+}
+
+const HUE_PER_UNIT: Record<string, number> = {
+  deg: 1,
+  grad: 0.9,
+  rad: 180 / Math.PI,
+  turn: 360,
+}
+// Longest suffix first, so `grad` is never read as the `rad` it ends with. Matching in
+// declaration order would work too, but only until someone alphabetizes the object.
+const HUE_UNITS = Object.keys(HUE_PER_UNIT).toSorted(
+  (one, two) => two.length - one.length,
+)
+const parse_hue = (token: string): number => {
+  const lower = token.toLowerCase()
+  const unit = HUE_UNITS.find((suffix) => lower.endsWith(suffix))
+  const value = parse_component(unit ? lower.slice(0, -unit.length) : lower, 360)
+  return value * (unit ? HUE_PER_UNIT[unit] : 1)
+}
+
+// Sign-preserving, so an out-of-gamut channel keeps its order instead of folding
+const transfer = (channel: number, encode: (magnitude: number) => number): number =>
+  Math.sign(channel) * encode(Math.abs(channel))
+
+const srgb_encode = (channel: number) =>
+  transfer(channel, (mag) =>
+    mag <= 0.0031308 ? 12.92 * mag : 1.055 * mag ** (1 / 2.4) - 0.055,
+  )
+const srgb_decode = (channel: number) =>
+  transfer(channel, (mag) =>
+    mag <= 0.04045 ? mag / 12.92 : ((mag + 0.055) / 1.055) ** 2.4,
+  )
+
+const XYZ_D65_TO_LINEAR_SRGB = [
+  3.2409699419045226, -1.537383177570094, -0.4986107602930034, -0.9692436362808796,
+  1.8759675015077202, 0.04155505740717559, 0.05563007969699366, -0.20397695888897652,
+  1.0569715142428786,
+]
+// Bradford-adapted, for the two spaces defined against the D50 white point
+const XYZ_D50_TO_D65 = [
+  0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136,
+  1.0099954580058226, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912,
+  1.3303659366080753,
+]
+
+const linear_srgb_to_rgb255 = (linear: Triple): Triple =>
+  linear.map((channel) => clamp(srgb_encode(channel)) * 255) as Triple
+
+const xyz_d65_to_rgb255 = (xyz: Triple): Triple =>
+  linear_srgb_to_rgb255(dot3(XYZ_D65_TO_LINEAR_SRGB, xyz))
+
+// Björn Ottosson's Oklab, https://bottosson.github.io/posts/oklab
+const oklab_to_rgb255 = ([lightness, a_axis, b_axis]: Triple): Triple => {
+  const long = (lightness + 0.3963377774 * a_axis + 0.2158037573 * b_axis) ** 3
+  const medium = (lightness - 0.1055613458 * a_axis - 0.0638541728 * b_axis) ** 3
+  const short = (lightness - 0.0894841775 * a_axis - 1.291485548 * b_axis) ** 3
+  return linear_srgb_to_rgb255([
+    4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short,
+    -1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short,
+    -0.0041960863 * long - 0.7034186147 * medium + 1.7076147022 * short,
+  ])
+}
+
+const KAPPA = 24389 / 27
+const EPSILON = 216 / 24389
+const D50_WHITE: Triple = [0.3457 / 0.3585, 1, (1 - 0.3457 - 0.3585) / 0.3585]
+
+const lab_to_rgb255 = ([lightness, a_axis, b_axis]: Triple): Triple => {
+  const f_y = (lightness + 16) / 116
+  const f_x = a_axis / 500 + f_y
+  const f_z = f_y - b_axis / 200
+  const xyz_d50: Triple = [
+    (f_x ** 3 > EPSILON ? f_x ** 3 : (116 * f_x - 16) / KAPPA) * D50_WHITE[0],
+    (lightness > KAPPA * EPSILON ? f_y ** 3 : lightness / KAPPA) * D50_WHITE[1],
+    (f_z ** 3 > EPSILON ? f_z ** 3 : (116 * f_z - 16) / KAPPA) * D50_WHITE[2],
+  ]
+  return xyz_d65_to_rgb255(dot3(XYZ_D50_TO_D65, xyz_d50))
+}
+
+const hsl_to_rgb255 = (hue: number, saturation: number, lightness: number): Triple => {
+  const wrapped = (((hue % 360) + 360) % 360) / 30
+  const amplitude = saturation * Math.min(lightness, 1 - lightness)
+  const channel = (offset: number) => {
+    const key = (offset + wrapped) % 12
+    return (lightness - amplitude * Math.max(-1, Math.min(key - 3, 9 - key, 1))) * 255
+  }
+  return [channel(0), channel(8), channel(4)]
+}
+
+const hwb_to_rgb255 = (hue: number, white: number, black: number): Triple => {
+  if (white + black >= 1) {
+    const gray = (white / (white + black)) * 255
+    return [gray, gray, gray]
+  }
+  const span = 1 - white - black
+  return hsl_to_rgb255(hue, 1, 0.5).map(
+    (channel) => channel * span + white * 255,
+  ) as Triple
+}
+
+const LINEAR_SRGB_TO_XYZ_D65 = [
+  0.4123907992659595, 0.35758433938387796, 0.1804807884018343, 0.21263900587151036,
+  0.7151686787677559, 0.07219231536073371, 0.01933081871559185, 0.11919477979462599,
+  0.9505321522496606,
+]
+
+const IDENTITY_MATRIX = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+const identity = (channel: number) => channel
+
+// The predefined spaces `color()` accepts, each as its decoding transfer function and
+// the matrix taking its linear form to XYZ. `d50` marks the ones needing adaptation,
+// and the xyz spaces are the degenerate case: their components already are XYZ.
+const COLOR_SPACES: Record<
+  string,
+  { decode: (channel: number) => number; matrix: readonly number[]; d50?: boolean }
+> = {
+  srgb: { decode: srgb_decode, matrix: LINEAR_SRGB_TO_XYZ_D65 },
+  'srgb-linear': { decode: identity, matrix: LINEAR_SRGB_TO_XYZ_D65 },
+  xyz: { decode: identity, matrix: IDENTITY_MATRIX },
+  'xyz-d65': { decode: identity, matrix: IDENTITY_MATRIX },
+  'xyz-d50': { decode: identity, matrix: IDENTITY_MATRIX, d50: true },
+  'display-p3': {
+    decode: srgb_decode,
+    matrix: [
+      0.4865709486482162, 0.26566769316909306, 0.1982172852343625, 0.2289745640697488,
+      0.6917385218365064, 0.079286914093745, 0, 0.04511338185890264, 1.043944368900976,
+    ],
+  },
+  'a98-rgb': {
+    decode: (channel) => transfer(channel, (mag) => mag ** (563 / 256)),
+    matrix: [
+      0.5766690429101305, 0.1855582379065463, 0.1882286462349947, 0.29734497525053605,
+      0.6273635662554661, 0.07529145849399788, 0.02703136138641234, 0.07068885253582723,
+      0.9913375368376388,
+    ],
+  },
+  'prophoto-rgb': {
+    decode: (channel) =>
+      transfer(channel, (mag) => (mag >= 1 / 512 ? mag ** 1.8 : mag / 16)),
+    d50: true,
+    matrix: [
+      0.7977604896723027, 0.13518583717574031, 0.0313493495815248, 0.2880711282292934,
+      0.7118432178101014, 0.00008565396060525902, 0, 0, 0.8251046025104601,
+    ],
+  },
+  rec2020: {
+    decode: (channel) =>
+      transfer(channel, (mag) =>
+        mag < 4.5 * 0.018053968510807
+          ? mag / 4.5
+          : ((mag + 1.09929682680944 - 1) / 1.09929682680944) ** (1 / 0.45),
+      ),
+    matrix: [
+      0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671,
+      0.6779980715188708, 0.05930171646986196, 0, 0.028072693049087428, 1.060985057710791,
+    ],
+  },
+}
+// Component tokens to a rectangular triple, `refs` giving each one's 100% reference
+const components = (tokens: string[], refs: Triple): Triple => [
+  parse_component(tokens[0], refs[0]),
+  parse_component(tokens[1], refs[1]),
+  parse_component(tokens[2], refs[2]),
+]
+// lch and oklch are lab and oklab in polar coordinates, so they convert and reuse the
+// rectangular transform rather than carrying one of their own
+const polar_components = (tokens: string[], refs: [number, number]): Triple => {
+  const chroma = parse_component(tokens[1], refs[1])
+  const hue = (parse_hue(tokens[2]) * Math.PI) / 180
+  return [
+    parse_component(tokens[0], refs[0]),
+    chroma * Math.cos(hue),
+    chroma * Math.sin(hue),
+  ]
+}
+
+// Component tokens to sRGB on 0..255; null when they do not fit the function's shape
+const function_to_rgb255 = (name: string, tokens: string[]): Triple | null => {
+  if (name === `color`) {
+    // own properties only: a bare lookup would find Object.prototype keys, so
+    // `color(constructor 1 1 1)` came back truthy and then blew up on space.decode
+    const space_name = tokens[0]?.toLowerCase() ?? ``
+    const space = Object.hasOwn(COLOR_SPACES, space_name)
+      ? COLOR_SPACES[space_name]
+      : undefined
+    if (!space || tokens.length < 4) return null
+    const linear = tokens
+      .slice(1, 4)
+      .map((token) => space.decode(parse_component(token, 1))) as Triple
+    const xyz = dot3(space.matrix, linear)
+    return xyz_d65_to_rgb255(space.d50 ? dot3(XYZ_D50_TO_D65, xyz) : xyz)
+  }
+  if (tokens.length !== 3) return null
+  if (name === `oklab`) return oklab_to_rgb255(components(tokens, [1, 0.4, 0.4]))
+  if (name === `oklch`) return oklab_to_rgb255(polar_components(tokens, [1, 0.4]))
+  if (name === `lab`) return lab_to_rgb255(components(tokens, [100, 125, 125]))
+  if (name === `lch`) return lab_to_rgb255(polar_components(tokens, [100, 150]))
+  // hsl and hwb share a shape: a hue and two percentages
+  const to_rgb255 = name === `hwb` ? hwb_to_rgb255 : hsl_to_rgb255
+  return to_rgb255(
+    parse_hue(tokens[0]),
+    clamp(parse_percentage(tokens[1])),
+    clamp(parse_percentage(tokens[2])),
+  )
+}
+
+const parse_color_function = (
+  name: string,
+  args: string,
+): [number, number, number, number] | null => {
+  const [main = ``, alpha_arg] = args.split(`/`)
+  const tokens = main
+    .trim()
+    .split(/[\s,]+/u)
+    .filter(Boolean)
+  // legacy `hsla(h, s, l, a)` carries alpha in the argument list instead of after a slash
+  const legacy_alpha =
+    alpha_arg === undefined && name !== `color` && tokens.length === 4
+      ? tokens.pop()
+      : undefined
+  const rgb = function_to_rgb255(name, tokens)
+  if (!rgb) return null
+  return finite_rgba(rgb, parse_alpha(alpha_arg?.trim() ?? legacy_alpha))
+}
+
+const parse_color = (color: string): [number, number, number, number] | null => {
+  const trimmed = color.trim()
+  const channels = RGB_COLOR.exec(trimmed)?.groups?.channels
+  if (channels) {
+    // percentages are legal here too, in the channels (`rgb(50% 0% 0%)`) as much as in
+    // the alpha (`rgb(0 0 0 / 50%)`), even though a computed value never uses them
+    const parts = channels.split(/[\s,/]+/u).filter(Boolean)
+    if (parts.length < 3) return null
+    const rgb = parts.slice(0, 3).map((token) => parse_component(token, 255)) as Triple
+    return finite_rgba(rgb, parse_alpha(parts[3]))
+  }
+  const color_fn = COLOR_FN.exec(trimmed)?.groups
+  if (color_fn) {
+    return parse_color_function(color_fn.name.toLowerCase(), color_fn.args)
+  }
+  const digits = HEX_COLOR.exec(trimmed)?.groups?.digits
+  if (!digits) return null
+  const stride = digits.length < 6 ? 1 : 2 // #rgb(a) spells each channel once
+  if (digits.length !== stride * 3 && digits.length !== stride * 4) return null
+  const channel = (idx: number) => {
+    const slice = digits.slice(idx * stride, idx * stride + stride)
+    return Number.parseInt(stride === 1 ? slice + slice : slice, 16)
+  }
+  return [
+    channel(0),
+    channel(1),
+    channel(2),
+    digits.length === stride * 4 ? channel(3) / 255 : 1,
+  ]
+}
+
+// Human-perceived brightness on 0..1, from https://stackoverflow.com/a/596243
+const luminance = (color: string): number => {
+  const parsed = parse_color(color)
+  if (!parsed) {
+    throw new Error(
+      `pick_contrast_color: cannot read color \`${color}\`, expected hex, rgb()/rgba(), ` +
+        `hsl()/hwb(), lab()/lch()/oklab()/oklch() or color(); named colors and ` +
+        `color-mix() are not parsed`,
+    )
+  }
+  const [red, green, blue] = parsed
+  return (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+}
+
+// Nearest ancestor background that is not fully transparent, or `` when every one of
+// them is — a node's own background is usually transparent, so the color that decides
+// readability belongs to some container further up.
+export const get_bg_color = (element: Element | null): string => {
+  for (let node = element; node; node = node.parentElement) {
+    const bg_color = getComputedStyle(node).backgroundColor
+    if ((parse_color(bg_color)?.[3] ?? 0) > 0) return bg_color
+  }
+  return ``
+}
+
+export const pick_contrast_color = (options: ContrastOptions = {}): string => {
+  const { bg_color, luminance_threshold = 0.7, choices = [`black`, `white`] } = options
+  // Nothing opaque behind the node: it shows through to the white a page starts as
+  const background = bg_color?.trim() ? bg_color : `#fff`
+  return luminance(background) > luminance_threshold ? choices[0] : choices[1]
+}
+
+// Set text color to whichever of `choices` reads better on the background actually
+// behind the node. For text over a value-driven fill (a heatmap cell, a color swatch)
+// where no single hard-coded color stays legible across the scale.
+export const contrast_color =
+  (options: ContrastOptions = {}) =>
+  (node: Element): (() => void) | undefined => {
+    if (!(node instanceof HTMLElement)) return undefined
+    const previous_color = node.style.color
+    const bg_color = options.bg_color ?? get_bg_color(node)
+    node.style.color = pick_contrast_color({ ...options, bg_color })
+    return () => {
+      node.style.color = previous_color
+    }
+  }
+
+export interface ForwardWindowKeydownOptions {
+  // Report `true` for a key you took, and the browser default (page scroll, quick
+  // find) is suppressed here instead of at every call site.
+  handle: (event: KeyboardEvent) => boolean
+  enabled?: boolean
+}
+
+// Hand a component the page's keydowns while the pointer is over it and nothing holds
+// focus. Several viewers can then share one set of shortcuts without all of them
+// answering at once, and none of them takes a key from a focused input — all without
+// the user having to click a viewer first. Complements `hotkey`, which binds to an
+// element or the document and arbitrates by focus alone.
+export const forward_window_keydown =
+  (options: ForwardWindowKeydownOptions) =>
+  (node: Element): (() => void) | undefined => {
+    const { handle, enabled = true } = options
+    if (!enabled) return undefined
+
+    let hovered = false
+    const on_enter = () => (hovered = true)
+    const on_leave = () => (hovered = false)
+    const on_keydown = (event: Event) => {
+      if (!hovered || !(event instanceof KeyboardEvent)) return
+      // Focus anywhere real means the user is aiming keys there, whatever the pointer
+      // happens to be over. Only body (or nothing) leaves hover to decide.
+      const { activeElement, body } = node.ownerDocument
+      if (activeElement && activeElement !== body) return
+      if (handle(event)) event.preventDefault()
+    }
+
+    node.addEventListener(`pointerenter`, on_enter)
+    node.addEventListener(`pointerleave`, on_leave)
+    globalThis.addEventListener(`keydown`, on_keydown)
+
+    return () => {
+      node.removeEventListener(`pointerenter`, on_enter)
+      node.removeEventListener(`pointerleave`, on_leave)
+      globalThis.removeEventListener(`keydown`, on_keydown)
     }
   }

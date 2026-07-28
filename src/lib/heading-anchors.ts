@@ -1,5 +1,5 @@
-// Svelte preprocessor that adds IDs to headings at build time for SSR support
-// This ensures fragment navigation (#heading-id) works on initial page load
+// Svelte preprocessor that adds IDs to headings at build time, so fragment navigation
+// (#heading-id) works on the initial SSR page load
 
 // Match headings in two contexts:
 // 1. Start of line (for .svelte files with formatted HTML)
@@ -126,7 +126,6 @@ function strip_svelte_expressions(str: string): string {
   return result
 }
 
-// Generate URL-friendly slug from text
 const slugify = (text: string): string =>
   text
     .normalize(`NFC`)
