@@ -27,7 +27,10 @@ describe(`ButtonGroup`, () => {
     // options is required; every test passes one, the cast keeps call sites terse
     const full_props = props as ComponentProps<typeof ButtonGroup>
     mounted.push(mount(ButtonGroup, { target: document.body, props: full_props }))
-    return [...document.querySelectorAll<HTMLButtonElement>(`.options button`)]
+    // `[data-value]` so an option_suffix rendering its own button doesn't join the list
+    return [
+      ...document.querySelectorAll<HTMLButtonElement>(`.options button[data-value]`),
+    ]
   }
   const values_of = (buttons: HTMLButtonElement[]) =>
     buttons.map((button) => button.dataset.value)
@@ -45,6 +48,12 @@ describe(`ButtonGroup`, () => {
   // source instead; the values they produce were checked in a real browser.
   const styles = button_group_source.slice(button_group_source.indexOf(`<style>`))
   // an info link, the affordance matbench-discovery had nested inside its buttons
+  const remove_button = createRawSnippet<[{ option: { value: string } }]>(
+    (get_params) => ({
+      render: () =>
+        `<button type="button" data-remove="${get_params().option.value}">x</button>`,
+    }),
+  )
   const info_link = createRawSnippet<[{ option: { value: string }; selected: boolean }]>(
     (get_params) => ({
       render: () => {
@@ -408,7 +417,9 @@ describe(`ButtonGroup`, () => {
   // global button typography.
   test(`leaves font-weight and font-style to the consumer`, () => {
     expect(styles).toMatch(/font-family:\s*var\(--btn-group-btn-font-family/u)
-    expect(styles).not.toMatch(/[^-]font:\s*inherit/u)
+    // any `font:` shorthand, not just `font: inherit` — `font: var(--x, inherit)` sets
+    // weight and style just the same, and is the form a reintroduction would take
+    expect(styles).not.toMatch(/[^-]font:/u)
     // a hook for either would have to be a declaration on the button, which is what
     // reintroduces the override, so neither property is set anywhere
     expect(styles).not.toMatch(/font-(?:weight|style):/u)
@@ -448,36 +459,45 @@ describe(`ButtonGroup`, () => {
     ).toEqual(Array(3).fill(true))
   })
 
-  // handle_keydown collects buttons with a depth-agnostic querySelectorAll, so the extra
-  // level should not matter, but a wrapper is exactly the kind of change that breaks it
-  test(`the option wrapper leaves arrow key navigation intact`, async () => {
-    const on_change = vi.fn()
-    const buttons = mount_group({
-      options: letters,
-      selected: `alpha`,
-      on_change,
-      option_suffix: info_link,
-    })
-    buttons[0].focus()
+  // A suffix rendering its own button is the second reason this prop exists, and it is
+  // what makes handle_keydown's query ambiguous: a bare `button` selector collects the
+  // suffixes too, so focus lands on one while the selection jumps an option ahead. An
+  // `<a>` suffix cannot catch that, since the selector never matched it either way.
+  test.each([
+    [`a link`, info_link],
+    [`a button`, remove_button],
+  ])(
+    `the option wrapper holding %s leaves arrow key navigation intact`,
+    async (_label, option_suffix) => {
+      const on_change = vi.fn()
+      const buttons = mount_group({
+        options: letters,
+        selected: `alpha`,
+        on_change,
+        option_suffix,
+      })
+      buttons[0].focus()
 
-    press(`ArrowRight`)
-    await tick()
-    expect(document.activeElement).toBe(buttons[1])
-    expect(buttons.map(checked_state)).toEqual([`false`, `true`, `false`])
+      press(`ArrowRight`)
+      await tick()
+      expect(document.activeElement).toBe(buttons[1])
+      expect(buttons.map(checked_state)).toEqual([`false`, `true`, `false`])
 
-    press(`End`)
-    await tick()
-    expect(document.activeElement).toBe(buttons[2])
-    expect(on_change.mock.calls.flat()).toEqual([`beta`, `gamma`])
-  })
+      press(`End`)
+      await tick()
+      expect(document.activeElement).toBe(buttons[2])
+      expect(on_change.mock.calls.flat()).toEqual([`beta`, `gamma`])
+    },
+  )
 
   // every one of these was a `:global` escape hatch in a downstream migration
   test.each([
     [`justify-content`, `--btn-group-justify-content`], // diagrams' wrapped tag rows
     [`cursor`, `--btn-group-btn-cursor`], // diagrams' group inside a clickable card
-    [`color`, `--btn-group-btn-hover-color`], // awesome-sveltekit
     [`transform`, `--btn-group-btn-hover-transform`], // the blog's hover lift
     [`transition`, `--btn-group-btn-transition`],
+    // no --btn-group-btn-hover-color row: the chain test below asserts the same
+    // substring plus the fallback, so a row here would be strictly weaker
   ])(`%s is settable through %s`, (property, custom_property) => {
     expect(styles).toMatch(
       new RegExp(`${property}:\\s*var\\(\\s*${custom_property}\\s*[,)]`, `u`),

@@ -47,7 +47,7 @@ either end.
 </p>
 ```
 
-### Multi select
+### Multi-select
 
 `multiple` swaps the semantics rather than just the bookkeeping: the container becomes
 a plain `group` of independent toggle buttons carrying `aria-pressed`, each its own tab
@@ -98,6 +98,12 @@ content it did not render.
 
 The wrapper only appears when you pass the snippet. Without it the buttons stay direct
 children of `.options`, so `.options > button` selectors keep matching.
+
+One caveat in single-select mode, where the group is a `radiogroup`: ARIA says a
+radiogroup owns only radios, so focusable slotted content is both an extra tab stop
+between the options and a spec violation. The example below accepts that knowingly, since
+a per-option docs link is the case the prop was added for. Non-focusable content — a
+badge, a count, an icon — has no such caveat, and neither does `multiple` mode.
 
 ```svelte example id="button-group-suffix"
 <script lang="ts">

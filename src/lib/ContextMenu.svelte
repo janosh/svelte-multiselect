@@ -3,7 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { click_outside, type DismissConfig, float, focus_trap } from './attachments'
   import type { CmdAction } from './types'
-  import { chain_handlers, type CmdSection, format_shortcut } from './utils'
+  import { chain_handlers, type CmdSection, format_shortcut, step_focus } from './utils'
 
   interface Props extends HTMLAttributes<HTMLMenuElement> {
     actions: (CmdAction | CmdSection)[]
@@ -35,6 +35,15 @@
   }: Props = $props()
 
   const trigger_mode = $derived(trigger ?? (children ? `region` : `body`))
+  // the region element only renders with `children`, so this combination installs no
+  // handler anywhere and nothing can ever open the menu — fail loudly rather than dead
+  $effect(() => {
+    if (trigger_mode === `region` && !children) {
+      throw new Error(
+        `ContextMenu: trigger="region" needs a children snippet to attach to`,
+      )
+    }
+  })
 
   // A right-click is a zero-size anchor: the menu hangs off the pointer itself
   const anchor = $derived(at && { top: at.y, bottom: at.y, left: at.x, right: at.x })
@@ -43,9 +52,16 @@
   // section; its required `action` callback is what one entry has and the other lacks
   const is_section = (entry: CmdAction | CmdSection): entry is CmdSection =>
     !(`action` in entry)
-  // namespaced so a section titled `Copy` and an action labelled `Copy` stay distinct keys
-  const entry_key = (entry: CmdAction | CmdSection): unknown =>
-    is_section(entry) ? `section:${entry.title}` : `action:${entry.id ?? entry.label}`
+  // Tagged with the field it came from, so a section titled `Copy`, an action with id
+  // `Copy` and an action labelled `Copy` are three keys rather than one. Serialized
+  // rather than left a tuple because Svelte keys by identity, and a fresh array every
+  // render would rebuild the whole menu; JSON also keeps id `1` apart from id `'1'`.
+  const entry_key = (entry: CmdAction | CmdSection): string => {
+    if (is_section(entry)) return JSON.stringify([`section`, entry.title])
+    const [field, value] =
+      entry.id === undefined ? [`label`, entry.label] : [`id`, entry.id]
+    return JSON.stringify([field, value])
+  }
   // an empty section is a heading over nothing, so it is dropped once anything else has
   // something to show. A menu of nothing but empty sections keeps them: open_at refuses
   // to open one, so the only way to see it is a consumer setting `at` itself.
@@ -75,26 +91,12 @@
 
   // Arrow keys are how a role="menu" is walked; focus_trap only owns Tab. Disabled
   // items are skipped rather than focused-and-inert, and the ends wrap.
-  const menu_steps: Record<string, (idx: number, count: number) => number> = {
-    ArrowDown: (idx, count) => (idx + 1) % count,
-    ArrowUp: (idx, count) => (idx - 1 + count) % count,
-    Home: () => 0,
-    End: (_idx, count) => count - 1,
-  }
-
+  // Arrows only, no horizontal: a vertical menu leaves Left/Right to the page
   function handle_menu_keys(event: KeyboardEvent) {
-    const step = menu_steps[event.key]
-    if (!step || !(event.currentTarget instanceof HTMLElement)) return
+    if (!(event.currentTarget instanceof HTMLElement)) return
     const selector = `[role^=menuitem]:not(:disabled)` // menuitem and menuitemradio alike
     const items = [...event.currentTarget.querySelectorAll<HTMLButtonElement>(selector)]
-    if (items.length === 0) return
-    event.preventDefault()
-    // With focus outside the list the steppers already land where the key implies:
-    // ArrowDown and Home on the first item, End on the last. Only ArrowUp needs nudging,
-    // since stepping back from -1 would stop one short of the end.
-    const idx = items.findIndex((menu_item) => menu_item === document.activeElement)
-    const from = idx === -1 && event.key === `ArrowUp` ? 0 : idx
-    items[step(from, items.length)]?.focus()
+    step_focus(event, items)
   }
 </script>
 
@@ -123,7 +125,7 @@
           the title is hidden from AT because aria-label already announces it -->
           <li role="group" aria-label={entry.title}>
             <span class="section-title" aria-hidden="true">{entry.title}</span>
-            {#each entry.actions as action (action.id ?? action.label)}
+            {#each entry.actions as action (entry_key(action))}
               {@render menu_item(action, entry)}
             {/each}
           </li>
@@ -188,14 +190,21 @@
     }
     button:hover:not(:disabled),
     button:focus-visible {
-      background: var(--context-menu-item-hover-bg, rgba(255, 255, 255, 0.15));
+      background: var(
+        --context-menu-item-hover-bg,
+        light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.15))
+      );
     }
     button:disabled {
       opacity: 0.5;
       cursor: not-allowed;
     }
     button[aria-checked='true'] {
-      background: var(--context-menu-item-checked-bg, rgba(255, 255, 255, 0.08));
+      /* the surface is light-dark, so a bare white overlay is invisible in light mode */
+      background: var(
+        --context-menu-item-checked-bg,
+        light-dark(rgba(0, 0, 0, 0.1), rgba(255, 255, 255, 0.08))
+      );
       font-weight: 600;
     }
     kbd {

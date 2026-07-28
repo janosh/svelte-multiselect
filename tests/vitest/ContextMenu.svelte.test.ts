@@ -4,7 +4,7 @@ import type { CmdSection } from '$lib/utils'
 import type { ComponentProps } from 'svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query, stub_prop } from './index'
+import { doc_query, escape_key, stub_prop } from './index'
 
 describe(`ContextMenu`, () => {
   type MenuProps = Partial<Omit<ComponentProps<typeof ContextMenu>, `actions`>>
@@ -193,7 +193,6 @@ describe(`ContextMenu`, () => {
 
   // both defaults ride document listeners; `dismiss` merges over them, reaching the
   // whole click_outside config — `escape: false` and `release` opt each one out
-  const escape_key = () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })
   const outside_press = () => new PointerEvent(`pointerdown`, { bubbles: true })
   const outside_click = () => new MouseEvent(`click`, { bubbles: true })
   const release: MenuProps = { dismiss: { dismiss_on: `release`, escape: false } }
@@ -203,6 +202,9 @@ describe(`ContextMenu`, () => {
     [`escape: false leaves Escape to the page`, release, escape_key, false],
     [`dismiss_on: release ignores the press`, release, outside_press, false],
     [`dismiss_on: release waits for the click`, release, outside_click, true],
+    // the mirror of the two rows above: without it, a listener bound to both events
+    // would still satisfy them and the press/release distinction would go unproven
+    [`the default press ignores a stray click`, {}, outside_click, false],
   ] as const)(`%s`, async (_desc, extra, make_event, closes) => {
     await open_menu(make_actions(), extra)
     expect(menu()).not.toBeNull()
@@ -237,6 +239,24 @@ describe(`ContextMenu`, () => {
       // no `selected`: a plain heading, whose items stay ordinary menu items
       { title: `Other`, actions: [{ label: `Reset`, action: vi.fn() }] },
     ]
+
+    // Keys are tagged with the field they came from. Untagged, every entry below keys
+    // to `1`, and Svelte aborts a keyed each on the first duplicate.
+    test(`an id and a label spelling the same thing stay distinct keys`, async () => {
+      await open_menu([
+        { id: 1, label: `Numeric id`, action: vi.fn() },
+        { id: `1`, label: `String id`, action: vi.fn() },
+        { label: `1`, action: vi.fn() },
+        { title: `1`, actions: [{ label: `In section`, action: vi.fn() }] },
+      ])
+
+      expect(items().map((btn) => btn.textContent?.trim())).toEqual([
+        `Numeric id`,
+        `String id`,
+        `1`,
+        `In section`,
+      ])
+    })
 
     test(`render as labelled groups of radios, flat actions keep menuitem`, async () => {
       // `Other` doubles as the second section's title, where a bare entry_key would

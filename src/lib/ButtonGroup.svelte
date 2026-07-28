@@ -1,6 +1,6 @@
 <script module lang="ts">
   import type { IconName } from './icons'
-  import { is_object } from './utils'
+  import { is_object, step_focus } from './utils'
 
   // Only `value` is required; the rest are display extras any option shape may omit
   export type ButtonGroupOption<Value extends string = string> = {
@@ -49,9 +49,13 @@
     sort_order?: `asc` | `desc` | null
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     // sibling of the button rather than content of it, so an option can carry a
-    // trailing link or badge without nesting interactive content inside a button
+    // trailing link or badge without nesting interactive content inside a button.
+    // Caveat in single-select mode: the group is a radiogroup, which per ARIA owns only
+    // radios, so anything focusable here is both an extra tab stop between the radios
+    // and an aria-required-children violation. Prefer non-focusable content, or accept
+    // the tradeoff knowingly — the sort arrow sits outside the group for this reason.
     option_suffix?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
-    on_change?: (selected: Value | Value[] | null) => void
+    on_change?: (selected: Value | Value[]) => void
     // `content` comes from each option's own `tooltip`; the rest is yours, which is
     // what lets a consumer opt into allow_html for rich tooltips
     tooltip_options?: Omit<TooltipOptions, `content`>
@@ -108,33 +112,20 @@
       if (selected === value) return // re-picking the checked radio changes nothing
       selected = value
     }
-    on_change?.(selected ?? null)
-  }
-
-  // Next focused index given the current one, which is -1 when focus enters the group
-  // from outside. Math.max keeps that entry case from stopping one short of the end.
-  const step_by: Record<string, (idx: number, count: number) => number> = {
-    ArrowRight: (idx, count) => (idx + 1) % count,
-    ArrowDown: (idx, count) => (idx + 1) % count,
-    ArrowLeft: (idx, count) => (Math.max(idx, 0) - 1 + count) % count,
-    ArrowUp: (idx, count) => (Math.max(idx, 0) - 1 + count) % count,
-    Home: () => 0,
-    End: (_idx, count) => count - 1,
+    on_change?.(selected)
   }
 
   function handle_keydown(event: KeyboardEvent) {
-    const step = step_by[event.key]
-    if (!step || !(event.currentTarget instanceof HTMLElement)) return
-    const selector = `button:not(:disabled)`
+    if (!(event.currentTarget instanceof HTMLElement)) return
+    // `[data-value]` excludes anything an option_suffix renders: a bare `button` query
+    // also collects those, which desyncs focus from the option it is meant to select
+    const selector = `button[data-value]:not(:disabled)`
     const buttons = [...event.currentTarget.querySelectorAll<HTMLButtonElement>(selector)]
-    if (buttons.length === 0) return
-    event.preventDefault()
-    const idx = buttons.findIndex((button) => button === document.activeElement)
-    const next_idx = step(idx, buttons.length)
-    buttons[next_idx]?.focus()
-    // A radio group carries its selection with focus; independent toggles do not
-    const next_option = enabled_options[next_idx]
-    if (!multiple && next_option) select(next_option.value)
+    const next_value = step_focus(event, buttons, { horizontal: true })?.dataset.value
+    // A radio group carries its selection with focus; independent toggles do not. Read
+    // the value off the button rather than indexing a parallel array, so DOM order and
+    // the option list cannot drift apart again.
+    if (!multiple && next_value !== undefined) select(next_value as Value)
   }
 </script>
 
@@ -228,7 +219,15 @@
       border-radius: var(--btn-group-btn-radius, 3pt);
       /* `all 0s` is the browser default, so the knob is inert until a consumer sets it */
       transition: var(--btn-group-btn-transition, all 0s);
-      &:hover:not(:disabled, :has(> button:disabled)) {
+      /* checked is excluded here rather than relying on source order: :hover plus this
+         :not() outweighs the checked selector below, so hovering a selected option would
+         otherwise replace its darker shading with the lighter hover one */
+      &:hover:not(
+          :disabled,
+          [aria-checked='true'],
+          [aria-pressed='true'],
+          :has(> button:is(:disabled, [aria-checked='true'], [aria-pressed='true']))
+        ) {
         background: var(
           --btn-group-btn-hover-bg,
           light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.12))

@@ -291,6 +291,34 @@ export const is_editable_event_target = (target: EventTarget | null): boolean =>
 export const is_modifier_chord = (event: KeyboardEvent): boolean =>
   event.altKey || event.ctrlKey || event.metaKey
 
+// Move focus within a list of items, wrapping at both ends, and hand back what took it
+// so a radio group can carry its selection along. Returns undefined when the key is not
+// a navigation key or the list is empty, in which case the event is left untouched.
+// Left/Right are opt-in: a vertical menu should leave them to the page.
+// Focus entering from outside gives idx -1, where each key still lands where it implies
+// — Home and a forward step on the first item, End and a backward step on the last.
+export function step_focus<T extends HTMLElement>(
+  event: KeyboardEvent,
+  items: T[],
+  { horizontal = false }: { horizontal?: boolean } = {},
+): T | undefined {
+  const { key } = event
+  const back = key === `ArrowUp` || (horizontal && key === `ArrowLeft`)
+  const forward = key === `ArrowDown` || (horizontal && key === `ArrowRight`)
+  if (!back && !forward && key !== `Home` && key !== `End`) return undefined
+  const count = items.length
+  if (count === 0) return undefined
+  event.preventDefault()
+  const idx = items.findIndex((item) => item === document.activeElement)
+  let next = count - 1 // End, and a backward step from outside the list
+  if (key === `Home`) next = 0
+  else if (forward) next = (idx + 1) % count
+  else if (back) next = (Math.max(idx, 0) - 1 + count) % count
+  const target = items[next]
+  target?.focus()
+  return target
+}
+
 // === Shortcut rebinding ===
 // The reverse of parse_shortcut, for UIs that let users record their own shortcuts.
 // Combos come back in one canonical spelling: modifiers in a fixed order, `mod` for
