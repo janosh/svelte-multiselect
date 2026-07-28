@@ -29,7 +29,7 @@ const setup_empty_page = () =>
   set_body(`<h1>H1</h1><h2 class="toc-exclude">H2</h2><h5>H5</h5>`)
 
 // `Heading 1`..`Heading n` as h2s with matching `heading-n` ids, the shape most
-// interaction tests want. jsdom gives every heading top=0, so the last one starts active.
+// interaction tests want. happy-dom gives every heading top=0, so the last one starts active.
 const set_headings = (count: number) =>
   set_body(
     Array.from(
@@ -92,7 +92,6 @@ const toc_texts = () =>
     li.textContent.trim(),
   )
 
-// Get collapsed state as array of booleans for easy assertion
 const get_collapsed_states = () =>
   Array.from(document.querySelectorAll(`aside.toc > nav > ol > li`)).map((li) =>
     li.classList.contains(`collapsed`),
@@ -768,12 +767,12 @@ describe(`Toc`, () => {
       )
       const replace_state_mock = vi.spyOn(history, `replaceState`)
 
-      // breakpoint above the jsdom window width forces mobile mode, where open=true is
+      // breakpoint above the happy-dom window width forces mobile mode, where open=true is
       // enough for keys to be handled (no hover check)
       mount_toc({ open: true, breakpoint: 2000, scrollBehavior })
       await tick()
 
-      // keys act on the active item, which is the last heading in jsdom; a click picks the first
+      // keys act on the active item, the last heading in happy-dom; a click picks the first
       if (key === null) doc_query(`aside.toc ol li`).click()
       else globalThis.dispatchEvent(new KeyboardEvent(`keydown`, { key }))
 
@@ -848,7 +847,7 @@ describe(`Toc`, () => {
     mount_toc()
     await tick()
 
-    // jsdom returns all-zero rects, so set_active_heading picks the last heading
+    // happy-dom returns all-zero rects, so set_active_heading picks the last heading
     expect(doc_query(`aside.toc li.active`).textContent.trim()).toBe(`Beta`)
 
     // arrange rects so any rebuild's set_active_heading() would switch active to Alpha
@@ -968,7 +967,7 @@ describe(`Toc`, () => {
     const active_text = () => doc_query(`aside.toc ol li.active`).textContent.trim()
     const scroll_mock = vi.fn<Element[`scrollIntoView`]>()
 
-    // jsdom reports top=0 for every unmocked heading, so plain scroll detection always lands
+    // happy-dom reports top=0 for every unmocked heading, so plain scroll detection lands
     // on the last one. `Heading 3` therefore means scroll_target was released, `Heading 1`
     // that it still pins the clicked heading.
     beforeEach(() => {
@@ -1440,7 +1439,7 @@ describe(`collapseSubheadings`, () => {
 
   test(`unmocked mount expands only the active heading's ancestor chain`, async () => {
     setup_nested_headings()
-    // no rect mock: jsdom reports top=0 for every heading, so set_active_heading walks
+    // no rect mock: happy-dom reports top=0 for every heading, so set_active_heading walks
     // last-to-first and stops immediately, making the trailing h3 (Sub 2.1) active
     mount_toc({ collapseSubheadings: true })
     await tick()

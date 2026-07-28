@@ -2065,7 +2065,7 @@
   class:open
   class:invalid
   class:input-display={input_display}
-  class="multiselect {outerDivClass} {rest.class ?? ``}"
+  class={[`multiselect`, outerDivClass, rest.class]}
   onmouseup={open_dropdown}
   {@attach click_outside({
     enabled: open,

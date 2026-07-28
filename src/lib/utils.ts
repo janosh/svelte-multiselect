@@ -32,8 +32,7 @@ export const slug_to_title = (slug: string): string =>
 export const has_group = <T extends Option>(opt: T): opt is T & { group: string } =>
   is_object(opt) && typeof opt.group === `string`
 
-// Get the label key from an option object or the option itself
-// if it's a string or number
+// Label of an object option, or the primitive option stringified
 export const get_label = (opt: Option) => {
   if (is_object(opt)) {
     if (opt.label === undefined) {
@@ -50,10 +49,10 @@ export const get_option_key = (opt: Option): unknown =>
   is_object(opt) ? (opt.value ?? get_label(opt)) : opt
 
 // Extract a CSS string from an option's style (string or {option, selected} object).
-// Always returns a semicolon-terminated string.
+// A non-empty result is semicolon-terminated.
 export function get_style(
   option: Option,
-  key: `selected` | `option` | null | undefined = null, // undefined falls back to null via default
+  key: `selected` | `option` | null | undefined = null,
 ) {
   let css_str = ``
   if (key !== null && key !== `selected` && key !== `option`) {
@@ -80,7 +79,7 @@ export function get_style(
 }
 
 // === Floating geometry ===
-// "Pick a side that fits, then stay on screen": tooltip, portalled dropdown, `float`.
+// "Pick a side that fits, then stay on screen", shared by every floating surface.
 
 export type Placement = `top` | `right` | `bottom` | `left`
 
@@ -161,6 +160,20 @@ export function compute_position(
   return { top, left, placement: chosen }
 }
 
+// === Keyboard shortcuts ===
+
+// `mod` is Cmd on Apple keyboards and Ctrl everywhere else, so one binding covers both
+const is_apple_platform = (): boolean =>
+  /mac|iphone|ipad|ipod/iu.test(globalThis.navigator?.userAgent ?? ``)
+
+const resolve_mod = (shortcut: string): string =>
+  shortcut.replaceAll(/\bmod\b/giu, is_apple_platform() ? `meta` : `ctrl`)
+
+// `,`, `+` and space are spelled out in a combo string so it can always be split on
+// `+`; matching needs the literal `event.key` back.
+const KEY_TOKENS: Record<string, string> = { ',': `comma`, '+': `plus`, ' ': `space` }
+const TOKEN_KEYS: Record<string, string> = { comma: `,`, plus: `+`, space: ` ` }
+
 export function split_shortcut(shortcut: string): string[] {
   const parts = shortcut
     .toLowerCase()
@@ -171,7 +184,6 @@ export function split_shortcut(shortcut: string): string[] {
   return parts
 }
 
-// Parse shortcut string into modifier+key parts
 export function parse_shortcut(shortcut: string): {
   key: string
   ctrl: boolean
@@ -179,8 +191,9 @@ export function parse_shortcut(shortcut: string): {
   alt: boolean
   meta: boolean
 } {
-  const parts = split_shortcut(shortcut)
-  const key = parts.pop() ?? ``
+  const parts = split_shortcut(resolve_mod(shortcut))
+  const last = parts.pop() ?? ``
+  const key = TOKEN_KEYS[last] ?? last
   const ctrl = parts.includes(`ctrl`)
   const shift = parts.includes(`shift`)
   const alt = parts.includes(`alt`)
@@ -205,14 +218,7 @@ export function matches_shortcut(
   )
 }
 
-// `mod` is Cmd on Apple keyboards and Ctrl everywhere else, so one binding covers both
-const is_apple_platform = (): boolean =>
-  /mac|iphone|ipad|ipod/iu.test(globalThis.navigator?.userAgent ?? ``)
-
-const resolve_mod = (shortcut: string): string =>
-  shortcut.replaceAll(/\bmod\b/giu, is_apple_platform() ? `meta` : `ctrl`)
-
-// Shortcut segments as display symbols, shared by CommandMenu and ContextMenu.
+// Shortcut segments as display symbols.
 // Only `mod` reads the platform; every other segment renders the same everywhere.
 const key_symbols: Record<string, string> = {
   meta: `⌘`,
@@ -228,6 +234,9 @@ const key_symbols: Record<string, string> = {
   arrowdown: `↓`,
   arrowleft: `←`,
   arrowright: `→`,
+  comma: `,`,
+  plus: `+`,
+  space: `␣`,
 }
 
 export const format_shortcut = (shortcut: string): string[] =>
@@ -260,7 +269,7 @@ export function run_hotkeys(event: KeyboardEvent, bindings: Hotkey[]): boolean {
   for (const binding of bindings) {
     if (binding.enabled === false) continue
     const keys = Array.isArray(binding.keys) ? binding.keys : [binding.keys]
-    if (!keys.some((key) => matches_shortcut(event, resolve_mod(key)))) continue
+    if (!keys.some((key) => matches_shortcut(event, key))) continue
     if (typing && !binding.allow_in_inputs) continue
     if (binding.prevent_default !== false) event.preventDefault()
     binding.handler(event)
@@ -279,6 +288,148 @@ export const is_editable_event_target = (target: EventTarget | null): boolean =>
 // Alt/Ctrl/Meta make a keystroke a chord. Shift is excluded: it types capitals.
 export const is_modifier_chord = (event: KeyboardEvent): boolean =>
   event.altKey || event.ctrlKey || event.metaKey
+
+// Move focus within a list of items, wrapping at both ends, and hand back what took it
+// so a radio group can carry its selection along. Returns undefined when the key is not
+// a navigation key or the list is empty, in which case the event is left untouched.
+// Left/Right are opt-in: a vertical menu should leave them to the page.
+// Focus entering from outside gives idx -1, where each key still lands where it implies
+// — Home and a forward step on the first item, End and a backward step on the last.
+export function step_focus<T extends HTMLElement>(
+  event: KeyboardEvent,
+  items: T[],
+  { horizontal = false }: { horizontal?: boolean } = {},
+): T | undefined {
+  const { key } = event
+  const back = key === `ArrowUp` || (horizontal && key === `ArrowLeft`)
+  const forward = key === `ArrowDown` || (horizontal && key === `ArrowRight`)
+  if (!back && !forward && key !== `Home` && key !== `End`) return undefined
+  const count = items.length
+  if (count === 0) return undefined
+  event.preventDefault()
+  const idx = items.findIndex((item) => item === document.activeElement)
+  let next = count - 1 // End, and a backward step from outside the list
+  if (key === `Home`) next = 0
+  else if (forward) next = (idx + 1) % count
+  else if (back) next = (Math.max(idx, 0) - 1 + count) % count
+  const target = items[next]
+  target?.focus()
+  return target
+}
+
+// === Shortcut rebinding ===
+// The reverse of parse_shortcut, for UIs that let users record their own shortcuts.
+// Combos come back in one canonical spelling: modifiers in a fixed order, `mod` for
+// the platform's primary modifier, and no segment that would break a split on `+`.
+
+const MODIFIER_ORDER = [`mod`, `meta`, `ctrl`, `alt`, `shift`]
+// other spellings users and `event.key` produce for the modifiers named above
+const MODIFIER_ALIASES: Record<string, string> = {
+  cmd: `meta`,
+  command: `meta`,
+  control: `ctrl`,
+  option: `alt`,
+}
+const canonical_modifier = (part: string): string => MODIFIER_ALIASES[part] ?? part
+const is_modifier = (part: string): boolean =>
+  MODIFIER_ORDER.includes(canonical_modifier(part))
+
+// `event.key` values that are a modifier in their own right, never a combo's key
+const MODIFIER_EVENT_KEYS = new Set(
+  `meta control alt altgraph shift capslock fn`.split(` `),
+)
+
+// Canonical combo for a keydown, e.g. `mod+shift+t`; null for a pure-modifier press.
+// `mod` stands in for Cmd on Apple and Ctrl elsewhere, so one recorded combo works on
+// both and round-trips through matches_shortcut. Pass mod: false to record the
+// physical modifier instead, which a combo bound to one platform wants.
+export function event_to_combo(
+  event: KeyboardEvent,
+  { mod = true }: { mod?: boolean } = {},
+): string | null {
+  const key = event.key.toLowerCase()
+  if (MODIFIER_EVENT_KEYS.has(key)) return null
+  const held: Record<string, boolean> = {
+    meta: event.metaKey,
+    ctrl: event.ctrlKey,
+    alt: event.altKey,
+    shift: event.shiftKey,
+  }
+  const primary = is_apple_platform() ? `meta` : `ctrl`
+  if (mod && held[primary]) {
+    held[primary] = false
+    held.mod = true
+  }
+  const mods = MODIFIER_ORDER.filter((name) => held[name])
+  return [...mods, KEY_TOKENS[key] ?? key].join(`+`)
+}
+
+// Canonical form of a combo written by hand or read back from storage; null for junk
+// (no key, several keys, or a lone modifier). Bare keys like `escape` are valid here
+// because run_hotkeys accepts them; require_modifier rejects them for rebinding UIs,
+// where an unmodified key would swallow ordinary typing.
+export function normalize_combo(
+  combo: string,
+  { require_modifier = false }: { require_modifier?: boolean } = {},
+): string | null {
+  const parts = split_shortcut(combo).filter(Boolean)
+  const mods = new Set(parts.filter(is_modifier).map(canonical_modifier))
+  const keys = parts.filter((part) => !is_modifier(part))
+  if (keys.length !== 1 || (require_modifier && mods.size === 0)) return null
+  const key = KEY_TOKENS[keys[0]] ?? keys[0]
+  if (MODIFIER_EVENT_KEYS.has(key)) return null
+  return [...MODIFIER_ORDER.filter((name) => mods.has(name)), key].join(`+`)
+}
+
+// `mod` is Cmd on Apple and Ctrl everywhere else, so `mod+k` and the platform's own
+// spelling of the same chord are one shortcut and have to collide. Conflicts are judged
+// on this resolved form; what gets stored stays in the canonical `mod` spelling.
+const resolve_combo = (combo: string): string => {
+  const primary = is_apple_platform() ? `meta` : `ctrl`
+  const parts = combo.split(`+`)
+  const mods = new Set(
+    parts.filter(is_modifier).map((part) => {
+      const name = canonical_modifier(part)
+      return name === `mod` ? primary : name
+    }),
+  )
+  const keys = parts.filter((part) => !is_modifier(part))
+  return [...MODIFIER_ORDER.filter((name) => mods.has(name)), ...keys].join(`+`)
+}
+
+// Validates stored `action id -> combo` overrides against a map of defaults, dropping
+// unknown ids, junk combos and overrides that merely restate the default. Overrides
+// that would leave two actions on one combo are dropped too, so an override can never
+// shadow another action's shortcut.
+export function sanitize_shortcut_overrides(
+  value: unknown,
+  defaults: Record<string, string>,
+): Record<string, string> {
+  if (!is_object(value)) return {}
+  const canonical_defaults = Object.fromEntries(
+    Object.entries(defaults).map(([id, combo]) => [id, normalize_combo(combo) ?? combo]),
+  )
+  const overrides: Record<string, string> = {}
+  for (const [action_id, combo] of Object.entries(value)) {
+    if (!(action_id in canonical_defaults) || typeof combo !== `string`) continue
+    const normalized = normalize_combo(combo)
+    if (normalized && normalized !== canonical_defaults[action_id]) {
+      overrides[action_id] = normalized
+    }
+  }
+  // dropping an override reinstates its default, which can collide in turn, so repeat
+  for (;;) {
+    const effective = Object.values({ ...canonical_defaults, ...overrides }).map(
+      resolve_combo,
+    )
+    const conflicting = Object.keys(overrides).filter((id) => {
+      const resolved = resolve_combo(overrides[id])
+      return effective.indexOf(resolved) !== effective.lastIndexOf(resolved)
+    })
+    if (conflicting.length === 0) return overrides
+    for (const id of conflicting) Reflect.deleteProperty(overrides, id)
+  }
+}
 
 // Compare arrays/values for equality to avoid unnecessary updates.
 // Prevents infinite loops when value/selected are bound to reactive wrappers
@@ -332,6 +483,15 @@ export function fuzzy_match(search_text: string, target_text: string): boolean {
   // empty search matches everything, empty target matches nothing - both already
   // handled by fuzzy_match_indices (empty search -> [], else vs empty target -> null)
   return fuzzy_match_indices(search_text, target_text) !== null
+}
+
+// A titled run of actions for ContextMenu, optionally a radio group: `selected` matches
+// an action's `id ?? label`, null being a group with nothing chosen yet. Left off, the
+// section is a plain heading and its items stay ordinary menu items.
+export type CmdSection = {
+  title: string
+  actions: CmdAction[]
+  selected?: string | number | null
 }
 
 export const format_cmd_metadata = (metadata: CmdAction[`metadata`]): string =>

@@ -28,6 +28,25 @@ test(`src/lib/index.ts re-exports all Svelte components`, () => {
   expect(components.filter((name) => !(name && name in lib))).toEqual([])
 })
 
+// Svelte types `class` as a ClassValue, so a consumer may hand any component an array or
+// an object. Interpolating that into a string renders `class="masonry [object Object]"`;
+// the array form passes it to Svelte's own clsx pass, which is what resolves the object.
+test(`no component interpolates a class prop into a class string`, () => {
+  const sources = import.meta.glob<string>(`$lib/**/*.svelte`, {
+    eager: true,
+    query: `?raw`,
+    import: `default`,
+  })
+  // an empty glob would make the filter below trivially true
+  expect(Object.keys(sources).length).toBeGreaterThan(20)
+  // a mustache in a quoted attribute, or a template literal
+  const interpolates_class = /class=(?:"[^"]*\{[^}"]*|\{`[^`]*\$\{[^}]*)\bclass\b/u
+  const offenders = Object.entries(sources)
+    .filter(([, source]) => interpolates_class.test(source))
+    .map(([path]) => path.split(`/`).pop())
+  expect(offenders).toEqual([])
+})
+
 describe(`scroll_into_view_if_needed_polyfill`, () => {
   type ObserverCallback = (
     entries: IntersectionObserverEntry[],

@@ -1,5 +1,5 @@
 import type { MultiSelectProps } from '$lib'
-import { assert } from 'vite-plus/test'
+import { assert, vi } from 'vite-plus/test'
 
 // Generic return type keeps call sites concise for DOM-specific assertions.
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
@@ -15,6 +15,55 @@ export function doc_query<T extends Element = HTMLElement>(selector: string): T 
 export const stub_prop = (target: object, prop: string, value: unknown) => {
   Object.defineProperty(target, prop, { value, configurable: true })
   return () => Reflect.deleteProperty(target, prop)
+}
+
+// happy-dom skips layout, so every geometry an attachment reads has to be mocked:
+// getBoundingClientRect plus the read-only offset* properties (hence defineProperty).
+export const mock_rect = (
+  element: HTMLElement,
+  rect: { left: number; top: number; width?: number; height?: number },
+) => {
+  const { left, top, width = 100, height = 50 } = rect
+  element.getBoundingClientRect = vi.fn(() => ({
+    left,
+    top,
+    width,
+    height,
+    right: left + width,
+    bottom: top + height,
+    x: left,
+    y: top,
+    toJSON: () => ({}),
+  }))
+  const offsets = {
+    offsetLeft: left,
+    offsetTop: top,
+    offsetWidth: width,
+    offsetHeight: height,
+  }
+  for (const [prop, value] of Object.entries(offsets)) {
+    Object.defineProperty(element, prop, { value, configurable: true })
+  }
+}
+
+export const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
+  new MouseEvent(type, { clientX, clientY, button, bubbles: true })
+
+// cancelable so callers can assert whether a handler swallowed the key
+export const escape_key = () =>
+  new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true, cancelable: true })
+
+// Tracking settlement (rather than awaiting) is the only way to assert a promise is
+// still pending, which is what a queue is for.
+export const track = <T>(promise: Promise<T>) => {
+  const state: { settled: boolean; value?: T; reason?: unknown } = { settled: false }
+  // a rejection settles the promise too; without this arm it would read as forever
+  // pending and go unhandled, so a broken promise looks like a hung one
+  void promise.then(
+    (value) => Object.assign(state, { settled: true, value }),
+    (reason: unknown) => Object.assign(state, { settled: true, reason }),
+  )
+  return state
 }
 
 export type Test2WayBindProps = MultiSelectProps & {

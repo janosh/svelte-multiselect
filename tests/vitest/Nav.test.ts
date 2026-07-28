@@ -181,7 +181,6 @@ describe(`Nav`, () => {
     const { dropdown_menu, toggle } = mount_dropdown()
     const burger_button = doc_query(`.burger`)
 
-    // Open burger menu and dropdown
     await click(burger_button)
     await click(toggle)
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)

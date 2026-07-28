@@ -1,6 +1,6 @@
 {
   "name": "svelte-widgets",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Accessible, keyboard-friendly Svelte components and attachments",
   "keywords": [
     "command-palette",
@@ -20,33 +20,16 @@
     "dist"
   ],
   "type": "module",
+  "sideEffects": [
+    "./dist/index.js"
+  ],
   "types": "./dist/index.d.ts",
   "svelte": "./dist/index.js",
   "exports": {
-    "./CommandMenu.svelte": {
-      "types": "./dist/CommandMenu.svelte.d.ts",
-      "svelte": "./dist/CommandMenu.svelte",
-      "default": "./dist/CommandMenu.svelte"
-    },
-    "./Masonry.svelte": {
-      "types": "./dist/Masonry.svelte.d.ts",
-      "svelte": "./dist/Masonry.svelte",
-      "default": "./dist/Masonry.svelte"
-    },
-    "./MultiSelect.svelte": {
-      "types": "./dist/MultiSelect.svelte.d.ts",
-      "svelte": "./dist/MultiSelect.svelte",
-      "default": "./dist/MultiSelect.svelte"
-    },
-    "./PageSearch.svelte": {
-      "types": "./dist/PageSearch.svelte.d.ts",
-      "svelte": "./dist/PageSearch.svelte",
-      "default": "./dist/PageSearch.svelte"
-    },
-    "./Toc.svelte": {
-      "types": "./dist/Toc.svelte.d.ts",
-      "svelte": "./dist/Toc.svelte",
-      "default": "./dist/Toc.svelte"
+    "./*.svelte": {
+      "types": "./dist/*.svelte.d.ts",
+      "svelte": "./dist/*.svelte",
+      "default": "./dist/*.svelte"
     },
     ".": {
       "types": "./dist/index.d.ts",
@@ -61,6 +44,14 @@
       "types": "./dist/utils.d.ts",
       "default": "./dist/utils.js"
     },
+    "./vite-config": {
+      "types": "./dist/vite-config.d.ts",
+      "default": "./dist/vite-config.js"
+    },
+    "./icons": {
+      "types": "./dist/icons.d.ts",
+      "default": "./dist/icons.js"
+    },
     "./heading-anchors": {
       "types": "./dist/heading-anchors.d.ts",
       "default": "./dist/heading-anchors.js"
@@ -72,6 +63,38 @@
     "./live-examples": {
       "types": "./dist/live-examples/index.d.ts",
       "default": "./dist/live-examples/index.js"
+    },
+    "./live-examples/create-highlighter": {
+      "types": "./dist/live-examples/create-highlighter.d.ts",
+      "default": "./dist/live-examples/create-highlighter.js"
+    },
+    "./clipboard": {
+      "types": "./dist/clipboard.svelte.d.ts",
+      "default": "./dist/clipboard.svelte.js"
+    },
+    "./dialogs": {
+      "types": "./dist/dialogs.svelte.d.ts",
+      "default": "./dist/dialogs.svelte.js"
+    },
+    "./file-drop": {
+      "types": "./dist/file-drop.d.ts",
+      "default": "./dist/file-drop.js"
+    },
+    "./fullscreen": {
+      "types": "./dist/fullscreen.svelte.d.ts",
+      "default": "./dist/fullscreen.svelte.js"
+    },
+    "./print": {
+      "types": "./dist/print.d.ts",
+      "default": "./dist/print.js"
+    },
+    "./text-search": {
+      "types": "./dist/text-search.d.ts",
+      "default": "./dist/text-search.js"
+    },
+    "./toast-queue": {
+      "types": "./dist/toast-queue.svelte.d.ts",
+      "default": "./dist/toast-queue.svelte.js"
     }
   },
   "publishConfig": {
@@ -82,28 +105,27 @@
     "test": "vp test --run && playwright test",
     "test:coverage": "vp test --run --coverage",
     "test:package": "npm run package && npm pack --dry-run && vp build --config tests/package-smoke/vite.config.ts",
-    "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\" {} + && find dist -name 'readme.svelte' -delete",
+    "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' -o -name '*.svelte' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\" {} + && find dist -name 'readme.svelte' -delete",
     "prepublishOnly": "npm run package",
     "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
   },
   "devDependencies": {
-    "@janosh/vite-config": "github:janosh/dotfiles",
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.70.1",
     "@sveltejs/package": "2.5.8",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
-    "@types/node": "^26.1.1",
-    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+    "@types/node": "^26.1.2",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "@vitest/coverage-v8": "4.1.10",
     "@wooorm/starry-night": "^3.10.0",
-    "happy-dom": "^20.11.0",
+    "happy-dom": "^20.11.1",
     "mdsvex": "^0.12.8",
     "pagefind": "^1.5.2",
-    "svelte": "^5.56.7",
+    "svelte": "^5.56.8",
     "typescript": "^6.0.3",
     "vite": "^8.1.5",
-    "vite-plus": "0.2.5"
+    "vite-plus": "0.2.6"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",

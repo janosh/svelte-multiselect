@@ -184,7 +184,6 @@ describe(`heading_anchors attachment`, () => {
 
     cleanup?.()
 
-    // verify no anchors added after cleanup
     const heading = document.createElement(`h2`)
     heading.id = `after`
     container.append(heading)

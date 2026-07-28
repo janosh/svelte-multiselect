@@ -9,7 +9,7 @@
     input_props,
     ...rest
   }: Omit<HTMLAttributes<HTMLLabelElement>, 'children'> & {
-    checked?: boolean // whether the toggle is on or off
+    checked?: boolean
     onkeydown?: (event: KeyboardEvent) => void
     children?: Snippet<[{ checked: boolean }]>
     input_props?: HTMLAttributes<HTMLInputElement>

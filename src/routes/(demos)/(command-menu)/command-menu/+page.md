@@ -4,7 +4,7 @@
   import { FileDetails } from '$lib'
 </script>
 
-## Navigation Command Menu
+## `CommandMenu`
 
 `<MultiSelect />` powers a full navigation command menu. Its source is shown at the bottom of this page.
 
@@ -26,7 +26,7 @@
 <CommandMenu {actions} triggers={[`n`]} />
 ```
 
-## Site Search with Pagefind
+## `PageSearch`
 
 `PageSearch` wraps `CommandMenu` with full-text search over statically generated pages.
 `fallback_actions` are matched locally on every keystroke, so known routes show up without

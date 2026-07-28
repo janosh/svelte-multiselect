@@ -436,6 +436,27 @@ innermost one steers Tab.
 alone) and `restore` the exit point, defaulting to whatever held focus when the trap
 went up. `include` extends the trap over portalled parts of the same surface.
 
+`root` narrows the trap to a descendant, for a node that wraps the surface together with
+siblings Tab must not reach — a modal's backdrop button above all. Element, selector or
+function returning either, resolved per keystroke like `click_outside`'s `scope`, so a
+selector matches markup rendered after setup and a function covers a `bind:this` still
+null then; `initial` resolves within it. `on_escape` joins the layer stack `click_outside`
+uses, so only the innermost trap hears the key, and cancels it, keeping a native
+`<dialog>` around the surface open until a second Escape lands with the layer gone.
+`recapture` pulls focus back to where it last sat inside whenever something outside takes
+it. All three are off unless asked for: the attached node is the trap and Escape passes
+through untouched.
+
+```svelte
+<div
+  class="dialog-layer"
+  {@attach focus_trap({ root: `.dialog`, on_escape: on_close, recapture: true })}
+>
+  <button class="dialog-backdrop" onclick={on_close}></button>
+  <section class="dialog" role="dialog" aria-modal="true">…</section>
+</div>
+```
+
 ### `hotkey`
 
 Declarative keybindings over the same matcher `CommandMenu` uses. `mod` is Cmd on Apple

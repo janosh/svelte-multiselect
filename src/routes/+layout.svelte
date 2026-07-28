@@ -35,6 +35,25 @@
     return demo_labels[`/${route_slug}`] ?? slug_to_title(route_slug)
   })
 
+  // source file behind each route, so the footer's edit link hits the page you're on
+  const page_sources: Record<string, string> = {
+    ...Object.fromEntries(
+      Object.keys(import.meta.glob(`./**/+page.{svelte,md}`)).map((file) => [
+        file.replace(/^\.\//u, `/`).replace(/\/?\+page\.(?:svelte|md)$/u, ``) || `/`,
+        file.replace(/^\.\//u, `src/routes/`),
+      ]),
+    ),
+    // these three render markdown from the repo root, so link the prose, not the wrapper
+    '/': `readme.md`,
+    '/changelog': `changelog.md`,
+    '/contributing': `contributing.md`,
+  }
+  // a 404 has no route id, so don't look one up — `/` would send it to the readme
+  const edit_href = $derived.by(() => {
+    const source = page.route.id ? page_sources[page.route.id] : undefined
+    return `${repository}/blob/-/${source ?? `src/routes`}`
+  })
+
   afterNavigate(() => (page_search_query = ``))
 
   if (browser) {
@@ -106,7 +125,7 @@
   --toc-active-color="var(--accent)"
 />
 
-<Footer />
+<Footer {edit_href} />
 
 <style>
   :global(::highlight(page-search-match)) {

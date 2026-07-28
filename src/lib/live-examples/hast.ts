@@ -27,7 +27,6 @@ const serialize_children = (children: HastNode[] | undefined): string => {
   return html
 }
 
-// Convert HAST to HTML string
 export const hast_to_html = (node: HastNode): string => {
   if (node.type === `text`) return escape_html_text(node.value ?? ``)
   if (node.type === `root`) return serialize_children(node.children)

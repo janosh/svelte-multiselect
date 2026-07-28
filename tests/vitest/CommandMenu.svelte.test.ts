@@ -11,7 +11,6 @@ const mock_actions = [
 
 const menu_input = () => doc_query<HTMLInputElement>(`dialog input[autocomplete]`)
 
-// type into the menu's search input: set value, fire input event, flush a tick
 async function type_search(text: string): Promise<HTMLInputElement> {
   const input = menu_input()
   input.value = text

@@ -134,7 +134,8 @@
 {/if}
 
 <svelte:element this={as} {...rest}>
-  {#each files as file, idx (file.title)}
+  <!-- object identity supports duplicate titles and preserves open state across inserts -->
+  {#each files as file, idx (file)}
     {@const { title, content } = file}
     {@const language = resolve_lang(file)}
     {@const cache_key = `${language}:${content}`}

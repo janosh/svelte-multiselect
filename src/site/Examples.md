@@ -1,6 +1,11 @@
 ## 🚀 &thinsp; Getting Started
 
-<label for="fruits">Pick your favorite fruits <span>basic multi-select</span></label>
+One live example per component. Each links to its full page.
+
+### MultiSelect
+
+Type to filter, click or arrow-key to pick. `selected` is bindable in both directions.
+[MultiSelect docs &rarr;](multiselect)
 
 ```svelte example
 <script lang="ts">
@@ -15,260 +20,168 @@
 <p>You selected: {JSON.stringify(selected)}</p>
 ```
 
-<label for="color">Pick one color <span>single-select with <code>maxSelect={1}</code></span></label>
+### CommandMenu
+
+A command palette with fuzzy search over your actions. `triggers` binds it to a modifier
+chord, or drive `open` yourself. [CommandMenu docs &rarr;](command-menu)
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { CommandMenu } from 'svelte-widgets'
 
-  const colors: string[] = ['Red', 'Green', 'Blue', 'Yellow', 'Purple']
-  let value: string | null = $state(null)
+  let open = $state(false)
+  let last_run = $state(``)
+  const actions = [`Toggle theme`, `Copy link`, `Open settings`, `Sign out`].map(
+    (label) => ({ label, action: () => (last_run = label) }),
+  )
 </script>
 
-<MultiSelect
-  id="color"
-  bind:value
-  options={colors}
-  maxSelect={1}
-  placeholder="Choose a color..."
-/>
+<button onclick={() => (open = true)}>Open command menu</button>
+<CommandMenu {actions} bind:open triggers={[]} />
 
-<p>You selected: {JSON.stringify(value)}</p>
+{#if last_run}<p>ran: <code>{last_run}</code></p>{/if}
 ```
 
-<label for="countries">Where have you lived? <span>options prop as array of objects</span></label>
+### Popover
+
+A floating surface that positions itself where it fits, traps Tab and closes on Escape or
+an outside press. [Popover docs &rarr;](popover)
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-widgets'
-  import type { ObjectOption } from '$lib/types'
+  import { Popover } from 'svelte-widgets'
+</script>
 
-  interface Country extends ObjectOption {
-    value: string
-    continent: string
-  }
+<Popover placement="bottom" align="start">
+  {#snippet trigger(props)}
+    <button {...props}>Open popover</button>
+  {/snippet}
+  <p style="margin: 0 0 6pt">Tab is trapped in here.</p>
+  <label>Name <input placeholder="type something" /></label>
+</Popover>
+```
 
-  const countries: Country[] = [
-    { label: 'United States', value: 'US', continent: 'North America' },
-    { label: 'Canada', value: 'CA', continent: 'North America' },
-    { label: 'United Kingdom', value: 'UK', continent: 'Europe' },
-    { label: 'Germany', value: 'DE', continent: 'Europe' },
-    { label: 'Japan', value: 'JP', continent: 'Asia' },
+### ContextMenu
+
+Replaces the browser's right-click menu for a region. Takes the same actions as
+`CommandMenu`. [ContextMenu docs &rarr;](popover#contextmenu)
+
+```svelte example
+<script lang="ts">
+  import { ContextMenu } from 'svelte-widgets'
+
+  let last_run = $state(``)
+  const record = (label: string) => (last_run = label)
+  const actions = [
+    { label: `Cut`, shortcut: `mod+x`, action: record },
+    { label: `Copy`, shortcut: `mod+c`, action: record },
+    { label: `Paste`, shortcut: `mod+v`, action: record },
   ]
-  let selected: Country[] = $state([])
 </script>
 
-<MultiSelect
-  id="countries"
-  bind:selected
-  options={countries}
-  placeholder="Select countries..."
-/>
+<ContextMenu {actions}>
+  <div
+    style="display: grid; place-items: center; height: 6em; border: 1px dashed gray; border-radius: 5pt"
+  >
+    Right-click me
+  </div>
+</ContextMenu>
 
-<p>Selected countries: {selected.map((c) => c.label).join(', ')}</p>
-<p>Country codes: {selected.map((c) => c.value).join(', ')}</p>
+{#if last_run}<p>ran: <code>{last_run}</code></p>{/if}
 ```
 
-<label for="skills">Add your skills (you can define new ones) <span>user-created options</span></label>
+### Nav
+
+A navigation bar with dropdowns, active-route styling and a mobile burger menu.
+[Nav docs &rarr;](nav)
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-widgets'
+  import { resolve } from '$app/paths'
+  import { page } from '$app/state'
+  import { Nav } from 'svelte-widgets'
 
-  const initial_tags: string[] = ['JavaScript', 'Svelte', 'TypeScript']
-  let selected: string[] = $state([])
+  const resolve_path = resolve as (path: string) => string
+  // real routes so the prerender crawl doesn't trip over dead links
+  const routes = [`/`, `/multiselect`, `/popover`, `/toc`].map(resolve_path)
+  const link_props = { onclick: (event: MouseEvent) => event.preventDefault() }
 </script>
 
-<MultiSelect
-  bind:selected
-  options={initial_tags}
-  allowUserOptions="append"
-  placeholder="Type to add skills..."
-/>
-
-<p>Your skills: {JSON.stringify(selected)}</p>
+<Nav {routes} {page} {link_props} />
 ```
 
-## 🔍 &thinsp; Advanced Examples
+### Toc
 
-<label for="fav-languages">Favorite programming languages? <span>multi-select with custom snippet</span></label>
+Finds the headings itself, watches for late-rendered ones and tracks which is in view. The
+one on the right of this page is a `Toc`. [Toc docs &rarr;](toc)
 
-```svelte example collapsible
+```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-widgets'
-  import { languages } from '$site/options'
-  import { LanguageSnippet } from '$site'
-
-  let selected: string[] = $state([])
+  import { Toc } from 'svelte-widgets'
 </script>
 
-<MultiSelect
-  id="fav-languages"
-  options={languages}
-  placeholder="Take your pick..."
-  bind:selected
->
-  {#snippet children({ idx, option })}
-    <LanguageSnippet {idx} {option} gap="1ex" />
+<div class="toc-demo" style="display: flex; gap: 2em">
+  <article style="flex: 1">
+    <h3>Getting started</h3>
+    <p>Scoped with <code>headingSelector</code> so it ignores the rest of the page.</p>
+    <h3>Configuration</h3>
+    <p>Pass <code>collapseSubheadings</code> to fold levels under their parent.</p>
+    <h3>Troubleshooting</h3>
+    <p>Set <code>warnOnEmpty</code> to hear about a selector that matches nothing.</p>
+  </article>
+
+  <Toc
+    headingSelector=".toc-demo h3"
+    breakpoint={0}
+    title="On this page"
+    style="position: static; width: 12em"
+  />
+</div>
+```
+
+### Masonry
+
+Balances items across as many columns as the container fits, measuring each one so uneven
+heights pack tightly. [Masonry docs &rarr;](masonry)
+
+```svelte example
+<script lang="ts">
+  import { Masonry } from 'svelte-widgets'
+
+  // deterministic pseudo-random heights so the packing is visible but stable
+  const items = Array.from({ length: 9 }, (_, idx) => ({
+    id: idx,
+    height: 40 + ((idx * 37) % 90),
+  }))
+</script>
+
+<Masonry {items} minColWidth={120} gap={10}>
+  {#snippet children({ item })}
+    <div
+      style="height: {item.height}px; display: grid; place-items: center; border-radius: 4pt; background: var(--surface)"
+    >
+      {item.id + 1}
+    </div>
   {/snippet}
-</MultiSelect>
-
-selected = {JSON.stringify(selected) || `[]`}
+</Masonry>
 ```
 
-<label for="fav-ml-tool">Favorite machine learning framework? <span>single-select with loading indicator on text input</span></label>
+### CopyButton
 
-```svelte example collapsible
+Copies its `content` and cycles through success and error states. Every code block on this
+site has one. [CopyButton docs &rarr;](copy-button)
+
+```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-widgets'
-  import type { ObjectOption } from '$lib/types'
-  import { ml_libs } from '$site/options'
-
-  let value: ObjectOption | null = $state(null)
-  let searchText: string = $state('')
-  let loading: boolean = $state(false)
-  $effect(() => {
-    loading = Boolean(searchText)
-    // perform some fetch/database request here to get list of options matching searchText
-    // options = await fetch(`https://example.com?search=${searchText}`)
-    setTimeout(async () => {
-      loading = false
-    }, 1000)
-  })
+  import { CopyButton } from 'svelte-widgets'
 </script>
 
-<MultiSelect
-  id="fav-ml-tool"
-  maxSelect={1}
-  maxSelectMsg={(current, max) => `${current} of ${max} selected`}
-  options={ml_libs}
-  bind:searchText
-  bind:value
-  {loading}
-  placeholder="Favorite machine learning tool?"
-/>
-
-value = {JSON.stringify(value) || `null`}
+<CopyButton content="npm install -D svelte-widgets" />
 ```
 
-<label for="confetti-select">Chance of Confetti <span>max select with custom filter function and callback on item selection</span></label>
+### The rest
 
-```svelte example collapsible
-<script lang="ts">
-  import MultiSelect from 'svelte-widgets'
-  import type { ObjectOption } from '$lib/types'
-  import { frontend_libs } from '$site/options'
-  import { Confetti, RepoSnippet } from '$site'
-
-  const filter_func = (op: ObjectOption, searchText: string): boolean => {
-    if (!searchText) return true
-    const search = searchText.toLowerCase()
-    const label_match = String(op.label).toLowerCase().includes(search)
-    const lang_match = String(op.lang).toLowerCase().includes(search)
-    return label_match || lang_match
-  }
-
-  let show_confetti: boolean = $state(false)
-</script>
-
-<MultiSelect
-  id="confetti-select"
-  options={frontend_libs}
-  maxSelect={4}
-  placeholder="Favorite web framework?"
-  filterFunc={filter_func}
-  onadd={(event) => {
-    if (event.option.label === `Svelte`) {
-      show_confetti = true
-      setTimeout(() => (show_confetti = false), 3000)
-    }
-  }}
->
-  {#snippet option({ idx, option, selected })}
-    <RepoSnippet {idx} {option} style={selected ? `opacity: 0.5` : ``} />
-  {/snippet}
-</MultiSelect>
-{#if show_confetti}
-  <Confetti />
-{/if}
-```
-
-<label for="color-select">Color select <span>with form submission</span></label>
-
-```svelte example collapsible
-<script lang="ts">
-  import MultiSelect from 'svelte-widgets'
-  import { colors } from '$site/options'
-  import { ColorSnippet } from '$site'
-
-  let selected: string[] = $state([])
-</script>
-
-<form
-  onsubmit={(event) => {
-    event.preventDefault()
-    alert(`You selected '${selected.join(`, `)}'`)
-  }}
->
-  <MultiSelect
-    id="color-select"
-    options={colors}
-    bind:selected
-    placeholder="Pick some colors..."
-    allowUserOptions="append"
-    required
-  >
-    {#snippet children({ idx, option })}
-      <ColorSnippet {idx} {option} />
-    {/snippet}
-  </MultiSelect>
-  <button>submit</button>
-  (due to passing <code>required={true}</code> here, form submission will abort if
-  Multiselect is empty)
-  <p>
-    Also sets
-    <code>allowUserOptions="append"</code> to allow adding custom colors.
-  </p>
-</form>
-```
-
-<label for="countries">What country are you from? <span><code>minSelect=1</code> means no <code>x</code> button to remove the selected option</span></label>
-
-```svelte example collapsible
-<script lang="ts">
-  import MultiSelect from 'svelte-widgets'
-  import { countries } from '$site/options'
-
-  // required={1} means form validation will prevent submission if no option selected
-  let maxOptions: number = $state(10)
-</script>
-
-<MultiSelect
-  id="countries"
-  options={countries}
-  required={1}
-  minSelect={1}
-  maxSelect={1}
-  {maxOptions}
-  selected={[`Canada`]}
-/>
-
-<label>
-  maxOptions <input type="range" min="1" max={30} bind:value={maxOptions} />
-  {maxOptions} <small>(leave undefined for no limit)</small>
-</label>
-```
-
-<style>
-  label {
-    display: flex;
-    margin: 1em 0 1ex;
-    align-items: center;
-    gap: 5pt;
-    font-weight: normal;
-  }
-  label span {
-    font-weight: 100;
-    margin-left: 1em;
-  }
-</style>
+`ThemeToggle`, `Toggle`, `Icon`, `CircleSpinner`, `FileDetails`, `PrevNext`,
+`SubpageGrid`, `GitHubCorner` and `CodeExample` are demoed together on the
+[extras page](extras), and the ten attachments have
+[their own page](attachments).
