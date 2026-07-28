@@ -1485,16 +1485,25 @@ describe(`focus_trap`, () => {
     return { surface, buttons }
   }
 
-  // returned so callers can assert the browser still gets its Tab
-  const press_tab = (shiftKey = false) => {
+  // returned so callers can assert whether the key was swallowed
+  const press_key = (key: string, shiftKey = false) => {
     const event = new KeyboardEvent(`keydown`, {
-      key: `Tab`,
+      key,
       bubbles: true,
       cancelable: true,
       shiftKey,
     })
     document.dispatchEvent(event)
     return event
+  }
+  const press_tab = (shiftKey = false) => press_key(`Tab`, shiftKey)
+  const press_escape = () => press_key(`Escape`)
+
+  // focus lands outside, then the microtask a recapture would schedule gets to run
+  const focus_out_to = async (target: HTMLElement) => {
+    target.focus()
+    await Promise.resolve()
+    return document.activeElement
   }
 
   // the trap layer stack is module-global, so a leaked trap steers a later test's Tab
@@ -1652,6 +1661,137 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(outside)
     press_tab()
     expect(document.activeElement).toBe(outside)
+  })
+
+  // The shape hive's modals have: a layer element wrapping a backdrop button and the
+  // dialog beside it, where only the dialog belongs in the Tab cycle.
+  const make_layer = () => {
+    const layer = create_element()
+    const backdrop = document.createElement(`button`)
+    const dialog = document.createElement(`section`)
+    dialog.className = `dialog`
+    const first = document.createElement(`button`)
+    const last = document.createElement(`button`)
+    dialog.append(first, last)
+    layer.append(backdrop, dialog)
+    return { layer, backdrop, dialog, first, last }
+  }
+
+  it(`without root the whole node is the trap, backdrop included`, () => {
+    const { layer, backdrop, first } = make_layer()
+    attach_trap(layer)
+    expect(document.activeElement).toBe(backdrop) // first tabbable in DOM order
+    press_tab()
+    expect(document.activeElement).toBe(first)
+  })
+
+  it.each([`selector`, `element`, `function`] as const)(
+    `root as %s keeps the sibling backdrop out of the Tab cycle`,
+    (kind) => {
+      const { layer, dialog, first, last } = make_layer()
+      const root =
+        kind === `selector` ? `.dialog` : kind === `element` ? dialog : () => dialog
+      attach_trap(layer, { root })
+
+      expect(document.activeElement).toBe(first) // the backdrop is no longer reachable
+      press_tab()
+      expect(document.activeElement).toBe(last)
+      press_tab()
+      expect(document.activeElement).toBe(first) // wrapped, never onto the backdrop
+      press_tab(true)
+      expect(document.activeElement).toBe(last)
+    },
+  )
+
+  it(`resolves initial within root, and falls back to the node when root finds nothing`, () => {
+    const { layer, dialog, last } = make_layer()
+    const decoy = document.createElement(`button`)
+    decoy.className = `wanted` // outside the root, so the selector must not reach it
+    layer.prepend(decoy)
+    last.className = `wanted`
+    attach_trap(layer, { root: dialog, initial: `.wanted` })
+    expect(document.activeElement).toBe(last)
+
+    const unresolvable = make_layer()
+    attach_trap(unresolvable.layer, { root: () => null })
+    expect(document.activeElement).toBe(unresolvable.backdrop) // back to the node
+  })
+
+  it(`calls on_escape for the innermost trap only, and swallows the key`, () => {
+    const outer = make_surface()
+    const inner = make_surface()
+    const on_outer = vi.fn()
+    const on_inner = vi.fn()
+    attach_trap(outer.surface, { on_escape: on_outer })
+    const cleanup_inner = attach_trap(inner.surface, { on_escape: on_inner })
+
+    const event = press_escape()
+    expect(on_inner).toHaveBeenCalledTimes(1)
+    expect(on_outer).not.toHaveBeenCalled()
+    // cancelled on purpose: a native <dialog> around the surface then stays open
+    // until a second Escape lands with this layer gone
+    expect(event.defaultPrevented).toBe(true)
+
+    cleanup_inner?.()
+    press_escape()
+    expect(on_outer).toHaveBeenCalledTimes(1)
+    expect(on_inner).toHaveBeenCalledTimes(1)
+  })
+
+  it(`leaves Escape untouched when no handler is given`, () => {
+    const { surface } = make_surface()
+    attach_trap(surface)
+    expect(press_escape().defaultPrevented).toBe(false)
+  })
+
+  // ported from hive's modal-focus test: focus that escapes comes back to the element
+  // that last held it inside, not to the entry point the trap opened on
+  it(`recapture pulls focus back to the last element that held it inside`, async () => {
+    const { surface, buttons } = make_surface()
+    attach_trap(surface, { recapture: true })
+    expect(document.activeElement).toBe(buttons[0])
+
+    buttons[2].focus()
+    expect(await focus_out_to(create_element(`button`))).toBe(buttons[2])
+  })
+
+  // the counterpart of the holds_focus guard on Tab: a trap that was never given
+  // focus must not summon it on every focus move elsewhere on the page
+  it(`recapture stays out of focus moves that never touched the trap`, async () => {
+    const { surface } = make_surface()
+    const elsewhere = create_element(`button`)
+    attach_trap(surface, { recapture: true, initial: false })
+
+    create_element(`button`).focus() // a focus move that never touches the trap
+    expect(await focus_out_to(elsewhere)).toBe(elsewhere)
+  })
+
+  it(`leaves escaped focus alone without recapture, and after teardown with it`, async () => {
+    const { surface, buttons } = make_surface()
+    const outside = create_element(`button`)
+
+    const cleanup_plain = attach_trap(surface, { restore: false })
+    buttons[1].focus()
+    expect(await focus_out_to(outside)).toBe(outside) // no recapture by default
+    cleanup_plain?.()
+
+    const cleanup = focus_trap({ recapture: true, restore: false })(surface)
+    buttons[1].focus()
+    cleanup?.()
+    expect(await focus_out_to(outside)).toBe(outside) // a torn-down trap stops recapturing
+  })
+
+  // Hygiene rather than behaviour — the guard above already silences a late microtask —
+  // but without this every surface that opens leaks a pair of document listeners for
+  // the rest of the page's life.
+  it(`recapture takes its document listeners off again on teardown`, () => {
+    const removals = vi.spyOn(document, `removeEventListener`)
+    focus_trap({ recapture: true, restore: false })(make_surface().surface)?.()
+
+    expect(removals.mock.calls.map(([type]) => type)).toEqual(
+      expect.arrayContaining([`focusin`, `focusout`]),
+    )
+    removals.mockRestore()
   })
 })
 
@@ -2795,8 +2935,44 @@ describe(`contrast_color`, () => {
     [`six-digit hex`, `#ffffff`, `black`],
     [`three-digit hex`, `#111`, `white`],
     [`eight-digit hex`, `#ffffffcc`, `black`],
+    // computed styles keep a color in the space it was authored in, so these arrive
+    // at get_bg_color verbatim rather than pre-converted to rgb()
+    [`white oklch`, `oklch(1 0 0)`, `black`],
+    [`black oklab`, `oklab(0 0 0)`, `white`],
+    [`red oklch`, `oklch(0.627955 0.257683 29.2338)`, `white`],
+    [`white lab`, `lab(100 0 0)`, `black`],
+    [`red lch`, `lch(54.291 106.837 40.853)`, `white`],
+    [`white display-p3`, `color(display-p3 1 1 1)`, `black`],
+    [`black srgb`, `color(srgb 0 0 0)`, `white`],
+    [`white rec2020`, `color(rec2020 1 1 1)`, `black`],
+    [`white xyz`, `color(xyz 0.9505 1 1.089)`, `black`],
+    [`red hsl`, `hsl(0 100% 50%)`, `white`],
+    [`white hwb`, `hwb(0 100% 0%)`, `black`],
   ])(`picks contrast text for a %s`, (_desc, bg_color, expected) => {
     expect(pick_contrast_color({ bg_color })).toBe(expected)
+  })
+
+  // the conversions are only worth anything if they land on the same luminance the
+  // equivalent sRGB spelling does, so each pair has to agree either side of a threshold
+  // set at the reference color's own luminance
+  it.each([
+    [`oklab(0.627955 0.224863 0.125846)`, 0.299],
+    [`oklch(62.7955% 0.257683 29.2338deg)`, 0.299],
+    [`lab(54.291 80.805 69.891)`, 0.299],
+    [`color(srgb 1 0 0)`, 0.299],
+    [`color(display-p3 1 0 0)`, 0.299], // p3 red is out of sRGB gamut and clips to red
+    [`color(prophoto-rgb 1 1 1)`, 1],
+    [`color(a98-rgb 1 1 1)`, 1],
+    [`color(srgb-linear 1 1 1)`, 1],
+    [`color(xyz-d50 0.9643 1 0.8251)`, 1],
+    [`hwb(0.5turn 0% 0%)`, 0.701], // cyan
+    [`hwb(0 25% 25%)`, 0.3995], // white and black both mixed into the pure hue
+    [`hsla(0, 100%, 50%, 0.5)`, 0.299],
+  ])(`%s converts to a luminance of %f`, (bg_color, expected) => {
+    const probe = (luminance_threshold: number) =>
+      pick_contrast_color({ bg_color, luminance_threshold, choices: [`over`, `under`] })
+    expect(probe(expected - 1e-4)).toBe(`over`)
+    expect(probe(expected + 1e-4)).toBe(`under`)
   })
 
   // Perceived brightness weights green ×0.587, red ×0.299 and blue ×0.114, so the
@@ -2820,12 +2996,22 @@ describe(`contrast_color`, () => {
     expect(pick_contrast_color(options)).toBe(expected)
   })
 
-  it.each([`red`, `oklch(0.7 0.1 200)`, `#12345`, `rgb(1, 2)`, `rgb(a, b, c)`])(
-    `throws on the unparsable color %s`,
-    (bg_color) => {
-      expect(() => pick_contrast_color({ bg_color })).toThrow(/cannot read color/u)
-    },
-  )
+  // named colors and color-mix() stay out: a computed value can carry neither, since
+  // color-mix() resolves to a color in its interpolation space before it is read back
+  it.each([
+    `red`,
+    `color-mix(in oklab, red, blue)`,
+    `color(not-a-space 1 1 1)`,
+    // Object.prototype keys are not color spaces: a bare lookup finds `constructor`
+    `color(constructor 1 1 1)`,
+    `color(srgb 1 1)`,
+    `oklch(0.7 0.1)`,
+    `#12345`,
+    `rgb(1, 2)`,
+    `rgb(a, b, c)`,
+  ])(`throws on the unparsable color %s`, (bg_color) => {
+    expect(() => pick_contrast_color({ bg_color })).toThrow(/cannot read color/u)
+  })
 
   it(`walks past transparent ancestors to the first painted background`, () => {
     const painted = create_element(`div`, { backgroundColor: `rgb(10, 10, 10)` })
@@ -2838,6 +3024,30 @@ describe(`contrast_color`, () => {
 
     const cleanup = contrast_color()(node)
     expect(node.style.color).toBe(`white`)
+    cleanup?.()
+  })
+
+  // the ancestor walk stops at the first painted background, and a wide-gamut one is
+  // painted: reading only rgb()/rgba() used to skip straight past it
+  it.each([
+    [`oklch(0.3 0.1 200)`, `white`, true],
+    [`oklch(0.3 0.1 200 / 0)`, `black`, false],
+    [`color(display-p3 1 1 1)`, `black`, true],
+  ])(`sees %s as a painted ancestor: %s`, (background, expected_color, painted) => {
+    const ancestor = document.createElement(`div`)
+    const node = document.createElement(`span`)
+    ancestor.append(node)
+    document.body.append(ancestor)
+    vi.spyOn(globalThis, `getComputedStyle`).mockImplementation(
+      (element) =>
+        ({
+          backgroundColor: element === ancestor ? background : `rgba(0, 0, 0, 0)`,
+        }) as CSSStyleDeclaration,
+    )
+
+    expect(get_bg_color(node)).toBe(painted ? background : ``)
+    const cleanup = contrast_color()(node)
+    expect(node.style.color).toBe(expected_color)
     cleanup?.()
   })
 

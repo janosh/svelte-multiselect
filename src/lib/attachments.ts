@@ -1374,7 +1374,7 @@ export const hotkey =
 
 export interface FocusTrapOptions {
   enabled?: boolean
-  // What to focus on activation: an element, a selector resolved within the node, or
+  // What to focus on activation: an element, a selector resolved within the root, or
   // `false` to leave focus where it is. Defaults to the first tabbable descendant.
   initial?: Element | string | false
   // Where focus returns on teardown. Defaults to whatever held it on activation;
@@ -1382,6 +1382,18 @@ export interface FocusTrapOptions {
   restore?: Element | false
   // Further containers the trap covers, for portalled parts of the same surface
   include?: (Element | null | undefined)[]
+  // Narrows the trap to a descendant, for a node that wraps the surface together with
+  // siblings Tab must not reach — a modal's backdrop button above all. Resolved per
+  // keystroke like `click_outside`'s `scope`: a selector picks up markup rendered after
+  // setup, a function covers a `bind:this` still null then. Falls back to the node.
+  root?: Element | string | null | (() => Element | null | undefined)
+  // Escape handler, on the same layer stack `click_outside` uses, so only the innermost
+  // trap hears the key. Omit and Escape passes through untouched.
+  on_escape?: (event: KeyboardEvent) => void
+  // Pull focus back to where it last sat inside whenever something outside takes it.
+  // Off by default: a trap that re-runs per state change (ConfirmDialog, once per
+  // queued question) has to be able to hand focus over, and recapture would fight it.
+  recapture?: boolean
 }
 
 // Exported so surfaces can find their own trigger to hand focus back to
@@ -1429,35 +1441,84 @@ const focus_element = (element: Element | null | undefined) => {
 export const focus_trap =
   (options: FocusTrapOptions = {}) =>
   (node: Element): (() => void) | undefined => {
-    const { enabled = true, initial, restore, include = [] } = options
+    const {
+      enabled = true,
+      initial,
+      restore,
+      include = [],
+      root,
+      on_escape,
+      recapture = false,
+    } = options
     if (!enabled || !(node instanceof HTMLElement)) return undefined
 
-    const containers = [node, ...include.filter((el) => el instanceof Element)]
+    const extra_containers = include.filter((el) => el instanceof Element)
+    const resolve_root = (): Element =>
+      (typeof root === `function`
+        ? root()
+        : typeof root === `string`
+          ? node.querySelector(root)
+          : root) ?? node
+    const containers = (): Element[] => [resolve_root(), ...extra_containers]
     // Recollected per keystroke: menus grow, filter and disable items while open
     const tabbables = (): (HTMLElement | SVGElement)[] =>
-      containers.flatMap((parent) =>
+      containers().flatMap((parent) =>
         [...parent.querySelectorAll(tabbable_selector)]
           .filter(is_focusable)
           .filter(is_tabbable),
       )
-    const holds_focus = () =>
-      containers.some((container) => container.contains(document.activeElement))
+    const is_inside = (target: unknown): target is Element =>
+      target instanceof Element && containers().some((el) => el.contains(target))
+    const holds_focus = () => is_inside(document.activeElement)
 
     const focus_origin = document.activeElement
-    // The node itself is the fallback focus target, so it needs to accept focus.
-    // Track whether we added tabindex so cleanup can leave the markup as it was.
-    let added_tabindex = false
+    // The root itself is the fallback focus target, so it needs to accept focus.
+    // Track where we added tabindex so cleanup can leave the markup as it was.
+    let tabindex_added_to: Element | null = null
+    let last_inside: Element | null = null
+    let trap_active = true
 
-    if (initial !== false) {
+    // `initial: false` keeps focus put by never reaching focus_into at setup, but a
+    // recapture has to land somewhere, so there it only means "no entry point named"
+    const wanted = initial === false ? undefined : initial
+
+    const focus_into = () => {
+      const root_el = resolve_root()
+      // Only a recapture focusin ever sets `last_inside`, so this is that path's
+      // preference: focus goes back where it sat, not to the trap's entry point.
+      const preferred = is_inside(last_inside) ? last_inside : null
       const requested =
-        typeof initial === `string` ? node.querySelector(initial) : initial
-      const target = requested ?? tabbables()[0] ?? node
-      if (target === node && !node.hasAttribute(`tabindex`)) {
-        node.tabIndex = -1
-        added_tabindex = true
+        typeof wanted === `string` ? root_el.querySelector(wanted) : wanted
+      const target = preferred ?? requested ?? tabbables()[0] ?? root_el
+      if (target === root_el && !root_el.hasAttribute(`tabindex`)) {
+        root_el.setAttribute(`tabindex`, `-1`)
+        tabindex_added_to = root_el
       }
       focus_element(target)
     }
+
+    const on_focusin = (event: FocusEvent) => {
+      if (is_inside(event.target)) last_inside = event.target
+    }
+
+    // Deferred to a microtask: focus sits on body between one element losing it and
+    // the next taking it, so answering at event time would recapture on every step
+    // within the trap. Only focus leaving the trap is the trap's business, hence the
+    // containment check, and `trap_active` covers the microtask a teardown outruns.
+    const on_focusout = (event: FocusEvent) => {
+      if (!is_inside(event.target)) return
+      queueMicrotask(() => {
+        if (trap_active && !holds_focus()) focus_into()
+      })
+    }
+
+    // Registered before the initial focus so `last_inside` starts out recorded
+    if (recapture) {
+      document.addEventListener(`focusin`, on_focusin)
+      document.addEventListener(`focusout`, on_focusout)
+    }
+
+    if (initial !== false) focus_into()
 
     const on_tab = (event: KeyboardEvent) => {
       // This is a document-wide capture layer, so without this guard a trap that was
@@ -1480,10 +1541,22 @@ export const focus_trap =
     }
 
     const unregister = register_trap_layer(on_tab)
+    // Swallowing the key is the same bargain dismiss_on_outside_press strikes above
+    const unregister_escape = on_escape
+      ? register_escape_layer((event) => {
+          event.preventDefault()
+          event.stopPropagation()
+          on_escape(event)
+        })
+      : undefined
 
     return () => {
+      trap_active = false
       unregister()
-      if (added_tabindex) node.removeAttribute(`tabindex`)
+      unregister_escape?.()
+      document.removeEventListener(`focusin`, on_focusin)
+      document.removeEventListener(`focusout`, on_focusout)
+      tabindex_added_to?.removeAttribute(`tabindex`)
       if (restore === false) return
       // Don't yank focus if the user already placed it elsewhere. A closing surface
       // usually leaves focus on body, which counts as ours to hand back.
@@ -1499,11 +1572,261 @@ export interface ContrastOptions {
   choices?: [string, string] // [on light background, on dark background]
 }
 
-// Only the forms getComputedStyle returns (`rgb()`/`rgba()`, either comma- or
-// space-separated) plus hex for hand-passed colors. Named colors and every other CSS
-// color function would want a full parser, which is not worth a dependency here.
+// === CSS color parsing ===
+// A color authored in a wide-gamut or perceptual space keeps that space in its computed
+// value — `getComputedStyle` hands back `oklch(…)`, `lab(…)` or `color(display-p3 …)`
+// verbatim rather than an sRGB approximation — so reading only `rgb()`/`rgba()` would
+// take a painted ancestor for a transparent one. Everything below converts to sRGB.
+// Not covered: named colors and `color-mix()`, neither of which a computed value can
+// carry (`color-mix()` resolves to a color in its interpolation space at computed-value
+// time). Both are rejected, and callers passing a color by hand get the error.
 const RGB_COLOR = /^rgba?\((?<channels>[^)]+)\)$/iu
 const HEX_COLOR = /^#(?<digits>[\da-f]+)$/iu
+const COLOR_FN = /^(?<name>oklch|oklab|lch|lab|hsla?|hwb|color)\((?<args>[^)]*)\)$/iu
+
+type Triple = [number, number, number]
+
+const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value))
+
+const dot3 = (matrix: readonly number[], [x_val, y_val, z_val]: Triple): Triple => [
+  matrix[0] * x_val + matrix[1] * y_val + matrix[2] * z_val,
+  matrix[3] * x_val + matrix[4] * y_val + matrix[5] * z_val,
+  matrix[6] * x_val + matrix[7] * y_val + matrix[8] * z_val,
+]
+
+// `none` is a real component value meaning "missing", and behaves as zero here
+const parse_component = (token: string, percent_ref: number): number => {
+  if (token.toLowerCase() === `none`) return 0
+  if (token.endsWith(`%`)) return (Number(token.slice(0, -1)) / 100) * percent_ref
+  return Number(token)
+}
+// hsl/hwb take `50` and `50%` to mean the same thing
+const parse_percentage = (token: string): number =>
+  token.endsWith(`%`) ? parse_component(token, 1) : parse_component(token, 1) / 100
+
+// `grad` has to be tested before `rad`, which it ends with
+const HUE_PER_UNIT: Record<string, number> = {
+  deg: 1,
+  grad: 0.9,
+  rad: 180 / Math.PI,
+  turn: 360,
+}
+const parse_hue = (token: string): number => {
+  const lower = token.toLowerCase()
+  const unit = Object.keys(HUE_PER_UNIT).find((suffix) => lower.endsWith(suffix))
+  const value = parse_component(unit ? lower.slice(0, -unit.length) : lower, 360)
+  return value * (unit ? HUE_PER_UNIT[unit] : 1)
+}
+
+// Sign-preserving, so an out-of-gamut channel keeps its order instead of folding
+const transfer = (channel: number, encode: (magnitude: number) => number): number =>
+  Math.sign(channel) * encode(Math.abs(channel))
+
+const srgb_encode = (channel: number) =>
+  transfer(channel, (mag) =>
+    mag <= 0.0031308 ? 12.92 * mag : 1.055 * mag ** (1 / 2.4) - 0.055,
+  )
+const srgb_decode = (channel: number) =>
+  transfer(channel, (mag) =>
+    mag <= 0.04045 ? mag / 12.92 : ((mag + 0.055) / 1.055) ** 2.4,
+  )
+
+const XYZ_D65_TO_LINEAR_SRGB = [
+  3.2409699419045226, -1.537383177570094, -0.4986107602930034, -0.9692436362808796,
+  1.8759675015077202, 0.04155505740717559, 0.05563007969699366, -0.20397695888897652,
+  1.0569715142428786,
+]
+// Bradford-adapted, for the two spaces defined against the D50 white point
+const XYZ_D50_TO_D65 = [
+  0.9554734527042182, -0.023098536874261423, 0.0632593086610217, -0.028369706963208136,
+  1.0099954580058226, 0.021041398966943008, 0.012314001688319899, -0.020507696433477912,
+  1.3303659366080753,
+]
+
+const linear_srgb_to_rgb255 = (linear: Triple): Triple =>
+  linear.map((channel) => clamp(srgb_encode(channel)) * 255) as Triple
+
+const xyz_d65_to_rgb255 = (xyz: Triple): Triple =>
+  linear_srgb_to_rgb255(dot3(XYZ_D65_TO_LINEAR_SRGB, xyz))
+
+// Björn Ottosson's Oklab, https://bottosson.github.io/posts/oklab
+const oklab_to_rgb255 = ([lightness, a_axis, b_axis]: Triple): Triple => {
+  const long = (lightness + 0.3963377774 * a_axis + 0.2158037573 * b_axis) ** 3
+  const medium = (lightness - 0.1055613458 * a_axis - 0.0638541728 * b_axis) ** 3
+  const short = (lightness - 0.0894841775 * a_axis - 1.291485548 * b_axis) ** 3
+  return linear_srgb_to_rgb255([
+    4.0767416621 * long - 3.3077115913 * medium + 0.2309699292 * short,
+    -1.2684380046 * long + 2.6097574011 * medium - 0.3413193965 * short,
+    -0.0041960863 * long - 0.7034186147 * medium + 1.7076147022 * short,
+  ])
+}
+
+const KAPPA = 24389 / 27
+const EPSILON = 216 / 24389
+const D50_WHITE: Triple = [0.3457 / 0.3585, 1, (1 - 0.3457 - 0.3585) / 0.3585]
+
+const lab_to_rgb255 = ([lightness, a_axis, b_axis]: Triple): Triple => {
+  const f_y = (lightness + 16) / 116
+  const f_x = a_axis / 500 + f_y
+  const f_z = f_y - b_axis / 200
+  const xyz_d50: Triple = [
+    (f_x ** 3 > EPSILON ? f_x ** 3 : (116 * f_x - 16) / KAPPA) * D50_WHITE[0],
+    (lightness > KAPPA * EPSILON ? f_y ** 3 : lightness / KAPPA) * D50_WHITE[1],
+    (f_z ** 3 > EPSILON ? f_z ** 3 : (116 * f_z - 16) / KAPPA) * D50_WHITE[2],
+  ]
+  return xyz_d65_to_rgb255(dot3(XYZ_D50_TO_D65, xyz_d50))
+}
+
+const hsl_to_rgb255 = (hue: number, saturation: number, lightness: number): Triple => {
+  const wrapped = (((hue % 360) + 360) % 360) / 30
+  const amplitude = saturation * Math.min(lightness, 1 - lightness)
+  const channel = (offset: number) => {
+    const key = (offset + wrapped) % 12
+    return (lightness - amplitude * Math.max(-1, Math.min(key - 3, 9 - key, 1))) * 255
+  }
+  return [channel(0), channel(8), channel(4)]
+}
+
+const hwb_to_rgb255 = (hue: number, white: number, black: number): Triple => {
+  if (white + black >= 1) {
+    const gray = (white / (white + black)) * 255
+    return [gray, gray, gray]
+  }
+  const span = 1 - white - black
+  return hsl_to_rgb255(hue, 1, 0.5).map(
+    (channel) => channel * span + white * 255,
+  ) as Triple
+}
+
+const LINEAR_SRGB_TO_XYZ_D65 = [
+  0.4123907992659595, 0.35758433938387796, 0.1804807884018343, 0.21263900587151036,
+  0.7151686787677559, 0.07219231536073371, 0.01933081871559185, 0.11919477979462599,
+  0.9505321522496606,
+]
+
+const IDENTITY_MATRIX = [1, 0, 0, 0, 1, 0, 0, 0, 1]
+const identity = (channel: number) => channel
+
+// The predefined spaces `color()` accepts, each as its decoding transfer function and
+// the matrix taking its linear form to XYZ. `d50` marks the ones needing adaptation,
+// and the xyz spaces are the degenerate case: their components already are XYZ.
+const COLOR_SPACES: Record<
+  string,
+  { decode: (channel: number) => number; matrix: readonly number[]; d50?: boolean }
+> = {
+  srgb: { decode: srgb_decode, matrix: LINEAR_SRGB_TO_XYZ_D65 },
+  'srgb-linear': { decode: identity, matrix: LINEAR_SRGB_TO_XYZ_D65 },
+  xyz: { decode: identity, matrix: IDENTITY_MATRIX },
+  'xyz-d65': { decode: identity, matrix: IDENTITY_MATRIX },
+  'xyz-d50': { decode: identity, matrix: IDENTITY_MATRIX, d50: true },
+  'display-p3': {
+    decode: srgb_decode,
+    matrix: [
+      0.4865709486482162, 0.26566769316909306, 0.1982172852343625, 0.2289745640697488,
+      0.6917385218365064, 0.079286914093745, 0, 0.04511338185890264, 1.043944368900976,
+    ],
+  },
+  'a98-rgb': {
+    decode: (channel) => transfer(channel, (mag) => mag ** (563 / 256)),
+    matrix: [
+      0.5766690429101305, 0.1855582379065463, 0.1882286462349947, 0.29734497525053605,
+      0.6273635662554661, 0.07529145849399788, 0.02703136138641234, 0.07068885253582723,
+      0.9913375368376388,
+    ],
+  },
+  'prophoto-rgb': {
+    decode: (channel) =>
+      transfer(channel, (mag) => (mag >= 1 / 512 ? mag ** 1.8 : mag / 16)),
+    d50: true,
+    matrix: [
+      0.7977604896723027, 0.13518583717574031, 0.0313493495815248, 0.2880711282292934,
+      0.7118432178101014, 0.00008565396060525902, 0, 0, 0.8251046025104601,
+    ],
+  },
+  rec2020: {
+    decode: (channel) =>
+      transfer(channel, (mag) =>
+        mag < 4.5 * 0.018053968510807
+          ? mag / 4.5
+          : ((mag + 1.09929682680944 - 1) / 1.09929682680944) ** (1 / 0.45),
+      ),
+    matrix: [
+      0.6369580483012914, 0.14461690358620832, 0.1688809751641721, 0.2627002120112671,
+      0.6779980715188708, 0.05930171646986196, 0, 0.028072693049087428, 1.060985057710791,
+    ],
+  },
+}
+// Component tokens to a rectangular triple, `refs` giving each one's 100% reference
+const components = (tokens: string[], refs: Triple): Triple => [
+  parse_component(tokens[0], refs[0]),
+  parse_component(tokens[1], refs[1]),
+  parse_component(tokens[2], refs[2]),
+]
+// lch and oklch are lab and oklab in polar coordinates, so they convert and reuse the
+// rectangular transform rather than carrying one of their own
+const polar_components = (tokens: string[], refs: [number, number]): Triple => {
+  const chroma = parse_component(tokens[1], refs[1])
+  const hue = (parse_hue(tokens[2]) * Math.PI) / 180
+  return [
+    parse_component(tokens[0], refs[0]),
+    chroma * Math.cos(hue),
+    chroma * Math.sin(hue),
+  ]
+}
+
+// Component tokens to sRGB on 0..255; null when they do not fit the function's shape
+const function_to_rgb255 = (name: string, tokens: string[]): Triple | null => {
+  if (name === `color`) {
+    // own properties only: a bare lookup would find Object.prototype keys, so
+    // `color(constructor 1 1 1)` came back truthy and then blew up on space.decode
+    const space_name = tokens[0]?.toLowerCase() ?? ``
+    const space = Object.hasOwn(COLOR_SPACES, space_name)
+      ? COLOR_SPACES[space_name]
+      : undefined
+    if (!space || tokens.length < 4) return null
+    const linear = tokens
+      .slice(1, 4)
+      .map((token) => space.decode(parse_component(token, 1))) as Triple
+    const xyz = dot3(space.matrix, linear)
+    return xyz_d65_to_rgb255(space.d50 ? dot3(XYZ_D50_TO_D65, xyz) : xyz)
+  }
+  if (tokens.length !== 3) return null
+  if (name === `oklab`) return oklab_to_rgb255(components(tokens, [1, 0.4, 0.4]))
+  if (name === `oklch`) return oklab_to_rgb255(polar_components(tokens, [1, 0.4]))
+  if (name === `lab`) return lab_to_rgb255(components(tokens, [100, 125, 125]))
+  if (name === `lch`) return lab_to_rgb255(polar_components(tokens, [100, 150]))
+  // hsl and hwb share a shape: a hue and two percentages
+  const to_rgb255 = name === `hwb` ? hwb_to_rgb255 : hsl_to_rgb255
+  return to_rgb255(
+    parse_hue(tokens[0]),
+    clamp(parse_percentage(tokens[1])),
+    clamp(parse_percentage(tokens[2])),
+  )
+}
+
+const parse_color_function = (
+  name: string,
+  args: string,
+): [number, number, number, number] | null => {
+  const [main = ``, alpha_arg] = args.split(`/`)
+  const tokens = main
+    .trim()
+    .split(/[\s,]+/u)
+    .filter(Boolean)
+  // legacy `hsla(h, s, l, a)` carries alpha in the argument list instead of after a slash
+  const legacy_alpha =
+    alpha_arg === undefined && name !== `color` && tokens.length === 4
+      ? tokens.pop()
+      : undefined
+  const rgb = function_to_rgb255(name, tokens)
+  if (!rgb) return null
+  const alpha_token = alpha_arg?.trim() ?? legacy_alpha
+  const parsed: [number, number, number, number] = [
+    ...rgb,
+    alpha_token === undefined ? 1 : clamp(parse_component(alpha_token, 1)),
+  ]
+  return parsed.every(Number.isFinite) ? parsed : null
+}
 
 const parse_color = (color: string): [number, number, number, number] | null => {
   const trimmed = color.trim()
@@ -1515,6 +1838,10 @@ const parse_color = (color: string): [number, number, number, number] | null => 
       .map(Number)
     if (parts.length < 3 || parts.slice(0, 4).some(Number.isNaN)) return null
     return [parts[0], parts[1], parts[2], parts[3] ?? 1]
+  }
+  const color_fn = COLOR_FN.exec(trimmed)?.groups
+  if (color_fn) {
+    return parse_color_function(color_fn.name.toLowerCase(), color_fn.args)
   }
   const digits = HEX_COLOR.exec(trimmed)?.groups?.digits
   if (!digits) return null
@@ -1537,7 +1864,9 @@ const luminance = (color: string): number => {
   const parsed = parse_color(color)
   if (!parsed) {
     throw new Error(
-      `pick_contrast_color: cannot read color \`${color}\`, expected rgb()/rgba() or hex`,
+      `pick_contrast_color: cannot read color \`${color}\`, expected hex, rgb()/rgba(), ` +
+        `hsl()/hwb(), lab()/lch()/oklab()/oklch() or color(); named colors and ` +
+        `color-mix() are not parsed`,
     )
   }
   const [red, green, blue] = parsed
