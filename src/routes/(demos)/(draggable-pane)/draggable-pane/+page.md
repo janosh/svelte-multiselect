@@ -61,6 +61,35 @@ The `children` snippet receives `{ show, show_controls, has_been_dragged, draggi
 so content can react to the pane's own chrome — pausing an animation while the pane is
 being dragged over it, for instance.
 
+The pane carries `toc-exclude`, so headings in its content stay out of a page's
+[`Toc`](toc) — a pane is floating chrome, not page structure.
+
+### Custom toggle content
+
+`open_icon` and `closed_icon` pick from the icons this library bundles. For anything else
+— your own SVG, a label, an icon set we don't ship — the `toggle` snippet replaces the
+button's _content_ while the button, and with it the anchor geometry, `aria-expanded` and
+click handling, stays with the component. It receives the same state as `children`.
+
+```svelte example id="draggable-pane-toggle"
+<script lang="ts">
+  import DraggablePane from '$lib/DraggablePane.svelte'
+</script>
+
+<div
+  style="position: relative; height: 10em; padding: 6pt; border: 1px dashed gray; border-radius: 5pt; display: flex; justify-content: flex-end"
+>
+  <DraggablePane toggle_props={{ title: `Layer info` }}>
+    {#snippet toggle({ show })}
+      <span style="font-size: 0.8em; padding: 0 2pt">{show ? `Hide` : `Info`}</span>
+    {/snippet}
+    {#snippet children()}
+      <p style="margin: 0">Text, an inline SVG, an icon from another set — anything.</p>
+    {/snippet}
+  </DraggablePane>
+</div>
+```
+
 ### Persistent panes
 
 `persistent` drops the press-outside dismissal only. Escape still closes the pane, as

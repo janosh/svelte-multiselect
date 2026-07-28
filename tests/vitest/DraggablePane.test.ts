@@ -176,11 +176,12 @@ describe(`DraggablePane`, () => {
   // The whole point of position="fixed": a toggle low on screen or hard against the
   // right edge must not park the pane off-viewport.
   test.each([
-    // [description, toggle rect, expected left, expected top]
-    [`bottom edge`, { left: 300, top: 400 }, `8px`, `312px`], // 500 - 180 - 8
-    [`right edge`, { left: 970, top: 20 }, `542px`, `45px`], // 1000 - 450 - 8
-    [`no clamping needed`, { left: 600, top: 20 }, `175px`, `45px`], // 620 - 450 + 5
-  ])(`fixed positioning clamps against the %s`, async (_desc, rect, left, top) => {
+    // [description, toggle rect, expected left, top, --pane-viewport-clamp]
+    // the top clamps to 500 - 180 - 8, leaving exactly that 180 below it
+    [`bottom edge`, { left: 300, top: 400 }, `8px`, `312px`, `180px`],
+    [`right edge`, { left: 970, top: 20 }, `542px`, `45px`, `447px`], // left = 1000 - 450 - 8
+    [`no clamping needed`, { left: 600, top: 20 }, `175px`, `45px`, `447px`], // 620 - 450 + 5
+  ])(`fixed positioning clamps against the %s`, async (_desc, rect, left, top, clamp) => {
     mock_viewport()
     const { toggle, pane } = await setup({ position: `fixed` })
     mock_rect(toggle, { ...rect, width: 20, height: 20 })
@@ -191,19 +192,8 @@ describe(`DraggablePane`, () => {
 
     expect(pane.style.left).toBe(left)
     expect(pane.style.top).toBe(top)
-  })
-
-  test(`--pane-viewport-clamp caps a fixed pane at the bottom viewport edge`, async () => {
-    mock_viewport()
-    const { toggle, pane } = await setup({ position: `fixed` })
-    mock_rect(toggle, { left: 300, top: 400, width: 20, height: 20 })
-    mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
-
-    toggle.click()
-    await tick()
-
-    // top clamped to 312, so 500 - 312 - 8 = 180 remains below it
-    expect(pane.style.getPropertyValue(`--pane-viewport-clamp`)).toBe(`180px`)
+    // the room left below the pane's top edge, which CSS min()s into its max-height
+    expect(pane.style.getPropertyValue(`--pane-viewport-clamp`)).toBe(clamp)
   })
 
   test(`absolute positioning measures against the offsetParent`, async () => {
@@ -284,21 +274,37 @@ describe(`DraggablePane`, () => {
     expect(pane.dataset.dragging).toBe(`false`)
   })
 
-  test(`the children snippet receives the pane state`, async () => {
-    await setup({ show: true })
+  // The toggle snippet exists because matterviz passes icons this library doesn't
+  // bundle (Info, Filter, Export, Orbit), which Icon.svelte swaps for its Alert fallback
+  test(`both snippets get the pane state, and toggle replaces the button content`, async () => {
+    let toggle_state: Record<string, unknown> = {}
+    const toggle = createRawSnippet<[Record<string, unknown>]>((state) => ({
+      render: () => {
+        toggle_state = state()
+        return `<span data-testid="custom-toggle">custom</span>`
+      },
+    }))
+    const { toggle: toggle_btn } = await setup({ show: true, toggle })
 
-    expect(last_pane_state).toEqual({
+    const pane_state = {
       show: true,
       show_controls: false,
       has_been_dragged: false,
       dragging: false,
-    })
+    }
+    expect(last_pane_state).toEqual(pane_state)
+    expect(toggle_state).toEqual(pane_state)
+    expect(toggle_btn.querySelector(`[data-testid="custom-toggle"]`)).not.toBeNull()
+    // the bundled icon is gone, but the button (and its aria wiring) is still ours
+    expect(toggle_btn.querySelector(`svg`)).toBeNull()
+    expect(toggle_btn.getAttribute(`aria-expanded`)).toBe(`true`)
   })
 
   test.each([
     [`both`, [445, 150], [545, 150], { width: `550px`, height: `300px` }],
     [`both`, [200, 295], [200, 395], { width: `450px`, height: `400px` }],
     [`width`, [445, 150], [545, 150], { width: `550px`, height: `300px` }],
+    [`height`, [200, 295], [200, 395], { width: `450px`, height: `400px` }],
     // height mode leaves the right edge alone, so the press does nothing
     [`height`, [445, 150], [545, 150], { width: ``, height: `` }],
   ] as const)(
@@ -345,7 +351,6 @@ describe(`DraggablePane`, () => {
     mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
 
     expect(document.querySelector(`.resize-grip`)).toBeNull()
-    expect(pane.style.paddingRight).toBe(``)
     pane.dispatchEvent(mouse_event(`mousedown`, 445, 150))
     globalThis.dispatchEvent(mouse_event(`mousemove`, 545, 150))
     expect(pane.style.width).toBe(``)
@@ -426,16 +431,26 @@ describe(`DraggablePane`, () => {
     expect(pane.style.left).toBe(`20px`)
   })
 
-  test(`spreads consumer props without losing its own class or role`, async () => {
+  test(`spreads consumer props without losing its own class, role or click`, async () => {
+    const onclick = vi.fn()
     const { toggle, pane } = await setup({
       pane_props: { class: `consumer-pane`, id: `my-pane` },
-      toggle_props: { class: `consumer-toggle`, title: `Options` },
+      toggle_props: { class: `consumer-toggle`, title: `Options`, onclick },
     })
 
     expect(pane.id).toBe(`my-pane`)
     expect(pane.classList.contains(`draggable-pane`)).toBe(true)
     expect(pane.classList.contains(`consumer-pane`)).toBe(true)
+    // Toc skips headings whose closest() match is excluded, so pane content (floating
+    // chrome, not page structure) stays out of a page's contents
+    expect(pane.classList.contains(`toc-exclude`)).toBe(true)
     expect(toggle.classList.contains(`pane-toggle`)).toBe(true)
     expect(toggle.classList.contains(`consumer-toggle`)).toBe(true)
+
+    // the spread lands before our own onclick, so without chaining theirs is dropped
+    toggle.click()
+    await tick()
+    expect(onclick).toHaveBeenCalledOnce()
+    expect(pane.style.display).toBe(`grid`) // our own handler still opened it
   })
 })

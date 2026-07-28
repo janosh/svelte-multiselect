@@ -5,10 +5,11 @@
   import { click_outside, draggable, resizable, tooltip } from './attachments'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
+  import { chain_handlers } from './utils'
 
   type CloseVia = `toggle` | `button` | `pointer` | `escape`
-  // Handed to the children snippet so content can react to the pane's own chrome —
-  // a plot pausing its animation while the pane is being dragged over it, say.
+  // Handed to both snippets so they can react to the pane's own chrome — a plot pausing
+  // its animation while the pane is being dragged over it, say.
   type PaneState = {
     show: boolean
     show_controls: boolean
@@ -19,6 +20,8 @@
   interface Props {
     show?: boolean
     children: Snippet<[PaneState]>
+    // Replaces the toggle button's content, for icons this library doesn't bundle
+    toggle?: Snippet<[PaneState]>
     toggle_props?: HTMLAttributes<HTMLButtonElement>
     open_icon?: IconName
     closed_icon?: IconName
@@ -45,6 +48,7 @@
   let {
     show = $bindable(false),
     children,
+    toggle,
     toggle_props = {},
     open_icon = `Cross`,
     closed_icon = `Expand`,
@@ -76,14 +80,15 @@
   // Both a drag and a resize opt the pane out of automatic repositioning and reveal
   // the reset button that opts it back in
   const show_controls = $derived(has_been_dragged)
+  const pane_state = $derived({ show, show_controls, has_been_dragged, dragging })
 
-  const resize_edges: ResizableOptions[`edges`] = $derived(
-    resize === `width`
-      ? [`right`]
-      : resize === `height`
-        ? [`bottom`]
-        : [`right`, `bottom`],
-  )
+  // an empty list is also what disables the attachment below, so the edges and the
+  // disabled flag cannot drift apart
+  const edges_by_resize: Record<
+    NonNullable<Props[`resize`]>,
+    NonNullable<ResizableOptions[`edges`]>
+  > = { both: [`right`, `bottom`], width: [`right`], height: [`bottom`], none: [] }
+  const resize_edges = $derived(edges_by_resize[resize])
   const gutter = (side: `width` | `height`) =>
     resize === `both` || resize === side ? `${resize_gutter_px}px` : null
 
@@ -91,6 +96,10 @@
     show = false
     on_close?.({ via })
   }
+  const toggle_pane = () => (show ? close_pane(`toggle`) : (show = true))
+
+  const clamp_to_viewport = (value: number, upper: number) =>
+    Math.max(viewport_margin_px, Math.min(value, upper))
 
   // Where the pane sits when it has not been dragged: under the toggle, right edges
   // aligned. Fixed panes additionally stay inside the viewport.
@@ -103,19 +112,13 @@
 
     if (position === `fixed`) {
       return {
-        left: Math.max(
-          viewport_margin_px,
-          Math.min(
-            toggle_rect.right - pane_width + offset_x,
-            globalThis.innerWidth - pane_width - viewport_margin_px,
-          ),
+        left: clamp_to_viewport(
+          toggle_rect.right - pane_width + offset_x,
+          globalThis.innerWidth - pane_width - viewport_margin_px,
         ),
-        top: Math.max(
-          viewport_margin_px,
-          Math.min(
-            toggle_rect.bottom + offset_y,
-            globalThis.innerHeight - min_reachable_height_px - viewport_margin_px,
-          ),
+        top: clamp_to_viewport(
+          toggle_rect.bottom + offset_y,
+          globalThis.innerHeight - min_reachable_height_px - viewport_margin_px,
         ),
       }
     }
@@ -184,15 +187,20 @@
   bind:this={toggle_btn}
   {...toggle_props}
   aria-expanded={show}
-  onclick={() => (show ? close_pane(`toggle`) : (show = true))}
+  onclick={chain_handlers(toggle_pane, toggle_props.onclick)}
   class={[`pane-toggle`, toggle_props.class]}
   {@attach tooltip({
     content: toggle_props.title ?? (show ? `Close pane` : `Open pane`),
   })}
 >
-  <Icon icon={show ? open_icon : closed_icon} style={icon_style} />
+  {#if toggle}
+    {@render toggle(pane_state)}
+  {:else}
+    <Icon icon={show ? open_icon : closed_icon} style={icon_style} />
+  {/if}
 </button>
 
+<!-- toc-exclude keeps pane headings out of a page's Toc: this is floating chrome -->
 <div
   bind:this={pane}
   role="dialog"
@@ -208,7 +216,7 @@
   style:padding-right={gutter(`width`)}
   style:padding-bottom={gutter(`height`)}
   {...pane_props}
-  class={[`draggable-pane`, show && `pane-open`, pane_props.class]}
+  class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
   {@attach draggable({
     handle_selector: `.drag-handle`,
     on_drag_start: () => {
@@ -219,7 +227,7 @@
     on_drag_end: () => (dragging = false),
   })}
   {@attach resizable({
-    disabled: resize === `none`,
+    disabled: resize_edges.length === 0,
     edges: resize_edges,
     min_width: 200,
     min_height: 100,
@@ -237,14 +245,8 @@
   })}
 >
   <div class="control-tab">
-    <!-- inline rather than <Icon>: icons.ts has no drag-grip or reset glyph -->
     <span class="drag-handle" aria-hidden="true">
-      <svg viewBox="0 0 16 16" fill="currentColor" style="width: 100%; height: 100%">
-        {#each [3, 8, 13] as row_y (row_y)}
-          <circle cx="6" cy={row_y} r="1.4" />
-          <circle cx="10" cy={row_y} r="1.4" />
-        {/each}
-      </svg>
+      <Icon icon="DragIndicator" style="width: 100%; height: 100%" />
     </span>
     {#if show_controls}
       <button
@@ -254,9 +256,7 @@
         aria-label="Reset pane position"
         onclick={reset_position}
       >
-        <svg viewBox="0 0 24 24" fill="currentColor" style="width: 100%; height: 100%">
-          <path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z" />
-        </svg>
+        <Icon icon="Reset" style="width: 100%; height: 100%" />
       </button>
       <button
         type="button"
@@ -270,7 +270,7 @@
     {/if}
   </div>
   <div class="pane-content">
-    {@render children({ show, show_controls, has_been_dragged, dragging })}
+    {@render children(pane_state)}
   </div>
   {#if resize === `both`}
     <!-- purely an affordance: the grab zone is the gutter, owned by `resizable` -->
