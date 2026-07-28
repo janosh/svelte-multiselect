@@ -48,9 +48,11 @@
     '/changelog': `changelog.md`,
     '/contributing': `contributing.md`,
   }
-  const edit_href = $derived(
-    `${repository}/blob/-/${page_sources[page.route.id ?? `/`] ?? `src/routes`}`,
-  )
+  // a 404 has no route id, so don't look one up — `/` would send it to the readme
+  const edit_href = $derived.by(() => {
+    const source = page.route.id ? page_sources[page.route.id] : undefined
+    return `${repository}/blob/-/${source ?? `src/routes`}`
+  })
 
   afterNavigate(() => (page_search_query = ``))
 

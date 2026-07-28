@@ -1,4 +1,5 @@
 import { fail } from '@sveltejs/kit'
+import { colors as allowed_colors } from '$site/options'
 import type { Actions } from './$types'
 
 // Form actions require a server and cannot work on static sites.
@@ -28,10 +29,19 @@ export const _actions = {
     if (!Array.isArray(colors)) {
       return fail(400, { colors: [], error: `array` })
     }
-    if (colors.length === 1 && colors[0] === `Red`) {
-      return fail(400, { colors, error: `boring` })
+    // only the offered colors may reach the response, so a hand-crafted POST can't
+    // echo arbitrary strings or objects back into the page
+    const valid_colors = colors.filter(
+      (color: unknown): color is string =>
+        typeof color === `string` && allowed_colors.includes(color),
+    )
+    if (valid_colors.length === 0) {
+      return fail(400, { colors: [], error: `missing` })
+    }
+    if (valid_colors.length === 1 && valid_colors[0] === `Red`) {
+      return fail(400, { colors: valid_colors, error: `boring` })
     }
 
-    return { colors, success: true }
+    return { colors: valid_colors, success: true }
   },
 } satisfies Actions

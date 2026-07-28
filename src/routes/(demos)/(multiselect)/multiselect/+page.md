@@ -179,9 +179,12 @@ selected = {JSON.stringify(selected) || `[]`}
     loading = Boolean(searchText)
     // perform some fetch/database request here to get list of options matching searchText
     // options = await fetch(`https://example.com?search=${searchText}`)
-    setTimeout(async () => {
+    const timer = setTimeout(() => {
       loading = false
     }, 1000)
+    // cancels the pending lookup on the next keystroke and on teardown so a stale
+    // timer can't clear the loading flag of a newer one
+    return () => clearTimeout(timer)
   })
 </script>
 

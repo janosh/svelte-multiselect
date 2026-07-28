@@ -164,7 +164,9 @@ timer, and re-copying a key restarts that timer so the checkmark cannot blink ou
 zero-byte file named after the directory. This walks the drop with `webkitGetAsEntry`
 instead, expanding directories depth-first (draining `readEntries`, which hands back at
 most 100 children per call), and falls back to the flat file list when the entry API
-yields nothing.
+yields nothing. It rejects rather than returning a partial list when a tree nests past 32
+levels or expands past 20 000 directories — the entry API resolves symlinks, so a link to
+an ancestor would otherwise recurse without end — which is why the handler below catches.
 
 ```svelte example id="file-drop-demo"
 <script lang="ts">
@@ -172,11 +174,20 @@ yields nothing.
 
   let dropped = $state<File[]>([])
   let is_dragging = $state(false)
+  let drop_error = $state(``)
 
   const handle_drop = async (event: DragEvent) => {
     event.preventDefault()
     is_dragging = false
-    if (event.dataTransfer) dropped = await files_from_data_transfer(event.dataTransfer)
+    if (!event.dataTransfer) return
+    // rejects on a tree that nests or branches past its caps, which a symlink cycle
+    // reaches — unhandled, the drop would look like it silently did nothing
+    try {
+      dropped = await files_from_data_transfer(event.dataTransfer)
+      drop_error = ``
+    } catch (error) {
+      drop_error = String(error)
+    }
   }
 </script>
 
@@ -196,10 +207,14 @@ yields nothing.
   Drop files or whole folders here
 </div>
 
+{#if drop_error}
+  <p style="margin: 8pt 0 0; color: tomato">{drop_error}</p>
+{/if}
+
 {#if dropped.length}
   <p style="margin: 8pt 0 0">{dropped.length} files:</p>
   <ul style="margin: 6pt 0 0; padding-left: 1.25em; max-height: 12em; overflow: auto">
-    {#each dropped as file (file.name)}
+    {#each dropped as file (file)}
       <li><code>{file.name}</code> — {file.size} bytes</li>
     {/each}
   </ul>
