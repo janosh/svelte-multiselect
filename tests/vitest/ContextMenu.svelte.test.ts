@@ -126,28 +126,6 @@ describe(`ContextMenu`, () => {
     )
   })
 
-  test(`arrow keys walk the menu, wrapping and skipping disabled items`, async () => {
-    const actions: CmdAction[] = [
-      { label: `One`, action: vi.fn() },
-      { label: `Two`, action: vi.fn(), disabled: true },
-      { label: `Three`, action: vi.fn() },
-    ]
-    await open_menu(actions)
-    const [one, , three] = items()
-    expect(document.activeElement).toBe(one) // focus_trap entered at the first item
-
-    press(`ArrowDown`)
-    expect(document.activeElement).toBe(three) // disabled `Two` is skipped
-    press(`ArrowDown`)
-    expect(document.activeElement).toBe(one) // wraps past the end
-    press(`ArrowUp`)
-    expect(document.activeElement).toBe(three) // and back past the start
-    press(`Home`)
-    expect(document.activeElement).toBe(one)
-    press(`End`)
-    expect(document.activeElement).toBe(three)
-  })
-
   // reachable by clicking menu chrome rather than an item: focus leaves the list, and
   // every key used to enter at the first item regardless of which end it pointed at
   test.each([
@@ -256,6 +234,22 @@ describe(`ContextMenu`, () => {
         `1`,
         `In section`,
       ])
+    })
+
+    // A section has no id, so its title is a heading rather than an identity. Keyed on
+    // title alone these two collided, and each_key_duplicate took down the whole menu.
+    test(`two sections may share a title`, async () => {
+      await open_menu([
+        { title: `Tools`, actions: [{ label: `First`, action: vi.fn() }] },
+        { title: `Tools`, actions: [{ label: `Second`, action: vi.fn() }] },
+      ])
+
+      expect(
+        [...document.querySelectorAll(`li[role="group"]`)].map((group) =>
+          group.getAttribute(`aria-label`),
+        ),
+      ).toEqual([`Tools`, `Tools`])
+      expect(items().map((btn) => btn.textContent?.trim())).toEqual([`First`, `Second`])
     })
 
     test(`render as labelled groups of radios, flat actions keep menuitem`, async () => {

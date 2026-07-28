@@ -56,12 +56,13 @@
   // `Copy` and an action labelled `Copy` are three keys rather than one. Serialized
   // rather than left a tuple because Svelte keys by identity, and a fresh array every
   // render would rebuild the whole menu; JSON also keeps id `1` apart from id `'1'`.
-  const entry_key = (entry: CmdAction | CmdSection): string => {
-    if (is_section(entry)) return JSON.stringify([`section`, entry.title])
-    const [field, value] =
-      entry.id === undefined ? [`label`, entry.label] : [`id`, entry.id]
-    return JSON.stringify([field, value])
-  }
+  const action_key = (action: CmdAction): string =>
+    JSON.stringify(action.id === undefined ? [`label`, action.label] : [`id`, action.id])
+  // A section carries no id, so its title is a heading rather than an identity and two
+  // sections may legitimately share one. Position disambiguates them: a duplicate key
+  // throws each_key_duplicate, which takes down the whole menu, not just the repeat.
+  const entry_key = (entry: CmdAction | CmdSection, idx: number): string =>
+    is_section(entry) ? JSON.stringify([`section`, entry.title, idx]) : action_key(entry)
   // an empty section is a heading over nothing, so it is dropped once anything else has
   // something to show. A menu of nothing but empty sections keeps them: open_at refuses
   // to open one, so the only way to see it is a consumer setting `at` itself.
@@ -118,14 +119,14 @@
     {@attach click_outside({ escape: true, ...dismiss, callback: () => (at = null) })}
     {@attach focus_trap()}
   >
-    {#each actions as entry (entry_key(entry))}
+    {#each actions as entry, idx (entry_key(entry, idx))}
       {#if is_section(entry)}
         {#if entry.actions.length || all_empty}
           <!-- role="group" names the run of items without taking them out of the menu;
           the title is hidden from AT because aria-label already announces it -->
           <li role="group" aria-label={entry.title}>
             <span class="section-title" aria-hidden="true">{entry.title}</span>
-            {#each entry.actions as action (entry_key(action))}
+            {#each entry.actions as action (action_key(action))}
               {@render menu_item(action, entry)}
             {/each}
           </li>
