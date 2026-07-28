@@ -6,7 +6,7 @@
 
 - Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control replacing six hand-rolled copies across five repos), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed`
 - Add `portal`, `contrast_color` and `forward_window_keydown` attachments, bringing the total to thirteen
-- Add headless modules behind their own subpaths: `svelte-widgets/toast-queue`, `/dialogs`, `/fullscreen`, `/clipboard`, `/print`, `/file-drop` and `/text-search`, the last matching across inline markup where `highlight_matches` walks text nodes one at a time
+- Add headless modules behind their own subpaths: `svelte-widgets/toast-queue`, `/dialogs`, `/fullscreen`, `/clipboard`, `/print`, `/file-drop` and `/text-search`, the last matching across inline markup where `highlight_matches` walks text nodes one at a time. It skips `script`, `style` and `noscript` so a find-in-page never steps onto text that renders nowhere, and treats text either side of one as continuous
 - Add shortcut rebinding for "customize shortcuts" UIs: `event_to_combo`, `normalize_combo` and `sanitize_shortcut_overrides` turn a keydown into a canonical combo and resolve collisions
 - Add sections to `ContextMenu`: `actions` accepts `CmdSection` entries rendered as an ARIA `group` of `menuitemradio` items with a selected value per section
 - Add a `create_highlighter(grammars)` factory and a `svelte-widgets/live-examples/create-highlighter` subpath, so consumers can pick their own grammars without the barrel's eager top-level await of 34 grammars
@@ -19,6 +19,8 @@
 - Fix `parse_shortcut` never resolving the `mod` token, which made `matches_shortcut(event, 'mod+z')` match a bare `z` with no modifier held. Only `run_hotkeys` was unaffected, since it pre-resolved at the call site. This also makes `space` matchable for the first time
 - Fix `highlight_matches` and `highlight_ranges` overwriting each other when they share a CSS highlight name. They keep one store now, so the name holds the union of their ranges until the last owner releases
 - Fix `svelte-widgets/Toast.svelte` failing to resolve its store when installed from npm: the packaging step rewrote `.ts` import specifiers in `.js` and `.d.ts` files but not in `.svelte` files
+- Fix `MultiSelect`, `Masonry`, `Popover`, `ContextMenu`, `LiteYouTubeEmbed` and `Nav` rendering `class="[object Object]"` when handed a class. Svelte types the attribute as a `ClassValue`, so an array or a `{ active: true }` object is legal, but these interpolated it into a string. They pass it to Svelte's own clsx pass now
+- Fix `Masonry` silently dropping its virtualization when a consumer passes `onscroll`: the prop spread sat after the component's own handler and replaced it, leaving the rendered window frozen at the top of the list however far down the user scrolled. `LiteYouTubeEmbed` had the mirror image, spreading first and so discarding a consumer's `onclick`. Both chain the two handlers now
 
 ## [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
 

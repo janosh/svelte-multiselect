@@ -103,28 +103,28 @@
     "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
   },
   "devDependencies": {
-    "@playwright/test": "^1.61.1",
+    "@playwright/test": "^1.62.0",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.70.1",
     "@sveltejs/package": "2.5.8",
     "@sveltejs/vite-plugin-svelte": "^7.2.0",
-    "@types/node": "^26.1.1",
-    "@typescript/native-preview": "^7.0.0-dev.20260707.2",
+    "@types/node": "^26.1.2",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
     "@vitest/coverage-v8": "4.1.10",
     "@wooorm/starry-night": "^3.10.0",
-    "happy-dom": "^20.11.0",
+    "happy-dom": "^20.11.1",
     "mdsvex": "^0.12.8",
     "pagefind": "^1.5.2",
-    "svelte": "^5.56.7",
+    "svelte": "^5.56.8",
     "typescript": "^6.0.3",
     "vite": "^8.1.5",
-    "vite-plus": "0.2.5"
+    "vite-plus": "0.2.6"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",
     "svelte": "^5.48.0",
     "vite": "^8.0.0",
-    "vite-plus": "*"
+    "vite-plus": "^0.2.5"
   },
   "peerDependenciesMeta": {
     "@wooorm/starry-night": {
