@@ -86,22 +86,71 @@ selection, and every colour is a `--btn-group-*` custom property.
 <p>filters: {active.length ? active.join(`, `) : `none`}</p>
 ```
 
+### Trailing affordances
+
+`option` replaces a button's contents, so whatever it renders lands _inside_ the
+`<button>` — wrong for a link or another button, since interactive content may not nest.
+`option_suffix` renders as a **sibling** instead, wrapped with the button in a `.option`
+span that becomes the visual pill, so the affordance sits inside the border while the
+button keeps the padding and still toggles when you click the pill's edges. Give the
+slotted element its own trailing padding; the component does not guess at spacing for
+content it did not render.
+
+The wrapper only appears when you pass the snippet. Without it the buttons stay direct
+children of `.options`, so `.options > button` selectors keep matching.
+
+```svelte example id="button-group-suffix"
+<script lang="ts">
+  import ButtonGroup from '$lib/ButtonGroup.svelte'
+
+  const metrics: Record<string, string> = { f1: `F1`, mae: `MAE`, rmsd: `RMSD` }
+  const docs: Record<string, string> = {
+    f1: `https://wikipedia.org/wiki/F-score`,
+    mae: `https://wikipedia.org/wiki/Mean_absolute_error`,
+    rmsd: `https://wikipedia.org/wiki/Root-mean-square_deviation`,
+  }
+  let metric = $state(`f1`)
+</script>
+
+<ButtonGroup options={metrics} bind:selected={metric} label="Rank models by">
+  {#snippet option_suffix({ option: opt })}
+    <a
+      href={docs[opt.value]}
+      target="_blank"
+      rel="noreferrer"
+      aria-label="About {opt.label}"
+      style="padding-right: 6pt; text-decoration: none">ⓘ</a
+    >
+  {/snippet}
+</ButtonGroup>
+
+<p>ranking by <code>{metric}</code></p>
+```
+
 ### Styling
 
-Everything themable hangs off `--btn-group-*`: `gap`, `padding`, `bg`, `border`,
-`radius` on the container, and `btn-padding`, `btn-radius`, `btn-bg`, `btn-color`,
-`btn-hover-bg`, `btn-active-bg`, `btn-active-color`, `btn-active-border-color`,
-`btn-disabled-opacity`, `btn-font-family`, `btn-font-size` on the buttons. The component
-lays its buttons out in a wrapping flex row and takes no position of its own, so placing
-it is the call site's job.
+Everything themable hangs off `--btn-group-*`: `display`, `gap`, `padding`, `bg`,
+`border`, `radius` and `justify-content` on the container, and `btn-padding`,
+`btn-radius`, `btn-bg`, `btn-color`, `btn-border`, `btn-gap`, `btn-cursor`,
+`btn-transition`, `btn-hover-bg`, `btn-hover-color`, `btn-hover-transform`,
+`btn-active-bg`, `btn-active-color`, `btn-active-border-color`, `btn-disabled-opacity`,
+`btn-font-family`, `btn-font-size` on the buttons. The component lays its buttons out in
+a wrapping flex row and takes no position of its own, so placing it is the call site's
+job.
 
-Font weight and style are deliberately not set, so your own `button {}` rule still wins.
-Only family and size are inherited, since a button's user-agent font would otherwise look
-wrong inside body text.
+Two only pay off together: a hover lift needs `btn-hover-transform` _and_
+`btn-transition`, since neither animates alone. `btn-hover-color` falls back to
+`btn-color`, so setting only the resting colour keeps it through hover.
+
+Font size needs no property of its own — the buttons resolve theirs to `inherit`, so
+`style="font-size: 1.2em"` on the group reaches them. Weight and style are the exception:
+they are declared nowhere, so your own `button {}` rule still wins, which also puts them
+out of reach of inheritance, since the user-agent `button` rule sets them directly. Style
+the buttons from your own stylesheet to change either.
 
 The root is a `<div>`. Pass `as="span"` where a div would be invalid, such as inside a
 heading or a paragraph.
 
 Per-option tooltips come from each option's `tooltip` field. `tooltip_options` forwards
-everything else to the [`tooltip`](/attachments#tooltip) attachment, so
+everything else to the [`tooltip`](attachments#tooltip) attachment, so
 `tooltip_options={{ allow_html: true }}` renders rich content instead of escaping it.

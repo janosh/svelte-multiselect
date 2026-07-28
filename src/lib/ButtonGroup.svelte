@@ -48,6 +48,9 @@
     // opt-in trailing asc/desc button; null (default) renders no arrow at all
     sort_order?: `asc` | `desc` | null
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
+    // sibling of the button rather than content of it, so an option can carry a
+    // trailing link or badge without nesting interactive content inside a button
+    option_suffix?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     on_change?: (selected: Value | Value[] | null) => void
     // `content` comes from each option's own `tooltip`; the rest is yours, which is
     // what lets a consumer opt into allow_html for rich tooltips
@@ -69,6 +72,7 @@
     disabled = false,
     sort_order = $bindable(null),
     option,
+    option_suffix,
     on_change,
     tooltip_options,
     tooltip_placement = `bottom`,
@@ -134,6 +138,32 @@
   }
 </script>
 
+{#snippet option_button(opt: ButtonGroupOption<Value>, is_selected: boolean)}
+  <button
+    type="button"
+    role={multiple ? undefined : `radio`}
+    aria-checked={multiple ? undefined : is_selected}
+    aria-pressed={multiple ? is_selected : undefined}
+    tabindex={multiple ? undefined : opt.value === roving_value ? 0 : -1}
+    disabled={disabled || opt.disabled}
+    data-value={opt.value}
+    onclick={() => select(opt.value)}
+    {@attach tooltip({
+      placement: tooltip_placement,
+      ...tooltip_options,
+      content: opt.tooltip,
+    })}
+  >
+    {#if option}
+      {@render option({ option: opt, selected: is_selected })}
+    {:else}
+      {#if opt.icon}<Icon icon={opt.icon} />{/if}
+      {opt.label}
+      {#if opt.loading}<CircleSpinner size="0.8em" />{/if}
+    {/if}
+  </button>
+{/snippet}
+
 <svelte:element this={as} {...rest} class={[`button-group`, rest.class]}>
   <!-- span, not div: it is display: flex either way and stays valid when `as` is a span -->
   <span
@@ -144,29 +174,15 @@
   >
     {#each option_list as opt (opt.value)}
       {@const is_selected = selected_values.includes(opt.value)}
-      <button
-        type="button"
-        role={multiple ? undefined : `radio`}
-        aria-checked={multiple ? undefined : is_selected}
-        aria-pressed={multiple ? is_selected : undefined}
-        tabindex={multiple ? undefined : opt.value === roving_value ? 0 : -1}
-        disabled={disabled || opt.disabled}
-        data-value={opt.value}
-        onclick={() => select(opt.value)}
-        {@attach tooltip({
-          placement: tooltip_placement,
-          ...tooltip_options,
-          content: opt.tooltip,
-        })}
-      >
-        {#if option}
-          {@render option({ option: opt, selected: is_selected })}
-        {:else}
-          {#if opt.icon}<Icon icon={opt.icon} />{/if}
-          {opt.label}
-          {#if opt.loading}<CircleSpinner size="0.8em" />{/if}
-        {/if}
-      </button>
+      {#if option_suffix}
+        <!-- opt-in: the extra level breaks consumers' `.options > button` selectors -->
+        <span class="option">
+          {@render option_button(opt, is_selected)}
+          {@render option_suffix({ option: opt, selected: is_selected })}
+        </span>
+      {:else}
+        {@render option_button(opt, is_selected)}
+      {/if}
     {/each}
   </span>
   {#if sort_order}
@@ -196,37 +212,62 @@
       display: flex;
       flex-wrap: wrap;
       align-items: center;
+      justify-content: var(--btn-group-justify-content, flex-start);
       gap: inherit;
+    }
+    /* the pill: the `option_suffix` wrapper where there is one, the button itself
+       everywhere else. Box and state colours live here so slotted content renders inside
+       the pill, while padding stays on the button so its edges still toggle. */
+    .option,
+    button:not(.option > *) {
+      display: inline-flex;
+      align-items: center;
+      background: var(--btn-group-btn-bg, transparent);
+      color: var(--btn-group-btn-color, inherit);
+      border: var(--btn-group-btn-border, 1px solid transparent);
+      border-radius: var(--btn-group-btn-radius, 3pt);
+      /* `all 0s` is the browser default, so the knob is inert until a consumer sets it */
+      transition: var(--btn-group-btn-transition, all 0s);
+      &:hover:not(:disabled, :has(> button:disabled)) {
+        background: var(
+          --btn-group-btn-hover-bg,
+          light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.12))
+        );
+        /* chains to btn-color so leaving this unset keeps the resting colour on hover */
+        color: var(--btn-group-btn-hover-color, var(--btn-group-btn-color, inherit));
+        transform: var(--btn-group-btn-hover-transform, none);
+      }
+      /* the checked state lives on the button; `:has` lifts it onto the wrapper */
+      &:is([aria-checked='true'], [aria-pressed='true']),
+      &:has(> button:is([aria-checked='true'], [aria-pressed='true'])) {
+        background: var(
+          --btn-group-btn-active-bg,
+          light-dark(rgba(0, 0, 0, 0.13), rgba(255, 255, 255, 0.22))
+        );
+        color: var(--btn-group-btn-active-color, inherit);
+        border-color: var(--btn-group-btn-active-border-color, transparent);
+      }
+    }
+    /* inside a pill the button drops its own box rather than nesting a second one in it.
+       Dropping the border rather than making it transparent keeps the pill the size of
+       an unwrapped one and lets the button fill it, so clicks on its edges still toggle. */
+    .option > button {
+      background: none;
+      color: inherit;
+      border: none;
+      border-radius: inherit;
     }
     button {
       display: inline-flex;
       align-items: center;
       gap: var(--btn-group-btn-gap, 0.4em);
       padding: var(--btn-group-btn-padding, 2pt 6pt);
-      background: var(--btn-group-btn-bg, transparent);
-      color: var(--btn-group-btn-color, inherit);
-      border: var(--btn-group-btn-border, 1px solid transparent);
-      border-radius: var(--btn-group-btn-radius, 3pt);
       /* longhands rather than the `font` shorthand, which would also set weight and
          style: this selector outranks a consumer's own `button {}` rule, so the
          shorthand silently overrode their global button typography */
       font-family: var(--btn-group-btn-font-family, inherit);
       font-size: var(--btn-group-btn-font-size, inherit);
-      cursor: pointer;
-    }
-    button:hover:not(:disabled) {
-      background: var(
-        --btn-group-btn-hover-bg,
-        light-dark(rgba(0, 0, 0, 0.07), rgba(255, 255, 255, 0.12))
-      );
-    }
-    button:is([aria-checked='true'], [aria-pressed='true']) {
-      background: var(
-        --btn-group-btn-active-bg,
-        light-dark(rgba(0, 0, 0, 0.13), rgba(255, 255, 255, 0.22))
-      );
-      color: var(--btn-group-btn-active-color, inherit);
-      border-color: var(--btn-group-btn-active-border-color, transparent);
+      cursor: var(--btn-group-btn-cursor, pointer);
     }
     button:disabled {
       opacity: var(--btn-group-btn-disabled-opacity, 0.5);

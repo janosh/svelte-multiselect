@@ -40,6 +40,19 @@ describe(`ButtonGroup`, () => {
     )
 
   const letters = { alpha: `Alpha`, beta: `Beta`, gamma: `Gamma` }
+  // happy-dom drops nested CSS rules, so the mounted stylesheet reports `.button-group
+  // {}` as empty and computed styles say nothing. The styling assertions below read the
+  // source instead; the values they produce were checked in a real browser.
+  const styles = button_group_source.slice(button_group_source.indexOf(`<style>`))
+  // an info link, the affordance matbench-discovery had nested inside its buttons
+  const info_link = createRawSnippet<[{ option: { value: string }; selected: boolean }]>(
+    (get_params) => ({
+      render: () => {
+        const { option: opt, selected } = get_params()
+        return `<a href="/docs/${opt.value}" data-sel="${selected}">i</a>`
+      },
+    }),
+  )
 
   test.each([
     [`bare values`, [`alpha`, `beta`, `gamma`], [`alpha`, `beta`, `gamma`]],
@@ -392,11 +405,88 @@ describe(`ButtonGroup`, () => {
 
   // The `font` shorthand would also set weight and style, and since `.button-group
   // button` outranks a consumer's own `button {}` rule it silently overrode their
-  // global button typography. Asserted against the source because happy-dom drops
-  // nested CSS rules, so the mounted stylesheet reports `.button-group {}` as empty.
+  // global button typography.
   test(`leaves font-weight and font-style to the consumer`, () => {
-    const styles = button_group_source.slice(button_group_source.indexOf(`<style>`))
     expect(styles).toMatch(/font-family:\s*var\(--btn-group-btn-font-family/u)
     expect(styles).not.toMatch(/[^-]font:\s*inherit/u)
+    // a hook for either would have to be a declaration on the button, which is what
+    // reintroduces the override, so neither property is set anywhere
+    expect(styles).not.toMatch(/font-(?:weight|style):/u)
+  })
+
+  // matbench-discovery's SelectToggle put an info link inside the button, which is an
+  // invalid content model. The `option` snippet renders inside the button and so cannot
+  // fix it; this one is a sibling, which is the whole point.
+  test(`option_suffix renders beside the button rather than inside it`, () => {
+    const buttons = mount_group({
+      options: letters,
+      selected: `beta`,
+      option_suffix: info_link,
+    })
+
+    expect(document.querySelectorAll(`.options > .option`)).toHaveLength(3)
+    for (const button of buttons) {
+      expect(button.querySelector(`a`)).toBeNull() // the invalid nesting being removed
+      expect(button.parentElement?.classList.contains(`option`)).toBe(true)
+      expect(button.nextElementSibling?.tagName).toBe(`A`)
+    }
+    // it gets the same params as `option`, so the affordance can react to selection
+    const links = [...document.querySelectorAll<HTMLAnchorElement>(`.option > a`)]
+    expect(
+      links.map((link) => `${link.getAttribute(`href`)}:${link.dataset.sel}`),
+    ).toEqual([`/docs/alpha:false`, `/docs/beta:true`, `/docs/gamma:false`])
+  })
+
+  // hive turned the component down partly because its `.segmented > button` rules would
+  // stop matching once every button gained a wrapper, so the wrapper is opt-in
+  test(`no per-option wrapper when nothing is slotted beside the button`, () => {
+    const buttons = mount_group({ options: letters })
+
+    expect(document.querySelector(`.option`)).toBeNull()
+    expect(
+      buttons.map((button) => button.parentElement?.classList.contains(`options`)),
+    ).toEqual(Array(3).fill(true))
+  })
+
+  // handle_keydown collects buttons with a depth-agnostic querySelectorAll, so the extra
+  // level should not matter, but a wrapper is exactly the kind of change that breaks it
+  test(`the option wrapper leaves arrow key navigation intact`, async () => {
+    const on_change = vi.fn()
+    const buttons = mount_group({
+      options: letters,
+      selected: `alpha`,
+      on_change,
+      option_suffix: info_link,
+    })
+    buttons[0].focus()
+
+    press(`ArrowRight`)
+    await tick()
+    expect(document.activeElement).toBe(buttons[1])
+    expect(buttons.map(checked_state)).toEqual([`false`, `true`, `false`])
+
+    press(`End`)
+    await tick()
+    expect(document.activeElement).toBe(buttons[2])
+    expect(on_change.mock.calls.flat()).toEqual([`beta`, `gamma`])
+  })
+
+  // every one of these was a `:global` escape hatch in a downstream migration
+  test.each([
+    [`justify-content`, `--btn-group-justify-content`], // diagrams' wrapped tag rows
+    [`cursor`, `--btn-group-btn-cursor`], // diagrams' group inside a clickable card
+    [`color`, `--btn-group-btn-hover-color`], // awesome-sveltekit
+    [`transform`, `--btn-group-btn-hover-transform`], // the blog's hover lift
+    [`transition`, `--btn-group-btn-transition`],
+  ])(`%s is settable through %s`, (property, custom_property) => {
+    expect(styles).toMatch(
+      new RegExp(`${property}:\\s*var\\(\\s*${custom_property}\\s*[,)]`, `u`),
+    )
+  })
+
+  test(`hover colour chains to the resting one, so setting only that survives hover`, () => {
+    expect(styles).toMatch(
+      /--btn-group-btn-hover-color,\s*var\(\s*--btn-group-btn-color/u,
+    )
   })
 })
