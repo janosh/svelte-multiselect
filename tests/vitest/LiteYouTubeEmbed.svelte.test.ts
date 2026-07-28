@@ -56,12 +56,13 @@ describe(`LiteYouTubeEmbed`, () => {
     expect(doc_query(`picture source`).getAttribute(`type`)).toBe(`image/webp`)
     const poster = doc_query<HTMLImageElement>(`img.poster`)
     expect(poster.getAttribute(`src`)).toBe(`https://i.ytimg.com/vi/xyz789/hqdefault.jpg`)
-    expect(poster.alt).toBe(`Watch the talk`)
+    // the poster is decorative, so the play button is the only thing carrying the label
+    expect(poster.alt).toBe(``)
     expect(doc_query(`button.play-btn`).getAttribute(`aria-label`)).toBe(`Watch the talk`)
 
     click(`button.play-btn`)
     await tick()
-    expect(doc_query(`iframe`).getAttribute(`title`)).toBe(`Watch the talk`)
+    expect(doc_query(`iframe`).getAttribute(`title`)).toBe(`YouTube video player`)
 
     // the poster URLs get the same encoding the iframe src above is checked for
     props.video_id = `a b/c`

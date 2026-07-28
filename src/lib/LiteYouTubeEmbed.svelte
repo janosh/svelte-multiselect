@@ -7,12 +7,15 @@
   let {
     video_id,
     play_label = `Play`,
+    iframe_title = `YouTube video player`,
     nocookie = true, // youtube-nocookie.com doesn't set tracking cookies until playback
     player_params = { autoplay: 1 },
     ...rest
   }: Omit<HTMLAttributes<HTMLDivElement>, `children`> & {
     video_id: string
     play_label?: string
+    // names the player itself, so it is not the play button's label a second time
+    iframe_title?: string
     nocookie?: boolean
     // YouTube player params verbatim, e.g. start, list, autoplay. replaces the default,
     // so pass autoplay: 1 along with anything else to keep playing on click
@@ -52,11 +55,9 @@
         srcset="https://i.ytimg.com/vi_webp/{safe_id}/hqdefault.webp"
         type="image/webp"
       />
-      <img
-        class="poster"
-        src="https://i.ytimg.com/vi/{safe_id}/hqdefault.jpg"
-        alt={play_label}
-      />
+      <!-- decorative: the play button below already carries the accessible name, and a
+      thumbnail described twice reads as two separate things -->
+      <img class="poster" src="https://i.ytimg.com/vi/{safe_id}/hqdefault.jpg" alt="" />
     </picture>
   {/key}
   <button type="button" class="play-btn" aria-label={play_label}></button>
@@ -64,7 +65,7 @@
     <iframe
       width="560"
       height="315"
-      title={play_label}
+      title={iframe_title}
       allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
       allowfullscreen
       src={iframe_src}
