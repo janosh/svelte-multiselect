@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import { click_outside, float, focus_trap } from './attachments'
+  import { click_outside, type DismissConfig, float, focus_trap } from './attachments'
   import type { CmdAction } from './types'
   import { chain_handlers, type CmdSection, format_shortcut } from './utils'
 
@@ -12,8 +12,14 @@
     // Region the right-click applies to. Omit and the whole document qualifies.
     children?: Snippet
     disabled?: boolean
+    // Merged over the default `{ escape: true }`. `dismiss_on: 'release'` suits a
+    // trigger that toggles: the default press closes before its own handler runs.
+    dismiss?: DismissConfig
     item?: Snippet<[{ action: CmdAction; section?: CmdSection; checked?: boolean }]>
     on_select?: (action: CmdAction, section?: CmdSection) => void
+    // What picks up the opening right-click: the region when `children` is given, the
+    // document otherwise. `none` installs neither, for a consumer that sets `at` itself.
+    trigger?: `body` | `region` | `none`
   }
 
   let {
@@ -21,10 +27,14 @@
     at = $bindable(null),
     children,
     disabled = false,
+    dismiss,
     item,
     on_select,
+    trigger,
     ...rest
   }: Props = $props()
+
+  const trigger_mode = $derived(trigger ?? (children ? `region` : `body`))
 
   // A right-click is a zero-size anchor: the menu hangs off the pointer itself
   const anchor = $derived(at && { top: at.y, bottom: at.y, left: at.x, right: at.x })
@@ -33,8 +43,15 @@
   // section; its required `action` callback is what one entry has and the other lacks
   const is_section = (entry: CmdAction | CmdSection): entry is CmdSection =>
     !(`action` in entry)
+  // namespaced so a section titled `Copy` and an action labelled `Copy` stay distinct keys
   const entry_key = (entry: CmdAction | CmdSection): unknown =>
-    is_section(entry) ? entry.title : (entry.id ?? entry.label)
+    is_section(entry) ? `section:${entry.title}` : `action:${entry.id ?? entry.label}`
+  // an empty section is a heading over nothing, so it is dropped once anything else has
+  // something to show. A menu of nothing but empty sections keeps them: open_at refuses
+  // to open one, so the only way to see it is a consumer setting `at` itself.
+  const all_empty = $derived(
+    actions.every((entry) => is_section(entry) && !entry.actions.length),
+  )
   // undefined leaves the item a plain menuitem; a boolean makes it a radio
   const is_checked = (action: CmdAction, section?: CmdSection): boolean | undefined =>
     section?.selected === undefined
@@ -43,8 +60,7 @@
 
   function open_at(event: MouseEvent) {
     // an empty section contributes nothing, so a menu of them has nothing to show
-    const empty = actions.every((entry) => is_section(entry) && !entry.actions.length)
-    if (disabled || empty) return
+    if (disabled || all_empty) return
     event.preventDefault() // replace the browser's own menu
     at = { x: event.clientX, y: event.clientY }
   }
@@ -82,11 +98,12 @@
   }
 </script>
 
-<svelte:body oncontextmenu={children ? undefined : open_at} />
+<svelte:body oncontextmenu={trigger_mode === `body` ? open_at : undefined} />
 
 {#if children}
+  {@const region_click = trigger_mode === `region` ? open_at : undefined}
   <!-- svelte-ignore a11y_no_static_element_interactions -- the menu itself carries the semantics; this is only the region a right-click applies to -->
-  <div oncontextmenu={open_at} style="display: contents">{@render children()}</div>
+  <div oncontextmenu={region_click} style="display: contents">{@render children()}</div>
 {/if}
 
 {#if anchor}
@@ -96,19 +113,21 @@
     class="context-menu {rest.class ?? ``}"
     onkeydown={chain_handlers(handle_menu_keys, rest.onkeydown)}
     {@attach float({ anchor, placement: `bottom`, align: `start`, padding: 8 })}
-    {@attach click_outside({ escape: true, callback: () => (at = null) })}
+    {@attach click_outside({ escape: true, ...dismiss, callback: () => (at = null) })}
     {@attach focus_trap()}
   >
     {#each actions as entry (entry_key(entry))}
       {#if is_section(entry)}
-        <!-- role="group" names the run of items without taking them out of the menu;
-        the title is hidden from AT because aria-label already announces it -->
-        <li role="group" aria-label={entry.title}>
-          <span class="section-title" aria-hidden="true">{entry.title}</span>
-          {#each entry.actions as action (action.id ?? action.label)}
-            {@render menu_item(action, entry)}
-          {/each}
-        </li>
+        {#if entry.actions.length || all_empty}
+          <!-- role="group" names the run of items without taking them out of the menu;
+          the title is hidden from AT because aria-label already announces it -->
+          <li role="group" aria-label={entry.title}>
+            <span class="section-title" aria-hidden="true">{entry.title}</span>
+            {#each entry.actions as action (action.id ?? action.label)}
+              {@render menu_item(action, entry)}
+            {/each}
+          </li>
+        {/if}
       {:else}
         <li role="none">{@render menu_item(entry)}</li>
       {/if}

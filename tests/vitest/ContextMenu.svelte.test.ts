@@ -20,9 +20,11 @@ describe(`ContextMenu`, () => {
     for (const app of mounted.splice(0)) void unmount(app)
     Reflect.deleteProperty(globalThis.navigator, `userAgent`)
   })
+  // returns the reactive props, so a test can drive `at` the way a consumer would
   const mount_menu = (actions: MenuEntries, extra: MenuProps = {}) => {
-    const props = $state({ actions, ...extra })
+    const props: MenuProps & { actions: MenuEntries } = $state({ actions, ...extra })
     mounted.push(mount(ContextMenu, { target: document.body, props }))
+    return props
   }
   const right_click = (target: EventTarget, clientX = 120, clientY = 240) => {
     const event = new MouseEvent(`contextmenu`, {
@@ -44,6 +46,9 @@ describe(`ContextMenu`, () => {
     await tick()
     return event
   }
+  const region = createRawSnippet(() => ({
+    render: () => `<div data-testid="region">region</div>`,
+  }))
   const menu = () => document.querySelector(`menu[role="menu"]`)
   // `role^=` catches both the plain menuitem and the menuitemradio a section renders
   const items = () =>
@@ -78,10 +83,7 @@ describe(`ContextMenu`, () => {
   // with a region, svelte:body's handler is dropped, so the rest of the page keeps
   // the browser's own menu
   test(`a children region scopes the right-click to itself`, async () => {
-    const children = createRawSnippet(() => ({
-      render: () => `<div data-testid="region">region</div>`,
-    }))
-    mount_menu(make_actions(), { children })
+    mount_menu(make_actions(), { children: region })
 
     const outside = right_click(document.body)
     await tick()
@@ -91,6 +93,25 @@ describe(`ContextMenu`, () => {
     right_click(doc_query(`[data-testid="region"]`))
     await tick()
     expect(menu()).not.toBeNull()
+  })
+
+  // for a consumer whose triggers must record *which* of their targets was
+  // right-clicked: neither the document nor a wrapper can, so it drives `at` itself
+  test.each([
+    [`no region`, {}, () => document.body],
+    [`a region`, { children: region }, () => doc_query(`[data-testid="region"]`)],
+  ] as const)(`trigger="none" installs no handler (%s)`, async (_desc, extra, target) => {
+    const props = mount_menu(make_actions(), { ...extra, trigger: `none` })
+
+    const event = right_click(target())
+    await tick()
+    expect(menu()).toBeNull()
+    expect(event.defaultPrevented).toBe(false) // the browser's own menu survives
+
+    props.at = { x: 30, y: 60 } // `at` alone still opens it
+    await tick()
+    const { left, top } = doc_query(`menu[role="menu"]`).style
+    expect([left, top]).toEqual([`30px`, `60px`])
   })
 
   test.each([
@@ -170,17 +191,25 @@ describe(`ContextMenu`, () => {
     expect(menu()).toBeNull()
   })
 
-  // both bubble to the document listeners that own dismissal
+  // both defaults ride document listeners; `dismiss` merges over them, reaching the
+  // whole click_outside config — `escape: false` and `release` opt each one out
+  const escape_key = () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })
+  const outside_press = () => new PointerEvent(`pointerdown`, { bubbles: true })
+  const outside_click = () => new MouseEvent(`click`, { bubbles: true })
+  const release: MenuProps = { dismiss: { dismiss_on: `release`, escape: false } }
   test.each([
-    [`Escape`, () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })],
-    [`a press outside`, () => new PointerEvent(`pointerdown`, { bubbles: true })],
-  ])(`%s dismisses the menu`, async (_desc, make_event) => {
-    await open_menu()
+    [`Escape dismisses the menu`, {}, escape_key, true],
+    [`a press outside dismisses the menu`, {}, outside_press, true],
+    [`escape: false leaves Escape to the page`, release, escape_key, false],
+    [`dismiss_on: release ignores the press`, release, outside_press, false],
+    [`dismiss_on: release waits for the click`, release, outside_click, true],
+  ] as const)(`%s`, async (_desc, extra, make_event, closes) => {
+    await open_menu(make_actions(), extra)
     expect(menu()).not.toBeNull()
 
     document.body.dispatchEvent(make_event())
     await tick()
-    expect(menu()).toBeNull()
+    expect(menu() === null).toBe(closes)
   })
 
   test(`stays shut when disabled or when there is nothing to show`, async () => {
@@ -210,7 +239,13 @@ describe(`ContextMenu`, () => {
     ]
 
     test(`render as labelled groups of radios, flat actions keep menuitem`, async () => {
-      await open_menu([{ label: `Copy`, action: vi.fn() }, ...make_sections()])
+      // `Other` doubles as the second section's title, where a bare entry_key would
+      // collide; the empty section is a heading over nothing, so it drops out
+      await open_menu([
+        { label: `Other`, action: vi.fn() },
+        ...make_sections(),
+        { title: `Empty`, actions: [] },
+      ])
 
       const groups = Array.from(document.querySelectorAll(`li[role="group"]`))
       expect(groups.map((group) => group.getAttribute(`aria-label`))).toEqual([
@@ -234,13 +269,22 @@ describe(`ContextMenu`, () => {
           btn.getAttribute(`aria-checked`),
         ]),
       ).toEqual([
-        [`Copy`, `menuitem`, null],
+        [`Other`, `menuitem`, null],
         [`Single`, `menuitemradio`, `true`],
         [`Double`, `menuitemradio`, `false`],
         [`Reset`, `menuitem`, null], // a section without `selected` is not a radio group
       ])
-      // group members are still direct children of the menu, not a nested list
+      // members stay direct children of the menu; the empty section adds no <li>
       expect(document.querySelectorAll(`menu[role="menu"] > li`)).toHaveLength(3)
+    })
+
+    // open_at refuses a menu with nothing to show; only a consumer's `at` reveals it
+    test(`a menu of nothing but empty sections keeps them`, async () => {
+      const props = mount_menu([{ title: `Empty`, actions: [] }], { trigger: `none` })
+      props.at = { x: 10, y: 20 }
+      await tick()
+      expect(doc_query(`li[role="group"]`).getAttribute(`aria-label`)).toBe(`Empty`)
+      expect(items()).toHaveLength(0)
     })
 
     test(`arrow keys cross section boundaries, skipping disabled items`, async () => {
