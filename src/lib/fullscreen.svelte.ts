@@ -8,6 +8,7 @@ export type FullscreenSyncOptions = {
   // CSS variable painted on the wrapper with the page background, e.g. `--struct-bg-fullscreen`
   get_bg_css_var?: () => string | undefined
   on_change?: (fullscreen: boolean) => void
+  // Reports rejected enter and exit requests.
   on_request_error?: (error: unknown) => void
 }
 
@@ -46,6 +47,7 @@ export function sync_fullscreen(opts: FullscreenSyncOptions): void {
     } else if (!fullscreen && fullscreen_element === wrapper) {
       document.exitFullscreen().catch((error: unknown) => {
         console.error(`exitFullscreen failed for`, wrapper, error)
+        opts.on_request_error?.(error)
       })
     }
 

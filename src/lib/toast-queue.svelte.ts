@@ -62,7 +62,7 @@ export interface ToastRequest<Priority extends string = ToastPriority> {
   // Absolute wall-clock deadline. Keeps counting down while the toast waits its turn,
   // for notices that go stale on their own schedule rather than after N seconds seen.
   expires_at_ms?: number | null
-  // Budget spent only while this toast is the visible one. Pauses on demotion.
+  // Visible-only budget; pauses on demotion and overrides expires_at_ms when both are set.
   visible_duration_ms?: number
   // Repeats of the same key update the existing toast instead of queueing behind it.
   // Defaults to the message, so identical text collapses without any bookkeeping.

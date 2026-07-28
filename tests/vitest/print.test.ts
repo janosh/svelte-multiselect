@@ -110,10 +110,6 @@ test(`afterprint removes the injected @page rule and the target marker`, () => {
   expect(print_styles()).toHaveLength(0)
   expect(node.hasAttribute(`data-print-target`)).toBe(false)
   expect(document.title).toBe(`Docs`)
-
-  // and the listener was one-shot: a second print's state is not torn down by a stale one
-  print_element(node, { single_page: true })
-  expect(print_styles()).toHaveLength(1)
 })
 
 // A print() that throws never fires afterprint, so nothing else would undo the swap
@@ -132,6 +128,19 @@ test(`a print that throws still restores the title, marker and style`, () => {
   expect(document.title).toBe(`Docs`)
   expect(node.hasAttribute(`data-print-target`)).toBe(false)
   expect(print_styles()).toHaveLength(0)
+})
+
+test(`a second cleanup leaves a title the app set in the meantime alone`, () => {
+  const node = make_target(500)
+  document.title = `Docs`
+  print_spy.mockImplementationOnce(() => {
+    after_print()
+    document.title = `App Renamed`
+    throw new Error(`print blocked`)
+  })
+
+  expect(() => print_element(node, { filename: `docs-print` })).toThrow(`print blocked`)
+  expect(document.title).toBe(`App Renamed`)
 })
 
 // Headless and embedded webviews return from print() without ever dispatching
@@ -154,39 +163,30 @@ test(`a print that never fires afterprint is undone by the watchdog`, () => {
   expect(document.title).toBe(`later-print`)
 })
 
-// Disarming only covers a watchdog whose own print ended. One whose print never fired
-// afterprint is still armed when the next print starts, and the marker is shared state on
-// the node, so without ownership it would strip the live print's marker mid-dialog and
-// leave its width rules matching nothing.
-test(`a still-armed watchdog does not strip a later print's marker`, () => {
-  vi.useFakeTimers()
-  const node = make_target(960)
-  print_element(node, { single_page: true }) // afterprint never fires for this one
-
-  vi.advanceTimersByTime(30_000)
-  print_element(node, { single_page: true })
-  vi.advanceTimersByTime(30_000) // the first watchdog fires while the second is live
-
-  expect(node.hasAttribute(`data-print-target`)).toBe(true)
-  expect(print_styles()).toHaveLength(1)
-})
-
-test(`two prints in a row leave one live style, not a growing stack`, () => {
+// Both prints target the same node, and the marker is shared state on it, so the first
+// print's cleanup must leave the second alone whichever way it arrives: disarmed by
+// afterprint, or fired by a watchdog that is still armed because its print never ended.
+// Without token ownership the armed one strips the live marker mid-dialog and leaves its
+// width rules matching nothing.
+test.each([
+  [`disarmed by afterprint`, true],
+  [`still armed, its own print never having ended`, false],
+])(`a first watchdog %s leaves the second print alone`, (_desc, first_print_ends) => {
   vi.useFakeTimers()
   const node = make_target(960)
   print_element(node, { single_page: true })
-  after_print()
-  // pins the disarm directly: without it the assertions below still fail, but on a
-  // stripped marker rather than on the stale timer that stripped it
-  expect(vi.getTimerCount()).toBe(0)
+  if (first_print_ends) {
+    after_print()
+    // pins the disarm itself: without it the assertions below still fail, but on a
+    // stripped marker rather than on the stale timer that stripped it
+    expect(vi.getTimerCount()).toBe(0)
+  }
 
-  // the second print starts inside the first watchdog's window, so a watchdog that
-  // outlived its own print would strip this one's marker and style out from under it
   vi.advanceTimersByTime(30_000)
   print_element(node, { single_page: true, page_width_mm: 100 })
-  vi.advanceTimersByTime(30_000)
+  vi.advanceTimersByTime(30_000) // the first watchdog's deadline passes here
 
-  expect(print_styles()).toHaveLength(1)
+  expect(print_styles()).toHaveLength(1) // one live style, not a growing stack
   expect(page_rule()).toBe(`@page { size: 100mm 254mm; margin: 0 }`)
   expect(node.hasAttribute(`data-print-target`)).toBe(true)
 })

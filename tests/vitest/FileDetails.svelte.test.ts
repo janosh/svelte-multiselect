@@ -256,19 +256,27 @@ test(`empty title renders details without summary`, () => {
   expect(document.querySelector(`summary`)).toBeNull()
 })
 
-// a title is a heading, not an identity: two files from different directories can share
-// one, and a bare title key would throw each_key_duplicate and drop the whole list
-test(`renders files sharing a title`, () => {
-  mount_files({
-    files: [
-      { title: `index.ts`, content: `export const a = 1` },
-      { title: `index.ts`, content: `export const b = 2` },
-    ],
-  })
+test(`duplicate titles render and keep their open state across inserts`, async () => {
+  const files = $state([
+    { title: `index.ts`, content: `export const a = 1` },
+    { title: `index.ts`, content: `export const b = 2` },
+  ])
+  mount_files({ files })
+  await tick()
 
-  expect(all_text(`details > summary`)).toHaveLength(2)
+  const all_details = () => [...document.querySelectorAll(`details`)]
+  const open_states = () => all_details().map((el) => el.open)
   expect(all_text(`details pre code`)).toEqual([
     `export const a = 1`,
     `export const b = 2`,
   ])
+  all_details()[1].open = true
+  await tick()
+  expect(open_states()).toEqual([false, true])
+
+  files.unshift({ title: `z.ts`, content: `const z = 0` })
+  await tick()
+
+  expect(all_text(`details > summary`)).toHaveLength(3)
+  expect(open_states()).toEqual([false, false, true])
 })

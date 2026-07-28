@@ -43,6 +43,7 @@ export const icon_data = {
   },
   BandStructure: {
     viewBox: `0 0 28 24`,
+    stroke: `currentColor`,
     path: `<g stroke-width="1.3" fill="none" stroke-linecap="round"><path d="M1 20c3-4 5-6 7-6s5 5 7 5 5-4 7-4"/><path d="M1 17c2-3 5-5 7-3s5 4 7 3 5-5 7-3"/><line x1="1" y1="12" x2="27" y2="12" stroke-dasharray="2 1.5" opacity="0.2"/><path d="M1 9c3 3 5 5 7 5s5-5 7-5 5 3 7 3"/><path d="M1 6c2 2 5 4 7 2s5-3 7-2 5 4 7 2"/><path d="M1 4c3 1 5 1 7 0s5-1 7 0 5 1 7 0" opacity="0.5"/><line x1="8" y1="1" x2="8" y2="23" stroke-dasharray="1.5 1.5" opacity="0.2"/><line x1="15" y1="1" x2="15" y2="23" stroke-dasharray="1.5 1.5" opacity="0.2"/><line x1="22" y1="1" x2="22" y2="23" stroke-dasharray="1.5 1.5" opacity="0.2"/></g>`,
   },
   Battery: {
@@ -51,6 +52,7 @@ export const icon_data = {
   },
   BrillouinZone: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g stroke-width="1.3" fill="none"><polygon points="12,1 22,7 22,17 12,23 2,17 2,7"/><line x1="2" y1="7" x2="22" y2="17"/><line x1="12" y1="1" x2="12" y2="23"/><line x1="22" y1="7" x2="2" y2="17"/></g>`,
   },
   Calendar: {
@@ -107,6 +109,7 @@ export const icon_data = {
   },
   Close: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<path d="M18 6L6 18M6 6l12 12" stroke-width="2" stroke-linecap="round"/>`,
   },
   Code: {
@@ -167,6 +170,7 @@ export const icon_data = {
   },
   DensityOfStates: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<line x1="3" y1="21" x2="21" y2="21" stroke-width="0.7" opacity="0.3"/><path d="M3 21C3 21 4 21 5 11C6 21 7 21 9 21C9 21 10 21 11 15C12 21 13 21 14 21C14 21 15 21 16.5 6C18 21 19 21 21 21" stroke-width="1.2" fill="none" stroke-linecap="round"/><path d="M3 21C3 21 4 21 5 11C6 21 7 21 9 21C9 21 10 21 11 15C12 21 13 21 14 21C14 21 15 21 16.5 6C18 21 19 21 21 21Z" fill="currentColor" stroke="none" opacity="0.12"/>`,
   },
   Directory: {
@@ -219,6 +223,7 @@ export const icon_data = {
   },
   ExternalLink: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></g>`,
   },
   Eye: {
@@ -231,6 +236,7 @@ export const icon_data = {
   },
   FermiSurface: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g stroke-width="1.3" fill="none"><circle cx="12" cy="12" r="9" opacity="0.3"/><ellipse cx="12" cy="12" rx="9" ry="4"/><ellipse cx="12" cy="12" rx="4" ry="9"/><ellipse cx="12" cy="12" rx="6" ry="7" transform="rotate(45 12 12)" opacity="0.5"/></g>`,
   },
   Filter: {
@@ -295,6 +301,8 @@ export const icon_data = {
   },
   Histogram: {
     viewBox: `0 0 48 48`,
+    stroke: `currentColor`,
+    fill: `currentColor`,
     path: `M4 42h40z M4 42h40 M8 28h6v14H8zm13-10h6v24h-6zM34 6h6v36h-6z`,
   },
   Info: {
@@ -339,10 +347,12 @@ export const icon_data = {
   },
   Magnetic: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path d="M12 3v18m6-14c-.633-1.255-1.538-2-2.5-2c-1.933 0-3.5 3.134-3.5 7s1.567 7 3.5 7s3.5-3.134 3.5-7v-1M6 7c.633-1.255 1.538-2 2.5-2c1.933 0 3.5 3.134 3.5 7s-1.567 7-3.5 7S5 15.866 5 12v-1"/><path d="m3 13l2-2l2 2m10 0l2-2l2 2"/></g>`,
   },
   Materials: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `M3 7l7-4l11 4M3 7v5l11 4l7-4V7M3 7l11 4l7-4M3 12v5l11 4l7-4v-5`,
   },
   Maximize: {
@@ -359,6 +369,7 @@ export const icon_data = {
   },
   Molecule: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M.75 17.25a6 6 0 1 0 12 0a6 6 0 0 0-12 0"/><path d="M3.75 17.25a3 3 0 0 1 3-3m7.5-6a4.5 4.5 0 1 0 9.002 0a4.5 4.5 0 0 0-9.002 0"/><path d="M17.25 8.25a1.5 1.5 0 0 1 1.5-1.5M3.75 3a2.25 2.25 0 1 0 4.5 0a2.25 2.25 0 0 0-4.5 0m8.211 11.274l3.436-3.024m-.759-4.83L8.149 3.664"/></g>`,
   },
   MoleculeNetwork: {
@@ -375,6 +386,7 @@ export const icon_data = {
   },
   NeuralNetwork: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `M21.5 12a2.5 2.5 0 1 1-5 0a2.5 2.5 0 0 1 5 0m-8-8a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0m-1 7.5a1.5 1.5 0 1 1-3 0a1.5 1.5 0 0 1 3 0m-6-4a2 2 0 1 1-4 0a2 2 0 0 1 4 0m4 12a2 2 0 1 1-4 0a2 2 0 0 1 4 0m3-14.5l4 5m-3 5.5l-4 3m-2.5-1l-3-8m1.313-2.846L10.5 4.5m2 7l4.005.344M12 5.5L11 10`,
   },
   NoImage: {
@@ -462,6 +474,7 @@ export const icon_data = {
   },
   RepoFork: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="20" r="3"/><circle cx="6" cy="6" r="3"/><circle cx="18" cy="6" r="3"/><path d="M18 9v2c0 .6-.4 1-1 1H7c-.6 0-1-.4-1-1V9"/><path d="M12 12v5"/></g>`,
   },
   Reset: {
@@ -502,6 +515,7 @@ export const icon_data = {
   },
   SolarPanel: {
     viewBox: `0 0 48 48`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-width="4"><rect width="40" height="24" x="4" y="8" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M30 32V8M18 32V8m24 12H6m18 21v-9m7 9H17"/></g>`,
   },
   Solid: {
@@ -550,6 +564,7 @@ export const icon_data = {
   },
   Thermometer: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"><path d="M13.5 15.404V3.747a2.996 2.996 0 0 0-3-2.997a3 3 0 0 0-3 2.997v11.657a4.495 4.495 0 0 0 3 7.846a4.5 4.5 0 0 0 4.204-2.891a4.49 4.49 0 0 0-1.204-4.955"/><path d="M9 18.732a1.5 1.5 0 0 0 1.5 1.499a1.5 1.5 0 0 0 1.5-1.499a1.5 1.5 0 0 0-1.5-1.498A1.5 1.5 0 0 0 9 18.732m1.5-14.985v13.487m6-13.487H18m-1.5 4.496H18m-1.5 4.495H18"/></g>`,
   },
   ThreePanels: {
@@ -582,6 +597,7 @@ export const icon_data = {
   },
   Versions: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `M10 7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-6a2 2 0 0 1-2-2zM7 7v10M4 8v8`,
   },
   VSCode: {
@@ -598,10 +614,12 @@ export const icon_data = {
   },
   ZoomIn: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></g>`,
   },
   ZoomOut: {
     viewBox: `0 0 24 24`,
+    stroke: `currentColor`,
     path: `<g fill="none" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="8" y1="11" x2="14" y2="11"/></g>`,
   },
 }

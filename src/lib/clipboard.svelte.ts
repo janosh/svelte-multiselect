@@ -1,3 +1,4 @@
+import { untrack } from 'svelte'
 import { SvelteMap, SvelteSet } from 'svelte/reactivity'
 
 // Headless "recently copied" state for UIs that render their own copy affordances, where
@@ -23,13 +24,15 @@ export const create_clipboard_feedback = (
   const copied = new SvelteSet<string>()
   const timers = new SvelteMap<string, ReturnType<typeof setTimeout>>()
 
-  const clear = (key?: string): void => {
-    for (const timer_key of key === undefined ? timers.keys() : [key]) {
-      clearTimeout(timers.get(timer_key))
-      timers.delete(timer_key)
-      copied.delete(timer_key)
-    }
-  }
+  // Timer bookkeeping must not subscribe an effect that calls clear().
+  const clear = (key?: string): void =>
+    untrack(() => {
+      for (const timer_key of key === undefined ? timers.keys() : [key]) {
+        clearTimeout(timers.get(timer_key))
+        timers.delete(timer_key)
+        copied.delete(timer_key)
+      }
+    })
 
   const copy = async (text: string, key: string = text): Promise<boolean> => {
     try {

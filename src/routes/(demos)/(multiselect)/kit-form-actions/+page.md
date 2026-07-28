@@ -91,6 +91,9 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
 
 The above code needs to be in a `+page.svelte` file with the following `+page.server.ts` file in the same directory next to it.
 
+`export const actions` is what your own app wants. This site exports `_actions` so its
+static build skips it; rename it back to run the demo locally.
+
 ```ts
 import { fail } from '@sveltejs/kit'
 import { colors as allowed_colors } from '$site/options'

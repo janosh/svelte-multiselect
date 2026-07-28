@@ -29,11 +29,13 @@ export const _actions = {
     if (!Array.isArray(colors)) {
       return fail(400, { colors: [], error: `array` })
     }
-    // only the offered colors may reach the response, so a hand-crafted POST can't
-    // echo arbitrary strings or objects back into the page
+    // filtered so a hand-crafted POST cannot echo arbitrary strings back into the page,
+    // deduplicated so a repeated `Red` cannot slip past the single-color check below
     const valid_colors = colors.filter(
-      (color: unknown): color is string =>
-        typeof color === `string` && allowed_colors.includes(color),
+      (color: unknown, color_idx): color is string =>
+        typeof color === `string` &&
+        allowed_colors.includes(color) &&
+        colors.indexOf(color) === color_idx,
     )
     if (valid_colors.length === 0) {
       return fail(400, { colors: [], error: `missing` })

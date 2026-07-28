@@ -13,8 +13,18 @@
   })
 </script>
 
-<svg viewBox={data.viewBox} fill="currentColor" {...rest}>
-  <path d={data.path} />
+<svg
+  viewBox={data.viewBox}
+  fill={data.fill ?? (data.stroke ? `none` : `currentColor`)}
+  stroke={data.stroke}
+  {...rest}
+>
+  {#if data.path.trimStart().startsWith(`<`)}
+    <!-- trusted package-owned markup -->
+    {@html data.path}
+  {:else}
+    <path d={data.path} />
+  {/if}
 </svg>
 
 <style>

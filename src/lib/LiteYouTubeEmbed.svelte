@@ -61,7 +61,9 @@
       <img class="poster" src="https://i.ytimg.com/vi/{safe_id}/hqdefault.jpg" alt="" />
     </picture>
   {/key}
-  <button type="button" class="play-btn" aria-label={play_label}></button>
+  <!-- opacity alone would leave the active play button in the tab order and a11y tree -->
+  <button type="button" class="play-btn" aria-label={play_label} inert={activated}
+  ></button>
   {#if activated}
     <iframe
       width="560"

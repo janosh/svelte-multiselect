@@ -1,19 +1,22 @@
-// Separate from toast.test.ts because driving a prop after mount needs a $state props
-// object, and runes are only available in .svelte.ts files. Deliberately holds this one
-// case, so none of that file's mount/teardown scaffolding has to be repeated here.
+// Separate because mutating props after mount requires runes in a .svelte.ts test.
 import Toast from '$lib/Toast.svelte'
 import { ToastStore } from '$lib/toast-queue.svelte.ts'
 import { mount, tick, unmount } from 'svelte'
-import { expect, test, vi } from 'vite-plus/test'
+import { afterEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
-// `hovered` is recorded whatever pause_on_hover says, leaving the prop pure policy: it
-// acts on the pointer already sitting there rather than waiting for a fresh enter.
+let app: Record<string, unknown> | undefined
+afterEach(() => {
+  if (app) void unmount(app)
+  app = undefined
+  vi.useRealTimers()
+})
+
 test(`flipping pause_on_hover acts on an already-hovered stack`, async () => {
   vi.useFakeTimers()
   const store = new ToastStore()
   const props = $state({ store, pause_on_hover: false })
-  const app = mount(Toast, { target: document.body, props })
+  app = mount(Toast, { target: document.body, props })
   store.show(`a`, { duration_ms: 1000 })
   await tick()
   vi.advanceTimersByTime(400)
@@ -30,7 +33,4 @@ test(`flipping pause_on_hover acts on an already-hovered stack`, async () => {
   expect(store.active?.message).toBe(`a`) // 600 ms was banked at the flip, not a fresh 1000
   vi.advanceTimersByTime(1)
   expect(store.active).toBeNull()
-
-  void unmount(app)
-  vi.useRealTimers()
 })

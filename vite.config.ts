@@ -23,7 +23,6 @@ export default {
     coverage: {
       reporter: [`text`, `json-summary`],
       include: [`src/lib/**/*.{ts,svelte}`],
-      exclude: [`src/lib/vite-config.ts`], // build tooling, not shipped runtime code
       thresholds: {
         statements: 95,
         branches: 89.8,

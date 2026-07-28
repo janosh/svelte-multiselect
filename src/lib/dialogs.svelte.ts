@@ -48,6 +48,11 @@ export const answer_dialog = (id: string): void => {
   dialog_queue.shift()?.resolve(id)
 }
 
+// Safely settle queued callers when their dialog host is torn down.
+export const dismiss_all_dialogs = (): void => {
+  for (const request of dialog_queue.splice(0)) request.resolve(request.dismiss_id)
+}
+
 export const ask_confirm = async (
   message: string,
   title: string,

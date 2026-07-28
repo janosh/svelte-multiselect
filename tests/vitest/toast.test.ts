@@ -466,15 +466,23 @@ describe(`ToastStore`, () => {
 
 describe(`<Toast />`, () => {
   const mounted: Record<string, unknown>[] = []
+  const stores: ToastStore<string>[] = []
+  const helper_nodes: Element[] = []
   afterEach(() => {
     for (const app of mounted.splice(0)) void unmount(app)
+    for (const store of stores.splice(0)) store.destroy()
+    for (const node of helper_nodes.splice(0)) node.remove()
     vi.useRealTimers()
   })
 
-  const render = (props: Record<string, unknown> = {}) => {
-    const store = (props.store as ToastStore | undefined) ?? new ToastStore()
+  const track = <Priority extends string>(store: ToastStore<Priority>, props = {}) => {
     mounted.push(mount(Toast, { target: document.body, props: { ...props, store } }))
+    stores.push(store)
     return store
+  }
+  const render = (props: Record<string, unknown> = {}) => {
+    const { store, ...rest } = props
+    return track((store as ToastStore | undefined) ?? new ToastStore(), rest)
   }
   const polite = () => doc_query(`[aria-live="polite"]`)
   const assertive = () => doc_query(`[aria-live="assertive"]`)
@@ -517,8 +525,7 @@ describe(`<Toast />`, () => {
   test(`a store built on a custom ladder drives the component`, async () => {
     // mounted with typed props rather than through `render`, so this also pins that a
     // narrowly-typed ToastStore is accepted where the component declares any ladder
-    const store = new ToastStore({ priorities: hive_ladder })
-    mounted.push(mount(Toast, { target: document.body, props: { store } }))
+    const store = track(new ToastStore({ priorities: hive_ladder }))
     store.show(`watching src/`, { priority: `watch` })
     await tick()
 
@@ -533,11 +540,9 @@ describe(`<Toast />`, () => {
   test(`a custom sticky_priorities decides urgency too`, async () => {
     // `action` is sticky here but not one of the ladder's top two, so the two rules only
     // agree if urgency reads the store's sticky set rather than recomputing slice(-2)
-    const store = new ToastStore({
-      priorities: hive_ladder,
-      sticky_priorities: [`action`],
-    })
-    mounted.push(mount(Toast, { target: document.body, props: { store } }))
+    const store = track(
+      new ToastStore({ priorities: hive_ladder, sticky_priorities: [`action`] }),
+    )
     store.show(`rebase needed`, { priority: `action` })
     await tick()
 
@@ -740,6 +745,7 @@ describe(`<Toast />`, () => {
     const opener = document.createElement(`button`)
     const elsewhere = document.createElement(`button`)
     document.body.append(opener, elsewhere)
+    helper_nodes.push(opener, elsewhere)
     const store = render()
     store.show(`a`, { action: { label: `Undo` } })
     await tick()
@@ -755,8 +761,6 @@ describe(`<Toast />`, () => {
 
     expect(store.active).toBeNull()
     expect(document.activeElement).toBe(moved_on ? elsewhere : opener)
-    opener.remove()
-    elsewhere.remove()
   })
 
   // Escape is scoped to the stack, so a press anywhere else on the page is none of the

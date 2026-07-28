@@ -1343,15 +1343,16 @@ describe(`dismiss_on_outside_press`, () => {
   })
 
   it(`dispatches no dismiss event and still calls back without a node`, () => {
+    // dismiss does not bubble, so this negative assertion requires capture.
     const document_listener = vi.fn()
-    document.addEventListener(`dismiss`, document_listener)
+    document.addEventListener(`dismiss`, document_listener, true)
+    cleanups.push(() => document.removeEventListener(`dismiss`, document_listener, true))
     const { callback } = listen()
 
     expect(() => press(create_element())).not.toThrow()
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback.mock.calls[0][0]).toMatchObject({ via: `pointer` })
     expect(document_listener).not.toHaveBeenCalled()
-    document.removeEventListener(`dismiss`, document_listener)
   })
 
   it(`escape reports focus_inside from the inside selectors alone`, () => {

@@ -144,7 +144,7 @@ describe(`LiteYouTubeEmbed`, () => {
     expect(fetched).toEqual([])
   })
 
-  test(`keeps a consumer class alongside the styling hook and flags activation`, async () => {
+  test(`keeps consumer attributes and makes the active play button inert`, async () => {
     mount_embed({ class: `my-embed`, style: `--lite-youtube-bg: navy` })
     await tick()
 
@@ -152,9 +152,11 @@ describe(`LiteYouTubeEmbed`, () => {
     expect(wrapper.classList.contains(`my-embed`)).toBe(true)
     expect(wrapper.classList.contains(`activated`)).toBe(false)
     expect(wrapper.getAttribute(`style`)).toBe(`--lite-youtube-bg: navy;`)
+    expect(doc_query(`button.play-btn`).hasAttribute(`inert`)).toBe(false)
 
     click(`button.play-btn`)
     await tick()
     expect(wrapper.classList.contains(`activated`)).toBe(true)
+    expect(doc_query(`button.play-btn`).hasAttribute(`inert`)).toBe(true)
   })
 })

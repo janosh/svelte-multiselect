@@ -188,18 +188,21 @@ describe(`flag <-> browser sync`, () => {
     expect(request).toHaveBeenCalledTimes(2)
   })
 
-  test(`a rejected exit is logged and leaves the browser in fullscreen`, async () => {
+  test(`a rejected exit is reported and leaves the browser in fullscreen`, async () => {
     const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
-    const { button, wrapper } = mount_button()
+    const on_request_error = vi.fn()
+    const { button, wrapper } = mount_button({ on_request_error })
 
     button.click()
     await settle()
-    document.exitFullscreen = vi.fn(() => Promise.reject(new Error(`exit denied`)))
+    const exit_error = new Error(`exit denied`)
+    document.exitFullscreen = vi.fn(() => Promise.reject(exit_error))
 
     button.click()
     await settle()
 
     expect(console_error).toHaveBeenCalledOnce()
+    expect(on_request_error).toHaveBeenCalledExactlyOnceWith(exit_error)
     expect(document.fullscreenElement).toBe(wrapper)
   })
 

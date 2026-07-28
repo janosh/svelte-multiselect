@@ -60,6 +60,8 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
     globalThis.removeEventListener(`afterprint`, cleanup)
     if (restore_title !== null) {
       document.title = restore_title
+      // Prevent another cleanup from restoring this title again.
+      restore_title = null
       title_swap_in_flight = false
     }
     // the selector matches on presence, so the token is invisible to the printed rules

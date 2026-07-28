@@ -3,14 +3,13 @@ import {
   answer_dialog,
   ask_confirm,
   dialog_queue,
+  dismiss_all_dialogs,
   request_choice,
 } from '$lib/dialogs.svelte'
 import { afterEach, expect, test } from 'vite-plus/test'
 import { track } from './index'
 
-afterEach(() => {
-  dialog_queue.length = 0 // module-level queue outlives a test
-})
+afterEach(dismiss_all_dialogs)
 
 // An answer can take several microtask hops to reach track (`ask_confirm` awaits
 // `request_choice` before mapping the id to a boolean). A macrotask drains them all.
@@ -65,6 +64,17 @@ test(`answering an empty queue resolves nothing and does not throw`, async () =>
   await flush()
   expect(answer.settled).toBe(false)
   expect(dialog_queue).toHaveLength(1)
+})
+
+test(`dismiss_all_dialogs settles every request with its own dismiss id`, async () => {
+  const first = track(request_choice(`First?`, `One`, yes_no, `no`))
+  const second = track(request_choice(`Second?`, `Two`, yes_no, `yes`))
+
+  dismiss_all_dialogs()
+  await flush()
+  expect([first.settled, first.value]).toEqual([true, `no`])
+  expect([second.settled, second.value]).toEqual([true, `yes`])
+  expect(dialog_queue).toHaveLength(0)
 })
 
 test.each([
