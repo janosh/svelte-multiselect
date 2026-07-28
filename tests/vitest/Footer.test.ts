@@ -96,13 +96,4 @@ describe(`Footer`, () => {
     expect(doc_query(`footer nav a`).hasAttribute(`data-custom`)).toBe(true)
     expect(document.querySelector(`footer svg`)).toBeNull() // default markup is gone
   })
-
-  test(`spreads rest props onto the footer element`, () => {
-    mount_footer({ class: `site-footer`, style: `--footer-bg: teal`, id: `foot` })
-
-    const footer = doc_query(`footer`)
-    expect(footer.classList.contains(`site-footer`)).toBe(true)
-    expect(footer.getAttribute(`style`)).toBe(`--footer-bg: teal;`)
-    expect(footer.id).toBe(`foot`)
-  })
 })

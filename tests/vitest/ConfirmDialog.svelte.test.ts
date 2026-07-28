@@ -3,7 +3,7 @@ import type { DialogChoice } from '$lib/dialogs.svelte'
 import { dialog_queue, request_choice } from '$lib/dialogs.svelte'
 import { mount, tick, unmount } from 'svelte'
 import { afterEach, expect, test } from 'vite-plus/test'
-import { doc_query } from './index'
+import { doc_query, track } from './index'
 
 // happy-dom implements <dialog>: showModal(), .open, close() and the close event all
 // behave, so nothing about the dialog is stubbed here. What it does not implement is
@@ -17,11 +17,6 @@ afterEach(() => {
   dialog_queue.length = 0
 })
 
-const track = <T>(promise: Promise<T>) => {
-  const state: { settled: boolean; value?: T } = { settled: false }
-  void promise.then((value) => Object.assign(state, { settled: true, value }))
-  return state
-}
 const flush = async () => {
   await tick()
   await new Promise((resolve) => setTimeout(resolve, 0))

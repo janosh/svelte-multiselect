@@ -1,40 +1,7 @@
 import DraggablePane from '$lib/DraggablePane.svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query, stub_prop } from './index'
-
-// happy-dom skips layout, so every geometry an attachment reads has to be mocked:
-// getBoundingClientRect plus the read-only offset* properties. Same shape as the
-// helper in attachments.test.ts.
-const mock_rect = (
-  element: HTMLElement,
-  rect: { left: number; top: number; width?: number; height?: number },
-) => {
-  const { left, top, width = 100, height = 50 } = rect
-  element.getBoundingClientRect = vi.fn(() => ({
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
-    x: left,
-    y: top,
-    toJSON: () => ({}),
-  }))
-  const offsets = {
-    offsetLeft: left,
-    offsetTop: top,
-    offsetWidth: width,
-    offsetHeight: height,
-  }
-  for (const [prop, value] of Object.entries(offsets)) {
-    Object.defineProperty(element, prop, { value, configurable: true })
-  }
-}
-
-const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
-  new MouseEvent(type, { clientX, clientY, button, bubbles: true })
+import { doc_query, mock_rect, mouse_event, stub_prop } from './index'
 
 describe(`DraggablePane`, () => {
   // click_outside registers document listeners that outlive innerHTML = '', and

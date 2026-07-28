@@ -32,6 +32,15 @@ const headings_on = (route: string) =>
     bare(match.groups?.text ?? ``),
   )
 
+// null when the link resolves, else why it doesn't, so a run reports every bad link
+const unresolved = (route: string, anchor: string | undefined, label: string) => {
+  if (!(route in route_sources)) return `${label}: no such page ${route}`
+  if (anchor && !headings_on(route).includes(bare(anchor))) {
+    return `${label}: ${route} has no heading for #${anchor}`
+  }
+  return null
+}
+
 // in-site markdown links on the demo pages, i.e. everything but `https:`, `mailto:` etc.
 const page_links = Object.entries(route_sources)
   .flatMap(([from, source]) =>
@@ -52,18 +61,11 @@ test(`demo pages link each other with base-relative paths`, () => {
 })
 
 test(`demo page links point at a page and heading that exist`, () => {
-  for (const { from, target } of page_links) {
+  const failures = page_links.flatMap(({ from, target }) => {
     const [page, anchor] = target.split(`#`)
-    const route = page ? `/${page}` : from
-    expect(Object.keys(route_sources), `no page for ${from} link ${target}`).toContain(
-      route,
-    )
-    if (anchor) {
-      expect(headings_on(route), `${route} has no heading for #${anchor}`).toContain(
-        bare(anchor),
-      )
-    }
-  }
+    return unresolved(page ? `/${page}` : from, anchor, `${from} link ${target}`) ?? []
+  })
+  expect(failures).toEqual([])
 })
 
 const docs_links = [
@@ -75,32 +77,14 @@ const docs_links = [
   anchor: match.groups?.anchor,
 }))
 
-test(`readme docs links point at pages that exist`, () => {
+test(`readme docs links point at a page and heading that exist`, () => {
   expect(docs_links.length).toBeGreaterThan(15)
+  expect(docs_links.filter(({ anchor }) => anchor).length).toBeGreaterThan(8)
 
-  for (const { route } of docs_links) {
-    expect(Object.keys(route_sources), `no page for readme link ${route}`).toContain(
-      route,
-    )
-  }
-})
-
-test(`readme docs anchors match a heading on the linked page`, () => {
-  const anchored = docs_links.flatMap(({ route, anchor }) =>
-    anchor ? [{ route, anchor }] : [],
+  const failures = docs_links.flatMap(
+    ({ route, anchor }) => unresolved(route, anchor, `readme link`) ?? [],
   )
-  expect(anchored.length).toBeGreaterThan(8)
-
-  for (const { route, anchor } of anchored) {
-    // compare on letters alone so this doesn't have to reimplement the slug rules in
-    // heading_ids, which is what actually stamps the ids onto the rendered headings
-    const headings = [...route_sources[route].matchAll(/^#{2,4} (?<text>.+)$/gmu)].map(
-      (match) => (match.groups?.text ?? ``).replaceAll(/[^a-z0-9]/giu, ``).toLowerCase(),
-    )
-    expect(headings, `${route} has no heading for #${anchor}`).toContain(
-      anchor.replaceAll(`-`, ``),
-    )
-  }
+  expect(failures).toEqual([])
 })
 
 // The readme promises every component has a subpath, which only holds while the exports

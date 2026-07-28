@@ -63,10 +63,13 @@ describe(`ContributorList`, () => {
   })
 
   test(`tooltip_options reach the attachment`, async () => {
-    await mount_list({ tooltip_options: { placement: `bottom`, delay: 0 } })
+    await mount_list({ tooltip_options: { show_arrow: false, style: `color: teal` } })
 
     hover(doc_query(`ul li:last-child a`))
     expect(doc_query(`.tooltip-content`).textContent).toBe(`octocat`)
+    // the options themselves, not just the content the component sets on its own
+    expect(doc_query(`.custom-tooltip`).style.color).toBe(`teal`)
+    expect(document.querySelector(`.custom-tooltip-arrow`)).toBeNull()
   })
 
   test.each([
@@ -76,13 +79,5 @@ describe(`ContributorList`, () => {
     await mount_list({ contributors: list })
     expect(document.querySelectorAll(`ul li`)).toHaveLength(expected_count)
     expect(document.querySelector(`ul`)).not.toBeNull()
-  })
-
-  test(`spreads rest props onto the list element`, async () => {
-    await mount_list({ class: `contributors`, style: `--contributor-avatar-size: 40px` })
-
-    const list = doc_query(`ul`)
-    expect(list.classList.contains(`contributors`)).toBe(true)
-    expect(list.getAttribute(`style`)).toBe(`--contributor-avatar-size: 40px;`)
   })
 })

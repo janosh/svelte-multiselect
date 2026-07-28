@@ -6,19 +6,13 @@ import {
   request_choice,
 } from '$lib/dialogs.svelte'
 import { afterEach, expect, test } from 'vite-plus/test'
+import { track } from './index'
 
 afterEach(() => {
   dialog_queue.length = 0 // module-level queue outlives a test
 })
 
 // Promises resolve on a microtask, so a bare `await` is enough to see a settled one.
-// Tracking settlement (rather than awaiting) is the only way to assert a promise is
-// still pending, which is what the queue is for.
-const track = <T>(promise: Promise<T>) => {
-  const state: { settled: boolean; value?: T } = { settled: false }
-  void promise.then((value) => Object.assign(state, { settled: true, value }))
-  return state
-}
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
 const yes_no: DialogChoice<`yes` | `no`>[] = [
