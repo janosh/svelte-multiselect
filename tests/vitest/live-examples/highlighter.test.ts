@@ -61,17 +61,24 @@ describe(`starry_night_highlighter`, () => {
     )
   })
 
+  // the fallback path emits nothing but the wrapper, so pin the whole string: a
+  // substring check would pass while the tail of the input went unescaped
   test.each([
-    [
-      `HTML special characters`,
-      `<div>&</div>`,
-      undefined,
-      `&lt;div&gt;&amp;&lt;/div&gt;`,
-    ],
-    [`braces in unsupported code`, `{#if x}{/if}`, undefined, `&#123;#if x&#125;`],
-    [`braces in highlighted code`, `{#if x}{/if}`, `svelte`, `&#123;`],
-  ])(`escapes %s`, (_desc, code, lang, expected) => {
-    expect(starry_night_highlighter(code, lang)).toContain(expected)
+    [`HTML special characters`, `<div>&</div>`, `&lt;div&gt;&amp;&lt;/div&gt;`],
+    [`braces`, `{#if x}{/if}`, `&#123;#if x&#125;&#123;/if&#125;`],
+  ])(`escapes %s in unhighlighted code`, (_desc, code, expected) => {
+    expect(starry_night_highlighter(code)).toBe(
+      `<pre class="highlight"><code>${expected}</code></pre>`,
+    )
+  })
+
+  // highlighted output is broken up by token spans, so only the braces can be pinned
+  test(`escapes braces in highlighted code`, () => {
+    const result = starry_night_highlighter(`{#if x}{/if}`, `svelte`)
+
+    expect(result).toContain(`&#123;`)
+    expect(result).toContain(`&#125;`)
+    expect(result).not.toMatch(/[{}]/u) // no brace survives for mdsvex to read
   })
 })
 

@@ -56,7 +56,12 @@ export const escape_key = () =>
 // still pending, which is what a queue is for.
 export const track = <T>(promise: Promise<T>) => {
   const state: { settled: boolean; value?: T } = { settled: false }
-  void promise.then((value) => Object.assign(state, { settled: true, value }))
+  // a rejection settles the promise too; without this arm it would read as forever
+  // pending and go unhandled, so a broken promise looks like a hung one
+  void promise.then(
+    (value) => Object.assign(state, { settled: true, value }),
+    () => Object.assign(state, { settled: true }),
+  )
   return state
 }
 

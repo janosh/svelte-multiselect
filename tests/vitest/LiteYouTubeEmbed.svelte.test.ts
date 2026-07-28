@@ -47,7 +47,11 @@ describe(`LiteYouTubeEmbed`, () => {
   })
 
   test(`builds both poster sources and the labels from video_id`, async () => {
-    const props = mount_embed({ video_id: `xyz789`, play_label: `Watch the talk` })
+    const props = mount_embed({
+      video_id: `xyz789`,
+      play_label: `Watch the talk`,
+      iframe_title: `Talk player`,
+    })
     await tick()
 
     expect(doc_query(`picture source`).getAttribute(`srcset`)).toBe(
@@ -62,7 +66,9 @@ describe(`LiteYouTubeEmbed`, () => {
 
     click(`button.play-btn`)
     await tick()
-    expect(doc_query(`iframe`).getAttribute(`title`)).toBe(`YouTube video player`)
+    // a supplied title, not the default: asserting the default cannot tell a wired prop
+    // from a hardcoded attribute
+    expect(doc_query(`iframe`).getAttribute(`title`)).toBe(`Talk player`)
 
     // the poster URLs get the same encoding the iframe src above is checked for
     props.video_id = `a b/c`
