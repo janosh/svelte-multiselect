@@ -49,18 +49,19 @@ export const mock_rect = (
 export const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
   new MouseEvent(type, { clientX, clientY, button, bubbles: true })
 
+// cancelable so callers can assert whether a handler swallowed the key
 export const escape_key = () =>
-  new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })
+  new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true, cancelable: true })
 
 // Tracking settlement (rather than awaiting) is the only way to assert a promise is
 // still pending, which is what a queue is for.
 export const track = <T>(promise: Promise<T>) => {
-  const state: { settled: boolean; value?: T } = { settled: false }
+  const state: { settled: boolean; value?: T; reason?: unknown } = { settled: false }
   // a rejection settles the promise too; without this arm it would read as forever
   // pending and go unhandled, so a broken promise looks like a hung one
   void promise.then(
     (value) => Object.assign(state, { settled: true, value }),
-    () => Object.assign(state, { settled: true }),
+    (reason: unknown) => Object.assign(state, { settled: true, reason }),
   )
   return state
 }

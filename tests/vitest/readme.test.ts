@@ -98,6 +98,9 @@ test(`the exports map keeps the wildcard the readme's subpath promise rests on`,
   expect(component_subpaths).toEqual([`./*.svelte`])
 
   const intro_start = readme.indexOf(`Every component is a named export`)
+  // without this the slice below runs from -1 and the failure blames the missing
+  // subpath prose rather than the sentence that actually moved
+  expect(intro_start, `intro sentence moved or was reworded`).not.toBe(-1)
   const paragraph = readme.slice(intro_start, readme.indexOf(`\n\n`, intro_start))
   expect(paragraph).toContain(`every one also has a direct`)
   expect(paragraph).toContain(`subpath import`)
