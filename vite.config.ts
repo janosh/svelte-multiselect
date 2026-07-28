@@ -8,9 +8,7 @@ export default {
     '*.{js,ts,svelte,html,css,md,json,yaml}': `vp check --fix`,
     '*.{ts,svelte}': `sh -c 'npx svelte-kit sync && npx svelte-check-rs --threshold error'`,
     '*.test.ts': `sh -c '! grep -E "(test|describe)\\.only\\(" "$@"' --`,
-    // `fo` is a word fragment in the text-search fixtures, which deliberately split a
-    // word across inline markup (`<b>fo</b>o` matching `foo`)
-    '*': `codespell --ignore-words-list falsy,fo --check-filenames`,
+    '*': `codespell --ignore-words-list falsy --check-filenames`,
   },
 
   plugins: [sveltekit(), ...live_examples()],

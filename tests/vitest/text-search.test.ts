@@ -1,6 +1,7 @@
 import { highlight_matches } from '$lib/attachments'
 import type { HighlightRangesOptions } from '$lib/text-search'
 import {
+  create_burst_debounce,
   create_search_jump,
   DEFAULT_SEGMENT_SELECTOR,
   highlight_ranges,
@@ -38,9 +39,8 @@ describe(`search_text`, () => {
 
   it.each([
     // cross-node matches the per-text-node highlight_matches attachment cannot make
-    [`inline child`, `<p>a<b>b</b>c</p>`, `abc`, 1],
-    [`nested inline children`, `<p><em><b>fo</b></em><i>o</i>d</p>`, `food`, 1],
-    [`inline wrappers without a block ancestor`, `<div>fo<b>o</b></div>`, `foo`, 1],
+    [`nested inline children`, `<p><em><b>fo</b></em><i>o</i>d</p>`, `food`, 1], // codespell:ignore fo
+    [`inline wrappers without a block ancestor`, `<div>fo<b>o</b></div>`, `foo`, 1], // codespell:ignore fo
     // segment boundaries, where no visible text is continuous
     [`sibling list items`, `<ul><li>ab</li><li>cd</li></ul>`, `bc`, 0],
     [`sibling table cells`, `<table><tr><td>ab</td><td>cd</td></tr></table>`, `bc`, 0],
@@ -57,7 +57,7 @@ describe(`search_text`, () => {
   it(`keeps a segment intact across empty text nodes`, () => {
     // Svelte emits empty text nodes as anchors between elements, so treating one
     // as the end of a segment would break cross-node matching in real components
-    const root = render(`<p><b>fo</b>o</p>`)
+    const root = render(`<p><b>fo</b>o</p>`) // codespell:ignore fo
     doc_query(`p`).lastChild?.before(document.createTextNode(``))
 
     expect(search_text(root, `foo`).ranges).toHaveLength(1)
@@ -311,7 +311,9 @@ describe(`highlight_ranges`, () => {
   })
 })
 
-describe(`observe_text_mutations`, () => {
+// observe_text_mutations is a MutationObserver wired straight to create_burst_debounce,
+// so the two share a clock and are exercised together
+describe(`observe_text_mutations and create_burst_debounce`, () => {
   beforeEach(() => vi.useFakeTimers())
   afterEach(() => vi.useRealTimers())
 
@@ -363,6 +365,31 @@ describe(`observe_text_mutations`, () => {
 
     await mutate(root, 200)
     expect(on_mutation).not.toHaveBeenCalled()
+  })
+
+  it(`cancel starts the next burst's max-wait window over`, () => {
+    const callback = vi.fn()
+    const { trigger, cancel } = create_burst_debounce(callback, {
+      debounce_ms: 50,
+      max_wait_ms: 120,
+    })
+
+    // spend most of one burst's ceiling, then abandon the burst
+    trigger()
+    vi.advanceTimersByTime(40)
+    trigger()
+    vi.advanceTimersByTime(40)
+    cancel()
+    vi.advanceTimersByTime(200)
+    expect(callback).not.toHaveBeenCalled()
+
+    // carrying the cancelled burst's start forward would leave the ceiling already
+    // spent, collapsing the debounce to zero and firing on the first trigger
+    trigger()
+    vi.advanceTimersByTime(49)
+    expect(callback).not.toHaveBeenCalled()
+    vi.advanceTimersByTime(1)
+    expect(callback).toHaveBeenCalledOnce()
   })
 })
 
@@ -437,10 +464,12 @@ describe(`create_search_jump`, () => {
   })
 
   it(`tolerates a null element`, () => {
-    const jump = create_search_jump({ on_clear: vi.fn() })
+    const on_clear = vi.fn()
+    const jump = create_search_jump({ on_clear })
 
     jump.start(null)
     vi.advanceTimersByTime(2000)
     expect(document.querySelector(`.search-match-jump`)).toBeNull()
+    expect(on_clear).toHaveBeenCalledOnce() // a jump to nothing still ends like any other
   })
 })
