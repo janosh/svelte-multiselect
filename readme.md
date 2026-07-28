@@ -21,10 +21,8 @@
 
 ## 🧩 &thinsp; Components
 
-Every component is a named export from the package root. The heavier ones also have a
-direct subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest:
-`ButtonGroup`, `CommandMenu`, `DraggablePane`, `Masonry`, `MultiSelect`, `PageSearch`,
-`Toast` and `Toc`.
+Every component is a named export from the package root, and every one also has a direct
+subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 
 | Component          | What it does                                                                            | Docs                                                                         |
 | ------------------ | --------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------- |
