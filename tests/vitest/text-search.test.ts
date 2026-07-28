@@ -39,8 +39,8 @@ describe(`search_text`, () => {
 
   it.each([
     // cross-node matches the per-text-node highlight_matches attachment cannot make
-    [`nested inline children`, `<p><em><b>fo</b></em><i>o</i>d</p>`, `food`, 1], // codespell:ignore fo
-    [`inline wrappers without a block ancestor`, `<div>fo<b>o</b></div>`, `foo`, 1], // codespell:ignore fo
+    [`nested inline children`, `<p><em><b>fo</b></em><i>o</i>d</p>`, `food`, 1],
+    [`inline wrappers without a block ancestor`, `<div>fo<b>o</b></div>`, `foo`, 1],
     // segment boundaries, where no visible text is continuous
     [`sibling list items`, `<ul><li>ab</li><li>cd</li></ul>`, `bc`, 0],
     [`sibling table cells`, `<table><tr><td>ab</td><td>cd</td></tr></table>`, `bc`, 0],
@@ -57,7 +57,7 @@ describe(`search_text`, () => {
   it(`keeps a segment intact across empty text nodes`, () => {
     // Svelte emits empty text nodes as anchors between elements, so treating one
     // as the end of a segment would break cross-node matching in real components
-    const root = render(`<p><b>fo</b>o</p>`) // codespell:ignore fo
+    const root = render(`<p><b>fo</b>o</p>`)
     doc_query(`p`).lastChild?.before(document.createTextNode(``))
 
     expect(search_text(root, `foo`).ranges).toHaveLength(1)

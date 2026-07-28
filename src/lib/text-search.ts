@@ -1,7 +1,7 @@
 // Find-in-page primitives that match across DOM node boundaries. Unlike the
 // highlight_matches attachment, which tests one text node at a time, these
 // concatenate every text node inside a block element before matching, so a query
-// can straddle inline markup (`<b>fo</b>o` matches `foo`). // codespell:ignore fo
+// can straddle inline markup (`<b>fo</b>o` matches `foo`).
 
 // Block-level elements a match is attributed to. Text inside one of them is
 // treated as a single string regardless of the inline markup splitting it up.
@@ -59,7 +59,7 @@ const text_segments = (
       if (enclosing && root.contains(enclosing)) element = enclosing
       else {
         // no block ancestor inside root, so climb out of inline wrappers instead:
-        // grouping by the immediate parent would split <div>fo<b>o</b></div> // codespell:ignore fo
+        // grouping by the immediate parent would split <div>fo<b>o</b></div>
         while (element !== root && element.matches(INLINE_SELECTOR)) {
           const next_element = element.parentElement
           if (!next_element) break

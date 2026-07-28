@@ -5,10 +5,12 @@ import live_examples from './src/lib/live-examples/vite-plugin.ts'
 export default {
   ...config, // shared lint/fmt/build from @janosh/vite-config (dotfiles)
   staged: {
+    // not spread from config.staged: typed as a record *or* a function, so no-misused-spread
     '*.{js,ts,svelte,html,css,md,json,yaml}': `vp check --fix`,
+    // shared hook runs the JS svelte-check; CI here uses the Rust port
     '*.{ts,svelte}': `sh -c 'npx svelte-kit sync && npx svelte-check-rs --threshold error'`,
-    '*.test.ts': `sh -c '! grep -E "(test|describe)\\.only\\(" "$@"' --`,
-    '*': `codespell --ignore-words-list falsy --check-filenames`,
+    // >fo< spares the text-search fixtures splitting `foo` across inline markup
+    '*': `codespell --ignore-words-list falsy --ignore-regex '>fo<' --check-filenames`,
   },
 
   plugins: [sveltekit(), ...live_examples()],
