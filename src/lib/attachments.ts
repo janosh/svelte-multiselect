@@ -9,6 +9,8 @@ const css_px = (css_length: string): number => {
   return trimmed ? Number(trimmed.replace(/px$/, ``)) : NaN
 }
 
+const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
+
 export interface DraggableOptions {
   handle_selector?: string
   disabled?: boolean
@@ -162,9 +164,6 @@ export const resizable =
     let active_edge: string | null = null
     let start = { x: 0, y: 0 }
     let initial = { width: 0, height: 0, left: 0, top: 0 }
-
-    const clamp = (val: number, min: number, max: number) =>
-      Math.max(min, Math.min(max, val))
 
     if (getComputedStyle(node).position === `static`) node.style.position = `relative`
 
@@ -1421,7 +1420,7 @@ const is_focusable = (element: unknown): element is HTMLElement | SVGElement =>
 
 // Visibility read from computed style rather than measured boxes: test DOMs skip
 // layout, so getClientRects would report every candidate as hidden and empty the trap.
-const is_tabbable = (element: Element): boolean => {
+const is_tabbable = (element: Element): element is HTMLElement | SVGElement => {
   if (!is_focusable(element)) return false
   if (element.closest(`[inert],[hidden],[disabled]`)) return false
   if (Number(element.getAttribute(`tabindex`) ?? 0) < 0) return false
@@ -1429,7 +1428,11 @@ const is_tabbable = (element: Element): boolean => {
   return style.display !== `none` && style.visibility !== `hidden`
 }
 
-const register_trap_layer = key_layer_stack((event) => event.key === `Tab`)
+// isComposing for the same reason the Escape layer above filters it: Tab cycles IME
+// candidates mid-composition, and swallowing it there eats the user's word choice
+const register_trap_layer = key_layer_stack(
+  (event) => event.key === `Tab` && !event.isComposing,
+)
 
 const focus_element = (element: Element | null | undefined) => {
   if (is_focusable(element)) element.focus()
@@ -1459,13 +1462,16 @@ export const focus_trap =
         : typeof root === `string`
           ? node.querySelector(root)
           : root) ?? node
-    const containers = (): Element[] => [resolve_root(), ...extra_containers]
+    // The node stays the containment boundary while `root` only narrows what Tab cycles.
+    // Narrowing both would make a focusable sibling of the root — the backdrop button in
+    // a modal, which a click focuses — read as outside: Tab would stop being trapped and
+    // teardown would skip the focus restore.
+    const containers = (): Element[] => [node, ...extra_containers]
+    const tab_scopes = (): Element[] => [resolve_root(), ...extra_containers]
     // Recollected per keystroke: menus grow, filter and disable items while open
     const tabbables = (): (HTMLElement | SVGElement)[] =>
-      containers().flatMap((parent) =>
-        [...parent.querySelectorAll(tabbable_selector)]
-          .filter(is_focusable)
-          .filter(is_tabbable),
+      tab_scopes().flatMap((parent) =>
+        [...parent.querySelectorAll(tabbable_selector)].filter(is_tabbable),
       )
     const is_inside = (target: unknown): target is Element =>
       target instanceof Element && containers().some((el) => el.contains(target))
@@ -1586,8 +1592,6 @@ const COLOR_FN = /^(?<name>oklch|oklab|lch|lab|hsla?|hwb|color)\((?<args>[^)]*)\
 
 type Triple = [number, number, number]
 
-const clamp = (value: number, min = 0, max = 1) => Math.min(max, Math.max(min, value))
-
 const dot3 = (matrix: readonly number[], [x_val, y_val, z_val]: Triple): Triple => [
   matrix[0] * x_val + matrix[1] * y_val + matrix[2] * z_val,
   matrix[3] * x_val + matrix[4] * y_val + matrix[5] * z_val,
@@ -1602,18 +1606,34 @@ const parse_component = (token: string, percent_ref: number): number => {
 }
 // hsl/hwb take `50` and `50%` to mean the same thing
 const parse_percentage = (token: string): number =>
-  token.endsWith(`%`) ? parse_component(token, 1) : parse_component(token, 1) / 100
+  parse_component(token, 1) / (token.endsWith(`%`) ? 1 : 100)
+// alpha is a 0..1 number or a percentage, and absent means opaque
+const parse_alpha = (token: string | undefined): number =>
+  token === undefined ? 1 : clamp(parse_component(token, 1))
+// Junk anywhere in a component reaches here as NaN, so one check at the end rejects
+// the whole color rather than every parse site having to guard
+const finite_rgba = (
+  rgb: Triple,
+  alpha: number,
+): [number, number, number, number] | null => {
+  const parsed: [number, number, number, number] = [...rgb, alpha]
+  return parsed.every(Number.isFinite) ? parsed : null
+}
 
-// `grad` has to be tested before `rad`, which it ends with
 const HUE_PER_UNIT: Record<string, number> = {
   deg: 1,
   grad: 0.9,
   rad: 180 / Math.PI,
   turn: 360,
 }
+// Longest suffix first, so `grad` is never read as the `rad` it ends with. Matching in
+// declaration order would work too, but only until someone alphabetizes the object.
+const HUE_UNITS = Object.keys(HUE_PER_UNIT).toSorted(
+  (one, two) => two.length - one.length,
+)
 const parse_hue = (token: string): number => {
   const lower = token.toLowerCase()
-  const unit = Object.keys(HUE_PER_UNIT).find((suffix) => lower.endsWith(suffix))
+  const unit = HUE_UNITS.find((suffix) => lower.endsWith(suffix))
   const value = parse_component(unit ? lower.slice(0, -unit.length) : lower, 360)
   return value * (unit ? HUE_PER_UNIT[unit] : 1)
 }
@@ -1820,24 +1840,19 @@ const parse_color_function = (
       : undefined
   const rgb = function_to_rgb255(name, tokens)
   if (!rgb) return null
-  const alpha_token = alpha_arg?.trim() ?? legacy_alpha
-  const parsed: [number, number, number, number] = [
-    ...rgb,
-    alpha_token === undefined ? 1 : clamp(parse_component(alpha_token, 1)),
-  ]
-  return parsed.every(Number.isFinite) ? parsed : null
+  return finite_rgba(rgb, parse_alpha(alpha_arg?.trim() ?? legacy_alpha))
 }
 
 const parse_color = (color: string): [number, number, number, number] | null => {
   const trimmed = color.trim()
   const channels = RGB_COLOR.exec(trimmed)?.groups?.channels
   if (channels) {
-    const parts = channels
-      .split(/[\s,/]+/u)
-      .filter(Boolean)
-      .map(Number)
-    if (parts.length < 3 || parts.slice(0, 4).some(Number.isNaN)) return null
-    return [parts[0], parts[1], parts[2], parts[3] ?? 1]
+    // percentages are legal here too, in the channels (`rgb(50% 0% 0%)`) as much as in
+    // the alpha (`rgb(0 0 0 / 50%)`), even though a computed value never uses them
+    const parts = channels.split(/[\s,/]+/u).filter(Boolean)
+    if (parts.length < 3) return null
+    const rgb = parts.slice(0, 3).map((token) => parse_component(token, 255)) as Triple
+    return finite_rgba(rgb, parse_alpha(parts[3]))
   }
   const color_fn = COLOR_FN.exec(trimmed)?.groups
   if (color_fn) {

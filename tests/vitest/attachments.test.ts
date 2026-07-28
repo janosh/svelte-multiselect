@@ -18,45 +18,13 @@ import {
   tooltip,
 } from '$lib/attachments'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { doc_query, stub_prop } from './index'
-
-const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
-  new MouseEvent(type, { clientX, clientY, button, bubbles: true })
+import { doc_query, mock_rect, mouse_event, stub_prop } from './index'
 
 const create_element = (tag = `div`, styles: Partial<CSSStyleDeclaration> = {}) => {
   const element = document.createElement(tag)
   Object.assign(element.style, styles)
   document.body.append(element)
   return element
-}
-
-// Mocks the geometry an attachment reads: getBoundingClientRect plus the
-// offset* properties (read-only, hence defineProperty).
-const mock_rect = (
-  element: HTMLElement,
-  rect: { left: number; top: number; width?: number; height?: number },
-) => {
-  const { left, top, width = 100, height = 50 } = rect
-  element.getBoundingClientRect = vi.fn(() => ({
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
-    x: left,
-    y: top,
-    toJSON: () => ({}),
-  }))
-  const offsets = {
-    offsetLeft: left,
-    offsetTop: top,
-    offsetWidth: width,
-    offsetHeight: height,
-  }
-  for (const [prop, value] of Object.entries(offsets)) {
-    Object.defineProperty(element, prop, { value, configurable: true })
-  }
 }
 
 describe(`get_html_sort_value`, () => {
@@ -170,6 +138,77 @@ describe(`tooltip`, () => {
       for (const [prop, original] of originals) {
         if (original) Object.defineProperty(HTMLElement.prototype, prop, original)
       }
+    }
+  }
+
+  // happy-dom does no layout, so the width balancer's binary search has nothing to
+  // bisect: every measurement returns the same number and it takes the min-content
+  // escape hatch instead. This stands in a box that really wraps — its height is the
+  // number of lines the text needs at the current width — and reports the padding and
+  // box-sizing the balancer reads, which happy-dom leaves empty (and so NaN).
+  const mock_wrapping_tooltip = ({
+    single_line,
+    min_content,
+    line_height,
+    max_width,
+  }: {
+    single_line: number
+    min_content: number
+    line_height: number
+    max_width: number
+  }) => {
+    const is_tooltip = (node: HTMLElement) => node.classList.contains(`custom-tooltip`)
+    const laid_out_width = ({ style }: HTMLElement) => {
+      if (style.width === `min-content`) return min_content
+      const explicit = Number(style.width.replace(/px$/u, ``))
+      if (Number.isFinite(explicit) && style.width !== ``) return explicit
+      // `auto`: a single line while wrapping is off, else as wide as the cap allows
+      if (style.whiteSpace === `nowrap`) return single_line
+      return Math.min(single_line, style.maxWidth === `none` ? Infinity : max_width)
+    }
+
+    const undo_metrics = ([`offsetWidth`, `offsetHeight`] as const).map((prop) => {
+      const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop)
+      Object.defineProperty(HTMLElement.prototype, prop, {
+        configurable: true,
+        get(this: HTMLElement) {
+          if (!is_tooltip(this)) return original?.get?.call(this) ?? 0
+          const width = laid_out_width(this)
+          if (prop === `offsetWidth`) return width
+          return Math.ceil(single_line / width) * line_height
+        },
+      })
+      return () => {
+        if (original) Object.defineProperty(HTMLElement.prototype, prop, original)
+      }
+    })
+
+    const real_computed = globalThis.getComputedStyle.bind(globalThis)
+    const computed_spy = vi
+      .spyOn(globalThis, `getComputedStyle`)
+      .mockImplementation((node, pseudo) => {
+        const computed = real_computed(node, pseudo)
+        if (!(node instanceof HTMLElement) || !is_tooltip(node)) return computed
+        // border-box keeps style.width and offsetWidth the same number, so the search
+        // reads back exactly what it wrote
+        const overrides: Record<string, string> = {
+          boxSizing: `border-box`,
+          maxWidth: `${max_width}px`,
+        }
+        return new Proxy(computed, {
+          get: (target, key) => {
+            if (typeof key === `string` && key in overrides) return overrides[key]
+            const value = Reflect.get(target, key)
+            // CSSStyleDeclaration methods use private fields, so they reject the proxy
+            // as a receiver unless handed back already bound to the real declaration
+            return typeof value === `function` ? value.bind(target) : value
+          },
+        })
+      })
+
+    return () => {
+      computed_spy.mockRestore()
+      for (const undo of undo_metrics) undo()
     }
   }
 
@@ -296,7 +335,7 @@ describe(`tooltip`, () => {
       [`custom content`, `content`, `Custom content`, false],
       [`aria-label`, `aria-label`, `Aria label tooltip`, false],
       [`data-title`, `data-title`, `Data title tooltip`, false],
-    ])(`should create tooltip from %s`, (_desc, attr, content, stores_title) => {
+    ])(`creates a tooltip from %s`, (_desc, attr, content, stores_title) => {
       const element = create_element()
       const options = attr === `content` ? { content, delay: 0 } : { delay: 0 }
       if (attr !== `content`) element.setAttribute(attr, content)
@@ -323,7 +362,7 @@ describe(`tooltip`, () => {
     it.each([
       [`custom content over title`, { content: `Custom content` }, `Custom content`],
       [`title over aria-label`, {}, `Title content`],
-    ])(`should prioritize %s`, (_description, options, expected_content) => {
+    ])(`prioritizes %s`, (_description, options, expected_content) => {
       const element = create_element()
       element.title = `Title content`
       element.setAttribute(`aria-label`, `Aria content`)
@@ -339,7 +378,7 @@ describe(`tooltip`, () => {
     it.each([
       [`empty content strings`, ``, undefined],
       [`missing content`, undefined, undefined],
-    ])(`should handle %s`, (_desc, content, expected) => {
+    ])(`handles %s`, (_desc, content, expected) => {
       const element = create_element()
       if (content !== undefined) element.title = content
       mock_bounds(element)
@@ -350,7 +389,7 @@ describe(`tooltip`, () => {
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
 
-    it(`should handle disabled option`, () => {
+    it(`handles the disabled option`, () => {
       const [element, cleanup] = attach_tooltip(`Disabled tooltip`, { disabled: true })
       expect(cleanup).toBeUndefined()
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
@@ -366,7 +405,7 @@ describe(`tooltip`, () => {
       [`title`, `title`, `Child title tooltip`],
       [`aria-label`, `aria-label`, `Child aria tooltip`],
       [`data-title`, `data-title`, `Child data tooltip`],
-    ])(`should setup tooltips for child elements with %s`, (_desc, attr, content) => {
+    ])(`sets up tooltips for child elements with %s`, (_desc, attr, content) => {
       const parent = create_element()
       const wrapper = document.createElement(`div`)
       const child = document.createElement(`span`)
@@ -383,7 +422,7 @@ describe(`tooltip`, () => {
       cleanup?.()
     })
 
-    it(`should not setup children added after initialization`, async () => {
+    it(`does not set up children added after initialization`, async () => {
       const parent = create_element()
       parent.title = `Parent tooltip` // keep the attachment live, else nothing is observed
       const cleanup = setup_tooltip(parent)
@@ -402,13 +441,13 @@ describe(`tooltip`, () => {
   })
 
   describe(`Event Handling and Cleanup`, () => {
-    it(`should handle an invalid element gracefully`, () => {
+    it(`handles an invalid element gracefully`, () => {
       const attach = tooltip()
       // @ts-expect-error testing a null input
       expect(attach(null)).toBeUndefined()
     })
 
-    it(`should restore original title on cleanup`, () => {
+    it(`restores the original title on cleanup`, () => {
       const element = create_element()
       element.title = `Original title`
       const cleanup = setup_tooltip(element)
@@ -421,7 +460,7 @@ describe(`tooltip`, () => {
       expect(element.hasAttribute(`data-original-title`)).toBe(false)
     })
 
-    it(`should remove scroll listener on cleanup`, () => {
+    it(`removes the scroll listener on cleanup`, () => {
       const element = create_element()
       element.title = `test`
       const spy = vi.spyOn(globalThis, `removeEventListener`)
@@ -766,6 +805,35 @@ describe(`tooltip`, () => {
       expect(doc_query(`.custom-tooltip`).textContent).toBe(expected_text)
     })
 
+    it.each([
+      // short enough for one line, so the balancer pins that width and stops wrapping
+      [`pins a one-line tooltip to its own text width`, 150, `150px`, `nowrap`],
+      // 600px of text capped at 280 wraps onto 3 lines, and 200px is the narrowest box
+      // that still holds 3 — wider wastes space, a pixel less spills onto a 4th
+      [
+        `balances a wrapped tooltip to the narrowest width holding its lines`,
+        600,
+        `200px`,
+        ``,
+      ],
+    ])(`%s`, (_desc, single_line, expected_width, expected_wrap) => {
+      const restore = mock_wrapping_tooltip({
+        single_line,
+        min_content: 100,
+        line_height: 20,
+        max_width: 280,
+      })
+      try {
+        show_tooltip({}, `a tooltip long enough to wrap onto several lines`)
+        const tip = doc_query(`.custom-tooltip`)
+        expect(tip.style.width).toBe(expected_width)
+        // happy-dom reports an unset textWrap as undefined rather than an empty string
+        expect(tip.style.textWrap || ``).toBe(expected_wrap)
+      } finally {
+        restore()
+      }
+    })
+
     it(`tooltip uses theme-aware light-dark() defaults`, () => {
       // Base styles must not carry a color-scheme (page-declared schemes stay in
       // control, see #405); the schemeless-page fallback is covered below. Asserts
@@ -1020,7 +1088,7 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it(`should trigger on clicks landing on SVG elements outside the node`, () => {
+  it(`triggers on clicks landing on SVG elements outside the node`, () => {
     const { callback } = attach_outside()
 
     const svg = document.createElementNS(`http://www.w3.org/2000/svg`, `svg`)
@@ -1030,7 +1098,7 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it(`should dispatch custom event without a callback`, () => {
+  it(`dispatches a custom event without a callback`, () => {
     const element = create_element()
     const listener = vi.fn()
     element.addEventListener(`dismiss`, listener)
@@ -1688,7 +1756,7 @@ describe(`focus_trap`, () => {
   it.each([`selector`, `element`, `function`] as const)(
     `root as %s keeps the sibling backdrop out of the Tab cycle`,
     (kind) => {
-      const { layer, dialog, first, last } = make_layer()
+      const { layer, backdrop, dialog, first, last } = make_layer()
       const root =
         kind === `selector` ? `.dialog` : kind === `element` ? dialog : () => dialog
       attach_trap(layer, { root })
@@ -1700,6 +1768,12 @@ describe(`focus_trap`, () => {
       expect(document.activeElement).toBe(first) // wrapped, never onto the backdrop
       press_tab(true)
       expect(document.activeElement).toBe(last)
+
+      // `root` narrows what Tab cycles, not what counts as inside: clicking the backdrop
+      // focuses it, and if that read as outside the trap it would disarm Tab entirely
+      backdrop.focus()
+      expect(press_tab().defaultPrevented).toBe(true)
+      expect(document.activeElement).toBe(first)
     },
   )
 
@@ -1804,7 +1878,7 @@ describe(`draggable`, () => {
     return element
   }
 
-  it(`should update position, callbacks, cursor, and userSelect while dragging`, () => {
+  it(`updates position, callbacks, cursor and userSelect while dragging`, () => {
     const element = create_fixed_box()
     const [on_drag_start, on_drag, on_drag_end] = [vi.fn(), vi.fn(), vi.fn()]
 
@@ -1833,7 +1907,7 @@ describe(`draggable`, () => {
     expect(element.style.cursor).toBe(``)
   })
 
-  it(`should not start dragging on a non-primary mouse button`, () => {
+  it(`does not start dragging on a non-primary mouse button`, () => {
     // the context menu can swallow the mouseup, leaving the element stuck to the cursor
     const element = create_fixed_box()
     draggable({})(element)
@@ -1843,7 +1917,7 @@ describe(`draggable`, () => {
     expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
-  it(`should not set up dragging when disabled`, () => {
+  it(`does not set up dragging when disabled`, () => {
     const element = create_fixed_box()
     const cleanup = draggable({ disabled: true })(element)
     expect(cleanup).toBeUndefined()
@@ -1854,7 +1928,7 @@ describe(`draggable`, () => {
     expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
-  it(`should warn and return undefined for missing handle selector`, () => {
+  it(`warns and returns undefined for a missing handle selector`, () => {
     const element = create_element()
     const warn_spy = vi.spyOn(console, `warn`).mockImplementation(() => {})
 
@@ -1865,7 +1939,7 @@ describe(`draggable`, () => {
     warn_spy.mockRestore()
   })
 
-  it(`should only drag when event originates from handle_selector`, () => {
+  it(`drags only when the event originates from handle_selector`, () => {
     const element = create_fixed_box({ left: 0, top: 0 })
 
     const handle = document.createElement(`div`)
@@ -1888,7 +1962,7 @@ describe(`draggable`, () => {
     expect(element.style.top).toBe(`40px`)
   })
 
-  it(`should use offsetLeft/offsetTop for non-fixed positioning`, () => {
+  it(`uses offsetLeft/offsetTop for non-fixed positioning`, () => {
     const element = create_element()
     element.style.position = `absolute`
     // Mock offsetLeft and offsetTop (these are read-only, so we use Object.defineProperty)
@@ -1909,7 +1983,7 @@ describe(`draggable`, () => {
     expect(element.style.top).toBe(`75px`) // 35 + (50-10)
   })
 
-  it(`should ignore global drag events before dragging starts`, () => {
+  it(`ignores global drag events before dragging starts`, () => {
     const on_drag = vi.fn()
     const on_drag_end = vi.fn()
     draggable({ on_drag, on_drag_end })(create_element())
@@ -1921,7 +1995,7 @@ describe(`draggable`, () => {
     expect(on_drag_end).not.toHaveBeenCalled()
   })
 
-  it(`should reset body userSelect and cursor when cleaned up mid-drag`, () => {
+  it(`resets body userSelect and cursor when cleaned up mid-drag`, () => {
     const element = create_fixed_box({ left: 0, top: 0 })
 
     const cleanup = draggable()(element)
@@ -2384,7 +2458,7 @@ describe(`sortable`, () => {
       (row) => row.children[col_idx].textContent,
     )
 
-  it(`should sort ascending then descending when clicking the same header`, () => {
+  it(`sorts ascending then descending when clicking the same header`, () => {
     const table = create_table()
     const cleanup = sortable()(table)
     const [planet_header, moons_header] = Array.from(table.querySelectorAll(`thead th`))
@@ -2401,7 +2475,7 @@ describe(`sortable`, () => {
     cleanup?.()
   })
 
-  it(`should not set up sorting when disabled`, () => {
+  it(`does not set up sorting when disabled`, () => {
     const table = create_table()
     expect(sortable({ disabled: true })(table)).toBeUndefined()
     const header = get_required_header(table)
@@ -2412,7 +2486,7 @@ describe(`sortable`, () => {
     expect(header.classList.contains(`table-sort-asc`)).toBe(false)
   })
 
-  it(`should apply custom classes and sorted_style, reset other columns`, () => {
+  it(`applies custom classes and sorted_style, resetting other columns`, () => {
     const table = create_table()
     sortable({
       asc_class: `asc`,
@@ -2438,7 +2512,7 @@ describe(`sortable`, () => {
     expect(h2.style.backgroundColor).toBe(`red`)
   })
 
-  it(`should handle empty table body and custom header_selector`, () => {
+  it(`handles an empty table body and a custom header_selector`, () => {
     const table = document.createElement(`table`)
     table.innerHTML = `<thead><tr><th class="sortable">A</th><th>B</th></tr></thead>`
     document.body.append(table)
@@ -2461,7 +2535,7 @@ describe(`sortable`, () => {
       [`foo`, `10`, `bar`, `2`],
       [`2`, `10`, `bar`, `foo`],
     ],
-  ])(`should sort %s correctly`, (_desc, cells, expected) => {
+  ])(`sorts %s correctly`, (_desc, cells, expected) => {
     const table = document.createElement(`table`)
     const rows = cells.map((val: string) => `<tr><td>${val}</td></tr>`).join(``)
     table.innerHTML = `<thead><tr><th>Col</th></tr></thead><tbody>${rows}</tbody>`
@@ -2473,7 +2547,7 @@ describe(`sortable`, () => {
     expect(get_column_values(table, 0).map((val) => val?.trim())).toEqual(expected)
   })
 
-  it(`should treat rows with missing cells (colspan placeholder) as empty and sort them last`, () => {
+  it(`treats rows with missing cells (colspan placeholder) as empty and sorts them last`, () => {
     const table = document.createElement(`table`)
     table.innerHTML =
       `<thead><tr><th>Name</th><th>Score</th></tr></thead><tbody>` +
@@ -2494,7 +2568,7 @@ describe(`sortable`, () => {
     expect(first_cells).toEqual([`Bob`, `Alice`, `No data`])
   })
 
-  it(`should not re-parent rows of nested tables when sorting`, () => {
+  it(`does not re-parent rows of nested tables when sorting`, () => {
     const table = document.createElement(`table`)
     table.innerHTML =
       `<thead><tr><th>Name</th><th>Data</th></tr></thead><tbody>` +
@@ -2517,7 +2591,7 @@ describe(`sortable`, () => {
     ])
   })
 
-  it(`should preserve header child markup across sort clicks and cleanup`, () => {
+  it(`preserves header child markup across sort clicks and cleanup`, () => {
     const table = create_table()
     const headers = Array.from(table.querySelectorAll<HTMLTableCellElement>(`thead th`))
     const [header] = headers
@@ -2564,7 +2638,7 @@ describe(`resizable`, () => {
     [`left`, [`left`], 5, 75, `ew-resize`],
     [`top`, [`top`], 100, 5, `ns-resize`],
   ] as const)(
-    `should apply resize cursor on %s edge hover`,
+    `applies the resize cursor on %s edge hover`,
     (_edge, edges, clientX, clientY, expected_cursor) => {
       const element = create_box()
       resizable(edges ? { edges: [...edges] } : {})(element)
@@ -2575,7 +2649,7 @@ describe(`resizable`, () => {
     },
   )
 
-  it(`should use custom handle_size and reset the cursor away from edges`, () => {
+  it(`uses a custom handle_size and resets the cursor away from edges`, () => {
     const element = create_box()
     const cleanup = resizable({ handle_size: 20 })(element)
 
@@ -2596,7 +2670,7 @@ describe(`resizable`, () => {
     [`min_height`, { min_height: 80 }, [100, 145], [100, 30], `height`, `80px`],
     [`max_height`, { max_height: 250 }, [100, 145], [100, 400], `height`, `250px`],
   ] as const)(
-    `should respect %s constraint`,
+    `respects the %s constraint`,
     (
       _constraint,
       options,
@@ -2617,16 +2691,36 @@ describe(`resizable`, () => {
     },
   )
 
-  it(`should not start resizing on a non-primary mouse button`, () => {
+  // every way a gesture can fail to be a resize. A non-primary press matters most: the
+  // context menu it opens can swallow the mouseup, leaving the element stuck to the cursor
+  it.each([
+    [
+      `a press away from any edge`,
+      (box: HTMLElement) => box.dispatchEvent(mouse_event(`mousedown`, 100, 75)),
+    ],
+    [
+      `a non-primary button on an edge`,
+      (box: HTMLElement) => box.dispatchEvent(mouse_event(`mousedown`, 195, 75, 2)),
+    ],
+    [`a global move with no press at all`, () => {}],
+  ])(`does not start resizing on %s`, (_desc, gesture) => {
     const element = create_box()
     const on_resize_start = vi.fn()
-    resizable({ on_resize_start })(element)
+    const on_resize = vi.fn()
+    const on_resize_end = vi.fn()
+    resizable({ on_resize_start, on_resize, on_resize_end })(element)
 
-    element.dispatchEvent(mouse_event(`mousedown`, 195, 75, 2))
+    gesture(element)
+    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
+    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+
     expect(on_resize_start).not.toHaveBeenCalled()
+    expect(on_resize).not.toHaveBeenCalled()
+    expect(on_resize_end).not.toHaveBeenCalled()
+    expect(element.style.width).toBe(`200px`) // untouched from create_box
   })
 
-  it(`should fire on_resize_start, on_resize, and on_resize_end callbacks`, () => {
+  it(`fires on_resize_start, on_resize and on_resize_end callbacks`, () => {
     const element = create_box()
 
     const on_resize_start = vi.fn()
@@ -2676,7 +2770,7 @@ describe(`resizable`, () => {
       { height: `200px`, top: `50px` },
     ],
   ] as const)(
-    `should handle %s edge resize with position adjustment`,
+    `handles a %s edge resize with position adjustment`,
     (
       _edge,
       rect,
@@ -2698,7 +2792,7 @@ describe(`resizable`, () => {
     },
   )
 
-  it(`should do nothing when disabled`, () => {
+  it(`does nothing when disabled`, () => {
     const element = create_box()
     const on_resize_start = vi.fn()
     const cleanup = resizable({ disabled: true, on_resize_start })(element)
@@ -2746,29 +2840,7 @@ describe(`resizable`, () => {
     expect(element.style.position).toBe(expected_position)
   })
 
-  it(`should not start resizing when clicking outside edge areas`, () => {
-    const element = create_box()
-    const on_resize_start = vi.fn()
-    resizable({ on_resize_start })(element)
-
-    element.dispatchEvent(mouse_event(`mousedown`, 100, 75))
-
-    expect(on_resize_start).not.toHaveBeenCalled()
-  })
-
-  it(`should ignore global resize events before resizing starts`, () => {
-    const on_resize = vi.fn()
-    const on_resize_end = vi.fn()
-    resizable({ on_resize, on_resize_end })(create_box())
-
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
-
-    expect(on_resize).not.toHaveBeenCalled()
-    expect(on_resize_end).not.toHaveBeenCalled()
-  })
-
-  it(`should reset body userSelect when cleaned up mid-resize`, () => {
+  it(`resets body userSelect when cleaned up mid-resize`, () => {
     const element = create_box()
     const on_resize = vi.fn()
 
@@ -2966,6 +3038,14 @@ describe(`contrast_color`, () => {
     [`color(srgb-linear 1 1 1)`, 1],
     [`color(xyz-d50 0.9643 1 0.8251)`, 1],
     [`hwb(0.5turn 0% 0%)`, 0.701], // cyan
+    // same cyan a third way: 200grad is 180deg, and `grad` must not read as the `rad`
+    // it ends with, which would leave a trailing `g` and parse to NaN
+    [`hwb(200grad 0% 0%)`, 0.701],
+    [`oklch(0.627955 0.257683 0.51022606rad)`, 0.299], // red, the 29.2338deg above in radians
+    // percentages are as legal in rgb() as anywhere else, in channels and alpha alike
+    [`rgb(100% 0% 0%)`, 0.299],
+    [`rgb(0 0 0 / 50%)`, 0],
+    [`rgba(255, 255, 255, 50%)`, 1],
     [`hwb(0 25% 25%)`, 0.3995], // white and black both mixed into the pure hue
     [`hsla(0, 100%, 50%, 0.5)`, 0.299],
   ])(`%s converts to a luminance of %f`, (bg_color, expected) => {
@@ -2973,6 +3053,35 @@ describe(`contrast_color`, () => {
       pick_contrast_color({ bg_color, luminance_threshold, choices: [`over`, `under`] })
     expect(probe(expected - 1e-4)).toBe(`over`)
     expect(probe(expected + 1e-4)).toBe(`under`)
+  })
+
+  // The cases above are all primaries or pure white, which every space maps to the same
+  // corner of sRGB — they pass whatever the conversion matrices hold. These are mid-gamut,
+  // where the coefficients actually decide the answer, and the expected channels are what
+  // Chrome 144 paints for the same string (canvas fillStyle, then getImageData).
+  // Chrome quantizes to 8-bit, so its answer is only good to half a channel: 0.5/255 is
+  // 1.96e-3 of luminance, and the tolerance is that bound. Every wrong-matrix result
+  // checked (skipping the D50 adaptation above all) misses by far more than this.
+  it.each([
+    [`oklch(0.7 0.15 30)`, [237, 118, 101]],
+    [`oklab(0.35 0.08 -0.12)`, [75, 28, 118]],
+    [`lab(50 40 -30)`, [165, 91, 171]],
+    [`lch(60 50 300)`, [157, 131, 222]],
+    [`hsl(200 60% 40%)`, [41, 122, 163]],
+    [`hwb(45 60% 10%)`, [230, 210, 153]],
+    [`color(srgb-linear 0.5 0.5 0.5)`, [188, 188, 188]],
+    [`color(display-p3 0.8 0.2 0.4)`, [222, 24, 101]],
+    [`color(a98-rgb 0.5 0.5 0.2)`, [128, 128, 40]],
+    [`color(prophoto-rgb 0.4 0.7 0.3)`, [0, 204, 64]],
+    [`color(rec2020 0.6 0.3 0.8)`, [187, 74, 218]],
+    [`color(xyz-d50 0.3 0.4 0.2)`, [122, 184, 127]],
+    [`color(xyz-d65 0.3 0.4 0.2)`, [139, 182, 107]],
+  ])(`%s lands where Chrome paints it`, (bg_color, [red, green, blue]) => {
+    const expected = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+    const probe = (luminance_threshold: number) =>
+      pick_contrast_color({ bg_color, luminance_threshold, choices: [`over`, `under`] })
+    expect(probe(expected - 2e-3)).toBe(`over`)
+    expect(probe(expected + 2e-3)).toBe(`under`)
   })
 
   // Perceived brightness weights green ×0.587, red ×0.299 and blue ×0.114, so the
@@ -3032,6 +3141,7 @@ describe(`contrast_color`, () => {
   it.each([
     [`oklch(0.3 0.1 200)`, `white`, true],
     [`oklch(0.3 0.1 200 / 0)`, `black`, false],
+    [`rgb(0 0 0 / 0%)`, `black`, false], // a percentage alpha reads as transparent too
     [`color(display-p3 1 1 1)`, `black`, true],
   ])(`sees %s as a painted ancestor: %s`, (background, expected_color, painted) => {
     const ancestor = document.createElement(`div`)
