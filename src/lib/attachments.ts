@@ -1,4 +1,5 @@
 import type { Attachment } from 'svelte/attachments'
+import type { TextMutationOptions, TextSearchNodeFilter } from './text-search'
 import { create_burst_debounce, sync_owned_highlight } from './text-search'
 import type { Hotkey, Placement, PositionOptions } from './utils'
 import { compute_position, fuzzy_match_indices, get_uuid, run_hotkeys } from './utils'
@@ -393,7 +394,7 @@ export type HighlightOptions = {
   query?: string
   disabled?: boolean
   fuzzy?: boolean
-  node_filter?: (node: Node) => number
+  node_filter?: TextSearchNodeFilter
   css_class?: string
   duration_ms?: number
   scroll_to_match?: false | ScrollIntoViewOptions
@@ -404,7 +405,7 @@ export type HighlightOptions = {
   // re-run lands `debounce_ms` after the last mutation but no later than
   // `max_wait_ms` after the first of the burst, so a stream of appended log lines
   // still refreshes at a steady rate instead of never settling.
-  observe_mutations?: boolean | { debounce_ms?: number; max_wait_ms?: number }
+  observe_mutations?: boolean | TextMutationOptions
 }
 
 const HAS_NON_ASCII = /\P{ASCII}/u
@@ -425,7 +426,10 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   const search = query.trim().toLowerCase().replaceAll(/\s+/gu, ` `)
   // if disabled or empty query, this instance owns no highlight
   if (!search || disabled) return undefined
-  const highlight_registry = globalThis.CSS?.highlights
+  // both halves of the CSS Custom Highlight API are needed, same as highlight_ranges
+  // checks: a registry without the constructor would throw in sync_owned_highlight
+  const highlight_registry =
+    typeof globalThis.Highlight === `function` ? globalThis.CSS?.highlights : undefined
   const highlight_owner = Symbol(css_class)
   const substring_pattern = new RegExp(
     search.replaceAll(/[.*+?^${}()|[\]\\]/gu, `\\$&`).replaceAll(` `, `\\s+`),
@@ -1479,8 +1483,9 @@ export const focus_trap =
 
     const focus_origin = document.activeElement
     // The root itself is the fallback focus target, so it needs to accept focus.
-    // Track where we added tabindex so cleanup can leave the markup as it was.
-    let tabindex_added_to: Element | null = null
+    // Track where we added tabindex so cleanup can leave the markup as it was. A set
+    // because a recapture can resolve a root the last one did not, and all get put back.
+    const tabindex_added_to = new Set<Element>()
     let last_inside: Element | null = null
     let trap_active = true
 
@@ -1498,7 +1503,7 @@ export const focus_trap =
       const target = preferred ?? requested ?? tabbables()[0] ?? root_el
       if (target === root_el && !root_el.hasAttribute(`tabindex`)) {
         root_el.setAttribute(`tabindex`, `-1`)
-        tabindex_added_to = root_el
+        tabindex_added_to.add(root_el)
       }
       focus_element(target)
     }
@@ -1562,7 +1567,7 @@ export const focus_trap =
       unregister_escape?.()
       document.removeEventListener(`focusin`, on_focusin)
       document.removeEventListener(`focusout`, on_focusout)
-      tabindex_added_to?.removeAttribute(`tabindex`)
+      for (const element of tabindex_added_to) element.removeAttribute(`tabindex`)
       if (restore === false) return
       // Don't yank focus if the user already placed it elsewhere. A closing surface
       // usually leaves focus on body, which counts as ours to hand back.

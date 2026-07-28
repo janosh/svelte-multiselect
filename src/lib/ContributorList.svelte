@@ -40,7 +40,9 @@
     gap: var(--contributor-gap, 1ex);
   }
   ul img {
+    /* both dimensions, or a custom size leaves the 60px height attribute and an oval */
     width: var(--contributor-avatar-size, 60px);
+    height: var(--contributor-avatar-size, 60px);
     border-radius: 50%;
     display: block;
     filter: grayscale(100%);

@@ -72,6 +72,14 @@ describe(`ContributorList`, () => {
     expect(document.querySelector(`.custom-tooltip-arrow`)).toBeNull()
   })
 
+  // sizing only the width would leave the 60px height attribute, i.e. an oval avatar
+  test(`--contributor-avatar-size drives both avatar dimensions`, async () => {
+    await mount_list({ style: `--contributor-avatar-size: 40px` })
+
+    const { width, height, borderRadius } = getComputedStyle(doc_query(`ul li img`))
+    expect([width, height, borderRadius]).toEqual([`40px`, `40px`, `50%`])
+  })
+
   test.each([
     [`empty list`, [], 0],
     [`single contributor`, [contributors[0]], 1],

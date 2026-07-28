@@ -181,7 +181,9 @@
       type="button"
       class="sort-order"
       {disabled}
-      aria-label="Sort {sort_order === `asc` ? `ascending` : `descending`}"
+      aria-label="Sorted {sort_order === `asc`
+        ? `ascending, activate to sort descending`
+        : `descending, activate to sort ascending`}"
       onclick={() => (sort_order = sort_order === `asc` ? `desc` : `asc`)}
     >
       {sort_order === `asc` ? `↑` : `↓`}

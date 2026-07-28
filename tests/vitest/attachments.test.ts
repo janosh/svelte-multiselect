@@ -63,6 +63,16 @@ describe(`get_html_sort_value`, () => {
   })
 })
 
+// The mocks below swap prototype getters and put the originals back. A happy-dom that
+// moved one off HTMLElement.prototype must fail here rather than leave a patched
+// prototype behind for every later test — getBoundingClientRect already has no own
+// descriptor there, so this is not hypothetical.
+const own_prototype_descriptor = (prop: string): PropertyDescriptor => {
+  const descriptor = Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop)
+  if (!descriptor) throw new Error(`HTMLElement.prototype.${prop} is not an own property`)
+  return descriptor
+}
+
 describe(`tooltip`, () => {
   const setup_tooltip = (element: HTMLElement, options = {}) => tooltip(options)(element)
 
@@ -113,11 +123,11 @@ describe(`tooltip`, () => {
         [`offsetHeight`, height],
       ] as const
     ).map(([prop, size]) => {
-      const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop)
+      const original = own_prototype_descriptor(prop)
       Object.defineProperty(HTMLElement.prototype, prop, {
         configurable: true,
         get(this: HTMLElement) {
-          return is_tooltip(this) ? size : (original?.get?.call(this) ?? 0)
+          return is_tooltip(this) ? size : (original.get?.call(this) ?? 0)
         },
       })
       return [prop, original] as const
@@ -126,7 +136,7 @@ describe(`tooltip`, () => {
     return () => {
       bounds_spy.mockRestore()
       for (const [prop, original] of originals) {
-        if (original) Object.defineProperty(HTMLElement.prototype, prop, original)
+        Object.defineProperty(HTMLElement.prototype, prop, original)
       }
     }
   }
@@ -158,19 +168,17 @@ describe(`tooltip`, () => {
     }
 
     const undo_metrics = ([`offsetWidth`, `offsetHeight`] as const).map((prop) => {
-      const original = Object.getOwnPropertyDescriptor(HTMLElement.prototype, prop)
+      const original = own_prototype_descriptor(prop)
       Object.defineProperty(HTMLElement.prototype, prop, {
         configurable: true,
         get(this: HTMLElement) {
-          if (!is_tooltip(this)) return original?.get?.call(this) ?? 0
+          if (!is_tooltip(this)) return original.get?.call(this) ?? 0
           const width = laid_out_width(this)
           if (prop === `offsetWidth`) return width
           return Math.ceil(single_line / width) * line_height
         },
       })
-      return () => {
-        if (original) Object.defineProperty(HTMLElement.prototype, prop, original)
-      }
+      return () => Object.defineProperty(HTMLElement.prototype, prop, original)
     })
 
     const real_computed = globalThis.getComputedStyle.bind(globalThis)
@@ -1801,6 +1809,33 @@ describe(`focus_trap`, () => {
     expect(await focus_out_to(create_element(`button`))).toBe(buttons[2])
   })
 
+  // A recapture re-resolves `root`, so a trap can inject its fallback tabindex into
+  // more than one element over its life and owes all of them a cleanup.
+  it(`takes the injected tabindex off every root it fell back to`, async () => {
+    const surface = create_element()
+    // no tabbables in either panel, so the root itself is the fallback focus target
+    const panels = [document.createElement(`div`), document.createElement(`div`)]
+    surface.append(...panels)
+    let current = panels[0]
+
+    const cleanup = attach_trap(surface, {
+      root: () => current,
+      recapture: true,
+      restore: false,
+    })
+    expect(panels[0].getAttribute(`tabindex`)).toBe(`-1`)
+
+    // the first panel goes away as focus leaves, so the recapture resolves the other
+    current = panels[1]
+    create_element(`button`).focus()
+    panels[0].remove()
+    await Promise.resolve()
+    expect(panels[1].getAttribute(`tabindex`)).toBe(`-1`)
+
+    cleanup?.()
+    expect(panels.map((panel) => panel.hasAttribute(`tabindex`))).toEqual([false, false])
+  })
+
   // the counterpart of the holds_focus guard on Tab: a trap that was never given
   // focus must not summon it on every focus move elsewhere on the page
   it(`recapture stays out of focus moves that never touched the trap`, async () => {
@@ -2081,8 +2116,13 @@ describe(`highlight_matches`, () => {
     cleanup?.()
   })
 
-  it(`runs range effects without CSS Highlight API support`, () => {
-    vi.stubGlobal(`CSS`, undefined)
+  it.each([
+    [`CSS is missing`, () => vi.stubGlobal(`CSS`, undefined)],
+    // a registry without the constructor is what a partial polyfill or a stub in a
+    // consumer's test leaves behind; constructing a Highlight there throws
+    [`Highlight is missing`, () => vi.stubGlobal(`Highlight`, undefined)],
+  ])(`runs range effects when %s`, (_desc, prepare) => {
+    prepare()
     mock_element.textContent = `PageSearch result`
     const on_highlight = vi.fn()
 
@@ -2092,6 +2132,7 @@ describe(`highlight_matches`, () => {
       node: mock_element,
       ranges: [expect.any(Range)],
     })
+    expect(set_highlights_spy).not.toHaveBeenCalled()
     cleanup?.()
   })
 

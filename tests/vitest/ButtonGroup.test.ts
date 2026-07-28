@@ -279,23 +279,27 @@ describe(`ButtonGroup`, () => {
     mount_group({ options: letters, sort_order: `asc` })
 
     const arrow = doc_query<HTMLButtonElement>(`.sort-order`)
-    expect([arrow.textContent?.trim(), arrow.getAttribute(`aria-label`)]).toEqual([
-      `↑`,
-      `Sort ascending`,
-    ])
+    // the label states the direction and what activating does. No aria-pressed: APG is
+    // explicit that a toggle's label must not change with its state, and this one does,
+    // so "Sorted ascending, not pressed" would read as the sort not being applied
+    const arrow_state = () => [
+      arrow.textContent?.trim(),
+      arrow.getAttribute(`aria-label`),
+    ]
+    const ascending = `Sorted ascending, activate to sort descending`
+    const descending = `Sorted descending, activate to sort ascending`
+    expect(arrow_state()).toEqual([`↑`, ascending])
+    expect(arrow.hasAttribute(`aria-pressed`)).toBe(false)
     // it sits outside the radiogroup, which may only own radios
     expect(arrow.closest(`.options`)).toBeNull()
 
     arrow.click()
     await tick()
-    expect([arrow.textContent?.trim(), arrow.getAttribute(`aria-label`)]).toEqual([
-      `↓`,
-      `Sort descending`,
-    ])
+    expect(arrow_state()).toEqual([`↓`, descending])
 
     arrow.click()
     await tick()
-    expect(arrow.textContent?.trim()).toBe(`↑`)
+    expect(arrow_state()).toEqual([`↑`, ascending])
   })
 
   test(`renders per-option icon and spinner, and forwards class and rest props`, () => {
@@ -393,11 +397,11 @@ describe(`ButtonGroup`, () => {
   // The wrapper is opt-in because hive turned the component down partly over its
   // `.segmented > button` rules, which stop matching once every button gains a parent.
   test.each([
-    [`nothing is slotted`, undefined, `options`, 0],
-    [`a suffix is slotted`, info_link, `option`, 3],
+    [`options`, `nothing is slotted`, undefined, 0],
+    [`option`, `a suffix is slotted`, info_link, 3],
   ] as const)(
-    `the button's parent is .%2$s when %s`,
-    (_d, option_suffix, parent, wraps) => {
+    `the button's parent is .%s when %s`,
+    (parent, _desc, option_suffix, wraps) => {
       const buttons = mount_group({ options: letters, selected: `beta`, option_suffix })
 
       expect(document.querySelectorAll(`.options > .option`)).toHaveLength(wraps)

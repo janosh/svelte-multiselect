@@ -1,7 +1,9 @@
 import DraggablePane from '$lib/DraggablePane.svelte'
+import pane_source from '$lib/DraggablePane.svelte?raw'
+import demo_page from '$root/src/routes/(demos)/(draggable-pane)/draggable-pane/+page.md?raw'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query, mock_rect, mouse_event, stub_prop } from './index'
+import { doc_query, escape_key, mock_rect, mouse_event, stub_prop } from './index'
 
 describe(`DraggablePane`, () => {
   // click_outside registers document listeners that outlive innerHTML = '', and
@@ -32,7 +34,9 @@ describe(`DraggablePane`, () => {
     await tick()
     return {
       toggle: doc_query<HTMLButtonElement>(`button.pane-toggle`),
-      pane: doc_query<HTMLDivElement>(`[role="dialog"]`),
+      // by class, not [role="dialog"]: the role is itself under test, and finding the
+      // pane by it would make those assertions tautological
+      pane: doc_query<HTMLDivElement>(`.draggable-pane`),
     }
   }
 
@@ -52,8 +56,8 @@ describe(`DraggablePane`, () => {
 
   const press = (target: EventTarget) =>
     target.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
-  const escape = () =>
-    document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
+  // returns false once a handler cancels the key, i.e. the pane swallowed it
+  const escape = () => document.dispatchEvent(escape_key())
   const is_open = (pane: HTMLElement) => pane.style.display === `grid`
 
   // the press-move-release both attachments listen for, on the pane (resize) or on
@@ -128,16 +132,11 @@ describe(`DraggablePane`, () => {
     const on_close = vi.fn()
     await setup({ on_close })
 
-    const event = new KeyboardEvent(`keydown`, {
-      key: `Escape`,
-      bubbles: true,
-      cancelable: true,
-    })
-    document.dispatchEvent(event)
+    const reached_the_page = escape()
     await tick()
 
     expect(on_close).not.toHaveBeenCalled()
-    expect(event.defaultPrevented).toBe(false)
+    expect(reached_the_page).toBe(true)
   })
 
   // The whole point of position="fixed": a toggle low on screen or hard against the
@@ -401,11 +400,29 @@ describe(`DraggablePane`, () => {
   test(`spreads consumer props without losing its own class, role or click`, async () => {
     const onclick = vi.fn()
     const { toggle, pane } = await setup({
-      pane_props: { class: `consumer-pane`, id: `my-pane` },
-      toggle_props: { class: `consumer-toggle`, title: `Options`, onclick },
+      pane_props: {
+        class: `consumer-pane`,
+        id: `my-pane`,
+        role: `region`,
+        'data-resize': `both`,
+        'aria-label': `Structure controls`,
+      },
+      toggle_props: {
+        class: `consumer-toggle`,
+        title: `Options`,
+        type: `submit`,
+        onclick,
+      },
     })
 
     expect(pane.id).toBe(`my-pane`)
+    // role, data-resize and type sit after the spread, so a consumer cannot clobber
+    // them: a `region` pane loses its dialog semantics, a `submit` toggle posts the form
+    expect([pane.getAttribute(`role`), pane.dataset.resize]).toEqual([`dialog`, `none`])
+    expect(toggle.getAttribute(`type`)).toBe(`button`)
+    // the other side of the ordering: aria-label sits before the spread, so a page with
+    // several panes can rename them apart rather than reading three "Draggable pane"s
+    expect(pane.getAttribute(`aria-label`)).toBe(`Structure controls`)
     expect(pane.classList.contains(`draggable-pane`)).toBe(true)
     expect(pane.classList.contains(`consumer-pane`)).toBe(true)
     // Toc skips headings whose closest() match is excluded, so pane content (floating
@@ -419,5 +436,22 @@ describe(`DraggablePane`, () => {
     await tick()
     expect(onclick).toHaveBeenCalledOnce()
     expect(pane.style.display).toBe(`grid`) // our own handler still opened it
+  })
+
+  // the demo page's Styling section is the only list of these, so a var added to the
+  // component without a mention there is a knob nobody can find
+  test(`every --pane-* custom property the styles read is documented`, () => {
+    const declared = new Set(
+      [...pane_source.matchAll(/var\(\s*(?<prop>--pane-[\w-]+)/gu)].map(
+        (match) => match.groups?.prop ?? ``,
+      ),
+    )
+    expect(declared.size).toBeGreaterThan(10)
+
+    // --pane-toggle-* vars are covered by the wildcard the page names them under
+    const undocumented = [...declared].filter(
+      (prop) => !prop.startsWith(`--pane-toggle-`) && !demo_page.includes(prop),
+    )
+    expect(undocumented).toEqual([])
   })
 })

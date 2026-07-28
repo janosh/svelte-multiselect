@@ -180,9 +180,9 @@
 <svelte:window onresize={handle_viewport_resize} />
 
 <button
-  type="button"
   bind:this={toggle_btn}
   {...toggle_props}
+  type="button"
   aria-expanded={show}
   onclick={chain_handlers(toggle_pane, toggle_props.onclick)}
   class={[`pane-toggle`, toggle_props.class]}
@@ -197,11 +197,13 @@
   {/if}
 </button>
 
-<!-- toc-exclude keeps pane headings out of a page's Toc: this is floating chrome -->
+<!-- toc-exclude keeps pane headings out of a page's Toc: this is floating chrome. The
+aria-label sits before the spread, so a page with several panes renames them via pane_props -->
 <div
   bind:this={pane}
-  role="dialog"
   aria-label="Draggable pane"
+  {...pane_props}
+  role="dialog"
   aria-modal="false"
   data-resize={resize}
   data-dragging={dragging}
@@ -212,7 +214,6 @@
   style:display={show ? `grid` : `none`}
   style:padding-right={gutter(`width`)}
   style:padding-bottom={gutter(`height`)}
-  {...pane_props}
   class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
   {@attach draggable({
     handle_selector: `.drag-handle`,
