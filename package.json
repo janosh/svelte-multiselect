@@ -123,17 +123,13 @@
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",
     "svelte": "^5.48.0",
-    "vite": "^8.0.0",
-    "vite-plus": "^0.2.5"
+    "vite": "^8.0.0"
   },
   "peerDependenciesMeta": {
     "@wooorm/starry-night": {
       "optional": true
     },
     "vite": {
-      "optional": true
-    },
-    "vite-plus": {
       "optional": true
     }
   },
