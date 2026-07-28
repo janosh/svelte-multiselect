@@ -36,6 +36,10 @@ export function sync_fullscreen(opts: FullscreenSyncOptions): void {
 
     if (fullscreen && fullscreen_element !== wrapper) {
       wrapper.requestFullscreen().catch((error: unknown) => {
+        // The browser refused (no user gesture, permissions policy), so the flag is now
+        // lying about the document. Clearing it both tells the consumer the truth and
+        // lets the next true transition be seen as a change worth retrying.
+        opts.set_fullscreen(false)
         console.error(`requestFullscreen failed for`, wrapper, error)
         opts.on_request_error?.(error)
       })

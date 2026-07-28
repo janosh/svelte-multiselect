@@ -44,6 +44,19 @@ const buttons = () => [
 const ask = (message: string, title: string) =>
   track(request_choice(message, title, write_choices, `cancel`))
 
+// happy-dom does no layout, so the dialog's box has to be supplied: a press on the
+// ::backdrop and one on the dialog's own padding both target the dialog element, and
+// only the pointer coordinates tell them apart.
+const stub_rect = (dialog: HTMLDialogElement) => {
+  const rect = { left: 100, top: 100, right: 300, bottom: 200, width: 200, height: 100 }
+  dialog.getBoundingClientRect = () => rect as DOMRect
+  return dialog
+}
+const press_at = (dialog: HTMLDialogElement, clientX: number, clientY: number) =>
+  stub_rect(dialog).dispatchEvent(
+    new MouseEvent(`click`, { bubbles: true, clientX, clientY }),
+  )
+
 test(`shows the queued question and closes once the queue drains`, async () => {
   const dialog = await mount_dialog()
   expect(dialog.open).toBe(false)
@@ -105,11 +118,7 @@ test(`one click cannot answer two racing requests`, async () => {
 // accented choice a stray key would otherwise reach.
 test.each([
   [`Escape`, (dialog: HTMLDialogElement) => dialog.close()],
-  [
-    `a backdrop click`,
-    (dialog: HTMLDialogElement) =>
-      dialog.dispatchEvent(new MouseEvent(`click`, { bubbles: true })),
-  ],
+  [`a backdrop click`, (dialog: HTMLDialogElement) => press_at(dialog, 10, 10)],
 ])(`%s resolves with dismiss_id`, async (_desc, dismiss) => {
   const dialog = await mount_dialog()
   const answer = ask(`Overwrite?`, `Write files`)
@@ -122,12 +131,21 @@ test.each([
   expect(dialog.open).toBe(false)
 })
 
-test(`a click inside the dialog is not a backdrop click`, async () => {
+test.each([
+  [
+    `on its content`,
+    () =>
+      doc_query(`dialog h2`).dispatchEvent(new MouseEvent(`click`, { bubbles: true })),
+  ],
+  // the padding belongs to the dialog, but the click lands on the dialog element there
+  // just as a backdrop press does, so target alone would dismiss the question
+  [`in its padding`, (dialog: HTMLDialogElement) => press_at(dialog, 105, 105)],
+])(`a click %s is not a backdrop click`, async (_desc, click) => {
   const dialog = await mount_dialog()
   const answer = ask(`Overwrite?`, `Write files`)
   await flush()
 
-  doc_query(`dialog h2`).dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+  click(dialog)
   await flush()
 
   expect(answer.settled).toBe(false)

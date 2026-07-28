@@ -47,7 +47,7 @@ describe(`LiteYouTubeEmbed`, () => {
   })
 
   test(`builds both poster sources and the labels from video_id`, async () => {
-    mount_embed({ video_id: `xyz789`, play_label: `Watch the talk` })
+    const props = mount_embed({ video_id: `xyz789`, play_label: `Watch the talk` })
     await tick()
 
     expect(doc_query(`picture source`).getAttribute(`srcset`)).toBe(
@@ -62,6 +62,16 @@ describe(`LiteYouTubeEmbed`, () => {
     click(`button.play-btn`)
     await tick()
     expect(doc_query(`iframe`).getAttribute(`title`)).toBe(`Watch the talk`)
+
+    // the poster URLs get the same encoding the iframe src above is checked for
+    props.video_id = `a b/c`
+    await tick()
+    expect(doc_query(`picture source`).getAttribute(`srcset`)).toBe(
+      `https://i.ytimg.com/vi_webp/a%20b%2Fc/hqdefault.webp`,
+    )
+    expect(doc_query(`img.poster`).getAttribute(`src`)).toBe(
+      `https://i.ytimg.com/vi/a%20b%2Fc/hqdefault.jpg`,
+    )
   })
 
   test.each([

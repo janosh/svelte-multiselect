@@ -63,5 +63,13 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
     document.head.append(style)
   }
 
-  globalThis.print()
+  // A print() that throws never fires afterprint, so the swapped title and the injected
+  // rules would outlive the call and follow the page around.
+  try {
+    globalThis.print()
+  } catch (error) {
+    globalThis.removeEventListener(`afterprint`, cleanup)
+    cleanup()
+    throw error
+  }
 }

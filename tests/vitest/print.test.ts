@@ -96,6 +96,24 @@ test(`afterprint removes the injected @page rule and the target marker`, () => {
   expect(print_styles()).toHaveLength(1)
 })
 
+// A print() that throws never fires afterprint, so nothing else would undo the swap
+test(`a print that throws still restores the title, marker and style`, () => {
+  const node = make_target(960)
+  document.title = `Docs`
+  const print_error = new Error(`print blocked`)
+  print_spy.mockImplementationOnce(() => {
+    throw print_error
+  })
+
+  expect(() =>
+    print_element(node, { single_page: true, filename: `docs-print` }),
+  ).toThrow(print_error)
+
+  expect(document.title).toBe(`Docs`)
+  expect(node.hasAttribute(`data-print-target`)).toBe(false)
+  expect(print_styles()).toHaveLength(0)
+})
+
 test(`two prints in a row leave one live style, not a growing stack`, () => {
   const node = make_target(960)
   print_element(node, { single_page: true })

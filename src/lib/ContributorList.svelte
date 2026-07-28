@@ -16,9 +16,15 @@
 <ul {...rest}>
   {#each contributors as { avatar_url, html_url, login } (login)}
     <li>
-      <a href={html_url} {@attach tooltip({ ...tooltip_options, content: login })}>
-        <!-- contributor lists run long and sit below the fold, so never block on them -->
-        <img src={avatar_url} alt={login} loading="lazy" />
+      <a
+        href={html_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        aria-label={login}
+        {@attach tooltip({ ...tooltip_options, content: login })}
+      >
+        <!-- below the fold, so lazy; sized up front, so a late arrival can't reflow -->
+        <img src={avatar_url} alt="" width="60" height="60" loading="lazy" />
       </a>
     </li>
   {/each}

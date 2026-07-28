@@ -238,10 +238,13 @@ describe(`shortcut rebinding`, () => {
   test.each([
     [mac, { key: `k`, metaKey: true }, `meta+k`],
     [linux, { key: `k`, ctrlKey: true }, `ctrl+k`],
-  ])(`event_to_combo({ mod: false }) records the physical modifier`, (ua, init, exp) => {
-    stub_prop(globalThis.navigator, `userAgent`, ua)
-    expect(event_to_combo(keydown(init), { mod: false })).toBe(exp)
-  })
+  ])(
+    `event_to_combo({ mod: false }) records the physical modifier on %s`,
+    (ua, init, exp) => {
+      stub_prop(globalThis.navigator, `userAgent`, ua)
+      expect(event_to_combo(keydown(init), { mod: false })).toBe(exp)
+    },
+  )
 
   // the load-bearing property: whatever a rebinding UI records must match the very
   // keystroke that produced it, on the platform it was recorded on and via the token
@@ -335,6 +338,18 @@ describe(`shortcut rebinding`, () => {
       expect(sanitize_shortcut_overrides({ paste: `mod+p` }, clashing)).toEqual({
         paste: `mod+p`,
       })
+    })
+
+    // `mod` resolves to the platform's primary modifier, so an override spelling that
+    // modifier out lands on the very same keystroke as a `mod` default
+    test.each([
+      [mac, `meta+x`, {}],
+      [mac, `ctrl+x`, { copy: `ctrl+x` }], // Ctrl is its own modifier on a Mac
+      [linux, `ctrl+x`, {}],
+      [linux, `meta+x`, { copy: `meta+x` }],
+    ])(`on %s an override of %j resolves against mod defaults`, (ua, combo, expected) => {
+      stub_prop(globalThis.navigator, `userAgent`, ua)
+      expect(sanitize_shortcut_overrides({ copy: combo }, defaults)).toEqual(expected)
     })
 
     test(`survives round-tripping its own output`, () => {

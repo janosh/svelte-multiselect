@@ -28,8 +28,13 @@
     if (request) answer_dialog(request.dismiss_id)
   }}
   onclick={(event) => {
-    // Clicks on the ::backdrop target the dialog element itself
-    if (event.target === event.currentTarget) event.currentTarget.close()
+    // Clicks on the ::backdrop target the dialog element itself, but so do clicks on the
+    // dialog's own padding, so the pointer has to be outside the box to count as a dismiss
+    if (event.target !== event.currentTarget) return
+    const { top, right, bottom, left } = event.currentTarget.getBoundingClientRect()
+    const { clientX, clientY } = event
+    const outside = clientX < left || clientX > right || clientY < top || clientY > bottom
+    if (outside) event.currentTarget.close()
   }}
 >
   {#if request}

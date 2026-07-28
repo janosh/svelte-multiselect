@@ -355,6 +355,22 @@ export function normalize_combo(
   return [...MODIFIER_ORDER.filter((name) => mods.has(name)), key].join(`+`)
 }
 
+// `mod` is Cmd on Apple and Ctrl everywhere else, so `mod+k` and the platform's own
+// spelling of the same chord are one shortcut and have to collide. Conflicts are judged
+// on this resolved form; what gets stored stays in the canonical `mod` spelling.
+const resolve_combo = (combo: string): string => {
+  const primary = is_apple_platform() ? `meta` : `ctrl`
+  const parts = combo.split(`+`)
+  const mods = new Set(
+    parts.filter(is_modifier).map((part) => {
+      const name = canonical_modifier(part)
+      return name === `mod` ? primary : name
+    }),
+  )
+  const keys = parts.filter((part) => !is_modifier(part))
+  return [...MODIFIER_ORDER.filter((name) => mods.has(name)), ...keys].join(`+`)
+}
+
 // Validates stored `action id -> combo` overrides against a map of defaults, dropping
 // unknown ids, junk combos and overrides that merely restate the default. Overrides
 // that would leave two actions on one combo are dropped too, so an override can never
@@ -377,10 +393,13 @@ export function sanitize_shortcut_overrides(
   }
   // dropping an override reinstates its default, which can collide in turn, so repeat
   for (;;) {
-    const effective = Object.values({ ...canonical_defaults, ...overrides })
-    const conflicting = Object.keys(overrides).filter(
-      (id) => effective.indexOf(overrides[id]) !== effective.lastIndexOf(overrides[id]),
+    const effective = Object.values({ ...canonical_defaults, ...overrides }).map(
+      resolve_combo,
     )
+    const conflicting = Object.keys(overrides).filter((id) => {
+      const resolved = resolve_combo(overrides[id])
+      return effective.indexOf(resolved) !== effective.lastIndexOf(resolved)
+    })
     if (conflicting.length === 0) return overrides
     for (const id of conflicting) Reflect.deleteProperty(overrides, id)
   }

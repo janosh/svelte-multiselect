@@ -25,13 +25,16 @@
     return false
   })
 
+  // shared so an id carrying `?`, `#` or `/` escapes its path segment in no URL below
+  const safe_id = $derived(encodeURIComponent(video_id))
+
   const iframe_src = $derived.by(() => {
     const params = new URLSearchParams(
       Object.entries(player_params).map(([key, val]) => [key, String(val)]),
     )
     const host = nocookie ? `www.youtube-nocookie.com` : `www.youtube.com`
     const query = params.size > 0 ? `?${params}` : ``
-    return `https://${host}/embed/${encodeURIComponent(video_id)}${query}`
+    return `https://${host}/embed/${safe_id}${query}`
   })
 </script>
 
@@ -46,12 +49,12 @@
   {#key video_id}
     <picture>
       <source
-        srcset="https://i.ytimg.com/vi_webp/{video_id}/hqdefault.webp"
+        srcset="https://i.ytimg.com/vi_webp/{safe_id}/hqdefault.webp"
         type="image/webp"
       />
       <img
         class="poster"
-        src="https://i.ytimg.com/vi/{video_id}/hqdefault.jpg"
+        src="https://i.ytimg.com/vi/{safe_id}/hqdefault.jpg"
         alt={play_label}
       />
     </picture>

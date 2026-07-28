@@ -33,15 +33,20 @@ describe(`ContributorList`, () => {
     await mount_list()
 
     const links = Array.from(document.querySelectorAll<HTMLAnchorElement>(`ul li a`))
-    expect(links.map((link) => link.getAttribute(`href`))).toEqual([
-      `https://gh/janosh`,
-      `https://gh/octocat`,
-    ])
     const avatars = Array.from(document.querySelectorAll<HTMLImageElement>(`ul li img`))
-    expect(avatars.map((img) => [img.getAttribute(`src`), img.alt])).toEqual([
-      [`https://avatars.gh/1`, `janosh`],
-      [`https://avatars.gh/2`, `octocat`],
+    // the login names the link, since the avatar it wraps is decorative
+    expect(links.map((link) => [link.href, link.getAttribute(`aria-label`)])).toEqual([
+      [`https://gh/janosh`, `janosh`],
+      [`https://gh/octocat`, `octocat`],
     ])
+    expect(avatars.map((img) => img.getAttribute(`src`))).toEqual([
+      `https://avatars.gh/1`,
+      `https://avatars.gh/2`,
+    ])
+    // chrome shared by every row: profiles are off-site, and an intrinsic size keeps
+    // lazy avatars from reflowing the row as they land
+    expect([links[0].target, links[0].rel]).toEqual([`_blank`, `noopener noreferrer`])
+    expect([avatars[0].alt, avatars[0].width, avatars[0].height]).toEqual([``, 60, 60])
   })
 
   // the hand-rolled hover label this port replaced is gone; the shared tooltip

@@ -174,8 +174,9 @@ describe(`flag <-> browser sync`, () => {
     const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
     const on_request_error = vi.fn()
     const request_error = new Error(`fullscreen denied`)
-    Element.prototype.requestFullscreen = vi.fn(() => Promise.reject(request_error))
-    const { button } = mount_button({ on_request_error })
+    const request = vi.fn(() => Promise.reject(request_error))
+    Element.prototype.requestFullscreen = request
+    const { button, flag } = mount_button({ on_request_error })
 
     button.click()
     await settle()
@@ -183,6 +184,13 @@ describe(`flag <-> browser sync`, () => {
     expect(on_request_error).toHaveBeenCalledExactlyOnceWith(request_error)
     expect(console_error).toHaveBeenCalledOnce()
     expect(document.fullscreenElement).toBeNull()
+    // a flag left true would both misreport the browser and make the next attempt a
+    // no-op, since the effect would see no change to act on
+    expect(get(flag)).toBe(false)
+
+    button.click()
+    await settle()
+    expect(request).toHaveBeenCalledTimes(2)
   })
 
   test(`a rejected exit is logged and leaves the browser in fullscreen`, async () => {
