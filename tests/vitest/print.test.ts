@@ -15,6 +15,7 @@ beforeEach(() => {
 })
 afterEach(() => {
   after_print() // the print dialog always closes eventually; let each test clean up
+  vi.useRealTimers() // the watchdog cases opt into fake ones
   vi.unstubAllGlobals()
   document.title = original_title
 })
@@ -126,12 +127,59 @@ test(`a print that throws still restores the title, marker and style`, () => {
   expect(print_styles()).toHaveLength(0)
 })
 
+// Headless and embedded webviews return from print() without ever dispatching
+// afterprint. Left alone the swapped title and the injected rules stand for good, and
+// the in-flight flag disables every later filename swap for the page's lifetime.
+test(`a print that never fires afterprint is undone by the watchdog`, () => {
+  vi.useFakeTimers()
+  const node = make_target(960)
+  document.title = `Docs`
+  print_element(node, { single_page: true, filename: `docs-print` })
+  expect(document.title).toBe(`docs-print`)
+
+  vi.advanceTimersByTime(60_000)
+
+  expect(document.title).toBe(`Docs`)
+  expect(node.hasAttribute(`data-print-target`)).toBe(false)
+  expect(print_styles()).toHaveLength(0)
+  // the swap flag went back too, so a later print still gets its filename
+  print_element(node, { filename: `later-print` })
+  expect(document.title).toBe(`later-print`)
+})
+
+// Disarming only covers a watchdog whose own print ended. One whose print never fired
+// afterprint is still armed when the next print starts, and the marker is shared state on
+// the node, so without ownership it would strip the live print's marker mid-dialog and
+// leave its width rules matching nothing.
+test(`a still-armed watchdog does not strip a later print's marker`, () => {
+  vi.useFakeTimers()
+  const node = make_target(960)
+  print_element(node, { single_page: true }) // afterprint never fires for this one
+
+  vi.advanceTimersByTime(30_000)
+  print_element(node, { single_page: true })
+  vi.advanceTimersByTime(30_000) // the first watchdog fires while the second is live
+
+  expect(node.hasAttribute(`data-print-target`)).toBe(true)
+  expect(print_styles()).toHaveLength(1)
+})
+
 test(`two prints in a row leave one live style, not a growing stack`, () => {
+  vi.useFakeTimers()
   const node = make_target(960)
   print_element(node, { single_page: true })
   after_print()
+  // pins the disarm directly: without it the assertions below still fail, but on a
+  // stripped marker rather than on the stale timer that stripped it
+  expect(vi.getTimerCount()).toBe(0)
+
+  // the second print starts inside the first watchdog's window, so a watchdog that
+  // outlived its own print would strip this one's marker and style out from under it
+  vi.advanceTimersByTime(30_000)
   print_element(node, { single_page: true, page_width_mm: 100 })
+  vi.advanceTimersByTime(30_000)
 
   expect(print_styles()).toHaveLength(1)
   expect(page_rule()).toBe(`@page { size: 100mm 254mm; margin: 0 }`)
+  expect(node.hasAttribute(`data-print-target`)).toBe(true)
 })

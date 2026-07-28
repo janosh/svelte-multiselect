@@ -28,19 +28,22 @@ const dir_entry = (
   children: FileSystemEntry[],
   batch_size = children.length,
 ): FileSystemDirectoryEntry => {
-  let read_idx = 0
   const entry = {
     isFile: false,
     isDirectory: true,
     name,
     fullPath: `/${name}`,
-    createReader: () => ({
-      readEntries: (on_entries: (entries: FileSystemEntry[]) => void) => {
-        const batch = children.slice(read_idx, read_idx + Math.max(batch_size, 1))
-        read_idx += batch.length
-        on_entries(batch)
-      },
-    }),
+    // per-reader cursor, like the browser's: a second reader restarts the listing
+    createReader: () => {
+      let read_idx = 0
+      return {
+        readEntries: (on_entries: (entries: FileSystemEntry[]) => void) => {
+          const batch = children.slice(read_idx, read_idx + Math.max(batch_size, 1))
+          read_idx += batch.length
+          on_entries(batch)
+        },
+      }
+    },
   }
   return entry as unknown as FileSystemDirectoryEntry
 }
@@ -84,11 +87,14 @@ test(`a directory larger than one readEntries batch is drained fully`, async () 
   const children = Array.from({ length: 250 }, (_unused, idx) =>
     file_entry(`file-${idx}.txt`),
   )
-  const dropped = drop([dir_entry(`big`, children, 100)])
+  const big_dir = dir_entry(`big`, children, 100)
 
-  const files = await files_from_data_transfer(dropped)
-  expect(files).toHaveLength(250) // three full batches then an empty one
+  const files = await files_from_data_transfer(drop([big_dir]))
+  expect(files).toHaveLength(250) // two full batches, a partial one, then an empty one
   expect(names(files).slice(-1)).toEqual([`file-249.txt`])
+
+  // a fresh reader restarts the listing, so a second drop is not silently empty
+  expect(await files_from_data_transfer(drop([big_dir]))).toHaveLength(250)
 })
 
 test(`an empty directory contributes nothing`, async () => {
@@ -122,6 +128,56 @@ test(`a rejected entry.file call rejects the whole expansion`, async () => {
   const broken = file_entry(`broken.txt`, (_on_file, on_error) => on_error?.(failure))
 
   await expect(files_from_data_transfer(drop([broken]))).rejects.toThrow(failure)
+})
+
+// `depth` directories wrapped around one file, outermost first: d{depth-1}/.../d0/bottom
+const nested_dirs = (depth: number): FileSystemEntry => {
+  let entry: FileSystemEntry = file_entry(`bottom.txt`)
+  for (let level = 0; level < depth; level++) entry = dir_entry(`d${level}`, [entry])
+  return entry
+}
+
+// A symlink to one of its own ancestors nests without end - the entry API resolves it -
+// so unbounded recursion would hang the tab. The cap has to stop that without tripping
+// on a real tree, so both sides of it are pinned here.
+test(`directory nesting is capped`, async () => {
+  const deepest_allowed = drop([nested_dirs(32)])
+  expect(names(await files_from_data_transfer(deepest_allowed))).toEqual([`bottom.txt`])
+
+  const too_deep = drop([nested_dirs(33)])
+  await expect(files_from_data_transfer(too_deep)).rejects.toThrow(
+    `Dropped directory /d0 nests deeper than 32 levels`,
+  )
+})
+
+// Two sibling links to a common ancestor branch as fast as they descend, so the depth cap
+// alone never trips - measured at 300k directory reads by depth 17. The entry budget is
+// what stops it, and the read counter here fails loudly if it ever stops doing so: an
+// uncapped run is a non-yielding microtask loop that vitest's timeout cannot interrupt.
+test(`a branching cycle is stopped by the entry budget`, async () => {
+  let reads = 0
+  const fanout_dir = (): FileSystemEntry =>
+    ({
+      isFile: false,
+      isDirectory: true,
+      name: `loop`,
+      fullPath: `/loop`,
+      createReader: () => {
+        let drained = false
+        return {
+          readEntries: (on_entries: (entries: FileSystemEntry[]) => void) => {
+            if (++reads > 50_000) throw new Error(`budget never tripped after ${reads}`)
+            on_entries(drained ? [] : [fanout_dir(), fanout_dir()])
+            drained = true
+          },
+        }
+      },
+    }) as unknown as FileSystemDirectoryEntry
+
+  const walk = files_from_data_transfer(drop([fanout_dir()]))
+  await expect(walk).rejects.toThrow(
+    `Dropped tree expands past 20000 directories at /loop`,
+  )
 })
 
 test(`entries are read in parallel rather than one after another`, async () => {

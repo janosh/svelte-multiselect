@@ -19,6 +19,8 @@ const INLINE_SELECTOR =
   `a, abbr, b, bdi, bdo, cite, code, data, del, dfn, em, i, ins, kbd, mark, q, ` +
   `ruby, s, samp, small, span, strong, sub, sup, time, u, var`
 
+const NON_RENDERED_SELECTOR = `script, style, noscript`
+
 // Same shape as the node_filter of the highlight_matches attachment: return one of
 // the NodeFilter constants to accept or reject a text node.
 export type TextSearchNodeFilter = (node: Node) => number
@@ -75,6 +77,10 @@ const text_segments = (
       segment.nodes.push({ node, start, end: segment.text.length })
       return
     }
+    // Source text, not content: a hit inside one would scroll the reader to nothing. The
+    // segment carries on across it rather than breaking, since the text either side of a
+    // <script> renders as one continuous run.
+    if (node instanceof Element && node.matches(NON_RENDERED_SELECTOR)) return
     const is_break =
       node !== root && node instanceof Element && node.matches(break_selector)
     if (is_break) segment = undefined
@@ -134,17 +140,37 @@ const normalize_with_offsets = (source: string): NormalizedText => {
   return { text, starts, ends }
 }
 
+// First node reaching min_end. `end` is a running sum of node lengths, so it never
+// decreases and the boundary can be binary searched — non-decreasing is all that needs
+// to hold, so the empty-node guard above is not load-bearing here. Scanning from the
+// front for each of many matches in a segment split across many text nodes is quadratic,
+// and a highlighted code block is one segment of hundreds of nodes.
+const node_reaching = (nodes: SegmentNode[], min_end: number): SegmentNode => {
+  let low = 0
+  let high = nodes.length - 1
+  while (low < high) {
+    const mid = (low + high) >> 1
+    if (nodes[mid].end >= min_end) high = mid
+    else low = mid + 1
+  }
+  const found = nodes[low]
+  // offsets come from the segment's own text, so they always land inside it
+  if (!found || found.end < min_end) {
+    throw new Error(`No text node reaches offset ${min_end} of ${nodes.at(-1)?.end}`)
+  }
+  return found
+}
+
 // start and end are offsets into the segment's concatenated text
 const range_for_match = (
   { element, nodes }: TextSegment,
   start: number,
   end: number,
-): Range | null => {
+): Range => {
   // a match ending exactly on a node boundary stays in that node rather than
   // opening a zero-length tail in the next one
-  const start_node = nodes.find((entry) => start < entry.end)
-  const end_node = nodes.find((entry) => end <= entry.end)
-  if (!start_node || !end_node) return null
+  const start_node = node_reaching(nodes, start + 1)
+  const end_node = node_reaching(nodes, end)
   const range = element.ownerDocument.createRange()
   range.setStart(start_node.node, start - start_node.start)
   range.setEnd(end_node.node, end - end_node.start)
@@ -171,11 +197,8 @@ export const search_text = (
     let match_idx = text.indexOf(normalized_query)
     while (match_idx >= 0) {
       const end_idx = match_idx + normalized_query.length
-      const range = range_for_match(segment, starts[match_idx], ends[end_idx - 1])
-      if (range) {
-        ranges.push(range)
-        matched_elements.add(segment.element)
-      }
+      ranges.push(range_for_match(segment, starts[match_idx], ends[end_idx - 1]))
+      matched_elements.add(segment.element)
       match_idx = text.indexOf(normalized_query, end_idx)
     }
   }
@@ -200,6 +223,8 @@ type OwnedHighlight = {
 // registry so a stubbed CSS.highlights cannot leak state into the real one.
 const owned_highlights = new WeakMap<HighlightRegistry, Map<string, OwnedHighlight>>()
 
+// Callers own the feature detection: a registry from an environment with no `Highlight`
+// constructor throws here rather than silently registering nothing.
 export const sync_owned_highlight = (
   registry: HighlightRegistry,
   css_class: string,
@@ -228,7 +253,10 @@ export const sync_owned_highlight = (
     else registry.delete(css_class)
     return
   }
-  if (state.installed && current !== state.installed) return
+  // Yield to another writer that has taken the name, but not to a vacant one: a
+  // CSS.highlights.clear() elsewhere on the page empties the registry without any new
+  // owner, and reading that as a takeover would strand this highlight permanently.
+  if (state.installed && current && current !== state.installed) return
   state.installed = new Highlight(...[...state.owners.values()].flat())
   registry.set(css_class, state.installed)
 }

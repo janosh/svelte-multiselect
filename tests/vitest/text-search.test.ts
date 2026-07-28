@@ -50,6 +50,12 @@ describe(`search_text`, () => {
     [`a nested block`, `<div>a<div>b</div>c</div>`, `ac`, 0],
     // a block nested in a block ends the outer run on both sides
     [`text after a nested block`, `<div>a<p>b</p>cd</div>`, `cd`, 1],
+    // source text never renders, so a hit inside one would scroll the reader to nothing
+    [`script source`, `<p>alpha <script>const alpha = 1</script></p>`, `alpha`, 1],
+    [`style source`, `<p>gap <style>.gap { gap: 0 }</style></p>`, `gap`, 1],
+    [`noscript source`, `<p>hi <noscript>hi there</noscript></p>`, `hi`, 1],
+    // skipping the subtree, not breaking on it: `fo` and `od` render as one run
+    [`text either side of a script`, `<p>fo<script>x</script>od</p>`, `food`, 1],
   ])(`%s`, (_desc, html, query, expected_count) => {
     expect(search_text(render(html), query).ranges).toHaveLength(expected_count)
   })
@@ -116,6 +122,21 @@ describe(`search_text`, () => {
       [0, 2],
     ])
     expect(matches).toHaveLength(2)
+  })
+
+  // Pins the binary search against the linear scan it replaced: 59 matches over 60 nodes
+  // hit boundaries across the whole offset table, where an off-by-one would show up.
+  // The quadratic scan it also fixes is a cost, not a behaviour, so nothing asserts it.
+  it(`maps every match onto its node in a segment split across many nodes`, () => {
+    const texts = Array.from({ length: 30 }, (_unused, idx) => `a${idx}b`)
+    const root = render(`<p>${texts.map((text) => `<b>${text}</b>`).join(``)}</p>`)
+
+    // `ba` straddles every boundary between consecutive nodes and nowhere else
+    const { ranges } = search_text(root, `ba`)
+
+    expect(ranges.map(range_bounds)).toEqual(
+      texts.slice(0, -1).map((text, idx) => [text, text.length - 1, texts[idx + 1], 1]),
+    )
   })
 
   it(`skips rejected subtrees and does not join text across them`, () => {
@@ -245,6 +266,22 @@ describe(`highlight_ranges`, () => {
     release?.()
     expect(installed_ranges(`one`)).toEqual(first)
     expect(registry.has(`two`)).toBe(false)
+  })
+
+  it(`yields the name to another writer, but reclaims it once vacant`, () => {
+    highlight_ranges(search(`<p>alpha</p>`, `alpha`))
+    const foreign = new globalThis.Highlight()
+    registry.set(`text-search-match`, foreign)
+
+    // someone else holds the name now, so a later sync leaves their highlight alone
+    highlight_ranges(search(`<p>beta</p>`, `beta`))
+    expect(registry.get(`text-search-match`)).toBe(foreign)
+
+    // a CSS.highlights.clear() elsewhere vacates it with no successor. Yielding to
+    // nobody would strand the highlight for the rest of the page's life.
+    registry.clear()
+    highlight_ranges(search(`<p>gamma</p>`, `gamma`))
+    expect(installed_ranges()).toHaveLength(3)
   })
 
   it(`restores a pre-existing highlight it did not install`, () => {

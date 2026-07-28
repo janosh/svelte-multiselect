@@ -33,19 +33,37 @@ const print_attr = `data-print-target`
 // back, and the page keeps that filename for good.
 let title_swap_in_flight = false
 
+// Headless and embedded webviews return from print() without ever firing afterprint,
+// which leaves the swapped title and the injected rules standing for good and
+// title_swap_in_flight disabling every later swap. Long enough that a dialog a user
+// actually opened has closed first.
+const AFTERPRINT_TIMEOUT_MS = 60_000
+
+// Stamped into the marker attribute so a print only ever clears its own. The attribute is
+// shared state on the node, and disarming does not cover a watchdog that is still armed
+// because its own print never ended: it would strip a later print's marker off the node.
+let print_seq = 0
+
 export const print_element = (node: HTMLElement, options: PrintOptions = {}): void => {
   const { filename, single_page = false, page_width_mm = 210, px_per_inch = 96 } = options
 
   let style: HTMLStyleElement | null = null
   // non-null only for the call that owns the swap, which is the only one that restores
   let restore_title: string | null = null
+  let watchdog: ReturnType<typeof setTimeout> | undefined
+  const token = `${++print_seq}`
 
   const cleanup = () => {
+    // afterprint and the watchdog both undo this print, so each disarms the other: a
+    // leftover one would fire mid-print later and strip that print's setup instead
+    clearTimeout(watchdog)
+    globalThis.removeEventListener(`afterprint`, cleanup)
     if (restore_title !== null) {
       document.title = restore_title
       title_swap_in_flight = false
     }
-    node.removeAttribute(print_attr)
+    // the selector matches on presence, so the token is invisible to the printed rules
+    if (node.getAttribute(print_attr) === token) node.removeAttribute(print_attr)
     style?.remove()
   }
 
@@ -59,7 +77,7 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
   }
 
   if (single_page) {
-    node.setAttribute(print_attr, ``)
+    node.setAttribute(print_attr, token)
     // Measured as the element stands on screen (getBoundingClientRect flushes layout): an
     // @media print rule of the caller's own that changes it is not reflected here.
     const height_px = node.getBoundingClientRect().height
@@ -76,12 +94,16 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
     document.head.append(style)
   }
 
+  // nothing was swapped or injected when neither option is set, so there is nothing for
+  // the watchdog to undo and no reason to pin a closure over `node` for a minute
+  if (restore_title !== null || style) {
+    watchdog = setTimeout(cleanup, AFTERPRINT_TIMEOUT_MS)
+  }
   // A print() that throws never fires afterprint, so the swapped title and the injected
   // rules would outlive the call and follow the page around.
   try {
     globalThis.print()
   } catch (error) {
-    globalThis.removeEventListener(`afterprint`, cleanup)
     cleanup()
     throw error
   }
