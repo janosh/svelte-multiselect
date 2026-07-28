@@ -28,14 +28,23 @@ export const format_print_filename = (prefix: string, date = new Date()): string
 // (a class, an id, a tag name) has to be known here.
 const print_attr = `data-print-target`
 
+// afterprint lands a turn of the event loop after print() returns, so back-to-back calls
+// overlap. Without this the second one reads the first one's filename as the title to put
+// back, and the page keeps that filename for good.
+let title_swap_in_flight = false
+
 export const print_element = (node: HTMLElement, options: PrintOptions = {}): void => {
   const { filename, single_page = false, page_width_mm = 210, px_per_inch = 96 } = options
 
-  const original_title = document.title
   let style: HTMLStyleElement | null = null
+  // non-null only for the call that owns the swap, which is the only one that restores
+  let restore_title: string | null = null
 
   const cleanup = () => {
-    document.title = original_title
+    if (restore_title !== null) {
+      document.title = restore_title
+      title_swap_in_flight = false
+    }
     node.removeAttribute(print_attr)
     style?.remove()
   }
@@ -43,7 +52,11 @@ export const print_element = (node: HTMLElement, options: PrintOptions = {}): vo
   // afterprint covers both outcomes: the dialog is dismissed the same way whether the
   // user saved a PDF or cancelled, and until then the swapped title has to stand.
   globalThis.addEventListener(`afterprint`, cleanup, { once: true })
-  if (filename !== undefined) document.title = filename
+  if (filename !== undefined && !title_swap_in_flight) {
+    restore_title = document.title
+    title_swap_in_flight = true
+    document.title = filename
+  }
 
   if (single_page) {
     node.setAttribute(print_attr, ``)

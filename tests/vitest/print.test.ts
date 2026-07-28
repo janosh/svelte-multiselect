@@ -51,6 +51,18 @@ test(`filename swaps document.title for the print and restores it after`, () => 
   expect(document.title).toBe(`Some Page`)
 })
 
+// afterprint arrives a turn late, so a second print can start while the first still has
+// the title swapped. Taken as the original, that filename would outlive both prints.
+test(`overlapping prints restore the title the first one found`, () => {
+  document.title = `Some Page`
+  print_element(make_target(500), { filename: `first-print` })
+  print_element(make_target(500), { filename: `second-print` })
+
+  expect(document.title).toBe(`first-print`) // the second call does not get to re-swap
+  after_print()
+  expect(document.title).toBe(`Some Page`)
+})
+
 test(`without a filename the title is left alone`, () => {
   document.title = `Untouched`
   print_element(make_target(500))
