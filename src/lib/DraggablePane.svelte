@@ -25,7 +25,6 @@
     toggle_props?: HTMLAttributes<HTMLButtonElement>
     open_icon?: IconName
     closed_icon?: IconName
-    icon_style?: string
     // Gap between the toggle button's bottom-right corner and the pane's
     offset?: { x?: number; y?: number }
     max_width?: string
@@ -52,7 +51,6 @@
     toggle_props = {},
     open_icon = `Cross`,
     closed_icon = `Expand`,
-    icon_style = ``,
     offset = { x: 5, y: 5 },
     max_width = `450px`,
     pane_props = {},
@@ -152,7 +150,6 @@
       left: `${left}px`,
       top: `${top}px`,
       right: `auto`,
-      bottom: `auto`,
     })
     if (position === `fixed`) {
       const available = globalThis.innerHeight - top - viewport_margin_px
@@ -196,7 +193,7 @@
   {#if toggle}
     {@render toggle(pane_state)}
   {:else}
-    <Icon icon={show ? open_icon : closed_icon} style={icon_style} />
+    <Icon icon={show ? open_icon : closed_icon} />
   {/if}
 </button>
 
@@ -305,7 +302,6 @@
     grid-template-rows: minmax(0, 1fr);
     text-align: left;
     width: var(--pane-width, 28em);
-    max-width: var(--pane-max-width, 80cqw);
     min-height: var(--pane-min-height, auto);
     /* --pane-viewport-clamp (set for position="fixed") keeps a pane whose toggle sits
        low on screen above the bottom viewport edge */

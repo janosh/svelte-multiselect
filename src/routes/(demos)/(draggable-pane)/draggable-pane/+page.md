@@ -124,7 +124,7 @@ remains below.
 ### Styling
 
 Everything hangs off CSS custom properties on the pane: `--pane-bg`, `--pane-border`,
-`--pane-border-radius`, `--pane-box-shadow`, `--pane-width`, `--pane-max-width`,
+`--pane-border-radius`, `--pane-box-shadow`, `--pane-width`,
 `--pane-min-height`, `--pane-max-height`, `--pane-padding`, `--pane-gap`,
 `--pane-z-index`, plus `--pane-toggle-*` for the button. `pane_props` and `toggle_props`
 spread onto the two elements for anything else.
