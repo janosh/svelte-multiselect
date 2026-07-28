@@ -72,6 +72,23 @@ describe(`Footer`, () => {
     expect(document.querySelector(`footer nav`)).toBeNull()
   })
 
+  // FooterLink has no id and href is not an identity: two links may point at the same
+  // page under different labels. A key that collided would throw each_key_duplicate and
+  // take down the whole nav rather than just the repeat.
+  test(`renders links sharing an href`, () => {
+    mount_footer({
+      links: [
+        { href: `/repo`, label: `GitHub`, icon: `GitHub` },
+        { href: `/repo`, label: `Source` },
+      ],
+    })
+
+    expect(anchors().map((anchor) => anchor.textContent?.trim())).toEqual([
+      `GitHub`,
+      `Source`,
+    ])
+  })
+
   test(`renders children after the nav in source order`, () => {
     mount_footer({
       links: [{ href: `/issues`, label: `Issues` }],

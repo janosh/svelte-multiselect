@@ -255,3 +255,20 @@ test(`empty title renders details without summary`, () => {
   expect(document.querySelector(`details`)).toBeInstanceOf(HTMLDetailsElement)
   expect(document.querySelector(`summary`)).toBeNull()
 })
+
+// a title is a heading, not an identity: two files from different directories can share
+// one, and a bare title key would throw each_key_duplicate and drop the whole list
+test(`renders files sharing a title`, () => {
+  mount_files({
+    files: [
+      { title: `index.ts`, content: `export const a = 1` },
+      { title: `index.ts`, content: `export const b = 2` },
+    ],
+  })
+
+  expect(all_text(`details > summary`)).toHaveLength(2)
+  expect(all_text(`details pre code`)).toEqual([
+    `export const a = 1`,
+    `export const b = 2`,
+  ])
+})

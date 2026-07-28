@@ -25,7 +25,8 @@
 <footer {...rest}>
   {#if links.length > 0}
     <nav>
-      {#each links as link}
+      <!-- index-prefixed: two links may share an href, which alone would collide -->
+      {#each links as link, idx (`${idx}-${link.href}`)}
         {#if item}
           {@render item({ link })}
         {:else}

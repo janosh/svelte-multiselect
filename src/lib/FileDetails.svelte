@@ -134,7 +134,8 @@
 {/if}
 
 <svelte:element this={as} {...rest}>
-  {#each files as file, idx (file.title)}
+  <!-- index-prefixed: a title is a heading, so two files may share one -->
+  {#each files as file, idx (`${idx}-${file.title}`)}
     {@const { title, content } = file}
     {@const language = resolve_lang(file)}
     {@const cache_key = `${language}:${content}`}

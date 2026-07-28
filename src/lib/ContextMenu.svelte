@@ -52,15 +52,12 @@
   // section; its required `action` callback is what one entry has and the other lacks
   const is_section = (entry: CmdAction | CmdSection): entry is CmdSection =>
     !(`action` in entry)
-  // Tagged with the field it came from, so a section titled `Copy`, an action with id
-  // `Copy` and an action labelled `Copy` are three keys rather than one. Serialized
-  // rather than left a tuple because Svelte keys by identity, and a fresh array every
-  // render would rebuild the whole menu; JSON also keeps id `1` apart from id `'1'`.
+  // Tagged by source field, so a section titled `Copy`, an action with id `Copy` and one
+  // labelled `Copy` stay three keys. Serialized, not a tuple: Svelte keys by identity.
   const action_key = (action: CmdAction): string =>
     JSON.stringify(action.id === undefined ? [`label`, action.label] : [`id`, action.id])
-  // A section carries no id, so its title is a heading rather than an identity and two
-  // sections may legitimately share one. Position disambiguates them: a duplicate key
-  // throws each_key_duplicate, which takes down the whole menu, not just the repeat.
+  // A section has no id, so its title is a heading two of them may share — position
+  // disambiguates, since a duplicate key takes down the whole menu, not just the repeat.
   const entry_key = (entry: CmdAction | CmdSection, idx: number): string =>
     is_section(entry) ? JSON.stringify([`section`, entry.title, idx]) : action_key(entry)
   // an empty section is a heading over nothing, so it is dropped once anything else has
@@ -113,7 +110,7 @@
   <menu
     role="menu"
     {...rest}
-    class="context-menu {rest.class ?? ``}"
+    class={[`context-menu`, rest.class]}
     onkeydown={chain_handlers(handle_menu_keys, rest.onkeydown)}
     {@attach float({ anchor, placement: `bottom`, align: `start`, padding: 8 })}
     {@attach click_outside({ escape: true, ...dismiss, callback: () => (at = null) })}

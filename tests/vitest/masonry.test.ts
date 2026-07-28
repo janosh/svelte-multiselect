@@ -559,12 +559,16 @@ describe(`Masonry virtualization`, () => {
     expect(rendered).toBeLessThan(100)
   })
 
-  test(`scrolling moves the rendered window down the column`, async () => {
+  test(`scrolling moves the window, and a consumer's onscroll still fires`, async () => {
+    // `{...rest}` is spread after the component's own onscroll, so unchained a consumer
+    // handler replaces it outright and the window silently stops tracking the scroll
+    const consumer_scroll = vi.fn()
     mount_virtualized(200, {
       calcCols: () => 1,
       getEstimatedHeight: () => 100,
       gap: 0,
       height: 300,
+      onscroll: consumer_scroll,
     })
     const rendered_ids = () => Array.from(item_els()).map((item) => item.textContent)
     expect(rendered_ids()[0]).toBe(`0`)
@@ -578,6 +582,7 @@ describe(`Masonry virtualization`, () => {
 
     // scroll_top=5000 with 100px items lands on item 50, minus 1 and 5 overscan
     expect(rendered_ids()[0]).toBe(`43`)
+    expect(consumer_scroll).toHaveBeenCalledOnce()
   })
 
   test(`defers virtualization until masonryHeight is measured for string heights`, async () => {

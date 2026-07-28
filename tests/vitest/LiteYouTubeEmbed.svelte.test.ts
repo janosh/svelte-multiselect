@@ -1,6 +1,6 @@
 import LiteYouTubeEmbed from '$lib/LiteYouTubeEmbed.svelte'
 import { mount, tick } from 'svelte'
-import { describe, expect, test } from 'vite-plus/test'
+import { afterAll, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 // happy-dom navigates an iframe's src for real, which would put youtube.com requests in
@@ -11,13 +11,16 @@ const { settings } = (
   }
 ).happyDOM
 const fetched: string[] = []
+const original_interceptor = settings.fetch.interceptor
 settings.fetch.interceptor = {
   beforeAsyncRequest: ({ request }: { request: { url: string } }) => {
     fetched.push(request.url)
     return new Response(``)
   },
 }
-
+afterAll(() => {
+  settings.fetch.interceptor = original_interceptor
+})
 describe(`LiteYouTubeEmbed`, () => {
   const mount_embed = (props: Record<string, unknown> = {}) => {
     const state_props = $state({ video_id: `abc123`, ...props })
@@ -32,7 +35,9 @@ describe(`LiteYouTubeEmbed`, () => {
     [`play button`, `button.play-btn`],
     [`poster image`, `img.poster`],
   ])(`has no iframe until the %s is clicked, then exactly one`, async (_desc, sel) => {
-    mount_embed()
+    // rest is spread ahead of the component's own onclick, so unchained this is dropped
+    const consumer_click = vi.fn()
+    mount_embed({ onclick: consumer_click })
     await tick()
     expect(iframes()).toHaveLength(0)
     expect(document.querySelector(`img.poster`)).not.toBeNull()
@@ -40,6 +45,7 @@ describe(`LiteYouTubeEmbed`, () => {
     click(sel)
     await tick()
     expect(iframes()).toHaveLength(1)
+    expect(consumer_click).toHaveBeenCalledOnce()
 
     click(sel) // a second click must not stack a second player
     await tick()

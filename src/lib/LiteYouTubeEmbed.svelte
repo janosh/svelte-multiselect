@@ -1,6 +1,7 @@
 <script lang="ts">
   // adapted from https://npmjs.com/package/svelte-lite-youtube-embed
   import type { HTMLAttributes } from 'svelte/elements'
+  import { chain_handlers } from './utils'
 
   // Shows the poster image behind a play button and only creates the iframe on the
   // first click, so an unwatched embed costs one image instead of a YouTube player.
@@ -44,9 +45,9 @@
 <!-- the nested play button is the keyboard affordance; its click bubbles up to here -->
 <div
   {...rest}
-  class="lite-youtube {rest.class ?? ``}"
+  class={[`lite-youtube`, rest.class]}
   class:activated
-  onclick={() => (activated = true)}
+  onclick={chain_handlers(() => (activated = true), rest.onclick)}
   role="presentation"
 >
   {#key video_id}
