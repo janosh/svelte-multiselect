@@ -9,6 +9,7 @@ export default {
     '*.{js,ts,svelte,html,css,md,json,yaml}': `vp check --fix`,
     // shared hook runs the JS svelte-check; CI here uses the Rust port
     '*.{ts,svelte}': `sh -c 'npx svelte-kit sync && npx svelte-check-rs --threshold error'`,
+    '*.test.ts': `sh -c '! grep -E "(test|describe)\\.only\\(" "$@"' --`,
     // >fo< spares the text-search fixtures splitting `foo` across inline markup
     '*': `codespell --ignore-words-list falsy --ignore-regex '>fo<' --check-filenames`,
   },
