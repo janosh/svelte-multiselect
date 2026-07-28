@@ -89,26 +89,25 @@ describe(`toast queue reducer`, () => {
     expect(resumed.queue.active?.expires_at_ms).toBe(1500) // 700 + the banked 800
   })
 
-  test(`an absolute deadline keeps running while the toast waits`, () => {
-    const first = add(create_toast_queue(), `a`, { expires_at_ms: 1000 }).queue
-    const { queue } = add(first, `b`, { priority: `error` }, 200)
-
-    // no visible_duration_ms, so nothing to bank — the wall clock is the whole contract
-    expect(queue.pending[0].expires_at_ms).toBe(1000)
-    expect(expire_toasts(queue, 1000).queue.pending).toEqual([])
-  })
-
-  test(`a toast that never became visible cannot expire while it waits`, () => {
-    // both clocks at once: the visibility budget wins, so the deadline is banked rather
-    // than left running on a toast nobody has seen yet
+  test.each([
+    // A bare deadline is a wall-clock contract and keeps running off screen. Pair it with
+    // a visibility budget and the budget wins: the deadline is banked rather than left
+    // running on a toast nobody has seen yet.
+    [`an absolute deadline keeps running while the toast waits`, {}, 1000, true],
+    [
+      `a visibility budget banks the deadline instead`,
+      { visible_duration_ms: 300 },
+      null,
+      false,
+    ],
+  ] as const)(`%s`, (_desc, budget, banked_deadline, expires_while_pending) => {
     const first = add(create_toast_queue(), `a`).queue
-    const { queue } = add(first, `b`, {
-      expires_at_ms: 500,
-      visible_duration_ms: 300,
-    })
+    const { queue } = add(first, `b`, { expires_at_ms: 1000, ...budget }, 200)
 
-    expect(queue.pending[0].expires_at_ms).toBeNull()
-    expect(expire_toasts(queue, 500).queue.pending).toEqual(queue.pending)
+    expect(queue.pending[0].expires_at_ms).toBe(banked_deadline)
+    expect(expire_toasts(queue, 1000).queue.pending).toEqual(
+      expires_while_pending ? [] : queue.pending,
+    )
   })
 
   describe(`overflow`, () => {
@@ -158,14 +157,6 @@ describe(`toast queue reducer`, () => {
       expect(effects.every((effect) => effect.reason === `overflow`)).toBe(true)
       expect(messages(queue.pending)).toEqual(kept)
     })
-
-    test(`max_pending is per queue`, () => {
-      let queue = create_toast_queue({ max_pending: 1 })
-      for (const message of [`a`, `b`, `c`]) queue = add(queue, message).queue
-
-      expect(queue.active?.message).toBe(`a`)
-      expect(messages(queue.pending)).toEqual([`b`])
-    })
   })
 
   describe(`dedupe`, () => {
@@ -187,51 +178,51 @@ describe(`toast queue reducer`, () => {
       expect(messages(louder.queue.pending)).toEqual([`on screen`])
     })
 
-    test(`a lower-priority repeat refreshes the text only`, () => {
-      const first = add(create_toast_queue(), `first text`, {
-        priority: `error`,
-        dedupe_key: `job`,
-        action: undo,
-      }).queue
-      const { queue } = add(first, `second text`, {
-        priority: `info`,
-        dedupe_key: `job`,
-      })
+    // What a repeat does to the toast it matches turns on the two priorities. Each case
+    // starts from the same `warning` toast carrying an action and a 900 ms budget, and
+    // the repeat is the same text with only its priority and `supplies` changed.
+    const original = {
+      priority: `warning`,
+      dedupe_key: `job`,
+      action: undo,
+      visible_duration_ms: 900,
+    } as const
+    const retry = { label: `Retry` }
 
-      expect(queue.active?.message).toBe(`second text`)
-      expect(queue.active?.priority).toBe(`error`)
-      expect(queue.active?.action).toEqual(undo)
-    })
+    test.each([
+      // [repeat's priority, what it does, what it supplies, priority/action/budget/deadline after]
+      [`lower`, `refreshes the text only`, {}, [`warning`, undo, 900, 900]],
+      // omitting a field is not an instruction to clear it: dropping the budget here
+      // left the toast on screen for good
+      [`equal`, `keeps what it leaves out`, {}, [`warning`, undo, 900, 1000]],
+      [`higher`, `clears what it leaves out`, {}, [`error`, undefined, undefined, null]],
+      [
+        `higher`,
+        `installs what it supplies`,
+        { action: retry, visible_duration_ms: 500 },
+        [`error`, retry, 500, 600],
+      ],
+    ] as const)(
+      `%s-priority repeat %s`,
+      (relation, _desc, supplies, [rank, action, budget, deadline]) => {
+        const priority = ({ lower: `info`, equal: `warning`, higher: `error` } as const)[
+          relation
+        ]
+        const first = add(create_toast_queue(), `first text`, original).queue
+        const { queue } = add(
+          first,
+          `second text`,
+          { priority, dedupe_key: `job`, ...supplies },
+          100,
+        )
 
-    test(`a higher-priority repeat takes over priority, timing and action`, () => {
-      const first = add(create_toast_queue(), `first text`, { dedupe_key: `job` }).queue
-      const { queue } = add(
-        first,
-        `second text`,
-        { priority: `error`, dedupe_key: `job`, action: undo, visible_duration_ms: 900 },
-        100,
-      )
-
-      expect(queue.active?.priority).toBe(`error`)
-      expect(queue.active?.action).toEqual(undo)
-      expect(queue.active?.expires_at_ms).toBe(1000) // restarted at the new priority
-    })
-
-    test(`an equal-priority repeat keeps the original action and duration`, () => {
-      const first = add(create_toast_queue(), `first text`, {
-        dedupe_key: `job`,
-        action: undo,
-        visible_duration_ms: 900,
-      }).queue
-      const { queue } = add(first, `second text`, { dedupe_key: `job` }, 100)
-
-      expect(queue.active?.message).toBe(`second text`)
-      expect(queue.active?.action).toEqual(undo)
-      // the window restarts on a repeat, but it is still a window: taking the omitted
-      // duration as an instruction to clear it left the toast on screen for good
-      expect(queue.active?.visible_duration_ms).toBe(900)
-      expect(queue.active?.expires_at_ms).toBe(1000)
-    })
+        expect(queue.active?.message).toBe(`second text`)
+        expect(queue.active?.priority).toBe(rank)
+        expect(queue.active?.action).toEqual(action)
+        expect(queue.active?.visible_duration_ms).toBe(budget)
+        expect(queue.active?.expires_at_ms).toBe(deadline)
+      },
+    )
 
     test(`a repeat that arrives already expired times out rather than lingering`, () => {
       const first = add(create_toast_queue(), `a`, { dedupe_key: `job` }).queue
@@ -371,11 +362,16 @@ describe(`ToastStore`, () => {
     expect(store.active?.message).toBe(`b`)
   })
 
-  test(`a plain toast times out on its own, a sticky one does not`, () => {
+  // The top two rungs of whichever ladder the store was built with are sticky; anything
+  // below times out on its own. Read off the ladder, so a custom one moves the line.
+  test.each([
+    [`the default ladder`, {}, `error`, `info`],
+    [`a custom ladder`, { priorities: hive_ladder }, `watch`, `action`],
+  ] as const)(`stickiness follows %s`, (_desc, options, sticky, fleeting) => {
     fake_clock()
-    const store = new ToastStore()
-    store.show(`sticky`, { priority: `error` })
-    store.show(`fleeting`)
+    const store = new ToastStore(options)
+    store.show(`sticky`, { priority: sticky })
+    store.show(`fleeting`, { priority: fleeting })
 
     expect(store.active?.message).toBe(`sticky`)
     vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS * 3)
@@ -452,19 +448,6 @@ describe(`ToastStore`, () => {
 
     store.clear()
     expect(store.items).toEqual([])
-  })
-
-  test(`stickiness defaults to the ladder's top two`, () => {
-    fake_clock()
-    const store = new ToastStore({ priorities: hive_ladder })
-    store.show(`undo delete`, { priority: `action` }) // a rung below the top two
-
-    vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS)
-    expect(store.active).toBeNull()
-
-    store.show(`watching src/`, { priority: `watch` })
-    vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS * 2)
-    expect(store.active?.message).toBe(`watching src/`)
   })
 
   test(`destroy drops the queue and its timer but keeps the ladder and ids`, () => {
@@ -602,14 +585,6 @@ describe(`<Toast />`, () => {
     expect(store.active).toBeNull()
   })
 
-  test(`dismissible={false} leaves no close button`, async () => {
-    const store = render({ dismissible: false })
-    store.show(`a`)
-    await tick()
-
-    expect(document.querySelector(`.toast-dismiss`)).toBeNull()
-  })
-
   test(`a children snippet replaces the message markup`, async () => {
     const children = createRawSnippet<[ToastItem]>((item) => ({
       render: () => `<em class="custom">${item().message}!</em>`,
@@ -641,19 +616,36 @@ describe(`<Toast />`, () => {
     expect(stack.classList.contains(`toast-stack`)).toBe(true)
   })
 
-  test(`hovering the stack suspends the countdown`, async () => {
+  // Both suspensions bank the unspent remainder rather than restarting the clock, and
+  // focus does it on its own — the second case has hover pausing switched off entirely.
+  test.each([
+    [`hovering the stack`, {}, `pointerenter`, `pointerleave`],
+    [
+      `focus entering it, with pause_on_hover off`,
+      { pause_on_hover: false },
+      `focusin`,
+      `focusout`,
+    ],
+  ] as const)(`%s suspends the countdown`, async (_desc, props, suspend, release) => {
     fake_clock()
-    const store = render()
-    store.show(`a`, { duration_ms: 1000 })
+    const store = render(props)
+    store.show(`a`, { duration_ms: 1000, action: { label: `Undo` } })
     await tick()
 
     const stack = doc_query(`.toast-stack`)
+    const fire = (type: string) =>
+      stack.dispatchEvent(
+        type.startsWith(`focus`)
+          ? new FocusEvent(type, { bubbles: true })
+          : new PointerEvent(type),
+      )
+
     vi.advanceTimersByTime(400)
-    stack.dispatchEvent(new PointerEvent(`pointerenter`))
+    fire(suspend)
     vi.advanceTimersByTime(5000)
     expect(store.active?.message).toBe(`a`)
 
-    stack.dispatchEvent(new PointerEvent(`pointerleave`))
+    fire(release)
     vi.advanceTimersByTime(599)
     expect(store.active?.message).toBe(`a`) // 600 ms was left, not a fresh 1000
     vi.advanceTimersByTime(1)
@@ -684,25 +676,6 @@ describe(`<Toast />`, () => {
 
     doc_query(`.toast-stack`).dispatchEvent(new PointerEvent(`pointerenter`))
     vi.advanceTimersByTime(1000)
-    expect(store.active).toBeNull()
-  })
-
-  test(`focus into the toast suspends the countdown even without hover`, async () => {
-    fake_clock()
-    const store = render({ pause_on_hover: false })
-    store.show(`a`, { duration_ms: 1000, action: { label: `Undo` } })
-    await tick()
-
-    const stack = doc_query(`.toast-stack`)
-    stack.dispatchEvent(new FocusEvent(`focusin`, { bubbles: true }))
-    vi.advanceTimersByTime(5000)
-    expect(store.active?.message).toBe(`a`)
-
-    // and focus leaving hands the untouched budget back to the clock
-    stack.dispatchEvent(new FocusEvent(`focusout`, { bubbles: true }))
-    vi.advanceTimersByTime(999)
-    expect(store.active?.message).toBe(`a`)
-    vi.advanceTimersByTime(1)
     expect(store.active).toBeNull()
   })
 

@@ -33,21 +33,11 @@ describe(`get_html_sort_value`, () => {
   const add_text = (element: HTMLElement, text: string) => (element.textContent = text)
 
   it.each([
-    [
-      `returns data-sort-value when present`,
-      `custom-value`,
-      `Different text`,
-      `custom-value`,
-    ],
-    [`returns empty string for data-sort-value=""`, ``, `Some text`, ``],
-    [
-      `returns textContent when no data-sort-value`,
-      null,
-      `Element text content`,
-      `Element text content`,
-    ],
-    [`returns empty string for empty elements`, null, null, ``],
-    [`returns whitespace textContent`, null, `   \n\t   `, `   \n\t   `],
+    [`data-sort-value wins over text`, `custom-value`, `Different text`, `custom-value`],
+    [`an empty data-sort-value stays empty`, ``, `Some text`, ``],
+    [`textContent when no data-sort-value`, null, `Element text`, `Element text`],
+    [`an empty element`, null, null, ``],
+    [`whitespace textContent verbatim`, null, `   \n\t   `, `   \n\t   `],
   ])(`%s`, (_desc, data_sort_value, text_content, expected) => {
     const element = create_element()
     if (data_sort_value !== null) add_data_sort(element, data_sort_value)
@@ -1137,25 +1127,40 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it(`scope confines inside selectors to one subtree`, () => {
-    const [own_scope, own_trigger, other_trigger] = [
-      create_element(),
-      create_element(),
-      create_element(),
-    ]
-    own_trigger.className = `trigger`
-    other_trigger.className = `trigger`
-    own_scope.append(own_trigger)
+  // Same selector, another instance's trigger: it must not shield this surface. The
+  // function form is resolved per press, for a `bind:this` still null at setup — a
+  // plain `scope` prop would have been captured null forever.
+  it.each([`element`, `function`] as const)(
+    `scope as %s confines inside selectors to one subtree`,
+    (kind) => {
+      const [own_scope, own_trigger, other_trigger] = [
+        create_element(),
+        create_element(),
+        create_element(),
+      ]
+      own_trigger.className = `trigger`
+      other_trigger.className = `trigger`
+      own_scope.append(own_trigger)
 
-    const { callback } = attach_outside({ inside: [`.trigger`], scope: own_scope })
+      let scope_el: Element | null = kind === `element` ? own_scope : null
+      const { callback } = attach_outside({
+        inside: [`.trigger`],
+        scope: kind === `element` ? own_scope : () => scope_el,
+      })
 
-    dispatch_press(own_trigger)
-    expect(callback).not.toHaveBeenCalled()
+      if (kind === `function`) {
+        // unconstrained while null, so the selector still shields every match
+        dispatch_press(other_trigger)
+        expect(callback).not.toHaveBeenCalled()
+        scope_el = own_scope
+      }
 
-    // Same selector, another instance's trigger: it must not shield this surface
-    dispatch_press(other_trigger)
-    expect(callback).toHaveBeenCalledTimes(1)
-  })
+      dispatch_press(own_trigger)
+      expect(callback).not.toHaveBeenCalled()
+      dispatch_press(other_trigger)
+      expect(callback).toHaveBeenCalledTimes(1)
+    },
+  )
 
   it(`an element in inside counts as part of the surface`, () => {
     const portalled = create_element() // sibling in body, no longer a descendant
@@ -1303,31 +1308,6 @@ describe(`click_outside`, () => {
     press_escape()
     expect(callback).not.toHaveBeenCalled()
   })
-
-  it(`resolves a scope function per press, for a bind:this still null at setup`, () => {
-    const [own_scope, own_trigger, other_trigger] = [
-      create_element(),
-      create_element(),
-      create_element(),
-    ]
-    own_trigger.className = `trigger`
-    other_trigger.className = `trigger`
-    own_scope.append(own_trigger)
-
-    // null while the surface's first render is still pending, so the selector is
-    // unconstrained — a plain `scope` prop would have been captured null forever
-    let scope_el: Element | null = null
-    const { callback } = attach_outside({ inside: [`.trigger`], scope: () => scope_el })
-
-    dispatch_press(other_trigger)
-    expect(callback).not.toHaveBeenCalled()
-
-    scope_el = own_scope
-    dispatch_press(own_trigger)
-    expect(callback).not.toHaveBeenCalled()
-    dispatch_press(other_trigger) // now out of scope, so it no longer shields
-    expect(callback).toHaveBeenCalledTimes(1)
-  })
 })
 
 describe(`dismiss_on_outside_press`, () => {
@@ -1445,7 +1425,7 @@ describe(`hotkey`, () => {
     return { node, cleanup }
   }
 
-  it(`fires on the node it is attached to, not on the rest of the page`, () => {
+  it(`fires on its own node only, and anywhere on the page when global`, () => {
     const handler = vi.fn()
     const { node, cleanup } = attach_hotkey({ bindings: [{ keys: `ctrl+k`, handler }] })
 
@@ -1459,14 +1439,12 @@ describe(`hotkey`, () => {
     cleanup?.()
     keydown(node, `k`, { ctrlKey: true })
     expect(handler).toHaveBeenCalledTimes(1)
-  })
 
-  it(`global listens anywhere on the page`, () => {
-    const handler = vi.fn()
-    attach_hotkey({ bindings: [{ keys: `ctrl+k`, handler }], global: true })
-
-    keydown(create_element(), `k`, { ctrlKey: true })
-    expect(handler).toHaveBeenCalledTimes(1)
+    // `global` is the opt-out: that binding answers from anywhere on the page
+    const anywhere = vi.fn()
+    attach_hotkey({ bindings: [{ keys: `ctrl+j`, handler: anywhere }], global: true })
+    keydown(create_element(), `j`, { ctrlKey: true })
+    expect(anywhere).toHaveBeenCalledTimes(1)
   })
 
   it(`leaves bare keys to text fields unless told otherwise`, () => {
@@ -1645,7 +1623,7 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(initial === false ? outside : buttons[2])
   })
 
-  it(`hands focus back to where it came from, or to a named element`, () => {
+  it(`restores to the trigger, to a named element, or wherever the user moved it`, () => {
     const trigger = create_element(`button`)
     trigger.focus()
     const { surface } = make_surface()
@@ -1655,18 +1633,12 @@ describe(`focus_trap`, () => {
     const elsewhere = create_element(`button`)
     focus_trap({ restore: elsewhere })(surface)?.()
     expect(document.activeElement).toBe(elsewhere)
-  })
 
-  it(`leaves focus alone when the user already moved it out`, () => {
-    const trigger = create_element(`button`)
+    // a deliberate move out during the trap's life outranks the recorded trigger
     trigger.focus()
-    const { surface } = make_surface()
     const cleanup = focus_trap()(surface)
-
-    const elsewhere = create_element(`button`)
     elsewhere.focus()
     cleanup?.()
-
     expect(document.activeElement).toBe(elsewhere)
   })
 
@@ -2957,23 +2929,17 @@ describe(`portal`, () => {
     expect(home.innerHTML).toBe(`<i></i><b></b><u></u><s></s>`)
   })
 
-  it.each([
-    [`null target`, null],
-    [`undefined target`, undefined],
-  ] as const)(`%s leaves the node where it is`, (_desc, target) => {
-    const { home, node } = setup()
+  it.each([`null`, `undefined`, `already the parent`] as const)(
+    `a %s target leaves the node where it is`,
+    (kind) => {
+      const { home, node } = setup()
+      const target = { null: null, undefined, 'already the parent': home }[kind]
 
-    expect(portal(target)(node)).toBeUndefined()
-    expect(node.parentElement).toBe(home)
-    expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`)
-  })
-
-  it(`does not reorder when the target is already the parent`, () => {
-    const { home, node } = setup()
-
-    expect(portal(home)(node)).toBeUndefined()
-    expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`) // not appended after <u>
-  })
+      expect(portal(target)(node)).toBeUndefined()
+      expect(node.parentElement).toBe(home)
+      expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`) // not re-appended after <u>
+    },
+  )
 
   it(`removes the node instead of stranding it when its anchor is gone`, () => {
     const { home, target, node } = setup()
@@ -2999,6 +2965,15 @@ describe(`portal`, () => {
 })
 
 describe(`contrast_color`, () => {
+  // brackets a color's luminance from both sides: a threshold just below it has to read
+  // as `over` and one just above as `under`, which pins the value without exposing it
+  const luminance_brackets = (bg_color: string, expected: number, tolerance: number) => {
+    const probe = (luminance_threshold: number) =>
+      pick_contrast_color({ bg_color, luminance_threshold, choices: [`over`, `under`] })
+    return [probe(expected - tolerance), probe(expected + tolerance)]
+  }
+  const bracketed = [`over`, `under`]
+
   it.each([
     [`light rgb background`, `rgb(255, 255, 255)`, `black`],
     [`dark rgb background`, `rgb(20, 20, 20)`, `white`],
@@ -3049,10 +3024,7 @@ describe(`contrast_color`, () => {
     [`hwb(0 25% 25%)`, 0.3995], // white and black both mixed into the pure hue
     [`hsla(0, 100%, 50%, 0.5)`, 0.299],
   ])(`%s converts to a luminance of %f`, (bg_color, expected) => {
-    const probe = (luminance_threshold: number) =>
-      pick_contrast_color({ bg_color, luminance_threshold, choices: [`over`, `under`] })
-    expect(probe(expected - 1e-4)).toBe(`over`)
-    expect(probe(expected + 1e-4)).toBe(`under`)
+    expect(luminance_brackets(bg_color, expected, 1e-4)).toEqual(bracketed)
   })
 
   // The cases above are all primaries or pure white, which every space maps to the same
@@ -3077,11 +3049,8 @@ describe(`contrast_color`, () => {
     [`color(xyz-d50 0.3 0.4 0.2)`, [122, 184, 127]],
     [`color(xyz-d65 0.3 0.4 0.2)`, [139, 182, 107]],
   ])(`%s lands where Chrome paints it`, (bg_color, [red, green, blue]) => {
-    const expected = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
-    const probe = (luminance_threshold: number) =>
-      pick_contrast_color({ bg_color, luminance_threshold, choices: [`over`, `under`] })
-    expect(probe(expected - 2e-3)).toBe(`over`)
-    expect(probe(expected + 2e-3)).toBe(`under`)
+    const luminance = (0.299 * red + 0.587 * green + 0.114 * blue) / 255
+    expect(luminance_brackets(bg_color, luminance, 2e-3)).toEqual(bracketed)
   })
 
   // Perceived brightness weights green ×0.587, red ×0.299 and blue ×0.114, so the
@@ -3122,17 +3091,21 @@ describe(`contrast_color`, () => {
     expect(() => pick_contrast_color({ bg_color })).toThrow(/cannot read color/u)
   })
 
-  it(`walks past transparent ancestors to the first painted background`, () => {
-    const painted = create_element(`div`, { backgroundColor: `rgb(10, 10, 10)` })
+  // a chain with nothing painted in it reports no background at all, and a page with
+  // nothing behind the node is assumed white
+  it.each([
+    [`the first painted ancestor`, `rgb(10, 10, 10)`, `rgb(10, 10, 10)`, `white`],
+    [`nothing when every ancestor is transparent`, `rgba(0, 0, 0, 0)`, ``, `black`],
+  ])(`the ancestor walk finds %s`, (_desc, background, expected_bg, expected_color) => {
+    const painted = create_element(`div`, { backgroundColor: background })
     const middle = document.createElement(`div`)
     const node = document.createElement(`span`)
     painted.append(middle)
     middle.append(node)
 
-    expect(get_bg_color(node)).toBe(`rgb(10, 10, 10)`)
-
+    expect(get_bg_color(node)).toBe(expected_bg)
     const cleanup = contrast_color()(node)
-    expect(node.style.color).toBe(`white`)
+    expect(node.style.color).toBe(expected_color)
     cleanup?.()
   })
 
@@ -3158,16 +3131,6 @@ describe(`contrast_color`, () => {
     expect(get_bg_color(node)).toBe(painted ? background : ``)
     const cleanup = contrast_color()(node)
     expect(node.style.color).toBe(expected_color)
-    cleanup?.()
-  })
-
-  it(`treats a fully transparent chain as no background at all`, () => {
-    const node = create_element(`div`, { backgroundColor: `rgba(0, 0, 0, 0)` })
-
-    expect(get_bg_color(node)).toBe(``)
-    // …and a page with nothing painted behind it is assumed white
-    const cleanup = contrast_color()(node)
-    expect(node.style.color).toBe(`black`)
     cleanup?.()
   })
 
@@ -3210,8 +3173,8 @@ describe(`forward_window_keydown`, () => {
     return event
   }
 
-  it(`forwards only while hovered`, () => {
-    const { node, handle } = attach()
+  it(`forwards only while hovered, and never once cleaned up`, () => {
+    const { node, handle, cleanup } = attach()
 
     press_key()
     expect(handle).not.toHaveBeenCalled() // never hovered, so this key is not ours
@@ -3221,6 +3184,11 @@ describe(`forward_window_keydown`, () => {
     expect(handle).toHaveBeenCalledTimes(1)
 
     unhover(node)
+    press_key()
+    expect(handle).toHaveBeenCalledTimes(1)
+
+    hover(node) // hovered again, but the listener is gone
+    cleanup?.()
     press_key()
     expect(handle).toHaveBeenCalledTimes(1)
   })
@@ -3273,16 +3241,5 @@ describe(`forward_window_keydown`, () => {
     hover(node)
     press_key()
     expect(handle).not.toHaveBeenCalled()
-  })
-
-  it(`cleanup stops forwarding`, () => {
-    const { node, handle, cleanup } = attach()
-    hover(node)
-    press_key()
-    expect(handle).toHaveBeenCalledTimes(1)
-
-    cleanup?.()
-    press_key()
-    expect(handle).toHaveBeenCalledTimes(1)
   })
 })

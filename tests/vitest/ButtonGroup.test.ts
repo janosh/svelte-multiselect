@@ -66,17 +66,10 @@ describe(`ButtonGroup`, () => {
   test.each([
     [`bare values`, [`alpha`, `beta`, `gamma`], [`alpha`, `beta`, `gamma`]],
     [`record`, letters, [`Alpha`, `Beta`, `Gamma`]],
-    [
-      `tuples`,
-      [
-        [`alpha`, `Alpha`],
-        [`beta`, `Beta`],
-        [`gamma`, `Gamma`],
-      ],
-      [`Alpha`, `Beta`, `Gamma`],
-    ],
+    [`tuples`, Object.entries(letters), [`Alpha`, `Beta`, `Gamma`]],
     [
       `option objects`,
+      // the label-less one falls back to its value
       [
         { value: `alpha`, label: `Alpha` },
         { value: `beta`, label: `Beta` },
@@ -84,7 +77,7 @@ describe(`ButtonGroup`, () => {
           value: `gamma`,
         },
       ],
-      [`Alpha`, `Beta`, `gamma`], // a label-less object falls back to its value
+      [`Alpha`, `Beta`, `gamma`],
     ],
   ] as const)(`renders %s as one button per option`, (_desc, options, labels) => {
     const buttons = mount_group({ options, selected: `beta` })
@@ -101,29 +94,21 @@ describe(`ButtonGroup`, () => {
     )
   })
 
+  // `multiple` discriminates the props union, so each mode arrives as a literal object
+  // rather than a boolean the body branches on — a widened `boolean` matches neither arm
   test.each([
-    [false, `radiogroup`, `radio`, `aria-checked`, `aria-pressed`],
-    [true, `group`, null, `aria-pressed`, `aria-checked`],
+    [`radiogroup`, `radio`, `aria-checked`, `aria-pressed`, { selected: `beta` }],
+    [
+      `group`,
+      null,
+      `aria-pressed`,
+      `aria-checked`,
+      { multiple: true, selected: [`beta`] },
+    ],
   ] as const)(
-    `multiple=%s uses %s semantics`,
-    (multiple, group_role, button_role, used_attr, unused_attr) => {
-      // `multiple` discriminates the props union, so it has to reach mount_group as a
-      // literal; passing the loop variable widens it to boolean and matches neither arm
-      const buttons = mount_group(
-        multiple
-          ? {
-              options: letters,
-              multiple: true,
-              label: `Greek letters`,
-              selected: [`beta`],
-            }
-          : {
-              options: letters,
-              multiple: false,
-              label: `Greek letters`,
-              selected: `beta`,
-            },
-      )
+    `a %s announces state through %s`,
+    (group_role, button_role, used_attr, unused_attr, mode) => {
+      const buttons = mount_group({ options: letters, label: `Greek letters`, ...mode })
 
       const group = doc_query(`.options`)
       expect(group.getAttribute(`role`)).toBe(group_role)
@@ -216,11 +201,7 @@ describe(`ButtonGroup`, () => {
     await tick()
     expect(document.activeElement).toBe(buttons[1])
     expect(buttons.map(checked_state)).toEqual([`false`, `false`, `false`])
-    expect(on_change).not.toHaveBeenCalled()
-
-    buttons[1].click() // Space/Enter reach the same handler via a native button click
-    await tick()
-    expect(buttons.map(checked_state)).toEqual([`false`, `true`, `false`])
+    expect(on_change).not.toHaveBeenCalled() // toggling is the click's job, covered above
   })
 
   test.each([
@@ -276,32 +257,25 @@ describe(`ButtonGroup`, () => {
     expect(on_change).not.toHaveBeenCalled()
   })
 
+  // multi select is a plain group, not a radiogroup, so it keeps every native tab stop
+  // rather than roving a single one. Joined so a row is one line: `` is an absent attr.
   test.each([
-    [`the checked option`, `gamma`, 2],
-    [`the first option when nothing is selected`, undefined, 0],
-    [`the first option when the selection matches nothing`, `delta`, 0],
-  ])(`roving tabindex sits on %s`, (_desc, selected, tabbable_idx) => {
-    const buttons = mount_group({ options: letters, selected })
+    [`the checked option`, { selected: `gamma` }, `-1,-1,0`],
+    [`the first option when nothing is selected`, {}, `0,-1,-1`],
+    [`the first, when the selection matches no option`, { selected: `delta` }, `0,-1,-1`],
+    [`every button, in multi select`, { multiple: true, selected: [`beta`] }, `,,`],
+  ] as const)(`the tab stop sits on %s`, (_desc, mode, expected) => {
+    const buttons = mount_group({ options: letters, ...mode })
 
-    expect(buttons.map((button) => button.tabIndex)).toEqual(
-      [0, 1, 2].map((idx) => (idx === tabbable_idx ? 0 : -1)),
+    expect(buttons.map((btn) => btn.getAttribute(`tabindex`) ?? ``).join(`,`)).toBe(
+      expected,
     )
   })
 
-  test(`multi select leaves every button tabbable`, () => {
-    const buttons = mount_group({ options: letters, multiple: true, selected: [`beta`] })
-
-    expect(buttons.map((button) => button.getAttribute(`tabindex`))).toEqual(
-      Array(3).fill(null),
-    )
-  })
-
-  test(`the sort arrow is opt-in`, () => {
+  test(`the sort arrow is opt-in and flips between asc and desc`, async () => {
     mount_group({ options: letters })
     expect(document.querySelector(`.sort-order`)).toBeNull()
-  })
 
-  test(`the sort arrow flips between asc and desc`, async () => {
     mount_group({ options: letters, sort_order: `asc` })
 
     const arrow = doc_query<HTMLButtonElement>(`.sort-order`)
@@ -361,40 +335,28 @@ describe(`ButtonGroup`, () => {
     ])
   })
 
-  test(`per-option tooltips show on hover, options without one stay silent`, async () => {
+  // Escaping is the default because tooltip content is often user data; `tooltip_options`
+  // is the opt out, and without that pass-through no consumer with rich tooltips can
+  // migrate. Each row also pins that an option carrying no tooltip stays silent.
+  test.each([
+    [`escapes markup by default`, undefined, `&lt;b&gt;bold&lt;/b&gt;`],
+    [`renders it under allow_html`, { allow_html: true }, `<b>bold</b>`],
+  ] as const)(`a per-option tooltip %s`, async (_desc, tooltip_options, expected) => {
     vi.useFakeTimers()
     try {
-      const options: Option[] = [
-        { value: `alpha`, label: `Alpha`, tooltip: `first letter` },
-        { value: `beta`, label: `Beta` },
-      ]
-      const buttons = mount_group({ options })
+      const options: Option[] = [{ value: `a`, tooltip: `<b>bold</b>` }, { value: `b` }]
+      const buttons = mount_group({ options, tooltip_options })
       await tick()
+      const hover = (button: HTMLButtonElement) => {
+        button.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+        vi.runAllTimers()
+      }
 
-      buttons[1].dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
+      hover(buttons[1])
       expect(document.querySelector(`.tooltip-content`)).toBeNull()
 
-      buttons[0].dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
-      expect(doc_query(`.tooltip-content`).textContent).toBe(`first letter`)
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  // without a pass-through, tooltip content is escaped, which blocks any consumer whose
-  // option tooltips are rich text
-  test(`tooltip_options reaches the tooltip, so allow_html works`, async () => {
-    vi.useFakeTimers()
-    try {
-      const options: Option[] = [{ value: `a`, tooltip: `<strong>bold</strong>` }]
-      const buttons = mount_group({ options, tooltip_options: { allow_html: true } })
-      await tick()
-
-      buttons[0].dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.runAllTimers()
-      expect(doc_query(`.tooltip-content`).innerHTML).toContain(`<strong>bold</strong>`)
+      hover(buttons[0])
+      expect(doc_query(`.tooltip-content`).innerHTML).toBe(expected)
     } finally {
       vi.useRealTimers()
     }
@@ -428,35 +390,32 @@ describe(`ButtonGroup`, () => {
   // matbench-discovery's SelectToggle put an info link inside the button, which is an
   // invalid content model. The `option` snippet renders inside the button and so cannot
   // fix it; this one is a sibling, which is the whole point.
-  test(`option_suffix renders beside the button rather than inside it`, () => {
-    const buttons = mount_group({
-      options: letters,
-      selected: `beta`,
-      option_suffix: info_link,
-    })
+  // The wrapper is opt-in because hive turned the component down partly over its
+  // `.segmented > button` rules, which stop matching once every button gains a parent.
+  test.each([
+    [`nothing is slotted`, undefined, `options`, 0],
+    [`a suffix is slotted`, info_link, `option`, 3],
+  ] as const)(
+    `the button's parent is .%2$s when %s`,
+    (_d, option_suffix, parent, wraps) => {
+      const buttons = mount_group({ options: letters, selected: `beta`, option_suffix })
 
-    expect(document.querySelectorAll(`.options > .option`)).toHaveLength(3)
-    for (const button of buttons) {
-      expect(button.querySelector(`a`)).toBeNull() // the invalid nesting being removed
-      expect(button.parentElement?.classList.contains(`option`)).toBe(true)
-      expect(button.nextElementSibling?.tagName).toBe(`A`)
-    }
-    // it gets the same params as `option`, so the affordance can react to selection
+      expect(document.querySelectorAll(`.options > .option`)).toHaveLength(wraps)
+      expect(buttons.map((btn) => btn.parentElement?.classList.contains(parent))).toEqual(
+        Array(3).fill(true),
+      )
+      // the affordance is a sibling, never nested in the button — the invalid model
+      expect(buttons.map((btn) => btn.querySelector(`a`))).toEqual(Array(3).fill(null))
+    },
+  )
+
+  test(`option_suffix gets the same params as option, so it can react to selection`, () => {
+    mount_group({ options: letters, selected: `beta`, option_suffix: info_link })
+
     const links = [...document.querySelectorAll<HTMLAnchorElement>(`.option > a`)]
     expect(
       links.map((link) => `${link.getAttribute(`href`)}:${link.dataset.sel}`),
     ).toEqual([`/docs/alpha:false`, `/docs/beta:true`, `/docs/gamma:false`])
-  })
-
-  // hive turned the component down partly because its `.segmented > button` rules would
-  // stop matching once every button gained a wrapper, so the wrapper is opt-in
-  test(`no per-option wrapper when nothing is slotted beside the button`, () => {
-    const buttons = mount_group({ options: letters })
-
-    expect(document.querySelector(`.option`)).toBeNull()
-    expect(
-      buttons.map((button) => button.parentElement?.classList.contains(`options`)),
-    ).toEqual(Array(3).fill(true))
   })
 
   // A suffix rendering its own button is the second reason this prop exists, and it is
@@ -490,21 +449,20 @@ describe(`ButtonGroup`, () => {
     },
   )
 
-  // every one of these was a `:global` escape hatch in a downstream migration
-  test.each([
-    [`justify-content`, `--btn-group-justify-content`], // diagrams' wrapped tag rows
-    [`cursor`, `--btn-group-btn-cursor`], // diagrams' group inside a clickable card
-    [`transform`, `--btn-group-btn-hover-transform`], // the blog's hover lift
-    [`transition`, `--btn-group-btn-transition`],
-    // no --btn-group-btn-hover-color row: the chain test below asserts the same
-    // substring plus the fallback, so a row here would be strictly weaker
-  ])(`%s is settable through %s`, (property, custom_property) => {
-    expect(styles).toMatch(
-      new RegExp(`${property}:\\s*var\\(\\s*${custom_property}\\s*[,)]`, `u`),
+  // The whole themable surface, not a handful of existence rows: this way a rename, a
+  // deletion and an undocumented new knob all fail. `justify-content`, `btn-cursor`,
+  // `btn-hover-transform` and `btn-transition` are here because each was a `:global`
+  // escape hatch a downstream repo needed.
+  test(`exposes exactly the documented custom properties`, () => {
+    const matches = styles.matchAll(/var\(\s*--btn-group-(?<name>[\w-]+)/gu)
+    const used = [...matches].map((match) => match.groups?.name ?? ``)
+    expect([...new Set(used)].toSorted().join(` `)).toBe(
+      `bg border btn-active-bg btn-active-border-color btn-active-color btn-bg ` +
+        `btn-border btn-color btn-cursor btn-disabled-opacity btn-font-family ` +
+        `btn-font-size btn-gap btn-hover-bg btn-hover-color btn-hover-transform ` +
+        `btn-padding btn-radius btn-transition display gap justify-content padding radius`,
     )
-  })
-
-  test(`hover colour chains to the resting one, so setting only that survives hover`, () => {
+    // hover colour chains to the resting one, so setting only that survives hover
     expect(styles).toMatch(
       /--btn-group-btn-hover-color,\s*var\(\s*--btn-group-btn-color/u,
     )
