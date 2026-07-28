@@ -29,12 +29,12 @@ export const optional_peer_error = `svelte-widgets/live-examples requires option
 // mention anywhere in this module pins ~1.3 MB into the chunk of every consumer that
 // supplies its own grammars. Defaulting lives in highlighter.ts instead.
 const create_instance = async (grammars: readonly Grammar[]): Promise<StarryNight> => {
-  try {
-    const { createStarryNight } = await import(`@wooorm/starry-night`)
-    return await createStarryNight(grammars)
-  } catch (cause) {
+  // only the import is guarded: a grammar that fails to compile is a caller's bad input,
+  // not an absent peer dependency, and must not be reported as one
+  const { createStarryNight } = await import(`@wooorm/starry-night`).catch((cause) => {
     throw new Error(optional_peer_error, { cause })
-  }
+  })
+  return createStarryNight(grammars)
 }
 
 // Escape characters that would be interpreted as Svelte template syntax

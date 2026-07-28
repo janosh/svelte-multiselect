@@ -2,9 +2,10 @@
 //
 //   export default { ...make_config({ fmt: { printWidth: 95 } }), plugins: [sveltekit()] }
 //
-// Sections merge one level deep over the defaults, so retuning one rule or staged glob
-// restates nothing else. Members are typed via SharedConfig rather than left to infer:
-// a 143-key inferred literal blows TS's instantiation depth when spread into UserConfig.
+// Sections merge over the defaults — lint's object-valued members a second level down,
+// so retuning one rule or staged glob restates nothing else, while its arrays replace.
+// Members are typed via SharedConfig rather than left to infer:
+// a rules literal this size blows TS's instantiation depth when spread into UserConfig.
 import type { UserConfig } from 'vite-plus'
 import type { OxlintConfig } from 'vite-plus/lint'
 
@@ -20,6 +21,96 @@ export type SharedConfig = {
   staged: Extract<NonNullable<UserConfig[`staged`]>, Record<string, unknown>>
 }
 
+// Rules that are simply on, grouped in the order they were adopted; the grouping is
+// review history and carries no runtime meaning. A word each rather than a line each, so
+// the seventeen that carry an option or a reason are not buried under 137 that do not.
+const error_rules = [
+  // extra rules not in the enabled categories
+  `no-template-curly-in-string no-constructor-return default-param-last guard-for-in
+  eslint-plugin-unicorn/prefer-array-find eslint-plugin-unicorn/no-typeof-undefined
+  eslint-plugin-unicorn/prefer-optional-catch-binding
+  eslint-plugin-unicorn/no-length-as-slice-end eslint-plugin-unicorn/prefer-node-protocol
+  eslint-plugin-unicorn/throw-new-error eslint-plugin-unicorn/prefer-type-error
+  eslint-plugin-unicorn/prefer-date-now
+  eslint-plugin-unicorn/require-number-to-fixed-digits-argument
+  eslint-plugin-unicorn/no-useless-promise-resolve-reject
+  eslint-plugin-unicorn/custom-error-definition eslint-plugin-import/no-duplicates
+  @typescript-eslint/no-non-null-assertion
+  @typescript-eslint/prefer-string-starts-ends-with @typescript-eslint/prefer-readonly
+  @typescript-eslint/prefer-regexp-exec @typescript-eslint/prefer-find
+  @typescript-eslint/no-deprecated @typescript-eslint/no-misused-promises
+  @typescript-eslint/restrict-plus-operands @typescript-eslint/no-dynamic-delete
+  @typescript-eslint/no-empty-object-type @typescript-eslint/no-explicit-any
+  @typescript-eslint/no-import-type-side-effects @typescript-eslint/no-invalid-void-type
+  @typescript-eslint/no-mixed-enums @typescript-eslint/no-require-imports
+  @typescript-eslint/only-throw-error @typescript-eslint/ban-ts-comment
+  @typescript-eslint/consistent-type-imports @typescript-eslint/prefer-function-type
+  @typescript-eslint/prefer-includes @typescript-eslint/prefer-optional-chain
+  @typescript-eslint/prefer-reduce-type-parameter
+  @typescript-eslint/prefer-ts-expect-error @typescript-eslint/return-await
+  @typescript-eslint/switch-exhaustiveness-check @typescript-eslint/unified-signatures
+  array-callback-return prefer-object-has-own eslint-plugin-promise/no-multiple-resolved
+  eslint-plugin-promise/no-return-in-finally eslint-plugin-promise/param-names
+  eslint-plugin-promise/valid-params @typescript-eslint/consistent-type-exports
+  eslint-plugin-unicorn/require-array-join-separator no-useless-computed-key
+  eslint-plugin-vitest/prefer-strict-boolean-matchers eslint-plugin-vitest/prefer-each
+  eslint-plugin-vitest/prefer-called-exactly-once-with
+  eslint-plugin-vitest/require-awaited-expect-poll`,
+  // tier 1: zero-violation guard rails
+  `no-var no-self-compare prefer-arrow-callback no-array-constructor no-new-wrappers
+  prefer-numeric-literals default-case-last no-object-constructor
+  @typescript-eslint/prefer-enum-initializers
+  @typescript-eslint/prefer-literal-enum-member
+  @typescript-eslint/consistent-type-assertions eslint-plugin-unicorn/prefer-array-some
+  eslint-plugin-unicorn/prefer-array-flat eslint-plugin-unicorn/prefer-math-min-max
+  eslint-plugin-unicorn/prefer-negative-index eslint-plugin-unicorn/prefer-includes
+  eslint-plugin-unicorn/prefer-default-parameters
+  eslint-plugin-unicorn/prefer-logical-operator-over-ternary
+  eslint-plugin-unicorn/no-instanceof-array
+  eslint-plugin-unicorn/prefer-keyboard-event-key eslint-plugin-unicorn/error-message
+  eslint-plugin-unicorn/escape-case eslint-plugin-unicorn/prefer-prototype-methods
+  eslint-plugin-unicorn/no-console-spaces eslint-plugin-unicorn/prefer-dom-node-dataset
+  eslint-plugin-unicorn/prefer-query-selector eslint-plugin-unicorn/prefer-modern-dom-apis
+  eslint-plugin-unicorn/prefer-dom-node-text-content
+  eslint-plugin-unicorn/text-encoding-identifier-case
+  eslint-plugin-unicorn/no-unreadable-iife
+  eslint-plugin-unicorn/consistent-empty-array-spread
+  eslint-plugin-unicorn/no-unnecessary-slice-end oxc/bad-bitwise-operator
+  eslint-plugin-vitest/no-identical-title eslint-plugin-vitest/prefer-comparison-matcher
+  eslint-plugin-vitest/prefer-equality-matcher eslint-plugin-vitest/prefer-to-contain
+  eslint-plugin-vitest/prefer-hooks-on-top eslint-plugin-vitest/prefer-hooks-in-order
+  eslint-plugin-vitest/no-test-return-statement`,
+  // tier 2: small cleanups (mostly autofixable)
+  `no-else-return object-shorthand prefer-template operator-assignment no-multi-assign
+  no-lonely-if symbol-description no-useless-return @typescript-eslint/array-type
+  @typescript-eslint/consistent-generic-constructors
+  @typescript-eslint/consistent-indexed-object-style
+  @typescript-eslint/prefer-promise-reject-errors
+  eslint-plugin-unicorn/prefer-dom-node-append
+  eslint-plugin-unicorn/consistent-existence-index-check
+  eslint-plugin-unicorn/prefer-string-slice eslint-plugin-unicorn/no-hex-escape
+  eslint-plugin-unicorn/prefer-import-meta-properties
+  eslint-plugin-unicorn/prefer-native-coercion-functions
+  eslint-plugin-unicorn/prefer-number-coercion eslint-plugin-unicorn/prefer-math-trunc
+  eslint-plugin-unicorn/no-useless-collection-argument
+  eslint-plugin-unicorn/prefer-structured-clone
+  eslint-plugin-unicorn/consistent-date-clone eslint-plugin-unicorn/relative-url-style
+  eslint-plugin-import/first eslint-plugin-import/newline-after-import
+  oxc/branches-sharing-code eslint-plugin-vitest/prefer-to-be prefer-object-spread
+  @typescript-eslint/prefer-for-of eslint-plugin-unicorn/prefer-string-raw
+  eslint-plugin-unicorn/prefer-modern-math-apis eslint-plugin-unicorn/prefer-regexp-test`,
+  // tier 3: larger but worthwhile
+  `@typescript-eslint/prefer-nullish-coalescing
+  eslint-plugin-unicorn/prefer-string-replace-all @typescript-eslint/dot-notation radix
+  prefer-exponentiation-operator no-implicit-coercion
+  eslint-plugin-vitest/prefer-to-have-length`,
+  // named capture groups self-document a regex match; positional ones must be
+  // renamed. And `export ... from` beats importing purely to re-export
+  `prefer-named-capture-group eslint-plugin-unicorn/prefer-export-from`,
+]
+  .join(` `)
+  .split(/\s+/u)
+
 const lint: SharedConfig[`lint`] = {
   plugins: [`oxc`, `typescript`, `unicorn`, `import`, `vitest`],
   options: { typeAware: true, typeCheck: true },
@@ -27,163 +118,19 @@ const lint: SharedConfig[`lint`] = {
   // Generic build-output dirs; projects append their own (e.g. `extensions/**`, `static/**`)
   ignorePatterns: [`build/**`, `.svelte-kit/**`, `package/**`, `dist/**`],
   rules: {
-    // Extra rules not in the enabled categories
+    ...Object.fromEntries(error_rules.map((rule) => [rule, `error`] as const)),
+    // the rest carry an option, or a reason for being off
     'no-console': [`error`, { allow: [`info`, `warn`, `error`] }],
-    'no-template-curly-in-string': `error`,
-    'no-constructor-return': `error`,
-    'default-param-last': `error`,
-    'guard-for-in': `error`,
-    'eslint-plugin-unicorn/prefer-array-find': `error`,
-    'eslint-plugin-unicorn/no-typeof-undefined': `error`,
-    'eslint-plugin-unicorn/prefer-optional-catch-binding': `error`,
-    'eslint-plugin-unicorn/no-length-as-slice-end': `error`,
-    'eslint-plugin-unicorn/prefer-node-protocol': `error`,
-    'eslint-plugin-unicorn/throw-new-error': `error`,
-    'eslint-plugin-unicorn/prefer-type-error': `error`,
-    'eslint-plugin-unicorn/prefer-date-now': `error`,
-    'eslint-plugin-unicorn/require-number-to-fixed-digits-argument': `error`,
-    'eslint-plugin-unicorn/no-useless-promise-resolve-reject': `error`,
-    'eslint-plugin-unicorn/custom-error-definition': `error`,
-    'eslint-plugin-import/no-duplicates': `error`,
-    '@typescript-eslint/no-non-null-assertion': `error`,
-    '@typescript-eslint/prefer-string-starts-ends-with': `error`,
-    '@typescript-eslint/prefer-readonly': `error`,
-    '@typescript-eslint/prefer-regexp-exec': `error`,
-    '@typescript-eslint/prefer-find': `error`,
-    '@typescript-eslint/no-deprecated': `error`,
-    '@typescript-eslint/no-misused-promises': `error`,
-    '@typescript-eslint/restrict-plus-operands': `error`,
-    '@typescript-eslint/no-dynamic-delete': `error`,
-    '@typescript-eslint/no-empty-object-type': `error`,
-    '@typescript-eslint/no-explicit-any': `error`,
-    '@typescript-eslint/no-import-type-side-effects': `error`,
-    '@typescript-eslint/no-invalid-void-type': `error`,
-    '@typescript-eslint/no-mixed-enums': `error`,
-    '@typescript-eslint/no-require-imports': `error`,
-    '@typescript-eslint/only-throw-error': `error`,
-    '@typescript-eslint/ban-ts-comment': `error`,
-    '@typescript-eslint/consistent-type-imports': `error`,
-    '@typescript-eslint/prefer-function-type': `error`,
-    '@typescript-eslint/prefer-includes': `error`,
-    '@typescript-eslint/prefer-optional-chain': `error`,
-    '@typescript-eslint/prefer-reduce-type-parameter': `error`,
-    '@typescript-eslint/prefer-ts-expect-error': `error`,
-    '@typescript-eslint/return-await': `error`,
-    '@typescript-eslint/switch-exhaustiveness-check': `error`,
-    '@typescript-eslint/unified-signatures': `error`,
-    'array-callback-return': `error`,
-    'prefer-object-has-own': `error`,
-    'eslint-plugin-promise/no-multiple-resolved': `error`,
-    'eslint-plugin-promise/no-return-in-finally': `error`,
-    'eslint-plugin-promise/param-names': `error`,
-    'eslint-plugin-promise/valid-params': `error`,
-    '@typescript-eslint/consistent-type-exports': `error`,
-    'eslint-plugin-unicorn/require-array-join-separator': `error`,
-    'no-useless-computed-key': `error`,
-    'eslint-plugin-vitest/prefer-strict-boolean-matchers': `error`,
-    'eslint-plugin-vitest/prefer-each': `error`,
-    'eslint-plugin-vitest/prefer-called-exactly-once-with': `error`,
-    'eslint-plugin-vitest/require-awaited-expect-poll': `error`,
-    // === Tier 1: zero-violation guard rails ===
-    'no-var': `error`,
-    'no-self-compare': `error`,
-    'prefer-arrow-callback': `error`,
-    'no-array-constructor': `error`,
-    'no-new-wrappers': `error`,
-    'prefer-numeric-literals': `error`,
-    'default-case-last': `error`,
-    'no-object-constructor': `error`,
-    '@typescript-eslint/prefer-enum-initializers': `error`,
-    '@typescript-eslint/prefer-literal-enum-member': `error`,
-    '@typescript-eslint/consistent-type-assertions': `error`,
-    'eslint-plugin-unicorn/prefer-array-some': `error`,
-    'eslint-plugin-unicorn/prefer-array-flat': `error`,
-    'eslint-plugin-unicorn/prefer-math-min-max': `error`,
-    'eslint-plugin-unicorn/prefer-negative-index': `error`,
-    'eslint-plugin-unicorn/prefer-includes': `error`,
-    'eslint-plugin-unicorn/prefer-default-parameters': `error`,
-    'eslint-plugin-unicorn/prefer-logical-operator-over-ternary': `error`,
     'eslint-plugin-unicorn/max-nested-calls': [`error`, { max: 3 }],
-    'eslint-plugin-unicorn/no-instanceof-array': `error`,
-    'eslint-plugin-unicorn/prefer-keyboard-event-key': `error`,
-    'eslint-plugin-unicorn/error-message': `error`,
-    'eslint-plugin-unicorn/escape-case': `error`,
-    'eslint-plugin-unicorn/prefer-prototype-methods': `error`,
-    'eslint-plugin-unicorn/no-console-spaces': `error`,
-    'eslint-plugin-unicorn/prefer-dom-node-dataset': `error`,
-    'eslint-plugin-unicorn/prefer-query-selector': `error`,
-    'eslint-plugin-unicorn/prefer-modern-dom-apis': `error`,
-    'eslint-plugin-unicorn/prefer-dom-node-text-content': `error`,
-    'eslint-plugin-unicorn/text-encoding-identifier-case': `error`,
-    'eslint-plugin-unicorn/no-unreadable-iife': `error`,
-    'eslint-plugin-unicorn/consistent-empty-array-spread': `error`,
-    'eslint-plugin-unicorn/no-unnecessary-slice-end': `error`,
-    'oxc/bad-bitwise-operator': `error`,
-    'eslint-plugin-vitest/no-identical-title': `error`,
-    'eslint-plugin-vitest/prefer-comparison-matcher': `error`,
-    'eslint-plugin-vitest/prefer-equality-matcher': `error`,
-    'eslint-plugin-vitest/prefer-to-contain': `error`,
-    'eslint-plugin-vitest/prefer-hooks-on-top': `error`,
-    'eslint-plugin-vitest/prefer-hooks-in-order': `error`,
-    'eslint-plugin-vitest/no-test-return-statement': `error`,
-    // === Tier 2: small cleanups (mostly autofixable) ===
-    'no-else-return': `error`,
-    'object-shorthand': `error`,
-    'prefer-template': `error`,
-    'operator-assignment': `error`,
-    'no-multi-assign': `error`,
-    'no-lonely-if': `error`,
-    'symbol-description': `error`,
-    'no-useless-return': `error`,
-    '@typescript-eslint/array-type': `error`,
-    '@typescript-eslint/consistent-generic-constructors': `error`,
-    '@typescript-eslint/consistent-indexed-object-style': `error`,
-    '@typescript-eslint/prefer-promise-reject-errors': `error`,
-    'eslint-plugin-unicorn/prefer-dom-node-append': `error`,
-    'eslint-plugin-unicorn/consistent-existence-index-check': `error`,
-    'eslint-plugin-unicorn/prefer-string-slice': `error`,
-    'eslint-plugin-unicorn/no-hex-escape': `error`,
-    'eslint-plugin-unicorn/prefer-import-meta-properties': `error`,
-    'eslint-plugin-unicorn/prefer-native-coercion-functions': `error`,
-    'eslint-plugin-unicorn/prefer-number-coercion': `error`,
-    'eslint-plugin-unicorn/prefer-math-trunc': `error`,
-    'eslint-plugin-unicorn/no-useless-collection-argument': `error`,
     'eslint-plugin-unicorn/numeric-separators-style': [
       `error`,
       { onlyIfContainsSeparator: true },
     ],
-    'eslint-plugin-unicorn/prefer-structured-clone': `error`,
-    'eslint-plugin-unicorn/consistent-date-clone': `error`,
-    'eslint-plugin-unicorn/relative-url-style': `error`,
-    // re-export directly (`export ... from`) instead of import-then-export
-    'eslint-plugin-unicorn/prefer-export-from': `error`,
-    'eslint-plugin-import/first': `error`,
-    'eslint-plugin-import/newline-after-import': `error`,
-    'oxc/branches-sharing-code': `error`,
-    'eslint-plugin-vitest/prefer-to-be': `error`,
-    'prefer-object-spread': `error`,
-    '@typescript-eslint/prefer-for-of': `error`,
-    'eslint-plugin-unicorn/prefer-string-raw': `error`,
-    'eslint-plugin-unicorn/prefer-modern-math-apis': `error`,
-    'eslint-plugin-unicorn/prefer-regexp-test': `error`,
-    // === Tier 3: larger but worthwhile ===
     // `null: ignore` keeps the idiomatic `== null` nullish check (null OR undefined)
     eqeqeq: [`error`, `always`, { null: `ignore` }],
-    '@typescript-eslint/prefer-nullish-coalescing': `error`,
-    // Off: false-positives on numeric `.size`/marker-radius fields (not collections)
-    'eslint-plugin-unicorn/prefer-string-replace-all': `error`,
-    '@typescript-eslint/dot-notation': `error`,
-    radix: `error`,
-    'prefer-exponentiation-operator': `error`,
-    'no-implicit-coercion': `error`,
-    // named capture groups self-document regex matches; positional groups must be renamed
-    'prefer-named-capture-group': `error`,
-    'eslint-plugin-vitest/prefer-to-have-length': `error`,
-    'eslint-plugin-vitest/require-mock-type-parameters': `off`,
-    // needs manual type annotations
+    // hoisting these out of Svelte reactive closures needs manual type annotations
     'eslint-plugin-unicorn/consistent-function-scoping': `off`,
-    // Svelte reactive closures
-    // Pervasive intentional patterns
+    // pervasive intentional patterns
     '@typescript-eslint/no-unsafe-type-assertion': `off`,
     '@typescript-eslint/restrict-template-expressions': `off`,
     'no-await-in-loop': `off`,
@@ -192,6 +139,7 @@ const lint: SharedConfig[`lint`] = {
     'oxc/no-map-spread': `off`,
     'eslint-plugin-vitest/no-conditional-expect': `off`,
     // Vitest default rules — too noisy
+    'eslint-plugin-vitest/require-mock-type-parameters': `off`,
     // Tests mock non-existent globals/DOM APIs via assignment (`globalThis.fetch = vi.fn()`,
     // `el.requestFullscreen = vi.fn()`); vi.spyOn throws on absent props and tightens mock types
     'eslint-plugin-vitest/prefer-spy-on': `off`,
@@ -201,8 +149,8 @@ const lint: SharedConfig[`lint`] = {
     // benign barrel-file cycles (components import from their package `index.ts` that re-exports
     // them); resolving them conflicts with the `$lib/foo` barrel-import convention
     'eslint-plugin-import/no-cycle': `off`,
+    // maxArgs 2 because vitest supports expect(actual, message)
     'eslint-plugin-vitest/valid-expect': [`error`, { maxArgs: 2 }],
-    // vitest supports expect(actual, message)
     // count any *assert*/*expect* helper as an assertion so expect-expect doesn't flag tests
     // that delegate to helpers (oxlint glob `*` matches one [a-z\d] run, so name them camelCase)
     'eslint-plugin-vitest/expect-expect': [

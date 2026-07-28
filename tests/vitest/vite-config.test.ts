@@ -29,6 +29,13 @@ test.each([
   const merged = make_config({ lint: { [member]: override } })
 
   expect(merged.lint[member]).toEqual({ ...defaults.lint[member], ...override })
+  // and nothing else moved. Without this, dropping the `...base.lint` spread from
+  // make_config still passes: the three object members are rebuilt from base either way,
+  // so only plugins, ignorePatterns and overrides would go missing.
+  expect(merged.lint).toEqual({
+    ...defaults.lint,
+    [member]: { ...defaults.lint[member], ...override },
+  })
 })
 
 // The defaults are module-level objects, so a result sharing their nested maps would let
