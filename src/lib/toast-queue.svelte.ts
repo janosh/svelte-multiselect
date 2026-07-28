@@ -42,10 +42,6 @@ export const DEFAULT_TOAST_DURATION_MS = 5000
 // Where a request that names no priority lands, on any ladder that has this rung
 const DEFAULT_TOAST_PRIORITY = `info`
 
-// A warning or error the user never saw is a bug report waiting to happen, so the top
-// two ranks of any ladder stay up until dismissed while the lower ones time out.
-export const STICKY_PRIORITIES: readonly ToastPriority[] = TOAST_PRIORITIES.slice(-2)
-
 // Both callbacks take the widened item rather than the queue's own ladder, which keeps
 // ToastItem covariant in its priority type: a parameter typed to the narrow ladder makes
 // ToastItem<'watch' | ...> unassignable to ToastItem<string> and would pin <Toast /> and
@@ -280,8 +276,13 @@ export const enqueue_toast = <Priority extends string>(
   )
 
   if (existing) {
-    const request_is_lower_priority =
-      rank < priority_rank(queue.priorities, existing.priority)
+    const existing_rank = priority_rank(queue.priorities, existing.priority)
+    const request_is_lower_priority = rank < existing_rank
+    // An equal-priority repeat escalates nothing, so an omitted field means "leave this
+    // as it was" rather than "clear it" — a plain repeat of a toast carrying a duration
+    // used to wipe it and strand the toast on screen for good. Only a louder repeat
+    // replaces the original's timing and action outright.
+    const carried: Partial<ToastItem<Priority>> = rank === existing_rank ? existing : {}
 
     // A lower-priority repeat only refreshes the text; the higher-priority
     // original keeps its priority, timing, and action.
@@ -291,10 +292,10 @@ export const enqueue_toast = <Priority extends string>(
           ...existing,
           message: request.message,
           priority,
-          expires_at_ms,
-          action: request.action,
-          visible_duration_ms: request.visible_duration_ms,
-          on_close: request.on_close,
+          expires_at_ms: expires_at_ms ?? carried.expires_at_ms ?? null,
+          action: request.action ?? carried.action,
+          visible_duration_ms: request.visible_duration_ms ?? carried.visible_duration_ms,
+          on_close: request.on_close ?? carried.on_close,
         }
     let transition: ToastQueueTransition<Priority>
     if (is_expired(updated, now_ms)) {
@@ -397,7 +398,9 @@ export interface ToastStoreOptions<
 > extends ToastQueueOptions<Priority> {
   duration_ms?: number
   // Priorities that stay up until dismissed. Defaults to the ladder's top two.
-  sticky_priorities?: readonly Priority[]
+  // NoInfer for the same reason default_priority has it: without it a typo here widens
+  // the ladder instead of failing, and the toast just never becomes sticky
+  sticky_priorities?: readonly NoInfer<Priority>[]
 }
 
 export class ToastStore<Priority extends string = ToastPriority> {
@@ -409,6 +412,8 @@ export class ToastStore<Priority extends string = ToastPriority> {
   constructor(options: ToastStoreOptions<Priority> = {}) {
     this.#queue = $state.raw(create_toast_queue<Priority>(options))
     this.#default_duration_ms = options.duration_ms ?? DEFAULT_TOAST_DURATION_MS
+    // a warning or error the user never saw is a bug report waiting to happen, so the
+    // ladder's top two stay up until dismissed while the lower ones time out
     this.#sticky_priorities =
       options.sticky_priorities ?? this.#queue.priorities.slice(-2)
   }
@@ -443,9 +448,7 @@ export class ToastStore<Priority extends string = ToastPriority> {
         ...request,
         message,
         priority,
-        ...(resolved_duration_ms !== null && {
-          visible_duration_ms: resolved_duration_ms,
-        }),
+        visible_duration_ms: resolved_duration_ms ?? undefined,
       },
       Date.now(),
     )

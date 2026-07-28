@@ -16,7 +16,8 @@
     // Moves the keyboard to the toast's own controls from anywhere on the page, since a
     // toast lives at the end of the DOM and Tab may be a long way from it. `null` opts out.
     focus_hotkey?: string | string[] | null
-    // Rendered into the assertive live region, interrupting whatever is being read
+    // Rendered into the assertive live region, interrupting whatever is being read.
+    // Defaults to the ladder's top two, the same rungs stickiness holds open.
     assertive?: readonly string[]
     dismiss_label?: string
     children?: Snippet<[ToastItem<string>]>
@@ -30,7 +31,7 @@
     // Option+T types `†` on Apple keyboards, so the shortcut is bound under both
     // spellings rather than silently doing nothing on macOS
     focus_hotkey = [`alt+t`, `alt+†`],
-    assertive = [`warning`, `error`],
+    assertive,
     dismiss_label = `Dismiss notification`,
     children,
     ...rest
@@ -41,7 +42,12 @@
   let focused = $state(false)
 
   const active = $derived(store.active)
-  const is_assertive = $derived(active !== null && assertive.includes(active.priority))
+  // hardcoding the original five here let a custom ladder's top rung stay on screen until
+  // dismissed while being announced politely, so the two rules read from one source
+  const assertive_priorities = $derived(assertive ?? store.priorities.slice(-2))
+  const is_assertive = $derived(
+    active !== null && assertive_priorities.includes(active.priority),
+  )
 
   const sync_pause = () => {
     if (hovered || focused) store.pause()
@@ -87,13 +93,21 @@
     if (!stack?.contains(document.activeElement)) origin.focus()
   }
 
+  // The buttons below restore focus themselves, since dismissing one toast can promote
+  // the next and leave `active` non-null. This covers every other way the last toast
+  // leaves — an absolute deadline that focus cannot pause, or the consumer clearing the
+  // queue — where there is no click to hang the restore off.
+  $effect(() => {
+    if (!active) void restore_focus()
+  })
+
   const dismiss = (id: string) => {
     store.dismiss(id)
-    restore_focus()
+    void restore_focus()
   }
   const run_action = (id: string) => {
     store.run_action(id)
-    restore_focus()
+    void restore_focus()
   }
 
   const bindings = $derived(

@@ -19,7 +19,7 @@ import type {
 } from '$lib/toast-queue.svelte.ts'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query } from './index'
+import { doc_query, escape_key } from './index'
 
 const undo = { label: `Undo` }
 // The ladder this queue was extracted from: `action` for undo prompts, `watch` for
@@ -169,13 +169,22 @@ describe(`toast queue reducer`, () => {
   })
 
   describe(`dedupe`, () => {
-    test(`a repeat updates in place instead of queueing behind itself`, () => {
+    test(`a repeat updates in place, on screen or in the queue`, () => {
       const first = add(create_toast_queue(), `saving`).queue
       const repeat = add(first, `saving`)
 
       expect(repeat.deduplicated).toBe(true)
       expect(repeat.toast_id).toBe(first.active?.id)
       expect(repeat.queue.pending).toEqual([])
+
+      // a match further back is updated where it sits and re-ranked from there, so a
+      // repeat that arrives louder promotes past the toast currently on screen
+      let queue = add(create_toast_queue(), `on screen`).queue
+      queue = add(queue, `queued`, { dedupe_key: `job` }).queue
+      const louder = add(queue, `louder`, { dedupe_key: `job`, priority: `error` })
+
+      expect(louder.queue.active?.message).toBe(`louder`)
+      expect(messages(louder.queue.pending)).toEqual([`on screen`])
     })
 
     test(`a lower-priority repeat refreshes the text only`, () => {
@@ -206,6 +215,22 @@ describe(`toast queue reducer`, () => {
       expect(queue.active?.priority).toBe(`error`)
       expect(queue.active?.action).toEqual(undo)
       expect(queue.active?.expires_at_ms).toBe(1000) // restarted at the new priority
+    })
+
+    test(`an equal-priority repeat keeps the original action and duration`, () => {
+      const first = add(create_toast_queue(), `first text`, {
+        dedupe_key: `job`,
+        action: undo,
+        visible_duration_ms: 900,
+      }).queue
+      const { queue } = add(first, `second text`, { dedupe_key: `job` }, 100)
+
+      expect(queue.active?.message).toBe(`second text`)
+      expect(queue.active?.action).toEqual(undo)
+      // the window restarts on a repeat, but it is still a window: taking the omitted
+      // duration as an instruction to clear it left the toast on screen for good
+      expect(queue.active?.visible_duration_ms).toBe(900)
+      expect(queue.active?.expires_at_ms).toBe(1000)
     })
 
     test(`a repeat that arrives already expired times out rather than lingering`, () => {
@@ -242,12 +267,17 @@ describe(`toast queue reducer`, () => {
 
   test(`activating an action removes the toast and reports it first`, () => {
     let queue = add(create_toast_queue(), `a`, { action: undo }).queue
-    queue = add(queue, `b`).queue
+    queue = add(queue, `b`, { action: undo }).queue
     const transition = activate_toast_action(queue, `toast-1`, 0)
 
     expect(transition.effects.map((effect) => effect.reason)).toEqual([`action`])
     expect(transition.effects[0].toast.message).toBe(`a`)
     expect(transition.queue.active?.message).toBe(`b`)
+
+    // a queued toast's action fires too: `show` hands back an id that outlives the wait
+    const queued = activate_toast_action(queue, `toast-2`, 0)
+    expect(queued.effects[0].toast.message).toBe(`b`)
+    expect(queued.queue.active?.message).toBe(`a`)
   })
 
   test(`activating a toast with no action is a no-op`, () => {
@@ -359,7 +389,7 @@ describe(`ToastStore`, () => {
     expect(store.active).toBeNull()
   })
 
-  test(`pause banks the remainder and resume spends exactly that`, () => {
+  test(`pause banks the remainder and resume spends exactly that, never more`, () => {
     fake_clock()
     const store = new ToastStore()
     store.show(`a`, { duration_ms: 1000 })
@@ -374,13 +404,9 @@ describe(`ToastStore`, () => {
     expect(store.active?.message).toBe(`a`)
     vi.advanceTimersByTime(1)
     expect(store.active).toBeNull()
-  })
 
-  test(`resume on a running toast does not extend it`, () => {
-    fake_clock()
-    const store = new ToastStore()
-    store.show(`a`, { duration_ms: 1000 })
-
+    // resuming one that was never paused is a no-op, not a second full duration
+    store.show(`b`, { duration_ms: 1000 })
     vi.advanceTimersByTime(300)
     store.resume()
     vi.advanceTimersByTime(700)
@@ -472,7 +498,6 @@ describe(`<Toast />`, () => {
   }
   const polite = () => doc_query(`[aria-live="polite"]`)
   const assertive = () => doc_query(`[aria-live="assertive"]`)
-  const escape_key = () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })
   const press_focus_hotkey = () =>
     document.dispatchEvent(
       new KeyboardEvent(`keydown`, { key: `t`, altKey: true, bubbles: true }),
@@ -518,7 +543,11 @@ describe(`<Toast />`, () => {
     await tick()
 
     expect(doc_query(`.toast`).dataset.priority).toBe(`watch`)
-    expect(polite().textContent).toContain(`watching src/`)
+    // `watch` is the ladder's second-highest rung, so it is sticky — and urgency has to
+    // agree with that: announcing it politely would let a notice that never leaves the
+    // screen go unread. Both rules read the top two off the store's own ladder.
+    expect(assertive().textContent).toContain(`watching src/`)
+    expect(polite().textContent).not.toContain(`watching src/`)
   })
 
   test(`the waiting count is rendered with a spelled-out label`, async () => {
@@ -664,9 +693,17 @@ describe(`<Toast />`, () => {
     store.show(`a`, { duration_ms: 1000, action: { label: `Undo` } })
     await tick()
 
-    doc_query(`.toast-stack`).dispatchEvent(new FocusEvent(`focusin`, { bubbles: true }))
+    const stack = doc_query(`.toast-stack`)
+    stack.dispatchEvent(new FocusEvent(`focusin`, { bubbles: true }))
     vi.advanceTimersByTime(5000)
     expect(store.active?.message).toBe(`a`)
+
+    // and focus leaving hands the untouched budget back to the clock
+    stack.dispatchEvent(new FocusEvent(`focusout`, { bubbles: true }))
+    vi.advanceTimersByTime(999)
+    expect(store.active?.message).toBe(`a`)
+    vi.advanceTimersByTime(1)
+    expect(store.active).toBeNull()
   })
 
   test(`the focus hotkey moves the keyboard to the toast's first control`, async () => {
@@ -678,12 +715,26 @@ describe(`<Toast />`, () => {
     expect(document.activeElement).toBe(doc_query(`.toast-action`))
   })
 
+  test(`the focus hotkey is inert when the toast has no controls`, async () => {
+    const store = render({ dismissible: false })
+    store.show(`a`)
+    await tick()
+    const before = document.activeElement
+
+    // nothing focusable in the card, so the hotkey leaves the keyboard where it is
+    expect(document.querySelector(`.toast button`)).toBeNull()
+    press_focus_hotkey()
+    expect(document.activeElement).toBe(before)
+  })
+
   // every route out of the toast unmounts the button holding focus, so each one has to
   // hand the user's place back rather than dropping focus on <body>
   test.each([
     [`the action button`, () => doc_query<HTMLButtonElement>(`.toast-action`).click()],
     [`the dismiss button`, () => doc_query<HTMLButtonElement>(`.toast-dismiss`).click()],
     [`Escape`, () => doc_query(`.toast-dismiss`).dispatchEvent(escape_key())],
+    // no click to hang the restore off: the queue empties from under the toast
+    [`a store-driven clear`, (store: ToastStore) => store.clear()],
   ])(`%s hands focus back to where the hotkey took it from`, async (_label, close) => {
     const opener = document.createElement(`button`)
     document.body.append(opener)
@@ -695,7 +746,7 @@ describe(`<Toast />`, () => {
     press_focus_hotkey()
     expect(document.activeElement).not.toBe(opener)
 
-    close()
+    close(store)
     await tick()
     await tick() // restore_focus waits a tick for the toast to leave the DOM
 
