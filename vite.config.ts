@@ -1,18 +1,18 @@
-import { config } from '@janosh/vite-config'
 import { sveltekit } from '@sveltejs/kit/vite'
 import live_examples from './src/lib/live-examples/vite-plugin.ts'
+import { make_config } from './src/lib/vite-config.ts'
 
 export default {
-  ...config, // shared lint/fmt/build from @janosh/vite-config (dotfiles)
-  staged: {
-    // not spread from config.staged: typed as a record *or* a function, so no-misused-spread
-    '*.{js,ts,svelte,html,css,md,json,yaml}': `vp check --fix`,
-    // shared hook runs the JS svelte-check; CI here uses the Rust port
-    '*.{ts,svelte}': `sh -c 'npx svelte-kit sync && npx svelte-check-rs --threshold error'`,
-    '*.test.ts': `sh -c '! grep -E "(test|describe)\\.only\\(" "$@"' --`,
-    // >fo< spares the text-search fixtures splitting `foo` across inline markup
-    '*': `codespell --ignore-words-list falsy --ignore-regex '>fo<' --check-filenames`,
-  },
+  // shared lint/fmt/build/staged, published as svelte-widgets/vite-config
+  ...make_config({
+    staged: {
+      // shared hook runs the JS svelte-check; CI here uses the Rust port
+      '*.{ts,svelte}': `sh -c 'npx svelte-kit sync && npx svelte-check-rs --threshold error'`,
+      '*.test.ts': `sh -c '! grep -E "(test|describe)\\.only\\(" "$@"' --`,
+      // >fo< spares the text-search fixtures splitting `foo` across inline markup
+      '*': `codespell --ignore-words-list falsy --ignore-regex '>fo<' --check-filenames`,
+    },
+  }),
 
   plugins: [sveltekit(), ...live_examples()],
 
@@ -23,6 +23,7 @@ export default {
     coverage: {
       reporter: [`text`, `json-summary`],
       include: [`src/lib/**/*.{ts,svelte}`],
+      exclude: [`src/lib/vite-config.ts`], // build tooling, not shipped runtime code
       thresholds: {
         statements: 95,
         branches: 89.8,

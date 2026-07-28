@@ -41,6 +41,10 @@
       "types": "./dist/utils.d.ts",
       "default": "./dist/utils.js"
     },
+    "./vite-config": {
+      "types": "./dist/vite-config.d.ts",
+      "default": "./dist/vite-config.js"
+    },
     "./heading-anchors": {
       "types": "./dist/heading-anchors.d.ts",
       "default": "./dist/heading-anchors.js"
@@ -99,7 +103,6 @@
     "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
   },
   "devDependencies": {
-    "@janosh/vite-config": "github:janosh/dotfiles",
     "@playwright/test": "^1.61.1",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.70.1",
@@ -120,13 +123,17 @@
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",
     "svelte": "^5.48.0",
-    "vite": "^8.0.0"
+    "vite": "^8.0.0",
+    "vite-plus": "*"
   },
   "peerDependenciesMeta": {
     "@wooorm/starry-night": {
       "optional": true
     },
     "vite": {
+      "optional": true
+    },
+    "vite-plus": {
       "optional": true
     }
   },
