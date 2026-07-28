@@ -112,7 +112,6 @@ export default function live_examples_plugin(
       const src = virtual_files.get(base_id)
       if (src !== undefined) return src
 
-      // For main component requests in production, fail the build
       const msg = `Example src not found for ${id}`
       if (process.env.NODE_ENV === `production`) {
         throw new Error(msg)
@@ -128,7 +127,6 @@ export default function live_examples_plugin(
       // Strip query params for extension check (Vite adds ?query for HMR, styles, etc.)
       const base_id = id.split(`?`)[0]
 
-      // Skip non-matching files
       const is_example_module = id.includes(EXAMPLE_MODULE_PREFIX)
       const is_markdown = extensions.some((ext) => base_id.endsWith(ext))
       if (!is_example_module && !is_markdown) return undefined
@@ -182,8 +180,7 @@ export default function live_examples_plugin(
 
           if (src !== virtual_files.get(virtual_id)) {
             virtual_files.set(virtual_id, src)
-            // Invalidate virtual modules and schedule a deferred reload so
-            // load() returns fresh content from virtual_files (which was just updated).
+            // Invalidate after updating the source so load() serves the new content.
             invalidate_virtual_modules(virtual_id)
           }
 

@@ -1,12 +1,14 @@
 import { ContextMenu } from '$lib'
 import type { CmdAction } from '$lib/types'
+import type { CmdSection } from '$lib/utils'
 import type { ComponentProps } from 'svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query, stub_prop } from './index'
+import { doc_query, escape_key, stub_prop } from './index'
 
 describe(`ContextMenu`, () => {
   type MenuProps = Partial<Omit<ComponentProps<typeof ContextMenu>, `actions`>>
+  type MenuEntries = ComponentProps<typeof ContextMenu>[`actions`]
   const make_actions = (): CmdAction[] => [
     { label: `Copy`, action: vi.fn(), shortcut: `mod+c` },
     { label: `Delete`, action: vi.fn(), disabled: true },
@@ -18,9 +20,11 @@ describe(`ContextMenu`, () => {
     for (const app of mounted.splice(0)) void unmount(app)
     Reflect.deleteProperty(globalThis.navigator, `userAgent`)
   })
-  const mount_menu = (actions: CmdAction[], extra: MenuProps = {}) => {
-    const props = $state({ actions, ...extra })
+  // returns the reactive props, so a test can drive `at` the way a consumer would
+  const mount_menu = (actions: MenuEntries, extra: MenuProps = {}) => {
+    const props: MenuProps & { actions: MenuEntries } = $state({ actions, ...extra })
     mounted.push(mount(ContextMenu, { target: document.body, props }))
+    return props
   }
   const right_click = (target: EventTarget, clientX = 120, clientY = 240) => {
     const event = new MouseEvent(`contextmenu`, {
@@ -33,15 +37,26 @@ describe(`ContextMenu`, () => {
     return event
   }
   // mounts a menu and right-clicks the page to open it, returning the contextmenu event
-  const open_menu = async (actions = make_actions(), extra: MenuProps = {}) => {
+  const open_menu = async (
+    actions: MenuEntries = make_actions(),
+    extra: MenuProps = {},
+  ) => {
     mount_menu(actions, extra)
     const event = right_click(document.body)
     await tick()
     return event
   }
+  const region = createRawSnippet(() => ({
+    render: () => `<div data-testid="region">region</div>`,
+  }))
   const menu = () => document.querySelector(`menu[role="menu"]`)
+  // `role^=` catches both the plain menuitem and the menuitemradio a section renders
   const items = () =>
-    Array.from(document.querySelectorAll<HTMLButtonElement>(`[role="menuitem"]`))
+    Array.from(document.querySelectorAll<HTMLButtonElement>(`[role^=menuitem]`))
+  const press = (key: string) =>
+    document.activeElement?.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true }),
+    )
 
   test(`a right-click opens the menu at the pointer, replacing the native one`, async () => {
     mount_menu(make_actions(), { class: `consumer-class` })
@@ -68,10 +83,7 @@ describe(`ContextMenu`, () => {
   // with a region, svelte:body's handler is dropped, so the rest of the page keeps
   // the browser's own menu
   test(`a children region scopes the right-click to itself`, async () => {
-    const children = createRawSnippet(() => ({
-      render: () => `<div data-testid="region">region</div>`,
-    }))
-    mount_menu(make_actions(), { children })
+    mount_menu(make_actions(), { children: region })
 
     const outside = right_click(document.body)
     await tick()
@@ -83,14 +95,23 @@ describe(`ContextMenu`, () => {
     expect(menu()).not.toBeNull()
   })
 
-  test(`an item snippet replaces the default label and shortcut markup`, async () => {
-    const item = createRawSnippet<[{ action: CmdAction }]>((get_params) => ({
-      render: () => `<span data-testid="custom">${get_params().action.label}!</span>`,
-    }))
-    await open_menu(make_actions(), { item })
+  // for a consumer whose triggers must record *which* of their targets was
+  // right-clicked: neither the document nor a wrapper can, so it drives `at` itself
+  test.each([
+    [`no region`, {}, () => document.body],
+    [`a region`, { children: region }, () => doc_query(`[data-testid="region"]`)],
+  ] as const)(`trigger="none" installs no handler (%s)`, async (_desc, extra, target) => {
+    const props = mount_menu(make_actions(), { ...extra, trigger: `none` })
 
-    expect(items().map((btn) => btn.textContent?.trim())).toEqual([`Copy!`, `Delete!`])
-    expect(document.querySelector(`kbd`)).toBeNull() // default shortcut markup is gone
+    const event = right_click(target())
+    await tick()
+    expect(menu()).toBeNull()
+    expect(event.defaultPrevented).toBe(false) // the browser's own menu survives
+
+    props.at = { x: 30, y: 60 } // `at` alone still opens it
+    await tick()
+    const { left, top } = doc_query(`menu[role="menu"]`).style
+    expect([left, top]).toEqual([`30px`, `60px`])
   })
 
   test.each([
@@ -103,33 +124,6 @@ describe(`ContextMenu`, () => {
     expect([...items()[0].querySelectorAll(`kbd`)].map((key) => key.textContent)).toEqual(
       expected,
     )
-  })
-
-  test(`arrow keys walk the menu, wrapping and skipping disabled items`, async () => {
-    const actions: CmdAction[] = [
-      { label: `One`, action: vi.fn() },
-      { label: `Two`, action: vi.fn(), disabled: true },
-      { label: `Three`, action: vi.fn() },
-    ]
-    await open_menu(actions)
-    const [one, , three] = items()
-    expect(document.activeElement).toBe(one) // focus_trap entered at the first item
-
-    const press = (key: string) =>
-      document.activeElement?.dispatchEvent(
-        new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true }),
-      )
-
-    press(`ArrowDown`)
-    expect(document.activeElement).toBe(three) // disabled `Two` is skipped
-    press(`ArrowDown`)
-    expect(document.activeElement).toBe(one) // wraps past the end
-    press(`ArrowUp`)
-    expect(document.activeElement).toBe(three) // and back past the start
-    press(`Home`)
-    expect(document.activeElement).toBe(one)
-    press(`End`)
-    expect(document.activeElement).toBe(three)
   })
 
   // reachable by clicking menu chrome rather than an item: focus leaves the list, and
@@ -175,17 +169,27 @@ describe(`ContextMenu`, () => {
     expect(menu()).toBeNull()
   })
 
-  // both bubble to the document listeners that own dismissal
+  // both defaults ride document listeners; `dismiss` merges over them, reaching the
+  // whole click_outside config — `escape: false` and `release` opt each one out
+  const outside_press = () => new PointerEvent(`pointerdown`, { bubbles: true })
+  const outside_click = () => new MouseEvent(`click`, { bubbles: true })
+  const release: MenuProps = { dismiss: { dismiss_on: `release`, escape: false } }
   test.each([
-    [`Escape`, () => new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true })],
-    [`a press outside`, () => new PointerEvent(`pointerdown`, { bubbles: true })],
-  ])(`%s dismisses the menu`, async (_desc, make_event) => {
-    await open_menu()
+    [`Escape dismisses the menu`, {}, escape_key, true],
+    [`a press outside dismisses the menu`, {}, outside_press, true],
+    [`escape: false leaves Escape to the page`, release, escape_key, false],
+    [`dismiss_on: release ignores the press`, release, outside_press, false],
+    [`dismiss_on: release waits for the click`, release, outside_click, true],
+    // the mirror of the two rows above: without it, a listener bound to both events
+    // would still satisfy them and the press/release distinction would go unproven
+    [`the default press ignores a stray click`, {}, outside_click, false],
+  ] as const)(`%s`, async (_desc, extra, make_event, closes) => {
+    await open_menu(make_actions(), extra)
     expect(menu()).not.toBeNull()
 
     document.body.dispatchEvent(make_event())
     await tick()
-    expect(menu()).toBeNull()
+    expect(menu() === null).toBe(closes)
   })
 
   test(`stays shut when disabled or when there is nothing to show`, async () => {
@@ -195,5 +199,173 @@ describe(`ContextMenu`, () => {
 
     await open_menu([])
     expect(menu()).toBeNull()
+
+    await open_menu([{ title: `Empty`, actions: [] }]) // a section with nothing in it
+    expect(menu()).toBeNull()
+  })
+
+  describe(`sections`, () => {
+    const make_sections = (): CmdSection[] => [
+      {
+        title: `Bond order`,
+        selected: `single`,
+        actions: [
+          { id: `single`, label: `Single`, action: vi.fn() },
+          { id: `double`, label: `Double`, action: vi.fn() },
+        ],
+      },
+      // no `selected`: a plain heading, whose items stay ordinary menu items
+      { title: `Other`, actions: [{ label: `Reset`, action: vi.fn() }] },
+    ]
+
+    // Keys are tagged with the field they came from. Untagged, every entry below keys
+    // to `1`, and Svelte aborts a keyed each on the first duplicate.
+    test(`an id and a label spelling the same thing stay distinct keys`, async () => {
+      await open_menu([
+        { id: 1, label: `Numeric id`, action: vi.fn() },
+        { id: `1`, label: `String id`, action: vi.fn() },
+        { label: `1`, action: vi.fn() },
+        { title: `1`, actions: [{ label: `In section`, action: vi.fn() }] },
+      ])
+
+      expect(items().map((btn) => btn.textContent?.trim())).toEqual([
+        `Numeric id`,
+        `String id`,
+        `1`,
+        `In section`,
+      ])
+    })
+
+    // A section has no id, so its title is a heading rather than an identity. Keyed on
+    // title alone these two collided, and each_key_duplicate took down the whole menu.
+    test(`two sections may share a title`, async () => {
+      await open_menu([
+        { title: `Tools`, actions: [{ label: `First`, action: vi.fn() }] },
+        { title: `Tools`, actions: [{ label: `Second`, action: vi.fn() }] },
+      ])
+
+      expect(
+        [...document.querySelectorAll(`li[role="group"]`)].map((group) =>
+          group.getAttribute(`aria-label`),
+        ),
+      ).toEqual([`Tools`, `Tools`])
+      expect(items().map((btn) => btn.textContent?.trim())).toEqual([`First`, `Second`])
+    })
+
+    test(`render as labelled groups of radios, flat actions keep menuitem`, async () => {
+      // `Other` doubles as the second section's title, where a bare entry_key would
+      // collide; the empty section is a heading over nothing, so it drops out
+      await open_menu([
+        { label: `Other`, action: vi.fn() },
+        ...make_sections(),
+        { title: `Empty`, actions: [] },
+      ])
+
+      const groups = Array.from(document.querySelectorAll(`li[role="group"]`))
+      expect(groups.map((group) => group.getAttribute(`aria-label`))).toEqual([
+        `Bond order`,
+        `Other`,
+      ])
+      // the visible title duplicates aria-label, so AT must not read it twice
+      expect(
+        groups.map((group) => group.querySelector(`.section-title`)?.textContent),
+      ).toEqual([`Bond order`, `Other`])
+      expect(
+        groups.map((group) =>
+          group.querySelector(`.section-title`)?.getAttribute(`aria-hidden`),
+        ),
+      ).toEqual([`true`, `true`])
+
+      expect(
+        items().map((btn) => [
+          btn.textContent?.trim(),
+          btn.getAttribute(`role`),
+          btn.getAttribute(`aria-checked`),
+        ]),
+      ).toEqual([
+        [`Other`, `menuitem`, null],
+        [`Single`, `menuitemradio`, `true`],
+        [`Double`, `menuitemradio`, `false`],
+        [`Reset`, `menuitem`, null], // a section without `selected` is not a radio group
+      ])
+      // members stay direct children of the menu; the empty section adds no <li>
+      expect(document.querySelectorAll(`menu[role="menu"] > li`)).toHaveLength(3)
+    })
+
+    // open_at refuses a menu with nothing to show; only a consumer's `at` reveals it
+    test(`a menu of nothing but empty sections keeps them`, async () => {
+      const props = mount_menu([{ title: `Empty`, actions: [] }], { trigger: `none` })
+      props.at = { x: 10, y: 20 }
+      await tick()
+      expect(doc_query(`li[role="group"]`).getAttribute(`aria-label`)).toBe(`Empty`)
+      expect(items()).toHaveLength(0)
+    })
+
+    test(`arrow keys cross section boundaries, skipping disabled items`, async () => {
+      const [bond_order, other] = make_sections()
+      bond_order.actions[1].disabled = true
+      await open_menu([{ label: `Copy`, action: vi.fn() }, bond_order, other])
+      const [copy, single, , reset] = items()
+      expect(document.activeElement).toBe(copy)
+
+      press(`ArrowDown`)
+      expect(document.activeElement).toBe(single) // flat item into a section
+      press(`ArrowDown`)
+      expect(document.activeElement).toBe(reset) // disabled `Double` skipped, next section
+      press(`ArrowDown`)
+      expect(document.activeElement).toBe(copy) // wraps out of the last section
+      press(`ArrowUp`)
+      expect(document.activeElement).toBe(reset)
+      press(`Home`)
+      expect(document.activeElement).toBe(copy)
+      press(`End`)
+      expect(document.activeElement).toBe(reset)
+    })
+
+    test(`choosing a section item reports the section it came from`, async () => {
+      const sections = make_sections()
+      const on_select = vi.fn()
+      await open_menu(sections, { on_select })
+
+      items()[1].click()
+      await tick()
+      expect(sections[0].actions[1].action).toHaveBeenCalledWith(`Double`)
+      expect(on_select).toHaveBeenCalledWith(sections[0].actions[1], sections[0])
+      expect(menu()).toBeNull()
+    })
+
+    // the snippet owns the whole button body, flat entries and section members alike
+    test(`the item snippet replaces the default markup, section and checked included`, async () => {
+      const item = createRawSnippet<
+        [{ action: CmdAction; section?: CmdSection; checked?: boolean }]
+      >((get_params) => ({
+        render: () => {
+          const { action, section, checked } = get_params()
+          return `<span>${section?.title ?? `flat`}/${action.label}/${checked}</span>`
+        },
+      }))
+      await open_menu([...make_actions(), ...make_sections()], { item })
+
+      expect(items().map((btn) => btn.textContent?.trim())).toEqual([
+        `flat/Copy/undefined`,
+        `flat/Delete/undefined`,
+        `Bond order/Single/true`,
+        `Bond order/Double/false`,
+        `Other/Reset/undefined`,
+      ])
+      expect(document.querySelector(`kbd`)).toBeNull() // default shortcut markup is gone
+    })
+
+    // CmdAction allows arbitrary extra keys, so one carrying `actions` or `title` must
+    // not be mistaken for a section
+    test(`a flat action with section-shaped extras stays flat`, async () => {
+      await open_menu([
+        { label: `Copy`, action: vi.fn(), actions: [`audit`], title: `tooltip` },
+      ])
+      const [copy] = items()
+      expect(copy.getAttribute(`role`)).toBe(`menuitem`)
+      expect(copy.getAttribute(`title`)).toBeNull() // `title` is not `description`
+      expect(document.querySelector(`li[role="group"]`)).toBeNull()
+    })
   })
 })

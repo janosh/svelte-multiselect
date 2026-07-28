@@ -51,3 +51,20 @@ test(`overview pages link to base-prefixed sibling routes`, () => {
   expect(hrefs.every((href) => href?.startsWith(`/docs/`))).toBe(true)
   expect(hrefs).toContain(`/docs/form`)
 })
+
+// an href is a destination, not an identity: two cards may point at one page under
+// different titles, and a bare href key would throw each_key_duplicate
+test(`renders cards sharing an href`, () => {
+  const subpages: [string, string, string][] = [
+    [`Basics`, `/guide`, `Start here`],
+    [`Advanced`, `/guide`, `Same page, deeper`],
+  ]
+  mount(SubpageGrid, {
+    target: document.body,
+    props: { title: `Demo`, subtitle: `Demo subtitle`, subpages },
+  })
+
+  expect(
+    [...document.querySelectorAll(`nav.grid a.card h2`)].map((h2) => h2.textContent),
+  ).toEqual([`Basics`, `Advanced`])
+})

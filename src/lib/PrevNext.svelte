@@ -63,7 +63,6 @@
     { kind: `next`, item: next, snippet: next_snippet, title: titles.next },
   ])
 
-  // Validation and logging
   $effect.pre(() => {
     if (log === `silent`) return
     if (items_arr.length < min_items && log === `verbose`) {

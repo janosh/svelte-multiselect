@@ -22,11 +22,9 @@ Selection history is **enabled by default** with a max of 50 entries, letting us
   let canUndo = $state(false)
   let canRedo = $state(false)
   let events: EventLogEntry[] = $state([])
-  // Use same platform detection as component (userAgentData is modern API, userAgent is fallback)
+  // same platform detection as the component
   const is_mac: boolean =
-    typeof navigator !== 'undefined' &&
-    (navigator.userAgentData?.platform === 'macOS' ||
-      /Mac|iPhone|iPad|iPod/.test(navigator.userAgent))
+    typeof navigator !== 'undefined' && /Mac|iPhone|iPad|iPod/.test(navigator.userAgent)
   const mod_key: string = is_mac ? 'Cmd' : 'Ctrl'
 
   function log_event(name: string, data: unknown): void {

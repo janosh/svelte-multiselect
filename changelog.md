@@ -1,5 +1,30 @@
 # Changelog
 
+## [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
+
+> 27 July 2026
+
+- Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control, generalized from the hand-rolled ones those repos each grew), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed`
+- Add `portal`, `contrast_color` and `forward_window_keydown` attachments, bringing the total to thirteen
+- Add headless modules behind their own subpaths: `svelte-widgets/toast-queue`, `/dialogs`, `/fullscreen`, `/clipboard`, `/print`, `/file-drop` and `/text-search`, the last matching across inline markup where `highlight_matches` walks text nodes one at a time. It skips `script`, `style` and `noscript` so a find-in-page never steps onto text that renders nowhere, and treats text either side of one as continuous
+- Add shortcut rebinding for "customize shortcuts" UIs: `event_to_combo`, `normalize_combo` and `sanitize_shortcut_overrides` turn a keydown into a canonical combo and resolve collisions
+- Add sections to `ContextMenu`: `actions` accepts `CmdSection` entries rendered as an ARIA `group` of `menuitemradio` items with a selected value per section
+- Add a `create_highlighter(grammars)` factory and a `svelte-widgets/live-examples/create-highlighter` subpath, so consumers can pick their own grammars without the barrel's eager top-level await of 34 grammars
+- Consolidate `icon_data` from 25 to 143 entries using matterviz's curated paths. `Icon` now supports fill/stroke glyphs and multi-element SVG markup. The name lookup still ships the full 56 kB raw map with any icon, so tree-shaking remains worth revisiting
+- Add a `toggle` snippet to `DraggablePane`, so a consumer can put any icon in the toggle button while the component keeps the button and its anchor geometry. `open_icon`/`closed_icon` are typed to the bundled `IconName`s, which left no route to an icon this package doesn't ship, and `icon_style` sizes the bundled one without reaching for the snippet at all. The pane carries `toc-exclude` now, keeping headings in floating chrome out of a page's `Toc`, and `pane-open` while it is open, which is what a page needs to style around a pane it does not own
+- Add an `option_suffix` snippet to `ButtonGroup`, rendered as a sibling of each button rather than inside it, so an option can carry a trailing link without nesting interactive content in a `<button>`. The wrapper element only appears when the snippet is supplied, so existing `.options > button` selectors keep matching. Adds `--btn-group-justify-content`, `--btn-group-btn-cursor`, `--btn-group-btn-hover-color`, `--btn-group-btn-hover-transform` and `--btn-group-btn-transition`, and `tooltip_options` for consumers whose option tooltips are rich text
+- Add `dismiss` and `trigger` to `ContextMenu`. `dismiss` merges over the default `{ escape: true }` and reaches the whole `click_outside` config, so a trigger that toggles can ask for `dismiss_on: 'release'` instead of being closed by its own press. `trigger: 'none'` installs no right-click handler at all, for a consumer driving `at` itself
+- Add `root`, `on_escape` and `recapture` to `focus_trap`. `root` follows `click_outside`'s `scope` shape and is resolved per keystroke, so a trap can cover an inner dialog while a sibling backdrop stays out of the Tab cycle. `on_escape` registers on the existing layer stack, so a trap inside a modal closes only itself. All three are opt-in
+- Add a configurable priority ladder to the toast queue: `create_toast_queue({ priorities })` takes an ordered list and every type is generic over it, so a consumer's own tiers rank correctly instead of falling below everything. An unknown priority now throws rather than ranking `-1`, and `create_toast_queue` takes an options object instead of a bare `max_pending`
+- Add `sideEffects` to the manifest, listing only `dist/index.js`, which patches `Element.prototype.scrollIntoViewIfNeeded` on import. Every other module is pure, so a bundler can now drop the components a consumer never imports instead of keeping the whole barrel
+- Add an `svelte-widgets/icons` subpath and re-export `icon_data` and `IconName` from the root. `IconName` types the public props of `Icon`, `ButtonGroup`, `DraggablePane` and `FullscreenButton`, but no export let a consumer name it
+- Drop `vite-plus` from `peerDependencies`. It appears in no emitted JavaScript, only as two `import type` lines in `vite-config.d.ts`, and the sole thing referencing it is `svelte-widgets/vite-config`, which nobody can use without already depending on vite-plus
+- Fix `parse_shortcut` never resolving the `mod` token, which made `matches_shortcut(event, 'mod+z')` match a bare `z` with no modifier held. Only `run_hotkeys` was unaffected, since it pre-resolved at the call site. This also makes `space` matchable for the first time
+- Fix `highlight_matches` and `highlight_ranges` overwriting each other when they share a CSS highlight name. They keep one store now, so the name holds the union of their ranges until the last owner releases
+- Fix `svelte-widgets/Toast.svelte` failing to resolve its store when installed from npm: the packaging step rewrote `.ts` import specifiers in `.js` and `.d.ts` files but not in `.svelte` files
+- Fix `MultiSelect`, `Masonry`, `Popover`, `ContextMenu`, `LiteYouTubeEmbed` and `Nav` rendering `class="[object Object]"` when handed a class. Svelte types the attribute as a `ClassValue`, so an array or a `{ active: true }` object is legal, but these interpolated it into a string. They pass it to Svelte's own clsx pass now
+- Fix `Masonry` silently dropping its virtualization when a consumer passes `onscroll`: the prop spread sat after the component's own handler and replaced it, leaving the rendered window frozen at the top of the list however far down the user scrolled. `LiteYouTubeEmbed` had the mirror image, spreading first and so discarding a consumer's `onclick`. Both chain the two handlers now
+
 ## [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
 
 > 27 July 2026
@@ -242,7 +267,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 24 October 2024
 
-- update `MultiSelect.svelte` for Svelte5 compatibility [`#293`](https://github.com/janosh/svelte-widgets/pull/293)
+- update `MultiSelect.svelte` for Svelte 5 compatibility [`#293`](https://github.com/janosh/svelte-widgets/pull/293)
 
 ## [v10.3.0](https://github.com/janosh/svelte-widgets/compare/v10.2.0...v10.3.0)
 

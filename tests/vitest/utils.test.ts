@@ -2,6 +2,8 @@ import type { Option, OptionStyle } from '$lib'
 import {
   chain_handlers,
   compute_position,
+  event_to_combo,
+  format_shortcut,
   fuzzy_match,
   get_label,
   get_option_key,
@@ -10,10 +12,13 @@ import {
   has_group,
   is_object,
   matches_shortcut,
+  normalize_combo,
   parse_shortcut,
+  sanitize_shortcut_overrides,
   slug_to_title,
 } from '$lib/utils'
-import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
+import { afterEach, assert, describe, expect, test, vi } from 'vite-plus/test'
+import { stub_prop } from './index'
 
 // RFC 4122 v4 is xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b); the timestamp+counter
 // fallback used when crypto is unavailable only guarantees the generic UUID shape
@@ -137,7 +142,12 @@ describe(`get_style`, () => {
   })
 })
 
+const mac = `Macintosh; Intel Mac OS X 10_15`
+const linux = `X11; Linux x86_64`
+
 describe(`keyboard shortcut parsing`, () => {
+  afterEach(() => Reflect.deleteProperty(globalThis.navigator, `userAgent`))
+
   test.each([
     [`+`, { key: `+`, ctrl: false, shift: false, alt: false, meta: false }],
     [`ctrl++`, { key: `+`, ctrl: true, shift: false, alt: false, meta: false }],
@@ -148,8 +158,30 @@ describe(`keyboard shortcut parsing`, () => {
     [`cmd+k`, { key: `k`, ctrl: false, shift: false, alt: false, meta: true }],
     [`Meta+Alt+X`, { key: `x`, ctrl: false, shift: false, alt: true, meta: true }],
     [`ctrl+shift+k`, { key: `k`, ctrl: true, shift: true, alt: false, meta: false }],
+    // spelled-out keys resolve to the `event.key` they stand for, so a combo that
+    // survives a split on `+` still matches. `space` never matched before: parts are
+    // trimmed, leaving ` ` unspellable any other way.
+    [`ctrl+plus`, { key: `+`, ctrl: true, shift: false, alt: false, meta: false }],
+    [`ctrl+space`, { key: ` `, ctrl: true, shift: false, alt: false, meta: false }],
+    [`shift+comma`, { key: `,`, ctrl: false, shift: true, alt: false, meta: false }],
   ])(`parse_shortcut(%j)`, (shortcut, expected) => {
     expect(parse_shortcut(shortcut)).toEqual(expected)
+  })
+
+  // parse_shortcut resolves `mod` itself, so matches_shortcut is correct on its own
+  // rather than only when run_hotkeys pre-resolves the binding
+  test.each([
+    [mac, { meta: true, ctrl: false }],
+    [linux, { meta: false, ctrl: true }],
+  ])(`parse_shortcut resolves mod per platform (%s)`, (user_agent, expected) => {
+    stub_prop(globalThis.navigator, `userAgent`, user_agent)
+    expect(parse_shortcut(`mod+shift+k`)).toEqual({
+      key: `k`,
+      shift: true,
+      alt: false,
+      ...expected,
+    })
+    expect(format_shortcut(`mod+comma`).at(-1)).toBe(`,`)
   })
 
   test.each([
@@ -165,6 +197,141 @@ describe(`keyboard shortcut parsing`, () => {
   ])(`matches_shortcut(%j) with %j`, (shortcut, event_init, expected) => {
     const event = new KeyboardEvent(`keydown`, event_init)
     expect(matches_shortcut(event, shortcut)).toBe(expected)
+  })
+})
+
+describe(`shortcut rebinding`, () => {
+  afterEach(() => Reflect.deleteProperty(globalThis.navigator, `userAgent`))
+  const keydown = (init: KeyboardEventInit) => new KeyboardEvent(`keydown`, init)
+
+  // a downstream consumer spells the platform's primary modifier `meta` on every platform, which this
+  // repo reads as the literal Meta key; `mod` is the token that resolves per platform
+  test.each([
+    [mac, { key: `k`, metaKey: true }, `mod+k`],
+    [linux, { key: `k`, ctrlKey: true }, `mod+k`],
+    [mac, { key: `k`, ctrlKey: true }, `ctrl+k`], // Ctrl is its own modifier on a Mac
+    [linux, { key: `k`, metaKey: true }, `meta+k`], // ...as is the Windows key elsewhere
+    // both held: the primary becomes `mod`, the other stays itself, so the two
+    // combos a downstream consumer collapses into `meta+k` stay distinct
+    [linux, { key: `k`, ctrlKey: true, metaKey: true }, `mod+meta+k`],
+    [mac, { key: `k`, ctrlKey: true, metaKey: true }, `mod+ctrl+k`],
+    // modifier order is fixed regardless of which flags are set
+    [mac, { key: `T`, metaKey: true, shiftKey: true, altKey: true }, `mod+alt+shift+t`],
+    // keys that would otherwise break a split on `+`
+    [linux, { key: `,`, ctrlKey: true }, `mod+comma`],
+    [linux, { key: `+`, ctrlKey: true }, `mod+plus`],
+    [linux, { key: ` `, altKey: true }, `alt+space`],
+    [linux, { key: `ArrowRight`, altKey: true }, `alt+arrowright`],
+    [linux, { key: `Escape` }, `escape`], // bare keys are combos too
+  ])(`event_to_combo on %s`, (user_agent, init, expected) => {
+    stub_prop(globalThis.navigator, `userAgent`, user_agent)
+    const event = keydown(init)
+    const combo = event_to_combo(event)
+    expect(combo).toBe(expected)
+    if (expected === `mod+k`) {
+      expect(event_to_combo(event, { mod: false })).toBe(
+        user_agent === mac ? `meta+k` : `ctrl+k`,
+      )
+    }
+    // A rebinding UI must emit a canonical combo that matches the keydown it recorded.
+    for (const round_trip of [combo, event_to_combo(event, { mod: false })]) {
+      assert(round_trip !== null)
+      expect(round_trip.split(`+`)).not.toContain(``)
+      expect(matches_shortcut(event, round_trip)).toBe(true)
+      expect(normalize_combo(round_trip)).toBe(round_trip)
+      expect(format_shortcut(round_trip)).not.toContain(``)
+    }
+  })
+
+  test.each([[`Meta`], [`Control`], [`Alt`], [`Shift`], [`CapsLock`], [`AltGraph`]])(
+    `event_to_combo(%s) is null while only modifiers are down`,
+    (key) => {
+      expect(event_to_combo(keydown({ key, shiftKey: true }))).toBeNull()
+    },
+  )
+
+  test.each([
+    [`Ctrl+Shift+K`, `ctrl+shift+k`], // case folded
+    [`shift+ctrl+k`, `ctrl+shift+k`], // modifiers reordered
+    [`Cmd+K`, `meta+k`], // aliases folded onto one spelling
+    [`command+k`, `meta+k`],
+    [`control+k`, `ctrl+k`],
+    [`option+k`, `alt+k`],
+    [`MOD+K`, `mod+k`], // mod is a modifier in its own right, not resolved here
+    [`ctrl++`, `ctrl+plus`], // this repo's literal plus spelling, canonicalized
+    [`ctrl+plus`, `ctrl+plus`],
+    [`ctrl+,`, `ctrl+comma`],
+    [`  Alt +  Space `, `alt+space`], // segments are trimmed
+    [`escape`, `escape`], // bare key
+    [`ctrl+`, null], // no key
+    [``, null],
+    [`ctrl`, null], // modifiers only
+    [`shift+alt`, null],
+    [`ctrl+a+b`, null], // two keys
+    [`ctrl+capslock`, null], // key that is only ever a modifier
+    [`meta+control`, null],
+  ])(`normalize_combo(%j) is %j`, (combo, expected) => {
+    expect(normalize_combo(combo)).toBe(expected)
+  })
+
+  test.each([
+    [`mod+k`, `mod+k`],
+    [`k`, null], // an unmodified key would swallow ordinary typing
+    [`escape`, null],
+  ])(`normalize_combo(%j, { require_modifier }) is %j`, (combo, expected) => {
+    expect(normalize_combo(combo, { require_modifier: true })).toBe(expected)
+  })
+
+  describe(`sanitize_shortcut_overrides`, () => {
+    const defaults = { copy: `mod+c`, cut: `mod+x`, paste: `mod+v` }
+
+    test.each([
+      [`non-object input`, `mod+c`, {}],
+      [`null`, null, {}],
+      [`unknown action id`, { nope: `mod+q` }, {}],
+      [`non-string combo`, { copy: 42 }, {}],
+      [`junk combo`, { copy: `mod+` }, {}],
+      [`no-op override`, { copy: `mod+c` }, {}],
+      // differently spelled but the same combo is still a no-op
+      [`no-op in another spelling`, { copy: `C+MOD` }, {}],
+      [`valid override`, { copy: `mod+shift+c` }, { copy: `mod+shift+c` }],
+      [`normalizes what it keeps`, { copy: `Shift+MOD+C` }, { copy: `mod+shift+c` }],
+      // an override landing on another action's default loses, and so does a pair of
+      // overrides landing on each other
+      [`collides with a default`, { copy: `mod+v` }, {}],
+      [`two overrides collide`, { copy: `mod+q`, cut: `mod+q` }, {}],
+      // a straight swap leaves no two actions sharing a combo, so it survives
+      [`swap`, { copy: `mod+x`, cut: `mod+c` }, { copy: `mod+x`, cut: `mod+c` }],
+      // copy/cut collide, so both are dropped; that frees `mod+c` again, which paste's
+      // override had been holding uncontested until copy's default came back
+      [`cascading collision`, { copy: `mod+q`, cut: `mod+q`, paste: `mod+c` }, {}],
+    ])(`%s`, (_desc, value, expected) => {
+      expect(sanitize_shortcut_overrides(value, defaults)).toEqual(expected)
+    })
+
+    test(`defaults that already collide do not void unrelated overrides`, () => {
+      const clashing = { copy: `mod+c`, cut: `mod+c`, paste: `mod+v` }
+      expect(sanitize_shortcut_overrides({ paste: `mod+p` }, clashing)).toEqual({
+        paste: `mod+p`,
+      })
+    })
+
+    // `mod` resolves to the platform's primary modifier, so an override spelling that
+    // modifier out lands on the very same keystroke as a `mod` default
+    test.each([
+      [mac, `meta+x`, {}],
+      [mac, `ctrl+x`, { copy: `ctrl+x` }], // Ctrl is its own modifier on a Mac
+      [linux, `ctrl+x`, {}],
+      [linux, `meta+x`, { copy: `meta+x` }],
+    ])(`on %s an override of %j resolves against mod defaults`, (ua, combo, expected) => {
+      stub_prop(globalThis.navigator, `userAgent`, ua)
+      expect(sanitize_shortcut_overrides({ copy: combo }, defaults)).toEqual(expected)
+    })
+
+    test(`survives round-tripping its own output`, () => {
+      const once = sanitize_shortcut_overrides({ copy: `MOD+Shift+C` }, defaults)
+      expect(sanitize_shortcut_overrides(once, defaults)).toEqual(once)
+    })
   })
 })
 

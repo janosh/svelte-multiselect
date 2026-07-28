@@ -57,7 +57,6 @@ interface RemarkNode {
   children?: RemarkNode[]
 }
 
-// Simple tree traversal - finds all nodes of a given type
 const visit = (tree: RemarkTree, type: string, callback: (node: RemarkNode) => void) => {
   const walk = (nodes: RemarkNode[]) => {
     for (const node of nodes) {
@@ -129,7 +128,6 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
           wrapper_alias,
         )
 
-        // Only track live examples for component imports
         if (is_live) example_csr.push(csr)
 
         node.type = `paragraph`
@@ -168,7 +166,6 @@ function remark(options: RemarkOptions = {}): RemarkTransformer {
       }
     })
 
-    // Create script block if none existed
     if (!injected) {
       tree.children.push({ type: `html`, value: `<script>\n${scripts}</script>` })
     }
@@ -210,7 +207,6 @@ function create_example_component(
   // Convert newlines to &#10; to prevent bundlers from stripping whitespace
   const highlighted = hast_to_html(tree).replaceAll(`\n`, `&#10;`)
 
-  // Code-only examples (ts, js, css, etc.) render only the highlighted code block.
   if (index === -1) {
     // Close and reopen <p> to avoid block-in-inline HTML nesting issues
     return `</p><pre class="highlight highlight-${lang}" style="position:relative"><span class="lang-label" style="${LABEL_STYLE}">${lang}</span><code>{@html ${JSON.stringify(

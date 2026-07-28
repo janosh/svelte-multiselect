@@ -14,7 +14,8 @@
 <p class="subtitle">{subtitle}</p>
 
 <nav class="grid">
-  {#each subpages as [page_title, href, description] (href)}
+  <!-- index-prefixed: an href is a destination, so two cards may point at one page -->
+  {#each subpages as [page_title, href, description], idx (`${idx}-${href}`)}
     <a {href} class="card">
       <Icon icon="ChevronRight" class="icon" aria-hidden="true" />
       <div>

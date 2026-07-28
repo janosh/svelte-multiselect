@@ -122,7 +122,7 @@ test.each([
   })
   const wrapper = copy_button.querySelector(`span`)
   expect(wrapper?.querySelectorAll(`span`)).toHaveLength(expected_spans)
-  expect(icon_path(copy_button)).toBe(icon_data.Copy.path)
+  expect(icon_path(copy_button)).toBe(icon_data.Copy.d)
   // an empty label must render no text at all, not a stray placeholder
   expect(copy_button.textContent?.trim()).toBe(text)
 })
@@ -304,12 +304,12 @@ test.each([
     const { copy_button, state_store } = mount_bound_copy_button()
     await click_copy_button(copy_button)
     expect(get(state_store)).toBe(expected_state) // internal change reached the binding
-    expect(icon_path(copy_button)).toBe(icon_data[icon].path)
+    expect(icon_path(copy_button)).toBe(icon_data[icon].d)
 
     // external write back to idle flows into the component and restores the Copy icon
     state_store.set(`ready`)
     await tick()
-    expect(icon_path(copy_button)).toBe(icon_data.Copy.path)
+    expect(icon_path(copy_button)).toBe(icon_data.Copy.d)
 
     console_error_spy.mockRestore()
   },

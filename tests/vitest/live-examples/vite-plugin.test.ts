@@ -1,4 +1,3 @@
-// Tests for vite-plugin.ts - the Vite plugin for virtual module resolution
 import { EXAMPLE_MODULE_PREFIX } from '$lib/live-examples/mdsvex-transform'
 import vite_plugin from '$lib/live-examples/vite-plugin'
 import { Buffer } from 'node:buffer'
@@ -214,10 +213,8 @@ describe(`transform`, () => {
     }
   })
 
-  // Note: The remark transform always generates sequential indices (0, 1, 2...) for live
-  // examples. Non-live examples (TypeScript, etc.) don't generate __live_example_src props
-  // or imports, so they don't create gaps. The vite plugin's enumeration index matches
-  // the import path index because both are sequential.
+  // The two indices line up only because non-live examples generate neither a
+  // __live_example_src prop nor an import, so neither sequence ever gains a gap.
   test(`props and imports have matching indices and virtual files are loadable`, () => {
     const index_plugin = get_plugin()
     const index_ctx = create_mock_context()

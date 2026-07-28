@@ -1,26 +1,52 @@
 <script lang="ts">
-  import type { HTMLAttributes } from 'svelte/elements'
-  import { icon_data, type IconName } from './icons'
+  import type { SVGAttributes } from 'svelte/elements'
+  import { icon_data, type IconData, type IconName } from './icons'
 
-  let { icon, ...rest }: HTMLAttributes<SVGSVGElement> & { icon: IconName } = $props()
+  // SVGAttributes, not HTMLAttributes, which rejects the `width`/`height` an <svg> takes.
+  // Either a bundled name or an ad-hoc glyph for an app's own chrome, never both and
+  // never neither, so a bare <Icon /> is a type error rather than a silent fallback.
+  let {
+    icon,
+    path,
+    viewBox = `0 0 24 24`,
+    stroke,
+    ...rest
+  }: SVGAttributes<SVGSVGElement> &
+    (
+      | { icon: IconName; path?: never; viewBox?: never; stroke?: never }
+      | { icon?: never; path: string; viewBox?: string; stroke?: string }
+    ) = $props()
 
-  const data = $derived.by(() => {
-    if (!(icon in icon_data)) {
-      console.error(`Icon '${icon}' not found`)
-      return icon_data.Alert
-    }
-    return icon_data[icon]
+  const data: IconData = $derived.by(() => {
+    if (path) return { d: path, viewBox, stroke }
+    if (icon && icon in icon_data) return icon_data[icon]
+    console.error(`Icon '${icon}' not found`)
+    return icon_data.Alert
   })
 </script>
 
-<svg viewBox={data.viewBox} fill="currentColor" {...rest}>
-  <path d={data.path} />
+<svg
+  role="img"
+  viewBox={data.viewBox}
+  fill={data.fill ?? (data.stroke ? `none` : `currentColor`)}
+  stroke={data.stroke}
+  {...rest}
+>
+  {#if `markup` in data}
+    <!-- several shapes rather than one `d`. Only registry glyphs reach {@html}; a
+    caller's `path` always becomes the `d` below, so markup in it cannot inject nodes -->
+    {@html data.markup}
+  {:else}
+    <path d={data.d} />
+  {/if}
 </svg>
 
 <style>
   svg {
-    width: 1em;
-    height: 1em;
+    width: var(--icon-size, 1em);
+    /* auto rather than 1em: several glyphs have non-square viewBoxes, which a fixed
+       height squashes. Setting --icon-size opts back into a square box. */
+    height: var(--icon-size, auto);
     display: inline-block;
     vertical-align: middle;
   }
