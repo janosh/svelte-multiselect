@@ -93,6 +93,8 @@ selection, and every colour is a `--btn-group-*` custom property.
 `option_suffix` renders as a **sibling** instead, wrapped with the button in a `.option`
 span, as shown by the counts above. Prefer non-interactive suffixes in single-select
 `radiogroup` mode; a focusable suffix adds a non-radio tab stop.
+Without `option_suffix`, buttons remain direct `.options` children, preserving
+`.options > button` selectors.
 
 ### Styling
 
