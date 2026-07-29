@@ -1,4 +1,5 @@
 import { SubpageGrid } from '$lib'
+import { icon_data, type IconName } from '$lib/icons'
 import MultiSelectPage from '$root/src/routes/(demos)/(multiselect)/multiselect/+page.md'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
@@ -50,6 +51,32 @@ test(`overview pages link to base-prefixed sibling routes`, () => {
   expect(hrefs.length).toBeGreaterThan(5)
   expect(hrefs.every((href) => href?.startsWith(`/docs/`))).toBe(true)
   expect(hrefs).toContain(`/docs/form`)
+})
+
+test(`per-page icons override the fallback, which is itself configurable`, () => {
+  const icons_for = (subpages: [string, string, string, IconName?][], props = {}) => {
+    document.body.innerHTML = ``
+    mount(SubpageGrid, {
+      target: document.body,
+      props: { title: `Demo`, subtitle: `sub`, subpages, ...props },
+    })
+    return [...document.querySelectorAll(`nav.grid a.card svg.icon`)].map(
+      (svg) => svg.innerHTML,
+    )
+  }
+  const pages: [string, string, string, IconName?][] = [
+    [`Plain`, `/plain`, `no icon`],
+    [`Marked`, `/marked`, `with icon`, `Copy`],
+  ]
+  const [chevron, explicit] = icons_for(pages)
+  expect(explicit).not.toBe(chevron)
+  // pin the default: a typo silently renders Icon's Alert fallback
+  const chevron_path = icon_data.ChevronRight.d
+  expect(chevron_path).toEqual(expect.any(String))
+  expect(chevron).toContain(chevron_path)
+  const [fallback, still_explicit] = icons_for(pages, { fallback_icon: `Check` })
+  expect(fallback).not.toBe(chevron)
+  expect(still_explicit).toBe(explicit)
 })
 
 // an href is a destination, not an identity: two cards may point at one page under

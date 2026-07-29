@@ -1,6 +1,5 @@
 <script lang="ts" generics="Item">
   import type { Snippet } from 'svelte'
-  import type { Action } from 'svelte/action'
   import { flip } from 'svelte/animate'
   import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
@@ -125,12 +124,12 @@
     return cached || getEstimatedHeight?.(item) || avg_measured_height || 150
   }
 
-  // Measure item heights via ResizeObserver
+  // Measure item heights via ResizeObserver.
   // Always attach observers for non-virtualizing cases, even for modes that don't
   // need measurement initially, because the user may switch modes at runtime.
   // Skip entirely during virtualization - only estimated heights are used there.
-  const measure_height: Action<HTMLElement, ItemId> = (node, item_id) => {
-    if (virtualize) return {}
+  const measure_height = (item_id: ItemId) => (node: HTMLElement) => {
+    if (virtualize) return
     const observer = new ResizeObserver(() => {
       const new_height = node.offsetHeight
       const old_height = item_heights_cache.get(item_id) ?? 0
@@ -142,7 +141,7 @@
       }
     })
     observer.observe(node)
-    return { destroy: () => observer.disconnect() }
+    return () => observer.disconnect()
   }
 
   // Effective order: virtualization forces row-first
@@ -422,7 +421,7 @@
       {#if effective_animate}
         {#each visible_items as { id, idx, item } (id)}
           <div
-            use:measure_height={id}
+            {@attach measure_height(id)}
             in:fade={{ delay: 100, duration }}
             out:fade={{ delay: 0, duration }}
             animate:flip={{ duration }}
@@ -432,7 +431,7 @@
         {/each}
       {:else}
         {#each visible_items as { id, idx, item } (id)}
-          <div use:measure_height={id}>
+          <div {@attach measure_height(id)}>
             {@render render_item(idx, item)}
           </div>
         {/each}

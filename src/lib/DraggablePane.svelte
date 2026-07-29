@@ -17,7 +17,30 @@
     dragging: boolean
   }
 
-  interface Props {
+  let {
+    show = $bindable(false),
+    children,
+    toggle,
+    toggle_props = {},
+    open_icon = `Cross`,
+    closed_icon = `Expand`,
+    icon_style,
+    offset = { x: 5, y: 5 },
+    max_width = `450px`,
+    pane_props = {},
+    persistent = false,
+    // default `release`: outside bind:checked can close; pan-behind does not. See attachments.
+    dismiss_on = `release`,
+    inside = [],
+    resize = `none`,
+    position = `absolute`,
+    on_close,
+    on_drag_start,
+    toggle_btn = $bindable(null),
+    pane = $bindable(null),
+    has_been_dragged = $bindable(false),
+    dragging = $bindable(false),
+  }: {
     show?: boolean
     children: Snippet<[PaneState]>
     // Replaces the toggle button's content, for icons this library doesn't bundle
@@ -31,12 +54,14 @@
     offset?: { x?: number; y?: number }
     max_width?: string
     pane_props?: HTMLAttributes<HTMLDivElement>
-    // Only Escape and the close button dismiss it — a press outside is ignored, for a
-    // pane the user keeps open while working on what it sits over
+    // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
+    dismiss_on?: `press` | `release`
+    // Outside controls that drive `show`; the pane's own toggle is always included. Elements
+    // only — click_outside's selector form needs its `scope` guard, which this does not expose
+    inside?: (Element | null | undefined)[]
     resize?: `both` | `width` | `height` | `none`
-    // `fixed` renders relative to the viewport so the pane escapes overflow-clipping
-    // ancestors (cards, tables) and caps its height to the space below its top edge
+    // `fixed` escapes overflow-clipping ancestors; height capped to space below top edge
     position?: `absolute` | `fixed`
     on_close?: (detail: { via: CloseVia }) => void
     on_drag_start?: () => void
@@ -44,29 +69,7 @@
     pane?: HTMLDivElement | null
     has_been_dragged?: boolean
     dragging?: boolean
-  }
-
-  let {
-    show = $bindable(false),
-    children,
-    toggle,
-    toggle_props = {},
-    open_icon = `Cross`,
-    closed_icon = `Expand`,
-    icon_style,
-    offset = { x: 5, y: 5 },
-    max_width = `450px`,
-    pane_props = {},
-    persistent = false,
-    resize = `none`,
-    position = `absolute`,
-    on_close,
-    on_drag_start,
-    toggle_btn = $bindable(null),
-    pane = $bindable(null),
-    has_been_dragged = $bindable(false),
-    dragging = $bindable(false),
-  }: Props = $props()
+  } = $props()
 
   const viewport_margin_px = 8
   // How much of the pane stays on screen when the toggle sits near the bottom edge.
@@ -84,12 +87,13 @@
     dragging,
   })
 
-  // an empty list is also what disables the attachment below, so the edges and the
-  // disabled flag cannot drift apart
-  const edges_by_resize: Record<
-    NonNullable<Props[`resize`]>,
-    NonNullable<ResizableOptions[`edges`]>
-  > = { both: [`right`, `bottom`], width: [`right`], height: [`bottom`], none: [] }
+  // empty list also disables the attachment below, so edges and disabled cannot drift
+  const edges_by_resize = {
+    both: [`right`, `bottom`],
+    width: [`right`],
+    height: [`bottom`],
+    none: [],
+  } satisfies Record<typeof resize, NonNullable<ResizableOptions[`edges`]>>
   const resize_edges = $derived(edges_by_resize[resize])
   const gutter = (side: `width` | `height`) =>
     resize === `both` || resize === side ? `${resize_gutter_px}px` : null
@@ -239,8 +243,9 @@ aria-label sits before the spread, so a page with several panes renames them via
   })}
   {@attach click_outside({
     enabled: show,
-    inside: [toggle_btn],
+    inside: [toggle_btn, ...inside],
     escape: true,
+    dismiss_on,
     // Escape always dismisses; a press outside is what `persistent` suppresses
     callback: (_node, _config, { via }) => {
       if (via === `escape` || !persistent) close_pane(via)
@@ -276,11 +281,11 @@ aria-label sits before the spread, so a page with several panes renames them via
     {@render children(pane_state)}
   </div>
   {#if resize === `both`}
-    <!-- purely an affordance: the grab zone is the gutter, owned by `resizable` -->
-    <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
-      <line x1="9" y1="1" x2="1" y2="9" />
-      <line x1="9" y1="4" x2="4" y2="9" />
-      <line x1="9" y1="7" x2="7" y2="9" />
+    <!-- affordance only; sized to the 8px gutter so its lines sit over pixels that resize -->
+    <svg class="resize-grip" viewBox="0 0 8 8" aria-hidden="true">
+      <line x1="7" y1="1" x2="1" y2="7" />
+      <line x1="7" y1="3" x2="3" y2="7" />
+      <line x1="7" y1="5" x2="5" y2="7" />
     </svg>
   {/if}
 </div>
@@ -377,12 +382,12 @@ aria-label sits before the spread, so a page with several panes renames them via
     }
     .resize-grip {
       position: absolute;
-      bottom: 1px;
-      right: 1px;
-      width: 10px;
-      height: 10px;
+      bottom: 0;
+      right: 0;
+      width: 8px; /* match resize_gutter_px / resizable handle_size */
+      height: 8px;
       opacity: 0.3;
-      pointer-events: none; /* the gutter underneath belongs to `resizable` */
+      pointer-events: none; /* gutter underneath belongs to `resizable` */
       line {
         stroke: currentColor;
         stroke-width: 1.5;

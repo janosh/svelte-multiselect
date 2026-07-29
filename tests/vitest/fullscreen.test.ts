@@ -233,6 +233,21 @@ describe(`flag <-> browser sync`, () => {
     expect(get(flag)).toBe(true)
   })
 
+  test(`placement=corner is opt-in`, () => {
+    expect(mount_button({ wrapper: undefined }).button.classList.contains(`corner`)).toBe(
+      false,
+    )
+    const { button } = mount_button({
+      wrapper: undefined,
+      placement: `corner`,
+      class: `mine`,
+    })
+    // svelte appends a scope hash, so check membership rather than the exact class list
+    for (const cls of [`fullscreen-btn`, `corner`, `mine`]) {
+      expect(button.classList.contains(cls)).toBe(true)
+    }
+  })
+
   test(`sync_fullscreen throws outside an effect context`, () => {
     expect(() =>
       sync_fullscreen({

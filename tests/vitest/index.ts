@@ -46,8 +46,19 @@ export const mock_rect = (
   }
 }
 
-export const mouse_event = (type: string, clientX: number, clientY: number, button = 0) =>
-  new MouseEvent(type, { clientX, clientY, button, bubbles: true })
+// PointerEvent for pointer*; MouseEvent otherwise. Default isPrimary: true (ctor leaves false).
+export const pointer_event = (
+  type: string,
+  clientX: number,
+  clientY: number,
+  init: PointerEventInit = {},
+) => {
+  const shared = { clientX, clientY, bubbles: true, ...init }
+  // lostpointercapture is a PointerEvent too — it just doesn't start with `pointer`
+  return type.startsWith(`pointer`) || type === `lostpointercapture`
+    ? new PointerEvent(type, { isPrimary: true, ...shared })
+    : new MouseEvent(type, shared)
+}
 
 // cancelable so callers can assert whether a handler swallowed the key
 export const escape_key = () =>
