@@ -47,10 +47,20 @@ const stub_rect = (dialog: HTMLDialogElement) => {
   dialog.getBoundingClientRect = () => rect as DOMRect
   return dialog
 }
-const press_at = (dialog: HTMLDialogElement, clientX: number, clientY: number) =>
+// Both halves of the gesture, as the browser sends them: a dismissal has to start on the
+// ::backdrop as well as end there, or a selection dragged out of the dialog would cancel it
+const press_at = (
+  dialog: HTMLDialogElement,
+  clientX: number,
+  clientY: number,
+  pointer_init: PointerEventInit = {},
+) => {
+  const init = { bubbles: true, clientX, clientY }
   stub_rect(dialog).dispatchEvent(
-    new MouseEvent(`click`, { bubbles: true, clientX, clientY }),
+    new PointerEvent(`pointerdown`, { isPrimary: true, ...init, ...pointer_init }),
   )
+  dialog.dispatchEvent(new MouseEvent(`click`, init))
+}
 
 test(`shows the queued question and closes once the queue drains`, async () => {
   const dialog = await mount_dialog()
@@ -135,12 +145,67 @@ test.each([
   // the padding belongs to the dialog, but the click lands on the dialog element there
   // just as a backdrop press does, so target alone would dismiss the question
   [`in its padding`, (dialog: HTMLDialogElement) => press_at(dialog, 105, 105)],
+  // A selection dragged off the message releases on the ::backdrop, and the browser
+  // reports that click on the dialog with the release coordinates. Dismissing on those
+  // alone answered the question with dismiss_id for what was only a text selection.
+  [
+    `released outside after starting inside`,
+    (dialog: HTMLDialogElement) => {
+      doc_query(`dialog p`).dispatchEvent(
+        new PointerEvent(`pointerdown`, { bubbles: true }),
+      )
+      stub_rect(dialog).dispatchEvent(
+        new MouseEvent(`click`, { bubbles: true, clientX: 10, clientY: 10 }),
+      )
+    },
+  ],
 ])(`a click %s is not a backdrop click`, async (_desc, click) => {
   const dialog = await mount_dialog()
   const answer = ask(`Overwrite?`, `Write files`)
   await flush()
 
   click(dialog)
+  await flush()
+
+  expect(answer.settled).toBe(false)
+  expect(dialog.open).toBe(true)
+})
+
+// A right-click or cancelled press on the backdrop must not leave a stale outside verdict
+// for the next primary click (same gating as dismiss_on_outside_press).
+test.each([
+  [`right-click`, { button: 2 }],
+  [`non-primary pointer`, { isPrimary: false }],
+])(`a %s on the backdrop does not dismiss`, async (_desc, pointer_init) => {
+  const dialog = await mount_dialog()
+  const answer = ask(`Overwrite?`, `Write files`)
+  await flush()
+
+  press_at(dialog, 10, 10, pointer_init)
+  await flush()
+
+  expect(answer.settled).toBe(false)
+  expect(dialog.open).toBe(true)
+})
+
+test(`pointercancel clears a backdrop press so the next click is judged fresh`, async () => {
+  const dialog = await mount_dialog()
+  const answer = ask(`Overwrite?`, `Write files`)
+  await flush()
+
+  stub_rect(dialog).dispatchEvent(
+    new PointerEvent(`pointerdown`, {
+      bubbles: true,
+      isPrimary: true,
+      clientX: 10,
+      clientY: 10,
+    }),
+  )
+  dialog.dispatchEvent(new PointerEvent(`pointercancel`, { bubbles: true }))
+  // click outside without a fresh primary pointerdown — stale verdict would close here
+  dialog.dispatchEvent(
+    new MouseEvent(`click`, { bubbles: true, clientX: 10, clientY: 10 }),
+  )
   await flush()
 
   expect(answer.settled).toBe(false)

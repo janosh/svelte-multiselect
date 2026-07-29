@@ -283,9 +283,6 @@ test(`ignores user-created options without action handlers`, async () => {
 
 test.each([
   [`page body`, () => document.body],
-  // showModal() backdrop clicks dispatch with the dialog element itself as the target,
-  // so a naive dialog.contains(target) check would wrongly keep the menu open
-  [`modal backdrop (target === dialog)`, () => doc_query<HTMLDialogElement>(`dialog`)],
   // SVG targets are Element but not HTMLElement - an instanceof HTMLElement guard
   // would wrongly ignore them and leave the menu open
   [
@@ -319,6 +316,29 @@ test.each([
 
   expect(props.open).toBe(false)
   expect(document.querySelector(`dialog`)).toBeNull()
+})
+
+// A press on the ::backdrop of a modal dialog reports the dialog as its target, and so
+// does one on the dialog's own padding ring (6pt of it here). Only the coordinates tell
+// them apart, so the padding used to close the menu the user was aiming at.
+test.each([
+  [`the backdrop`, 10, 10, false],
+  [`its own padding`, 105, 105, true],
+])(`a press on %s`, async (_label, clientX, clientY, stays_open) => {
+  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  mount(CommandMenu, { target: document.body, props })
+  await tick()
+
+  // happy-dom does no layout, so the dialog's box has to be supplied
+  const dialog = doc_query<HTMLDialogElement>(`dialog`)
+  const rect = { left: 100, top: 100, right: 300, bottom: 200, width: 200, height: 100 }
+  dialog.getBoundingClientRect = () => rect as DOMRect
+  const init = { bubbles: true, clientX, clientY }
+  dialog.dispatchEvent(new PointerEvent(`pointerdown`, { isPrimary: true, ...init }))
+  dialog.dispatchEvent(new MouseEvent(`click`, init))
+  await tick()
+
+  expect(props.open).toBe(stays_open)
 })
 
 test(`keeps dialog open when clicking inside the menu`, async () => {

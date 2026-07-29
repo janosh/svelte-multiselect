@@ -315,7 +315,11 @@
 <nav
   {...rest}
   class:mobile={is_mobile}
-  {@attach click_outside({ callback: close_menus })}
+  {@attach click_outside({
+    // skip the document listener (and its scrollbar layout read) when nothing is open
+    enabled: is_open || Boolean(pinned_dropdown) || Boolean(hovered_dropdown),
+    callback: close_menus,
+  })}
 >
   <button
     class="burger"

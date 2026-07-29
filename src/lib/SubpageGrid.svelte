@@ -1,13 +1,20 @@
 <script lang="ts">
   import Icon from './Icon.svelte'
+  import type { IconName } from './icons'
 
-  type Subpage = [title: string, href: string, description: string]
+  type Subpage = [title: string, href: string, description: string, icon?: IconName]
 
   const {
     title,
     subtitle,
     subpages,
-  }: { title: string; subtitle: string; subpages: Subpage[] } = $props()
+    fallback_icon = `ChevronRight`,
+  }: {
+    title: string
+    subtitle: string
+    subpages: Subpage[]
+    fallback_icon?: IconName
+  } = $props()
 </script>
 
 <h1>{title}</h1>
@@ -15,9 +22,9 @@
 
 <nav class="grid">
   <!-- index-prefixed: an href is a destination, so two cards may point at one page -->
-  {#each subpages as [page_title, href, description], idx (`${idx}-${href}`)}
+  {#each subpages as [page_title, href, description, icon], idx (`${idx}-${href}`)}
     <a {href} class="card">
-      <Icon icon="ChevronRight" class="icon" aria-hidden="true" />
+      <Icon icon={icon ?? fallback_icon} class="icon" aria-hidden="true" />
       <div>
         <h2>{page_title}</h2>
         <p>{description}</p>
@@ -73,7 +80,8 @@
   }
   .card :global(svg.icon) {
     width: 1.2em;
-    height: 1.2em;
+    height: auto; /* keeps non-square glyphs in proportion, as Icon.svelte does */
+    max-height: 1.2em;
     flex-shrink: 0;
     margin-top: 0.14em;
     opacity: 0.65;

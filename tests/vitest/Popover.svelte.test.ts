@@ -2,7 +2,7 @@ import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import type Popover from '$lib/Popover.svelte'
-import { doc_query } from './index'
+import { doc_query, pointer_event } from './index'
 import TestPopover from './TestPopover.svelte'
 
 describe(`Popover`, () => {
@@ -19,8 +19,9 @@ describe(`Popover`, () => {
   }
   const trigger = () => doc_query<HTMLButtonElement>(`[data-testid="popover-trigger"]`)
   const surface = () => document.querySelector(`[role="dialog"]`)
+  // pointer_event sets isPrimary; a bare PointerEvent reads as a second finger
   const press = (target: EventTarget) =>
-    target.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+    target.dispatchEvent(pointer_event(`pointerdown`, 0, 0))
 
   test(`trigger opens the surface and wires the aria attributes`, async () => {
     mount_popover()
@@ -106,6 +107,39 @@ describe(`Popover`, () => {
     await tick()
     expect(surface()).toBeNull()
     expect(on_close).toHaveBeenCalledWith({ via: `trigger` })
+  })
+
+  // Dismissal waits for the click, so a gesture behind the popover — a pan, a drag — keeps
+  // it visible until the release instead of having it vanish underneath
+  test(`dismiss_on: 'release' waits for the click`, async () => {
+    const on_close = vi.fn()
+    mount_popover({ dismiss_on: `release`, on_close })
+    trigger().click()
+    await tick()
+
+    press(document.body)
+    await tick()
+    expect(surface()).not.toBeNull()
+    expect(on_close).not.toHaveBeenCalled()
+
+    document.body.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+    await tick()
+    expect(surface()).toBeNull()
+    expect(on_close).toHaveBeenCalledWith({ via: `pointer` })
+  })
+
+  // a drag off the surface reports its click on a common ancestor, not an outside click
+  test(`dismiss_on: 'release' keeps a gesture that started inside`, async () => {
+    const on_close = vi.fn()
+    mount_popover({ dismiss_on: `release`, on_close })
+    trigger().click()
+    await tick()
+    press(doc_query(`[role="dialog"]`))
+    document.body.dispatchEvent(pointer_event(`click`, 0, 0, { detail: 1 }))
+    await tick()
+
+    expect(surface()).not.toBeNull()
+    expect(on_close).not.toHaveBeenCalled()
   })
 
   test(`escape: false leaves Escape to the consumer`, async () => {
