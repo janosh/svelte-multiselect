@@ -281,11 +281,11 @@ aria-label sits before the spread, so a page with several panes renames them via
     {@render children(pane_state)}
   </div>
   {#if resize === `both`}
-    <!-- affordance only; hit target is `resizable`'s strip underneath -->
-    <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
-      <line x1="9" y1="1" x2="1" y2="9" />
-      <line x1="9" y1="4" x2="4" y2="9" />
-      <line x1="9" y1="7" x2="7" y2="9" />
+    <!-- affordance only; sized to the 8px gutter so its lines sit over pixels that resize -->
+    <svg class="resize-grip" viewBox="0 0 8 8" aria-hidden="true">
+      <line x1="7" y1="1" x2="1" y2="7" />
+      <line x1="7" y1="3" x2="3" y2="7" />
+      <line x1="7" y1="5" x2="5" y2="7" />
     </svg>
   {/if}
 </div>
@@ -382,10 +382,10 @@ aria-label sits before the spread, so a page with several panes renames them via
     }
     .resize-grip {
       position: absolute;
-      bottom: 1px;
-      right: 1px;
-      width: 10px;
-      height: 10px;
+      bottom: 0;
+      right: 0;
+      width: 8px; /* match resize_gutter_px / resizable handle_size */
+      height: 8px;
       opacity: 0.3;
       pointer-events: none; /* gutter underneath belongs to `resizable` */
       line {

@@ -71,7 +71,9 @@ test(`per-page icons override the fallback, which is itself configurable`, () =>
   const [chevron, explicit] = icons_for(pages)
   expect(explicit).not.toBe(chevron)
   // pin the default: a typo silently renders Icon's Alert fallback
-  expect(chevron).toContain(icon_data.ChevronRight.d ?? ``)
+  const chevron_path = icon_data.ChevronRight.d
+  expect(chevron_path).toEqual(expect.any(String))
+  expect(chevron).toContain(chevron_path)
   const [fallback, still_explicit] = icons_for(pages, { fallback_icon: `Check` })
   expect(fallback).not.toBe(chevron)
   expect(still_explicit).toBe(explicit)
