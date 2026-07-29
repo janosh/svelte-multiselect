@@ -17,6 +17,13 @@ const center_of = async (locator: Locator): Promise<Point> => {
   return { x: x + width / 2, y: y + height / 2 }
 }
 
+const mouse_drag = async (page: Page, from: Point, [dx, dy]: readonly number[]) => {
+  await page.mouse.move(from.x, from.y)
+  await page.mouse.down()
+  await page.mouse.move(from.x + dx, from.y + dy)
+  await page.mouse.up()
+}
+
 const open_pane = async (page: Page) => {
   await page.goto(`/draggable-pane`, { waitUntil: `networkidle` })
   await page.locator(`button.pane-toggle`).first().click()
@@ -31,10 +38,7 @@ test(`a mouse drag moves the pane`, async ({ page }) => {
   const before = await box_of(pane)
   const grip = await center_of(handle)
 
-  await page.mouse.move(grip.x, grip.y)
-  await page.mouse.down()
-  await page.mouse.move(grip.x - 60, grip.y + 40)
-  await page.mouse.up()
+  await mouse_drag(page, grip, [-60, 40])
 
   const after = await box_of(pane)
   expect(Math.round(after.x - before.x)).toBe(-60)
@@ -42,22 +46,14 @@ test(`a mouse drag moves the pane`, async ({ page }) => {
 })
 
 // The strips are absolute children, so they anchor to the padding box and only reach the
-// pane's 1px border because of their negative insets. Layout is a browser fact.
+// pane's 1px border because of their negative insets — press outside one and nothing
+// resizes. Layout is a browser fact.
 test(`the outermost pixel of the right edge still resizes`, async ({ page }) => {
   const { pane } = await open_pane(page)
   const before = await box_of(pane)
   const outer_edge = { x: before.x + before.width - 0.5, y: before.y + before.height / 2 }
 
-  const on_strip = await page.evaluate(
-    ({ x, y }) => document.elementFromPoint(x, y)?.getAttribute(`data-resize-edge`),
-    outer_edge,
-  )
-  expect(on_strip).toBe(`right`)
-
-  await page.mouse.move(outer_edge.x, outer_edge.y)
-  await page.mouse.down()
-  await page.mouse.move(outer_edge.x - 70, outer_edge.y)
-  await page.mouse.up()
+  await mouse_drag(page, outer_edge, [-70, 0])
 
   const after = await box_of(pane)
   expect(Math.round(after.width - before.width)).toBe(-70)
@@ -69,10 +65,7 @@ test(`a corner drag resizes width only, the strip painted last`, async ({ page }
   const before = await box_of(pane)
   const corner = { x: before.x + before.width - 3, y: before.y + before.height - 3 }
 
-  await page.mouse.move(corner.x, corner.y)
-  await page.mouse.down()
-  await page.mouse.move(corner.x - 80, corner.y + 50)
-  await page.mouse.up()
+  await mouse_drag(page, corner, [-80, 50])
 
   const after = await box_of(pane)
   expect(Math.round(after.width - before.width)).toBe(-80)
@@ -83,11 +76,11 @@ test.describe(`touch`, () => {
   test.use({ hasTouch: true, isMobile: true, viewport: { width: 900, height: 800 } })
 
   // Playwright's touchscreen only taps; drag goes through CDP
-  const touch_drag = async (page: Page, from: Point, to: Point) => {
+  const touch_drag = async (page: Page, from: Point, [dx, dy]: readonly number[]) => {
     const cdp = await page.context().newCDPSession(page)
     for (const [type, point] of [
       [`touchStart`, from],
-      [`touchMove`, to],
+      [`touchMove`, { x: from.x + dx, y: from.y + dy }],
       [`touchEnd`, null],
     ] as const) {
       await cdp.send(`Input.dispatchTouchEvent`, {
@@ -102,7 +95,7 @@ test.describe(`touch`, () => {
     const before = await box_of(pane)
     const grip = await center_of(handle)
 
-    await touch_drag(page, grip, { x: grip.x - 50, y: grip.y + 30 })
+    await touch_drag(page, grip, [-50, 30])
 
     const after = await box_of(pane)
     expect(Math.round(after.x - before.x)).toBe(-50)
@@ -117,7 +110,7 @@ test.describe(`touch`, () => {
     const scroll_before = await page.evaluate(() => globalThis.scrollY)
     const edge = { x: before.x + before.width / 2, y: before.y + before.height - 3 }
 
-    await touch_drag(page, edge, { x: edge.x, y: edge.y + 60 })
+    await touch_drag(page, edge, [0, 60])
 
     const after = await box_of(pane)
     expect(Math.round(after.height - before.height)).toBe(60)

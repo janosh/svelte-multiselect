@@ -264,15 +264,13 @@ export const resizable =
       .map((edge) => {
         const handle = document.createElement(`div`)
         const across = edge === `left` || edge === `right`
-        const [side_a, side_b] = across
-          ? ([`top`, `bottom`] as const)
-          : ([`left`, `right`] as const)
+        const cross = across ? ([`top`, `bottom`] as const) : ([`left`, `right`] as const)
         handle.dataset.resizeEdge = edge
         handle.style.cssText = `position: absolute; touch-action: none;
-          cursor: ${across ? `ew` : `ns`}-resize; ${edge}: ${inset(edge)}px;
-          ${side_a}: ${inset(side_a)}px; ${side_b}: ${inset(side_b)}px;
-          ${across ? `width` : `height`}: ${handle_size}px`
-        handle.addEventListener(`pointerdown`, (evt) => on_pointerdown(evt, edge), {
+          cursor: ${across ? `ew` : `ns`}-resize;
+          ${across ? `width` : `height`}: ${handle_size}px;
+          ${[edge, ...cross].map((side) => `${side}: ${inset(side)}px`).join(`; `)}`
+        handle.addEventListener(`pointerdown`, (event) => on_pointerdown(event, edge), {
           signal,
         })
         handle.addEventListener(`dblclick`, on_dblclick, { signal })
