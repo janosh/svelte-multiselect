@@ -1332,6 +1332,19 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(3)
   })
 
+  // A press inside can end without any click at all — released off-screen, or the OS taking
+  // over for a native drag. The verdict must not then be applied to a click that carries no
+  // pointer of its own: keyboard Enter and .click() both report detail 0.
+  it(`dismiss_on: 'release' still dismisses on a keyboard-driven click`, () => {
+    const { element, callback } = attach_outside({ dismiss_on: `release` })
+    const outside = create_element()
+
+    dispatch_press(element) // pointerdown inside that never produces a click
+    outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 0 }))
+
+    expect(callback).toHaveBeenCalledTimes(1)
+  })
+
   // Capture phase is what makes dismissal unsuppressable, and its price is running before
   // the pressed control's own handler — which is why a control that toggles the surface
   // belongs in `inside` rather than relying on `release` to order things for it.
@@ -1924,6 +1937,35 @@ describe(`draggable`, () => {
     mock_rect(element, rect)
     return element
   }
+
+  // a second primary press (mouse while a touch is down) would orphan the first follower,
+  // whose window listeners then outlive cleanup and keep moving a detached node
+  it(`ignores a second primary press mid-drag`, () => {
+    const element = create_fixed_box()
+    const on_drag = vi.fn()
+    const cleanup = draggable({ on_drag })(element)
+
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, { pointerId: 1 }))
+    element.dispatchEvent(pointer_event(`pointerdown`, 8, 8, { pointerId: 2 }))
+    cleanup?.()
+    on_drag.mockClear()
+
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 55, 55, { pointerId: 1 }))
+    expect(on_drag).not.toHaveBeenCalled()
+  })
+
+  // the handle may carry the consumer's own inline styles, which are not ours to discard
+  it(`restores inline cursor and touch-action rather than blanking them`, () => {
+    const element = create_fixed_box()
+    element.style.cursor = `pointer`
+    element.style.touchAction = `pan-y`
+
+    draggable({})(element)?.()
+    expect([element.style.cursor, element.style.touchAction]).toEqual([
+      `pointer`,
+      `pan-y`,
+    ])
+  })
 
   it(`updates position, callbacks, cursor and userSelect while dragging`, () => {
     const element = create_fixed_box()
@@ -2728,6 +2770,26 @@ describe(`resizable`, () => {
     return element
   }
 
+  // A mouse pressed while a touch is down reaches here: isPrimary bars a second finger but
+  // not a second device. Without the guard the first follower is orphaned, so its window
+  // listeners outlive cleanup and keep resizing a detached node.
+  it(`ignores a second primary press mid-resize`, () => {
+    const element = create_box()
+    const on_resize = vi.fn()
+    const cleanup = resizable({ on_resize })(element)
+
+    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
+    // away from any edge: the old code cleared active_edge here and stranded userSelect
+    element.dispatchEvent(pointer_event(`pointerdown`, 100, 75, { pointerId: 2 }))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 100, 75, { pointerId: 1 }))
+    expect(document.body.style.userSelect).toBe(``)
+
+    cleanup?.()
+    on_resize.mockClear()
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 400, 75, { pointerId: 1 }))
+    expect(on_resize).not.toHaveBeenCalled()
+  })
+
   it.each([
     [`right`, undefined, 195, 75, `ew-resize`],
     [`bottom`, undefined, 100, 145, `ns-resize`],
@@ -2778,6 +2840,19 @@ describe(`resizable`, () => {
     })
     element.dispatchEvent(event)
     expect(event.defaultPrevented).toBe(prevented)
+  })
+
+  // left/top are also written by `draggable` on the same node, so a reset that blanks them
+  // unconditionally would snap a dragged element back to wherever its stylesheet puts it
+  it(`double-click leaves a left/top this instance never wrote`, () => {
+    const element = create_box()
+    resizable({ edges: [`left`, `top`] })(element)
+    // stands in for draggable having positioned the node
+    element.style.left = `60px`
+    element.style.top = `60px`
+
+    element.dispatchEvent(pointer_event(`dblclick`, 5, 75))
+    expect([element.style.left, element.style.top]).toEqual([`60px`, `60px`])
   })
 
   // touches[0] is the oldest active touch, so a finger resting on the content would hide a
