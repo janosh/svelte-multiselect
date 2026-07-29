@@ -12,24 +12,32 @@ const css_px = (css_length: string): number => {
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 
-// Window-level follow, so a gesture that leaves the node keeps reporting. pointerId filters
-// a second finger; pointercancel ends like release.
+// Capture on `target` so a pointer over an iframe keeps reporting; window listeners still
+// get the bubbled moves. `lostpointercapture` is target-only — end there too. pointerId
+// filters a second finger; pointercancel ends like release.
 const is_primary_press = (event: PointerEvent) => event.button === 0 && event.isPrimary
 const follow_pointer = (
+  target: HTMLElement,
   pointer_id: number,
   on_move: (event: PointerEvent) => void,
   on_end: (event: PointerEvent) => void,
 ) => {
   const ac = new AbortController()
+  const { signal } = ac
+  target.setPointerCapture(pointer_id)
   const on_pointer = (event: PointerEvent) => {
     if (event.pointerId !== pointer_id) return
     if (event.type === `pointermove`) on_move(event)
     else on_end(event)
   }
   for (const type of [`pointermove`, `pointerup`, `pointercancel`] as const) {
-    globalThis.addEventListener(type, on_pointer, { signal: ac.signal })
+    globalThis.addEventListener(type, on_pointer, { signal })
   }
-  return () => ac.abort()
+  target.addEventListener(`lostpointercapture`, on_pointer, { signal })
+  return () => {
+    ac.abort() // before release, or lostpointercapture re-enters on_end
+    if (target.hasPointerCapture(pointer_id)) target.releasePointerCapture(pointer_id)
+  }
 }
 
 export interface DraggableOptions {
@@ -106,7 +114,12 @@ export const draggable =
       document.body.style.userSelect = `none` // Prevent text selection during drag
       handle.style.cursor = `grabbing`
 
-      unfollow = follow_pointer(event.pointerId, handle_pointermove, handle_pointerup)
+      unfollow = follow_pointer(
+        handle,
+        event.pointerId,
+        handle_pointermove,
+        handle_pointerup,
+      )
 
       options.on_drag_start?.(event)
     }
@@ -209,7 +222,7 @@ export const resizable =
       }
       document.body.style.userSelect = `none`
       on_resize_start?.(event, { width: initial.width, height: initial.height })
-      unfollow = follow_pointer(event.pointerId, on_pointermove, on_pointerup)
+      unfollow = follow_pointer(node, event.pointerId, on_pointermove, on_pointerup)
     }
 
     function on_pointermove(event: PointerEvent) {

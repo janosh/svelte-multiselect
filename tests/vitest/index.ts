@@ -54,7 +54,8 @@ export const pointer_event = (
   init: PointerEventInit = {},
 ) => {
   const shared = { clientX, clientY, bubbles: true, ...init }
-  return type.startsWith(`pointer`)
+  // lostpointercapture is a PointerEvent too — it just doesn't start with `pointer`
+  return type.startsWith(`pointer`) || type === `lostpointercapture`
     ? new PointerEvent(type, { isPrimary: true, ...shared })
     : new MouseEvent(type, shared)
 }

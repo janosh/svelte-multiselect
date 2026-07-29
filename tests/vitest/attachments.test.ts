@@ -2036,16 +2036,31 @@ describe(`draggable`, () => {
     expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
-  // the OS took the pointer, so the drag ends there — a later move must not resume it
-  it(`ends the drag on pointercancel`, () => {
+  // Either ends the drag: nothing further arrives for a pointer that was cancelled or whose
+  // capture went away. `lostpointercapture` is dispatched on the capture target, not window.
+  it.each([
+    [
+      `pointercancel`,
+      (el: HTMLElement, id: number) =>
+        globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0, { pointerId: id })),
+    ],
+    [
+      `lostpointercapture`,
+      (el: HTMLElement, id: number) =>
+        el.dispatchEvent(pointer_event(`lostpointercapture`, 0, 0, { pointerId: id })),
+    ],
+  ])(`ends the drag on %s`, (_end_type, dispatch_end) => {
     const element = create_fixed_box()
     const on_drag_end = vi.fn()
     draggable({ on_drag_end })(element)
 
     element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, { pointerId: 3 }))
-    globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0, { pointerId: 3 }))
+    expect(element.hasPointerCapture(3)).toBe(true)
+
+    dispatch_end(element, 3)
     expect(on_drag_end).toHaveBeenCalledOnce()
     expect(document.body.style.userSelect).toBe(``)
+    expect(element.hasPointerCapture(3)).toBe(false)
     globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50, { pointerId: 3 }))
     expect([element.style.left, element.style.top]).toEqual([`10px`, `20px`])
   })
@@ -2937,23 +2952,38 @@ describe(`resizable`, () => {
   )
 
   // a second finger drives and ends nothing; the resize belongs to the first, until the OS
-  // takes it away
-  it(`ignores another pointer, ends on pointercancel`, () => {
+  // takes it away — cancel or lost capture both end it
+  it.each([
+    [
+      `pointercancel`,
+      (el: HTMLElement, id: number) =>
+        globalThis.dispatchEvent(
+          pointer_event(`pointercancel`, 250, 75, { pointerId: id }),
+        ),
+    ],
+    [
+      `lostpointercapture`,
+      (el: HTMLElement, id: number) =>
+        el.dispatchEvent(pointer_event(`lostpointercapture`, 250, 75, { pointerId: id })),
+    ],
+  ])(`ignores another pointer, ends on %s`, (_end_type, dispatch_end) => {
     const element = create_box()
     const on_resize_end = vi.fn()
     resizable({ on_resize_end })(element)
 
     grip(element).dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
+    expect(element.hasPointerCapture(1)).toBe(true)
     globalThis.dispatchEvent(pointer_event(`pointermove`, 400, 75, { pointerId: 2 }))
     globalThis.dispatchEvent(pointer_event(`pointerup`, 400, 75, { pointerId: 2 }))
     expect(element.style.width).toBe(`200px`) // untouched from create_box
     expect(on_resize_end).not.toHaveBeenCalled()
 
     globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75, { pointerId: 1 }))
-    globalThis.dispatchEvent(pointer_event(`pointercancel`, 250, 75, { pointerId: 1 }))
+    dispatch_end(element, 1)
     expect(element.style.width).toBe(`255px`)
     expect(on_resize_end).toHaveBeenCalledOnce()
     expect(document.body.style.userSelect).toBe(``)
+    expect(element.hasPointerCapture(1)).toBe(false)
   })
 
   // every way a gesture can fail to be a resize. A non-primary press matters most: the
