@@ -998,10 +998,12 @@ describe(`click_outside`, () => {
     init: PointerEventInit = {},
   ) => {
     // a real PointerEvent so the scrollbar guard (MouseEvent-only) actually runs here, and
-    // primary by default because the constructor's own default reads as a second finger
+    // primary by default because the constructor's own default reads as a second finger.
+    // A click gets detail: 1, which is how the dismissal tells a pointer click from a
+    // keyboard or programmatic one — a bare Event would be judged as the latter.
     const event = kind.startsWith(`pointer`)
       ? new PointerEvent(kind, { bubbles: true, isPrimary: true, ...init })
-      : new Event(kind, { bubbles: true })
+      : new MouseEvent(kind, { bubbles: true, detail: 1 })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
       value: () =>
@@ -2766,13 +2768,33 @@ describe(`resizable`, () => {
   ])(`a touch %s is cancelled: %s`, (_desc, clientX, clientY, prevented) => {
     const element = create_box()
     resizable()(element)
+    const touch = { clientX, clientY } as Touch
+    // changedTouches is what just landed, which is what the edge test reads
     const event = new TouchEvent(`touchstart`, {
       bubbles: true,
       cancelable: true,
-      touches: [{ clientX, clientY } as Touch],
+      touches: [touch],
+      changedTouches: [touch],
     })
     element.dispatchEvent(event)
     expect(event.defaultPrevented).toBe(prevented)
+  })
+
+  // touches[0] is the oldest active touch, so a finger resting on the content would hide a
+  // second one landing on an edge and the browser would pan instead of resize
+  it(`cancels a second finger landing on an edge while one rests on the content`, () => {
+    const element = create_box()
+    resizable()(element)
+    const resting = { clientX: 100, clientY: 75 } as Touch
+    const landing = { clientX: 195, clientY: 75 } as Touch
+    const event = new TouchEvent(`touchstart`, {
+      bubbles: true,
+      cancelable: true,
+      touches: [resting, landing],
+      changedTouches: [landing],
+    })
+    element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(true)
   })
 
   it(`uses a custom handle_size and resets the cursor away from edges`, () => {
