@@ -258,8 +258,8 @@ export interface MultiSelectProps<T extends Option = Option>
   name?: string | null
   noMatchingOptionsMsg?: string
   open?: boolean
-  // Only reaches a portalled dropdown: an in-place one closes on the input's blur, which the
-  // browser fires on the press already. See dismiss_on_outside_press.
+  // Mostly reaches portalled dropdowns: with the input focused, a press outside blurs it and
+  // that closes an in-place dropdown before any click. See dismiss_on_outside_press.
   dismiss_on?: DismissConfig[`dismiss_on`]
   options?: T[] // static options, or omit when using loadOptions
   outerDiv?: HTMLDivElement | null

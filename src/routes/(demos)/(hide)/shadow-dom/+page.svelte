@@ -1,8 +1,6 @@
 <script lang="ts">
-  // Internal test page for playwright e2e tests (tests/playwright/CommandMenu.test.ts):
-  // inside a shadow root a click retargets to the host by the time it reaches window, so
-  // only composedPath() still names the element it landed on. happy-dom retargets nothing,
-  // so no unit test can tell composedPath() and event.target apart.
+  // Fixture for tests/playwright/CommandMenu.test.ts. happy-dom retargets nothing, so a
+  // shadow root is the only place composedPath() and event.target differ.
   import { CommandMenu } from '$lib'
   import { mount, unmount } from 'svelte'
 

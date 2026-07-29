@@ -1314,8 +1314,7 @@ describe(`click_outside`, () => {
     dispatch_press(create_element(), [], `click`)
     expect(callback).not.toHaveBeenCalled()
 
-    // Enter on an outside control fires a click with no pointerdown of its own, so the
-    // verdict on the drag above must not linger and swallow it
+    // the verdict is spent on that click, so the next outside click dismisses as usual
     dispatch_press(create_element(), [], `click`)
     expect(callback).toHaveBeenCalledTimes(1)
 
@@ -2037,33 +2036,16 @@ describe(`draggable`, () => {
     expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
-  // Either ends the drag: nothing further arrives for a pointer that was cancelled or whose
-  // capture went away. The capture itself is what keeps moves coming while the pointer is
-  // over an iframe, and it has to be handed back or the node holds the pointer for good.
-  // `lostpointercapture` is dispatched on the capture target, not the window.
-  it.each([
-    [
-      `pointercancel`,
-      (el: HTMLElement, id: number) =>
-        globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0, { pointerId: id })),
-    ],
-    [
-      `lostpointercapture`,
-      (el: HTMLElement, id: number) =>
-        el.dispatchEvent(pointer_event(`lostpointercapture`, 0, 0, { pointerId: id })),
-    ],
-  ])(`ends the drag on %s`, (_end_type, dispatch_end) => {
+  // the OS took the pointer, so the drag ends there — a later move must not resume it
+  it(`ends the drag on pointercancel`, () => {
     const element = create_fixed_box()
     const on_drag_end = vi.fn()
     draggable({ on_drag_end })(element)
 
     element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, { pointerId: 3 }))
-    expect(element.hasPointerCapture(3)).toBe(true)
-
-    dispatch_end(element, 3)
+    globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0, { pointerId: 3 }))
     expect(on_drag_end).toHaveBeenCalledOnce()
     expect(document.body.style.userSelect).toBe(``)
-    expect(element.hasPointerCapture(3)).toBe(false)
     globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50, { pointerId: 3 }))
     expect([element.style.left, element.style.top]).toEqual([`10px`, `20px`])
   })
@@ -2508,94 +2490,76 @@ describe(`highlight_matches`, () => {
     cleanup?.()
   })
 
-  // Fake timers must restore in finally: a leak leaves Date.now() frozen for later tests,
-  // and create_burst_debounce keys its max_wait window off Date.now(). Flush MO after each
-  // append — callbacks are microtasks, and advancing timers before they run misses the burst.
+  // Flush MO (microtask) before advancing timers, or the burst never arms the debounce.
+  // afterEach restores real timers — create_burst_debounce keys max_wait off Date.now().
   it(`debounced observation coalesces a burst into one re-run`, async () => {
     vi.useFakeTimers()
+    mock_element.textContent = `nothing here`
     const on_highlight = vi.fn()
-    let cleanup: (() => void) | undefined
-    try {
-      mock_element.textContent = `nothing here`
-      cleanup = highlight_matches({
-        query: `line`,
-        on_highlight,
-        observe_mutations: { debounce_ms: 50, max_wait_ms: 1000 },
-      })(mock_element)
-      expect(on_highlight).toHaveBeenCalledTimes(1) // the initial run
+    const cleanup = highlight_matches({
+      query: `line`,
+      on_highlight,
+      observe_mutations: { debounce_ms: 50, max_wait_ms: 1000 },
+    })(mock_element)
+    expect(on_highlight).toHaveBeenCalledTimes(1) // the initial run
 
-      for (const idx of [1, 2, 3]) {
-        mock_element.append(document.createTextNode(` line ${idx}`))
-        await Promise.resolve() // MutationObserver delivery
-        await vi.advanceTimersByTimeAsync(20) // shorter than debounce_ms
-      }
-      expect(on_highlight).toHaveBeenCalledTimes(1) // still nothing but the initial run
-
-      await vi.advanceTimersByTimeAsync(50)
-      expect(on_highlight).toHaveBeenCalledTimes(2)
-      expect(get_highlight_ranges()).toHaveLength(3)
-    } finally {
-      cleanup?.()
-      vi.useRealTimers()
+    for (const idx of [1, 2, 3]) {
+      mock_element.append(document.createTextNode(` line ${idx}`))
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(20) // shorter than debounce_ms
     }
+    expect(on_highlight).toHaveBeenCalledTimes(1) // still nothing but the initial run
+
+    await vi.advanceTimersByTimeAsync(50)
+    expect(on_highlight).toHaveBeenCalledTimes(2)
+    expect(get_highlight_ranges()).toHaveLength(3)
+    cleanup?.()
   })
 
   it(`max_wait_ms forces a re-run through a burst that never pauses`, async () => {
     vi.useFakeTimers()
+    mock_element.textContent = `nothing here`
     const on_highlight = vi.fn()
-    let cleanup: (() => void) | undefined
-    try {
-      mock_element.textContent = `nothing here`
-      cleanup = highlight_matches({
-        query: `line`,
-        on_highlight,
-        observe_mutations: { debounce_ms: 50, max_wait_ms: 120 },
-      })(mock_element)
+    const cleanup = highlight_matches({
+      query: `line`,
+      on_highlight,
+      observe_mutations: { debounce_ms: 50, max_wait_ms: 120 },
+    })(mock_element)
 
-      // a mutation every 40 ms would reset a plain debounce forever
-      for (const idx of [1, 2, 3, 4]) {
-        mock_element.append(document.createTextNode(` line ${idx}`))
-        await Promise.resolve()
-        await vi.advanceTimersByTimeAsync(40)
-      }
-
-      expect(on_highlight).toHaveBeenCalledTimes(2) // initial run plus the capped one
-    } finally {
-      cleanup?.()
-      vi.useRealTimers()
+    // a mutation every 40 ms would reset a plain debounce forever
+    for (const idx of [1, 2, 3, 4]) {
+      mock_element.append(document.createTextNode(` line ${idx}`))
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(40)
     }
+
+    expect(on_highlight).toHaveBeenCalledTimes(2) // initial run plus the capped one
+    cleanup?.()
   })
 
   it(`cleanup drops a pending debounced re-run`, async () => {
     vi.useFakeTimers()
+    mock_element.textContent = `nothing here`
     const on_highlight = vi.fn()
-    let cleanup: (() => void) | undefined
-    try {
-      mock_element.textContent = `nothing here`
-      cleanup = highlight_matches({
-        query: `line`,
-        on_highlight,
-        observe_mutations: { debounce_ms: 50 },
-      })(mock_element)
+    const cleanup = highlight_matches({
+      query: `line`,
+      on_highlight,
+      observe_mutations: { debounce_ms: 50 },
+    })(mock_element)
 
-      mock_element.append(document.createTextNode(` line 1`))
-      await Promise.resolve()
-      await vi.advanceTimersByTimeAsync(10)
-      expect(vi.getTimerCount()).toBe(1)
+    mock_element.append(document.createTextNode(` line 1`))
+    await Promise.resolve()
+    await vi.advanceTimersByTimeAsync(10)
+    expect(vi.getTimerCount()).toBe(1)
 
-      cleanup?.()
-      cleanup = undefined
-      // disarmed, not merely ignored: a live timer holds the closure (and, in node,
-      // the event loop) until it fires
-      expect(vi.getTimerCount()).toBe(0)
-      await vi.advanceTimersByTimeAsync(100)
+    cleanup?.()
+    // disarmed, not merely ignored: a live timer holds the closure (and, in node,
+    // the event loop) until it fires
+    expect(vi.getTimerCount()).toBe(0)
+    await vi.advanceTimersByTimeAsync(100)
 
-      expect(on_highlight).toHaveBeenCalledTimes(1)
-      expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
-    } finally {
-      cleanup?.()
-      vi.useRealTimers()
-    }
+    expect(on_highlight).toHaveBeenCalledTimes(1)
+    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
   })
 
   it(`cleanup removes only its own highlight entry`, () => {
@@ -2842,11 +2806,11 @@ describe(`resizable`, () => {
   // `touch-action` has no per-region form, so each strip is a real element carrying its own
   // — and its cursor, which needs no hover handler now
   it.each([
-    [`right`, `ew-resize`, `width`],
-    [`bottom`, `ns-resize`, `height`],
-    [`left`, `ew-resize`, `width`],
-    [`top`, `ns-resize`, `height`],
-  ] as const)(`the %s strip grabs %s`, (edge, cursor, thickness) => {
+    [`right`, `ew-resize`, `width`, [`top`, `bottom`]],
+    [`bottom`, `ns-resize`, `height`, [`left`, `right`]],
+    [`left`, `ew-resize`, `width`, [`top`, `bottom`]],
+    [`top`, `ns-resize`, `height`, [`left`, `right`]],
+  ] as const)(`the %s strip grabs %s`, (edge, cursor, thickness, across) => {
     const element = create_box()
     resizable({ edges: [edge], handle_size: 20 })(element)
     const { style } = grip(element, edge)
@@ -2856,7 +2820,42 @@ describe(`resizable`, () => {
       `none`,
       `absolute`,
     ])
-    expect([style[thickness], style[edge]]).toEqual([`20px`, `0px`])
+    // pinned at both ends of the cross axis, so neither corner of the edge is dead
+    expect([style[thickness], style[edge], style[across[0]], style[across[1]]]).toEqual([
+      `20px`,
+      `0px`,
+      `0px`,
+      `0px`,
+    ])
+  })
+
+  // Absolute children anchor to the padding box, so a strip flush with its edge sits inside
+  // the border, leaving the visible edge — grabbable back when this hit-tested — dead.
+  it(`offsets each strip outward by the border it covers`, () => {
+    const element = create_box()
+    element.style.borderStyle = `solid`
+    element.style.borderWidth = `4px 6px 8px 10px` // top right bottom left
+    resizable({ edges: [`right`, `bottom`] })(element)
+
+    const right = grip(element, `right`).style
+    expect([right.right, right.top, right.bottom]).toEqual([`-6px`, `-4px`, `-8px`])
+    const bottom = grip(element, `bottom`).style
+    expect([bottom.bottom, bottom.left, bottom.right]).toEqual([`-8px`, `-10px`, `-6px`])
+  })
+
+  // detaching a strip does not unbind its listeners, so a consumer holding one could still
+  // press it and resize a node this attachment no longer manages
+  it(`stops responding to a strip retained across cleanup`, () => {
+    const element = create_box()
+    const on_resize = vi.fn()
+    const cleanup = resizable({ on_resize })(element)
+    const strip = grip(element)
+
+    cleanup?.()
+    strip.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 300, 75))
+    expect(on_resize).not.toHaveBeenCalled()
+    expect(element.style.width).toBe(`200px`) // untouched from create_box
   })
 
   // right over bottom, so the corner they share resizes width, as the old hit test did
@@ -2873,6 +2872,11 @@ describe(`resizable`, () => {
 
     cleanup?.()
     expect(element.querySelectorAll(`[data-resize-edge]`)).toHaveLength(0)
+
+    // an `edges` change re-runs the attachment; the old strips must not survive it
+    resizable({ edges: [`left`] })(element)
+    const after = [...element.querySelectorAll(`[data-resize-edge]`)]
+    expect(after.map((strip) => strip.getAttribute(`data-resize-edge`))).toEqual([`left`])
   })
 
   // the one visible way back from a manual resize, so it has to clear what the drag wrote
@@ -2933,38 +2937,23 @@ describe(`resizable`, () => {
   )
 
   // a second finger drives and ends nothing; the resize belongs to the first, until the OS
-  // takes it away — cancel or lost capture both end it
-  it.each([
-    [
-      `pointercancel`,
-      (el: HTMLElement, id: number) =>
-        globalThis.dispatchEvent(
-          pointer_event(`pointercancel`, 250, 75, { pointerId: id }),
-        ),
-    ],
-    [
-      `lostpointercapture`,
-      (el: HTMLElement, id: number) =>
-        el.dispatchEvent(pointer_event(`lostpointercapture`, 250, 75, { pointerId: id })),
-    ],
-  ])(`ignores another pointer, ends on %s`, (_end_type, dispatch_end) => {
+  // takes it away
+  it(`ignores another pointer, ends on pointercancel`, () => {
     const element = create_box()
     const on_resize_end = vi.fn()
     resizable({ on_resize_end })(element)
 
     grip(element).dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
-    expect(element.hasPointerCapture(1)).toBe(true)
     globalThis.dispatchEvent(pointer_event(`pointermove`, 400, 75, { pointerId: 2 }))
     globalThis.dispatchEvent(pointer_event(`pointerup`, 400, 75, { pointerId: 2 }))
     expect(element.style.width).toBe(`200px`) // untouched from create_box
     expect(on_resize_end).not.toHaveBeenCalled()
 
     globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75, { pointerId: 1 }))
-    dispatch_end(element, 1)
+    globalThis.dispatchEvent(pointer_event(`pointercancel`, 250, 75, { pointerId: 1 }))
     expect(element.style.width).toBe(`255px`)
     expect(on_resize_end).toHaveBeenCalledOnce()
     expect(document.body.style.userSelect).toBe(``)
-    expect(element.hasPointerCapture(1)).toBe(false)
   })
 
   // every way a gesture can fail to be a resize. A non-primary press matters most: the

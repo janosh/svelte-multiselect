@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import type { DismissConfig, ResizableOptions } from './attachments'
+  import type { ResizableOptions } from './attachments'
   import { click_outside, draggable, resizable, tooltip } from './attachments'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
@@ -29,9 +29,7 @@
     max_width = `450px`,
     pane_props = {},
     persistent = false,
-    // `release` by default: an outside checkbox bound to `show` cannot close the pane
-    // otherwise, and a pan behind it would make the pane vanish mid-gesture. Costs the
-    // mirror case (see dismiss_on_outside_press), whose fix is `inside`, or `press`.
+    // default `release`: outside bind:checked can close; pan-behind does not. See attachments.
     dismiss_on = `release`,
     inside = [],
     resize = `none`,
@@ -59,8 +57,9 @@
     // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
     dismiss_on?: `press` | `release`
-    // Outside controls that drive `show`; the pane's own toggle is always included
-    inside?: DismissConfig[`inside`]
+    // Outside controls that drive `show`; the pane's own toggle is always included. Elements
+    // only — click_outside's selector form needs its `scope` guard, which this does not expose
+    inside?: (Element | null | undefined)[]
     resize?: `both` | `width` | `height` | `none`
     // `fixed` escapes overflow-clipping ancestors; height capped to space below top edge
     position?: `absolute` | `fixed`
@@ -282,7 +281,7 @@ aria-label sits before the spread, so a page with several panes renames them via
     {@render children(pane_state)}
   </div>
   {#if resize === `both`}
-    <!-- hit-testable affordance; resize + dblclick-reset live on the pane via `resizable` -->
+    <!-- affordance only; hit target is `resizable`'s strip underneath -->
     <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
       <line x1="9" y1="1" x2="1" y2="9" />
       <line x1="9" y1="4" x2="4" y2="9" />
@@ -388,7 +387,7 @@ aria-label sits before the spread, so a page with several panes renames them via
       width: 10px;
       height: 10px;
       opacity: 0.3;
-      /* no cursor: resizable's strips are appended after this, so theirs wins here */
+      pointer-events: none; /* gutter underneath belongs to `resizable` */
       line {
         stroke: currentColor;
         stroke-width: 1.5;

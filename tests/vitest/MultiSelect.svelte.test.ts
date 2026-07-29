@@ -8543,10 +8543,12 @@ test.each([
     await tick()
     expect(is_open()).toBe(true)
 
-    const outside = document.createElement(`div`)
+    // a focusable target, so the blur names where focus went — the close only skips relatedTarget
+    // inside the component, which is how a click on the dropdown's own option keeps it open
+    const outside = document.createElement(`button`)
     document.body.append(outside)
     outside.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
-    input.dispatchEvent(new FocusEvent(`blur`)) // the browser's own default action
+    input.dispatchEvent(new FocusEvent(`blur`, { relatedTarget: outside }))
     await tick()
     expect(is_open()).toBe(survives_press)
 

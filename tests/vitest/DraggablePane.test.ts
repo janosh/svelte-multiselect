@@ -147,7 +147,8 @@ describe(`DraggablePane`, () => {
     },
   )
 
-  const mount_toggles = async (dismiss_on: `press` | `release`, show = false) => {
+  // dismiss_on undefined leaves the pane's own default in force, which is what pins it
+  const mount_toggles = async (dismiss_on?: `press` | `release`, show = false) => {
     const props = { dismiss_on, show }
     mounted.push(mount(TestPaneExternalToggles, { target: document.body, props }))
     await tick()
@@ -158,16 +159,17 @@ describe(`DraggablePane`, () => {
     }
   }
 
-  // The main reason for the `release` default. The UA flips `checked` while dispatching the
-  // click, so dismissing a task earlier lets Svelte write checked=false to the DOM first and
-  // the flip then reads as "check it" — reopening the pane, leaving it uncloseable from that
-  // checkbox. On the click, dismissal lands ahead of the bind's change handler instead.
+  // The main reason for the `release` default. Dismissing on the press lets Svelte's flush
+  // write checked=false to the DOM before the click, whose pre-click activation flips it back
+  // for the bind to commit — reopening the pane, leaving it uncloseable from that checkbox.
+  // On the click, dismissal lands after that activation instead.
   test.each([
-    [`press`, true],
-    [`release`, false],
+    [`press`, true, `press`],
+    [`release`, false, `release`],
+    [`the default`, false, undefined],
   ] as const)(
     `dismiss_on=%s, an outside checkbox bound to show reopens the pane: %s`,
-    async (dismiss_on, reopens) => {
+    async (_label, reopens, dismiss_on) => {
       const { pane, checkbox } = await mount_toggles(dismiss_on, true)
       expect(is_open(pane)).toBe(true)
 
@@ -202,20 +204,23 @@ describe(`DraggablePane`, () => {
   )
 
   // and the fix for it, when the trigger is one the consumer holds a reference to
-  test(`inside spares an outside control's press and click`, async () => {
-    const control = document.createElement(`button`)
-    document.body.append(control)
-    cleanups.push(() => control.remove())
-    const { pane } = await open_pane({ inside: [control] })
+  test.each([`press`, `release`] as const)(
+    `inside spares an outside control's press and click, dismiss_on=%s`,
+    async (dismiss_on) => {
+      const control = document.createElement(`button`)
+      document.body.append(control)
+      cleanups.push(() => control.remove())
+      const { pane } = await open_pane({ inside: [control], dismiss_on })
 
-    press_release(control)
-    await tick()
-    expect(is_open(pane)).toBe(true)
+      press_release(control)
+      await tick()
+      expect(is_open(pane)).toBe(true)
 
-    press_release(document.body) // control: an unregistered element still dismisses
-    await tick()
-    expect(is_open(pane)).toBe(false)
-  })
+      press_release(document.body) // control: an unregistered element still dismisses
+      await tick()
+      expect(is_open(pane)).toBe(false)
+    },
+  )
 
   test(`persistent ignores an outside press but honours Escape`, async () => {
     const on_close = vi.fn()

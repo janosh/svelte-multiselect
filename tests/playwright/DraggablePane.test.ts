@@ -41,42 +41,29 @@ test(`a mouse drag moves the pane`, async ({ page }) => {
   expect(Math.round(after.y - before.y)).toBe(40)
 })
 
-// An iframe wins the hit test for anything over it, so a drag crossing one is where a page
-// stops hearing about the pointer. Measured: Chromium keeps delivering to the pressed frame
-// anyway, even for an out-of-process one, so this passes with setPointerCapture removed too.
-// It pins the behaviour, not the mechanism — happy-dom hit-tests nothing and can't see it.
-test(`a drag whose pointer crosses an iframe keeps following it`, async ({ page }) => {
-  const { pane, handle } = await open_pane(page)
+// The strips are absolute children, so they anchor to the padding box and only reach the
+// pane's 1px border because of their negative insets. Layout is a browser fact.
+test(`the outermost pixel of the right edge still resizes`, async ({ page }) => {
+  const { pane } = await open_pane(page)
   const before = await box_of(pane)
-  const grip = await center_of(handle)
-  const target = { x: grip.x - 60, y: grip.y + 40 }
+  const outer_edge = { x: before.x + before.width - 0.5, y: before.y + before.height / 2 }
 
-  // 127.0.0.1 is a different site than localhost, so this frame gets its own renderer
-  // process — the case implicit capture does not cover. Clear of the grip, or the press
-  // itself would land on the iframe and start nothing.
-  const covers_target = await page.evaluate(({ x, y }) => {
-    const frame = document.createElement(`iframe`)
-    frame.src = `http://127.0.0.1:3005/`
-    frame.style.cssText = `position: fixed; z-index: 9999; border: 0; width: 180px;
-      height: 200px; left: ${x - 140}px; top: ${y - 20}px`
-    document.body.append(frame)
-    return document.elementFromPoint(x, y) === frame
-  }, target)
-  expect(covers_target).toBe(true)
+  const on_strip = await page.evaluate(
+    ({ x, y }) => document.elementFromPoint(x, y)?.getAttribute(`data-resize-edge`),
+    outer_edge,
+  )
+  expect(on_strip).toBe(`right`)
 
-  await page.mouse.move(grip.x, grip.y)
+  await page.mouse.move(outer_edge.x, outer_edge.y)
   await page.mouse.down()
-  await page.mouse.move(target.x, target.y)
+  await page.mouse.move(outer_edge.x - 70, outer_edge.y)
   await page.mouse.up()
 
   const after = await box_of(pane)
-  expect(Math.round(after.x - before.x)).toBe(-60)
-  expect(Math.round(after.y - before.y)).toBe(40)
+  expect(Math.round(after.width - before.width)).toBe(-70)
 })
 
-// The strips overlap in the corner and only paint order breaks the tie, so which axis a
-// corner drag resizes is a browser fact — happy-dom paints nothing and cannot decide it.
-// The grip drawn there is an affordance for "this pane resizes", not a two-axis handle.
+// Corner strip paint order (right over bottom) is a browser fact; happy-dom cannot decide it.
 test(`a corner drag resizes width only, the strip painted last`, async ({ page }) => {
   const { pane } = await open_pane(page)
   const before = await box_of(pane)

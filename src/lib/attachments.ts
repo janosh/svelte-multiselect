@@ -12,38 +12,24 @@ const css_px = (css_length: string): number => {
 
 const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
 
-// Window-level follow; pointercancel ends like release; pointerId ignores a second finger.
-// `target` captures the pointer so a gesture that wanders over an iframe — or out of the
-// window — keeps reporting: without capture the iframe hit-test swallows every move and no
-// release ever arrives, leaving the gesture stuck mid-flight. Captured events still bubble,
-// hence the window listeners. `lostpointercapture` fires on the capture target (not the
-// window), so that one is wired there: losing capture (node removed, another element grabs
-// the pointer, focus jumps into an iframe) ends the gesture, since nothing more will reach us.
+// Window-level follow, so a gesture that leaves the node keeps reporting. pointerId filters
+// a second finger; pointercancel ends like release.
 const is_primary_press = (event: PointerEvent) => event.button === 0 && event.isPrimary
 const follow_pointer = (
-  target: HTMLElement,
   pointer_id: number,
   on_move: (event: PointerEvent) => void,
   on_end: (event: PointerEvent) => void,
 ) => {
   const ac = new AbortController()
-  const { signal } = ac
-  target.setPointerCapture(pointer_id)
   const on_pointer = (event: PointerEvent) => {
     if (event.pointerId !== pointer_id) return
     if (event.type === `pointermove`) on_move(event)
     else on_end(event)
   }
   for (const type of [`pointermove`, `pointerup`, `pointercancel`] as const) {
-    globalThis.addEventListener(type, on_pointer, { signal })
+    globalThis.addEventListener(type, on_pointer, { signal: ac.signal })
   }
-  // HTMLElementEventMap includes lostpointercapture; ElementEventMap does not
-  target.addEventListener(`lostpointercapture`, on_pointer, { signal })
-  return () => {
-    // abort first so our own releasePointerCapture does not re-enter on_end via lostpointercapture
-    ac.abort()
-    if (target.hasPointerCapture(pointer_id)) target.releasePointerCapture(pointer_id)
-  }
+  return () => ac.abort()
 }
 
 export interface DraggableOptions {
@@ -83,22 +69,20 @@ export const draggable =
     let start = { x: 0, y: 0 }
     const initial = { left: 0, top: 0 }
 
-    const maybe_handle = options.handle_selector
+    const found = options.handle_selector
       ? node.querySelector<HTMLElement>(options.handle_selector)
       : node
-
-    if (!maybe_handle) {
+    if (!found) {
       console.warn(
         `Draggable: handle not found with selector "${options.handle_selector}"`,
       )
       return undefined
     }
-    const handle = maybe_handle
+    const handle = found
 
     function handle_pointerdown(event: PointerEvent) {
-      // secondary buttons / a second finger would otherwise restart or swallow the drag.
-      // `dragging` also bars a second primary pointer (mouse pressed while a touch is
-      // down), which would strand the first follower's listeners past cleanup.
+      // `dragging` bars a second primary pointer mid-drag (mouse while a touch is down),
+      // which would strand the first follower's listeners past cleanup.
       if (dragging || !is_primary_press(event)) return
       if (!(event.target instanceof Node) || !handle.contains(event.target)) return
 
@@ -122,12 +106,7 @@ export const draggable =
       document.body.style.userSelect = `none` // Prevent text selection during drag
       handle.style.cursor = `grabbing`
 
-      unfollow = follow_pointer(
-        handle,
-        event.pointerId,
-        handle_pointermove,
-        handle_pointerup,
-      )
+      unfollow = follow_pointer(event.pointerId, handle_pointermove, handle_pointerup)
 
       options.on_drag_start?.(event)
     }
@@ -154,17 +133,14 @@ export const draggable =
       options.on_drag_end?.(event)
     }
 
-    // restored on cleanup rather than blanked: the handle may carry the consumer's own
-    // inline cursor or touch-action, which is not ours to discard
+    // restore consumer inline styles on teardown rather than blanking them
     const prev = { cursor: handle.style.cursor, touch_action: handle.style.touchAction }
     handle.addEventListener(`pointerdown`, handle_pointerdown)
     handle.style.cursor = `grab`
-    // otherwise the browser pans the page and the drag never gets a move
-    handle.style.touchAction = `none`
+    handle.style.touchAction = `none` // else the browser pans and the drag never moves
 
     return () => {
       unfollow?.()
-      // If unmounted mid-drag, undo global side effects the release would have reset
       if (dragging) document.body.style.userSelect = ``
       handle.removeEventListener(`pointerdown`, handle_pointerdown)
       handle.style.cursor = prev.cursor
@@ -172,10 +148,9 @@ export const draggable =
     }
   }
 
-// Appends one absolutely-positioned `[data-resize-edge]` child per edge as its grab strip,
-// and promotes a `position: static` node to `relative` so they anchor to it. Both are
-// visible to a consumer's CSS, and a node that is its own scroll container scrolls them
-// out of view — put the overflow on a child instead.
+// One `[data-resize-edge]` child per edge (touch-action has no per-region form). Promotes
+// `position: static` → `relative`. Put overflow on a child — a scrollable node scrolls the
+// strips out of view.
 export const resizable =
   (options: ResizableOptions = {}): Attachment =>
   (element: Element): (() => void) | undefined => {
@@ -208,16 +183,20 @@ export const resizable =
     let start = { x: 0, y: 0 }
     let initial = { width: 0, height: 0, left: 0, top: 0 }
 
-    if (getComputedStyle(node).position === `static`) node.style.position = `relative`
+    const computed = getComputedStyle(node)
+    if (computed.position === `static`) node.style.position = `relative`
+    // Absolute children anchor to the padding box, so a strip at `edge: 0` sits inside the
+    // border and leaves the visible edge ungrabbable. Negative insets put it back on the
+    // border box, the region the pointer used to be hit-tested against.
+    const inset = (edge: Edge) =>
+      -(css_px(computed.getPropertyValue(`border-${edge}-width`)) || 0)
 
     const has_edge = (...sides: Edge[]) => sides.some((side) => edges.includes(side))
     // whether a left/top shrink moved the node, so dblclick knows those are ours to clear
     const repositioned = { left: false, top: false }
 
     function on_pointerdown(event: PointerEvent, edge: Edge) {
-      // `active_edge` bars a second primary pointer mid-resize (a mouse pressed while a
-      // touch is down, which `isPrimary` does not catch): it would orphan the first
-      // follower, whose window listeners then outlive cleanup.
+      // `active_edge` bars a second primary mid-resize (mouse while a touch is down)
       if (active_edge || !is_primary_press(event)) return
       active_edge = edge
 
@@ -230,40 +209,29 @@ export const resizable =
       }
       document.body.style.userSelect = `none`
       on_resize_start?.(event, { width: initial.width, height: initial.height })
-      unfollow = follow_pointer(node, event.pointerId, on_pointermove, on_pointerup)
+      unfollow = follow_pointer(event.pointerId, on_pointermove, on_pointerup)
     }
 
     function on_pointermove(event: PointerEvent) {
       if (!active_edge) return
       const dx = event.clientX - start.x
       const dy = event.clientY - start.y
+      let width = initial.width
+      let height = initial.height
       // grow from the far edge; shrink moves left/top so the opposite corner stays put
-      const size = (
-        grow: Edge,
-        shrink: Edge,
-        delta: number,
-        base: number,
-        min: number,
-        max: number,
-        pos: `left` | `top`,
-      ) => {
-        if (active_edge === grow) return clamp(base + delta, min, max)
-        if (active_edge !== shrink) return base
-        const clamped = clamp(base - delta, min, max)
-        node.style[pos] = `${initial[pos] - (clamped - base)}px`
-        repositioned[pos] = true
-        return clamped
+      if (active_edge === `right`) width = clamp(initial.width + dx, min_width, max_width)
+      else if (active_edge === `left`) {
+        width = clamp(initial.width - dx, min_width, max_width)
+        node.style.left = `${initial.left - (width - initial.width)}px`
+        repositioned.left = true
       }
-      const width = size(`right`, `left`, dx, initial.width, min_width, max_width, `left`)
-      const height = size(
-        `bottom`,
-        `top`,
-        dy,
-        initial.height,
-        min_height,
-        max_height,
-        `top`,
-      )
+      if (active_edge === `bottom`) {
+        height = clamp(initial.height + dy, min_height, max_height)
+      } else if (active_edge === `top`) {
+        height = clamp(initial.height - dy, min_height, max_height)
+        node.style.top = `${initial.top - (height - initial.height)}px`
+        repositioned.top = true
+      }
       node.style.width = `${width}px`
       node.style.height = `${height}px`
       on_resize?.(event, { width, height })
@@ -277,9 +245,7 @@ export const resizable =
       active_edge = null
     }
 
-    // Clear only the inline styles this instance wrote: a consumer-set height must survive,
-    // and left/top may belong to `draggable` on the same node, which also writes them —
-    // blanking those would snap a dragged element back to wherever its stylesheet puts it.
+    // Only clear styles we wrote — leave consumer height and `draggable`'s left/top alone
     const on_dblclick = () => {
       if (has_edge(`left`, `right`)) node.style.width = ``
       if (has_edge(`top`, `bottom`)) node.style.height = ``
@@ -290,24 +256,26 @@ export const resizable =
       }
     }
 
-    // One child per edge rather than hit-testing the node's own border box: `touch-action`
-    // has no per-region form, so a touch or pen landing on a strip of the node would pan the
-    // page and the resize would never see a move. The cursor comes with the strip, and the
-    // browser does the hit test. Low precedence first: `right` paints over `bottom`, so a
-    // corner press resizes width, matching the order the hit test checked in.
+    // Paint order: `right` over `bottom`, so a corner press resizes width
+    const strips = new AbortController()
+    const { signal } = strips
     const handles = ([`top`, `left`, `bottom`, `right`] as const)
       .filter((edge) => edges.includes(edge))
       .map((edge) => {
         const handle = document.createElement(`div`)
         const across = edge === `left` || edge === `right`
-        const span = across
-          ? `top: 0; height: 100%; width`
-          : `left: 0; width: 100%; height`
+        const [side_a, side_b] = across
+          ? ([`top`, `bottom`] as const)
+          : ([`left`, `right`] as const)
         handle.dataset.resizeEdge = edge
-        handle.style.cssText = `position: absolute; touch-action: none; ${edge}: 0;
-          ${span}: ${handle_size}px; cursor: ${across ? `ew` : `ns`}-resize`
-        handle.addEventListener(`pointerdown`, (event) => on_pointerdown(event, edge))
-        handle.addEventListener(`dblclick`, on_dblclick)
+        handle.style.cssText = `position: absolute; touch-action: none;
+          cursor: ${across ? `ew` : `ns`}-resize; ${edge}: ${inset(edge)}px;
+          ${side_a}: ${inset(side_a)}px; ${side_b}: ${inset(side_b)}px;
+          ${across ? `width` : `height`}: ${handle_size}px`
+        handle.addEventListener(`pointerdown`, (evt) => on_pointerdown(evt, edge), {
+          signal,
+        })
+        handle.addEventListener(`dblclick`, on_dblclick, { signal })
         node.append(handle)
         return handle
       })
@@ -315,7 +283,8 @@ export const resizable =
     return () => {
       unfollow?.()
       if (active_edge) document.body.style.userSelect = ``
-      for (const handle of handles) handle.remove() // takes their listeners with them
+      strips.abort() // removal alone leaves a retained strip ref able to fire on_pointerdown
+      for (const handle of handles) handle.remove()
     }
   }
 
@@ -1150,10 +1119,11 @@ export type DismissConfig = {
   // Resolved per press when a function, for a `bind:this` still null at setup time.
   scope?: Element | null | (() => Element | null | undefined)
   escape?: boolean // dismiss on Escape as well, reporting where focus was
-  // `release` waits for the click, for a surface floating over something draggable (starting
-  // a pan or an orbit behind it should not make it vanish under the cursor) and for outside
-  // controls bound to the same state, which cannot close the surface otherwise. It gives up
-  // the right-click and titlebar-drag cases above. See dismiss_on_outside_press.
+  // `release` waits for the click, for a surface floating over something draggable (starting a
+  // pan or an orbit behind it should not make it vanish under the cursor) and for an outside
+  // checkbox bound to the same state, which cannot close the surface otherwise. It gives up
+  // dismissing on a right-click and on a press the OS turns into a window drag, neither of
+  // which fires a click at all. See dismiss_on_outside_press.
   dismiss_on?: `press` | `release`
 }
 
@@ -1228,15 +1198,11 @@ const is_scrollbar_press = (event: Event): boolean => {
 // click). Capture + composedPath. Plain function so `node` can be omitted and `inside`
 // alone defines the surface.
 //
-// `dismiss_on: 'release'` waits for the click: a pan behind the surface no longer makes it
-// vanish mid-gesture, a press that never becomes a click leaves it standing, and an outside
-// `<input type=checkbox bind:checked={open}>` can still close it. That last one is a task
-// boundary, not handler order — the UA flips `checked` while dispatching the click, so
-// dismissing a task earlier lets Svelte write `checked=false` first and the UA's flip then
-// reads as "check it", reopening what the user just closed. What neither mode fixes is a
-// control whose click handler reads the state (`open = !open` reopens either way, capture
-// runs first), and `release` costs the mirror case: an outside trigger that opens on
-// `pointerdown` is closed by the click ending that gesture. Both belong in `inside`.
+// `dismiss_on: 'release'` waits for the click — pan-behind stays open, and an outside
+// `bind:checked` checkbox can close it (dismiss on the press and Svelte's flush writes
+// checked=false before the click's pre-click activation flips it back, which the bind commits).
+// Neither mode fixes `open = !open` on the control itself; put those in `inside`. `release`
+// also closes an outside trigger that opened on the same gesture's `pointerdown`.
 export const dismiss_on_outside_press = (options: DismissOptions = {}): (() => void) => {
   const {
     node,

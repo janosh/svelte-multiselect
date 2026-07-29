@@ -11,23 +11,13 @@ test(`a click inside the menu keeps it open from within a shadow root`, async ({
   const menu = page.locator(`#shadow-host dialog`)
   await expect(menu).toBeVisible()
 
-  // dispatched rather than clicked: the host is what hit-testing reports at those
-  // coordinates, so a real click could never reach the input inside the shadow root
-  const retargets = await page.evaluate(() => {
-    const host = document.querySelector(`#shadow-host`)
-    const input = host?.shadowRoot?.querySelector(`input[role="combobox"]`)
-    if (!(host instanceof HTMLElement) || !input)
-      throw new Error(`no menu in a shadow root`)
-    return new Promise((resolve) => {
-      globalThis.addEventListener(`click`, (event) => resolve(event.target === host), {
-        once: true,
-      })
-      input.dispatchEvent(new MouseEvent(`click`, { bubbles: true, composed: true }))
-    })
-  })
-  expect(retargets).toBe(true) // else the test proves nothing about composedPath
+  // force: the host is what hit-testing reports at these coordinates, so Playwright refuses
+  // the click as intercepted — the browser still targets the input and retargets to the host
+  await menu.getByRole(`combobox`).click({ force: true })
   await expect(menu).toBeVisible()
 
-  await page.locator(`h2`).click({ force: true }) // the modal backdrop covers the heading
+  // dispatched, not clicked: the modal backdrop covers the heading, so a real click there
+  // closes through backdrop_dismiss and would pass with close_if_outside gone
+  await page.locator(`h2`).dispatchEvent(`click`)
   await expect(menu).toBeHidden()
 })

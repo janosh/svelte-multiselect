@@ -1,12 +1,12 @@
 <script lang="ts">
-  // Outside controls driving the pane's `show`, for its dismiss_on tests: a bound checkbox
-  // and a button that opens on pointerdown, neither of them in the pane's `inside` list.
+  // A real component, because `bind:checked` writing back through a parent's state is the
+  // whole mechanism under test — a hand-built checkbox would not exercise it.
   import DraggablePane from '$lib/DraggablePane.svelte'
 
   let {
     dismiss_on,
     show = $bindable(false),
-  }: { dismiss_on: `press` | `release`; show?: boolean } = $props()
+  }: { dismiss_on?: `press` | `release`; show?: boolean } = $props()
 </script>
 
 <input type="checkbox" bind:checked={show} />
