@@ -2,6 +2,7 @@
   import type { ComponentProps } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { fade } from 'svelte/transition'
+  import { backdrop_dismiss } from './attachments'
   import MultiSelect from './MultiSelect.svelte'
   import type { CmdAction, MultiSelectProps } from './types'
   import type { Hotkey } from './utils'
@@ -219,18 +220,14 @@
     run_hotkeys(event, key_bindings)
   }
 
+  // Window bubble so an outside toggle sees its click first. Backdrop → backdrop_dismiss.
   function close_if_outside(event: MouseEvent) {
-    const target = event.target
-    // dialog is null until the next flush after open is set, e.g. when a button's
-    // click handler sets open=true and the same click bubbles up to window - don't
-    // treat that click as outside. Element (not HTMLElement) so SVG targets count.
-    if (!open || !dialog || !(target instanceof Element)) return
-    // backdrop clicks on a modal dialog have target === dialog, so close unless the click
-    // is on this menu's MultiSelect (scoped inside the dialog) or its options list
-    if (dialog.contains(target) && target.closest(`div.multiselect`)) return
+    if (!open || !dialog) return // null until flush after open=true
+    const path = event.composedPath()
+    if (path.includes(dialog)) return
     const listbox_id = input?.getAttribute(`aria-controls`)
     const listbox = listbox_id && document.querySelector(`#${CSS.escape(listbox_id)}`)
-    if (listbox && listbox.contains(target)) return
+    if (listbox && path.includes(listbox)) return
     close_menu()
   }
 
@@ -280,6 +277,7 @@
     {...dialog_props}
     onclose={chain_handlers(close_menu, dialog_props?.onclose)}
     oncancel={handle_dialog_cancel}
+    {@attach backdrop_dismiss()}
   >
     <MultiSelect
       {...rest}

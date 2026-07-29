@@ -1,6 +1,7 @@
 import type { Snippet } from 'svelte'
 import type { FlipParams } from 'svelte/animate'
 import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
+import type { DismissConfig } from './attachments'
 import type { IconName } from './icons'
 
 export type Option = string | number | ObjectOption
@@ -257,6 +258,9 @@ export interface MultiSelectProps<T extends Option = Option>
   name?: string | null
   noMatchingOptionsMsg?: string
   open?: boolean
+  // Mostly reaches portalled dropdowns: with the input focused, a press outside blurs it and
+  // that closes an in-place dropdown before any click. See dismiss_on_outside_press.
+  dismiss_on?: DismissConfig[`dismiss_on`]
   options?: T[] // static options, or omit when using loadOptions
   outerDiv?: HTMLDivElement | null
   outerDivClass?: string

@@ -12,8 +12,7 @@
     // Region the right-click applies to. Omit and the whole document qualifies.
     children?: Snippet
     disabled?: boolean
-    // Merged over the default `{ escape: true }`. `dismiss_on: 'release'` suits a
-    // trigger that toggles: the default press closes before its own handler runs.
+    // Merged over `{ escape: true }`. `dismiss_on: 'release'` for right-click toggles.
     dismiss?: DismissConfig
     item?: Snippet<[{ action: CmdAction; section?: CmdSection; checked?: boolean }]>
     on_select?: (action: CmdAction, section?: CmdSection) => void
