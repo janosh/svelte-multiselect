@@ -23,7 +23,9 @@
     // `fixed` escapes overflow: hidden ancestors but is clipped by a transformed one
     strategy?: `fixed` | `absolute`
     escape?: boolean
-    dismiss_on?: DismissConfig[`dismiss_on`] // `release`: pan-behind / no-click trigger
+    // `release`: pan-behind, no-click presses and outside controls bound to `open` keep
+    // working — see dismiss_on_outside_press
+    dismiss_on?: DismissConfig[`dismiss_on`]
     trap_focus?: boolean
     surface?: HTMLDivElement | null
     trigger?: Snippet<[TriggerProps]>

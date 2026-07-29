@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
-  import type { ResizableOptions } from './attachments'
+  import type { DismissConfig, ResizableOptions } from './attachments'
   import { click_outside, draggable, resizable, tooltip } from './attachments'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
@@ -29,8 +29,11 @@
     max_width = `450px`,
     pane_props = {},
     persistent = false,
-    // `release` by default: pane floats over pannable content. `toggle_btn` is in `inside`.
+    // `release` by default: an outside checkbox bound to `show` cannot close the pane
+    // otherwise, and a pan behind it would make the pane vanish mid-gesture. Costs the
+    // mirror case (see dismiss_on_outside_press), whose fix is `inside`, or `press`.
     dismiss_on = `release`,
+    inside = [],
     resize = `none`,
     position = `absolute`,
     on_close,
@@ -56,6 +59,8 @@
     // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
     dismiss_on?: `press` | `release`
+    // Outside controls that drive `show`; the pane's own toggle is always included
+    inside?: DismissConfig[`inside`]
     resize?: `both` | `width` | `height` | `none`
     // `fixed` escapes overflow-clipping ancestors; height capped to space below top edge
     position?: `absolute` | `fixed`
@@ -239,7 +244,7 @@ aria-label sits before the spread, so a page with several panes renames them via
   })}
   {@attach click_outside({
     enabled: show,
-    inside: [toggle_btn],
+    inside: [toggle_btn, ...inside],
     escape: true,
     dismiss_on,
     // Escape always dismisses; a press outside is what `persistent` suppresses
@@ -383,7 +388,7 @@ aria-label sits before the spread, so a page with several panes renames them via
       width: 10px;
       height: 10px;
       opacity: 0.3;
-      cursor: nwse-resize; /* events bubble into the pane's resize gutter */
+      /* no cursor: resizable's strips are appended after this, so theirs wins here */
       line {
         stroke: currentColor;
         stroke-width: 1.5;

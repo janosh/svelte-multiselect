@@ -7,8 +7,10 @@ beforeAll(() => {
 
 // Node's localStorage is undefined without --localstorage-file; happy-dom won't replace it.
 // Unconditional: reading the property to probe it prints Node's experimental warning.
+// configurable so tests can replace it via vi.stubGlobal / defineProperty.
 const store = new Map<string, string>()
 Object.defineProperty(globalThis, `localStorage`, {
+  configurable: true,
   writable: true,
   value: {
     getItem: (key: string) => store.get(key) ?? null,

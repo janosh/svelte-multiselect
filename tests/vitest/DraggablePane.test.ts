@@ -4,6 +4,7 @@ import demo_page from '$root/src/routes/(demos)/(draggable-pane)/draggable-pane/
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query, escape_key, mock_rect, pointer_event, stub_prop } from './index'
+import TestPaneExternalToggles from './TestPaneExternalToggles.svelte'
 
 describe(`DraggablePane`, () => {
   // click_outside registers document listeners that outlive innerHTML = '', and
@@ -54,8 +55,9 @@ describe(`DraggablePane`, () => {
     return refs
   }
 
+  // pointer_event sets isPrimary; a bare PointerEvent reads as a second finger
   const press = (target: EventTarget) =>
-    target.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+    target.dispatchEvent(pointer_event(`pointerdown`, 0, 0))
   // The pane dismisses on release, so a gesture meant to dismiss needs both halves.
   // Kept apart from `press` because a lone pointerdown is what several tests assert on.
   const press_release = (target: EventTarget) => {
@@ -83,6 +85,13 @@ describe(`DraggablePane`, () => {
   }
   const drag_by = (dx: number, dy: number) =>
     drag(doc_query(`.drag-handle`), [0, 0], [dx, dy])
+  // resizable hit-tests nothing itself: each edge gets a strip, and pressing one is the
+  // only way in. happy-dom paints nothing, so the corner's precedence lives in playwright.
+  const strip_of = (pane: HTMLElement, edge: `right` | `bottom`) => {
+    const strip = pane.querySelector<HTMLElement>(`[data-resize-edge="${edge}"]`)
+    if (!strip) throw new Error(`pane has no ${edge} grab strip`)
+    return strip
+  }
 
   test(`toggle opens the pane, flips aria-expanded and swaps the icon`, async () => {
     const { toggle, pane } = await setup()
@@ -123,7 +132,7 @@ describe(`DraggablePane`, () => {
   })
 
   // A press behind the pane — panning the content it floats over — must not make it vanish
-  // mid-gesture. Hence the `release` default; the click half is covered above.
+  // mid-gesture. One reason for the `release` default; the click half is covered above.
   test.each([
     [`release`, true],
     [`press`, false],
@@ -137,6 +146,76 @@ describe(`DraggablePane`, () => {
       expect(is_open(pane)).toBe(stays_open)
     },
   )
+
+  const mount_toggles = async (dismiss_on: `press` | `release`, show = false) => {
+    const props = { dismiss_on, show }
+    mounted.push(mount(TestPaneExternalToggles, { target: document.body, props }))
+    await tick()
+    return {
+      pane: doc_query<HTMLDivElement>(`.draggable-pane`),
+      checkbox: doc_query<HTMLInputElement>(`input[type="checkbox"]`),
+      trigger: doc_query<HTMLButtonElement>(`[data-testid="pointerdown-trigger"]`),
+    }
+  }
+
+  // The main reason for the `release` default. The UA flips `checked` while dispatching the
+  // click, so dismissing a task earlier lets Svelte write checked=false to the DOM first and
+  // the flip then reads as "check it" — reopening the pane, leaving it uncloseable from that
+  // checkbox. On the click, dismissal lands ahead of the bind's change handler instead.
+  test.each([
+    [`press`, true],
+    [`release`, false],
+  ] as const)(
+    `dismiss_on=%s, an outside checkbox bound to show reopens the pane: %s`,
+    async (dismiss_on, reopens) => {
+      const { pane, checkbox } = await mount_toggles(dismiss_on, true)
+      expect(is_open(pane)).toBe(true)
+
+      press(checkbox)
+      await tick() // the flush a browser gets between pointerdown and click
+      checkbox.click() // UA activation: flips checked, then fires click and change
+      await tick()
+
+      expect(is_open(pane)).toBe(reopens)
+      expect(checkbox.checked).toBe(reopens)
+    },
+  )
+
+  // The price of that default: only the pane's own toggle counts as `inside`, so an outside
+  // trigger that opens on the press is closed again by the click ending the same gesture
+  test.each([
+    [`press`, true],
+    [`release`, false],
+  ] as const)(
+    `dismiss_on=%s, a pane opened by an outside pointerdown trigger stays open: %s`,
+    async (dismiss_on, stays_open) => {
+      const { pane, trigger } = await mount_toggles(dismiss_on)
+
+      press(trigger)
+      await tick()
+      expect(is_open(pane)).toBe(true)
+      trigger.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
+      await tick()
+
+      expect(is_open(pane)).toBe(stays_open)
+    },
+  )
+
+  // and the fix for it, when the trigger is one the consumer holds a reference to
+  test(`inside spares an outside control's press and click`, async () => {
+    const control = document.createElement(`button`)
+    document.body.append(control)
+    cleanups.push(() => control.remove())
+    const { pane } = await open_pane({ inside: [control] })
+
+    press_release(control)
+    await tick()
+    expect(is_open(pane)).toBe(true)
+
+    press_release(document.body) // control: an unregistered element still dismisses
+    await tick()
+    expect(is_open(pane)).toBe(false)
+  })
 
   test(`persistent ignores an outside press but honours Escape`, async () => {
     const on_close = vi.fn()
@@ -293,47 +372,45 @@ describe(`DraggablePane`, () => {
     expect(toggle_btn.getAttribute(`aria-expanded`)).toBe(`true`)
   })
 
+  // resizable grabs each edge with a strip of its own, so `resize` shows up as which
+  // strips exist — that mapping is the whole of what the prop does
   test.each([
-    [`both`, [445, 150], [545, 150], { width: `550px`, height: `300px` }],
-    [`both`, [200, 295], [200, 395], { width: `450px`, height: `400px` }],
-    [`width`, [445, 150], [545, 150], { width: `550px`, height: `300px` }],
-    [`height`, [200, 295], [200, 395], { width: `450px`, height: `400px` }],
-    // height mode leaves the right edge alone, so the press does nothing
-    [`height`, [445, 150], [545, 150], { width: ``, height: `` }],
-    [`none`, [445, 150], [545, 150], { width: ``, height: `` }],
+    [`both`, [`bottom`, `right`]],
+    [`width`, [`right`]],
+    [`height`, [`bottom`]],
+    [`none`, []],
+  ] as const)(`resize=%s puts grab strips on %o`, async (resize, expected_edges) => {
+    const { pane } = await open_pane({ resize })
+    const strips = [...pane.querySelectorAll(`[data-resize-edge]`)]
+    expect(strips.map((strip) => strip.getAttribute(`data-resize-edge`))).toEqual(
+      expected_edges,
+    )
+  })
+
+  test.each([
+    [`both`, `right`, [545, 150], { width: `550px`, height: `300px` }],
+    [`both`, `bottom`, [200, 395], { width: `450px`, height: `400px` }],
+    [`width`, `right`, [545, 150], { width: `550px`, height: `300px` }],
+    [`height`, `bottom`, [200, 395], { width: `450px`, height: `400px` }],
   ] as const)(
-    `resize=%s drag from (%o) sets the pane size`,
-    async (resize, [start_x, start_y], [end_x, end_y], expected) => {
+    `resize=%s dragging the %s strip sets the pane size`,
+    async (resize, edge, [end_x, end_y], expected) => {
       const { pane } = await open_pane({ resize })
       mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
 
-      drag(pane, [start_x, start_y], [end_x, end_y])
+      drag(strip_of(pane, edge), [445, 295], [end_x, end_y])
       await tick()
 
       expect({ width: pane.style.width, height: pane.style.height }).toEqual(expected)
     },
   )
 
-  // Known limitation of `resizable`: get_edge returns a single edge and tests `right`
-  // first, so a press in the corner where both zones overlap resizes width only. The
-  // grip there is an affordance for "this pane resizes", not a two-axis handle.
-  test(`a corner press resizes one axis, not both`, async () => {
-    const { pane } = await open_pane({ resize: `both` })
-    mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
-
-    drag(pane, [445, 295], [545, 395])
-    await tick()
-
-    expect(pane.style.width).toBe(`550px`)
-    expect(pane.style.height).toBe(`300px`) // pinned at its start height, not 400px
-  })
-
   test(`a resize opts the pane out of repositioning and reveals the controls`, async () => {
     const { pane } = await open_pane({ resize: `both` })
     mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
     expect(document.querySelector(`.reset-button`)).toBeNull()
 
-    pane.dispatchEvent(pointer_event(`pointerdown`, 445, 150))
+    strip_of(pane, `right`).dispatchEvent(pointer_event(`pointerdown`, 445, 150))
     await tick()
 
     expect(document.querySelector(`.reset-button`)).not.toBeNull()
@@ -365,12 +442,12 @@ describe(`DraggablePane`, () => {
     const { pane } = await open_pane({ resize: `both`, on_close })
     mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
 
-    // press on the grip gutter, drag past the pane, release over the page
-    press(pane)
-    drag(pane, [445, 150], [900, 150])
+    // press the grab strip, drag past the pane, release over the page
+    drag(strip_of(pane, `right`), [445, 150], [900, 150])
     document.body.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
     await tick()
 
+    expect(pane.style.width).toBe(`905px`) // the resize really happened
     expect(is_open(pane)).toBe(true)
     expect(on_close).not.toHaveBeenCalled()
   })

@@ -258,7 +258,9 @@ export interface MultiSelectProps<T extends Option = Option>
   name?: string | null
   noMatchingOptionsMsg?: string
   open?: boolean
-  dismiss_on?: DismissConfig[`dismiss_on`] // `release`: pan-behind / no-click trigger
+  // Only reaches a portalled dropdown: an in-place one closes on the input's blur, which the
+  // browser fires on the press already. See dismiss_on_outside_press.
+  dismiss_on?: DismissConfig[`dismiss_on`]
   options?: T[] // static options, or omit when using loadOptions
   outerDiv?: HTMLDivElement | null
   outerDivClass?: string

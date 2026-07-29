@@ -1003,7 +1003,7 @@ describe(`click_outside`, () => {
     // keyboard or programmatic one — a bare Event would be judged as the latter.
     const event = kind.startsWith(`pointer`)
       ? new PointerEvent(kind, { bubbles: true, isPrimary: true, ...init })
-      : new MouseEvent(kind, { bubbles: true, detail: 1 })
+      : new MouseEvent(kind, { bubbles: true, detail: 1, ...init })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
       value: () =>
@@ -1346,8 +1346,9 @@ describe(`click_outside`, () => {
   })
 
   // Capture phase is what makes dismissal unsuppressable, and its price is running before
-  // the pressed control's own handler — which is why a control that toggles the surface
-  // belongs in `inside` rather than relying on `release` to order things for it.
+  // the pressed control's own handler — so a control that toggles the surface from its click
+  // handler belongs in `inside`; `release` cannot reorder that one for it (a control bound to
+  // the state is the case `release` does fix, see DraggablePane's checkbox tests)
   it(`dismisses from the capture phase, ahead of the pressed control's handler`, () => {
     const order: string[] = []
     const { callback } = attach_outside({ dismiss_on: `release` })
@@ -2036,16 +2037,34 @@ describe(`draggable`, () => {
     expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
-  it(`ends the drag when the pointer is cancelled`, () => {
+  // Either ends the drag: nothing further arrives for a pointer that was cancelled or whose
+  // capture went away. The capture itself is what keeps moves coming while the pointer is
+  // over an iframe, and it has to be handed back or the node holds the pointer for good.
+  // `lostpointercapture` is dispatched on the capture target, not the window.
+  it.each([
+    [
+      `pointercancel`,
+      (el: HTMLElement, id: number) =>
+        globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0, { pointerId: id })),
+    ],
+    [
+      `lostpointercapture`,
+      (el: HTMLElement, id: number) =>
+        el.dispatchEvent(pointer_event(`lostpointercapture`, 0, 0, { pointerId: id })),
+    ],
+  ])(`ends the drag on %s`, (_end_type, dispatch_end) => {
     const element = create_fixed_box()
     const on_drag_end = vi.fn()
     draggable({ on_drag_end })(element)
 
-    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5))
-    globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0))
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, { pointerId: 3 }))
+    expect(element.hasPointerCapture(3)).toBe(true)
+
+    dispatch_end(element, 3)
     expect(on_drag_end).toHaveBeenCalledOnce()
     expect(document.body.style.userSelect).toBe(``)
-    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50))
+    expect(element.hasPointerCapture(3)).toBe(false)
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50, { pointerId: 3 }))
     expect([element.style.left, element.style.top]).toEqual([`10px`, `20px`])
   })
 
@@ -2489,71 +2508,94 @@ describe(`highlight_matches`, () => {
     cleanup?.()
   })
 
+  // Fake timers must restore in finally: a leak leaves Date.now() frozen for later tests,
+  // and create_burst_debounce keys its max_wait window off Date.now(). Flush MO after each
+  // append — callbacks are microtasks, and advancing timers before they run misses the burst.
   it(`debounced observation coalesces a burst into one re-run`, async () => {
     vi.useFakeTimers()
-    mock_element.textContent = `nothing here`
     const on_highlight = vi.fn()
-    const cleanup = highlight_matches({
-      query: `line`,
-      on_highlight,
-      observe_mutations: { debounce_ms: 50, max_wait_ms: 1000 },
-    })(mock_element)
-    expect(on_highlight).toHaveBeenCalledTimes(1) // the initial run
+    let cleanup: (() => void) | undefined
+    try {
+      mock_element.textContent = `nothing here`
+      cleanup = highlight_matches({
+        query: `line`,
+        on_highlight,
+        observe_mutations: { debounce_ms: 50, max_wait_ms: 1000 },
+      })(mock_element)
+      expect(on_highlight).toHaveBeenCalledTimes(1) // the initial run
 
-    for (const idx of [1, 2, 3]) {
-      mock_element.append(document.createTextNode(` line ${idx}`))
-      await vi.advanceTimersByTimeAsync(20) // shorter than debounce_ms
+      for (const idx of [1, 2, 3]) {
+        mock_element.append(document.createTextNode(` line ${idx}`))
+        await Promise.resolve() // MutationObserver delivery
+        await vi.advanceTimersByTimeAsync(20) // shorter than debounce_ms
+      }
+      expect(on_highlight).toHaveBeenCalledTimes(1) // still nothing but the initial run
+
+      await vi.advanceTimersByTimeAsync(50)
+      expect(on_highlight).toHaveBeenCalledTimes(2)
+      expect(get_highlight_ranges()).toHaveLength(3)
+    } finally {
+      cleanup?.()
+      vi.useRealTimers()
     }
-    expect(on_highlight).toHaveBeenCalledTimes(1) // still nothing but the initial run
-
-    await vi.advanceTimersByTimeAsync(50)
-    expect(on_highlight).toHaveBeenCalledTimes(2)
-    expect(get_highlight_ranges()).toHaveLength(3)
-    cleanup?.()
   })
 
   it(`max_wait_ms forces a re-run through a burst that never pauses`, async () => {
     vi.useFakeTimers()
-    mock_element.textContent = `nothing here`
     const on_highlight = vi.fn()
-    const cleanup = highlight_matches({
-      query: `line`,
-      on_highlight,
-      observe_mutations: { debounce_ms: 50, max_wait_ms: 120 },
-    })(mock_element)
+    let cleanup: (() => void) | undefined
+    try {
+      mock_element.textContent = `nothing here`
+      cleanup = highlight_matches({
+        query: `line`,
+        on_highlight,
+        observe_mutations: { debounce_ms: 50, max_wait_ms: 120 },
+      })(mock_element)
 
-    // a mutation every 40 ms would reset a plain debounce forever
-    for (const idx of [1, 2, 3, 4]) {
-      mock_element.append(document.createTextNode(` line ${idx}`))
-      await vi.advanceTimersByTimeAsync(40)
+      // a mutation every 40 ms would reset a plain debounce forever
+      for (const idx of [1, 2, 3, 4]) {
+        mock_element.append(document.createTextNode(` line ${idx}`))
+        await Promise.resolve()
+        await vi.advanceTimersByTimeAsync(40)
+      }
+
+      expect(on_highlight).toHaveBeenCalledTimes(2) // initial run plus the capped one
+    } finally {
+      cleanup?.()
+      vi.useRealTimers()
     }
-
-    expect(on_highlight).toHaveBeenCalledTimes(2) // initial run plus the capped one
-    cleanup?.()
   })
 
   it(`cleanup drops a pending debounced re-run`, async () => {
     vi.useFakeTimers()
-    mock_element.textContent = `nothing here`
     const on_highlight = vi.fn()
-    const cleanup = highlight_matches({
-      query: `line`,
-      on_highlight,
-      observe_mutations: { debounce_ms: 50 },
-    })(mock_element)
+    let cleanup: (() => void) | undefined
+    try {
+      mock_element.textContent = `nothing here`
+      cleanup = highlight_matches({
+        query: `line`,
+        on_highlight,
+        observe_mutations: { debounce_ms: 50 },
+      })(mock_element)
 
-    mock_element.append(document.createTextNode(` line 1`))
-    await vi.advanceTimersByTimeAsync(10)
-    expect(vi.getTimerCount()).toBe(1)
+      mock_element.append(document.createTextNode(` line 1`))
+      await Promise.resolve()
+      await vi.advanceTimersByTimeAsync(10)
+      expect(vi.getTimerCount()).toBe(1)
 
-    cleanup?.()
-    // disarmed, not merely ignored: a live timer holds the closure (and, in node,
-    // the event loop) until it fires
-    expect(vi.getTimerCount()).toBe(0)
-    await vi.advanceTimersByTimeAsync(100)
+      cleanup?.()
+      cleanup = undefined
+      // disarmed, not merely ignored: a live timer holds the closure (and, in node,
+      // the event loop) until it fires
+      expect(vi.getTimerCount()).toBe(0)
+      await vi.advanceTimersByTimeAsync(100)
 
-    expect(on_highlight).toHaveBeenCalledTimes(1)
-    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+      expect(on_highlight).toHaveBeenCalledTimes(1)
+      expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+    } finally {
+      cleanup?.()
+      vi.useRealTimers()
+    }
   })
 
   it(`cleanup removes only its own highlight entry`, () => {
@@ -2769,6 +2811,12 @@ describe(`resizable`, () => {
     mock_rect(element, rect)
     return element
   }
+  // the strip the browser hit-tests, in place of coordinates near an edge
+  const grip = (box: HTMLElement, edge = `right`) => {
+    const strip = box.querySelector<HTMLElement>(`[data-resize-edge="${edge}"]`)
+    if (!strip) throw new Error(`no ${edge} resize strip on ${box.outerHTML}`)
+    return strip
+  }
 
   // A mouse pressed while a touch is down reaches here: isPrimary bars a second finger but
   // not a second device. Without the guard the first follower is orphaned, so its window
@@ -2778,9 +2826,10 @@ describe(`resizable`, () => {
     const on_resize = vi.fn()
     const cleanup = resizable({ on_resize })(element)
 
-    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
-    // away from any edge: the old code cleared active_edge here and stranded userSelect
-    element.dispatchEvent(pointer_event(`pointerdown`, 100, 75, { pointerId: 2 }))
+    grip(element).dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
+    grip(element, `bottom`).dispatchEvent(
+      pointer_event(`pointerdown`, 100, 145, { pointerId: 2 }),
+    )
     globalThis.dispatchEvent(pointer_event(`pointerup`, 100, 75, { pointerId: 1 }))
     expect(document.body.style.userSelect).toBe(``)
 
@@ -2790,56 +2839,64 @@ describe(`resizable`, () => {
     expect(on_resize).not.toHaveBeenCalled()
   })
 
+  // `touch-action` has no per-region form, so each strip is a real element carrying its own
+  // — and its cursor, which needs no hover handler now
   it.each([
-    [`right`, undefined, 195, 75, `ew-resize`],
-    [`bottom`, undefined, 100, 145, `ns-resize`],
-    [`left`, [`left`], 5, 75, `ew-resize`],
-    [`top`, [`top`], 100, 5, `ns-resize`],
-  ] as const)(
-    `applies the resize cursor on %s edge hover`,
-    (_edge, edges, clientX, clientY, expected_cursor) => {
-      const element = create_box()
-      resizable(edges ? { edges: [...edges] } : {})(element)
+    [`right`, `ew-resize`, `width`],
+    [`bottom`, `ns-resize`, `height`],
+    [`left`, `ew-resize`, `width`],
+    [`top`, `ns-resize`, `height`],
+  ] as const)(`the %s strip grabs %s`, (edge, cursor, thickness) => {
+    const element = create_box()
+    resizable({ edges: [edge], handle_size: 20 })(element)
+    const { style } = grip(element, edge)
 
-      element.dispatchEvent(pointer_event(`pointermove`, clientX, clientY))
+    expect([style.cursor, style.touchAction, style.position]).toEqual([
+      cursor,
+      `none`,
+      `absolute`,
+    ])
+    expect([style[thickness], style[edge]]).toEqual([`20px`, `0px`])
+  })
 
-      expect(element.style.cursor).toBe(expected_cursor)
-    },
-  )
+  // right over bottom, so the corner they share resizes width, as the old hit test did
+  it(`creates a strip per edge only, low precedence first`, () => {
+    const element = create_box()
+    const cleanup = resizable({ edges: [`right`, `bottom`, `top`] })(element)
+
+    const strips = [...element.querySelectorAll(`[data-resize-edge]`)]
+    expect(strips.map((strip) => strip.getAttribute(`data-resize-edge`))).toEqual([
+      `top`,
+      `bottom`,
+      `right`,
+    ])
+
+    cleanup?.()
+    expect(element.querySelectorAll(`[data-resize-edge]`)).toHaveLength(0)
+  })
 
   // the one visible way back from a manual resize, so it has to clear what the drag wrote
-  it.each<[string, ResizableOptions | undefined, number, number, string, string]>([
-    [`an edge`, undefined, 195, 75, ``, ``],
-    [`the content`, undefined, 100, 75, `320px`, `240px`],
+  it.each<[string, ResizableOptions | undefined, string, string]>([
+    [`a strip`, undefined, ``, ``],
     // width-only must not wipe a consumer-set height
-    [`an edge of a width-only instance`, { edges: [`right`] }, 195, 75, ``, `240px`],
-  ])(`double-clicking %s clears managed sizes`, (_desc, options, x, y, width, height) => {
+    [`a strip of a width-only instance`, { edges: [`right`] }, ``, `240px`],
+  ])(`double-clicking %s clears managed sizes`, (_desc, options, width, height) => {
     const element = create_box()
     resizable(options)(element)
     element.style.width = `320px`
     element.style.height = `240px`
-    element.dispatchEvent(pointer_event(`dblclick`, x, y))
-    expect(element.style.width).toBe(width)
-    expect(element.style.height).toBe(height)
+
+    grip(element).dispatchEvent(pointer_event(`dblclick`, 195, 75))
+    expect([element.style.width, element.style.height]).toEqual([width, height])
   })
 
-  // edge-only cancel: touch-action:none on the node would kill content panning
-  it.each([
-    [`on an edge`, 195, 75, true],
-    [`on the content`, 100, 75, false],
-  ])(`a touch %s is cancelled: %s`, (_desc, clientX, clientY, prevented) => {
+  it(`leaves a double-click on the content alone`, () => {
     const element = create_box()
     resizable()(element)
-    const touch = { clientX, clientY } as Touch
-    // changedTouches is what just landed, which is what the edge test reads
-    const event = new TouchEvent(`touchstart`, {
-      bubbles: true,
-      cancelable: true,
-      touches: [touch],
-      changedTouches: [touch],
-    })
-    element.dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(prevented)
+    element.style.width = `320px`
+
+    element.dispatchEvent(pointer_event(`dblclick`, 100, 75))
+    expect(element.style.width).toBe(`320px`)
   })
 
   // left/top are also written by `draggable` on the same node, so a reset that blanks them
@@ -2851,104 +2908,76 @@ describe(`resizable`, () => {
     element.style.left = `60px`
     element.style.top = `60px`
 
-    element.dispatchEvent(pointer_event(`dblclick`, 5, 75))
+    grip(element, `left`).dispatchEvent(pointer_event(`dblclick`, 5, 75))
     expect([element.style.left, element.style.top]).toEqual([`60px`, `60px`])
   })
 
-  // touches[0] is the oldest active touch, so a finger resting on the content would hide a
-  // second one landing on an edge and the browser would pan instead of resize
-  it(`cancels a second finger landing on an edge while one rests on the content`, () => {
-    const element = create_box()
-    resizable()(element)
-    const resting = { clientX: 100, clientY: 75 } as Touch
-    const landing = { clientX: 195, clientY: 75 } as Touch
-    const event = new TouchEvent(`touchstart`, {
-      bubbles: true,
-      cancelable: true,
-      touches: [resting, landing],
-      changedTouches: [landing],
-    })
-    element.dispatchEvent(event)
-    expect(event.defaultPrevented).toBe(true)
-  })
-
-  it(`uses a custom handle_size and resets the cursor away from edges`, () => {
-    const element = create_box()
-    const cleanup = resizable({ handle_size: 20 })(element)
-
-    element.dispatchEvent(pointer_event(`pointermove`, 185, 75))
-    expect(element.style.cursor).toBe(`ew-resize`)
-
-    element.dispatchEvent(pointer_event(`pointermove`, 175, 75))
-    expect(element.style.cursor).toBe(``)
-
-    cleanup?.()
-    element.dispatchEvent(pointer_event(`pointermove`, 185, 75))
-    expect(element.style.cursor).toBe(``)
-  })
-
   it.each([
-    [`min_width`, { min_width: 100 }, [195, 75], [50, 75], `width`, `100px`],
-    [`max_width`, { max_width: 300 }, [195, 75], [500, 75], `width`, `300px`],
-    [`min_height`, { min_height: 80 }, [100, 145], [100, 30], `height`, `80px`],
-    [`max_height`, { max_height: 250 }, [100, 145], [100, 400], `height`, `250px`],
+    [`min_width`, { min_width: 100 }, `right`, [50, 75], `width`, `100px`],
+    [`max_width`, { max_width: 300 }, `right`, [500, 75], `width`, `300px`],
+    [`min_height`, { min_height: 80 }, `bottom`, [100, 30], `height`, `80px`],
+    [`max_height`, { max_height: 250 }, `bottom`, [100, 400], `height`, `250px`],
   ] as const)(
     `respects the %s constraint`,
-    (
-      _constraint,
-      options,
-      [start_client_x, start_client_y],
-      [drag_client_x, drag_client_y],
-      dimension,
-      expected_value,
-    ) => {
+    (_constraint, options, edge, [drag_client_x, drag_client_y], dimension, expected) => {
       const element = create_box()
       resizable(options)(element)
 
-      element.dispatchEvent(pointer_event(`pointerdown`, start_client_x, start_client_y))
+      grip(element, edge).dispatchEvent(pointer_event(`pointerdown`, 195, 145))
       globalThis.dispatchEvent(pointer_event(`pointermove`, drag_client_x, drag_client_y))
 
-      expect(element.style[dimension]).toBe(expected_value)
+      expect(element.style[dimension]).toBe(expected)
 
       globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
     },
   )
 
   // a second finger drives and ends nothing; the resize belongs to the first, until the OS
-  // takes it away
-  it(`ignores another pointer, ends on pointercancel`, () => {
+  // takes it away — cancel or lost capture both end it
+  it.each([
+    [
+      `pointercancel`,
+      (el: HTMLElement, id: number) =>
+        globalThis.dispatchEvent(
+          pointer_event(`pointercancel`, 250, 75, { pointerId: id }),
+        ),
+    ],
+    [
+      `lostpointercapture`,
+      (el: HTMLElement, id: number) =>
+        el.dispatchEvent(pointer_event(`lostpointercapture`, 250, 75, { pointerId: id })),
+    ],
+  ])(`ignores another pointer, ends on %s`, (_end_type, dispatch_end) => {
     const element = create_box()
     const on_resize_end = vi.fn()
     resizable({ on_resize_end })(element)
 
-    element.dispatchEvent(pointer_event(`pointermove`, 195, 75)) // hover sets the cursor
-    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
+    grip(element).dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
+    expect(element.hasPointerCapture(1)).toBe(true)
     globalThis.dispatchEvent(pointer_event(`pointermove`, 400, 75, { pointerId: 2 }))
     globalThis.dispatchEvent(pointer_event(`pointerup`, 400, 75, { pointerId: 2 }))
     expect(element.style.width).toBe(`200px`) // untouched from create_box
     expect(on_resize_end).not.toHaveBeenCalled()
 
     globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75, { pointerId: 1 }))
-    element.dispatchEvent(pointer_event(`pointermove`, 250, 75)) // off the edge, mid-resize
-    expect(element.style.cursor).toBe(`ew-resize`)
-
-    globalThis.dispatchEvent(pointer_event(`pointercancel`, 250, 75, { pointerId: 1 }))
+    dispatch_end(element, 1)
     expect(element.style.width).toBe(`255px`)
     expect(on_resize_end).toHaveBeenCalledOnce()
     expect(document.body.style.userSelect).toBe(``)
+    expect(element.hasPointerCapture(1)).toBe(false)
   })
 
   // every way a gesture can fail to be a resize. A non-primary press matters most: the
   // context menu it opens can swallow the release, leaving the element stuck to the cursor
   it.each([
     [
-      `a press away from any edge`,
+      `a press on the content, clear of every strip`,
       (box: HTMLElement) => box.dispatchEvent(pointer_event(`pointerdown`, 100, 75)),
     ],
     [
-      `a non-primary button on an edge`,
+      `a non-primary button on a strip`,
       (box: HTMLElement) =>
-        box.dispatchEvent(pointer_event(`pointerdown`, 195, 75, { button: 2 })),
+        grip(box).dispatchEvent(pointer_event(`pointerdown`, 195, 75, { button: 2 })),
     ],
     [`a global move with no press at all`, () => {}],
   ])(`does not start resizing on %s`, (_desc, gesture) => {
@@ -2977,7 +3006,7 @@ describe(`resizable`, () => {
 
     resizable({ on_resize_start, on_resize, on_resize_end })(element)
 
-    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
+    grip(element).dispatchEvent(pointer_event(`pointerdown`, 195, 75))
     expect(document.body.style.userSelect).toBe(`none`)
     expect(on_resize_start).toHaveBeenCalledTimes(1)
     expect(on_resize_start).toHaveBeenCalledWith(expect.any(PointerEvent), {
@@ -3029,7 +3058,9 @@ describe(`resizable`, () => {
       const element = create_box(rect)
       resizable({ edges: [_edge] })(element)
 
-      element.dispatchEvent(pointer_event(`pointerdown`, start_client_x, start_client_y))
+      grip(element, _edge).dispatchEvent(
+        pointer_event(`pointerdown`, start_client_x, start_client_y),
+      )
       globalThis.dispatchEvent(pointer_event(`pointermove`, drag_client_x, drag_client_y))
 
       for (const [property, value] of Object.entries(expected_styles)) {
@@ -3047,9 +3078,8 @@ describe(`resizable`, () => {
 
     expect(cleanup).toBeUndefined()
     expect(element.style.position).toBe(``) // disabled skips the position: relative fixup
+    expect(element.querySelectorAll(`[data-resize-edge]`)).toHaveLength(0)
 
-    element.dispatchEvent(pointer_event(`pointermove`, 195, 75)) // edge hover sets no cursor
-    expect(element.style.cursor).toBe(``)
     element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
     globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
     expect(on_resize_start).not.toHaveBeenCalled()
@@ -3070,7 +3100,7 @@ describe(`resizable`, () => {
       expect(warn).toHaveBeenCalledWith(
         expect.stringContaining(`min dimensions exceed max dimensions`),
       )
-      expect(element.style.cursor).toBe(``)
+      expect(element.querySelectorAll(`[data-resize-edge]`)).toHaveLength(0)
     } finally {
       warn.mockRestore()
     }
@@ -3093,14 +3123,12 @@ describe(`resizable`, () => {
     const on_resize = vi.fn()
 
     const cleanup = resizable({ on_resize })(element)
-    element.dispatchEvent(pointer_event(`pointermove`, 195, 75))
-    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
+    grip(element).dispatchEvent(pointer_event(`pointerdown`, 195, 75))
     expect(document.body.style.userSelect).toBe(`none`)
-    expect(element.style.cursor).toBe(`ew-resize`)
 
     cleanup?.() // unmount mid-resize, before any release
     expect(document.body.style.userSelect).toBe(``)
-    expect(element.style.cursor).toBe(``)
+    expect(element.querySelectorAll(`[data-resize-edge]`)).toHaveLength(0)
 
     globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
     expect(on_resize).not.toHaveBeenCalled()

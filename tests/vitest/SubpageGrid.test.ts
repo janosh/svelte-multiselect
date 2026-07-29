@@ -1,5 +1,5 @@
 import { SubpageGrid } from '$lib'
-import type { IconName } from '$lib/icons'
+import { icon_data, type IconName } from '$lib/icons'
 import MultiSelectPage from '$root/src/routes/(demos)/(multiselect)/multiselect/+page.md'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
@@ -70,6 +70,8 @@ test(`per-page icons override the fallback, which is itself configurable`, () =>
   ]
   const [chevron, explicit] = icons_for(pages)
   expect(explicit).not.toBe(chevron)
+  // pin the default: a typo silently renders Icon's Alert fallback
+  expect(chevron).toContain(icon_data.ChevronRight.d ?? ``)
   const [fallback, still_explicit] = icons_for(pages, { fallback_icon: `Check` })
   expect(fallback).not.toBe(chevron)
   expect(still_explicit).toBe(explicit)

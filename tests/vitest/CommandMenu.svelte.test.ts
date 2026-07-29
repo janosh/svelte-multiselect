@@ -334,7 +334,7 @@ test.each([
   const rect = { left: 100, top: 100, right: 300, bottom: 200, width: 200, height: 100 }
   dialog.getBoundingClientRect = () => rect as DOMRect
   const init = { bubbles: true, clientX, clientY }
-  dialog.dispatchEvent(new PointerEvent(`pointerdown`, init))
+  dialog.dispatchEvent(new PointerEvent(`pointerdown`, { isPrimary: true, ...init }))
   dialog.dispatchEvent(new MouseEvent(`click`, init))
   await tick()
 

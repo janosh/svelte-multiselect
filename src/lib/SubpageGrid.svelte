@@ -80,7 +80,8 @@
   }
   .card :global(svg.icon) {
     width: 1.2em;
-    height: 1.2em;
+    height: auto; /* keeps non-square glyphs in proportion, as Icon.svelte does */
+    max-height: 1.2em;
     flex-shrink: 0;
     margin-top: 0.14em;
     opacity: 0.65;

@@ -204,9 +204,11 @@ describe(`Nav`, () => {
 
     // a dropdown left open by hover alone must arm the listener too — on a touch device
     // that state has nothing to close it
+    const listeners_before_hover = press_listeners()
     mouse_enter(dropdown)
     await tick()
     expect(is_visible(dropdown_menu)).toBe(true)
+    expect(press_listeners()).toBe(listeners_before_hover + 1)
     await click_outside()
     expect(is_visible(dropdown_menu)).toBe(false)
   })
