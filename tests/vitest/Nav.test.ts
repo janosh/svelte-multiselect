@@ -178,10 +178,17 @@ describe(`Nav`, () => {
   })
 
   test(`click outside closes burger menu and dropdowns, inside click does not`, async () => {
-    const { dropdown_menu, toggle } = mount_dropdown()
+    const add_listener = vi.spyOn(document, `addEventListener`)
+    const press_listeners = () =>
+      add_listener.mock.calls.filter(([type]) => type === `pointerdown`).length
+    const { dropdown, dropdown_menu, toggle } = mount_dropdown()
     const burger_button = doc_query(`.burger`)
+    // with nothing open there is nothing to dismiss, so the document stays clean — that
+    // handler does a layout read (the scrollbar guard) for every press on the page
+    expect(press_listeners()).toBe(0)
 
     await click(burger_button)
+    expect(press_listeners()).toBe(1)
     await click(toggle)
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`true`)
     expect(is_visible(dropdown_menu)).toBe(true)
@@ -193,6 +200,14 @@ describe(`Nav`, () => {
     // Click outside should close both
     await click_outside()
     expect(burger_button.getAttribute(`aria-expanded`)).toBe(`false`)
+    expect(is_visible(dropdown_menu)).toBe(false)
+
+    // a dropdown left open by hover alone must arm the listener too — on a touch device
+    // that state has nothing to close it
+    mouse_enter(dropdown)
+    await tick()
+    expect(is_visible(dropdown_menu)).toBe(true)
+    await click_outside()
     expect(is_visible(dropdown_menu)).toBe(false)
   })
 

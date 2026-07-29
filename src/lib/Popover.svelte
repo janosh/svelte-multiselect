@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import type { DismissConfig } from './attachments'
   import { click_outside, float, focus_trap, tabbable_selector } from './attachments'
   import { get_uuid, type Placement } from './utils'
 
@@ -22,6 +23,7 @@
     // `fixed` escapes overflow: hidden ancestors but is clipped by a transformed one
     strategy?: `fixed` | `absolute`
     escape?: boolean
+    dismiss_on?: DismissConfig[`dismiss_on`] // `release`: pan-behind / no-click trigger
     trap_focus?: boolean
     surface?: HTMLDivElement | null
     trigger?: Snippet<[TriggerProps]>
@@ -38,6 +40,7 @@
     match_width = false,
     strategy = `fixed`,
     escape = true,
+    dismiss_on = `press`,
     trap_focus = true,
     surface = $bindable(null),
     trigger,
@@ -82,6 +85,7 @@
     {@attach click_outside({
       inside: [trigger_wrapper],
       escape,
+      dismiss_on,
       callback: (_node, _config, { via }) => close(via),
     })}
     {@attach focus_trap({

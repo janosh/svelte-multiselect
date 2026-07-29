@@ -3,7 +3,7 @@ import pane_source from '$lib/DraggablePane.svelte?raw'
 import demo_page from '$root/src/routes/(demos)/(draggable-pane)/draggable-pane/+page.md?raw'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query, escape_key, mock_rect, mouse_event, stub_prop } from './index'
+import { doc_query, escape_key, mock_rect, pointer_event, stub_prop } from './index'
 
 describe(`DraggablePane`, () => {
   // click_outside registers document listeners that outlive innerHTML = '', and
@@ -56,6 +56,12 @@ describe(`DraggablePane`, () => {
 
   const press = (target: EventTarget) =>
     target.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+  // The pane dismisses on release, so a gesture meant to dismiss needs both halves.
+  // Kept apart from `press` because a lone pointerdown is what several tests assert on.
+  const press_release = (target: EventTarget) => {
+    press(target)
+    return target.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+  }
   // returns false once a handler cancels the key, i.e. the pane swallowed it
   const escape = () => document.dispatchEvent(escape_key())
   const is_open = (pane: HTMLElement) => pane.style.display === `grid`
@@ -67,9 +73,11 @@ describe(`DraggablePane`, () => {
     [start_x, start_y]: readonly number[],
     [end_x, end_y]: readonly number[],
   ) => {
-    target.dispatchEvent(mouse_event(`mousedown`, start_x, start_y))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, end_x, end_y))
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    target.dispatchEvent(pointer_event(`pointerdown`, start_x, start_y))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, end_x, end_y))
+    globalThis.dispatchEvent(
+      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
+    )
   }
   const drag_by = (dx: number, dy: number) =>
     drag(doc_query(`.drag-handle`), [0, 0], [dx, dy])
@@ -95,7 +103,7 @@ describe(`DraggablePane`, () => {
   test.each([
     [`toggle`, (toggle: HTMLElement) => toggle.click()],
     [`button`, () => doc_query<HTMLButtonElement>(`.close-button`).click()],
-    [`pointer`, () => press(document.body)],
+    [`pointer`, () => press_release(document.body)],
   ] as const)(`closes via %s`, async (via, dismiss) => {
     const on_close = vi.fn()
     const { toggle, pane } = await open_pane({ on_close })
@@ -112,11 +120,27 @@ describe(`DraggablePane`, () => {
     expect(on_close).toHaveBeenCalledWith({ via })
   })
 
+  // A press behind the pane — panning the content it floats over — must not make it vanish
+  // mid-gesture. Hence the `release` default; the click half is covered above.
+  test.each([
+    [`release`, true],
+    [`press`, false],
+  ] as const)(
+    `with dismiss_on=%s, a bare outside pointerdown leaves the pane open: %s`,
+    async (dismiss_on, stays_open) => {
+      const { pane } = await open_pane({ dismiss_on })
+
+      press(document.body)
+      await tick()
+      expect(is_open(pane)).toBe(stays_open)
+    },
+  )
+
   test(`persistent ignores an outside press but honours Escape`, async () => {
     const on_close = vi.fn()
     const { pane } = await open_pane({ persistent: true, on_close })
 
-    press(document.body)
+    press_release(document.body)
     await tick()
     expect(is_open(pane)).toBe(true)
     expect(on_close).not.toHaveBeenCalled()
@@ -229,12 +253,14 @@ describe(`DraggablePane`, () => {
     const { pane } = await open_pane({ on_drag_start })
     expect(pane.dataset.dragging).toBe(`false`)
 
-    doc_query(`.drag-handle`).dispatchEvent(mouse_event(`mousedown`, 0, 0))
+    doc_query(`.drag-handle`).dispatchEvent(pointer_event(`pointerdown`, 0, 0))
     await tick()
     expect(on_drag_start).toHaveBeenCalledTimes(1)
     expect(pane.dataset.dragging).toBe(`true`)
 
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    globalThis.dispatchEvent(
+      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
+    )
     await tick()
     expect(pane.dataset.dragging).toBe(`false`)
   })
@@ -305,11 +331,13 @@ describe(`DraggablePane`, () => {
     mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
     expect(document.querySelector(`.reset-button`)).toBeNull()
 
-    pane.dispatchEvent(mouse_event(`mousedown`, 445, 150))
+    pane.dispatchEvent(pointer_event(`pointerdown`, 445, 150))
     await tick()
 
     expect(document.querySelector(`.reset-button`)).not.toBeNull()
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    globalThis.dispatchEvent(
+      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
+    )
   })
 
   test.each([
@@ -327,9 +355,9 @@ describe(`DraggablePane`, () => {
     },
   )
 
-  // click_outside dismisses on pointerdown, so the click browsers (and Playwright)
-  // synthesize after a resize never reaches it — matterviz's 200 ms post-resize guard
-  // against exactly that is unnecessary here.
+  // The pane dismisses on the click, which browsers (and Playwright) synthesize even after
+  // a resize that ends outside it — click_outside exempts it because the pointerdown was
+  // inside, so matterviz's 200 ms post-resize guard is unnecessary here.
   test(`a resize released outside the pane does not dismiss it`, async () => {
     const on_close = vi.fn()
     const { pane } = await open_pane({ resize: `both`, on_close })

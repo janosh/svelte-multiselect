@@ -8521,6 +8521,30 @@ test(`press on the portalled dropdown does not close it`, async () => {
   await unmount(app)
 })
 
+// Dismissal waits for the click, so a gesture behind the dropdown keeps it open until the
+// release, and a press that never becomes a click leaves it open altogether.
+test(`dismiss_on: 'release' keeps the dropdown open until the click lands`, async () => {
+  const props = $state<MultiSelectProps>({
+    options: [1, 2, 3],
+    open: true,
+    dismiss_on: `release`,
+  })
+  const app = mount(MultiSelect, { target: document.body, props })
+  await tick()
+  const outside = document.createElement(`div`)
+  document.body.append(outside)
+
+  outside.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+  await tick()
+  expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(true)
+
+  outside.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+  await tick()
+  expect(doc_query(`div.multiselect`).classList.contains(`open`)).toBe(false)
+  outside.remove()
+  await unmount(app)
+})
+
 test(`searchExpandsCollapsedGroups: manually collapsed group stays collapsed until the search changes`, async () => {
   mount(MultiSelect, {
     target: document.body,

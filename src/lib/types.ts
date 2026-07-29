@@ -1,6 +1,7 @@
 import type { Snippet } from 'svelte'
 import type { FlipParams } from 'svelte/animate'
 import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
+import type { DismissConfig } from './attachments'
 import type { IconName } from './icons'
 
 export type Option = string | number | ObjectOption
@@ -257,6 +258,7 @@ export interface MultiSelectProps<T extends Option = Option>
   name?: string | null
   noMatchingOptionsMsg?: string
   open?: boolean
+  dismiss_on?: DismissConfig[`dismiss_on`] // `release`: pan-behind / no-click trigger
   options?: T[] // static options, or omit when using loadOptions
   outerDiv?: HTMLDivElement | null
   outerDivClass?: string

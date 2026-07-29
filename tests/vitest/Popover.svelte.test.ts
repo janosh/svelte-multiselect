@@ -108,6 +108,25 @@ describe(`Popover`, () => {
     expect(on_close).toHaveBeenCalledWith({ via: `trigger` })
   })
 
+  // Dismissal waits for the click, so a gesture behind the popover — a pan, a drag — keeps
+  // it visible until the release instead of having it vanish underneath
+  test(`dismiss_on: 'release' waits for the click`, async () => {
+    const on_close = vi.fn()
+    mount_popover({ dismiss_on: `release`, on_close })
+    trigger().click()
+    await tick()
+
+    press(document.body)
+    await tick()
+    expect(surface()).not.toBeNull()
+    expect(on_close).not.toHaveBeenCalled()
+
+    document.body.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+    await tick()
+    expect(surface()).toBeNull()
+    expect(on_close).toHaveBeenCalledWith({ via: `pointer` })
+  })
+
   test(`escape: false leaves Escape to the consumer`, async () => {
     mount_popover({ escape: false })
     trigger().click()

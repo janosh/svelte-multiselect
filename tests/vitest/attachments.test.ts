@@ -1,4 +1,8 @@
-import type { ContrastOptions, FocusTrapOptions } from '$lib/attachments'
+import type {
+  ContrastOptions,
+  FocusTrapOptions,
+  ResizableOptions,
+} from '$lib/attachments'
 import {
   click_outside,
   contrast_color,
@@ -18,7 +22,7 @@ import {
   tooltip,
 } from '$lib/attachments'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { doc_query, mock_rect, mouse_event, stub_prop } from './index'
+import { doc_query, mock_rect, pointer_event, stub_prop } from './index'
 
 const create_element = (tag = `div`, styles: Partial<CSSStyleDeclaration> = {}) => {
   const element = document.createElement(tag)
@@ -991,10 +995,12 @@ describe(`click_outside`, () => {
     target: Element,
     path: EventTarget[] = [],
     kind = `pointerdown`,
+    init: PointerEventInit = {},
   ) => {
-    // a real PointerEvent so the scrollbar guard (MouseEvent-only) actually runs here
+    // a real PointerEvent so the scrollbar guard (MouseEvent-only) actually runs here, and
+    // primary by default because the constructor's own default reads as a second finger
     const event = kind.startsWith(`pointer`)
-      ? new PointerEvent(kind, { bubbles: true })
+      ? new PointerEvent(kind, { bubbles: true, isPrimary: true, ...init })
       : new Event(kind, { bubbles: true })
     Object.defineProperty(event, `target`, { value: target })
     Object.defineProperty(event, `composedPath`, {
@@ -1294,6 +1300,51 @@ describe(`click_outside`, () => {
 
     dispatch_press(create_element(), [], `click`)
     expect(callback).toHaveBeenCalledTimes(1)
+  })
+
+  // Dragging or resizing the surface can release past its edge, and the browser then
+  // reports the click on a common ancestor — outside. Only a gesture that both starts
+  // and ends outside is a dismissal, else a resize would close what it was resizing.
+  it(`dismiss_on: 'release' ignores a gesture that started inside`, () => {
+    const { element, callback } = attach_outside({ dismiss_on: `release` })
+
+    dispatch_press(element)
+    dispatch_press(create_element(), [], `click`)
+    expect(callback).not.toHaveBeenCalled()
+
+    // Enter on an outside control fires a click with no pointerdown of its own, so the
+    // verdict on the drag above must not linger and swallow it
+    dispatch_press(create_element(), [], `click`)
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    // the OS claiming a gesture ends it without a click, so that verdict must not linger
+    // for the next click either
+    dispatch_press(element)
+    dispatch_press(element, [], `pointercancel`)
+    dispatch_press(create_element(), [], `click`)
+    expect(callback).toHaveBeenCalledTimes(2)
+
+    // nor may a right-click inside, which fires no click of its own at all
+    dispatch_press(element, [], `pointerdown`, { button: 2 })
+    dispatch_press(create_element(), [], `click`)
+    expect(callback).toHaveBeenCalledTimes(3)
+  })
+
+  // Capture phase is what makes dismissal unsuppressable, and its price is running before
+  // the pressed control's own handler — which is why a control that toggles the surface
+  // belongs in `inside` rather than relying on `release` to order things for it.
+  it(`dismisses from the capture phase, ahead of the pressed control's handler`, () => {
+    const order: string[] = []
+    const { callback } = attach_outside({ dismiss_on: `release` })
+    callback.mockImplementation(() => order.push(`dismiss`))
+    const control = create_element(`button`)
+    control.addEventListener(`click`, (event) => {
+      event.stopPropagation() // cannot suppress a dismissal that already ran
+      order.push(`control`)
+    })
+
+    control.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+    expect(order).toEqual([`dismiss`, `control`])
   })
 
   it(`ignores Escape unless asked, so existing keydown chains keep their order`, () => {
@@ -1879,36 +1930,79 @@ describe(`draggable`, () => {
     const cleanup = draggable({ on_drag_start, on_drag, on_drag_end })(element)
     expect(element.style.cursor).toBe(`grab`)
 
-    element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5))
     expect(element.style.left).toBe(`10px`)
     expect(element.style.top).toBe(`20px`)
     expect(element.style.cursor).toBe(`grabbing`)
     expect(document.body.style.userSelect).toBe(`none`)
     expect(on_drag_start).toHaveBeenCalledOnce()
 
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 15, 25))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 15, 25))
     expect(element.style.left).toBe(`20px`)
     expect(element.style.top).toBe(`40px`)
     expect(on_drag).toHaveBeenCalledOnce()
 
-    const mouseup = new MouseEvent(`mouseup`, { bubbles: true })
-    globalThis.dispatchEvent(mouseup)
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
     expect(on_drag_end).toHaveBeenCalledOnce()
     expect(element.style.cursor).toBe(`grab`)
     expect(document.body.style.userSelect).toBe(``)
 
     cleanup?.()
     expect(element.style.cursor).toBe(``)
+    expect(element.style.touchAction).toBe(``)
   })
 
-  it(`does not start dragging on a non-primary mouse button`, () => {
-    // the context menu can swallow the mouseup, leaving the element stuck to the cursor
+  it(`drags from a touch and sets touch-action`, () => {
     const element = create_fixed_box()
     draggable({})(element)
+    expect(element.style.touchAction).toBe(`none`)
 
-    element.dispatchEvent(mouse_event(`mousedown`, 5, 5, 2))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 50, 50))
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, { pointerType: `touch` }))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 15, 25))
+    expect([element.style.left, element.style.top]).toEqual([`20px`, `40px`])
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 15, 25, { pointerType: `touch` }))
+    expect(document.body.style.userSelect).toBe(``)
+  })
+
+  it(`ignores moves and releases from another pointer`, () => {
+    const element = create_fixed_box()
+    const on_drag_end = vi.fn()
+    draggable({ on_drag_end })(element)
+
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, { pointerId: 1 }))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50, { pointerId: 2 }))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 50, 50, { pointerId: 2 }))
+    expect([element.style.left, element.style.top]).toEqual([`10px`, `20px`])
+    expect(on_drag_end).not.toHaveBeenCalled()
+
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 15, 25, { pointerId: 1 }))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 15, 25, { pointerId: 1 }))
+    expect([element.style.left, element.style.top]).toEqual([`20px`, `40px`])
+    expect(on_drag_end).toHaveBeenCalledOnce()
+  })
+
+  it.each([
+    [`a non-primary button`, { button: 2 }],
+    [`a second finger`, { isPrimary: false }],
+  ])(`does not start dragging from %s`, (_desc, init) => {
+    const element = create_fixed_box()
+    draggable({})(element)
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5, init))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50))
     expect([element.style.left, element.style.top]).toEqual([``, ``])
+  })
+
+  it(`ends the drag when the pointer is cancelled`, () => {
+    const element = create_fixed_box()
+    const on_drag_end = vi.fn()
+    draggable({ on_drag_end })(element)
+
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5))
+    globalThis.dispatchEvent(pointer_event(`pointercancel`, 0, 0))
+    expect(on_drag_end).toHaveBeenCalledOnce()
+    expect(document.body.style.userSelect).toBe(``)
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50))
+    expect([element.style.left, element.style.top]).toEqual([`10px`, `20px`])
   })
 
   it(`does not set up dragging when disabled`, () => {
@@ -1917,8 +2011,8 @@ describe(`draggable`, () => {
     expect(cleanup).toBeUndefined()
     expect(element.style.cursor).toBe(``)
 
-    element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 50, 50))
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50))
     expect([element.style.left, element.style.top]).toEqual([``, ``])
   })
 
@@ -1943,15 +2037,15 @@ describe(`draggable`, () => {
     const attach = draggable({ handle_selector: `.drag-handle` })
     attach(element)
 
-    // mousedown on element (not handle) should not start dragging
-    element.dispatchEvent(mouse_event(`mousedown`, 0, 0))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 50, 50))
+    // press on element (not handle) should not start dragging
+    element.dispatchEvent(pointer_event(`pointerdown`, 0, 0))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 50, 50))
     expect(element.style.left).toBe(``)
     expect(element.style.top).toBe(``)
 
-    // mousedown on handle should start dragging
-    handle.dispatchEvent(mouse_event(`mousedown`, 0, 0))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 30, 40))
+    // press on handle should start dragging
+    handle.dispatchEvent(pointer_event(`pointerdown`, 0, 0))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 30, 40))
     expect(element.style.left).toBe(`30px`)
     expect(element.style.top).toBe(`40px`)
   })
@@ -1966,13 +2060,13 @@ describe(`draggable`, () => {
     const attach = draggable()
     attach(element)
 
-    element.dispatchEvent(mouse_event(`mousedown`, 10, 10))
+    element.dispatchEvent(pointer_event(`pointerdown`, 10, 10))
 
     expect(element.style.left).toBe(`25px`)
     expect(element.style.top).toBe(`35px`)
 
     // Drag to new position
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 30, 50))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 30, 50))
     expect(element.style.left).toBe(`45px`) // 25 + (30-10)
     expect(element.style.top).toBe(`75px`) // 35 + (50-10)
   })
@@ -1982,8 +2076,8 @@ describe(`draggable`, () => {
     const on_drag_end = vi.fn()
     draggable({ on_drag, on_drag_end })(create_element())
 
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 100, 100))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
 
     expect(on_drag).not.toHaveBeenCalled()
     expect(on_drag_end).not.toHaveBeenCalled()
@@ -1993,15 +2087,15 @@ describe(`draggable`, () => {
     const element = create_fixed_box({ left: 0, top: 0 })
 
     const cleanup = draggable()(element)
-    element.dispatchEvent(mouse_event(`mousedown`, 5, 5))
+    element.dispatchEvent(pointer_event(`pointerdown`, 5, 5))
     expect(document.body.style.userSelect).toBe(`none`)
     expect(element.style.cursor).toBe(`grabbing`)
 
-    cleanup?.() // unmount mid-drag, before any mouseup
+    cleanup?.() // unmount mid-drag, before any release
     expect(document.body.style.userSelect).toBe(``)
     expect(element.style.cursor).toBe(``)
 
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 100, 100))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 100, 100))
     expect(element.style.left).toBe(`0px`)
     expect(element.style.top).toBe(`0px`)
   })
@@ -2643,24 +2737,56 @@ describe(`resizable`, () => {
       const element = create_box()
       resizable(edges ? { edges: [...edges] } : {})(element)
 
-      element.dispatchEvent(mouse_event(`mousemove`, clientX, clientY))
+      element.dispatchEvent(pointer_event(`pointermove`, clientX, clientY))
 
       expect(element.style.cursor).toBe(expected_cursor)
     },
   )
 
+  // the one visible way back from a manual resize, so it has to clear what the drag wrote
+  it.each<[string, ResizableOptions | undefined, number, number, string, string]>([
+    [`an edge`, undefined, 195, 75, ``, ``],
+    [`the content`, undefined, 100, 75, `320px`, `240px`],
+    // width-only must not wipe a consumer-set height
+    [`an edge of a width-only instance`, { edges: [`right`] }, 195, 75, ``, `240px`],
+  ])(`double-clicking %s clears managed sizes`, (_desc, options, x, y, width, height) => {
+    const element = create_box()
+    resizable(options)(element)
+    element.style.width = `320px`
+    element.style.height = `240px`
+    element.dispatchEvent(pointer_event(`dblclick`, x, y))
+    expect(element.style.width).toBe(width)
+    expect(element.style.height).toBe(height)
+  })
+
+  // edge-only cancel: touch-action:none on the node would kill content panning
+  it.each([
+    [`on an edge`, 195, 75, true],
+    [`on the content`, 100, 75, false],
+  ])(`a touch %s is cancelled: %s`, (_desc, clientX, clientY, prevented) => {
+    const element = create_box()
+    resizable()(element)
+    const event = new TouchEvent(`touchstart`, {
+      bubbles: true,
+      cancelable: true,
+      touches: [{ clientX, clientY } as Touch],
+    })
+    element.dispatchEvent(event)
+    expect(event.defaultPrevented).toBe(prevented)
+  })
+
   it(`uses a custom handle_size and resets the cursor away from edges`, () => {
     const element = create_box()
     const cleanup = resizable({ handle_size: 20 })(element)
 
-    element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
+    element.dispatchEvent(pointer_event(`pointermove`, 185, 75))
     expect(element.style.cursor).toBe(`ew-resize`)
 
-    element.dispatchEvent(mouse_event(`mousemove`, 175, 75))
+    element.dispatchEvent(pointer_event(`pointermove`, 175, 75))
     expect(element.style.cursor).toBe(``)
 
     cleanup?.()
-    element.dispatchEvent(mouse_event(`mousemove`, 185, 75))
+    element.dispatchEvent(pointer_event(`pointermove`, 185, 75))
     expect(element.style.cursor).toBe(``)
   })
 
@@ -2682,25 +2808,50 @@ describe(`resizable`, () => {
       const element = create_box()
       resizable(options)(element)
 
-      element.dispatchEvent(mouse_event(`mousedown`, start_client_x, start_client_y))
-      globalThis.dispatchEvent(mouse_event(`mousemove`, drag_client_x, drag_client_y))
+      element.dispatchEvent(pointer_event(`pointerdown`, start_client_x, start_client_y))
+      globalThis.dispatchEvent(pointer_event(`pointermove`, drag_client_x, drag_client_y))
 
       expect(element.style[dimension]).toBe(expected_value)
 
-      globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+      globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
     },
   )
 
+  // a second finger drives and ends nothing; the resize belongs to the first, until the OS
+  // takes it away
+  it(`ignores another pointer, ends on pointercancel`, () => {
+    const element = create_box()
+    const on_resize_end = vi.fn()
+    resizable({ on_resize_end })(element)
+
+    element.dispatchEvent(pointer_event(`pointermove`, 195, 75)) // hover sets the cursor
+    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75, { pointerId: 1 }))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 400, 75, { pointerId: 2 }))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 400, 75, { pointerId: 2 }))
+    expect(element.style.width).toBe(`200px`) // untouched from create_box
+    expect(on_resize_end).not.toHaveBeenCalled()
+
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75, { pointerId: 1 }))
+    element.dispatchEvent(pointer_event(`pointermove`, 250, 75)) // off the edge, mid-resize
+    expect(element.style.cursor).toBe(`ew-resize`)
+
+    globalThis.dispatchEvent(pointer_event(`pointercancel`, 250, 75, { pointerId: 1 }))
+    expect(element.style.width).toBe(`255px`)
+    expect(on_resize_end).toHaveBeenCalledOnce()
+    expect(document.body.style.userSelect).toBe(``)
+  })
+
   // every way a gesture can fail to be a resize. A non-primary press matters most: the
-  // context menu it opens can swallow the mouseup, leaving the element stuck to the cursor
+  // context menu it opens can swallow the release, leaving the element stuck to the cursor
   it.each([
     [
       `a press away from any edge`,
-      (box: HTMLElement) => box.dispatchEvent(mouse_event(`mousedown`, 100, 75)),
+      (box: HTMLElement) => box.dispatchEvent(pointer_event(`pointerdown`, 100, 75)),
     ],
     [
       `a non-primary button on an edge`,
-      (box: HTMLElement) => box.dispatchEvent(mouse_event(`mousedown`, 195, 75, 2)),
+      (box: HTMLElement) =>
+        box.dispatchEvent(pointer_event(`pointerdown`, 195, 75, { button: 2 })),
     ],
     [`a global move with no press at all`, () => {}],
   ])(`does not start resizing on %s`, (_desc, gesture) => {
@@ -2711,8 +2862,8 @@ describe(`resizable`, () => {
     resizable({ on_resize_start, on_resize, on_resize_end })(element)
 
     gesture(element)
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
 
     expect(on_resize_start).not.toHaveBeenCalled()
     expect(on_resize).not.toHaveBeenCalled()
@@ -2729,27 +2880,27 @@ describe(`resizable`, () => {
 
     resizable({ on_resize_start, on_resize, on_resize_end })(element)
 
-    element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
+    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
     expect(document.body.style.userSelect).toBe(`none`)
     expect(on_resize_start).toHaveBeenCalledTimes(1)
-    expect(on_resize_start).toHaveBeenCalledWith(expect.any(MouseEvent), {
+    expect(on_resize_start).toHaveBeenCalledWith(expect.any(PointerEvent), {
       width: 200,
       height: 150,
     })
 
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
     expect(on_resize).toHaveBeenCalledTimes(1)
-    expect(on_resize).toHaveBeenCalledWith(expect.any(MouseEvent), {
+    expect(on_resize).toHaveBeenCalledWith(expect.any(PointerEvent), {
       width: 255,
       height: 150,
     })
 
     // End resize
-    globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+    globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
     expect(document.body.style.userSelect).toBe(``)
     expect(on_resize_end).toHaveBeenCalledTimes(1)
     expect(on_resize_end).toHaveBeenCalledWith(
-      expect.any(MouseEvent),
+      expect.any(PointerEvent),
       { width: 200, height: 150 }, // offsetWidth/Height from mock
     )
   })
@@ -2781,14 +2932,14 @@ describe(`resizable`, () => {
       const element = create_box(rect)
       resizable({ edges: [_edge] })(element)
 
-      element.dispatchEvent(mouse_event(`mousedown`, start_client_x, start_client_y))
-      globalThis.dispatchEvent(mouse_event(`mousemove`, drag_client_x, drag_client_y))
+      element.dispatchEvent(pointer_event(`pointerdown`, start_client_x, start_client_y))
+      globalThis.dispatchEvent(pointer_event(`pointermove`, drag_client_x, drag_client_y))
 
       for (const [property, value] of Object.entries(expected_styles)) {
         expect(element.style.getPropertyValue(property)).toBe(value)
       }
 
-      globalThis.dispatchEvent(new MouseEvent(`mouseup`, { bubbles: true }))
+      globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
     },
   )
 
@@ -2800,10 +2951,10 @@ describe(`resizable`, () => {
     expect(cleanup).toBeUndefined()
     expect(element.style.position).toBe(``) // disabled skips the position: relative fixup
 
-    element.dispatchEvent(mouse_event(`mousemove`, 195, 75)) // edge hover sets no cursor
+    element.dispatchEvent(pointer_event(`pointermove`, 195, 75)) // edge hover sets no cursor
     expect(element.style.cursor).toBe(``)
-    element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
+    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
     expect(on_resize_start).not.toHaveBeenCalled()
     expect(element.style.width).toBe(`200px`) // untouched from create_element
   })
@@ -2845,16 +2996,16 @@ describe(`resizable`, () => {
     const on_resize = vi.fn()
 
     const cleanup = resizable({ on_resize })(element)
-    element.dispatchEvent(mouse_event(`mousemove`, 195, 75))
-    element.dispatchEvent(mouse_event(`mousedown`, 195, 75))
+    element.dispatchEvent(pointer_event(`pointermove`, 195, 75))
+    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
     expect(document.body.style.userSelect).toBe(`none`)
     expect(element.style.cursor).toBe(`ew-resize`)
 
-    cleanup?.() // unmount mid-resize, before any mouseup
+    cleanup?.() // unmount mid-resize, before any release
     expect(document.body.style.userSelect).toBe(``)
     expect(element.style.cursor).toBe(``)
 
-    globalThis.dispatchEvent(mouse_event(`mousemove`, 250, 75))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
     expect(on_resize).not.toHaveBeenCalled()
   })
 })

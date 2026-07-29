@@ -387,7 +387,10 @@ turns into a window drag still closes the surface. Presses that land in a scroll
 gutter are ignored, so reaching for the scrollbar does not close what you are
 scrolling toward. A surface floating over something draggable can pass
 `dismiss_on: 'release'` to wait for the click instead, so starting a pan behind it
-does not make it vanish mid-drag.
+does not make it vanish mid-drag, and a right-click leaves it standing. Both modes
+dismiss from the capture phase, ahead of the pressed element's own handlers, so a
+control that toggles the surface on click belongs in `inside` — otherwise the
+dismissal unsets its state and the click flips it straight back on.
 
 Pass `inside` for regions that count as inside though they sit outside the node:
 elements for portalled content the node no longer contains, selectors for triggers.

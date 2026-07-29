@@ -17,7 +17,29 @@
     dragging: boolean
   }
 
-  interface Props {
+  let {
+    show = $bindable(false),
+    children,
+    toggle,
+    toggle_props = {},
+    open_icon = `Cross`,
+    closed_icon = `Expand`,
+    icon_style,
+    offset = { x: 5, y: 5 },
+    max_width = `450px`,
+    pane_props = {},
+    persistent = false,
+    // `release` by default: pane floats over pannable content. `toggle_btn` is in `inside`.
+    dismiss_on = `release`,
+    resize = `none`,
+    position = `absolute`,
+    on_close,
+    on_drag_start,
+    toggle_btn = $bindable(null),
+    pane = $bindable(null),
+    has_been_dragged = $bindable(false),
+    dragging = $bindable(false),
+  }: {
     show?: boolean
     children: Snippet<[PaneState]>
     // Replaces the toggle button's content, for icons this library doesn't bundle
@@ -31,12 +53,11 @@
     offset?: { x?: number; y?: number }
     max_width?: string
     pane_props?: HTMLAttributes<HTMLDivElement>
-    // Only Escape and the close button dismiss it — a press outside is ignored, for a
-    // pane the user keeps open while working on what it sits over
+    // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
+    dismiss_on?: `press` | `release`
     resize?: `both` | `width` | `height` | `none`
-    // `fixed` renders relative to the viewport so the pane escapes overflow-clipping
-    // ancestors (cards, tables) and caps its height to the space below its top edge
+    // `fixed` escapes overflow-clipping ancestors; height capped to space below top edge
     position?: `absolute` | `fixed`
     on_close?: (detail: { via: CloseVia }) => void
     on_drag_start?: () => void
@@ -44,29 +65,7 @@
     pane?: HTMLDivElement | null
     has_been_dragged?: boolean
     dragging?: boolean
-  }
-
-  let {
-    show = $bindable(false),
-    children,
-    toggle,
-    toggle_props = {},
-    open_icon = `Cross`,
-    closed_icon = `Expand`,
-    icon_style,
-    offset = { x: 5, y: 5 },
-    max_width = `450px`,
-    pane_props = {},
-    persistent = false,
-    resize = `none`,
-    position = `absolute`,
-    on_close,
-    on_drag_start,
-    toggle_btn = $bindable(null),
-    pane = $bindable(null),
-    has_been_dragged = $bindable(false),
-    dragging = $bindable(false),
-  }: Props = $props()
+  } = $props()
 
   const viewport_margin_px = 8
   // How much of the pane stays on screen when the toggle sits near the bottom edge.
@@ -84,12 +83,13 @@
     dragging,
   })
 
-  // an empty list is also what disables the attachment below, so the edges and the
-  // disabled flag cannot drift apart
-  const edges_by_resize: Record<
-    NonNullable<Props[`resize`]>,
-    NonNullable<ResizableOptions[`edges`]>
-  > = { both: [`right`, `bottom`], width: [`right`], height: [`bottom`], none: [] }
+  // empty list also disables the attachment below, so edges and disabled cannot drift
+  const edges_by_resize = {
+    both: [`right`, `bottom`],
+    width: [`right`],
+    height: [`bottom`],
+    none: [],
+  } satisfies Record<typeof resize, NonNullable<ResizableOptions[`edges`]>>
   const resize_edges = $derived(edges_by_resize[resize])
   const gutter = (side: `width` | `height`) =>
     resize === `both` || resize === side ? `${resize_gutter_px}px` : null
@@ -241,6 +241,7 @@ aria-label sits before the spread, so a page with several panes renames them via
     enabled: show,
     inside: [toggle_btn],
     escape: true,
+    dismiss_on,
     // Escape always dismisses; a press outside is what `persistent` suppresses
     callback: (_node, _config, { via }) => {
       if (via === `escape` || !persistent) close_pane(via)
@@ -276,7 +277,7 @@ aria-label sits before the spread, so a page with several panes renames them via
     {@render children(pane_state)}
   </div>
   {#if resize === `both`}
-    <!-- purely an affordance: the grab zone is the gutter, owned by `resizable` -->
+    <!-- hit-testable affordance; resize + dblclick-reset live on the pane via `resizable` -->
     <svg class="resize-grip" viewBox="0 0 10 10" aria-hidden="true">
       <line x1="9" y1="1" x2="1" y2="9" />
       <line x1="9" y1="4" x2="4" y2="9" />
@@ -382,7 +383,7 @@ aria-label sits before the spread, so a page with several panes renames them via
       width: 10px;
       height: 10px;
       opacity: 0.3;
-      pointer-events: none; /* the gutter underneath belongs to `resizable` */
+      cursor: nwse-resize; /* events bubble into the pane's resize gutter */
       line {
         stroke: currentColor;
         stroke-width: 1.5;

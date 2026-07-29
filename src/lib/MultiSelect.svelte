@@ -3,6 +3,7 @@
   // === Imports ===
   import { tick, untrack } from 'svelte'
   import { flip } from 'svelte/animate'
+  import { fromAction } from 'svelte/attachments'
   import type { FocusEventHandler } from 'svelte/elements'
   import { SvelteSet } from 'svelte/reactivity'
   import { click_outside, highlight_matches } from './attachments'
@@ -70,6 +71,7 @@
     name = null,
     noMatchingOptionsMsg = `No matching options`,
     open = $bindable(false),
+    dismiss_on = `press`,
     options = $bindable(),
     outerDiv = $bindable(null),
     outerDivClass = ``,
@@ -2071,6 +2073,7 @@
     enabled: open,
     // a portalled dropdown is no longer a descendant of this div
     inside: [ul_options],
+    dismiss_on,
     callback: (_node, _config, { event }) => close_dropdown(event),
   })}
   title={disabled ? disabledInputTitle : null}
@@ -2239,7 +2242,11 @@
 
   {#if listbox_rendered}
     <ul
-      use:portal_action={{ target_node: outerDiv, open, ...portal_params }}
+      {@attach fromAction(portal_action, () => ({
+        target_node: outerDiv,
+        open,
+        ...portal_params,
+      }))}
       {@attach highlight_matches({
         query: effective_filter_text,
         disabled: !highlightMatches,
