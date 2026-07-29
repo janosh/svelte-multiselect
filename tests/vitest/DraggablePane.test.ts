@@ -60,7 +60,9 @@ describe(`DraggablePane`, () => {
   // Kept apart from `press` because a lone pointerdown is what several tests assert on.
   const press_release = (target: EventTarget) => {
     press(target)
-    return target.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+    // detail: 1 is a real pointer click; 0 is keyboard/programmatic and skips the
+    // press-started-inside exemption
+    return target.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
   }
   // returns false once a handler cancels the key, i.e. the pane swallowed it
   const escape = () => document.dispatchEvent(escape_key())
@@ -366,7 +368,7 @@ describe(`DraggablePane`, () => {
     // press on the grip gutter, drag past the pane, release over the page
     press(pane)
     drag(pane, [445, 150], [900, 150])
-    document.body.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    document.body.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
     await tick()
 
     expect(is_open(pane)).toBe(true)
