@@ -4,8 +4,10 @@ import { compute_position } from './utils'
 
 type PortalActionParams = PortalParams & { open: boolean }
 
-// MultiSelect's portal action. Stays separate from caret-based floating geometry
-// because it owns element-width matching and restoration to the dropdown's original DOM
+// MultiSelect's portal helper. Kept as a Svelte action and applied via
+// `fromAction` so `update` can activate/deactivate without tearing down the
+// portalled node. Stays separate from caret-based floating geometry because it
+// owns element-width matching and restoration to the dropdown's original DOM
 // position. Repositioning is deferred a microtask so offsetHeight is measured after the
 // dropdown's contents render. No SSR guard: Svelte only invokes actions on the client.
 export function portal_action(node: HTMLElement, initial_params: PortalActionParams) {
