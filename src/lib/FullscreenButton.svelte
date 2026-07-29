@@ -9,6 +9,7 @@
   let {
     fullscreen = $bindable(false),
     wrapper,
+    placement = `inline`,
     bg_css_var = `--fullscreen-bg`,
     icons = { enter: `Fullscreen`, exit: `ExitFullscreen` },
     labels = { enter: `Enter fullscreen`, exit: `Exit fullscreen` },
@@ -20,6 +21,8 @@
     fullscreen?: boolean
     // element to send fullscreen; omit to only toggle the flag and drive fullscreen yourself
     wrapper?: HTMLElement
+    // `corner`: top-right of nearest positioned ancestor (CSS vars, overridable)
+    placement?: `inline` | `corner`
     bg_css_var?: string
     icons?: { enter: IconName; exit: IconName }
     labels?: { enter: string; exit: string }
@@ -48,7 +51,7 @@
   aria-label={label}
   {...rest}
   aria-pressed={fullscreen}
-  class={[`fullscreen-btn`, rest.class]}
+  class={[`fullscreen-btn`, placement === `corner` && `corner`, rest.class]}
   onclick={chain_handlers(() => (fullscreen = !fullscreen), rest.onclick)}
 >
   {#if children}
@@ -68,7 +71,16 @@
     background: var(--fullscreen-btn-bg, transparent);
     color: var(--fullscreen-btn-color, inherit);
     cursor: pointer;
-    transition: background 0.2s;
+    opacity: var(--fullscreen-btn-opacity, 1);
+    transition:
+      background 0.2s,
+      opacity 0.2s;
+  }
+  .fullscreen-btn.corner {
+    position: var(--fullscreen-btn-position, absolute);
+    top: var(--fullscreen-btn-top, 5pt);
+    right: var(--fullscreen-btn-right, 4px);
+    z-index: var(--fullscreen-btn-z-index, 10);
   }
   .fullscreen-btn:hover,
   .fullscreen-btn:focus-visible {
@@ -76,5 +88,6 @@
       --fullscreen-btn-hover-bg,
       color-mix(in srgb, currentcolor 8%, transparent)
     );
+    opacity: var(--fullscreen-btn-hover-opacity, 1);
   }
 </style>
