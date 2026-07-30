@@ -26,6 +26,13 @@ export { default as Toast } from './Toast.svelte'
 export { default as Toc } from './Toc.svelte'
 export { default as Toggle } from './Toggle.svelte'
 export { default as ThemeToggle } from './ThemeToggle.svelte'
+export {
+  apply_theme_mode,
+  resolve_theme_mode,
+  system_preference,
+  theme,
+  type ThemeMode,
+} from './theme.svelte'
 export type * from './types'
 export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'
