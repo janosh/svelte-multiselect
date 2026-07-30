@@ -1,6 +1,6 @@
 {
   "name": "svelte-widgets",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "description": "Accessible, keyboard-friendly Svelte components and attachments",
   "keywords": [
     "command-palette",
@@ -112,8 +112,8 @@
     "build:site": "vp build && pagefind --site build --exclude-selectors \"pre, details\"",
     "test": "vp test --run && playwright test",
     "test:coverage": "vp test --run --coverage",
-    "test:package": "npm run package && npm pack --dry-run && vp build --config tests/package-smoke/vite.config.ts",
-    "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' -o -name '*.svelte' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g\" {} + && find dist -name 'readme.svelte' -delete",
+    "test:package": "npm run package && tsc -p tests/package-smoke/tsconfig.json && npm pack --dry-run && vp build --config tests/package-smoke/vite.config.ts",
+    "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' -o -name '*.svelte' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g; s{((?:from|import)\\s*(?:\\(\\s*)?['\\\"])(\\.\\.?\\/(?:[^\\/'\\\"]+\\/)*[^\\/.'\\\"]+)(['\\\"])}{\\1\\2.js\\3}g\" {} + && find dist -name 'readme.svelte' -delete",
     "prepare": "npm run package",
     "prepublishOnly": "npm run package",
     "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"

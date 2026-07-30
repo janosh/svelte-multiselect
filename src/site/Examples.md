@@ -122,7 +122,7 @@ one on the right of this page is a `Toc`. [Toc docs &rarr;](toc)
 
 <div class="toc-demo" style="display: flex; gap: 2em">
   <article style="flex: 1">
-    <h3>Getting started</h3>
+    <h3 id="toc-demo-getting-started">Getting started</h3>
     <p>Scoped with <code>headingSelector</code> so it ignores the rest of the page.</p>
     <h3>Configuration</h3>
     <p>Pass <code>collapseSubheadings</code> to fold levels under their parent.</p>

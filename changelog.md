@@ -1,13 +1,20 @@
 # Changelog
 
-## [v1.2.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.2.0)
+## svelte-widgets [v1.3.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.3.0)
 
 > 30 July 2026
 
+- Add three accessible components: `Sheet` for portalled edge panels, snippet-driven `Tabs` with automatic/manual activation and `Accordion` with single/multiple expansion
+- Add `file_drop` attachment with accept filtering, directory expansion and explicit drop errors
+- Add hover/focus triggers and open/close delays to `Popover`
+- Add rich snippet bodies and validated `ask_prompt()` requests to the queued dialog API
+- Make text search match NFC/NFD-equivalent Unicode and skip hidden form-control text
 - Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync
 - Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML
+- **Breaking:** Unify build-time heading IDs, runtime heading anchors and `Toc` on the same Unicode-preserving slugger and collision allocator, and make heading parsing tolerate `>` inside quoted attributes while ignoring comments and code/script/style containers. This changes generated IDs containing punctuation or non-ASCII text and changes duplicate suffixes from the old `Toc` slugger
+- Document every headless subpath and attachment, including the lower-level backdrop and outside-press dismissal primitives
 
-## [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
+## svelte-widgets [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
 
 > 27 July 2026
 
@@ -17,7 +24,7 @@
 - Add shortcut rebinding for "customize shortcuts" UIs: `event_to_combo`, `normalize_combo` and `sanitize_shortcut_overrides` turn a keydown into a canonical combo and resolve collisions
 - Add sections to `ContextMenu`: `actions` accepts `CmdSection` entries rendered as an ARIA `group` of `menuitemradio` items with a selected value per section
 - Add a `create_highlighter(grammars)` factory and a `svelte-widgets/live-examples/create-highlighter` subpath, so consumers can pick their own grammars without the barrel's eager top-level await of 34 grammars
-- Consolidate `icon_data` from 25 to 143 entries using matterviz's curated paths. `Icon` now supports fill/stroke glyphs and multi-element SVG markup. The name lookup still ships the full 56 kB raw map with any icon, so tree-shaking remains worth revisiting
+- Consolidate `icon_data` from 25 to 142 entries using matterviz's curated paths. `Icon` now supports fill/stroke glyphs and multi-element SVG markup. The name lookup still ships the full 56 kB raw map with any icon, so tree-shaking remains worth revisiting
 - Add a `toggle` snippet to `DraggablePane`, so a consumer can put any icon in the toggle button while the component keeps the button and its anchor geometry. `open_icon`/`closed_icon` are typed to the bundled `IconName`s, which left no route to an icon this package doesn't ship, and `icon_style` sizes the bundled one without reaching for the snippet at all. The pane carries `toc-exclude` now, keeping headings in floating chrome out of a page's `Toc`, and `pane-open` while it is open, which is what a page needs to style around a pane it does not own
 - Add an `option_suffix` snippet to `ButtonGroup`, rendered as a sibling of each button rather than inside it, so an option can carry a trailing link without nesting interactive content in a `<button>`. The wrapper element only appears when the snippet is supplied, so existing `.options > button` selectors keep matching. Adds `--btn-group-justify-content`, `--btn-group-btn-cursor`, `--btn-group-btn-hover-color`, `--btn-group-btn-hover-transform` and `--btn-group-btn-transition`, and `tooltip_options` for consumers whose option tooltips are rich text
 - Add `dismiss` and `trigger` to `ContextMenu`. `dismiss` merges over the default `{ escape: true }` and reaches the whole `click_outside` config, so a right-click trigger can ask for `dismiss_on: 'release'` instead of being closed by its own press. `trigger: 'none'` installs no right-click handler at all, for a consumer driving `at` itself
@@ -32,7 +39,7 @@
 - Fix `MultiSelect`, `Masonry`, `Popover`, `ContextMenu`, `LiteYouTubeEmbed` and `Nav` rendering `class="[object Object]"` when handed a class. Svelte types the attribute as a `ClassValue`, so an array or a `{ active: true }` object is legal, but these interpolated it into a string. They pass it to Svelte's own clsx pass now
 - Fix `Masonry` silently dropping its virtualization when a consumer passes `onscroll`: the prop spread sat after the component's own handler and replaced it, leaving the rendered window frozen at the top of the list however far down the user scrolled. `LiteYouTubeEmbed` had the mirror image, spreading first and so discarding a consumer's `onclick`. Both chain the two handlers now
 
-## [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
+## svelte-widgets [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
 
 > 27 July 2026
 

@@ -6,6 +6,15 @@ import type { IconName } from './icons'
 
 export type Option = string | number | ObjectOption
 
+export type TabItem<Value extends string = string> = {
+  value: Value
+  label?: string
+  disabled?: boolean
+}
+
+export type AccordionItem<Value extends string = string> = TabItem<Value>
+export type AccordionValue<Value extends string = string> = Value | Value[] | null
+
 // single CSS string or an object with optional 'option' and 'selected' keys,
 // which only apply to the dropdown list and list of selected options, respectively
 export type OptionStyle = string | { option?: string; selected?: string }
@@ -244,9 +253,8 @@ export interface MultiSelectProps<T extends Option = Option>
   // Virtualized dropdown rendering for large option lists: only rows near the scroll
   // viewport are rendered as DOM nodes. Pass true for defaults or { itemHeight, overscan }
   // to tune row height (px, default 30, applies to group headers too) and extra rows
-  // rendered above/below the visible window (default 10). Grouped options are supported
-  // except in combination with stickyGroupHeaders, which falls back to full rendering
-  // (with a console.warn).
+  // rendered above/below the visible window (default 10). Grouped options and sticky
+  // headers are supported; virtual rows use the configured fixed height for geometry.
   virtualList?: boolean | { itemHeight?: number; overscan?: number }
   maxSelect?: number | null // null means there is no upper limit for selected.length
   maxSelectMsg?: ((current: number, max: number) => string) | null

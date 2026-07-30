@@ -1,4 +1,5 @@
 import type { Attachment } from 'svelte/attachments'
+import { files_from_data_transfer, filter_accepted_files } from './file-drop'
 import type { TextMutationOptions, TextSearchNodeFilter } from './text-search'
 import { create_burst_debounce, sync_owned_highlight } from './text-search'
 import type { Hotkey, Placement, PositionOptions } from './utils'
@@ -39,6 +40,116 @@ const follow_pointer = (
     if (target.hasPointerCapture(pointer_id)) target.releasePointerCapture(pointer_id)
   }
 }
+
+export interface FileDropOptions {
+  accept?: string
+  multiple?: boolean
+  disabled?: boolean
+  on_files: (files: File[]) => unknown
+  on_drag_active?: (active: boolean, event?: DragEvent) => void
+  on_error?: (error: unknown) => unknown
+}
+
+// Headless file-drop handling. The data attribute gives CSS consumers the same state
+// the callback receives, while the depth counter prevents child-to-child drags from
+// flickering inactive. Directory expansion and its explicit errors live in file-drop.
+export const file_drop =
+  (options: FileDropOptions): Attachment<HTMLElement> =>
+  (node): (() => void) | undefined => {
+    const {
+      accept = ``,
+      multiple = false,
+      disabled = false,
+      on_files,
+      on_drag_active,
+      on_error,
+    } = options
+
+    const previous_drag_active = node.getAttribute(`data-drag-active`)
+    node.removeAttribute(`data-drag-active`)
+    let drag_depth = 0
+    let drag_active = false
+    let drop_generation = 0
+
+    const carries_files = (data_transfer: DataTransfer): boolean =>
+      Array.from(data_transfer.types).includes(`Files`) ||
+      data_transfer.files.length > 0 ||
+      Array.from(data_transfer.items).some((item) => item.kind === `file`)
+    const set_drag_active = (active: boolean, event?: DragEvent) => {
+      if (active === drag_active) return
+      drag_active = active
+      node.toggleAttribute(`data-drag-active`, active)
+      on_drag_active?.(active, event)
+    }
+    const on_dragenter = (event: DragEvent) => {
+      if (!event.dataTransfer || !carries_files(event.dataTransfer)) return
+      event.preventDefault()
+      if (disabled) return
+      drag_depth += 1
+      set_drag_active(true, event)
+    }
+    const on_dragover = (event: DragEvent) => {
+      if (!event.dataTransfer || !carries_files(event.dataTransfer)) return
+      event.preventDefault()
+    }
+    const on_dragleave = (event: DragEvent) => {
+      if (!drag_active) return
+      drag_depth = Math.max(0, drag_depth - 1)
+      if (drag_depth === 0) set_drag_active(false, event)
+    }
+    const on_drop = (event: DragEvent) => {
+      const { dataTransfer: data_transfer } = event
+      if (!data_transfer || !carries_files(data_transfer)) return
+      event.preventDefault()
+      drag_depth = 0
+      set_drag_active(false, event)
+      if (disabled) return
+
+      const generation = ++drop_generation
+      let delivery_started = false
+      void files_from_data_transfer(data_transfer)
+        .then(async (dropped) => {
+          if (generation !== drop_generation) return
+          const accepted = filter_accepted_files(dropped, accept, multiple)
+          if (accepted.length === 0) return
+          delivery_started = true
+          await on_files(accepted)
+        })
+        .catch(async (error: unknown) => {
+          if (!delivery_started && generation !== drop_generation) return
+          if (!on_error) {
+            globalThis.reportError(error)
+            return
+          }
+          try {
+            await on_error(error)
+          } catch (reporting_error) {
+            globalThis.reportError(reporting_error)
+          }
+        })
+    }
+    const on_dragend = (event: DragEvent) => {
+      drag_depth = 0
+      set_drag_active(false, event)
+    }
+
+    const event_controller = new AbortController()
+    node.addEventListener(`dragenter`, on_dragenter, { signal: event_controller.signal })
+    node.addEventListener(`dragover`, on_dragover, { signal: event_controller.signal })
+    node.addEventListener(`dragleave`, on_dragleave, { signal: event_controller.signal })
+    node.addEventListener(`drop`, on_drop, { signal: event_controller.signal })
+    globalThis.addEventListener(`dragend`, on_dragend, {
+      signal: event_controller.signal,
+    })
+
+    return () => {
+      drop_generation += 1
+      event_controller.abort()
+      if (drag_active) set_drag_active(false)
+      if (previous_drag_active === null) node.removeAttribute(`data-drag-active`)
+      else node.setAttribute(`data-drag-active`, previous_drag_active)
+    }
+  }
 
 export interface DraggableOptions {
   handle_selector?: string
@@ -194,7 +305,14 @@ export const resizable =
     let active_edge: Edge | null = null
     let unfollow: (() => void) | undefined
     let start = { x: 0, y: 0 }
-    let initial = { width: 0, height: 0, left: 0, top: 0 }
+    let initial = {
+      width: 0,
+      height: 0,
+      left: 0,
+      top: 0,
+      width_inset: 0,
+      height_inset: 0,
+    }
 
     const computed = getComputedStyle(node)
     if (computed.position === `static`) node.style.position = `relative`
@@ -214,11 +332,32 @@ export const resizable =
       active_edge = edge
 
       start = { x: event.clientX, y: event.clientY }
+      const current_style = getComputedStyle(node)
+      const content_box_inset = (properties: string[]) =>
+        current_style.boxSizing === `border-box`
+          ? 0
+          : properties.reduce(
+              (total, property) =>
+                total + (css_px(current_style.getPropertyValue(property)) || 0),
+              0,
+            )
       initial = {
         width: node.offsetWidth,
         height: node.offsetHeight,
-        left: node.offsetLeft,
-        top: node.offsetTop,
+        left: css_px(current_style.left) || 0,
+        top: css_px(current_style.top) || 0,
+        width_inset: content_box_inset([
+          `padding-left`,
+          `padding-right`,
+          `border-left-width`,
+          `border-right-width`,
+        ]),
+        height_inset: content_box_inset([
+          `padding-top`,
+          `padding-bottom`,
+          `border-top-width`,
+          `border-bottom-width`,
+        ]),
       }
       document.body.style.userSelect = `none`
       on_resize_start?.(event, { width: initial.width, height: initial.height })
@@ -245,8 +384,10 @@ export const resizable =
         node.style.top = `${initial.top - (height - initial.height)}px`
         repositioned.top = true
       }
-      node.style.width = `${width}px`
-      node.style.height = `${height}px`
+      // Callbacks and constraints use border-box dimensions; CSS width/height do not
+      // include padding and borders on content-box elements.
+      node.style.width = `${Math.max(0, width - initial.width_inset)}px`
+      node.style.height = `${Math.max(0, height - initial.height_inset)}px`
       on_resize?.(event, { width, height })
     }
 
@@ -2000,9 +2141,8 @@ export const pick_contrast_color = (options: ContrastOptions = {}): string => {
   return luminance(background) > luminance_threshold ? choices[0] : choices[1]
 }
 
-// Set text color to whichever of `choices` reads better on the background actually
-// behind the node. For text over a value-driven fill (a heatmap cell, a color swatch)
-// where no single hard-coded color stays legible across the scale.
+// Set text color once at attachment setup to whichever of `choices` reads better on the
+// background behind the node. For dynamic fills, re-run with an explicit bg_color.
 export const contrast_color =
   (options: ContrastOptions = {}) =>
   (node: Element): (() => void) | undefined => {
@@ -2022,11 +2162,10 @@ export interface ForwardWindowKeydownOptions {
   enabled?: boolean
 }
 
-// Hand a component the page's keydowns while the pointer is over it and nothing holds
-// focus. Several viewers can then share one set of shortcuts without all of them
-// answering at once, and none of them takes a key from a focused input — all without
-// the user having to click a viewer first. Complements `hotkey`, which binds to an
-// element or the document and arbitrates by focus alone.
+// Hand a component the page's keydowns while the pointer is over it and focus is on the
+// page or the component root. Several viewers can then share one set of shortcuts without
+// all answering at once, and none takes a key from a focused descendant control.
+// Complements `hotkey`, which binds to an element or the document and arbitrates by focus.
 export const forward_window_keydown =
   (options: ForwardWindowKeydownOptions) =>
   (node: Element): (() => void) | undefined => {
@@ -2038,10 +2177,10 @@ export const forward_window_keydown =
     const on_leave = () => (hovered = false)
     const on_keydown = (event: Event) => {
       if (!hovered || !(event instanceof KeyboardEvent)) return
-      // Focus anywhere real means the user is aiming keys there, whatever the pointer
-      // happens to be over. Only body (or nothing) leaves hover to decide.
+      // The root itself may be focusable so keyboard users can aim shortcuts at it.
+      // Any other focused element, including a descendant control, keeps its own keys.
       const { activeElement, body } = node.ownerDocument
-      if (activeElement && activeElement !== body) return
+      if (activeElement && activeElement !== body && activeElement !== node) return
       if (handle(event)) event.preventDefault()
     }
 

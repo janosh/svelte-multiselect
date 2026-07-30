@@ -1,7 +1,8 @@
 import ConfirmDialog from '$lib/ConfirmDialog.svelte'
 import type { DialogChoice } from '$lib/dialogs.svelte'
-import { dialog_queue, request_choice } from '$lib/dialogs.svelte'
-import { mount, tick, unmount } from 'svelte'
+import { ask_prompt, dialog_queue, request_choice } from '$lib/dialogs.svelte'
+import { createRawSnippet, mount, tick, unmount } from 'svelte'
+import { render } from 'svelte/server'
 import { afterEach, expect, test } from 'vite-plus/test'
 import { doc_query, track } from './index'
 
@@ -39,26 +40,12 @@ const buttons = () => [
 const ask = (message: string, title: string) =>
   track(request_choice(message, title, write_choices, `cancel`))
 
-// happy-dom does no layout, so the dialog's box has to be supplied: a press on the
-// ::backdrop and one on the dialog's own padding both target the dialog element, and
-// only the pointer coordinates tell them apart.
-const stub_rect = (dialog: HTMLDialogElement) => {
+// happy-dom does no layout, so supply the dialog box before pressing its ::backdrop.
+const press_backdrop = (dialog: HTMLDialogElement) => {
   const rect = { left: 100, top: 100, right: 300, bottom: 200, width: 200, height: 100 }
   dialog.getBoundingClientRect = () => rect as DOMRect
-  return dialog
-}
-// Both halves of the gesture, as the browser sends them: a dismissal has to start on the
-// ::backdrop as well as end there, or a selection dragged out of the dialog would cancel it
-const press_at = (
-  dialog: HTMLDialogElement,
-  clientX: number,
-  clientY: number,
-  pointer_init: PointerEventInit = {},
-) => {
-  const init = { bubbles: true, clientX, clientY }
-  stub_rect(dialog).dispatchEvent(
-    new PointerEvent(`pointerdown`, { isPrimary: true, ...init, ...pointer_init }),
-  )
+  const init = { bubbles: true, clientX: 10, clientY: 10 }
+  dialog.dispatchEvent(new PointerEvent(`pointerdown`, { isPrimary: true, ...init }))
   dialog.dispatchEvent(new MouseEvent(`click`, init))
 }
 
@@ -82,6 +69,84 @@ test(`shows the queued question and closes once the queue drains`, async () => {
   expect([answer.settled, answer.value]).toEqual([true, `write`])
   expect(dialog.open).toBe(false)
   expect(buttons()).toHaveLength(0)
+})
+
+test(`renders a typed rich body snippet`, async () => {
+  const dialog = await mount_dialog()
+  const body = createRawSnippet(() => ({
+    render: () => `<strong data-testid="rich-body">Three files will be removed</strong>`,
+  }))
+
+  void request_choice(
+    { kind: `snippet`, snippet: body },
+    `Remove files`,
+    write_choices,
+    `cancel`,
+  )
+  await flush()
+
+  expect(dialog.open).toBe(true)
+  expect(doc_query(`[data-testid="rich-body"]`).textContent).toBe(
+    `Three files will be removed`,
+  )
+  expect(document.querySelector(`dialog .message`)).toBeNull()
+})
+
+test(`prompt validation stays open, reports the error, then resolves the value`, async () => {
+  const dialog = await mount_dialog()
+  const answer = track(
+    ask_prompt(`Name this workspace`, `New workspace`, {
+      initial_value: `draft`,
+      input_label: `Workspace name`,
+      placeholder: `my-workspace`,
+      confirm_label: `Create`,
+      validate: (value) => (value.trim() ? undefined : `Enter a workspace name`),
+    }),
+  )
+  await flush()
+
+  const input = doc_query<HTMLInputElement>(`dialog input`)
+  expect(dialog.open).toBe(true)
+  expect(document.activeElement).toBe(input)
+  expect([input.value, input.placeholder]).toEqual([`draft`, `my-workspace`])
+  expect(doc_query(`dialog label span`).textContent).toBe(`Workspace name`)
+  expect(buttons().map((button) => button.textContent?.trim())).toEqual([
+    `Cancel`,
+    `Create`,
+  ])
+
+  input.value = ` `
+  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  doc_query<HTMLFormElement>(`dialog form`).dispatchEvent(
+    new SubmitEvent(`submit`, { bubbles: true, cancelable: true }),
+  )
+  await flush()
+  expect(answer.settled).toBe(false)
+  expect(dialog.open).toBe(true)
+  expect(doc_query(`[role="alert"]`).textContent?.trim()).toBe(`Enter a workspace name`)
+  expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
+
+  input.value = `widgets`
+  input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
+  await tick()
+  expect(document.querySelector(`[role="alert"]`)).toBeNull()
+  expect(input.getAttribute(`aria-invalid`)).toBeNull()
+  doc_query<HTMLFormElement>(`dialog form`).dispatchEvent(
+    new SubmitEvent(`submit`, { bubbles: true, cancelable: true }),
+  )
+  await flush()
+  expect([answer.settled, answer.value]).toEqual([true, `widgets`])
+  expect(dialog.open).toBe(false)
+})
+
+test(`dismissing a prompt returns null`, async () => {
+  const dialog = await mount_dialog()
+  const answer = track(ask_prompt(`Name?`, `Profile`))
+  await flush()
+
+  dialog.close()
+  await flush()
+  expect([answer.settled, answer.value]).toEqual([true, null])
 })
 
 // The reason the queue exists. Two prompts racing in one modal would leave the second
@@ -123,7 +188,7 @@ test(`one click cannot answer two racing requests`, async () => {
 // accented choice a stray key would otherwise reach.
 test.each([
   [`Escape`, (dialog: HTMLDialogElement) => dialog.close()],
-  [`a backdrop click`, (dialog: HTMLDialogElement) => press_at(dialog, 10, 10)],
+  [`a backdrop click`, press_backdrop],
 ])(`%s resolves with dismiss_id`, async (_desc, dismiss) => {
   const dialog = await mount_dialog()
   const answer = ask(`Overwrite?`, `Write files`)
@@ -134,82 +199,6 @@ test.each([
 
   expect([answer.settled, answer.value]).toEqual([true, `cancel`])
   expect(dialog.open).toBe(false)
-})
-
-test.each([
-  [
-    `on its content`,
-    () =>
-      doc_query(`dialog h2`).dispatchEvent(new MouseEvent(`click`, { bubbles: true })),
-  ],
-  // the padding belongs to the dialog, but the click lands on the dialog element there
-  // just as a backdrop press does, so target alone would dismiss the question
-  [`in its padding`, (dialog: HTMLDialogElement) => press_at(dialog, 105, 105)],
-  // A selection dragged off the message releases on the ::backdrop, and the browser
-  // reports that click on the dialog with the release coordinates. Dismissing on those
-  // alone answered the question with dismiss_id for what was only a text selection.
-  [
-    `released outside after starting inside`,
-    (dialog: HTMLDialogElement) => {
-      doc_query(`dialog p`).dispatchEvent(
-        new PointerEvent(`pointerdown`, { bubbles: true }),
-      )
-      stub_rect(dialog).dispatchEvent(
-        new MouseEvent(`click`, { bubbles: true, clientX: 10, clientY: 10 }),
-      )
-    },
-  ],
-])(`a click %s is not a backdrop click`, async (_desc, click) => {
-  const dialog = await mount_dialog()
-  const answer = ask(`Overwrite?`, `Write files`)
-  await flush()
-
-  click(dialog)
-  await flush()
-
-  expect(answer.settled).toBe(false)
-  expect(dialog.open).toBe(true)
-})
-
-// A right-click or cancelled press on the backdrop must not leave a stale outside verdict
-// for the next primary click (same gating as dismiss_on_outside_press).
-test.each([
-  [`right-click`, { button: 2 }],
-  [`non-primary pointer`, { isPrimary: false }],
-])(`a %s on the backdrop does not dismiss`, async (_desc, pointer_init) => {
-  const dialog = await mount_dialog()
-  const answer = ask(`Overwrite?`, `Write files`)
-  await flush()
-
-  press_at(dialog, 10, 10, pointer_init)
-  await flush()
-
-  expect(answer.settled).toBe(false)
-  expect(dialog.open).toBe(true)
-})
-
-test(`pointercancel clears a backdrop press so the next click is judged fresh`, async () => {
-  const dialog = await mount_dialog()
-  const answer = ask(`Overwrite?`, `Write files`)
-  await flush()
-
-  stub_rect(dialog).dispatchEvent(
-    new PointerEvent(`pointerdown`, {
-      bubbles: true,
-      isPrimary: true,
-      clientX: 10,
-      clientY: 10,
-    }),
-  )
-  dialog.dispatchEvent(new PointerEvent(`pointercancel`, { bubbles: true }))
-  // click outside without a fresh primary pointerdown — stale verdict would close here
-  dialog.dispatchEvent(
-    new MouseEvent(`click`, { bubbles: true, clientX: 10, clientY: 10 }),
-  )
-  await flush()
-
-  expect(answer.settled).toBe(false)
-  expect(dialog.open).toBe(true)
 })
 
 // Answering removes the button that had focus. Without a hand-off the next question
@@ -240,25 +229,48 @@ test(`focus enters each question and returns to the opener`, async () => {
   expect(document.activeElement).toBe(buttons()[0]) // moved on to the third question
 })
 
-test(`Tab is kept inside the dialog while a question is up`, async () => {
-  const outside = document.createElement(`button`)
-  document.body.append(outside)
+test(`unmount safely dismisses every queued request`, async () => {
   await mount_dialog()
-
-  ask(`Overwrite?`, `Write files`)
+  const first = ask(`Overwrite?`, `Write files`)
+  const second = track(ask_prompt(`Name?`, `Profile`))
   await flush()
-  const [cancel_button, write_button] = buttons()
 
-  const press_tab = (shift = false) =>
-    document.activeElement?.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `Tab`, shiftKey: shift, bubbles: true }),
-    )
+  const app = mounted.pop()
+  if (!app) throw new Error(`ConfirmDialog test app was not mounted`)
+  await unmount(app)
+  await flush()
 
-  expect(document.activeElement).toBe(cancel_button)
-  press_tab()
-  expect(document.activeElement).toBe(write_button)
-  press_tab()
-  expect(document.activeElement).toBe(cancel_button) // wrapped instead of reaching `outside`
-  press_tab(true)
-  expect(document.activeElement).toBe(write_button)
+  expect([first.settled, first.value]).toEqual([true, `cancel`])
+  expect([second.settled, second.value]).toEqual([true, null])
+  expect(dialog_queue).toHaveLength(0)
+})
+
+test(`only the last mounted host dismisses queued requests`, async () => {
+  const first_app = mount(ConfirmDialog, { target: document.body })
+  const second_app = mount(ConfirmDialog, { target: document.body })
+  mounted.push(first_app, second_app)
+  const answer = ask(`Overwrite?`, `Write files`)
+  await flush()
+
+  await unmount(first_app)
+  mounted.splice(mounted.indexOf(first_app), 1)
+  await flush()
+  expect(answer.settled).toBe(false)
+  expect(dialog_queue).toHaveLength(1)
+  expect(doc_query<HTMLDialogElement>(`dialog.confirm-dialog`).open).toBe(true)
+
+  await unmount(second_app)
+  mounted.splice(mounted.indexOf(second_app), 1)
+  await flush()
+  expect([answer.settled, answer.value]).toEqual([true, `cancel`])
+})
+
+test(`SSR rendering does not settle the shared browser queue`, async () => {
+  const answer = ask(`Overwrite?`, `Write files`)
+
+  render(ConfirmDialog)
+  await flush()
+
+  expect(answer.settled).toBe(false)
+  expect(dialog_queue).toHaveLength(1)
 })

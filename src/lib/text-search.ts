@@ -19,13 +19,19 @@ const INLINE_SELECTOR =
   `a, abbr, b, bdi, bdo, cite, code, data, del, dfn, em, i, ins, kbd, mark, q, ` +
   `ruby, s, samp, small, span, strong, sub, sup, time, u, var`
 
-const NON_RENDERED_SELECTOR = `script, style, noscript`
+// CSS-hidden content is not detected: getComputedStyle() per element would force
+// layout-sensitive traversal. The semantic hidden attribute is cheap to exclude.
+const NON_RENDERED_SELECTOR = `script, style, noscript, [hidden]`
+const FORM_CONTROL_SELECTOR = `textarea, select`
 
 // Same shape as the node_filter of the highlight_matches attachment: return one of
 // the NodeFilter constants to accept or reject a text node.
 export type TextSearchNodeFilter = (node: Node) => number
 
 export type TextSearchOptions = {
+  // Ordered subsequence matching. A fuzzy match highlights the shortest span found
+  // by the greedy scan, including any skipped characters inside that span.
+  fuzzy?: boolean
   node_filter?: TextSearchNodeFilter
   segment_selector?: string
 }
@@ -84,7 +90,9 @@ const text_segments = (
     const is_break =
       node !== root && node instanceof Element && node.matches(break_selector)
     if (is_break) segment = undefined
-    for (const child of node.childNodes) visit(child)
+    if (!(node instanceof Element && node.matches(FORM_CONTROL_SELECTOR))) {
+      for (const child of node.childNodes) visit(child)
+    }
     if (is_break) segment = undefined
   }
 
@@ -92,52 +100,72 @@ const text_segments = (
   return segments
 }
 
-type NormalizedText = {
-  text: string
-  // starts[i]/ends[i] bracket the original code point(s) that produced normalized
-  // unit i. Both are needed because lowercasing can change a character's length
-  // (İ → i̇), astral characters span two UTF-16 units, and a whitespace run
-  // collapses to a single space.
-  starts: number[]
-  ends: number[]
-}
+type MatchBounds = { start: number; end: number }
+type NormalizedText = { text: string; offsets: MatchBounds[] }
 
 const WHITESPACE = /\s/u
 
+// offsets[i] brackets the source code point(s) that produced normalized unit i.
+// Canonical decomposition and lowercasing can expand a character (é → e + ◌́,
+// İ → i + ◌̇), astral characters span two UTF-16 units, and whitespace collapses.
+type NormalizedToken = MatchBounds & { char: string }
+
 const normalize_with_offsets = (source: string): NormalizedText => {
   let text = ``
-  const starts: number[] = []
-  const ends: number[] = []
+  const offsets: MatchBounds[] = []
   let source_idx = 0
   let in_whitespace = false
+  const tokens: NormalizedToken[] = []
+
+  const flush_tokens = (): void => {
+    if (tokens.length === 0) return
+    const token_queues: Record<string, NormalizedToken[]> = {}
+    const queue_offsets: Record<string, number> = {}
+    for (const token of tokens) (token_queues[token.char] ??= []).push(token)
+    const normalized = tokens
+      .map((token) => token.char)
+      .join(``)
+      .normalize(`NFD`)
+    for (const char of normalized) {
+      const queue_offset = queue_offsets[char] ?? 0
+      const token = token_queues[char][queue_offset]
+      queue_offsets[char] = queue_offset + 1
+      text += char
+      offsets.push(token)
+      if (char.length === 2) offsets.push(token)
+    }
+    tokens.length = 0
+  }
+
   for (const char of source) {
     const next_idx = source_idx + char.length
     if (WHITESPACE.test(char)) {
+      flush_tokens()
       // collapse runs so a query with single spaces matches source-formatted markup.
       // The rest of the run needs no offsets: queries are trimmed, so no match can
       // begin or end inside one.
       if (!in_whitespace) {
         text += ` `
-        starts.push(source_idx)
-        ends.push(next_idx)
+        offsets.push({ start: source_idx, end: next_idx })
         in_whitespace = true
       }
     } else {
       in_whitespace = false
       // toLowerCase leaves final sigma distinct from medial sigma, but readers
       // searching for one mean the other
-      const lowered = char.toLowerCase().replaceAll(`ς`, `σ`)
-      text += lowered
-      // one entry per UTF-16 unit of the lowered char, not per code point, so
-      // indexOf offsets into the normalized text can be looked up directly
-      while (starts.length < text.length) {
-        starts.push(source_idx)
-        ends.push(next_idx)
+      const normalized_char = char.toLowerCase().replaceAll(`ς`, `σ`).normalize(`NFD`)
+      for (const normalized_code_point of normalized_char) {
+        tokens.push({
+          char: normalized_code_point,
+          start: source_idx,
+          end: next_idx,
+        })
       }
     }
     source_idx = next_idx
   }
-  return { text, starts, ends }
+  flush_tokens()
+  return { text, offsets }
 }
 
 // First node reaching min_end. `end` is a running sum of node lengths, so it never
@@ -177,6 +205,57 @@ const range_for_match = (
   return range
 }
 
+const match_bounds = (text: string, query: string, fuzzy: boolean): MatchBounds[] => {
+  const matches: MatchBounds[] = []
+  if (!fuzzy) {
+    let match_idx = text.indexOf(query)
+    while (match_idx >= 0) {
+      const end = match_idx + query.length
+      matches.push({ start: match_idx, end })
+      match_idx = text.indexOf(query, end)
+    }
+    return matches
+  }
+
+  // Find compact, non-overlapping ordered subsequences. The forward pass discovers
+  // the earliest end, then the backward pass tightens the start before scanning on.
+  const query_chars = Array.from(query)
+  let search_from = 0
+
+  while (search_from < text.length) {
+    let cursor = search_from
+    for (const query_char of query_chars) {
+      const position = text.indexOf(query_char, cursor)
+      if (position === -1) return matches
+      cursor = position + query_char.length
+    }
+
+    const end = cursor
+    let start = end
+    for (let char_idx = query_chars.length - 1; char_idx >= 0; char_idx--) {
+      const query_char = query_chars[char_idx]
+      start = text.lastIndexOf(query_char, start - query_char.length)
+    }
+    matches.push({ start, end })
+    search_from = end
+  }
+  return matches
+}
+
+const source_bounds = (
+  offsets: MatchBounds[],
+  start: number,
+  end: number,
+): MatchBounds => {
+  let source_start = offsets[start].start
+  let source_end = offsets[start].end
+  for (let offset_idx = start + 1; offset_idx < end; offset_idx++) {
+    source_start = Math.min(source_start, offsets[offset_idx].start)
+    source_end = Math.max(source_end, offsets[offset_idx].end)
+  }
+  return { start: source_start, end: source_end }
+}
+
 // Find every occurrence of query under root, case- and whitespace-insensitively.
 export const search_text = (
   root: Element,
@@ -184,6 +263,7 @@ export const search_text = (
   options: TextSearchOptions = {},
 ): TextSearchResult => {
   const {
+    fuzzy = false,
     node_filter = () => NodeFilter.FILTER_ACCEPT,
     segment_selector = DEFAULT_SEGMENT_SELECTOR,
   } = options
@@ -193,13 +273,11 @@ export const search_text = (
   const ranges: Range[] = []
   const matched_elements = new Set<Element>()
   for (const segment of text_segments(root, node_filter, segment_selector)) {
-    const { text, starts, ends } = normalize_with_offsets(segment.text)
-    let match_idx = text.indexOf(normalized_query)
-    while (match_idx >= 0) {
-      const end_idx = match_idx + normalized_query.length
-      ranges.push(range_for_match(segment, starts[match_idx], ends[end_idx - 1]))
+    const { text, offsets } = normalize_with_offsets(segment.text)
+    for (const { start, end } of match_bounds(text, normalized_query, fuzzy)) {
+      const source = source_bounds(offsets, start, end)
+      ranges.push(range_for_match(segment, source.start, source.end))
       matched_elements.add(segment.element)
-      match_idx = text.indexOf(normalized_query, end_idx)
     }
   }
   return { matches: [...matched_elements], ranges }
@@ -365,8 +443,9 @@ export const create_search_jump = (options: SearchJumpOptions = {}): SearchJump 
     marked = null
   }
   const clear = (): void => {
+    const was_active = timeout !== undefined
     clear_visual()
-    on_clear?.()
+    if (was_active) on_clear?.()
   }
   const start = (element: Element | null, opts: SearchJumpStartOptions = {}): void => {
     const { scroll_target = element, scroll = { block: `center`, inline: `nearest` } } =

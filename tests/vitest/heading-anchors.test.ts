@@ -1,9 +1,43 @@
-import { heading_anchors, heading_ids } from '$lib/heading-anchors'
-import { describe, expect, it } from 'vite-plus/test'
+import {
+  heading_anchors,
+  heading_ids,
+  slugify_heading,
+  unique_heading_id,
+} from '$lib/heading-anchors'
+import { SvelteSet } from 'svelte/reactivity'
+import { describe, expect, it, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const preprocess = (content: string, filename?: string) =>
   heading_ids().markup({ content, filename })
+
+describe(`slugify_heading`, () => {
+  // Compatibility is intentionally Unicode-preserving and NFC-normalized: fragment IDs
+  // stay readable, and canonically equivalent spellings still collide as duplicates.
+  it.each([
+    [`Hello, World!`, `hello-world`],
+    [`  Déjà vu / 東京  `, `déjà-vu-東京`],
+    [`foo.bar`, `foo-bar`],
+    [`foobar`, `foobar`],
+    [`a/b`, `a-b`],
+    [`ab`, `ab`],
+    [`Svelte 5.0: what's new?`, `svelte-5-0-what-s-new`],
+    [`Cafe\u0301`, `café`],
+    [`H\u0331`, `ẖ`],
+    [`✨ ---`, ``],
+  ])(`slugify_heading(%j) -> %j`, (input, expected) => {
+    expect(slugify_heading(input)).toBe(expected)
+  })
+
+  it(`allocates and reserves suffixed collisions`, () => {
+    const used_ids = new SvelteSet<string>()
+    expect(
+      [`foo`, `foo`, `foo-1`].map((base_id) => unique_heading_id(base_id, used_ids)),
+    ).toEqual([`foo`, `foo-1`, `foo-1-1`])
+    expect([...used_ids]).toEqual([`foo`, `foo-1`, `foo-1-1`])
+    expect(unique_heading_id(``, new SvelteSet([`section`]))).toBe(`section-1`)
+  })
+})
 
 describe(`heading_ids preprocessor`, () => {
   // exact VLQ mappings; a lone `AAAA` per line is the identity map for unshifted text
@@ -38,6 +72,26 @@ describe(`heading_ids preprocessor`, () => {
       `<h2 on:click={handler}>Clickable</h2>`,
       `<h2 id="clickable" on:click={handler}>Clickable</h2>`,
     ],
+    [
+      `<h2 data-label="left > right">Quoted</h2>`,
+      `<h2 id="quoted" data-label="left > right">Quoted</h2>`,
+    ],
+    [
+      `</p><h3 title='left > right'>Inline</h3>`,
+      `</p><h3 id="inline" title='left > right'>Inline</h3>`,
+    ],
+    [
+      `<h2 title="contains id=foo">Visible</h2>`,
+      `<h2 id="visible" title="contains id=foo">Visible</h2>`,
+    ],
+    [
+      `<h2 class={condition ? "id=foo" : "other"}>Visible</h2>`,
+      `<h2 id="visible" class={condition ? "id=foo" : "other"}>Visible</h2>`,
+    ],
+    [
+      `<h2>{@html "<span>{</span>"} Details</h2>`,
+      `<h2 id="details">{@html "<span>{</span>"} Details</h2>`,
+    ],
     // Svelte expressions are stripped from the slug source but kept in the markup
     [`<h2>{greeting} World</h2>`, `<h2 id="world">{greeting} World</h2>`],
     [`<h2>{first} and {second}</h2>`, `<h2 id="and">{first} and {second}</h2>`],
@@ -69,6 +123,7 @@ describe(`heading_ids preprocessor`, () => {
 
   it.each([
     `<h2 id="">Empty ID</h2>`, // an existing id, even empty, is never replaced
+    `<h2 id=>Malformed ID</h2>`,
     `<h2 class="test" id="existing" data-foo="bar">Text</h2>`,
     `<h2>{dynamicOnly}</h2>`, // no static text → no id
     `<h2><span></span></h2>`,
@@ -78,17 +133,42 @@ describe(`heading_ids preprocessor`, () => {
     expect(preprocess(input).code).toBe(input)
   })
 
+  it.each([
+    [`HTML comments`, `<!-- example > <h2>Comment heading</h2> -->`],
+    [`pre`, `<pre><h2>Code sample heading</h2></pre>`],
+    [`script`, `<script>\nconst template = \`\n<h2>Template heading</h2>\n\`\n</script>`],
+    [`style`, `<style>\n/*\n<h2>CSS example heading</h2>\n*/\n</style>`],
+  ])(`skips headings inside %s`, (_label, excluded_content) => {
+    const source = `${excluded_content}\n<h2>Visible heading</h2>`
+    const result = preprocess(source, `Protected.svelte`)
+    expect(result.code).toBe(
+      `${excluded_content}\n<h2 id="visible-heading">Visible heading</h2>`,
+    )
+    expect(result.map.sourcesContent).toEqual([source])
+  })
+
   it(`handles duplicate headings with -1, -2 suffixes`, () => {
     const result = preprocess(
-      `<h2>Foo</h2>\n<h2>Foo</h2>\n<h3>Foo</h3>\n<h2>Bar</h2>\n<h2>Foo</h2>\n<h2>Café</h2>\n<h2>Cafe\u0301</h2>`,
+      `<h2>Foo</h2>\n<h2>Foo</h2>\n<h3>Foo 1</h3>\n<h2>Foo</h2>\n<h2>Bar</h2>\n<h2>Café</h2>\n<h2>Cafe\u0301</h2>`,
     )
-    // exact output pins which heading gets which suffix: the counter is shared
-    // across tags (h3 takes foo-2) and NFC normalization makes the decomposed
-    // `Cafe\u0301` a duplicate of `Café` while leaving the heading text untouched
+    // The already-suffixed Foo 1 cannot collide with the duplicate Foo's `foo-1`.
+    // NFC normalization also makes decomposed `Cafe\u0301` a duplicate of `Café`.
     expect(result.code).toBe(
-      `<h2 id="foo">Foo</h2>\n<h2 id="foo-1">Foo</h2>\n<h3 id="foo-2">Foo</h3>\n` +
-        `<h2 id="bar">Bar</h2>\n<h2 id="foo-3">Foo</h2>\n<h2 id="café">Café</h2>\n` +
+      `<h2 id="foo">Foo</h2>\n<h2 id="foo-1">Foo</h2>\n<h3 id="foo-1-1">Foo 1</h3>\n` +
+        `<h2 id="foo-2">Foo</h2>\n<h2 id="bar">Bar</h2>\n<h2 id="café">Café</h2>\n` +
         `<h2 id="café-1">Cafe\u0301</h2>`,
+    )
+  })
+
+  it(`reserves explicit IDs before generating earlier headings`, () => {
+    expect(preprocess(`<h2>Foo</h2>\n<h2 id="foo">Explicit</h2>`).code).toBe(
+      `<h2 id="foo-1">Foo</h2>\n<h2 id="foo">Explicit</h2>`,
+    )
+  })
+
+  it(`reserves explicit IDs in rendered pre content`, () => {
+    expect(preprocess(`<pre><h2 id="foo">Sample</h2></pre>\n<h2>Foo</h2>`).code).toBe(
+      `<pre><h2 id="foo">Sample</h2></pre>\n<h2 id="foo-1">Foo</h2>`,
     )
   })
 })
@@ -124,6 +204,16 @@ describe(`heading_anchors attachment`, () => {
 
   it.each([
     [`sibling headings`, `<h2>Same</h2><h3>Same</h3>`, [`same`, `same-1`]],
+    [
+      `Unicode sibling headings`,
+      `<h2>Über Café</h2><h3>Über Café</h3>`,
+      [`über-café`, `über-café-1`],
+    ],
+    [
+      `duplicate colliding with a suffixed slug`,
+      `<h2>Foo</h2><h3>Foo</h3><h2>Foo 1</h2>`,
+      [`foo`, `foo-1`, `foo-1-1`],
+    ],
     // querySelector('#2024-roadmap') throws SyntaxError since CSS ID selectors
     // can't start with an unescaped digit - uniqueness check must use getElementById
     [
@@ -144,7 +234,7 @@ describe(`heading_anchors attachment`, () => {
     heading_anchors()(container)
     const ids = Array.from(container.querySelectorAll(`h2, h3`)).map((el) => el.id)
     expect(ids).toEqual(expected_ids)
-    expect(container.querySelectorAll(anchor_selector)).toHaveLength(2)
+    expect(container.querySelectorAll(anchor_selector)).toHaveLength(expected_ids.length)
   })
 
   it(`skips headings with no usable text`, () => {
@@ -167,6 +257,34 @@ describe(`heading_anchors attachment`, () => {
     expect(container.querySelector(`h3 ${anchor_selector}`)?.getAttribute(`href`)).toBe(
       `#dynamic`,
     )
+  })
+
+  it(`collects IDs lazily and discards observer records caused by anchors`, async () => {
+    const container = create_container()
+    const document_query_spy = vi.spyOn(document, `querySelectorAll`)
+    heading_anchors()(container)
+
+    const explicit = document.createElement(`h2`)
+    explicit.id = `explicit`
+    explicit.textContent = `Explicit`
+    const explicit_query_spy = vi.spyOn(explicit, `querySelector`)
+    container.append(explicit)
+    await tick()
+    expect(explicit_query_spy).toHaveBeenCalledExactlyOnceWith(anchor_selector)
+    expect(
+      document_query_spy.mock.calls.filter(([selector]) => selector === `[id]`),
+    ).toHaveLength(0)
+
+    const generated = document.createElement(`h2`)
+    generated.textContent = `Generated`
+    const generated_query_spy = vi.spyOn(generated, `querySelector`)
+    container.append(generated)
+    await tick()
+    expect(generated.id).toBe(`generated`)
+    expect(generated_query_spy).toHaveBeenCalledExactlyOnceWith(anchor_selector)
+    expect(
+      document_query_spy.mock.calls.filter(([selector]) => selector === `[id]`),
+    ).toHaveLength(1)
   })
 
   it(`cleanup disconnects observer and stops processing`, async () => {

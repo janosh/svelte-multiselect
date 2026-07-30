@@ -1,18 +1,30 @@
 // Svelte preprocessor that adds IDs to headings at build time, so fragment navigation
 // (#heading-id) works on the initial SSR page load
 
+import { SvelteSet } from 'svelte/reactivity'
+
 // Match headings in two contexts:
 // 1. Start of line (for .svelte files with formatted HTML)
 // 2. After > (for mdsvex output where HTML is on single line, e.g., "</p> <h2>")
-// Known limitation: [^>]* breaks on attribute values containing > (e.g. data-foo="a>b")
-const heading_regex_line_start =
-  /^(?<indent>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/gimu
-const heading_regex_after_tag =
-  /(?<=>)(?<space>\s*)<(?<tag>h[1-6])(?<attrs>[^>]*)>(?<inner>[\s\S]*?)<\/\k<tag>>/giu
+// Quoted attributes may contain `>`; only an unquoted `>` ends the opening tag.
+const heading_attrs = String.raw`(?:[^>"']|"[^"]*"|'[^']*')*`
+const heading_pattern = String.raw`<(?<tag>h[1-6])(?<attrs>${heading_attrs})>(?<inner>[\s\S]*?)<\/\k<tag>>`
+const heading_regex_line_start = new RegExp(String.raw`^\s*${heading_pattern}`, `gimu`)
+const heading_regex_after_tag = new RegExp(String.raw`(?<=>)\s*${heading_pattern}`, `giu`)
+const excluded_heading_content_regex = new RegExp(
+  String.raw`<!--[\s\S]*?-->|<(?<excluded_tag>pre|script|style)\b${heading_attrs}>[\s\S]*?<\/\k<excluded_tag>\s*>`,
+  `giu`,
+)
+const heading_attr_regex =
+  /(?:^|\s)(?<name>[^\s"'=<>`]+)(?:(?<equals>\s*=\s*)(?:"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<unquoted>[^\s"'=<>`]+))?)?/gu
+const html_string_expression_regex = /\{@html\s+(?<json>"(?:\\.|[^"\\])*")\s*\}/gu
+const katex_annotation_regex =
+  /<annotation\b[^>]*encoding="application\/x-tex"[^>]*>(?<tex>[\s\S]*?)<\/annotation>/iu
 // Cheap precondition for both regexes above: no `<h1`..`<h6` means no match.
 const has_heading = /<h[1-6]/iu
 
 type TextInsertion = { index: number; text: string }
+type HeadingMatch = { attrs: string; inner: string; start: number; tag: string }
 
 const BASE64 = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
 
@@ -35,10 +47,9 @@ function insert_with_source_map(
   insertions: TextInsertion[],
   filename = `source.svelte`,
 ) {
-  const sorted_insertions = insertions.toSorted((left, right) => left.index - right.index)
   let source_cursor = 0
   let code = ``
-  for (const insertion of sorted_insertions) {
+  for (const insertion of insertions) {
     if (
       insertion.index < source_cursor ||
       insertion.index > source.length ||
@@ -62,10 +73,10 @@ function insert_with_source_map(
       const line_end = original_offset + line.length
       let inserted_columns = 0
       while (
-        insertion_idx < sorted_insertions.length &&
-        sorted_insertions[insertion_idx].index <= line_end
+        insertion_idx < insertions.length &&
+        insertions[insertion_idx].index <= line_end
       ) {
-        const insertion = sorted_insertions[insertion_idx]
+        const insertion = insertions[insertion_idx]
         const original_column = insertion.index - original_offset
         const generated_column = original_column + inserted_columns
         segments.push(
@@ -111,79 +122,187 @@ function insert_with_source_map(
   }
 }
 
-// Remove Svelte expressions handling nested braces (e.g., {fn({a: 1})})
-// Treats unmatched } as literal text to avoid dropping content
+function find_svelte_expression_end(str: string, start: number): number {
+  let depth = 0
+  let quote: string | null = null
+  let escaped = false
+  for (let idx = start; idx < str.length; idx++) {
+    const char = str[idx]
+    if (quote) {
+      if (escaped) escaped = false
+      else if (char === `\\`) escaped = true
+      else if (char === quote) quote = null
+    } else if (char === `"` || char === `'` || char === `\``) quote = char
+    else if (char === `{`) depth++
+    else if (char === `}` && --depth === 0) return idx
+  }
+  return -1
+}
+
+// Remove Svelte expressions while ignoring braces inside quoted JS strings.
+// Unmatched } remains literal; unmatched { consumes the remaining text as before.
 function strip_svelte_expressions(str: string): string {
-  // no expression to strip means the char-by-char rebuild below is a no-op
   if (!str.includes(`{`)) return str
   let result = ``
-  let depth = 0
-  for (const char of str) {
-    if (char === `{`) depth++
-    else if (char === `}` && depth > 0) depth--
-    else if (depth === 0) result += char
+  for (let idx = 0; idx < str.length; idx++) {
+    if (str[idx] !== `{`) {
+      result += str[idx]
+      continue
+    }
+    const expression_end = find_svelte_expression_end(str, idx)
+    if (expression_end === -1) break
+    idx = expression_end
   }
   return result
 }
 
-const slugify = (text: string): string =>
+// Remove Svelte attribute expressions but preserve braces inside quoted HTML attributes.
+const without_attr_expressions = (attrs: string): string => {
+  let result = ``
+  let quote: string | null = null
+  for (let idx = 0; idx < attrs.length; idx++) {
+    const char = attrs[idx]
+    if (quote) {
+      result += char
+      if (char === quote) quote = null
+    } else if (char === `"` || char === `'`) {
+      quote = char
+      result += char
+    } else if (char === `{`) {
+      const expression_end = find_svelte_expression_end(attrs, idx)
+      if (expression_end === -1) return result + attrs.slice(idx)
+      result += `{}`
+      idx = expression_end
+    } else result += char
+  }
+  return result
+}
+
+const get_heading_id_attr = (attrs: string): string | undefined => {
+  for (const match of without_attr_expressions(attrs).matchAll(heading_attr_regex)) {
+    const { double, equals, name, single, unquoted } = match.groups ?? {}
+    if (name?.toLowerCase() !== `id` || equals === undefined) continue
+    return double ?? single ?? unquoted ?? ``
+  }
+  return undefined
+}
+
+const extract_math_sources = (inner: string): string =>
+  inner.replaceAll(html_string_expression_regex, (expression, json: string) => {
+    let html: unknown
+    try {
+      html = JSON.parse(json)
+    } catch {
+      return expression
+    }
+    if (typeof html !== `string`) return expression
+    const tex = katex_annotation_regex.exec(html)?.groups?.tex
+    return (
+      tex
+        ?.replaceAll(`&lt;`, `<`)
+        .replaceAll(`&gt;`, `>`)
+        .replaceAll(`&amp;`, `&`)
+        .replaceAll(/[{}]/gu, ``) ?? expression
+    )
+  })
+
+// Preserve Unicode letters and marks, normalize equivalent spellings to NFC, and turn
+// punctuation runs into separators so distinct headings do not collapse to the same slug.
+export const slugify_heading = (text: string): string =>
   text
-    .normalize(`NFC`)
     .toLowerCase()
-    .replaceAll(/\s+/gu, `-`)
-    .replaceAll(/[^\p{L}\p{M}\p{N}_-]/gu, ``)
-    .replaceAll(/-+/gu, `-`) // collapse multiple dashes
+    .normalize(`NFC`)
+    // Collapse punctuation and whitespace runs into separators so `foo.bar` cannot
+    // collide with `foobar`, while retaining Unicode letters, marks, and numbers.
+    .replaceAll(/[^\p{L}\p{M}\p{N}_]+/gu, `-`)
     .replaceAll(/^-|-$/gu, ``) // trim leading/trailing dashes
+
+// Allocate and reserve an ID in one operation. All heading-ID producers share this
+// `-1`, `-2`, ... collision policy, including collisions with already suffixed slugs.
+export function unique_heading_id(base_id: string, used_ids: Set<string>): string {
+  const base = base_id || `section`
+  let id = base
+  let suffix = 1
+  while (used_ids.has(id)) id = `${base}-${suffix++}`
+  used_ids.add(id)
+  return id
+}
 
 export function heading_ids() {
   return {
     name: `heading-ids`,
     markup({ content, filename }: { content: string; filename?: string }) {
-      const seen_ids = new Map<string, number>()
-      const processed_heading_starts = new Set<number>()
+      const used_ids = new SvelteSet<string>()
       const insertions: TextInsertion[] = []
 
-      const get_heading_id = (attrs: string, inner: string): string | null => {
-        // Skip if already has an id (use ^|\s to avoid matching data-id, aria-id, etc.)
-        if (/(?:^|\s)id\s*=/u.test(attrs)) return null
-
-        const text = strip_svelte_expressions(inner.replaceAll(/<[^>]+>/gu, ``)).trim()
+      const get_heading_id = (inner: string): string | null => {
+        const text = strip_svelte_expressions(
+          extract_math_sources(inner).replaceAll(/<[^>]+>/gu, ``),
+        ).trim()
         if (!text) return null
 
-        const base_id = slugify(text)
+        const base_id = slugify_heading(text)
         if (!base_id) return null
-
-        // Handle duplicates within same file
-        const count = seen_ids.get(base_id) ?? 0
-        seen_ids.set(base_id, count + 1)
-        return count ? `${base_id}-${count}` : base_id
+        return unique_heading_id(base_id, used_ids)
       }
-      const add_heading_ids = (heading_regex: RegExp): void => {
+      const heading_matches: HeadingMatch[] = []
+      const seen_heading_starts = new SvelteSet<number>()
+      const collect_heading_matches = (heading_regex: RegExp): void => {
         for (const match of content.matchAll(heading_regex)) {
-          const { attrs, inner, tag } = match.groups ?? {}
-          if (
-            match.index === undefined ||
-            attrs === undefined ||
-            inner === undefined ||
-            !tag
-          )
-            continue
+          if (match.index === undefined || !match.groups) continue
+          const { attrs, inner, tag } = match.groups
+          if (attrs === undefined || inner === undefined || !tag) continue
           const heading_start = match.index + match[0].indexOf(`<${tag}`)
-          if (processed_heading_starts.has(heading_start)) continue
-          const id = get_heading_id(attrs, inner)
-          if (!id) continue
-          processed_heading_starts.add(heading_start)
-          insertions.push({
-            index: heading_start + tag.length + 1,
-            text: ` id="${id}"`,
-          })
+          if (seen_heading_starts.has(heading_start)) continue
+          seen_heading_starts.add(heading_start)
+          heading_matches.push({ attrs, inner, start: heading_start, tag })
         }
       }
 
       // both passes scan the whole file, so skip them when there is no heading
       if (has_heading.test(content)) {
-        add_heading_ids(heading_regex_line_start)
-        add_heading_ids(heading_regex_after_tag)
+        collect_heading_matches(heading_regex_line_start)
+        collect_heading_matches(heading_regex_after_tag)
+        const excluded_ranges = Array.from(
+          content.matchAll(excluded_heading_content_regex),
+          (match) => ({
+            end: match.index + match[0].length,
+            start: match.index,
+            tag: match.groups?.excluded_tag?.toLowerCase() ?? null,
+          }),
+        )
+        const ordered_heading_matches = heading_matches
+          .map((match) => ({
+            ...match,
+            excluded_by: excluded_ranges.find(
+              ({ end, start }) => match.start >= start && match.start < end,
+            )?.tag,
+            existing_id: get_heading_id_attr(match.attrs),
+          }))
+          .toSorted((left, right) => left.start - right.start)
+        // Reserve explicit IDs before generating any automatic ones, including IDs that
+        // appear later in source order, because explicit author choices take precedence.
+        for (const { excluded_by, existing_id } of ordered_heading_matches) {
+          // A heading inside <pre> still creates a real DOM ID. Comments, script, and style
+          // contents do not, so reserving their source-only IDs would create false collisions.
+          if (excluded_by !== undefined && excluded_by !== `pre`) continue
+          if (existing_id) used_ids.add(existing_id)
+        }
+        for (const {
+          excluded_by,
+          existing_id,
+          inner,
+          start,
+          tag,
+        } of ordered_heading_matches) {
+          if (excluded_by !== undefined || existing_id !== undefined) continue
+          const id = get_heading_id(inner)
+          if (!id) continue
+          insertions.push({
+            index: start + tag.length + 1,
+            text: ` id="${id}"`,
+          })
+        }
       }
 
       return insert_with_source_map(content, insertions, filename)
@@ -203,18 +322,17 @@ export interface HeadingAnchorsOptions {
   icon_svg?: string
 }
 
-function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): void {
+function add_anchor_to_heading(
+  heading: Element,
+  get_used_ids: () => Set<string>,
+  icon_svg: string,
+): void {
   if (heading.querySelector(`a[aria-hidden="true"]`)) return
   if (!heading.id) {
     // Generate ID from text content (fallback for dynamic headings)
-    const base_id = slugify((heading.textContent ?? ``).trim())
+    const base_id = slugify_heading((heading.textContent ?? ``).trim())
     if (!base_id) return
-    // Ensure unique ID in document (getElementById since slugs can start with a
-    // digit, which querySelector rejects as an invalid CSS ID selector)
-    let counter = 0
-    // oxlint-disable-next-line unicorn/prefer-query-selector
-    while (document.getElementById(counter ? `${base_id}-${counter}` : base_id)) counter++
-    heading.id = counter ? `${base_id}-${counter}` : base_id
+    heading.id = unique_heading_id(base_id, get_used_ids())
   }
   const anchor = document.createElement(`a`)
   anchor.href = `#${heading.id}`
@@ -226,10 +344,7 @@ function add_anchor_to_heading(heading: Element, icon_svg: string = link_svg): v
 const is_heading = (element: Element): boolean => /^H[1-6]$/u.test(element.tagName)
 
 const get_default_headings = (node: Element): Element[] =>
-  [...node.children].flatMap((child) => [
-    ...(is_heading(child) ? [child] : []),
-    ...[...child.children].filter(is_heading),
-  ])
+  [...node.children].flatMap((child) => [child, ...child.children].filter(is_heading))
 
 // Svelte 5 attachment that adds anchor links to headings within a container
 export const heading_anchors =
@@ -242,16 +357,22 @@ export const heading_anchors =
     const get_headings = selector
       ? () => Array.from(node.querySelectorAll(selector))
       : () => get_default_headings(node)
-
-    for (const heading of get_headings()) {
-      add_anchor_to_heading(heading, icon_svg)
+    const add_anchors = () => {
+      let used_ids: Set<string> | undefined
+      const get_used_ids = () =>
+        (used_ids ??= new SvelteSet(
+          Array.from(document.querySelectorAll<HTMLElement>(`[id]`), ({ id }) => id),
+        ))
+      for (const heading of get_headings()) {
+        add_anchor_to_heading(heading, get_used_ids, icon_svg)
+      }
     }
+    add_anchors()
 
     // Watch for new headings - requery the container to respect nesting depth constraints
     const observer = new MutationObserver(() => {
-      for (const heading of get_headings()) {
-        add_anchor_to_heading(heading, icon_svg)
-      }
+      add_anchors()
+      observer.takeRecords()
     })
     observer.observe(node, { childList: true, subtree: true })
 
