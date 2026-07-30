@@ -1,4 +1,5 @@
 export * from './heading-anchors'
+export { default as Accordion } from './Accordion.svelte'
 export { default as ButtonGroup } from './ButtonGroup.svelte'
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CommandMenu } from './CommandMenu.svelte'
@@ -21,7 +22,9 @@ export { default as Masonry } from './Masonry.svelte'
 export { default, default as MultiSelect } from './MultiSelect.svelte'
 export { default as Nav } from './Nav.svelte'
 export { default as PrevNext } from './PrevNext.svelte'
+export { default as Sheet } from './Sheet.svelte'
 export { default as SubpageGrid } from './SubpageGrid.svelte'
+export { default as Tabs } from './Tabs.svelte'
 export { default as Toast } from './Toast.svelte'
 export { default as Toc } from './Toc.svelte'
 export { default as Toggle } from './Toggle.svelte'
@@ -31,8 +34,8 @@ export {
   resolve_theme_mode,
   system_preference,
   theme,
-  type ThemeMode,
 } from './theme.svelte'
+export type { ThemeMode } from './theme.svelte'
 export type * from './types'
 export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'

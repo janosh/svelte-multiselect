@@ -4,6 +4,37 @@
 // zero-byte File named after the directory. webkitGetAsEntry is the only way to see
 // inside, and it is only readable during the drop event itself.
 
+// Match the comma-separated unique file type specifiers accepted by
+// `<input type="file" accept="…">`: filename extensions, exact MIME types and MIME
+// wildcards. Empty accept strings impose no restriction, like the native input.
+export const file_matches_accept = (file: File, accept = ``): boolean => {
+  const tokens = accept
+    .split(`,`)
+    .map((token) => token.trim().toLowerCase())
+    .filter(Boolean)
+  if (tokens.length === 0) return true
+
+  const file_name = file.name.toLowerCase()
+  const mime_type = file.type.toLowerCase()
+  return tokens.some((token) => {
+    if (token.startsWith(`.`)) return file_name.endsWith(token)
+    if (token.endsWith(`/*`)) return mime_type.startsWith(token.slice(0, -1))
+    return mime_type === token
+  })
+}
+
+// Apply drop/input selection constraints in the same order as a native picker:
+// disallowed files disappear first, then a single-select consumer gets the first
+// remaining file rather than an unacceptable first item blocking later matches.
+export const filter_accepted_files = (
+  files: Iterable<File>,
+  accept = ``,
+  multiple = false,
+): File[] => {
+  const accepted = Array.from(files).filter((file) => file_matches_accept(file, accept))
+  return multiple ? accepted : accepted.slice(0, 1)
+}
+
 const is_file_entry = (entry: FileSystemEntry): entry is FileSystemFileEntry =>
   entry.isFile
 
@@ -54,9 +85,9 @@ const files_from_entry = async (
     )
   }
   const entries = await read_all_entries(entry.createReader())
-  // an arrow rather than files_from_entry itself: map's index would land in `budget`
-  const nested = entries.map((child) => files_from_entry(child, budget, depth + 1))
-  return (await Promise.all(nested)).flat()
+  return (
+    await Promise.all(entries.map((child) => files_from_entry(child, budget, depth + 1)))
+  ).flat()
 }
 
 // Every file in a drop, with dropped directories expanded depth-first and in the order

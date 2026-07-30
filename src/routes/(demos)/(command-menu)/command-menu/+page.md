@@ -123,18 +123,23 @@ when the menu reopens.
 ```svelte example id="command-menu-shortcuts"
 <script lang="ts">
   import { CommandMenu } from '$lib'
+  import { apply_theme_mode, theme, THEME_MODE_CYCLE } from '$lib/theme.svelte'
 
   let last_triggered = $state(``)
 
   const actions = [
     {
       label: `Toggle theme`,
-      description: `Switch between light and dark mode`,
+      description: `Cycle light, system and dark modes`,
       metadata: [`Appearance`],
       badge: `Setting`,
       keywords: [`color scheme`],
       shortcut: `ctrl+shift+l`,
-      action: (label: string) => (last_triggered = label),
+      action: () => {
+        const next_mode = THEME_MODE_CYCLE[theme.mode]
+        apply_theme_mode(next_mode)
+        last_triggered = `Theme: ${next_mode}`
+      },
     },
     {
       label: `Copy page URL`,

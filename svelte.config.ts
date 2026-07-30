@@ -3,6 +3,7 @@ import type { Config } from '@sveltejs/kit'
 import { mdsvex } from 'mdsvex'
 import pkg from './package.json' with { type: 'json' }
 import { heading_ids } from './src/lib/heading-anchors.ts'
+import { katex_preprocess } from './src/lib/katex.ts'
 import {
   mdsvex_transform,
   starry_night_highlighter,
@@ -10,7 +11,7 @@ import {
 
 const base_segment = (process.env.BASE_PATH ?? ``).replaceAll(/^\/+|\/+$/gu, ``)
 const base_path: `` | `/${string}` = base_segment ? `/${base_segment}` : ``
-const remarkPlugins = [
+const remark_plugins = [
   [
     mdsvex_transform,
     {
@@ -23,16 +24,20 @@ const remarkPlugins = [
     },
   ],
 ]
+const { before: katex_before, after: katex_after } = katex_preprocess()
 
 const config: Config = {
   extensions: [`.svelte`, `.md`],
 
+  // KaTeX before/after mdsvex so markdown never sees rendered HTML; heading IDs last.
   preprocess: [
+    katex_before,
     mdsvex({
-      remarkPlugins,
+      remarkPlugins: remark_plugins,
       extensions: [`.md`],
       highlight: { highlighter: starry_night_highlighter },
     }),
+    katex_after,
     heading_ids(),
   ],
 

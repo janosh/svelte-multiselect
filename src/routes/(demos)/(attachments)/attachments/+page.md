@@ -4,12 +4,19 @@ Exported from `svelte-widgets/attachments`:
 
 - [`tooltip`](#tooltip)
 - [`draggable`](#draggable)
+- [`resizable`](#resizable)
 - [`sortable`](#sortable)
 - [`highlight_matches`](#highlight_matches)
 - [`click_outside`](#click_outside)
+- [`dismiss_on_outside_press`](#dismiss_on_outside_press)
+- [`backdrop_dismiss`](#backdrop_dismiss)
 - [`focus_trap`](#focus_trap)
 - [`hotkey`](#hotkey)
 - [`float`](#float)
+- [`portal`](#portal)
+- [`contrast_color`](#contrast_color)
+- [`forward_window_keydown`](#forward_window_keydown)
+- [`file_drop`](#file_drop)
 
 ### `tooltip`
 
@@ -589,6 +596,188 @@ which is how `ContextMenu` hangs a menu off the pointer.
     background: rgba(255, 255, 255, 0.08);
   }
 </style>
+```
+
+### `resizable`
+
+`resizable` adds invisible edge handles and reports the resulting dimensions. Double-click an enabled edge to clear the size written by the attachment.
+
+```svelte example id="attachments-resizable"
+<script lang="ts">
+  import { resizable } from '$lib/attachments'
+
+  let dimensions = $state({ width: 240, height: 120 })
+</script>
+
+<div
+  style="position: relative; width: 240px; height: 120px; padding: 1rem; border: 1px solid currentColor"
+  {@attach resizable({
+    edges: [`right`, `bottom`, `left`],
+    min_width: 160,
+    min_height: 80,
+    on_resize: (_event, next) => (dimensions = next),
+  })}
+>
+  Resize from three edges: {Math.round(dimensions.width)} × {Math.round(
+    dimensions.height,
+  )}
+</div>
+```
+
+### `portal`
+
+`portal` moves existing DOM into another container and restores its original position on teardown.
+
+```svelte example id="attachments-portal"
+<script lang="ts">
+  import { portal } from '$lib/attachments'
+
+  let target = $state<HTMLElement | null>(null)
+</script>
+
+<div
+  bind:this={target}
+  style="min-height: 3rem; padding: 0.5rem; border: 1px dashed currentColor"
+>
+  Portal target:
+</div>
+<strong {@attach portal(target)}>I render inside the target.</strong>
+```
+
+### `contrast_color`
+
+`contrast_color` chooses between two foregrounds using the painted background behind the element when the attachment initializes. It does not observe later CSS or ancestor changes; pass a changing `bg_color` option or reattach when the background changes.
+
+```svelte example id="attachments-contrast-color"
+<script lang="ts">
+  import { contrast_color } from '$lib/attachments'
+
+  const colors = [`#f7d154`, `#1769aa`, `oklch(45% 0.2 25)`]
+</script>
+
+<div style="display: flex; gap: 0.5rem">
+  {#each colors as background}
+    <span
+      style:background
+      style="padding: 0.6rem; border-radius: 4pt"
+      {@attach contrast_color()}
+    >
+      {background}
+    </span>
+  {/each}
+</div>
+```
+
+### `forward_window_keydown`
+
+`forward_window_keydown` sends page-level keys to the viewer under the pointer while focus is on the page or the viewer root, but leaves keys with focused descendant controls.
+
+```svelte example id="attachments-forward-window-keydown"
+<script lang="ts">
+  import { forward_window_keydown } from '$lib/attachments'
+
+  let last_key = $state(`none`)
+</script>
+
+<div
+  tabindex="-1"
+  style="padding: 1rem; border: 1px solid currentColor"
+  {@attach forward_window_keydown({
+    handle: (event) => {
+      if (!event.key.startsWith(`Arrow`)) return false
+      last_key = event.key
+      return true
+    },
+  })}
+>
+  Hover here, leave focus on the page and press an arrow key. Last key: {last_key}
+</div>
+```
+
+### `file_drop`
+
+`file_drop` expands dropped directories, applies the same MIME/extension accept syntax as a file input and reports processing errors. A drop with no accepted files is ignored. A newer drop supersedes expansion work that has not reached `on_files`; a callback already running is left to finish.
+
+```svelte example id="attachments-file-drop"
+<script lang="ts">
+  import { file_drop } from '$lib/attachments'
+
+  let names = $state<string[]>([])
+  let drag_active = $state(false)
+  const show_files = (files: File[]) => (names = files.map(({ name }) => name))
+</script>
+
+<label
+  data-active={drag_active}
+  style="display: block; padding: 1rem; border: 1px dashed currentColor"
+  {@attach file_drop({
+    accept: `image/*,.pdf`,
+    multiple: true,
+    on_drag_active: (active) => (drag_active = active),
+    on_files: show_files,
+    on_error: (error) => (names = [`Error: ${String(error)}`]),
+  })}
+>
+  {drag_active ? `Release files` : `Drop images or PDFs`}
+  <input
+    type="file"
+    accept="image/*,.pdf"
+    multiple
+    onchange={(event) => show_files(Array.from(event.currentTarget.files ?? []))}
+  />
+</label>
+<p aria-live="polite">{names.join(`, `) || `No files selected`}</p>
+```
+
+### `backdrop_dismiss`
+
+`backdrop_dismiss` closes a native dialog only when both the press and release land on its `::backdrop`, not when a text selection starts inside and ends outside.
+
+```svelte example id="attachments-backdrop-dismiss"
+<script lang="ts">
+  import { backdrop_dismiss } from '$lib/attachments'
+
+  let dialog = $state<HTMLDialogElement | null>(null)
+</script>
+
+<button onclick={() => dialog?.showModal()}>Open native dialog</button>
+<dialog bind:this={dialog} {@attach backdrop_dismiss()}>
+  <p>Click the backdrop to close.</p>
+  <button onclick={() => dialog?.close()}>Close</button>
+</dialog>
+```
+
+### `dismiss_on_outside_press`
+
+For a surface assembled from several elements, call `dismiss_on_outside_press()` directly with an `inside` list instead of attaching `click_outside` to one node.
+
+```svelte example id="attachments-dismiss-multiple"
+<script lang="ts">
+  import { dismiss_on_outside_press } from '$lib/attachments'
+
+  let open = $state(true)
+  let first = $state<HTMLElement | null>(null)
+  let second = $state<HTMLElement | null>(null)
+
+  $effect(() => {
+    if (!open || !first || !second) return
+    return dismiss_on_outside_press({
+      inside: [first, second],
+      escape: true,
+      callback: () => (open = false),
+    })
+  })
+</script>
+
+<button onclick={() => (open = true)}>Open two-part surface</button>
+{#if open}
+  <div bind:this={first} style="padding: 0.5rem; border: 1px solid currentColor">
+    First part
+  </div>
+  <div bind:this={second} style="padding: 0.5rem; border: 1px solid currentColor">
+    Second part
+  </div>
+{/if}
 ```
 
 <style>

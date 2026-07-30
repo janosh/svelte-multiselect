@@ -1,6 +1,7 @@
 import type { KatexOptions } from 'katex'
 import { mdsvex } from 'mdsvex'
 import { compile, preprocess } from 'svelte/compiler'
+import { heading_ids } from '$lib/heading-anchors'
 import { katex_preprocess } from '$lib/katex'
 import { describe, expect, it } from 'vite-plus/test'
 
@@ -12,6 +13,15 @@ const run = (content: string, filename = `page.md`, options: KatexOptions = {}) 
 
 const has_katex = (code: string) =>
   code.includes(`{@html`) && code.includes(`katex-html`) && !code.includes(`katex-error`)
+
+const run_pipeline = (source: string) => {
+  const { before, after } = katex_preprocess()
+  return preprocess(
+    source,
+    [before, mdsvex({ extensions: [`.md`] }), after, heading_ids()],
+    { filename: `page.md` },
+  )
+}
 
 describe(`katex_preprocess`, () => {
   it.each([
@@ -63,14 +73,28 @@ describe(`katex_preprocess`, () => {
     [`\`\`\`js\r`, `const y = $x$\r`, `\`\`\`\r`].join(`\n`),
     [`\`\`\`js`, `const y = $x$`].join(`\n`),
     [`~~~js`, `const y = $x$`].join(`\n`),
+    [`\`\`\`tex`, `$$`, `x`, `$$`, `\`\`\``].join(`\n`),
     `    const y = $x$`,
+    `    $$x$$`,
     `use \`$x$\` in text`,
     `use \`\`$x$\`\` in text`,
     `info = \`Point (\${x}, \${y})\``,
     `<!-- $x$ -->`,
+    `<!--\n$$\nx\n$$\n-->`,
+    `<script>\n$$\nx\n$$\n</script>`,
   ])(`leaves $ inside protected code or comments alone`, (input) => {
     expect(run(input).code).toBe(input)
   })
+
+  it.each([
+    `\\begin{pmatrix}\n    a & b \\\\\n\\end{pmatrix}`,
+    `\\text{<!-- note -->}`,
+    `\\text{\`literal\`}`,
+    `\\text{<script>x</script>}`,
+    [`\`\`\``, `x`, `\`\`\``].join(`\n`),
+  ])(`renders display math containing protected-looking syntax %j`, (tex) =>
+    expect(has_katex(run(`$$\n${tex}\n$$`).code)).toBe(true),
+  )
 
   it(`restores overlapping protected regions`, () => {
     const source = `keep \`<script>const x = 1</script>\` and render $x$`
@@ -149,8 +173,17 @@ describe(`katex_preprocess`, () => {
     expect(has_katex(code)).toBe(true)
   })
 
+  it.each([
+    [`## $x$`, `x`],
+    [`## $E = mc^2$`, `e-mc-2`],
+    [`## $\\{$ Details`, `details`],
+  ])(`gives math heading %j the source-derived ID %j`, async (source, expected_id) => {
+    const { code } = await run_pipeline(source)
+    expect(code).toContain(`<h2 id="${expected_id}">`)
+    expect(has_katex(code)).toBe(true)
+  })
+
   it(`survives mdsvex and produces valid Svelte`, async () => {
-    const katex = katex_preprocess()
     const source = [
       `# Math`,
       ``,
@@ -160,11 +193,7 @@ describe(`katex_preprocess`, () => {
       `const literal = \`$y$\``,
       `\`\`\``,
     ].join(`\n`)
-    const processed = await preprocess(
-      source,
-      [katex.before, mdsvex({ extensions: [`.md`] }), katex.after],
-      { filename: `page.md` },
-    )
+    const processed = await run_pipeline(source)
     for (const sentinel of [`\0`, `\uE000`, `\uE001`]) {
       expect(processed.code).not.toContain(sentinel)
     }

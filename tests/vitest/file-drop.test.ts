@@ -1,4 +1,8 @@
-import { files_from_data_transfer } from '$lib/file-drop'
+import {
+  files_from_data_transfer,
+  file_matches_accept,
+  filter_accepted_files,
+} from '$lib/file-drop'
 import { expect, test, vi } from 'vite-plus/test'
 
 // happy-dom has DataTransfer but no webkitGetAsEntry and no FileSystemEntry types at
@@ -55,6 +59,51 @@ const drop = (entries: (FileSystemEntry | null)[], files: File[] = []): DataTran
   }) as unknown as DataTransfer
 
 const names = (files: File[]) => files.map((file) => file.name)
+
+test.each([
+  [`case-insensitive extension`, new File([``], `REPORT.PDF`), `.pdf`, true],
+  [
+    `exact MIME type`,
+    new File([``], `renamed.bin`, { type: `application/pdf` }),
+    `application/pdf`,
+    true,
+  ],
+  [
+    `MIME wildcard`,
+    new File([``], `photo.unknown`, { type: `image/avif` }),
+    `image/*`,
+    true,
+  ],
+  [
+    `comma-separated alternatives`,
+    new File([``], `notes.txt`, { type: `text/plain` }),
+    `.md, text/plain`,
+    true,
+  ],
+  [`empty accept`, new File([``], `anything.bin`), ``, true],
+  [
+    `non-matching MIME and extension`,
+    new File([``], `data.json`, { type: `application/json` }),
+    `.txt,image/*`,
+    false,
+  ],
+] as const)(`accept matching supports %s`, (_description, file, accept, expected) => {
+  expect(file_matches_accept(file, accept)).toBe(expected)
+})
+
+test(`accept filtering happens before the multiple limit`, () => {
+  const files = [
+    new File([``], `skip.txt`, { type: `text/plain` }),
+    new File([``], `first.png`, { type: `image/png` }),
+    new File([``], `second.png`, { type: `image/png` }),
+  ]
+
+  expect(names(filter_accepted_files(files, `image/*`))).toEqual([`first.png`])
+  expect(names(filter_accepted_files(files, `image/*`, true))).toEqual([
+    `first.png`,
+    `second.png`,
+  ])
+})
 
 test(`plain files come back in drop order`, async () => {
   const dropped = drop([file_entry(`a.txt`), file_entry(`b.txt`)])

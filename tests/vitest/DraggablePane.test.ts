@@ -33,11 +33,15 @@ describe(`DraggablePane`, () => {
       mount(DraggablePane, { target: document.body, props: { children, ...props } }),
     )
     await tick()
+    const pane = doc_query<HTMLDivElement>(`.draggable-pane`)
+    // happy-dom does not apply the component stylesheet; mirror its border-box rule so
+    // resizable's box-model conversion matches the browser.
+    pane.style.boxSizing = `border-box`
     return {
       toggle: doc_query<HTMLButtonElement>(`button.pane-toggle`),
       // by class, not [role="dialog"]: the role is itself under test, and finding the
       // pane by it would make those assertions tautological
-      pane: doc_query<HTMLDivElement>(`.draggable-pane`),
+      pane,
     }
   }
 

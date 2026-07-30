@@ -78,9 +78,29 @@ describe(`search_text`, () => {
 
   it.each([
     // offsets are computed on normalized text but must land on the original
-    // characters: İ lowercases to two UTF-16 units, 😀 already is two
+    // characters: canonical decomposition and lowercasing can expand one source
+    // character while 😀 already spans two UTF-16 units
     [`length-changing lowercase`, `<p>İİİab</p>`, `ab`, [`İİİab`, 3, `İİİab`, 5]],
+    [`length-changing match`, `<p>İ</p>`, `i\u0307`, [`İ`, 0, `İ`, 1]],
     [`astral characters`, `<p>😀ab</p>`, `ab`, [`😀ab`, 2, `😀ab`, 4]],
+    [
+      `NFC query against NFD source`,
+      `<p>Cafe\u0301 noir</p>`,
+      `café`,
+      [`Cafe\u0301 noir`, 0, `Cafe\u0301 noir`, 5],
+    ],
+    [
+      `NFD query against NFC source`,
+      `<p>touché</p>`,
+      `touche\u0301`,
+      [`touché`, 0, `touché`, 6],
+    ],
+    [
+      `astral prefix before canonical match`,
+      `<p>😀éab</p>`,
+      `e\u0301a`,
+      [`😀éab`, 2, `😀éab`, 4],
+    ],
     [
       `case insensitivity`,
       `<p>The TEST case</p>`,
@@ -94,6 +114,27 @@ describe(`search_text`, () => {
     const [range, ...rest] = search_text(render(html), query).ranges
     expect(rest).toEqual([])
     expect(range_bounds(range)).toEqual(expected)
+  })
+
+  it.each([
+    [`the full run`, `q\u0301\u0328`, 0],
+    [`only reordered marks`, `\u0301\u0328`, 1],
+  ])(`maps %s across canonically reordered combining marks`, (_desc, query, start) => {
+    const source = `q\u0301\u0328`
+    const [range] = search_text(render(`<p>${source}</p>`), query).ranges
+
+    expect(range_bounds(range)).toEqual([source, start, source, 3])
+    expect(range.toString()).toBe(source.slice(start))
+  })
+
+  it(`canonically matches decomposed accents across text nodes`, () => {
+    const prefix = `\u0063\u0061\u0066`
+    const root = render(`<p>${prefix}<b>e</b>\u0301</p>`)
+
+    const { ranges } = search_text(root, `\u0063\u0061\u0066\u00E9`)
+
+    expect(ranges).toHaveLength(1)
+    expect(range_bounds(ranges[0])).toEqual([prefix, 0, `\u0301`, 1])
   })
 
   it.each([
@@ -150,6 +191,21 @@ describe(`search_text`, () => {
     expect(search_text(root, `abxxcd`).ranges).toHaveLength(1)
   })
 
+  it.each([
+    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, 0],
+    [`select`, `<p>before<select><option>secret</option></select>after</p>`, 0],
+    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, 0],
+    [`hidden-until-found content`, `<p><span hidden="until-found">secret</span></p>`, 1],
+  ])(`handles %s`, (_desc, html, match_count) => {
+    expect(search_text(render(html), `secret`).ranges).toHaveLength(match_count)
+  })
+
+  it(`searches continuously across hidden content`, () => {
+    expect(
+      search_text(render(`<p>fo<span hidden>secret</span>od</p>`), `food`).ranges,
+    ).toHaveLength(1)
+  })
+
   it(`honors a custom segment selector`, () => {
     const root = render(`<div class="cell">ab<b>c</b></div><div class="cell">d</div>`)
 
@@ -172,6 +228,17 @@ describe(`search_text`, () => {
     const { ranges } = search_text(root, `world`)
     expect(ranges).toHaveLength(1)
     expect(ranges[0].startContainer.ownerDocument).toBe(other_doc)
+  })
+
+  it(`fuzzy-matches the shortest non-overlapping ordered subsequences`, () => {
+    const root = render(`<p>a----abc a-b-c</p>`)
+
+    expect(search_text(root, `abc`).ranges.map((range) => range.toString())).toEqual([
+      `abc`,
+    ])
+    expect(
+      search_text(root, `abc`, { fuzzy: true }).ranges.map((range) => range.toString()),
+    ).toEqual([`abc`, `a-b-c`])
   })
 })
 
@@ -457,20 +524,22 @@ describe(`create_search_jump`, () => {
     expect(on_clear).toHaveBeenCalledTimes(1)
   })
 
-  it(`clear() removes the mark early and cancels the timeout`, () => {
+  it(`clear() always notifies, removes the mark early, and cancels the timeout`, () => {
     const root = render(`<p>first</p>`)
     const paragraph = doc_query(`p`)
     paragraph.scrollIntoView = vi.fn()
     const on_clear = vi.fn()
     const jump = create_search_jump({ class_name: `flash`, on_clear })
 
+    jump.clear()
+    expect(on_clear).toHaveBeenCalledOnce()
     jump.start(paragraph)
     jump.clear()
     expect(paragraph.classList.contains(`flash`)).toBe(false)
-    expect(on_clear).toHaveBeenCalledTimes(1)
+    expect(on_clear).toHaveBeenCalledTimes(2)
 
     vi.advanceTimersByTime(5000)
-    expect(on_clear).toHaveBeenCalledTimes(1)
+    expect(on_clear).toHaveBeenCalledTimes(2)
     expect(root.querySelector(`.flash`)).toBeNull()
   })
 

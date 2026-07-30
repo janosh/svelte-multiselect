@@ -60,9 +60,26 @@ export const pointer_event = (
     : new MouseEvent(type, shared)
 }
 
+export const data_transfer = (
+  files: File[],
+  items: DataTransferItem[] = [],
+): DataTransfer => ({ files, items, types: [`Files`] }) as unknown as DataTransfer
+
+export const drag_event = (type: string, transfer: DataTransfer): DragEvent => {
+  const event = new Event(type, { bubbles: true, cancelable: true }) as DragEvent
+  Object.defineProperty(event, `dataTransfer`, { value: transfer })
+  return event
+}
+
 // cancelable so callers can assert whether a handler swallowed the key
 export const escape_key = () =>
   new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true, cancelable: true })
+
+export const press_key = (target: EventTarget, key: string) => {
+  const event = new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true })
+  target.dispatchEvent(event)
+  return event
+}
 
 // Tracking settlement (rather than awaiting) is the only way to assert a promise is
 // still pending, which is what a queue is for.
