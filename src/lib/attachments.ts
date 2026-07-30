@@ -71,8 +71,9 @@ export const file_drop =
     let drag_active = false
     let drop_generation = 0
 
+    // items is an array-like DataTransferItemList, unlike the plain types array
     const carries_files = (data_transfer: DataTransfer): boolean =>
-      Array.from(data_transfer.types).includes(`Files`) ||
+      data_transfer.types.includes(`Files`) ||
       data_transfer.files.length > 0 ||
       Array.from(data_transfer.items).some((item) => item.kind === `file`)
     const set_drag_active = (active: boolean, event?: DragEvent) => {

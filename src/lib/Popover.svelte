@@ -153,11 +153,9 @@
     if (!focus_inside) focus_open_blocked = false
     close_if_interaction_ended()
   }
-  const toggle_from_click = () => {
-    clear_timeouts()
-    if (open) close(`trigger`)
-    else open = true
-  }
+  // No clear_timeouts() here: click mode never schedules one, and a timer left over from
+  // a mode switch already abandons itself when it sees trigger_mode changed.
+  const toggle_from_click = () => (open ? close(`trigger`) : (open = true))
 
   const trigger_props: TriggerProps = $derived.by(() => {
     const aria = {

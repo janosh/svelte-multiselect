@@ -21,9 +21,8 @@
 
   const request = $derived(dialog_queue[0])
   const component_id = $props.id()
-  const dialog_id = `confirm-dialog-${component_id}`
-  const title_id = `${dialog_id}-title`
-  const error_id = `${dialog_id}-error`
+  const title_id = `confirm-dialog-${component_id}-title`
+  const error_id = `confirm-dialog-${component_id}-error`
   let dialog_el = $state<HTMLDialogElement | null>(null)
   let prompt_value = $derived(request?.kind === `prompt` ? request.initial_value : ``)
   // Writable derived on `request`: submitting an invalid value assigns the error, and
@@ -33,13 +32,12 @@
     return ``
   })
 
+  // submit_prompt no-ops unless a prompt is at the head of the queue, so the form needs
+  // no guard of its own.
   const submit_current_prompt = (event: SubmitEvent) => {
     event.preventDefault()
-    if (request?.kind !== `prompt`) return
     const result = submit_prompt(prompt_value)
-    if (result.status === `invalid`) {
-      validation_message = result.message
-    }
+    if (result.status === `invalid`) validation_message = result.message
   }
 
   // showModal() puts the dialog in the top layer with native Escape handling. focus_trap

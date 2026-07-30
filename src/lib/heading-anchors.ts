@@ -245,15 +245,15 @@ export function heading_ids() {
       }
       // Both regexes scan the whole file and can match the same heading, so key by
       // source offset and keep the first hit.
-      const heading_matches = new Map<number, HeadingMatch>()
+      const matches_by_start = new Map<number, HeadingMatch>()
       const collect_heading_matches = (heading_regex: RegExp): void => {
         for (const match of content.matchAll(heading_regex)) {
           if (match.index === undefined || !match.groups) continue
           const { attrs, inner, tag } = match.groups
           if (attrs === undefined || inner === undefined || !tag) continue
           const start = match.index + match[0].indexOf(`<${tag}`)
-          if (!heading_matches.has(start)) {
-            heading_matches.set(start, { attrs, inner, start, tag })
+          if (!matches_by_start.has(start)) {
+            matches_by_start.set(start, { attrs, inner, start, tag })
           }
         }
       }
@@ -270,7 +270,9 @@ export function heading_ids() {
             tag: match.groups?.excluded_tag?.toLowerCase() ?? null,
           }),
         )
-        const ordered_heading_matches = [...heading_matches.values()]
+        // excluded_by is undefined when no range contains the heading and null when the
+        // containing range is a comment, which has no tag to report.
+        const headings = [...matches_by_start.values()]
           .map((match) => ({
             ...match,
             excluded_by: excluded_ranges.find(
@@ -281,26 +283,17 @@ export function heading_ids() {
           .toSorted((left, right) => left.start - right.start)
         // Reserve explicit IDs before generating any automatic ones, including IDs that
         // appear later in source order, because explicit author choices take precedence.
-        for (const { excluded_by, existing_id } of ordered_heading_matches) {
+        for (const { excluded_by, existing_id } of headings) {
           // A heading inside <pre> still creates a real DOM ID. Comments, script, and style
           // contents do not, so reserving their source-only IDs would create false collisions.
           if (excluded_by !== undefined && excluded_by !== `pre`) continue
           if (existing_id) used_ids.add(existing_id)
         }
-        for (const {
-          excluded_by,
-          existing_id,
-          inner,
-          start,
-          tag,
-        } of ordered_heading_matches) {
+        for (const { excluded_by, existing_id, inner, start, tag } of headings) {
           if (excluded_by !== undefined || existing_id !== undefined) continue
           const id = get_heading_id(inner)
           if (!id) continue
-          insertions.push({
-            index: start + tag.length + 1,
-            text: ` id="${id}"`,
-          })
+          insertions.push({ index: start + tag.length + 1, text: ` id="${id}"` })
         }
       }
 
