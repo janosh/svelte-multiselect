@@ -291,6 +291,53 @@ describe(`Popover`, () => {
     expect(surface()).not.toBeNull()
   })
 
+  // Removing a focused surface delivers no focusout, and focus_trap then hands focus
+  // back to the trigger. Without dropping the stale focus state on close, that focusin
+  // reopens what was just dismissed.
+  test.each([`hover`, `focus`] as const)(
+    `%s dismissal with focus inside stays closed`,
+    async (trigger_mode) => {
+      vi.useFakeTimers()
+      const props = mount_popover({ trigger_mode, open_delay: 0, close_delay: 10 })
+      trigger().focus()
+      await advance_time(0)
+      doc_query<HTMLButtonElement>(`[data-testid="popover-item"]`).focus()
+      await advance_time(0)
+      expect(surface()).not.toBeNull()
+
+      props.open = false
+      await advance_time(100)
+      expect(surface()).toBeNull()
+    },
+  )
+
+  // Same stale state seen from the other side: with nothing to restore focus to, a later
+  // hover cycle must still close on mouseleave instead of waiting on a focus that left.
+  test(`hover-out still closes after a dismissal that stranded focus`, async () => {
+    vi.useFakeTimers()
+    const props = mount_popover({
+      trigger_mode: `hover`,
+      open_delay: 0,
+      close_delay: 10,
+      trap_focus: false,
+    })
+    trigger().dispatchEvent(new MouseEvent(`mouseenter`))
+    await advance_time(0)
+    doc_query<HTMLButtonElement>(`[data-testid="popover-item"]`).focus()
+    await advance_time(0)
+    props.open = false
+    await advance_time(100)
+
+    trigger().dispatchEvent(new MouseEvent(`mouseenter`))
+    await advance_time(0)
+    expect(surface()).not.toBeNull()
+    trigger().dispatchEvent(
+      new MouseEvent(`mouseleave`, { relatedTarget: document.body }),
+    )
+    await advance_time(100)
+    expect(surface()).toBeNull()
+  })
+
   test(`controlled open state stays in sync`, async () => {
     const props = mount_popover({ open: true, placement: `right` })
     await tick()

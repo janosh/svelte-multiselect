@@ -91,11 +91,24 @@
   const close = (via: `pointer` | `escape` | `trigger`) => {
     clear_timeouts()
     if (!open) return
-    focus_open_blocked = via === `escape` && focus_inside
-    pointer_inside = false
     open = false
     on_close?.({ via })
   }
+
+  // Every close runs through here, including a consumer flipping `open` directly, which
+  // never reaches close(). Removing a focused surface delivers no focusout, so
+  // focus_inside would stay true and wedge close_if_interaction_ended on the branch that
+  // only cancels the pending close. focus_trap then hands focus back to the trigger, and
+  // in hover/focus modes that focusin would reopen what was just dismissed.
+  let was_open = false
+  $effect.pre(() => {
+    if (was_open && !open) {
+      focus_open_blocked = focus_inside
+      focus_inside = false
+      pointer_inside = false
+    }
+    was_open = open
+  })
 
   const open_after_delay = () => {
     clear_timeouts()

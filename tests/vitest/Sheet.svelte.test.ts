@@ -8,8 +8,10 @@ describe(`Sheet`, () => {
   type SheetProps = ComponentProps<typeof TestSheet>
   const mounted: Record<string, unknown>[] = []
 
-  afterEach(() => {
-    for (const app of mounted.splice(0)) void unmount(app)
+  // Awaited: teardown releases the module-level single-open-sheet latch, so a pending
+  // unmount would make the next test's open throw.
+  afterEach(async () => {
+    await Promise.all(mounted.splice(0).map((app) => unmount(app)))
     document.body.style.removeProperty(`overflow`)
   })
 
