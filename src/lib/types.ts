@@ -253,8 +253,9 @@ export interface MultiSelectProps<T extends Option = Option>
   // Virtualized dropdown rendering for large option lists: only rows near the scroll
   // viewport are rendered as DOM nodes. Pass true for defaults or { itemHeight, overscan }
   // to tune row height (px, default 30, applies to group headers too) and extra rows
-  // rendered above/below the visible window (default 10). Grouped options and sticky
-  // headers are supported; virtual rows use the configured fixed height for geometry.
+  // rendered above/below the visible window (default 10). Grouped options are supported
+  // except in combination with stickyGroupHeaders, which falls back to full rendering
+  // (with a console.warn).
   virtualList?: boolean | { itemHeight?: number; overscan?: number }
   maxSelect?: number | null // null means there is no upper limit for selected.length
   maxSelectMsg?: ((current: number, max: number) => string) | null
