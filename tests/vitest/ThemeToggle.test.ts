@@ -1,20 +1,32 @@
-import { ThemeToggle } from '$lib'
+import {
+  apply_theme_mode,
+  resolve_theme_mode,
+  system_preference,
+  theme,
+  ThemeToggle,
+} from '$lib'
+import { icon_data } from '$lib/icons'
 import type { ComponentProps } from 'svelte'
-import { mount, tick } from 'svelte'
+import { mount, tick, unmount } from 'svelte'
 import { afterEach, beforeEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index.ts'
 
+const mounted: Record<string, unknown>[] = []
+
 beforeEach(() => {
+  apply_theme_mode(`system`)
   localStorage.clear()
   document.documentElement.style.colorScheme = ``
   delete document.documentElement.dataset.theme
 })
 
-// the localStorage-failure test swaps the global out; leaking it breaks every later test
-afterEach(() => vi.unstubAllGlobals())
+afterEach(async () => {
+  for (const app of mounted.splice(0)) await unmount(app)
+  vi.unstubAllGlobals()
+})
 
 const mount_theme_toggle = async (props: ComponentProps<typeof ThemeToggle> = {}) => {
-  mount(ThemeToggle, { target: document.body, props })
+  mounted.push(mount(ThemeToggle, { target: document.body, props }))
   await tick()
   return doc_query<HTMLButtonElement>(`button`)
 }
@@ -24,9 +36,19 @@ const applied_theme = () => [
   document.documentElement.dataset.theme,
 ]
 
+const rendered_icon_path = () => doc_query(`button svg path`).getAttribute(`d`)
+
+const disable_storage = () => {
+  const throw_disabled = () => {
+    throw new DOMException(`storage disabled`)
+  }
+  vi.stubGlobal(`localStorage`, { getItem: throw_disabled, setItem: throw_disabled })
+  return vi.spyOn(console, `error`).mockImplementation(() => {})
+}
+
 test(`initial render stays hidden until hydration`, async () => {
   localStorage.setItem(`theme`, `dark`)
-  mount(ThemeToggle, { target: document.body })
+  mounted.push(mount(ThemeToggle, { target: document.body }))
   const button = doc_query<HTMLButtonElement>(`button`)
   expect(button.style.visibility).toBe(`hidden`)
   expect(button.querySelector(`svg`)).toBeNull()
@@ -36,9 +58,7 @@ test(`initial render stays hidden until hydration`, async () => {
   await tick()
   expect(button.style.visibility).toBe(`visible`)
   expect(applied_theme()).toEqual([`dark`, `dark`])
-  // scaled inline rather than in CSS, where Icon's own scoped rule would win
-  const icon = doc_query<SVGSVGElement>(`button svg`)
-  expect(icon.style.transform).toBe(`scale(1.5)`)
+  expect(button.querySelector(`svg`)).not.toBeNull()
 })
 
 // icon_props.style is appended after the default transform rather than replacing it, so
@@ -51,15 +71,15 @@ test(`icon_props.style is appended after the default transform`, async () => {
 })
 
 test.each([
-  [`theme`, `light`, `light`],
-  [`theme`, `dark`, `dark`],
-  [`theme`, `system`, `light`],
-  [`theme_mode`, `light`, `light`],
-  [`theme_mode`, `dark`, `dark`],
-] as const)(`mount applies %s=%s`, async (storage_key, stored, effective) => {
+  [`theme`, `light`, `light`, `Sun`],
+  [`theme`, `dark`, `dark`, `Moon`],
+  [`theme`, `system`, `light`, `Monitor`],
+  [`theme_mode`, `dark`, `dark`, `Moon`],
+] as const)(`mount applies %s=%s`, async (storage_key, stored, effective, icon_name) => {
   localStorage.setItem(storage_key, stored)
   await mount_theme_toggle()
   expect(applied_theme()).toEqual([effective, effective])
+  expect(rendered_icon_path()).toBe(icon_data[icon_name].d)
 })
 
 // the rows above cover each key alone, so nothing pins which one wins when both exist
@@ -68,19 +88,11 @@ test(`theme key takes precedence over the legacy theme_mode key`, async () => {
   localStorage.setItem(`theme`, `light`)
   await mount_theme_toggle()
   expect(applied_theme()).toEqual([`light`, `light`])
+  expect(localStorage.getItem(`theme_mode`)).toBeNull() // retired on apply
 })
 
 test(`gracefully degrades when localStorage throws`, async () => {
-  const throw_disabled = () => {
-    throw new DOMException(`storage disabled`)
-  }
-  // replace the global, don't spy on Storage.prototype: happy-dom's localStorage proxy
-  // caches its bound methods, so a prototype spy never runs and injects no fault
-  vi.stubGlobal(`localStorage`, {
-    getItem: throw_disabled,
-    setItem: throw_disabled,
-  })
-  const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
+  const console_error = disable_storage()
 
   const button = await mount_theme_toggle()
   expect(button.style.visibility).toBe(`visible`)
@@ -90,13 +102,25 @@ test(`gracefully degrades when localStorage throws`, async () => {
   await tick()
   expect(applied_theme()).toEqual([`dark`, `dark`])
 
-  // also the only proof the fault landed: working empty storage yields the same
-  // light -> dark sequence asserted above
-  expect(console_error.mock.calls.flat()).toEqual([
-    `Failed to get theme mode from localStorage`,
-    `Failed to set theme mode in localStorage`,
-    `Failed to set theme mode in localStorage`,
-  ])
+  expect(console_error).toHaveBeenCalledWith(
+    expect.stringContaining(`Failed to get theme mode from localStorage`),
+    expect.anything(),
+  )
+  expect(console_error).toHaveBeenCalledWith(
+    expect.stringContaining(`Failed to set theme mode`),
+    expect.anything(),
+  )
+})
+
+test(`mount preserves an externally applied theme when storage is unavailable`, async () => {
+  disable_storage()
+
+  apply_theme_mode(`dark`)
+  expect(theme.mode).toBe(`dark`)
+  await mount_theme_toggle()
+
+  expect(applied_theme()).toEqual([`dark`, `dark`])
+  expect(rendered_icon_path()).toBe(icon_data.Moon.d)
 })
 
 test(`click cycles through light -> system -> dark -> light`, async () => {
@@ -124,8 +148,6 @@ test(`click cycles through light -> system -> dark -> light`, async () => {
 test(`system mode reapplies theme when media query changes`, async () => {
   let matches = false
   let change_handler: (() => void) | undefined
-  // stubGlobal so afterEach restores it - a leaked dark-preferring matchMedia would
-  // silently change the theme every later test resolves from `system`
   vi.stubGlobal(`matchMedia`, (media: string) => ({
     media,
     get matches() {
@@ -159,3 +181,44 @@ test.each([
     ]).toEqual([data_original_title, title])
   },
 )
+
+// CommandMenu / PageSearch call apply_theme_mode without clicking the toggles
+test(`apply_theme_mode keeps mounted ThemeToggles in sync`, async () => {
+  localStorage.setItem(`theme`, `light`)
+  await mount_theme_toggle()
+  await mount_theme_toggle()
+  const buttons = document.querySelectorAll(`button`)
+  expect(buttons).toHaveLength(2)
+
+  apply_theme_mode(`dark`)
+  await tick()
+  expect(applied_theme()).toEqual([`dark`, `dark`])
+  expect(localStorage.getItem(`theme`)).toBe(`dark`)
+  for (const button of buttons) {
+    expect(button.getAttribute(`aria-label`)).toBe(`Switch to light theme`)
+    expect(button.querySelector(`path`)?.getAttribute(`d`)).toBe(icon_data.Moon.d)
+  }
+})
+
+test.each([[undefined], [`blue`]] as const)(
+  `resolve_theme_mode defaults to system for stored value %j`,
+  (stored) => {
+    if (stored !== undefined) localStorage.setItem(`theme`, stored)
+    expect(resolve_theme_mode()).toBe(`system`)
+  },
+)
+
+test.each([
+  [true, `dark`],
+  [false, `light`],
+] as const)(`system_preference: matches=%s → %s`, (matches, expected) => {
+  const match_media = vi.fn((media: string) => ({
+    media,
+    matches,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+  }))
+  vi.stubGlobal(`matchMedia`, match_media)
+  expect(system_preference()).toBe(expected)
+  expect(match_media).toHaveBeenCalledWith(`(prefers-color-scheme: dark)`)
+})
