@@ -19,7 +19,7 @@ const wrap_entity_tags = (str: string) =>
 
 export const load = async () => {
   const compiled_changelog = await compile(wrap_entity_tags(brace_to_paren(changelog)))
-  if (!compiled_changelog) return { changelog: compiled_changelog }
+  if (!compiled_changelog) throw new Error(`mdsvex returned no compiled changelog`)
   const { code } = heading_ids().markup({ content: compiled_changelog.code })
   return { changelog: { code } }
 }
