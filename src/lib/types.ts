@@ -6,6 +6,15 @@ import type { IconName } from './icons'
 
 export type Option = string | number | ObjectOption
 
+export type TabItem<Value extends string = string> = {
+  value: Value
+  label?: string
+  disabled?: boolean
+}
+
+export type AccordionItem<Value extends string = string> = TabItem<Value>
+export type AccordionValue<Value extends string = string> = Value | Value[] | null
+
 // single CSS string or an object with optional 'option' and 'selected' keys,
 // which only apply to the dropdown list and list of selected options, respectively
 export type OptionStyle = string | { option?: string; selected?: string }

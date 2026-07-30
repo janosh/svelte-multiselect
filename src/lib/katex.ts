@@ -26,9 +26,8 @@ const DISPLAY_INLINE_MATH = /(?<![\\$])\$\$(?<tex>[^\r\n]+?)\$\$(?!\$)/gu
 const SLOT_OPEN = `\uE000`
 const SLOT_CLOSE = `\uE001`
 
-// Fences first (they wrap <script> in live examples), then indented code,
-// script/style outside fences and inline code. Overlaps can nest placeholders,
-// so restore expands protected parts until no placeholders remain.
+// Fences first (they wrap <script> in live examples), then indented code, comments,
+// script/style outside fences and inline code. Overlaps can nest placeholders.
 const PROTECT_PATTERNS = [
   /^ {0,3}(?<fence>`{3,})[^\r\n]*(?:\r?\n(?:[\s\S]*?^ {0,3}\k<fence>`*[ \t]*\r?$|[\s\S]*(?![\s\S]))|(?![\s\S]))/gmu,
   /^ {0,3}(?<fence>~{3,})[^\r\n]*(?:\r?\n(?:[\s\S]*?^ {0,3}\k<fence>~*[ \t]*\r?$|[\s\S]*(?![\s\S]))|(?![\s\S]))/gmu,
@@ -37,21 +36,6 @@ const PROTECT_PATTERNS = [
   /<(?<tag>script|style)\b[^>]*>[\s\S]*?<\/\k<tag>>/giu,
   /(?<ticks>`+)(?!`)[\s\S]*?(?<!`)\k<ticks>(?!`)/gu,
 ]
-
-const protect = (
-  content: string,
-  part_token: string,
-): { text: string; parts: string[] } => {
-  const parts: string[] = []
-  let text = content
-  for (const pattern of PROTECT_PATTERNS) {
-    text = text.replace(pattern, (match) => {
-      parts.push(match)
-      return `${part_token}${parts.length - 1}\0`
-    })
-  }
-  return { text, parts }
-}
 
 const restore = (text: string, parts: string[], part_token: string): string => {
   const part_re = new RegExp(`${part_token}(?<idx>\\d+)\\0`, `gu`)
@@ -76,7 +60,6 @@ export function katex_preprocess(options: KatexOptions = {}) {
     `${slot_token}(?<encoded_html>[A-Za-z0-9_-]+)${SLOT_CLOSE}`,
     `gu`,
   )
-
   const before = {
     name: `katex-before`,
     markup({ content, filename }: MarkupArgs) {
@@ -90,17 +73,31 @@ export function katex_preprocess(options: KatexOptions = {}) {
         })
         return `${slot_token}${Buffer.from(html).toString(`base64url`)}${SLOT_CLOSE}`
       }
-      const { text, parts } = protect(content, part_token)
-      return {
-        code: restore(
-          text
-            .replace(DISPLAY_BLOCK_MATH, (_, tex: string) => slot(tex, true))
-            .replace(DISPLAY_INLINE_MATH, (_, tex: string) => slot(tex, true))
-            .replace(INLINE_MATH, (_, tex: string) => slot(tex, false)),
-          parts,
-          part_token,
-        ),
+
+      const protected_ranges = PROTECT_PATTERNS.flatMap((pattern) =>
+        Array.from(content.matchAll(pattern), (match) => ({
+          end: match.index + match[0].length,
+          start: match.index,
+        })),
+      )
+      const parts: string[] = []
+      const stash = (match: string) => {
+        parts.push(match)
+        return `${part_token}${parts.length - 1}\0`
       }
+      let text = content.replace(
+        DISPLAY_BLOCK_MATH,
+        (match, tex: string, offset: number) =>
+          protected_ranges.some(({ end, start }) => start <= offset && offset < end)
+            ? match
+            : slot(tex, true),
+      )
+      for (const pattern of PROTECT_PATTERNS) text = text.replace(pattern, stash)
+
+      text = text
+        .replace(DISPLAY_INLINE_MATH, (_match, tex: string) => slot(tex, true))
+        .replace(INLINE_MATH, (_match, tex: string) => slot(tex, false))
+      return { code: restore(text, parts, part_token) }
     },
   }
 

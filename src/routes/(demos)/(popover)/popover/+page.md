@@ -52,6 +52,21 @@ and Escape closes the innermost surface only.
 `strategy="absolute"` survives a transformed ancestor at the cost of tracking page
 scroll, and `match_width` sizes the surface to the trigger for dropdown-like menus.
 
+Use `trigger_mode="hover"` or `trigger_mode="focus"` for non-click interactions. Hover mode also opens on focus, and `open_delay`/`close_delay` keep the surface stable while the pointer crosses from its trigger. Non-click modes default to a 150 ms close delay.
+
+```svelte example id="popover-hover"
+<script lang="ts">
+  import { Popover } from '$lib'
+</script>
+
+<Popover trigger_mode="hover" open_delay={150} close_delay={250} trap_focus={false}>
+  {#snippet trigger(props)}
+    <button {...props}>Hover or focus</button>
+  {/snippet}
+  <a href="https://svelte.dev">Interactive content stays open while focused.</a>
+</Popover>
+```
+
 ### `ContextMenu`
 
 Right-click a region to replace the browser's own menu. Actions are

@@ -2,9 +2,12 @@ import type { DialogChoice } from '$lib/dialogs.svelte'
 import {
   answer_dialog,
   ask_confirm,
+  ask_prompt,
   dialog_queue,
   dismiss_all_dialogs,
+  dismiss_dialog,
   request_choice,
+  submit_prompt,
 } from '$lib/dialogs.svelte'
 import { afterEach, expect, test } from 'vite-plus/test'
 import { track } from './index'
@@ -25,14 +28,17 @@ test(`request_choice queues a request and resolves it with the answer`, async ()
 
   expect(dialog_queue).toHaveLength(1)
   expect(dialog_queue[0]).toMatchObject({
+    kind: `choice`,
     title: `Confirm`,
-    message: `Overwrite?`,
+    body: { kind: `text`, text: `Overwrite?` },
     dismiss_id: `no`,
     choices: yes_no,
   })
   await flush()
   expect(answer.settled).toBe(false) // nothing resolves until someone answers
 
+  expect(() => answer_dialog(`maybe`)).toThrow(`Unknown dialog answer "maybe"`)
+  expect(dialog_queue).toHaveLength(1)
   answer_dialog(`yes`)
   await flush()
   expect([answer.settled, answer.value]).toEqual([true, `yes`])
@@ -69,11 +75,13 @@ test(`answering an empty queue resolves nothing and does not throw`, async () =>
 test(`dismiss_all_dialogs settles every request with its own dismiss id`, async () => {
   const first = track(request_choice(`First?`, `One`, yes_no, `no`))
   const second = track(request_choice(`Second?`, `Two`, yes_no, `yes`))
+  const prompt = track(ask_prompt(`Name?`, `Profile`))
 
   dismiss_all_dialogs()
   await flush()
   expect([first.settled, first.value]).toEqual([true, `no`])
   expect([second.settled, second.value]).toEqual([true, `yes`])
+  expect([prompt.settled, prompt.value]).toEqual([true, null])
   expect(dialog_queue).toHaveLength(0)
 })
 
@@ -84,8 +92,10 @@ test.each([
   const confirmed = track(ask_confirm(`Delete it?`, `Careful`, `Delete`))
   await flush()
 
-  expect(dialog_queue[0].dismiss_id).toBe(`cancel`) // Escape must never mean yes
-  expect(dialog_queue[0].choices).toEqual([
+  const request = dialog_queue[0]
+  if (request?.kind !== `choice`) throw new Error(`Expected a choice request`)
+  expect(request.dismiss_id).toBe(`cancel`) // Escape must never mean yes
+  expect(request.choices).toEqual([
     { id: `cancel`, label: `Cancel` },
     { id: `ok`, label: `Delete`, tone: `accent` },
   ])
@@ -93,4 +103,76 @@ test.each([
   answer_dialog(answer_id)
   await flush()
   expect([confirmed.settled, confirmed.value]).toEqual([true, expected])
+})
+
+test(`ask_prompt validates before resolving and keeps its typed options`, async () => {
+  const prompted = track(
+    ask_prompt(`Choose a project name`, `New project`, {
+      initial_value: `draft`,
+      placeholder: `my-project`,
+      input_label: `Project name`,
+      confirm_label: `Create`,
+      cancel_label: `Never mind`,
+      validate: (value) => (value.trim() ? undefined : `A name is required`),
+    }),
+  )
+
+  const request = dialog_queue[0]
+  if (request?.kind !== `prompt`) throw new Error(`Expected a prompt request`)
+  expect(request).toMatchObject({
+    body: { kind: `text`, text: `Choose a project name` },
+    initial_value: `draft`,
+    placeholder: `my-project`,
+    input_label: `Project name`,
+    confirm_label: `Create`,
+    cancel_label: `Never mind`,
+  })
+
+  expect(submit_prompt(`   `)).toEqual({
+    status: `invalid`,
+    message: `A name is required`,
+  })
+  await flush()
+  expect(prompted.settled).toBe(false)
+  expect(dialog_queue[0]).toBe(request)
+
+  expect(submit_prompt(`widgets`)).toEqual({ status: `submitted` })
+  await flush()
+  expect([prompted.settled, prompted.value]).toEqual([true, `widgets`])
+  expect(dialog_queue).toHaveLength(0)
+  expect(submit_prompt(`late`)).toEqual({ status: `no_prompt` })
+})
+
+test(`an empty validation message accepts and submits the prompt`, async () => {
+  const prompted = track(
+    ask_prompt(`Optional validation`, `Prompt`, { validate: () => `` }),
+  )
+
+  expect(submit_prompt(`accepted`)).toEqual({ status: `submitted` })
+  await flush()
+  expect([prompted.settled, prompted.value]).toEqual([true, `accepted`])
+})
+
+test(`prompt dismissal returns null without consuming a following choice`, async () => {
+  const prompt = track(ask_prompt(`Name?`, `Profile`))
+  const choice = track(request_choice(`Continue?`, `Next`, yes_no, `no`))
+
+  dismiss_dialog()
+  await flush()
+  expect([prompt.settled, prompt.value]).toEqual([true, null])
+  expect(choice.settled).toBe(false)
+  expect(dialog_queue[0]?.kind).toBe(`choice`)
+
+  answer_dialog(`yes`)
+  await flush()
+  expect([choice.settled, choice.value]).toEqual([true, `yes`])
+})
+
+test(`choice answers cannot accidentally submit the prompt at the queue head`, async () => {
+  const prompt = track(ask_prompt(`Name?`, `Profile`))
+
+  answer_dialog(`unexpected`)
+  await flush()
+  expect(prompt.settled).toBe(false)
+  expect(dialog_queue[0]?.kind).toBe(`prompt`)
 })

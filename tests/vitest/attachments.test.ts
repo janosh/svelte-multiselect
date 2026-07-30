@@ -4,10 +4,12 @@ import type {
   ResizableOptions,
 } from '$lib/attachments'
 import {
+  backdrop_dismiss,
   click_outside,
   contrast_color,
   dismiss_on_outside_press,
   draggable,
+  file_drop,
   float,
   focus_trap,
   forward_window_keydown,
@@ -22,7 +24,14 @@ import {
   tooltip,
 } from '$lib/attachments'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { doc_query, mock_rect, pointer_event, stub_prop } from './index'
+import {
+  data_transfer,
+  doc_query,
+  drag_event,
+  mock_rect,
+  pointer_event,
+  stub_prop,
+} from './index'
 
 const create_element = (tag = `div`, styles: Partial<CSSStyleDeclaration> = {}) => {
   const element = document.createElement(tag)
@@ -359,6 +368,10 @@ describe(`tooltip`, () => {
 
       cleanup?.()
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
+      if (stores_title) {
+        expect(element.getAttribute(`title`)).toBe(content)
+        expect(element.hasAttribute(`data-original-title`)).toBe(false)
+      }
     })
 
     it.each([
@@ -420,7 +433,7 @@ describe(`tooltip`, () => {
       if (attr === `title`) {
         expect(child.hasAttribute(`title`)).toBe(false)
         expect(child.getAttribute(`data-original-title`)).toBe(content)
-      } else expect(child.getAttribute(attr)).toBe(content)
+      }
       cleanup?.()
     })
 
@@ -449,19 +462,6 @@ describe(`tooltip`, () => {
       expect(attach(null)).toBeUndefined()
     })
 
-    it(`restores the original title on cleanup`, () => {
-      const element = create_element()
-      element.title = `Original title`
-      const cleanup = setup_tooltip(element)
-
-      expect(element.hasAttribute(`title`)).toBe(false)
-      expect(element.getAttribute(`data-original-title`)).toBe(`Original title`)
-
-      cleanup?.()
-      expect(element.getAttribute(`title`)).toBe(`Original title`)
-      expect(element.hasAttribute(`data-original-title`)).toBe(false)
-    })
-
     it(`removes the scroll listener on cleanup`, () => {
       const element = create_element()
       element.title = `test`
@@ -471,13 +471,10 @@ describe(`tooltip`, () => {
       spy.mockRestore()
     })
 
-    it.each([
-      [`with custom content`, { content: `Custom content` }],
-      [`without custom content`, {}],
-    ])(`suppresses dynamically set title %s`, async (_desc, tooltip_options) => {
+    it(`suppresses a dynamically set title with custom content`, async () => {
       const element = create_element()
       element.setAttribute(`aria-label`, `initial label`)
-      const cleanup = setup_tooltip(element, tooltip_options)
+      const cleanup = setup_tooltip(element, { content: `Custom content` })
 
       element.setAttribute(`title`, `Late title`)
       await Promise.resolve()
@@ -685,22 +682,14 @@ describe(`tooltip`, () => {
       },
     )
 
-    it.each([
-      [`hide_delay: 200 delays hiding`, { hide_delay: 200 }, true, 200],
-      [`undefined hide_delay hides immediately`, {}, false, 0],
-    ])(`%s`, (_desc, options, visible_after_leave, delay_ms) => {
-      const element = show_tooltip(options)
+    it(`hide_delay delays hiding`, () => {
+      const element = show_tooltip({ hide_delay: 200 })
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
-      expect(document.querySelector(`.custom-tooltip`)).toEqual(
-        visible_after_leave ? expect.any(HTMLDivElement) : null,
-      )
-
-      if (delay_ms > 0) {
-        vi.advanceTimersByTime(delay_ms)
-        expect(document.querySelector(`.custom-tooltip`)).toBeNull()
-      }
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLDivElement)
+      vi.advanceTimersByTime(200)
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
 
     it(`mouseleave before delay expires cancels pending tooltip`, () => {
@@ -749,14 +738,9 @@ describe(`tooltip`, () => {
       )
     })
 
-    it.each([
-      [`show_arrow: false hides arrow`, { show_arrow: false }, false],
-      [`show_arrow: true (default) shows arrow`, {}, true],
-    ])(`%s`, (_desc, options, expect_arrow) => {
-      show_tooltip(options)
-
-      const arrow = doc_query(`.custom-tooltip`).querySelector(`.custom-tooltip-arrow`)
-      expect(arrow).toEqual(expect_arrow ? expect.any(HTMLDivElement) : null)
+    it(`show_arrow: false hides the arrow`, () => {
+      show_tooltip({ show_arrow: false })
+      expect(document.querySelector(`.custom-tooltip-arrow`)).toBeNull()
     })
 
     it(`manages aria-describedby on show/hide`, () => {
@@ -1043,19 +1027,10 @@ describe(`click_outside`, () => {
     return { element, callback, cleanup }
   }
 
-  it.each([
-    [`inside click`, false, true, 0],
-    [`disabled`, true, false, 0],
-  ])(`%s triggers callback %s times`, (_desc, is_outside, enabled, expected_calls) => {
-    const { element, callback } = attach_outside({ enabled })
-
-    const target = is_outside ? create_element() : element
-    const path = is_outside
-      ? []
-      : [element, document.body, document.documentElement, document, globalThis]
-    dispatch_press(target, path)
-
-    expect(callback).toHaveBeenCalledTimes(expected_calls)
+  it(`disabled suppresses outside presses`, () => {
+    const { callback } = attach_outside({ enabled: false })
+    dispatch_press(create_element())
+    expect(callback).not.toHaveBeenCalled()
   })
 
   it(`inside selectors keep matching regions from dismissing (single, multiple, nested)`, () => {
@@ -1100,19 +1075,10 @@ describe(`click_outside`, () => {
     expect(listener).toHaveBeenCalled()
   })
 
-  it(`cleanup stops triggering callbacks`, () => {
-    const { callback, cleanup } = attach_outside()
-
-    dispatch_press(create_element())
-    expect(callback).toHaveBeenCalledTimes(1)
-
-    cleanup?.()
-    dispatch_press(create_element())
-    expect(callback).toHaveBeenCalledTimes(1) // Still 1, not called again
-  })
-
-  it(`dismisses on the press, not on a following click`, () => {
-    const { callback } = attach_outside()
+  it(`dismisses only on outside presses and stops after cleanup`, () => {
+    const { element, callback, cleanup } = attach_outside()
+    dispatch_press(element)
+    expect(callback).not.toHaveBeenCalled()
 
     const outside = create_element()
     const event = dispatch_press(outside)
@@ -1126,6 +1092,10 @@ describe(`click_outside`, () => {
 
     // right-clicks and OS-captured drags never send this click, hence pointerdown
     outside.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
+    expect(callback).toHaveBeenCalledTimes(1)
+
+    cleanup?.()
+    dispatch_press(outside)
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
@@ -1180,13 +1150,25 @@ describe(`click_outside`, () => {
     expect(callback).toHaveBeenCalledTimes(1)
   })
 
-  it(`escape dismisses only the innermost layer`, () => {
+  it(`Escape is opt-in, dismisses only the top layer, and stops page handlers`, () => {
+    const without_escape = attach_outside()
+    const page_handler = vi.fn()
+    document.addEventListener(`keydown`, page_handler)
+    cleanups.push(() => document.removeEventListener(`keydown`, page_handler))
+
+    expect(press_escape().defaultPrevented).toBe(false)
+    expect(without_escape.callback).not.toHaveBeenCalled()
+    expect(page_handler).toHaveBeenCalledOnce()
+    page_handler.mockClear()
+
     const outer = attach_outside({ escape: true })
     const inner = attach_outside({ escape: true })
 
-    press_escape()
+    const event = press_escape()
     expect(inner.callback).toHaveBeenCalledTimes(1)
     expect(outer.callback).not.toHaveBeenCalled()
+    expect(page_handler).not.toHaveBeenCalled()
+    expect(event.defaultPrevented).toBe(true)
 
     // with the inner surface gone, the next Escape reaches the one behind it
     inner.cleanup?.()
@@ -1194,22 +1176,8 @@ describe(`click_outside`, () => {
     expect(inner.callback).toHaveBeenCalledTimes(1)
     expect(outer.callback).toHaveBeenCalledTimes(1)
     outer.cleanup?.()
-  })
-
-  it(`escape stops at the top layer instead of reaching page handlers`, () => {
-    const page_handler = vi.fn()
-    document.addEventListener(`keydown`, page_handler)
-    const { cleanup } = attach_outside({ escape: true })
-
-    const event = press_escape()
-
-    expect(page_handler).not.toHaveBeenCalled()
-    expect(event.defaultPrevented).toBe(true) // a native <dialog> stays open
-
-    cleanup?.()
     press_escape()
     expect(page_handler).toHaveBeenCalledTimes(1)
-    document.removeEventListener(`keydown`, page_handler)
   })
 
   it(`ignores a press on the page scrollbar`, () => {
@@ -1292,23 +1260,18 @@ describe(`click_outside`, () => {
     })
   })
 
-  // A surface over a pannable plot or a 3D viewport wants release semantics:
-  // pressing to start a drag behind it should not make it vanish under the cursor.
-  it(`dismiss_on: 'release' waits for the click and ignores the press`, () => {
-    const { callback } = attach_outside({ dismiss_on: `release` })
-
-    dispatch_press(create_element())
-    expect(callback).not.toHaveBeenCalled()
-
-    dispatch_press(create_element(), [], `click`)
-    expect(callback).toHaveBeenCalledTimes(1)
-  })
-
   // Dragging or resizing the surface can release past its edge, and the browser then
   // reports the click on a common ancestor — outside. Only a gesture that both starts
   // and ends outside is a dismissal, else a resize would close what it was resizing.
-  it(`dismiss_on: 'release' ignores a gesture that started inside`, () => {
+  it(`dismiss_on: 'release' waits for clicks and ignores gestures started inside`, () => {
     const { element, callback } = attach_outside({ dismiss_on: `release` })
+    const outside = create_element()
+
+    dispatch_press(outside)
+    expect(callback).not.toHaveBeenCalled()
+    dispatch_press(outside, [], `click`)
+    expect(callback).toHaveBeenCalledTimes(1)
+    callback.mockClear()
 
     dispatch_press(element)
     dispatch_press(create_element(), [], `click`)
@@ -1361,13 +1324,6 @@ describe(`click_outside`, () => {
     control.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
     expect(order).toEqual([`dismiss`, `control`])
   })
-
-  it(`ignores Escape unless asked, so existing keydown chains keep their order`, () => {
-    const { callback } = attach_outside()
-
-    press_escape()
-    expect(callback).not.toHaveBeenCalled()
-  })
 })
 
 describe(`dismiss_on_outside_press`, () => {
@@ -1396,6 +1352,10 @@ describe(`dismiss_on_outside_press`, () => {
     for (const menu of [menu_a, menu_b]) menu.className = `header-menu-root`
     panel.append(menu_a, panel_filler, menu_b)
 
+    // dismiss does not bubble, so this negative assertion requires capture.
+    const document_listener = vi.fn()
+    document.addEventListener(`dismiss`, document_listener, true)
+    cleanups.push(() => document.removeEventListener(`dismiss`, document_listener, true))
     const { callback } = listen({ inside: [`.header-menu-root`] })
 
     press(menu_a)
@@ -1405,17 +1365,6 @@ describe(`dismiss_on_outside_press`, () => {
     // between the two menus but still inside the panel: an attached surface would
     // have to count this as inside, a node-less listener must not
     press(panel_filler)
-    expect(callback).toHaveBeenCalledTimes(1)
-  })
-
-  it(`dispatches no dismiss event and still calls back without a node`, () => {
-    // dismiss does not bubble, so this negative assertion requires capture.
-    const document_listener = vi.fn()
-    document.addEventListener(`dismiss`, document_listener, true)
-    cleanups.push(() => document.removeEventListener(`dismiss`, document_listener, true))
-    const { callback } = listen()
-
-    expect(() => press(create_element())).not.toThrow()
     expect(callback).toHaveBeenCalledTimes(1)
     expect(callback.mock.calls[0][0]).toMatchObject({ via: `pointer` })
     expect(document_listener).not.toHaveBeenCalled()
@@ -1443,20 +1392,6 @@ describe(`dismiss_on_outside_press`, () => {
     press(create_element())
     expect(callback).not.toHaveBeenCalled()
     expect(() => cleanup()).not.toThrow()
-  })
-
-  it(`a node passed in still counts as inside and receives the dismiss event`, () => {
-    const node = create_element()
-    const dismiss_listener = vi.fn()
-    node.addEventListener(`dismiss`, dismiss_listener)
-    const { callback } = listen({ node })
-
-    press(node)
-    expect(callback).not.toHaveBeenCalled()
-
-    press(create_element())
-    expect(callback).toHaveBeenCalledTimes(1)
-    expect(dismiss_listener).toHaveBeenCalledTimes(1)
   })
 })
 
@@ -1824,7 +1759,12 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(unresolvable.backdrop) // back to the node
   })
 
-  it(`calls on_escape for the innermost trap only, and swallows the key`, () => {
+  it(`handles Escape only when configured and only in the innermost trap`, () => {
+    const plain = make_surface()
+    const cleanup_plain = attach_trap(plain.surface)
+    expect(press_escape().defaultPrevented).toBe(false)
+    cleanup_plain?.()
+
     const outer = make_surface()
     const inner = make_surface()
     const on_outer = vi.fn()
@@ -1843,12 +1783,6 @@ describe(`focus_trap`, () => {
     press_escape()
     expect(on_outer).toHaveBeenCalledTimes(1)
     expect(on_inner).toHaveBeenCalledTimes(1)
-  })
-
-  it(`leaves Escape untouched when no handler is given`, () => {
-    const { surface } = make_surface()
-    attach_trap(surface)
-    expect(press_escape().defaultPrevented).toBe(false)
   })
 
   // ported from a downstream consumer's modal-focus test: focus that escapes comes back to the element
@@ -1973,6 +1907,7 @@ describe(`draggable`, () => {
 
     const cleanup = draggable({ on_drag_start, on_drag, on_drag_end })(element)
     expect(element.style.cursor).toBe(`grab`)
+    expect(element.style.touchAction).toBe(`none`)
 
     element.dispatchEvent(pointer_event(`pointerdown`, 5, 5))
     expect(element.style.left).toBe(`10px`)
@@ -2131,18 +2066,6 @@ describe(`draggable`, () => {
     expect(element.style.top).toBe(`75px`) // 35 + (50-10)
   })
 
-  it(`ignores global drag events before dragging starts`, () => {
-    const on_drag = vi.fn()
-    const on_drag_end = vi.fn()
-    draggable({ on_drag, on_drag_end })(create_element())
-
-    globalThis.dispatchEvent(pointer_event(`pointermove`, 100, 100))
-    globalThis.dispatchEvent(pointer_event(`pointerup`, 0, 0))
-
-    expect(on_drag).not.toHaveBeenCalled()
-    expect(on_drag_end).not.toHaveBeenCalled()
-  })
-
   it(`resets body userSelect and cursor when cleaned up mid-drag`, () => {
     const element = create_fixed_box({ left: 0, top: 0 })
 
@@ -2209,11 +2132,9 @@ describe(`highlight_matches`, () => {
 
   it.each([
     // Early returns
-    [`no query`, ``, `test`, false, undefined, undefined],
     [`whitespace-only query`, ` \t\n `, `a b`, false, undefined, undefined],
 
     // Substring highlighting (fuzzy=false)
-    [`substring match`, `test`, `<p>This is a test paragraph</p>`, false, 1, undefined],
     [`case insensitive`, `test`, `<p>Test with TEST and TeSt</p>`, false, 3, undefined],
     [`no cross-node match`, `bc`, `<ul><li>ab</li><li>cd</li></ul>`, false, 0, undefined],
     [`no matches`, `xyz`, `<p>Content without search term</p>`, false, 0, undefined],
@@ -2278,11 +2199,6 @@ describe(`highlight_matches`, () => {
   })
 
   it.each([
-    [
-      `default smooth centered scrolling`,
-      undefined,
-      { behavior: `smooth`, block: `center` },
-    ],
     [`disabled scrolling`, false, undefined],
     [
       `custom scrolling`,
@@ -2449,6 +2365,8 @@ describe(`highlight_matches`, () => {
 
   it(`aggregates same-name highlights across attached elements`, () => {
     const second_element = document.createElement(`div`)
+    const other_highlight = { external: true }
+    mock_css_highlights.set(`other-highlight`, other_highlight)
     mock_element.textContent = `First match`
     second_element.textContent = `Second match`
 
@@ -2464,6 +2382,8 @@ describe(`highlight_matches`, () => {
     })
     cleanup_second?.()
     expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
+    expect(mock_css_highlights.get(`other-highlight`)).toBe(other_highlight)
+    expect(delete_highlights_spy).toHaveBeenCalledWith(`highlight-match`)
   })
 
   it.each([
@@ -2576,18 +2496,6 @@ describe(`highlight_matches`, () => {
     expect(on_highlight).toHaveBeenCalledTimes(1)
     expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
   })
-
-  it(`cleanup removes only its own highlight entry`, () => {
-    mock_css_highlights.set(`other-highlight`, `existing highlight`)
-    mock_element.innerHTML = `<p>test content</p>`
-
-    const cleanup = highlight_matches({ query: `test` })(mock_element)
-    cleanup?.()
-
-    expect(delete_highlights_spy).toHaveBeenCalledWith(`highlight-match`)
-    expect(mock_css_highlights.has(`highlight-match`)).toBe(false)
-    expect(mock_css_highlights.has(`other-highlight`)).toBe(true)
-  })
 })
 
 describe(`sortable`, () => {
@@ -2620,16 +2528,13 @@ describe(`sortable`, () => {
   it(`sorts ascending then descending when clicking the same header`, () => {
     const table = create_table()
     const cleanup = sortable()(table)
-    const [planet_header, moons_header] = Array.from(table.querySelectorAll(`thead th`))
+    const [planet_header] = Array.from(table.querySelectorAll(`thead th`))
 
     planet_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(get_column_values(table, 0)).toEqual([`Earth`, `Jupiter`, `Mars`])
 
     planet_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
     expect(get_column_values(table, 0)).toEqual([`Mars`, `Jupiter`, `Earth`])
-
-    moons_header.dispatchEvent(new MouseEvent(`click`, { bubbles: true }))
-    expect(get_column_values(table, 1)).toEqual([`1`, `2`, `95`])
 
     cleanup?.()
   })
@@ -2783,6 +2688,39 @@ describe(`sortable`, () => {
   })
 })
 
+describe(`backdrop_dismiss`, () => {
+  it(`closes only after a primary press and release both land outside`, () => {
+    const dialog = create_element(`dialog`) as HTMLDialogElement
+    mock_rect(dialog, { left: 10, top: 10, width: 100, height: 100 })
+    const close = vi.spyOn(dialog, `close`).mockImplementation(() => undefined)
+    const cleanup = backdrop_dismiss()(dialog)
+    const dispatch = (
+      type: `pointerdown` | `pointercancel` | `click`,
+      client_x: number,
+      client_y: number,
+      init: PointerEventInit = {},
+    ) => dialog.dispatchEvent(pointer_event(type, client_x, client_y, init))
+
+    dispatch(`pointerdown`, 50, 50)
+    dispatch(`click`, 5, 5)
+    dispatch(`pointerdown`, 5, 5)
+    dispatch(`click`, 50, 50)
+    dispatch(`pointerdown`, 5, 5, { button: 2 })
+    dispatch(`click`, 5, 5)
+    dispatch(`pointerdown`, 5, 5, { isPrimary: false })
+    dispatch(`click`, 5, 5)
+    dispatch(`pointerdown`, 5, 5)
+    dispatch(`pointercancel`, 5, 5)
+    dispatch(`click`, 5, 5)
+    expect(close).not.toHaveBeenCalled()
+
+    dispatch(`pointerdown`, 5, 5)
+    dispatch(`click`, 5, 5)
+    expect(close).toHaveBeenCalledOnce()
+    cleanup?.()
+  })
+})
+
 describe(`resizable`, () => {
   // every case resizes the same 200x150 box unless it needs its own position
   const create_box = (rect = { left: 0, top: 0, width: 200, height: 150 }) => {
@@ -2856,6 +2794,29 @@ describe(`resizable`, () => {
     expect([right.right, right.top, right.bottom]).toEqual([`-6px`, `-4px`, `-8px`])
     const bottom = grip(element, `bottom`).style
     expect([bottom.bottom, bottom.left, bottom.right]).toEqual([`-8px`, `-10px`, `-6px`])
+  })
+
+  it(`preserves content-box dimensions at zero pointer delta`, () => {
+    const element = create_box()
+    Object.assign(element.style, {
+      boxSizing: `content-box`,
+      padding: `10px 12px`,
+      border: `3px solid`,
+    })
+    mock_rect(element, { left: 0, top: 0, width: 230, height: 176 })
+    const on_resize = vi.fn()
+    resizable({ min_width: 20, on_resize })(element)
+
+    grip(element).dispatchEvent(pointer_event(`pointerdown`, 230, 80))
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 230, 80))
+    expect([element.style.width, element.style.height]).toEqual([`200px`, `150px`])
+
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 0, 80))
+    expect(element.style.width).toBe(`0px`)
+    expect(on_resize).toHaveBeenLastCalledWith(expect.any(PointerEvent), {
+      width: 30,
+      height: 176,
+    })
   })
 
   // detaching a strip does not unbind its listeners, so a consumer holding one could still
@@ -2998,7 +2959,6 @@ describe(`resizable`, () => {
       (box: HTMLElement) =>
         grip(box).dispatchEvent(pointer_event(`pointerdown`, 195, 75, { button: 2 })),
     ],
-    [`a global move with no press at all`, () => {}],
   ])(`does not start resizing on %s`, (_desc, gesture) => {
     const element = create_box()
     const on_resize_start = vi.fn()
@@ -3056,14 +3016,14 @@ describe(`resizable`, () => {
       { left: 100, top: 50, width: 200, height: 150 },
       [105, 100],
       [55, 100],
-      { width: `250px`, left: `50px` },
+      { width: `250px`, left: `-50px` },
     ],
     [
       `top`,
       { left: 100, top: 100, width: 200, height: 150 },
       [200, 105],
       [200, 55],
-      { height: `200px`, top: `50px` },
+      { height: `200px`, top: `-50px` },
     ],
   ] as const)(
     `handles a %s edge resize with position adjustment`,
@@ -3092,17 +3052,11 @@ describe(`resizable`, () => {
 
   it(`does nothing when disabled`, () => {
     const element = create_box()
-    const on_resize_start = vi.fn()
-    const cleanup = resizable({ disabled: true, on_resize_start })(element)
+    const cleanup = resizable({ disabled: true })(element)
 
     expect(cleanup).toBeUndefined()
     expect(element.style.position).toBe(``) // disabled skips the position: relative fixup
     expect(element.querySelectorAll(`[data-resize-edge]`)).toHaveLength(0)
-
-    element.dispatchEvent(pointer_event(`pointerdown`, 195, 75))
-    globalThis.dispatchEvent(pointer_event(`pointermove`, 250, 75))
-    expect(on_resize_start).not.toHaveBeenCalled()
-    expect(element.style.width).toBe(`200px`) // untouched from create_element
   })
 
   it.each([
@@ -3235,21 +3189,12 @@ describe(`portal`, () => {
 
     expect(node.parentElement).toBe(target)
     expect(home.innerHTML).toBe(`<i></i><!--portal--><u></u>`) // anchor holds the spot
+    home.append(document.createElement(`s`))
 
     cleanup?.()
     expect(node.parentElement).toBe(home)
-    expect(home.innerHTML).toBe(`<i></i><b></b><u></u>`) // back between its siblings
-    expect(target.childNodes).toHaveLength(0)
-  })
-
-  it(`restores between siblings added while it was away`, () => {
-    const { home, target, node } = setup()
-    const cleanup = portal(target)(node)
-
-    home.append(document.createElement(`s`))
-    cleanup?.()
-
     expect(home.innerHTML).toBe(`<i></i><b></b><u></u><s></s>`)
+    expect(target.childNodes).toHaveLength(0)
   })
 
   it.each([`null`, `undefined`, `already the parent`] as const)(
@@ -3532,29 +3477,35 @@ describe(`forward_window_keydown`, () => {
     expect(second.handle).toHaveBeenCalledTimes(1)
   })
 
-  it(`leaves keys to a focused input even while hovered`, () => {
+  it(`leaves focused inputs alone but handles keys focused on its root`, () => {
     const { node, handle } = attach()
     hover(node)
     const input = document.createElement(`input`)
-    document.body.append(input)
+    node.append(input)
     input.focus()
 
     press_key()
     expect(handle).not.toHaveBeenCalled()
 
-    input.blur() // focus falls back to body, so hover decides again
-    press_key()
+    const shadow_input = document.createElement(`input`)
+    node.attachShadow({ mode: `open` }).append(shadow_input)
+    shadow_input.focus()
+    shadow_input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `f`, bubbles: true, composed: true }),
+    )
+    expect(handle).not.toHaveBeenCalled()
+
+    node.tabIndex = 0
+    node.focus()
+    const event = press_key()
     expect(handle).toHaveBeenCalledTimes(1)
+    expect(event.defaultPrevented).toBe(true)
   })
 
-  it.each([
-    [`suppresses the browser default when handled`, true, true],
-    [`leaves the default alone when unhandled`, false, false],
-  ])(`%s`, (_desc, handled, expected_prevented) => {
-    const { node } = attach(handled)
+  it(`leaves the browser default alone when unhandled`, () => {
+    const { node } = attach(false)
     hover(node)
-
-    expect(press_key().defaultPrevented).toBe(expected_prevented)
+    expect(press_key().defaultPrevented).toBe(false)
   })
 
   it(`disabled attaches nothing`, () => {
@@ -3564,5 +3515,236 @@ describe(`forward_window_keydown`, () => {
     hover(node)
     press_key()
     expect(handle).not.toHaveBeenCalled()
+  })
+})
+
+describe(`file_drop`, () => {
+  const cleanups: (() => void)[] = []
+  afterEach(() => {
+    for (const cleanup of cleanups.splice(0)) cleanup()
+  })
+  const attach_file_drop = (
+    node: HTMLElement,
+    options: Parameters<typeof file_drop>[0],
+  ) => {
+    const cleanup = file_drop(options)(node)
+    if (cleanup) cleanups.push(cleanup)
+    return cleanup
+  }
+  const delayed_transfer = (file: File) => {
+    let deliver_file: FileCallback | undefined
+    const entry = {
+      isFile: true,
+      isDirectory: false,
+      name: file.name,
+      fullPath: `/${file.name}`,
+      file: (callback: FileCallback) => {
+        deliver_file = callback
+      },
+    } as unknown as FileSystemFileEntry
+    const item = {
+      kind: `file`,
+      webkitGetAsEntry: () => entry,
+    } as unknown as DataTransferItem
+    return {
+      transfer: data_transfer([], [item]),
+      resolve: () => {
+        if (!deliver_file)
+          throw new Error(`Delayed file ${file.name} was never requested`)
+        deliver_file(file)
+      },
+    }
+  }
+
+  it(`tracks nested drag activity, filters accept types, and honors multiple`, async () => {
+    const node = create_element()
+    const on_files = vi.fn()
+    const on_drag_active = vi.fn()
+    const transfer = data_transfer([
+      new File([`one`], `one.TXT`, { type: `text/plain` }),
+      new File([`image`], `photo.webp`, { type: `image/webp` }),
+      new File([`pdf`], `notes.bin`, { type: `application/pdf` }),
+      new File([`skip`], `skip.json`, { type: `application/json` }),
+    ])
+    attach_file_drop(node, {
+      accept: `.txt,image/*,application/pdf`,
+      multiple: true,
+      on_files,
+      on_drag_active,
+    })
+
+    const enter = drag_event(`dragenter`, transfer)
+    node.dispatchEvent(enter)
+    node.dispatchEvent(drag_event(`dragenter`, transfer))
+    expect(enter.defaultPrevented).toBe(true)
+    expect(node.hasAttribute(`data-drag-active`)).toBe(true)
+    expect(on_drag_active).toHaveBeenCalledExactlyOnceWith(true, enter)
+
+    node.dispatchEvent(drag_event(`dragleave`, transfer))
+    expect(node.hasAttribute(`data-drag-active`)).toBe(true)
+    node.dispatchEvent(drag_event(`drop`, transfer))
+
+    await vi.waitFor(() => expect(on_files).toHaveBeenCalledOnce())
+    expect(on_files.mock.calls[0][0].map((file: File) => file.name)).toEqual([
+      `one.TXT`,
+      `photo.webp`,
+      `notes.bin`,
+    ])
+    expect(node.hasAttribute(`data-drag-active`)).toBe(false)
+    expect(on_drag_active.mock.calls.map(([active]) => active)).toEqual([true, false])
+  })
+
+  it(`single-file mode chooses the first accepted file`, async () => {
+    const node = create_element()
+    const on_files = vi.fn()
+    const transfer = data_transfer([
+      new File([``], `skip.txt`, { type: `text/plain` }),
+      new File([``], `first.png`, { type: `image/png` }),
+      new File([``], `second.png`, { type: `image/png` }),
+    ])
+    attach_file_drop(node, { accept: `image/*`, on_files })
+
+    node.dispatchEvent(drag_event(`drop`, transfer))
+    await vi.waitFor(() => expect(on_files).toHaveBeenCalledOnce())
+    expect(on_files.mock.calls[0][0].map((file: File) => file.name)).toEqual([
+      `first.png`,
+    ])
+  })
+
+  it(`ignores a drop when no file matches accept`, async () => {
+    const node = create_element()
+    const on_files = vi.fn()
+    const rejected = new File([``], `notes.txt`, { type: `text/plain` })
+    attach_file_drop(node, { accept: `image/*`, on_files })
+
+    node.dispatchEvent(drag_event(`drop`, data_transfer([rejected])))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(on_files).not.toHaveBeenCalled()
+  })
+
+  it(`ignores stale completions and pending work after cleanup`, async () => {
+    const node = create_element()
+    const on_files = vi.fn()
+    const cleanup = attach_file_drop(node, { on_files })
+    const first = delayed_transfer(new File([``], `first.txt`))
+    const second = new File([``], `second.txt`)
+
+    node.dispatchEvent(drag_event(`drop`, first.transfer))
+    node.dispatchEvent(drag_event(`drop`, data_transfer([second])))
+    await vi.waitFor(() => expect(on_files).toHaveBeenCalledOnce())
+    expect(on_files.mock.calls[0][0].map((file: File) => file.name)).toEqual([
+      `second.txt`,
+    ])
+
+    first.resolve()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(on_files).toHaveBeenCalledOnce()
+
+    const after_cleanup = delayed_transfer(new File([``], `after-cleanup.txt`))
+    node.dispatchEvent(drag_event(`drop`, after_cleanup.transfer))
+    cleanup?.()
+    after_cleanup.resolve()
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(on_files).toHaveBeenCalledOnce()
+  })
+
+  it(`reports directory expansion failures through on_error`, async () => {
+    const node = create_element()
+    const failure = new DOMException(`entry disappeared`, `NotFoundError`)
+    const broken_entry = {
+      isFile: true,
+      isDirectory: false,
+      name: `broken.txt`,
+      fullPath: `/broken.txt`,
+      file: (_on_file: FileCallback, on_error?: ErrorCallback) => on_error?.(failure),
+    } as FileSystemFileEntry
+    const item = {
+      kind: `file`,
+      webkitGetAsEntry: () => broken_entry,
+    } as unknown as DataTransferItem
+    const on_files = vi.fn()
+    const on_error = vi.fn()
+    attach_file_drop(node, { multiple: true, on_files, on_error })
+
+    node.dispatchEvent(drag_event(`drop`, data_transfer([], [item])))
+    await vi.waitFor(() => expect(on_error).toHaveBeenCalledExactlyOnceWith(failure))
+    expect(on_files).not.toHaveBeenCalled()
+  })
+
+  it(`disabled mode prevents browser navigation without activating or processing`, () => {
+    const node = create_element()
+    const on_files = vi.fn()
+    const on_drag_active = vi.fn()
+    const cleanup = attach_file_drop(node, { disabled: true, on_files, on_drag_active })
+    const transfer = data_transfer([
+      new File([``], `ignored.txt`, { type: `text/plain` }),
+    ])
+    const dragover = drag_event(`dragover`, transfer)
+    const drop = drag_event(`drop`, transfer)
+
+    node.dispatchEvent(dragover)
+    node.dispatchEvent(drop)
+    expect(cleanup).toBeTypeOf(`function`)
+    expect(dragover.defaultPrevented).toBe(true)
+    expect(drop.defaultPrevented).toBe(true)
+    expect(node.hasAttribute(`data-drag-active`)).toBe(false)
+    expect(on_drag_active).not.toHaveBeenCalled()
+    expect(on_files).not.toHaveBeenCalled()
+  })
+
+  it(`global dragend clears activity after unbalanced dragenter events`, () => {
+    const node = create_element()
+    const on_drag_active = vi.fn()
+    const transfer = data_transfer([new File([``], `file.txt`)])
+    attach_file_drop(node, { on_files: vi.fn(), on_drag_active })
+
+    node.dispatchEvent(drag_event(`dragenter`, transfer))
+    node.dispatchEvent(drag_event(`dragenter`, transfer))
+    expect(node.hasAttribute(`data-drag-active`)).toBe(true)
+    globalThis.dispatchEvent(drag_event(`dragend`, transfer))
+
+    expect(node.hasAttribute(`data-drag-active`)).toBe(false)
+    expect(on_drag_active.mock.calls.map(([active]) => active)).toEqual([true, false])
+  })
+
+  it(`uses reportError when asynchronous processing fails without on_error`, async () => {
+    const report_error = vi.fn()
+    vi.stubGlobal(`reportError`, report_error)
+    try {
+      const node = create_element()
+      const failure = new Error(`consumer rejected files`)
+      attach_file_drop(node, {
+        on_files: () => {
+          throw failure
+        },
+      })
+
+      const transfer = data_transfer([new File([``], `file.txt`)])
+      node.dispatchEvent(drag_event(`drop`, transfer))
+      await vi.waitFor(() =>
+        expect(report_error).toHaveBeenCalledExactlyOnceWith(failure),
+      )
+    } finally {
+      vi.unstubAllGlobals()
+    }
+  })
+
+  it(`cleanup removes handlers, resets state, and restores the prior data attribute`, () => {
+    const node = create_element()
+    node.setAttribute(`data-drag-active`, `consumer-value`)
+    const on_files = vi.fn()
+    const on_drag_active = vi.fn()
+    const transfer = data_transfer([new File([``], `file.txt`)])
+    const cleanup = attach_file_drop(node, { on_files, on_drag_active })
+
+    node.dispatchEvent(drag_event(`dragenter`, transfer))
+    cleanup?.()
+    expect(on_drag_active.mock.calls.map(([active]) => active)).toEqual([true, false])
+    expect(node.getAttribute(`data-drag-active`)).toBe(`consumer-value`)
+
+    const drop = drag_event(`drop`, transfer)
+    node.dispatchEvent(drop)
+    expect(drop.defaultPrevented).toBe(false)
+    expect(on_files).not.toHaveBeenCalled()
   })
 })

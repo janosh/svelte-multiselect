@@ -1,4 +1,5 @@
-import { type CollapseMode, type OpenChangeHandler, Toc } from '$lib'
+import Toc from '$lib/Toc.svelte'
+import type { CollapseMode, OpenChangeHandler } from '$lib/types'
 import type { ComponentProps } from 'svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import {
@@ -285,11 +286,11 @@ describe(`Toc`, () => {
     expect(doc_query(`aside.toc li > a`).getAttribute(`href`)).toBe(`#real`)
   })
 
-  test(`autoIds assigns unique heading ids and link hrefs`, async () => {
+  test(`autoIds shares Unicode slugs and -1 duplicate suffixes`, async () => {
     set_body(`
-      <div id="intro"></div>
-      <h2>Intro!</h2>
-      <h2>Intro?</h2>
+      <div id="déjà-vu"></div>
+      <h2>Déjà vu!</h2>
+      <h2>Déjà vu?</h2>
       <h3 id="custom-id">Custom</h3>
     `)
 
@@ -298,15 +299,28 @@ describe(`Toc`, () => {
 
     const headings = document.querySelectorAll<HTMLHeadingElement>(`body > :is(h2, h3)`)
     expect([...headings].map((heading) => heading.id)).toEqual([
-      `intro-2`,
-      `intro-3`,
+      `déjà-vu-1`,
+      `déjà-vu-2`,
       `custom-id`,
     ])
     expect(
       [...document.querySelectorAll<HTMLAnchorElement>(`aside.toc li > a`)].map(
         (anchor) => anchor.getAttribute(`href`),
       ),
-    ).toEqual([`#intro-2`, `#intro-3`, `#custom-id`])
+    ).toEqual([`#d%C3%A9j%C3%A0-vu-1`, `#d%C3%A9j%C3%A0-vu-2`, `#custom-id`])
+  })
+
+  test(`autoIds avoids collisions with already suffixed slugs`, async () => {
+    set_body(`<h2>Foo</h2><h2>Foo</h2><h3>Foo 1</h3>`)
+
+    mount_toc()
+    await tick()
+
+    expect(
+      [...document.querySelectorAll<HTMLHeadingElement>(`body > :is(h2, h3)`)].map(
+        ({ id }) => id,
+      ),
+    ).toEqual([`foo`, `foo-1`, `foo-1-1`])
   })
 
   test(`autoIds=false leaves headings without ids or hrefs`, async () => {

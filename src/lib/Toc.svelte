@@ -10,7 +10,8 @@
     SlugifyHeading,
     TocHeadingData,
   } from './types'
-  import { get_heading_visibility, slugify_heading_text, unique_id } from './toc-utils'
+  import { slugify_heading, unique_heading_id } from './heading-anchors'
+  import { get_heading_visibility } from './toc-utils'
 
   let {
     activeHeading = $bindable(null),
@@ -44,7 +45,7 @@
     warnOnEmpty = false,
     collapseSubheadings = false,
     slugifyHeading = (node: HTMLHeadingElement, idx: number) =>
-      slugify_heading_text(node.textContent ?? ``) || `heading-${idx + 1}`,
+      slugify_heading(node.textContent ?? ``) || `heading-${idx + 1}`,
     blurParams = { duration: 200 },
     openTocIcon,
     titleSnippet,
@@ -149,9 +150,7 @@
   }
 
   // helper to immediately set active heading and track scroll target
-  function set_scroll_target(node: HTMLHeadingElement, idx = headings.indexOf(node)) {
-    // only proceed if heading exists in array (could be removed between click and handler)
-    if (idx < 0) return
+  function set_scroll_target(node: HTMLHeadingElement, idx: number) {
     activeHeading = node
     activeTocLi = tocItems[idx]
     scroll_target = node
@@ -371,9 +370,8 @@
     if (!autoIds) return data
 
     const used_ids = get_used_ids()
-    const id = unique_id(data.id || slugifyHeading(heading, idx), used_ids)
+    const id = unique_heading_id(data.id || slugifyHeading(heading, idx), used_ids)
     heading.id = id
-    used_ids.add(id)
     return { ...data, id }
   }
 
@@ -387,9 +385,7 @@
     let used_ids: Set<string> | undefined
     const get_used_ids = () =>
       (used_ids ??= new Set(
-        Array.from(document.querySelectorAll<HTMLElement>(`[id]`), ({ id }) => id).filter(
-          Boolean,
-        ),
+        Array.from(document.querySelectorAll<HTMLElement>(`[id]`), ({ id }) => id),
       ))
     const heading_entries: { data: TocHeadingData; heading: HTMLHeadingElement }[] = []
     for (const [idx, heading] of (queried_headings ?? []).entries()) {
@@ -848,7 +844,6 @@
   :where(aside.toc > nav > .toc-title) {
     margin-top: var(--toc-title-margin-top, 0);
   }
-
   aside.toc.mobile {
     position: fixed;
     bottom: var(--toc-mobile-bottom, 1em);

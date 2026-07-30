@@ -33,6 +33,9 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `ContextMenu`      | Right-click menu anchored to the pointer, with arrow-key navigation                     | [docs](https://janosh.github.io/svelte-widgets/popover#contextmenu)          |
 | `ConfirmDialog`    | Promise-based dialog queue, so two racing prompts can't share one answer                | [docs](https://janosh.github.io/svelte-widgets/dialogs)                      |
 | `DraggablePane`    | Floating panel you can drag by its header, resize and reset to its anchor               | [docs](https://janosh.github.io/svelte-widgets/draggable-pane)               |
+| `Sheet`            | Portalled edge panel with backdrop dismissal and focus restoration                      | [docs](https://janosh.github.io/svelte-widgets/patterns#sheet)               |
+| `Tabs`             | Controlled ARIA tabs with automatic or manual keyboard activation                       | [docs](https://janosh.github.io/svelte-widgets/patterns#tabs)                |
+| `Accordion`        | Single or multi-open disclosure group with snippet-rendered content                     | [docs](https://janosh.github.io/svelte-widgets/patterns#accordion)           |
 | `Toast`            | Notification queue with priorities, dedupe and pause-on-hover                           | [docs](https://janosh.github.io/svelte-widgets/toast)                        |
 | `Nav`              | Navigation bar with dropdowns, pinning and active-route styling                         | [docs](https://janosh.github.io/svelte-widgets/nav)                          |
 | `Toc`              | Sticky table of contents that finds and tracks its own headings                         | [docs](https://janosh.github.io/svelte-widgets/toc)                          |
@@ -54,15 +57,11 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `LiteYouTubeEmbed` | YouTube poster that only loads the player iframe once clicked                           | [docs](https://janosh.github.io/svelte-widgets/site-chrome#liteyoutubeembed) |
 | `Wiggle`           | Spring-animated shake wrapper                                                           | [docs](https://janosh.github.io/svelte-widgets/wiggle)                       |
 
-Thirteen [attachments](https://janosh.github.io/svelte-widgets/attachments) ship alongside
-them and work on any element. Twelve come from `svelte-widgets/attachments`:
-`click_outside`, `float`, `focus_trap`, `hotkey`, `tooltip`, `draggable`, `resizable`,
-`sortable`, `highlight_matches`, `portal`, `contrast_color` and `forward_window_keydown`.
-The thirteenth, `heading_anchors`, has its own `svelte-widgets/heading-anchors` subpath.
+Fifteen [attachments](https://janosh.github.io/svelte-widgets/attachments) ship alongside them and work on any element. Fourteen come from `svelte-widgets/attachments`: `backdrop_dismiss`, `click_outside`, `contrast_color`, `draggable`, `file_drop`, `float`, `focus_trap`, `forward_window_keydown`, `highlight_matches`, `hotkey`, `portal`, `resizable`, `sortable` and `tooltip`. The fifteenth, `heading_anchors`, has its own `svelte-widgets/heading-anchors` subpath. `dismiss_on_outside_press` is the lower-level multi-surface primitive behind `click_outside`.
 
 ```svelte
 <script>
-  import { CommandMenu, MultiSelect, Popover, Toc } from 'svelte-widgets'
+  import { CommandMenu, MultiSelect, Popover, Tabs, Toc } from 'svelte-widgets'
 </script>
 ```
 
@@ -97,10 +96,7 @@ This package was called `svelte-multiselect` up to v11. Swap it out:
 npm uninstall svelte-multiselect && npm install -D svelte-widgets
 ```
 
-Then rewrite the imports. Matching on the opening quote (all three kinds) keeps prose and
-GitHub URLs untouched, and covers every subpath (`/attachments`, `/utils`, `/types`,
-`/heading-anchors`, `/live-examples`) along with the bare import. It skips `.md`
-deliberately: in markdown a backtick-quoted mention is usually prose, not an import.
+Then rewrite the imports. Matching on the opening quote (all three kinds) keeps prose and GitHub URLs untouched, and covers every subpath along with the bare import. It skips `.md` deliberately: in markdown a backtick-quoted mention is usually prose, not an import.
 
 ```sh
 find src -type f \( -name '*.svelte' -o -name '*.ts' -o -name '*.js' \) -exec perl -pi -e "s{(['\"\`])svelte-multiselect}{\$1svelte-widgets}g" {} +
@@ -117,7 +113,7 @@ here, so the same swap applies with `import { Toc } from 'svelte-widgets'` and
 
 ## 📦 &thinsp; Subpath exports
 
-Attachments and utilities are also available as subpath imports:
+Components have direct `.svelte` entry points, and headless/build-time APIs have focused subpaths:
 
 ```ts
 import {
@@ -134,15 +130,37 @@ import { compute_position, fuzzy_match, get_label } from 'svelte-widgets/utils'
 import { heading_anchors } from 'svelte-widgets/heading-anchors'
 ```
 
-For `$…$` and `$$…$$` math in mdsvex, place the two halves of `katex_preprocess()` around mdsvex so markdown never sees the rendered HTML:
+| Subpath                             | API                                                        |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `/attachments`                      | Element attachments and dismissal primitives               |
+| `/clipboard`                        | Clipboard feedback state                                   |
+| `/dialogs`                          | Queued choice, confirmation and prompt requests            |
+| `/file-drop`                        | Directory expansion and accept filtering                   |
+| `/fullscreen`                       | Shared fullscreen state                                    |
+| `/heading-anchors`                  | Heading ID preprocessor, slugger and anchor attachment     |
+| `/icons`                            | Dynamic icon registry                                      |
+| `/katex`                            | KaTeX before/after preprocessor pair                       |
+| `/live-examples`                    | mdsvex live-example transform, Vite plugin and highlighter |
+| `/live-examples/create-highlighter` | Lightweight custom grammar highlighter factory             |
+| `/print`                            | Element printing                                           |
+| `/text-search`                      | Text ranges, highlighting and search-jump helpers          |
+| `/theme`                            | Headless light/dark/system state                           |
+| `/toast-queue`                      | Toast reducer and reactive store                           |
+| `/types`                            | Shared component/action types                              |
+| `/utils`                            | Positioning, fuzzy matching, hotkeys and general helpers   |
+| `/vite-config`                      | This repository's Vite Plus configuration helper           |
+
+For `$…$` and `$$…$$` math in mdsvex, run `katex_preprocess()` before and after mdsvex so markdown never sees the rendered HTML, then `heading_ids()` last:
 
 ```ts
 import { mdsvex } from 'mdsvex'
+import { heading_ids } from 'svelte-widgets/heading-anchors'
 import { katex_preprocess } from 'svelte-widgets/katex'
 
-const katex = katex_preprocess()
+const { before: katex_before, after: katex_after } = katex_preprocess()
+
 export default {
-  preprocess: [katex.before, mdsvex({ extensions: [`.md`] }), katex.after],
+  preprocess: [katex_before, mdsvex({ extensions: [`.md`] }), katex_after, heading_ids()],
 }
 ```
 

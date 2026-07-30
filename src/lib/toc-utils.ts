@@ -1,24 +1,3 @@
-export const slugify_heading_text = (text: string): string =>
-  text
-    .normalize(`NFKD`)
-    .replaceAll(/[\u0300-\u036F]/g, ``)
-    .toLowerCase()
-    .replaceAll(/[^a-z0-9]+/g, `-`)
-    .replaceAll(/^-+|-+$/g, ``)
-
-export function unique_id(base_id: string, used_ids: Set<string>): string {
-  const base = base_id || `section`
-  let id = base
-  let suffix = 2
-
-  while (used_ids.has(id)) {
-    id = `${base}-${suffix}`
-    suffix += 1
-  }
-
-  return id
-}
-
 export function get_heading_visibility(
   levels: readonly number[],
   active_idx: number | null,

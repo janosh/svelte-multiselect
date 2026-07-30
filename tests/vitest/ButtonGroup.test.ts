@@ -103,7 +103,9 @@ describe(`ButtonGroup`, () => {
       null,
       `aria-pressed`,
       `aria-checked`,
-      { multiple: true, selected: [`beta`] },
+      // `selected` is bindable and reassigned by the component, so it must stay mutable
+      // even though `as const` freezes the rest of the row
+      { multiple: true, selected: [`beta`] as string[] },
     ],
   ] as const)(
     `a %s announces state through %s`,
@@ -263,7 +265,11 @@ describe(`ButtonGroup`, () => {
     [`the checked option`, { selected: `gamma` }, `-1,-1,0`],
     [`the first option when nothing is selected`, {}, `0,-1,-1`],
     [`the first, when the selection matches no option`, { selected: `delta` }, `0,-1,-1`],
-    [`every button, in multi select`, { multiple: true, selected: [`beta`] }, `,,`],
+    [
+      `every button, in multi select`,
+      { multiple: true, selected: [`beta`] as string[] },
+      `,,`,
+    ],
   ] as const)(`the tab stop sits on %s`, (_desc, mode, expected) => {
     const buttons = mount_group({ options: letters, ...mode })
 

@@ -88,6 +88,17 @@ test(`the exports map keeps the wildcard component subpath`, () => {
   expect(component_subpaths).toEqual([`./*.svelte`])
 })
 
+test(`every non-component subpath appears in the readme export table`, () => {
+  const subpaths = Object.keys(pkg_exports)
+    .filter((subpath) => subpath !== `.` && subpath !== `./*.svelte`)
+    .map((subpath) => subpath.replace(`./`, `/`).replace(`*`, `<Name>`))
+  const documented = [...readme.matchAll(/^\|\s+`(?<subpath>\/[^`]+)`\s+\|/gmu)].flatMap(
+    (match) => match.groups?.subpath ?? [],
+  )
+
+  expect(documented.toSorted()).toEqual(subpaths.toSorted())
+})
+
 test(`every exported component appears in the readme component table`, () => {
   const components = Object.keys(lib).filter((name) => /^[A-Z]/u.test(name))
   expect(components.length).toBeGreaterThan(15)

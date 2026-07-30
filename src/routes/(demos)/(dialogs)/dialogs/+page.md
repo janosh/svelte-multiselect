@@ -18,13 +18,12 @@ Two details carry their weight:
 - **`dismiss_id` decides what Escape means.** A dismissal resolves with that id, never with
   the accented choice, so a stray keypress is never read as consent.
 
-Choices are arbitrary in number. `ask_confirm(message, title, confirm_label = 'OK')` is the
-two-button shorthand and resolves to a boolean.
+Choices are arbitrary in number. `ask_confirm(body, title, confirm_label = 'OK')` is the two-button shorthand and resolves to a boolean. A body can be text or a trusted Svelte snippet. `ask_prompt(body, title, options)` adds a text field, returns `string | null` and keeps the dialog open when its validator returns an error message.
 
 ```svelte example id="confirm-dialog-demo"
 <script lang="ts">
   import ConfirmDialog from '$lib/ConfirmDialog.svelte'
-  import { ask_confirm, request_choice } from '$lib/dialogs.svelte'
+  import { ask_confirm, ask_prompt, request_choice } from '$lib/dialogs.svelte'
 
   let answers = $state<string[]>([])
   const record = (answer: string) => (answers = [answer, ...answers].slice(0, 5))
@@ -47,13 +46,38 @@ two-button shorthand and resolves to a boolean.
     )
     record(`request_choice resolved ${answer}`)
   }
+
+  const ask_name = async () => {
+    const name = await ask_prompt(`Choose a display name.`, `Profile`, {
+      input_label: `Display name`,
+      placeholder: `Ada`,
+      validate: (value) =>
+        value.trim().length < 2 ? `Enter at least two characters` : undefined,
+    })
+    record(`ask_prompt resolved ${name ?? `cancelled`}`)
+  }
+
+  const ask_rich = async () => {
+    const ok = await ask_confirm(
+      { kind: `snippet`, snippet: rich_body },
+      `Publish package`,
+      `Publish`,
+    )
+    record(`rich ask_confirm resolved ${ok}`)
+  }
 </script>
+
+{#snippet rich_body()}
+  <p>Publish <strong>svelte-widgets</strong> with the current changelog?</p>
+{/snippet}
 
 <ConfirmDialog />
 
 <div style="display: flex; gap: 6pt; flex-wrap: wrap">
   <button type="button" onclick={ask_delete}>Ask to delete</button>
   <button type="button" onclick={ask_quit}>Ask to quit</button>
+  <button type="button" onclick={ask_name}>Ask for a name</button>
+  <button type="button" onclick={ask_rich}>Ask with rich body</button>
   <button
     type="button"
     onclick={() => {
