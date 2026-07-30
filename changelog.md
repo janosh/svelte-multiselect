@@ -1,5 +1,12 @@
 # Changelog
 
+## [v1.2.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.2.0)
+
+> 30 July 2026
+
+- Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync
+- Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML
+
 ## [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
 
 > 27 July 2026
