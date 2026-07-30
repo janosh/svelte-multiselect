@@ -1,6 +1,6 @@
 # Changelog
 
-## svelte-widgets [v1.3.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.3.0)
+## [v1.3.0](https://github.com/janosh/svelte-widgets/compare/v1.2.0...v1.3.0)
 
 > 30 July 2026
 
@@ -9,12 +9,17 @@
 - Add hover/focus triggers and open/close delays to `Popover`
 - Add rich snippet bodies and validated `ask_prompt()` requests to the queued dialog API
 - Make text search match NFC/NFD-equivalent Unicode and skip hidden form-control text
-- Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync
-- Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML
 - **Breaking:** Unify build-time heading IDs, runtime heading anchors and `Toc` on the same Unicode-preserving slugger and collision allocator, and make heading parsing tolerate `>` inside quoted attributes while ignoring comments and code/script/style containers. This changes generated IDs containing punctuation or non-ASCII text and changes duplicate suffixes from the old `Toc` slugger
 - Document every headless subpath and attachment, including the lower-level backdrop and outside-press dismissal primitives
 
-## svelte-widgets [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
+## [v1.2.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.2.0)
+
+> 30 July 2026
+
+- Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync
+- Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML
+
+## [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
 
 > 27 July 2026
 
@@ -39,7 +44,7 @@
 - Fix `MultiSelect`, `Masonry`, `Popover`, `ContextMenu`, `LiteYouTubeEmbed` and `Nav` rendering `class="[object Object]"` when handed a class. Svelte types the attribute as a `ClassValue`, so an array or a `{ active: true }` object is legal, but these interpolated it into a string. They pass it to Svelte's own clsx pass now
 - Fix `Masonry` silently dropping its virtualization when a consumer passes `onscroll`: the prop spread sat after the component's own handler and replaced it, leaving the rendered window frozen at the top of the list however far down the user scrolled. `LiteYouTubeEmbed` had the mirror image, spreading first and so discarding a consumer's `onclick`. Both chain the two handlers now
 
-## svelte-widgets [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
+## [v1.0.0](https://github.com/janosh/svelte-widgets/compare/v11.8.0...v1.0.0)
 
 > 27 July 2026
 
