@@ -117,6 +117,27 @@ describe(`Accordion`, () => {
     expect(on_change).toHaveBeenLastCalledWith([`gamma`])
   })
 
+  // An uncontrolled accordion falls back to the empty shape for its mode, and a value
+  // whose shape belongs to the other mode reads as nothing open rather than throwing.
+  test.each([
+    [`uncontrolled single`, {}, [true, true, true]],
+    [`uncontrolled multiple`, { multiple: true }, [true, true, true]],
+    [`array value in single mode`, { value: [`alpha`] }, [true, true, true]],
+    [
+      `single value in multiple mode`,
+      { multiple: true, value: `alpha` },
+      [true, true, true],
+    ],
+    [
+      `matching multiple value`,
+      { multiple: true, value: [`alpha`, `gamma`] },
+      [false, true, false],
+    ],
+  ] as [string, Partial<Props>, boolean[]][])(`%s`, (_name, props, hidden) => {
+    mount_accordion(props)
+    expect(panels().map((panel) => panel.hidden)).toEqual(hidden)
+  })
+
   test(`arrow, Home and End keys move focus across enabled headings`, () => {
     mount_accordion({ value: `alpha` })
     triggers()[0].focus()

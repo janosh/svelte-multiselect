@@ -2,7 +2,6 @@
   import type { Snippet } from 'svelte'
   import { untrack } from 'svelte'
   import type { SVGAttributes, SvelteHTMLElements } from 'svelte/elements'
-  import { SvelteSet } from 'svelte/reactivity'
   import { blur, type BlurParams } from 'svelte/transition'
   import type {
     CollapseMode,
@@ -385,7 +384,7 @@
     const invalid_selector = queried_headings === null
     let used_ids: Set<string> | undefined
     const get_used_ids = () =>
-      (used_ids ??= new SvelteSet(
+      (used_ids ??= new Set(
         Array.from(document.querySelectorAll<HTMLElement>(`[id]`), ({ id }) => id),
       ))
     const heading_entries: { data: TocHeadingData; heading: HTMLHeadingElement }[] = []

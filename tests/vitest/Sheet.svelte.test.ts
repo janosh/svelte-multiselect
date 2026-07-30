@@ -1,5 +1,5 @@
 import type { ComponentProps } from 'svelte'
-import { mount, tick, unmount } from 'svelte'
+import { flushSync, mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query, escape_key, pointer_event } from './index'
 import TestSheet from './TestSheet.svelte'
@@ -164,6 +164,22 @@ describe(`Sheet`, () => {
     expect(already_inert.getAttribute(`inert`)).toBe(`preserved`)
     expect(document.body.style.getPropertyValue(`overflow`)).toBe(`clip`)
     expect(document.body.style.getPropertyPriority(`overflow`)).toBe(`important`)
+  })
+
+  // The single shared inert/scroll-lock state cannot describe two open sheets, so the
+  // second one fails loudly rather than silently stealing the first one's restore data.
+  test(`a second concurrently open sheet throws`, async () => {
+    mount_sheet({ open: true })
+    const second = mount_sheet()
+    await tick()
+
+    expect(() => {
+      second.open = true
+      flushSync()
+    }).toThrow(/does not support nested or concurrent open sheets/u)
+
+    second.open = false
+    await tick()
   })
 
   test(`unmount removes the portal host and its listeners`, async () => {

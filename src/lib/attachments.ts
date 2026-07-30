@@ -117,12 +117,10 @@ export const file_drop =
         })
         .catch(async (error: unknown) => {
           if (!delivery_started && generation !== drop_generation) return
-          if (!on_error) {
-            globalThis.reportError(error)
-            return
-          }
+          // A consumer's handler failing must not itself become an unhandled rejection
           try {
-            await on_error(error)
+            if (on_error) await on_error(error)
+            else globalThis.reportError(error)
           } catch (reporting_error) {
             globalThis.reportError(reporting_error)
           }

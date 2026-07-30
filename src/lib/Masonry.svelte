@@ -65,9 +65,7 @@
     height?: number | string
   } = $props()
 
-  // svelte-check-rs 0.11.0 reads $props.id as possibly undefined though svelte's own
-  // types declare `id(): string`. Needed over a random uuid so the id survives hydration.
-  // @ts-expect-error svelte-check-rs 0.11.0 false positive
+  // Needed over a random uuid so the id survives hydration.
   const masonry_id = $props.id()
 
   // Height tracking for column balancing and virtualization

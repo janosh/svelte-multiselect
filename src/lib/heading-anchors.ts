@@ -1,8 +1,6 @@
 // Svelte preprocessor that adds IDs to headings at build time, so fragment navigation
 // (#heading-id) works on the initial SSR page load
 
-import { SvelteSet } from 'svelte/reactivity'
-
 // Match headings in two contexts:
 // 1. Start of line (for .svelte files with formatted HTML)
 // 2. After > (for mdsvex output where HTML is on single line, e.g., "</p> <h2>")
@@ -232,7 +230,7 @@ export function heading_ids() {
   return {
     name: `heading-ids`,
     markup({ content, filename }: { content: string; filename?: string }) {
-      const used_ids = new SvelteSet<string>()
+      const used_ids = new Set<string>()
       const insertions: TextInsertion[] = []
 
       const get_heading_id = (inner: string): string | null => {
@@ -245,17 +243,18 @@ export function heading_ids() {
         if (!base_id) return null
         return unique_heading_id(base_id, used_ids)
       }
-      const heading_matches: HeadingMatch[] = []
-      const seen_heading_starts = new SvelteSet<number>()
+      // Both regexes scan the whole file and can match the same heading, so key by
+      // source offset and keep the first hit.
+      const heading_matches = new Map<number, HeadingMatch>()
       const collect_heading_matches = (heading_regex: RegExp): void => {
         for (const match of content.matchAll(heading_regex)) {
           if (match.index === undefined || !match.groups) continue
           const { attrs, inner, tag } = match.groups
           if (attrs === undefined || inner === undefined || !tag) continue
-          const heading_start = match.index + match[0].indexOf(`<${tag}`)
-          if (seen_heading_starts.has(heading_start)) continue
-          seen_heading_starts.add(heading_start)
-          heading_matches.push({ attrs, inner, start: heading_start, tag })
+          const start = match.index + match[0].indexOf(`<${tag}`)
+          if (!heading_matches.has(start)) {
+            heading_matches.set(start, { attrs, inner, start, tag })
+          }
         }
       }
 
@@ -271,7 +270,7 @@ export function heading_ids() {
             tag: match.groups?.excluded_tag?.toLowerCase() ?? null,
           }),
         )
-        const ordered_heading_matches = heading_matches
+        const ordered_heading_matches = [...heading_matches.values()]
           .map((match) => ({
             ...match,
             excluded_by: excluded_ranges.find(
@@ -358,9 +357,11 @@ export const heading_anchors =
       ? () => Array.from(node.querySelectorAll(selector))
       : () => get_default_headings(node)
     const add_anchors = () => {
+      // Built at most once per pass and only when some heading actually lacks an ID,
+      // since scanning every [id] in the document is the expensive part.
       let used_ids: Set<string> | undefined
       const get_used_ids = () =>
-        (used_ids ??= new SvelteSet(
+        (used_ids ??= new Set(
           Array.from(document.querySelectorAll<HTMLElement>(`[id]`), ({ id }) => id),
         ))
       for (const heading of get_headings()) {

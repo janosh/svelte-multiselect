@@ -145,19 +145,26 @@ export const ask_confirm = async (
 export const ask_prompt = (
   body: DialogBodyInput,
   title: string,
-  options: PromptOptions = {},
+  {
+    initial_value = ``,
+    placeholder = ``,
+    input_label = `Response`,
+    confirm_label = `OK`,
+    cancel_label = `Cancel`,
+    validate,
+  }: PromptOptions = {},
 ): Promise<string | null> =>
   new Promise<string | null>((resolve) => {
     dialog_queue.push({
       kind: `prompt`,
       title,
       body: normalize_body(body),
-      initial_value: options.initial_value ?? ``,
-      placeholder: options.placeholder ?? ``,
-      input_label: options.input_label ?? `Response`,
-      confirm_label: options.confirm_label ?? `OK`,
-      cancel_label: options.cancel_label ?? `Cancel`,
-      validate: options.validate ?? null,
+      initial_value,
+      placeholder,
+      input_label,
+      confirm_label,
+      cancel_label,
+      validate: validate ?? null,
       resolve,
     })
   })

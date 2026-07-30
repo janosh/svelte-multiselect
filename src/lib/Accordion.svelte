@@ -30,37 +30,35 @@
 
   const component_id = $props.id()
   const base_id = `accordion-${component_id}`
-  const open_values = $derived(
-    multiple
-      ? Array.isArray(value)
-        ? value
-        : []
-      : Array.isArray(value) || value == null
-        ? []
-        : [value],
-  )
+  // `value` is an array in multiple mode and a single value or null otherwise. Anything
+  // that does not match the current mode reads as nothing open.
+  const open_values = $derived.by(() => {
+    if (Array.isArray(value)) return multiple ? value : []
+    return multiple || value == null ? [] : [value]
+  })
   const trigger_id = (item: AccordionItem<Value>) =>
     `${base_id}-trigger-${encodeURIComponent(item.value)}`
   const panel_id = (item: AccordionItem<Value>) =>
     `${base_id}-panel-${encodeURIComponent(item.value)}`
 
   function toggle(item: AccordionItem<Value>) {
+    const is_open = open_values.includes(item.value)
     const next_value: AccordionValue<Value> = multiple
-      ? open_values.includes(item.value)
+      ? is_open
         ? open_values.filter((entry) => entry !== item.value)
         : [...open_values, item.value]
-      : open_values.includes(item.value)
+      : is_open
         ? null
         : item.value
     value = next_value
     on_change?.(next_value)
   }
 
-  function handle_keydown(event: KeyboardEvent) {
+  function handle_keydown(event: KeyboardEvent & { currentTarget: HTMLElement }) {
     const root = event.currentTarget
-    const target = event.target
+    const { target } = event
+    // A nested accordion's own root claims its triggers, so the outer root ignores them.
     if (
-      !(root instanceof HTMLElement) ||
       !(target instanceof HTMLButtonElement) ||
       !target.classList.contains(`accordion-trigger`) ||
       target.closest(`.accordion`) !== root

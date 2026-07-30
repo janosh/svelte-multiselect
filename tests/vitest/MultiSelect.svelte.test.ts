@@ -2725,11 +2725,11 @@ test(`remove buttons lack default-icon class when removeIcon snippet is provided
 test(`errors to console when option is an object but has no label key`, () => {
   console.error = vi.fn()
 
-  // mount() doesn't enforce generic component prop types, so { foo: 42 } is accepted
-  // despite ObjectOption requiring label https://github.com/sveltejs/svelte/issues/17658
+  // ObjectOption requires a label, so the shape under test is only reachable past the
+  // type system — which is the point: the guard exists for untyped runtime data
   mount(MultiSelect, {
     target: document.body,
-    props: { options: [{ foo: 42 }] },
+    props: { options: [{ foo: 42 }] as never },
   })
 
   expect(console.error).toHaveBeenCalledWith(

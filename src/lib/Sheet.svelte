@@ -1,54 +1,35 @@
 <script module lang="ts">
   // Single-sheet modal chrome: one open sheet makes every other body child inert and
   // locks document scroll. Nested sheets are unsupported.
-  type ModalState = {
-    host: HTMLElement
-    inert_attributes: Map<Element, string | null>
-    overflow_value: string
-    overflow_priority: string
-  }
-
-  let modal_state: ModalState | undefined
-
-  const restore_inert = (element: Element, inert_attribute: string | null) => {
-    if (inert_attribute === null) element.removeAttribute(`inert`)
-    else element.setAttribute(`inert`, inert_attribute)
-  }
+  let sheet_is_open = false
 
   const activate_modal_sheet = (host: HTMLElement): (() => void) => {
-    if (modal_state) {
+    if (sheet_is_open) {
       throw new Error(
         `Sheet does not support nested or concurrent open sheets; close the open sheet first`,
       )
     }
 
-    const doc = host.ownerDocument
-    const body_style = doc.body.style
+    const { body } = host.ownerDocument
+    const body_style = body.style
     const inert_attributes = new Map<Element, string | null>()
-    for (const sibling of doc.body.children) {
+    for (const sibling of body.children) {
       if (sibling === host) continue
       inert_attributes.set(sibling, sibling.getAttribute(`inert`))
       sibling.setAttribute(`inert`, ``)
     }
-    modal_state = {
-      host,
-      inert_attributes,
-      overflow_value: body_style.getPropertyValue(`overflow`),
-      overflow_priority: body_style.getPropertyPriority(`overflow`),
-    }
+    const overflow_value = body_style.getPropertyValue(`overflow`)
+    const overflow_priority = body_style.getPropertyPriority(`overflow`)
+    sheet_is_open = true
     body_style.setProperty(`overflow`, `hidden`)
 
     return () => {
-      if (modal_state?.host !== host) return
-      for (const [element, inert_attribute] of modal_state.inert_attributes) {
-        restore_inert(element, inert_attribute)
+      for (const [element, inert_attribute] of inert_attributes) {
+        if (inert_attribute === null) element.removeAttribute(`inert`)
+        else element.setAttribute(`inert`, inert_attribute)
       }
-      doc.body.style.setProperty(
-        `overflow`,
-        modal_state.overflow_value,
-        modal_state.overflow_priority,
-      )
-      modal_state = undefined
+      body_style.setProperty(`overflow`, overflow_value, overflow_priority)
+      sheet_is_open = false
     }
   }
 </script>

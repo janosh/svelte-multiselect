@@ -60,8 +60,7 @@
     if (activation === `automatic`) select(item.value)
   }
 
-  function handle_keydown(event: KeyboardEvent) {
-    if (!(event.currentTarget instanceof HTMLElement)) return
+  function handle_keydown(event: KeyboardEvent & { currentTarget: HTMLElement }) {
     const { key } = event
     if (orientation === `horizontal` && (key === `ArrowUp` || key === `ArrowDown`)) return
     const buttons = [

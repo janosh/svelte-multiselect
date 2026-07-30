@@ -305,16 +305,24 @@ describe(`Popover`, () => {
     expect(trigger().getAttribute(`aria-expanded`)).toBe(`false`)
   })
 
+  // A torn-down component cannot render a surface either way, so asserting on the DOM
+  // alone cannot tell a cancelled timer from one that still fires. Watch the timer id.
   test(`unmount cancels a pending delayed open`, async () => {
     vi.useFakeTimers()
     mount_popover({ trigger_mode: `hover`, open_delay: 50 })
+    await tick()
+    const set_timeout = vi.spyOn(globalThis, `setTimeout`)
+    const clear_timeout = vi.spyOn(globalThis, `clearTimeout`)
     trigger().dispatchEvent(new MouseEvent(`mouseenter`))
+    const pending_timer = set_timeout.mock.results.at(-1)?.value as unknown
+    expect(pending_timer).toBeDefined()
 
     const app = mounted.pop()
     if (!app) throw new Error(`Popover test app was not mounted`)
     await unmount(app)
-    await advance_time(50)
+    expect(clear_timeout).toHaveBeenCalledWith(pending_timer)
 
+    await advance_time(50)
     expect(surface()).toBeNull()
   })
 

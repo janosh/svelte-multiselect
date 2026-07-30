@@ -76,16 +76,15 @@
   let focus_inside = false
   let focus_open_blocked = false
 
-  const clear_open_timeout = () => {
-    clearTimeout(open_timeout)
-    open_timeout = undefined
-  }
   const clear_close_timeout = () => {
     clearTimeout(close_timeout)
     close_timeout = undefined
   }
+  // Open and close are tracked separately: a pointer leaving while focus stays inside
+  // cancels only the pending close, leaving a pending open to still fire.
   const clear_timeouts = () => {
-    clear_open_timeout()
+    clearTimeout(open_timeout)
+    open_timeout = undefined
     clear_close_timeout()
   }
 
@@ -153,25 +152,17 @@
       'aria-haspopup': `dialog` as const,
       'aria-controls': surface_id,
     }
-    if (trigger_mode === `click`) {
-      // the press already went through click_outside, which counts the trigger as
-      // inside — so this click toggles rather than fighting a dismissal
-      return { ...aria, onclick: toggle_from_click }
-    }
-    const focus_handlers = {
-      onfocusin: enter_focus,
-      onfocusout: leave_focus,
-    }
-    if (trigger_mode === `focus`) return { ...aria, ...focus_handlers }
+    // the press already went through click_outside, which counts the trigger as
+    // inside — so this click toggles rather than fighting a dismissal
+    if (trigger_mode === `click`) return { ...aria, onclick: toggle_from_click }
+    const on_focus = { ...aria, onfocusin: enter_focus, onfocusout: leave_focus }
+    if (trigger_mode === `focus`) return on_focus
     // Hover also opens on focus so the same content remains keyboard-reachable.
-    return {
-      ...aria,
-      ...focus_handlers,
-      onmouseenter: enter_pointer,
-      onmouseleave: leave_pointer,
-    }
+    return { ...on_focus, onmouseenter: enter_pointer, onmouseleave: leave_pointer }
   })
 
+  // Returns (not calls) clear_timeouts, so Svelte runs it as the teardown and no
+  // pending open/close survives unmount.
   $effect(() => clear_timeouts)
 </script>
 
