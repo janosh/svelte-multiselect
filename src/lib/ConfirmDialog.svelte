@@ -147,11 +147,11 @@
   }
   .message,
   .body {
+    /* paths and directory lists are long and must not be clipped */
     overflow-wrap: anywhere;
   }
   .message {
     margin: 0;
-    /* paths and directory lists are long and must not be clipped */
     opacity: 0.8;
     font-size: 0.9em;
     line-height: 1.45;

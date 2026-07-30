@@ -13,8 +13,8 @@ import { doc_query, track } from './index'
 // is the dialog element itself.
 
 const mounted: Record<string, unknown>[] = []
-afterEach(() => {
-  for (const app of mounted.splice(0)) void unmount(app)
+afterEach(async () => {
+  await Promise.all(mounted.splice(0).map((app) => unmount(app)))
   dialog_queue.length = 0
 })
 

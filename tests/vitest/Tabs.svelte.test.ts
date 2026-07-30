@@ -192,6 +192,11 @@ describe(`Tabs`, () => {
     await tick()
     expect(props.value).toBe(`overview`)
     expect(on_change).toHaveBeenLastCalledWith(`overview`)
+
+    tabs()[2].focus()
+    props.items = [items[0]]
+    await tick()
+    expect(tabs()[0].tabIndex).toBe(0)
   })
 
   test(`tab and panel snippets receive item and selection state`, () => {

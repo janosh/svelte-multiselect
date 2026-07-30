@@ -10,8 +10,8 @@ describe(`Popover`, () => {
   // click_outside and focus_trap register document listeners that outlive
   // document.body.innerHTML = '', so unmount for real between cases
   const mounted: Record<string, unknown>[] = []
-  afterEach(() => {
-    for (const app of mounted.splice(0)) void unmount(app)
+  afterEach(async () => {
+    await Promise.all(mounted.splice(0).map((app) => unmount(app)))
     vi.useRealTimers()
   })
   const mount_popover = (extra: Partial<PopoverProps> = {}) => {
@@ -39,6 +39,7 @@ describe(`Popover`, () => {
 
     expect(trigger().getAttribute(`aria-expanded`)).toBe(`true`)
     expect(surface()?.id).toBe(trigger().getAttribute(`aria-controls`))
+    expect(surface()?.getAttribute(`aria-label`)).toBe(`Popover`)
     // focus_trap moved the keyboard into the surface
     expect(document.activeElement).toBe(doc_query(`[data-testid="popover-item"]`))
   })
@@ -46,7 +47,7 @@ describe(`Popover`, () => {
   // both live after the {...rest} spread, so a consumer prop cannot clobber the aria
   // linkage or drop the .popover class every bit of the styling hangs off
   test(`keeps its own id and class alongside a consumer's`, async () => {
-    mount_popover({ id: `consumer-id`, class: `consumer-class` })
+    mount_popover({ id: `consumer-id`, class: `consumer-class`, 'aria-label': `Actions` })
     trigger().click()
     await tick()
 
@@ -55,6 +56,7 @@ describe(`Popover`, () => {
     // svelte adds its own scoping hash, so check membership not the whole list
     expect(dialog.classList.contains(`popover`)).toBe(true)
     expect(dialog.classList.contains(`consumer-class`)).toBe(true)
+    expect(dialog.getAttribute(`aria-label`)).toBe(`Actions`)
   })
 
   // The wrapper around the trigger snippet is `display: contents` and measures 0x0,
@@ -258,7 +260,7 @@ describe(`Popover`, () => {
 
   test(`Escape from a focus popover closes without immediately reopening`, async () => {
     vi.useFakeTimers()
-    mount_popover({ trigger_mode: `focus` })
+    const props = mount_popover({ trigger_mode: `focus` })
     const outside = document.createElement(`button`)
     document.body.append(outside)
 
@@ -266,6 +268,7 @@ describe(`Popover`, () => {
     await advance_time(0)
     doc_query<HTMLButtonElement>(`[data-testid="popover-item"]`).focus()
 
+    props.trap_focus = false
     document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
     await advance_time(0)
     expect(surface()).toBeNull()
@@ -277,11 +280,13 @@ describe(`Popover`, () => {
     expect(surface()).not.toBeNull()
   })
 
-  test(`Escape outside a focus popover does not block its next focus-open`, async () => {
+  test(`focus can reopen after Escape without focus restoration`, async () => {
     vi.useFakeTimers()
-    mount_popover({ open: true, trigger_mode: `focus`, trap_focus: false })
+    const props = mount_popover({ open: true, trigger_mode: `focus`, trap_focus: false })
     await tick()
+    doc_query<HTMLButtonElement>(`[data-testid="popover-item"]`).focus()
 
+    props.trap_focus = true
     document.dispatchEvent(new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true }))
     await advance_time(0)
     expect(surface()).toBeNull()
@@ -379,6 +384,10 @@ describe(`Popover`, () => {
     trigger().dispatchEvent(new MouseEvent(`mouseenter`))
 
     props.trigger_mode = `click`
+    await tick()
+    trigger().click()
+    props.open = false
+    props.trigger_mode = `hover`
     await advance_time(50)
     expect(surface()).toBeNull()
   })

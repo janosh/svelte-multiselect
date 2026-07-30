@@ -20,8 +20,9 @@ const INLINE_SELECTOR =
   `ruby, s, samp, small, span, strong, sub, sup, time, u, var`
 
 // CSS-hidden content is not detected: getComputedStyle() per element would force
-// layout-sensitive traversal. The semantic hidden attribute is cheap to exclude.
-const NON_RENDERED_SELECTOR = `script, style, noscript, [hidden]`
+// layout-sensitive traversal. Ordinary hidden content is cheap to exclude, while
+// hidden="until-found" stays searchable like it does in the browser's find-in-page.
+const NON_RENDERED_SELECTOR = `script, style, noscript, [hidden]:not([hidden="until-found" i])`
 const FORM_CONTROL_SELECTOR = `textarea, select`
 
 // Same shape as the node_filter of the highlight_matches attachment: return one of
@@ -443,9 +444,8 @@ export const create_search_jump = (options: SearchJumpOptions = {}): SearchJump 
     marked = null
   }
   const clear = (): void => {
-    const was_active = timeout !== undefined
     clear_visual()
-    if (was_active) on_clear?.()
+    on_clear?.()
   }
   const start = (element: Element | null, opts: SearchJumpStartOptions = {}): void => {
     const { scroll_target = element, scroll = { block: `center`, inline: `nearest` } } =

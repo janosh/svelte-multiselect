@@ -371,15 +371,21 @@ export const resizable =
       let height = initial.height
       // grow from the far edge; shrink moves left/top so the opposite corner stays put
       if (active_edge === `right`) width = clamp(initial.width + dx, min_width, max_width)
-      else if (active_edge === `left`) {
+      else if (active_edge === `left`)
         width = clamp(initial.width - dx, min_width, max_width)
-        node.style.left = `${initial.left - (width - initial.width)}px`
-        repositioned.left = true
-      }
       if (active_edge === `bottom`) {
         height = clamp(initial.height + dy, min_height, max_height)
       } else if (active_edge === `top`) {
         height = clamp(initial.height - dy, min_height, max_height)
+      }
+      // Content-box padding and borders cannot shrink, so report their actual minimum.
+      width = Math.max(width, initial.width_inset)
+      height = Math.max(height, initial.height_inset)
+      if (active_edge === `left`) {
+        node.style.left = `${initial.left - (width - initial.width)}px`
+        repositioned.left = true
+      }
+      if (active_edge === `top`) {
         node.style.top = `${initial.top - (height - initial.height)}px`
         repositioned.top = true
       }
@@ -2177,7 +2183,10 @@ export const forward_window_keydown =
     const on_keydown = (event: Event) => {
       if (!hovered || !(event instanceof KeyboardEvent)) return
       // The root itself may be focusable so keyboard users can aim shortcuts at it.
-      // Any other focused element, including a descendant control, keeps its own keys.
+      // Any other focused element, including one retargeted through a shadow root, keeps
+      // its own keys. composedPath()[0] exposes that original shadow-DOM target.
+      const event_target = event.composedPath()[0]
+      if (event_target instanceof Element && event_target !== node) return
       const { activeElement, body } = node.ownerDocument
       if (activeElement && activeElement !== body && activeElement !== node) return
       if (handle(event)) event.preventDefault()

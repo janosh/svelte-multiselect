@@ -130,7 +130,7 @@ when the menu reopens.
   const actions = [
     {
       label: `Toggle theme`,
-      description: `Switch between light and dark mode`,
+      description: `Cycle light, system and dark modes`,
       metadata: [`Appearance`],
       badge: `Setting`,
       keywords: [`color scheme`],

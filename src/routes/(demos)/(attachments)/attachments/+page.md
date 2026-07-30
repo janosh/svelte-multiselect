@@ -696,7 +696,7 @@ which is how `ContextMenu` hangs a menu off the pointer.
 
 ### `file_drop`
 
-`file_drop` expands dropped directories, applies the same MIME/extension accept syntax as a file input and reports processing errors. A drop with no accepted files is ignored, and only the latest in-flight drop may complete.
+`file_drop` expands dropped directories, applies the same MIME/extension accept syntax as a file input and reports processing errors. A drop with no accepted files is ignored. A newer drop supersedes expansion work that has not reached `on_files`; a callback already running is left to finish.
 
 ```svelte example id="attachments-file-drop"
 <script lang="ts">
@@ -704,22 +704,29 @@ which is how `ContextMenu` hangs a menu off the pointer.
 
   let names = $state<string[]>([])
   let drag_active = $state(false)
+  const show_files = (files: File[]) => (names = files.map(({ name }) => name))
 </script>
 
-<div
+<label
   data-active={drag_active}
-  style="padding: 1rem; border: 1px dashed currentColor"
+  style="display: block; padding: 1rem; border: 1px dashed currentColor"
   {@attach file_drop({
     accept: `image/*,.pdf`,
     multiple: true,
     on_drag_active: (active) => (drag_active = active),
-    on_files: (files) => (names = files.map(({ name }) => name)),
+    on_files: show_files,
     on_error: (error) => (names = [`Error: ${String(error)}`]),
   })}
 >
-  {drag_active ? `Release files` : `Drop images or PDFs`} — {names.join(`, `) ||
-    `none yet`}
-</div>
+  {drag_active ? `Release files` : `Drop images or PDFs`}
+  <input
+    type="file"
+    accept="image/*,.pdf"
+    multiple
+    onchange={(event) => show_files(Array.from(event.currentTarget.files ?? []))}
+  />
+</label>
+<p aria-live="polite">{names.join(`, `) || `No files selected`}</p>
 ```
 
 ### `backdrop_dismiss`

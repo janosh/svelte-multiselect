@@ -10,7 +10,7 @@ const heading_pattern = String.raw`<(?<tag>h[1-6])(?<attrs>${heading_attrs})>(?<
 const heading_regex_line_start = new RegExp(String.raw`^\s*${heading_pattern}`, `gimu`)
 const heading_regex_after_tag = new RegExp(String.raw`(?<=>)\s*${heading_pattern}`, `giu`)
 const excluded_heading_content_regex = new RegExp(
-  String.raw`<!--[\s\S]*?-->|<(?<excluded_tag>pre|script|style)\b${heading_attrs}>[\s\S]*?<\/\k<excluded_tag>\s*>`,
+  String.raw`<!--[\s\S]*?-->|<(?<excluded_tag>pre|script|style|textarea|title)\b${heading_attrs}>[\s\S]*?<\/\k<excluded_tag>\s*>`,
   `giu`,
 )
 const heading_attr_regex =
@@ -319,16 +319,23 @@ function add_anchor_to_heading(
   get_used_ids: () => Set<string>,
   icon_svg: string,
 ): void {
-  if (heading.querySelector(`a[aria-hidden="true"]`)) return
+  const existing_anchor =
+    heading.querySelector<HTMLAnchorElement>(`a[aria-hidden="true"]`)
+  if (existing_anchor && !existing_anchor.hasAttribute(`data-heading-anchor`)) return
   if (!heading.id) {
     // Generate ID from text content (fallback for dynamic headings)
     const base_id = slugify_heading((heading.textContent ?? ``).trim())
     if (!base_id) return
     heading.id = unique_heading_id(base_id, get_used_ids())
   }
+  if (existing_anchor) {
+    existing_anchor.href = `#${heading.id}`
+    return
+  }
   const anchor = document.createElement(`a`)
   anchor.href = `#${heading.id}`
   anchor.setAttribute(`aria-hidden`, `true`)
+  anchor.toggleAttribute(`data-heading-anchor`)
   anchor.innerHTML = icon_svg
   heading.append(anchor)
 }
@@ -363,12 +370,17 @@ export const heading_anchors =
     }
     add_anchors()
 
-    // Watch for new headings - requery the container to respect nesting depth constraints
+    // Requery for new headings and keep existing links aligned with dynamic IDs.
     const observer = new MutationObserver(() => {
       add_anchors()
       observer.takeRecords()
     })
-    observer.observe(node, { childList: true, subtree: true })
+    observer.observe(node, {
+      attributeFilter: [`id`],
+      attributes: true,
+      childList: true,
+      subtree: true,
+    })
 
     return () => observer.disconnect()
   }

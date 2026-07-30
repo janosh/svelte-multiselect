@@ -138,6 +138,8 @@ describe(`heading_ids preprocessor`, () => {
     [`pre`, `<pre><h2>Code sample heading</h2></pre>`],
     [`script`, `<script>\nconst template = \`\n<h2>Template heading</h2>\n\`\n</script>`],
     [`style`, `<style>\n/*\n<h2>CSS example heading</h2>\n*/\n</style>`],
+    [`textarea`, `<textarea><h2>Textarea content</h2></textarea>`],
+    [`title`, `<title><h2>Title content</h2></title>`],
   ])(`skips headings inside %s`, (_label, excluded_content) => {
     const source = `${excluded_content}\n<h2>Visible heading</h2>`
     const result = preprocess(source, `Protected.svelte`)
@@ -193,13 +195,23 @@ describe(`heading_anchors attachment`, () => {
     expect(container.querySelector(tag)?.lastElementChild).toBe(anchor)
   })
 
-  it(`handles multiple headings and prevents duplicates`, () => {
+  it(`keeps managed anchors unique and synced without rewriting consumer links`, async () => {
     const container = create_container(
-      `<h1 id="title">Title</h1><h2 id="one">One</h2><h3 id="two">Two</h3>`,
+      `<h1 id="title">Title</h1><h2 id="one">One</h2><h3 id="two">Two</h3>` +
+        `<h4 id="consumer">Four<a aria-hidden="true" href="#custom">custom</a></h4>`,
     )
     heading_anchors()(container)
     heading_anchors()(container) // call twice to test duplicate prevention
-    expect(container.querySelectorAll(anchor_selector)).toHaveLength(3)
+    const [managed_heading, consumer_heading] = container.querySelectorAll(`h1, h4`)
+    managed_heading.id = `renamed`
+    consumer_heading.id = `changed`
+    await tick()
+
+    expect(
+      [...container.querySelectorAll(anchor_selector)].map((anchor) =>
+        anchor.getAttribute(`href`),
+      ),
+    ).toEqual([`#renamed`, `#one`, `#two`, `#custom`])
   })
 
   it.each([

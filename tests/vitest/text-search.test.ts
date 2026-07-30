@@ -192,11 +192,12 @@ describe(`search_text`, () => {
   })
 
   it.each([
-    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`],
-    [`select`, `<p>before<select><option>secret</option></select>after</p>`],
-    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`],
-  ])(`does not search %s text`, (_desc, html) => {
-    expect(search_text(render(html), `secret`).ranges).toEqual([])
+    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, 0],
+    [`select`, `<p>before<select><option>secret</option></select>after</p>`, 0],
+    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, 0],
+    [`hidden-until-found content`, `<p><span hidden="until-found">secret</span></p>`, 1],
+  ])(`handles %s`, (_desc, html, match_count) => {
+    expect(search_text(render(html), `secret`).ranges).toHaveLength(match_count)
   })
 
   it(`searches continuously across hidden content`, () => {
@@ -523,7 +524,7 @@ describe(`create_search_jump`, () => {
     expect(on_clear).toHaveBeenCalledTimes(1)
   })
 
-  it(`clear() removes the mark early and cancels the timeout`, () => {
+  it(`clear() always notifies, removes the mark early, and cancels the timeout`, () => {
     const root = render(`<p>first</p>`)
     const paragraph = doc_query(`p`)
     paragraph.scrollIntoView = vi.fn()
@@ -531,14 +532,14 @@ describe(`create_search_jump`, () => {
     const jump = create_search_jump({ class_name: `flash`, on_clear })
 
     jump.clear()
-    expect(on_clear).not.toHaveBeenCalled() // no flash had started
+    expect(on_clear).toHaveBeenCalledOnce()
     jump.start(paragraph)
     jump.clear()
     expect(paragraph.classList.contains(`flash`)).toBe(false)
-    expect(on_clear).toHaveBeenCalledTimes(1)
+    expect(on_clear).toHaveBeenCalledTimes(2)
 
     vi.advanceTimersByTime(5000)
-    expect(on_clear).toHaveBeenCalledTimes(1)
+    expect(on_clear).toHaveBeenCalledTimes(2)
     expect(root.querySelector(`.flash`)).toBeNull()
   })
 

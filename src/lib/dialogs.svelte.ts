@@ -96,6 +96,10 @@ export const request_choice = <Id extends string>(
 export const answer_dialog = (id: string): void => {
   const request = dialog_queue[0]
   if (request?.kind !== `choice`) return
+  if (!request.choices.some((choice) => choice.id === id))
+    throw new Error(
+      `Unknown dialog answer "${id}"; expected ${request.choices.map((choice) => choice.id).join(`, `)}`,
+    )
   dialog_queue.shift()
   request.resolve(id)
 }

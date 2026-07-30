@@ -101,13 +101,18 @@
   // only cancels the pending close. focus_trap then hands focus back to the trigger, and
   // in hover/focus modes that focusin would reopen what was just dismissed.
   let was_open = false
+  let trap_was_enabled = false
   $effect.pre(() => {
     if (was_open && !open) {
-      focus_open_blocked = focus_inside
+      focus_open_blocked =
+        focus_inside &&
+        trap_was_enabled &&
+        Boolean(trigger_wrapper?.querySelector(tabbable_selector))
       focus_inside = false
       pointer_inside = false
     }
     was_open = open
+    trap_was_enabled = trap_focus
   })
 
   const open_after_delay = () => {
@@ -153,9 +158,12 @@
     if (!focus_inside) focus_open_blocked = false
     close_if_interaction_ended()
   }
-  // No clear_timeouts() here: click mode never schedules one, and a timer left over from
-  // a mode switch already abandons itself when it sees trigger_mode changed.
-  const toggle_from_click = () => (open ? close(`trigger`) : (open = true))
+  // Cancel a delayed timer left by an earlier trigger mode.
+  const toggle_from_click = () => {
+    clear_timeouts()
+    if (open) close(`trigger`)
+    else open = true
+  }
 
   const trigger_props: TriggerProps = $derived.by(() => {
     const aria = {
@@ -187,6 +195,7 @@
     role="dialog"
     {...rest}
     id={surface_id}
+    aria-label={rest[`aria-label`] ?? (rest[`aria-labelledby`] ? undefined : `Popover`)}
     class={[`popover`, rest.class]}
     {@attach float({ anchor, placement, align, offset, padding, match_width, strategy })}
     {@attach click_outside({

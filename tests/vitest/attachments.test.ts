@@ -2804,12 +2804,19 @@ describe(`resizable`, () => {
       border: `3px solid`,
     })
     mock_rect(element, { left: 0, top: 0, width: 230, height: 176 })
-    resizable()(element)
+    const on_resize = vi.fn()
+    resizable({ min_width: 20, on_resize })(element)
 
     grip(element).dispatchEvent(pointer_event(`pointerdown`, 230, 80))
     globalThis.dispatchEvent(pointer_event(`pointermove`, 230, 80))
-
     expect([element.style.width, element.style.height]).toEqual([`200px`, `150px`])
+
+    globalThis.dispatchEvent(pointer_event(`pointermove`, 0, 80))
+    expect(element.style.width).toBe(`0px`)
+    expect(on_resize).toHaveBeenLastCalledWith(expect.any(PointerEvent), {
+      width: 30,
+      height: 176,
+    })
   })
 
   // detaching a strip does not unbind its listeners, so a consumer holding one could still
@@ -3478,6 +3485,14 @@ describe(`forward_window_keydown`, () => {
     input.focus()
 
     press_key()
+    expect(handle).not.toHaveBeenCalled()
+
+    const shadow_input = document.createElement(`input`)
+    node.attachShadow({ mode: `open` }).append(shadow_input)
+    shadow_input.focus()
+    shadow_input.dispatchEvent(
+      new KeyboardEvent(`keydown`, { key: `f`, bubbles: true, composed: true }),
+    )
     expect(handle).not.toHaveBeenCalled()
 
     node.tabIndex = 0

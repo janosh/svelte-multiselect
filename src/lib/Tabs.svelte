@@ -43,6 +43,10 @@
   // Manual activation lets focus move without selection. A writable derived follows an
   // externally controlled value again as soon as that value changes.
   let roving_value = $derived(selected_value)
+  $effect(() => {
+    if (!enabled_items.some((item) => item.value === roving_value))
+      roving_value = selected_value
+  })
 
   const tab_id = (item: TabItem<Value>) =>
     `${base_id}-tab-${encodeURIComponent(item.value)}`

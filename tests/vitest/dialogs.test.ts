@@ -37,6 +37,8 @@ test(`request_choice queues a request and resolves it with the answer`, async ()
   await flush()
   expect(answer.settled).toBe(false) // nothing resolves until someone answers
 
+  expect(() => answer_dialog(`maybe`)).toThrow(`Unknown dialog answer "maybe"`)
+  expect(dialog_queue).toHaveLength(1)
   answer_dialog(`yes`)
   await flush()
   expect([answer.settled, answer.value]).toEqual([true, `yes`])
