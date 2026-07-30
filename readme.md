@@ -134,6 +134,20 @@ import { compute_position, fuzzy_match, get_label } from 'svelte-widgets/utils'
 import { heading_anchors } from 'svelte-widgets/heading-anchors'
 ```
 
+For `$…$` and `$$…$$` math in mdsvex, place the two halves of `katex_preprocess()` around mdsvex so markdown never sees the rendered HTML:
+
+```ts
+import { mdsvex } from 'mdsvex'
+import { katex_preprocess } from 'svelte-widgets/katex'
+
+const katex = katex_preprocess()
+export default {
+  preprocess: [katex.before, mdsvex({ extensions: [`.md`] }), katex.after],
+}
+```
+
+Import `katex/dist/katex.min.css` once in the app so the generated markup is styled.
+
 `Popover` and `ContextMenu` compose these three: a surface positioned by `float`,
 dismissed by `click_outside` (on the press, so a right-click closes it too) and
 keyboard-scoped by `focus_trap`.
