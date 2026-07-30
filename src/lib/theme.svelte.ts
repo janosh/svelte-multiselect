@@ -10,7 +10,9 @@ export const THEME_MODE_CYCLE = {
 } as const
 
 export const system_preference = (): `light` | `dark` =>
-  matchMedia(`(prefers-color-scheme: dark)`).matches ? `dark` : `light`
+  typeof matchMedia !== `undefined` && matchMedia(`(prefers-color-scheme: dark)`).matches
+    ? `dark`
+    : `light`
 
 export const resolve_theme_mode = (): ThemeMode => {
   try {

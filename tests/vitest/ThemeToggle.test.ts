@@ -222,3 +222,8 @@ test.each([
   expect(system_preference()).toBe(expected)
   expect(match_media).toHaveBeenCalledWith(`(prefers-color-scheme: dark)`)
 })
+
+test(`system_preference defaults to light without matchMedia`, () => {
+  vi.stubGlobal(`matchMedia`, undefined)
+  expect(system_preference()).toBe(`light`)
+})

@@ -26,12 +26,13 @@ const DISPLAY_INLINE_MATH = /(?<![\\$])\$\$(?<tex>[^\r\n]+?)\$\$(?!\$)/gu
 const SLOT_OPEN = `\uE000`
 const SLOT_CLOSE = `\uE001`
 
-// Fences first (they wrap <script> in live examples), then script/style outside
-// fences, then inline code. Overlaps can nest placeholders, so restore expands
-// protected parts until no placeholders remain.
+// Fences first (they wrap <script> in live examples), then indented code,
+// script/style outside fences and inline code. Overlaps can nest placeholders,
+// so restore expands protected parts until no placeholders remain.
 const PROTECT_PATTERNS = [
-  /^ {0,3}(?<fence>`{3,})[^\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>`*[ \t]*\r?$/gmu,
-  /^ {0,3}(?<fence>~{3,})[^\r\n]*\r?\n[\s\S]*?^ {0,3}\k<fence>~*[ \t]*\r?$/gmu,
+  /^ {0,3}(?<fence>`{3,})[^\r\n]*(?:\r?\n(?:[\s\S]*?^ {0,3}\k<fence>`*[ \t]*\r?$|[\s\S]*(?![\s\S]))|(?![\s\S]))/gmu,
+  /^ {0,3}(?<fence>~{3,})[^\r\n]*(?:\r?\n(?:[\s\S]*?^ {0,3}\k<fence>~*[ \t]*\r?$|[\s\S]*(?![\s\S]))|(?![\s\S]))/gmu,
+  /^(?: {4,}|\t)[^\r\n]*(?:\r?\n|$)/gmu,
   /<!--[\s\S]*?-->/gu,
   /<(?<tag>script|style)\b[^>]*>[\s\S]*?<\/\k<tag>>/giu,
   /(?<ticks>`+)(?!`)[\s\S]*?(?<!`)\k<ticks>(?!`)/gu,
