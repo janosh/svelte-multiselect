@@ -726,7 +726,7 @@ which is how `ContextMenu` hangs a menu off the pointer.
 >
   {drag_active
     ? `Release files`
-    : `Drop ${allow_multiple ? `files` : `a file`} matching ${accepted_file_types}`}
+    : `Drop images or PDFs (${accepted_file_types}; multiple: ${allow_multiple})`}
   <input
     type="file"
     accept={accepted_file_types}

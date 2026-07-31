@@ -3762,14 +3762,20 @@ describe(`file_drop`, () => {
     expect(on_files.mock.calls.map(([, signal]) => signal.aborted)).toEqual([true, false])
   })
 
-  it(`uses reportError when on_error itself fails`, async () => {
+  const reporting_error = new Error(`error reporter failed`)
+  it.each([
+    [
+      `throws`,
+      () => {
+        throw reporting_error
+      },
+    ],
+    [`rejects`, () => Promise.reject(reporting_error)],
+  ])(`uses reportError when on_error %s`, async (_description, report_failure) => {
     const report_error = vi.fn()
     vi.stubGlobal(`reportError`, report_error)
     const initial_failure = new Error(`consumer rejected files`)
-    const reporting_error = new Error(`error reporter failed`)
-    const on_error = vi.fn(() => {
-      throw reporting_error
-    })
+    const on_error = vi.fn(report_failure)
     const { node } = attach_file_drop({
       on_files: vi.fn(() => {
         throw initial_failure

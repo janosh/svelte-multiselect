@@ -4,16 +4,18 @@
 
 > 30 July 2026
 
-- **Breaking:** `Sheet` now uses native `<dialog>` with nested top-layer stacking and browser-managed inertness; its bindable `surface` is `HTMLDialogElement | null` instead of `HTMLDivElement | null`, so migrate bound refs to `HTMLDialogElement` and replace div-only attributes with valid dialog attributes. Also add snippet-driven `Tabs` and single/multiple `Accordion` with optional non-collapsible single selection
-- Add `file_drop` attachment with accept filtering, directory expansion, explicit drop errors and cooperative `AbortSignal` cancellation for superseded callbacks
-- Add hover/focus triggers and delays to `Popover`, honor explicit popup IDs and keep `role`, `aria-haspopup` and mounted `aria-controls` references aligned; also add rich snippet bodies and validated `ask_prompt()` requests to queued dialogs
-- Add headless `apply_theme_mode`, `resolve_theme_mode`, `system_preference`, cross-tab `listen_theme_storage` and shared `theme` state under `svelte-widgets/theme`; apply the docs site's saved theme before first paint
-- Add `svelte-widgets/katex` with `katex_preprocess()` to protect rendered math from mdsvex
-- Move `draggable` / `resizable` to pointer events with capture/cancel handling and border-box resize strips
-- Harden `dismiss_on: 'release'`, add `backdrop_dismiss`, and expose dismissal controls through MultiSelect, Popover and DraggablePane
+- Add three accessible components: `Sheet` for portalled edge panels, snippet-driven `Tabs` with automatic/manual activation and `Accordion` with single/multiple expansion
+- Add `file_drop` attachment with accept filtering, directory expansion and explicit drop errors
+- Add hover/focus triggers and open/close delays to `Popover`
+- Add rich snippet bodies and validated `ask_prompt()` requests to the queued dialog API
+- Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync
+- Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML
+- Drive `draggable` / `resizable` with pointer events (`pointerId` filtering, `pointercancel`, `setPointerCapture`) so touch works and a gesture over an iframe or stolen focus still ends cleanly; resize hit-testing is now edge strips that cover the border box
+- Harden `dismiss_on: 'release'`: ignore clicks whose primary press started inside, and add `backdrop_dismiss` for modal `::backdrop` vs padding. Wire `dismiss_on` through MultiSelect / Popover / DraggablePane (pane defaults to `release`, plus an element-only `inside` prop)
 - Add `FullscreenButton` `placement="corner"` and optional per-page icons on `SubpageGrid`
 - Make text search match NFC/NFD-equivalent Unicode and skip hidden form-control text
-- **Breaking:** Unify heading IDs and `Toc` on a Unicode-preserving slugger and collision allocator, changing punctuation/non-ASCII IDs and duplicate suffixes; heading parsing now tolerates quoted `>`, ignores comments and code/script/style containers, and reserves static IDs on rendered elements before allocating generated heading IDs
+- **Breaking:** Unify build-time heading IDs, runtime heading anchors and `Toc` on the same Unicode-preserving slugger and collision allocator, and make heading parsing tolerate `>` inside quoted attributes while ignoring comments and code/script/style containers. This changes generated IDs containing punctuation or non-ASCII text and changes duplicate suffixes from the old `Toc` slugger
+- Document every headless subpath and attachment, including the lower-level backdrop and outside-press dismissal primitives
 
 ## [v1.1.0](https://github.com/janosh/svelte-widgets/compare/v1.0.0...v1.1.0)
 

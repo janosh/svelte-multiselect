@@ -142,7 +142,7 @@ describe(`Popover`, () => {
     expect(surface()).not.toBeNull()
     expect(on_close).not.toHaveBeenCalled()
 
-    document.body.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
+    document.body.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
     await tick()
     expect(surface()).toBeNull()
     expect(on_close).toHaveBeenCalledWith({ via: `pointer` })
