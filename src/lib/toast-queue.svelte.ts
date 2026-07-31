@@ -37,7 +37,7 @@ const priority_rank = <Priority extends string>(
 }
 
 // Soft cap on waiting toasts. Soft because an unactioned action is never dropped.
-export const DEFAULT_MAX_PENDING = 3
+const DEFAULT_MAX_PENDING = 3
 export const DEFAULT_TOAST_DURATION_MS = 5000
 // Where a request that names no priority lands, on any ladder that has this rung
 const DEFAULT_TOAST_PRIORITY = `info`
@@ -126,7 +126,7 @@ const is_expired = (toast: ToastItem<string>, now_ms: number): boolean =>
 
 // Bank the unspent part of a visibility budget. A toast pushed back into the queue has
 // not been read, so its clock stops until it is on screen again.
-export const pause_visibility_timeout = <Priority extends string>(
+const pause_visibility_timeout = <Priority extends string>(
   toast: ToastItem<Priority>,
   now_ms: number,
 ): ToastItem<Priority> =>
@@ -141,7 +141,7 @@ export const pause_visibility_timeout = <Priority extends string>(
             : Math.max(0, toast.expires_at_ms - now_ms),
       }
 
-export const start_visibility_timeout = <Priority extends string>(
+const start_visibility_timeout = <Priority extends string>(
   toast: ToastItem<Priority>,
   now_ms: number,
 ): ToastItem<Priority> =>

@@ -45,7 +45,8 @@ export interface FileDropOptions {
   accept?: string
   multiple?: boolean
   disabled?: boolean
-  on_files: (files: File[]) => unknown
+  // Aborted by a newer accepted drop or when the attachment is recreated/destroyed.
+  on_files: (files: File[], signal: AbortSignal) => unknown
   on_drag_active?: (active: boolean, event?: DragEvent) => void
   on_error?: (error: unknown) => unknown
 }
@@ -70,6 +71,7 @@ export const file_drop =
     let drag_depth = 0
     let drag_active = false
     let drop_generation = 0
+    let callback_controller: AbortController | undefined
 
     // items is an array-like DataTransferItemList, unlike the plain types array
     const carries_files = (data_transfer: DataTransfer): boolean =>
@@ -81,6 +83,10 @@ export const file_drop =
       drag_active = active
       node.toggleAttribute(`data-drag-active`, active)
       on_drag_active?.(active, event)
+    }
+    const reset_drag = (event?: DragEvent) => {
+      drag_depth = 0
+      set_drag_active(false, event)
     }
     const on_dragenter = (event: DragEvent) => {
       if (!event.dataTransfer || !carries_files(event.dataTransfer)) return
@@ -102,22 +108,27 @@ export const file_drop =
       const { dataTransfer: data_transfer } = event
       if (!data_transfer || !carries_files(data_transfer)) return
       event.preventDefault()
-      drag_depth = 0
-      set_drag_active(false, event)
+      reset_drag(event)
       if (disabled) return
 
       const generation = ++drop_generation
-      let delivery_started = false
+      let delivery_controller: AbortController | undefined
       void files_from_data_transfer(data_transfer)
         .then(async (dropped) => {
           if (generation !== drop_generation) return
           const accepted = filter_accepted_files(dropped, accept, multiple)
           if (accepted.length === 0) return
-          delivery_started = true
-          await on_files(accepted)
+          callback_controller?.abort()
+          if (generation !== drop_generation) return
+          delivery_controller = new AbortController()
+          callback_controller = delivery_controller
+          await on_files(accepted, delivery_controller.signal)
+          if (callback_controller === delivery_controller) callback_controller = undefined
         })
         .catch(async (error: unknown) => {
-          if (!delivery_started && generation !== drop_generation) return
+          if (callback_controller === delivery_controller) callback_controller = undefined
+          if (delivery_controller?.signal.aborted) return
+          if (!delivery_controller && generation !== drop_generation) return
           // A consumer's handler failing must not itself become an unhandled rejection
           try {
             if (on_error) await on_error(error)
@@ -127,24 +138,21 @@ export const file_drop =
           }
         })
     }
-    const on_dragend = (event: DragEvent) => {
-      drag_depth = 0
-      set_drag_active(false, event)
-    }
-
     const event_controller = new AbortController()
     node.addEventListener(`dragenter`, on_dragenter, { signal: event_controller.signal })
     node.addEventListener(`dragover`, on_dragover, { signal: event_controller.signal })
     node.addEventListener(`dragleave`, on_dragleave, { signal: event_controller.signal })
     node.addEventListener(`drop`, on_drop, { signal: event_controller.signal })
-    globalThis.addEventListener(`dragend`, on_dragend, {
+    globalThis.addEventListener(`dragend`, reset_drag, {
       signal: event_controller.signal,
     })
 
     return () => {
       drop_generation += 1
+      callback_controller?.abort()
+      callback_controller = undefined
       event_controller.abort()
-      if (drag_active) set_drag_active(false)
+      reset_drag()
       if (previous_drag_active === null) node.removeAttribute(`data-drag-active`)
       else node.setAttribute(`data-drag-active`, previous_drag_active)
     }
@@ -1476,32 +1484,34 @@ export const click_outside =
 
 // ::backdrop (and dialog padding) both target the dialog — only coordinates tell them
 // apart. Start must be outside too, or a selection dragged onto the backdrop dismisses.
-export const backdrop_dismiss = (): Attachment<HTMLDialogElement> => (node) => {
-  let press_outside = false
-  const is_outside_box = ({ target, clientX, clientY }: MouseEvent) => {
-    if (target !== node) return false
-    const { top, right, bottom, left } = node.getBoundingClientRect()
-    return clientX < left || clientX > right || clientY < top || clientY > bottom
+export const backdrop_dismiss =
+  (callback?: () => void): Attachment<HTMLDialogElement> =>
+  (node) => {
+    let press_outside = false
+    const is_outside_box = ({ target, clientX, clientY }: MouseEvent) => {
+      if (target !== node) return false
+      const { top, right, bottom, left } = node.getBoundingClientRect()
+      return clientX < left || clientX > right || clientY < top || clientY > bottom
+    }
+    // Same primary/cancel gating as dismiss_on_outside_press: a right-click or second finger
+    // must not leave a stale outside verdict for the next click.
+    const on_pointerdown = (event: PointerEvent) => {
+      press_outside = is_primary_press(event) && is_outside_box(event)
+    }
+    const forget_press = () => (press_outside = false)
+    const on_click = (event: MouseEvent) => {
+      if (press_outside && is_outside_box(event)) (callback ?? (() => node.close()))()
+      press_outside = false
+    }
+    node.addEventListener(`pointerdown`, on_pointerdown)
+    node.addEventListener(`pointercancel`, forget_press)
+    node.addEventListener(`click`, on_click)
+    return () => {
+      node.removeEventListener(`pointerdown`, on_pointerdown)
+      node.removeEventListener(`pointercancel`, forget_press)
+      node.removeEventListener(`click`, on_click)
+    }
   }
-  // Same primary/cancel gating as dismiss_on_outside_press: a right-click or second finger
-  // must not leave a stale outside verdict for the next click.
-  const on_pointerdown = (event: PointerEvent) => {
-    press_outside = is_primary_press(event) && is_outside_box(event)
-  }
-  const forget_press = () => (press_outside = false)
-  const on_click = (event: MouseEvent) => {
-    if (press_outside && is_outside_box(event)) node.close()
-    press_outside = false
-  }
-  node.addEventListener(`pointerdown`, on_pointerdown)
-  node.addEventListener(`pointercancel`, forget_press)
-  node.addEventListener(`click`, on_click)
-  return () => {
-    node.removeEventListener(`pointerdown`, on_pointerdown)
-    node.removeEventListener(`pointercancel`, forget_press)
-    node.removeEventListener(`click`, on_click)
-  }
-}
 
 export type AnchorRect = { top: number; left: number; bottom: number; right: number }
 

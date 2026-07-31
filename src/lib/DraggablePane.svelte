@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLButtonAttributes } from 'svelte/elements'
   import type { ResizableOptions } from './attachments'
   import { click_outside, draggable, resizable, tooltip } from './attachments'
   import Icon from './Icon.svelte'
@@ -45,7 +45,7 @@
     children: Snippet<[PaneState]>
     // Replaces the toggle button's content, for icons this library doesn't bundle
     toggle?: Snippet<[PaneState]>
-    toggle_props?: HTMLAttributes<HTMLButtonElement>
+    toggle_props?: Omit<HTMLButtonAttributes, `aria-expanded` | `type`>
     open_icon?: IconName
     closed_icon?: IconName
     // Sizing the bundled icon is the common case; reach for `toggle` only to replace it
@@ -53,7 +53,9 @@
     // Gap between the toggle button's bottom-right corner and the pane's
     offset?: { x?: number; y?: number }
     max_width?: string
-    pane_props?: HTMLAttributes<HTMLDivElement>
+    // `aria-label` is deliberately absent from the Omit: several panes on a page need
+    // distinct names. The rest describe the dialog itself and stay component-owned.
+    pane_props?: Omit<HTMLAttributes<HTMLDivElement>, `aria-modal` | `role`>
     // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
     dismiss_on?: `press` | `release`
@@ -87,16 +89,16 @@
     dragging,
   })
 
-  // empty list also disables the attachment below, so edges and disabled cannot drift
-  const edges_by_resize = {
+  // One mapping drives the attachment, its disabled state and the content gutters.
+  const edges_by_resize: Record<typeof resize, NonNullable<ResizableOptions[`edges`]>> = {
     both: [`right`, `bottom`],
     width: [`right`],
     height: [`bottom`],
     none: [],
-  } satisfies Record<typeof resize, NonNullable<ResizableOptions[`edges`]>>
+  }
   const resize_edges = $derived(edges_by_resize[resize])
-  const gutter = (side: `width` | `height`) =>
-    resize === `both` || resize === side ? `${resize_gutter_px}px` : null
+  const gutter = (edge: `right` | `bottom`) =>
+    resize_edges.includes(edge) ? `${resize_gutter_px}px` : null
 
   const close_pane = (via: CloseVia) => {
     show = false
@@ -220,8 +222,8 @@ aria-label sits before the spread, so a page with several panes renames them via
   style:top="{fallback_position.top}px"
   style:left="{fallback_position.left}px"
   style:display={show ? `grid` : `none`}
-  style:padding-right={gutter(`width`)}
-  style:padding-bottom={gutter(`height`)}
+  style:padding-right={gutter(`right`)}
+  style:padding-bottom={gutter(`bottom`)}
   class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
   class:pane-open={show}
   {@attach draggable({

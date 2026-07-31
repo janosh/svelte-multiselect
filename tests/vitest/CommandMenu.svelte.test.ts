@@ -428,7 +428,7 @@ test(`applies custom styles and props correctly`, async () => {
     actions: mock_actions,
     class: custom_class,
     placeholder: custom_placeholder,
-    dialog_style: custom_dialog_style,
+    dialog_props: { style: custom_dialog_style },
     liOptionStyle: custom_li_style,
   })
 

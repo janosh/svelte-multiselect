@@ -51,6 +51,7 @@ and Escape closes the innermost surface only.
 `escape={false}` and `trap_focus={false}` opt out of those behaviors,
 `strategy="absolute"` survives a transformed ancestor at the cost of tracking page
 scroll, and `match_width` sizes the surface to the trigger for dropdown-like menus.
+Set `role` to `menu`, `listbox`, `tree` or `grid` when appropriate; the trigger mirrors it in `aria-haspopup` and only sets `aria-controls` while the surface is mounted.
 
 Use `trigger_mode="hover"` or `trigger_mode="focus"` for non-click interactions. Hover mode also opens on focus, and `open_delay`/`close_delay` keep the surface stable while the pointer crosses from its trigger. Non-click modes default to a 150 ms close delay.
 

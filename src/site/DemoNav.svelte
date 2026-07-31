@@ -25,17 +25,13 @@
   for (const [route, label] of Object.entries(demo_labels)) {
     nav_labels[resolve_path(route)] = label
   }
-
-  const base_style = `max-width: var(--main-max-width); --nav-item-padding: 2pt 4pt; --nav-link-active-color: var(--accent); `
 </script>
 
 <Nav
   {...props}
   routes={prefixed_routes}
   {page}
-  style={base_style + (props.style ?? ``)}
-  menu_props={{ style: `gap: 10pt` }}
   labels={{ ...nav_labels, ...(props.labels ?? {}) }}
 >
-  <ThemeToggle style="margin-left: 6pt" />
+  <ThemeToggle />
 </Nav>

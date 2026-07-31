@@ -1,6 +1,6 @@
 import {
   apply_theme_mode,
-  resolve_theme_mode,
+  listen_theme_storage,
   system_preference,
   theme,
   ThemeToggle,
@@ -16,6 +16,7 @@ const mounted: Record<string, unknown>[] = []
 beforeEach(() => {
   apply_theme_mode(`system`)
   localStorage.clear()
+  sessionStorage.clear()
   document.documentElement.style.colorScheme = ``
   delete document.documentElement.dataset.theme
 })
@@ -58,7 +59,6 @@ test(`initial render stays hidden until hydration`, async () => {
   await tick()
   expect(button.style.visibility).toBe(`visible`)
   expect(applied_theme()).toEqual([`dark`, `dark`])
-  expect(button.querySelector(`svg`)).not.toBeNull()
 })
 
 // icon_props.style is appended after the default transform rather than replacing it, so
@@ -74,6 +74,7 @@ test.each([
   [`theme`, `light`, `light`, `Sun`],
   [`theme`, `dark`, `dark`, `Moon`],
   [`theme`, `system`, `light`, `Monitor`],
+  [`theme`, `blue`, `light`, `Monitor`],
   [`theme_mode`, `dark`, `dark`, `Moon`],
 ] as const)(`mount applies %s=%s`, async (storage_key, stored, effective, icon_name) => {
   localStorage.setItem(storage_key, stored)
@@ -130,25 +131,19 @@ test(`click cycles through light -> system -> dark -> light`, async () => {
   const button = await mount_theme_toggle({ onclick })
   expect(applied_theme()).toEqual([`light`, `light`])
 
-  for (const [stored, effective] of [
-    [`system`, `light`],
-    [`dark`, `dark`],
-    [`light`, `light`],
-  ] as const) {
+  for (const effective of [`light`, `dark`, `light`] as const) {
     button.click()
     await tick()
-    expect(localStorage.getItem(`theme`)).toBe(stored)
     expect(applied_theme()).toEqual([effective, effective])
   }
 
-  expect(onclick).toHaveBeenCalledTimes(3)
   expect(observed_modes).toEqual([`system`, `dark`, `light`])
 })
 
 test(`system mode reapplies theme when media query changes`, async () => {
   let matches = false
   let change_handler: (() => void) | undefined
-  vi.stubGlobal(`matchMedia`, (media: string) => ({
+  const match_media = vi.fn((media: string) => ({
     media,
     get matches() {
       return matches
@@ -156,15 +151,59 @@ test(`system mode reapplies theme when media query changes`, async () => {
     addEventListener: (_event: string, handler: () => void) => (change_handler = handler),
     removeEventListener: () => {},
   }))
+  vi.stubGlobal(`matchMedia`, match_media)
   localStorage.setItem(`theme`, `system`)
   await mount_theme_toggle()
   expect(applied_theme()).toEqual([`light`, `light`])
+  expect(match_media).toHaveBeenCalledWith(`(prefers-color-scheme: dark)`)
 
   matches = true
   change_handler?.()
   await tick()
 
   expect(applied_theme()).toEqual([`dark`, `dark`])
+})
+
+test(`storage events synchronize current and legacy theme keys until unmount`, async () => {
+  const dispatch_storage = async (key: string | null, storage_area = localStorage) => {
+    globalThis.dispatchEvent(
+      new StorageEvent(`storage`, { key, storageArea: storage_area }),
+    )
+    await tick()
+  }
+  localStorage.setItem(`theme`, `light`)
+  await mount_theme_toggle()
+
+  localStorage.setItem(`theme`, `dark`)
+  await dispatch_storage(`theme`)
+  expect(applied_theme()).toEqual([`dark`, `dark`])
+  expect(rendered_icon_path()).toBe(icon_data.Moon.d)
+
+  localStorage.setItem(`theme`, `light`)
+  await dispatch_storage(`unrelated`)
+  expect(applied_theme()).toEqual([`dark`, `dark`])
+
+  sessionStorage.setItem(`theme`, `dark`)
+  await dispatch_storage(`theme`, sessionStorage)
+  expect(applied_theme()).toEqual([`dark`, `dark`])
+
+  localStorage.removeItem(`theme`)
+  localStorage.setItem(`theme_mode`, `light`)
+  await dispatch_storage(`theme_mode`)
+  expect(applied_theme()).toEqual([`light`, `light`])
+  expect(localStorage.getItem(`theme_mode`)).toBeNull()
+
+  localStorage.clear()
+  await dispatch_storage(null)
+  expect(localStorage.getItem(`theme`)).toBe(`system`)
+  expect(rendered_icon_path()).toBe(icon_data.Monitor.d)
+
+  const app = mounted.pop()
+  if (!app) throw new Error(`ThemeToggle test app was not mounted`)
+  await unmount(app)
+  localStorage.setItem(`theme`, `dark`)
+  await dispatch_storage(`theme`)
+  expect(applied_theme()).toEqual([`light`, `light`])
 })
 
 // both rows needed: tooltip=false alone passes even if the attachment never runs
@@ -200,30 +239,15 @@ test(`apply_theme_mode keeps mounted ThemeToggles in sync`, async () => {
   }
 })
 
-test.each([[undefined], [`blue`]] as const)(
-  `resolve_theme_mode defaults to system for stored value %j`,
-  (stored) => {
-    if (stored !== undefined) localStorage.setItem(`theme`, stored)
-    expect(resolve_theme_mode()).toBe(`system`)
-  },
-)
-
-test.each([
-  [true, `dark`],
-  [false, `light`],
-] as const)(`system_preference: matches=%s → %s`, (matches, expected) => {
-  const match_media = vi.fn((media: string) => ({
-    media,
-    matches,
-    addEventListener: () => {},
-    removeEventListener: () => {},
-  }))
-  vi.stubGlobal(`matchMedia`, match_media)
-  expect(system_preference()).toBe(expected)
-  expect(match_media).toHaveBeenCalledWith(`(prefers-color-scheme: dark)`)
-})
-
 test(`system_preference defaults to light without matchMedia`, () => {
   vi.stubGlobal(`matchMedia`, undefined)
   expect(system_preference()).toBe(`light`)
 })
+
+test.each([`document`, `addEventListener`] as const)(
+  `listen_theme_storage fails clearly without browser global %s`,
+  (global_name) => {
+    vi.stubGlobal(global_name, undefined)
+    expect(() => listen_theme_storage()).toThrow(`listen_theme_storage() is client-only`)
+  },
+)

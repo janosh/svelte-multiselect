@@ -149,17 +149,6 @@
     prev_scroll_target_distance = Infinity
   }
 
-  // helper to immediately set active heading and track scroll target
-  function set_scroll_target(node: HTMLHeadingElement, idx: number) {
-    activeHeading = node
-    activeTocLi = tocItems[idx]
-    scroll_target = node
-    prev_scroll_target_distance = Infinity
-    // clear any existing timeout and set a new fallback
-    if (scroll_target_timeout) clearTimeout(scroll_target_timeout)
-    scroll_target_timeout = setTimeout(clear_scroll_target, scroll_target_fallback_ms)
-  }
-
   function set_open(value: boolean, trigger: OpenChangeTrigger) {
     if ((last_reported_open ?? open) === value) return
     last_reported_open = value
@@ -284,7 +273,12 @@
 
   function activate_heading(node: HTMLHeadingElement, idx = headings.indexOf(node)) {
     if (idx === -1) return
-    set_scroll_target(node, idx)
+    activeHeading = node
+    activeTocLi = tocItems[idx]
+    scroll_target = node
+    prev_scroll_target_distance = Infinity
+    if (scroll_target_timeout) clearTimeout(scroll_target_timeout)
+    scroll_target_timeout = setTimeout(clear_scroll_target, scroll_target_fallback_ms)
     node.scrollIntoView?.({ behavior: scrollBehavior, block: `start` })
 
     // use the raw id as the URL fragment so it matches the DOM id exactly. encodeURIComponent

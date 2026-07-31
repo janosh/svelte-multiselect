@@ -88,11 +88,15 @@ test(`toggle all button opens/closes all, tracks label, and handles partial/nati
     title,
     content: `content of ${title}`,
   }))
-  mount_files({ files, toggle_all_btn_title: `toggle all`, button_props: { onclick } })
+  const button_props = { onclick }
+  // Omit'd from the prop type; a bare button inside a form submits it on every toggle
+  Reflect.set(button_props, `type`, `submit`)
+  mount_files({ files, toggle_all_btn_title: `toggle all`, button_props })
   await tick()
 
   const details = [...document.querySelectorAll(`details`)]
-  const btn = doc_query(`button[title='toggle all']`)
+  const btn = doc_query<HTMLButtonElement>(`button[title='toggle all']`)
+  expect(btn.type).toBe(`button`)
   const open_states = () => details.map((el) => el.open)
 
   expect(open_states()).toEqual([false, false, false]) // initially closed

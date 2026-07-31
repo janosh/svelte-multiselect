@@ -1,6 +1,10 @@
 <script lang="ts">
   // adapted from https://npmjs.com/package/svelte-lite-youtube-embed
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type {
+    HTMLAttributes,
+    HTMLButtonAttributes,
+    HTMLIframeAttributes,
+  } from 'svelte/elements'
   import { chain_handlers } from './utils'
 
   // Shows the poster image behind a play button and only creates the iframe on the
@@ -11,6 +15,8 @@
     iframe_title = `YouTube video player`,
     nocookie = true, // youtube-nocookie.com doesn't set tracking cookies until playback
     player_params = { autoplay: 1 },
+    play_btn_props,
+    iframe_props,
     ...rest
   }: Omit<HTMLAttributes<HTMLDivElement>, `children`> & {
     video_id: string
@@ -21,6 +27,8 @@
     // YouTube player params verbatim, e.g. start, list, autoplay. replaces the default,
     // so pass autoplay: 1 along with anything else to keep playing on click
     player_params?: Record<string, string | number>
+    play_btn_props?: Omit<HTMLButtonAttributes, `aria-label` | `inert` | `type`>
+    iframe_props?: Omit<HTMLIframeAttributes, `src` | `srcdoc` | `title`>
   } = $props()
 
   // $derived is writable: the click below sets it true, a new video_id snaps it back
@@ -62,15 +70,23 @@
     </picture>
   {/key}
   <!-- opacity alone would leave the active play button in the tab order and a11y tree -->
-  <button type="button" class="play-btn" aria-label={play_label} inert={activated}
+  <button
+    {...play_btn_props}
+    type="button"
+    class={[`play-btn`, play_btn_props?.class]}
+    aria-label={play_label}
+    inert={activated}
   ></button>
   {#if activated}
+    <!-- iframe_props can tune loading and policy but cannot replace the player document. -->
     <iframe
       width="560"
       height="315"
-      title={iframe_title}
       allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
       allowfullscreen
+      {...iframe_props}
+      srcdoc={undefined}
+      title={iframe_title}
       src={iframe_src}
     ></iframe>
   {/if}

@@ -1,36 +1,28 @@
-import { mount, tick, unmount } from 'svelte'
-import { expect, test, vi } from 'vite-plus/test'
 import CodeExample from '$lib/CodeExample.svelte'
-import CopyButton from '$lib/CopyButton.svelte'
+import { mount, tick } from 'svelte'
+import { assert, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
 const [id, src] = [`uniq-id`, `some code`]
 
-const mount_global_copy_button = (props: Record<string, unknown> = {}) =>
-  mount(CopyButton, {
-    target: document.body,
-    props: { global: true, ...props },
-  })
-
-const append_code_block = (text: string) => {
-  const pre = document.createElement(`pre`)
-  const code = document.createElement(`code`)
-  code.textContent = text
-  pre.append(code)
-  document.body.append(pre)
-  return pre
-}
-
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const onclick = vi.fn()
-  const props = { meta: { collapsible: true, id }, src, button_props: { onclick } }
+  const button_props = { onclick }
+  // Omit'd from the prop type; a bare button inside a form would submit it on toggle
+  Reflect.set(button_props, `type`, `submit`)
+  const props = {
+    id: `host-id`,
+    meta: { collapsible: true, id },
+    src,
+    button_props,
+  }
   mount(CodeExample, { target: document.body, props })
 
   // collapsible defaults code_above to true, which orders the <pre> above the example
   expect(doc_query(`div.code-example#${id}`).classList.contains(`code-above`)).toBe(true)
-  expect(document.querySelector(`nav`)).not.toBeNull()
 
   const toggle_button = doc_query<HTMLButtonElement>(`nav > button`)
+  expect(toggle_button.type).toBe(`button`)
   expect(toggle_button.textContent).toContain(`View code`)
   const pre_closed = doc_query<HTMLPreElement>(`pre`)
   expect(pre_closed.classList.contains(`open`)).toBe(false)
@@ -45,6 +37,25 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   expect(doc_query(`pre.open > code`).textContent).toBe(src)
   expect(toggle_button.textContent).toContain(`Close`)
   expect(onclick).toHaveBeenCalledOnce()
+})
+
+test(`forwards host attributes when metadata does not override the ID`, () => {
+  mount(CodeExample, {
+    target: document.body,
+    props: {
+      id: `host-id`,
+      class: `host-class`,
+      style: `max-width: 40rem`,
+      'data-testid': `example`,
+    },
+  })
+  const host = doc_query(`div.code-example`)
+  expect([host.id, host.classList.contains(`host-class`), host.style.maxWidth]).toEqual([
+    `host-id`,
+    true,
+    `40rem`,
+  ])
+  expect(host.dataset.testid).toBe(`example`)
 })
 
 // both links always render and toggle via display, so a lost `cond` ships a dead link
@@ -67,11 +78,16 @@ test.each([
 ] as const)(
   `renders the %s link in nav and hides the unconfigured one`,
   (shown_title, meta, expected_href) => {
-    mount(CodeExample, { target: document.body, props: { meta, src } })
+    // one bag is shared by every external link, so an href on it could only point the
+    // repl and github icons at the same URL. `title` stays overridable by design.
+    const link_props = { class: `consumer-link` }
+    Reflect.set(link_props, `href`, `/hijacked`)
+    mount(CodeExample, { target: document.body, props: { meta, src, link_props } })
     const link = (title: string) =>
       doc_query<HTMLAnchorElement>(`nav a[title="${title}"]`)
 
     expect(link(shown_title).getAttribute(`href`)).toBe(expected_href)
+    expect([...link(shown_title).classList]).toContain(`consumer-link`)
     expect(link(shown_title).getAttribute(`target`)).toBe(`_blank`)
     expect(link(shown_title).getAttribute(`rel`)).toBe(`noreferrer`)
     expect(link(shown_title).style.display).toBe(`inline-block`)
@@ -81,15 +97,9 @@ test.each([
   },
 )
 
-// github: true must link to the file serving the current page; the mdsvex transform
-// emits that path as meta.filename, so it must work as fallback when meta.file is unset.
-// a string github is instead an explicit blob path, needing no file/filename at all
+// github: true + meta.file is covered by the GitHub link case above; these cover the
+// mdsvex filename fallback and an explicit string blob path
 test.each([
-  [
-    `true + meta.file`,
-    { github: true, file: `src/lib/CodeExample.svelte` },
-    `src/lib/CodeExample.svelte`,
-  ],
   [
     `true + meta.filename (set by mdsvex transform)`,
     { github: true, filename: `src/routes/(demos)/(attachments)/attachments/+page.md` },
@@ -105,48 +115,22 @@ test.each([
   expect(link.getAttribute(`href`)).toBe(`${repo}/blob/-/${expected_path}`)
 })
 
-test.each([`typescript`, `css`])(
-  `lang-label renders %s out of flow so it can't indent the first code line`,
-  (lang) => {
-    mount(CodeExample, { target: document.body, props: { src, meta: { lang } } })
-
-    const label = doc_query<HTMLSpanElement>(`.lang-label`)
-    expect(label.textContent).toBe(lang)
-    // pre is white-space: pre, so an in-flow label shifts the first code line right.
-    // absolute positioning takes it out of flow (regression guard, see CodeExample.svelte)
-    expect(getComputedStyle(label).position).toBe(`absolute`)
-  },
-)
-
-test(`lang-label is omitted when meta.lang is unset`, () => {
-  mount(CodeExample, { target: document.body, props: { src } })
-
-  expect(document.querySelector(`.lang-label`)).toBeNull()
-})
-
-test(`dynamically added pre > code elements get copy buttons applied`, async () => {
-  const copy_button_component = mount_global_copy_button()
-  const new_pre = append_code_block(`dynamically added code`)
-  await tick()
-
-  const copy_button = new_pre.querySelector(`button`)
-  expect(copy_button).toBeInstanceOf(HTMLButtonElement)
-  expect(copy_button?.style.position).toBe(`absolute`)
-  void unmount(copy_button_component)
-})
-
-test(`prevents duplicate copy buttons when as !== button`, async () => {
-  const copy_button_component = mount_global_copy_button({ as: `a` })
-  const pre = append_code_block(`test code`)
-  await tick()
-
-  const copy_buttons = pre.querySelectorAll(`a[data-sms-copy]`)
-  expect(copy_buttons).toHaveLength(1)
-
-  pre.setAttribute(`data-test`, `modified`)
-  await tick()
-
-  const copy_buttons_after = pre.querySelectorAll(`a[data-sms-copy]`)
-  expect(copy_buttons_after).toHaveLength(1)
-  void unmount(copy_button_component)
+test.each([
+  [`typescript`, `typescript`],
+  [undefined, null],
+] as const)(`lang-label for meta.lang=%j`, (lang, expected_text) => {
+  mount(CodeExample, {
+    target: document.body,
+    props: { src, meta: lang === undefined ? {} : { lang } },
+  })
+  const label = document.querySelector<HTMLSpanElement>(`.lang-label`)
+  if (expected_text === null) {
+    expect(label).toBeNull()
+    return
+  }
+  assert(label !== null)
+  expect(label.textContent).toBe(expected_text)
+  // pre is white-space: pre, so an in-flow label shifts the first code line right.
+  // absolute positioning takes it out of flow (regression guard, see CodeExample.svelte)
+  expect(getComputedStyle(label).position).toBe(`absolute`)
 })

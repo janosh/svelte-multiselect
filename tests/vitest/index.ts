@@ -71,12 +71,17 @@ export const drag_event = (type: string, transfer: DataTransfer): DragEvent => {
   return event
 }
 
-// cancelable so callers can assert whether a handler swallowed the key
-export const escape_key = () =>
-  new KeyboardEvent(`keydown`, { key: `Escape`, bubbles: true, cancelable: true })
+const key_event = (key: string, init: KeyboardEventInit = {}) =>
+  new KeyboardEvent(`keydown`, { bubbles: true, cancelable: true, ...init, key })
 
-export const press_key = (target: EventTarget, key: string) => {
-  const event = new KeyboardEvent(`keydown`, { key, bubbles: true, cancelable: true })
+// cancelable so callers can assert whether a handler swallowed the key
+export const escape_key = (init: KeyboardEventInit = {}) => key_event(`Escape`, init)
+export const press_key = (
+  target: EventTarget,
+  key: string,
+  init: KeyboardEventInit = {},
+) => {
+  const event = key_event(key, init)
   target.dispatchEvent(event)
   return event
 }

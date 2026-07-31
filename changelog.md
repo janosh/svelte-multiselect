@@ -4,14 +4,14 @@
 
 > 30 July 2026
 
-- Add three accessible components: `Sheet` for portalled edge panels, snippet-driven `Tabs` with automatic/manual activation and `Accordion` with single/multiple expansion
-- Add `file_drop` attachment with accept filtering, directory expansion and explicit drop errors
+- Add three accessible components: `Sheet` for portalled edge panels, snippet-driven `Tabs` with automatic/manual activation and `Accordion` with single/multiple expansion [`#436`](https://github.com/janosh/svelte-widgets/pull/436)
+- Add `file_drop` attachment with accept filtering, directory expansion and explicit drop errors [`#436`](https://github.com/janosh/svelte-widgets/pull/436)
 - Add hover/focus triggers and open/close delays to `Popover`
 - Add rich snippet bodies and validated `ask_prompt()` requests to the queued dialog API
-- Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync
-- Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML
-- Drive `draggable` / `resizable` with pointer events (`pointerId` filtering, `pointercancel`, `setPointerCapture`) so touch works and a gesture over an iframe or stolen focus still ends cleanly; resize hit-testing is now edge strips that cover the border box
-- Harden `dismiss_on: 'release'`: ignore clicks whose primary press started inside, and add `backdrop_dismiss` for modal `::backdrop` vs padding. Wire `dismiss_on` through MultiSelect / Popover / DraggablePane (pane defaults to `release`, plus an element-only `inside` prop)
+- Extract headless theme helpers (`apply_theme_mode`, `resolve_theme_mode`, `system_preference`, shared `theme` state) to `svelte-widgets/theme`, so CommandMenu / PageSearch actions can set the theme without duplicating ThemeToggle's localStorage + `data-theme` logic, and the toggle icon stays in sync [`#435`](https://github.com/janosh/svelte-widgets/pull/435)
+- Add `svelte-widgets/katex` with `katex_preprocess()`, a before/after preprocessor pair that hides rendered KaTeX behind collision-safe placeholders around mdsvex so markdown cannot mangle the math HTML [`#435`](https://github.com/janosh/svelte-widgets/pull/435)
+- Drive `draggable` / `resizable` with pointer events (`pointerId` filtering, `pointercancel`, `setPointerCapture`) so touch works and a gesture over an iframe or stolen focus still ends cleanly; resize hit-testing is now edge strips that cover the border box [`#434`](https://github.com/janosh/svelte-widgets/pull/434)
+- Harden `dismiss_on: 'release'`: ignore clicks whose primary press started inside, and add `backdrop_dismiss` for modal `::backdrop` vs padding. Wire `dismiss_on` through MultiSelect / Popover / DraggablePane (pane defaults to `release`, plus an element-only `inside` prop) [`#434`](https://github.com/janosh/svelte-widgets/pull/434)
 - Add `FullscreenButton` `placement="corner"` and optional per-page icons on `SubpageGrid`
 - Make text search match NFC/NFD-equivalent Unicode and skip hidden form-control text
 - **Breaking:** Unify build-time heading IDs, runtime heading anchors and `Toc` on the same Unicode-preserving slugger and collision allocator, and make heading parsing tolerate `>` inside quoted attributes while ignoring comments and code/script/style containers. This changes generated IDs containing punctuation or non-ASCII text and changes duplicate suffixes from the old `Toc` slugger
@@ -21,7 +21,7 @@
 
 > 27 July 2026
 
-- Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control, generalized from the hand-rolled ones those repos each grew), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed`
+- Add eight components consolidated from downstream repos: `ButtonGroup` (a segmented control, generalized from the hand-rolled ones those repos each grew), `Toast`, `ConfirmDialog`, `DraggablePane`, `FullscreenButton`, `Footer`, `ContributorList` and `LiteYouTubeEmbed` [`#433`](https://github.com/janosh/svelte-widgets/pull/433)
 - Add `portal`, `contrast_color` and `forward_window_keydown` attachments, bringing the total to thirteen
 - Add headless modules behind their own subpaths: `svelte-widgets/toast-queue`, `/dialogs`, `/fullscreen`, `/clipboard`, `/print`, `/file-drop` and `/text-search`, the last matching across inline markup where `highlight_matches` walks text nodes one at a time. It skips `script`, `style` and `noscript` so a find-in-page never steps onto text that renders nowhere, and treats text either side of one as continuous
 - Add shortcut rebinding for "customize shortcuts" UIs: `event_to_combo`, `normalize_combo` and `sanitize_shortcut_overrides` turn a keydown into a canonical combo and resolve collisions
@@ -47,7 +47,7 @@
 > 27 July 2026
 
 - Add `Popover` and `ContextMenu` components plus `float`, `focus_trap` and `hotkey` attachments, with Escape closing one layer at a time [`#431`](https://github.com/janosh/svelte-widgets/pull/431)
-- Absorb `svelte-toc` and `svelte-bricks`: `Toc` and `Masonry` ship here now, with their test suites and `svelte-widgets/Toc.svelte` / `svelte-widgets/Masonry.svelte` subpath exports
+- Absorb `svelte-toc` and `svelte-bricks`: `Toc` and `Masonry` ship here now, with their test suites and `svelte-widgets/Toc.svelte` / `svelte-widgets/Masonry.svelte` subpath exports [`#432`](https://github.com/janosh/svelte-widgets/pull/432)
 - Add Pagefind-powered `PageSearch` and expand `CommandMenu` with async action loading, navigation and match highlighting [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
 - Add `rangeSelect` for Shift-click and Shift+Arrow range selection, an `onrangeSelect` event and a `selectAllScope` of `visible` or `matching` [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
 - Pass an `AbortSignal` to `loadOptions` and abort superseded searches [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
@@ -58,8 +58,8 @@
 - Validate `OptionStyle` objects even when no style key is passed [`#429`](https://github.com/janosh/svelte-widgets/pull/429)
 - Add a `svelte-widgets/types` subpath export [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
 - Strengthen tests that could not fail across the vitest suite [`79625e0`](https://github.com/janosh/svelte-widgets/commit/79625e0)
-- **Breaking:** Rename the package from `svelte-multiselect` to `svelte-widgets`, restarting versioning at v1.0.0. `MultiSelect` is now one of 19 components, so imports become `svelte-widgets` and subpaths like `svelte-widgets/attachments`. Everything below v1.0.0 in this changelog was released as `svelte-multiselect`
-- **Breaking:** Deprecate `svelte-toc` and `svelte-bricks`. Replace `import Toc from 'svelte-toc'` with `import { Toc } from 'svelte-widgets'` and `import Masonry from 'svelte-bricks'` with `import { Masonry } from 'svelte-widgets'`. Their console warnings now name the component (`Toc received invalid …`, `Masonry: …`) rather than the old package
+- **Breaking:** Rename the package from `svelte-multiselect` to `svelte-widgets`, restarting versioning at v1.0.0. `MultiSelect` is now one of 19 components, so imports become `svelte-widgets` and subpaths like `svelte-widgets/attachments`. Everything below v1.0.0 in this changelog was released as `svelte-multiselect` [`#432`](https://github.com/janosh/svelte-widgets/pull/432)
+- **Breaking:** Deprecate `svelte-toc` and `svelte-bricks`. Replace `import Toc from 'svelte-toc'` with `import { Toc } from 'svelte-widgets'` and `import Masonry from 'svelte-bricks'` with `import { Masonry } from 'svelte-widgets'`. Their console warnings now name the component (`Toc received invalid …`, `Masonry: …`) rather than the old package [`#432`](https://github.com/janosh/svelte-widgets/pull/432)
 - **Breaking:** Rename `CmdPalette` to `CommandMenu` and `PagefindPalette` to `PageSearch`. The old names are removed [`#428`](https://github.com/janosh/svelte-widgets/pull/428)
 - **Breaking:** `click_outside` dismisses on `pointerdown` rather than `click`, `exclude`/`include` merge into `inside`, `trigger` becomes `dismiss_on: press | release`, the `outside-click` event becomes `dismiss`, and `callback` gains a `{ focus_inside, via, event }` detail [`#431`](https://github.com/janosh/svelte-widgets/pull/431)
 
@@ -210,8 +210,8 @@
 
 > 4 October 2025
 
-- Add prop `fuzzy: boolean = true` to `MultiSelect` and `CmdPalette` for fuzzy option filtering (#334) by @janosh
-- fix broken mobile touch selection with portal enabled (#336) by @janosh
+- Add prop `fuzzy: boolean = true` to `MultiSelect` and `CmdPalette` for fuzzy option filtering [`#334`](https://github.com/janosh/svelte-widgets/pull/334) by @janosh
+- fix broken mobile touch selection with portal enabled [`#336`](https://github.com/janosh/svelte-widgets/pull/336) by @janosh
 - immediately hide tooltip on scroll + icon fixes in MultiSelect + type fixes in CmdPalette and PrevNext by @janosh
 
 ## [v11.2.3](https://github.com/janosh/svelte-widgets/compare/v11.2.2...v11.2.3)
@@ -269,8 +269,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 17 May 2025
 
-- Multiselect portal [`#306`](https://github.com/janosh/svelte-widgets/pull/306)
-- Multiselect portal (#306) [`#301`](https://github.com/janosh/svelte-widgets/issues/301)
+- Multiselect portal [`#306`](https://github.com/janosh/svelte-widgets/pull/306) [`#301`](https://github.com/janosh/svelte-widgets/issues/301)
 
 ## [v11.0.0](https://github.com/janosh/svelte-widgets/compare/v11.0.0-rc.1...v11.0.0)
 
@@ -331,7 +330,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 1 June 2023
 
-- Revert "Fix Svelte 3.57 a11y (#215)" [`#232`](https://github.com/janosh/svelte-widgets/pull/232)
+- Revert "Fix Svelte 3.57 a11y [`#215`](https://github.com/janosh/svelte-widgets/pull/215)" [`#232`](https://github.com/janosh/svelte-widgets/pull/232)
 - Add default slot [`#231`](https://github.com/janosh/svelte-widgets/pull/231)
 - CmdPalette add prop close_keys [`099e1ac`](https://github.com/janosh/svelte-widgets/commit/099e1acbae8b66b0a10129ecb2930bb10920974f)
 - add copy buttons to all code fences [`950dcf6`](https://github.com/janosh/svelte-widgets/commit/950dcf64ccc91471ebf5dc3b7ef169156ef86e44)
@@ -402,7 +401,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Coverage badges [`#190`](https://github.com/janosh/svelte-widgets/pull/190)
 - feat: add type inference for the `options` prop [`#189`](https://github.com/janosh/svelte-widgets/pull/189)
-- feat: add type inference for the `options` prop (#189) [`#78`](https://github.com/janosh/svelte-widgets/issues/78)
+- feat: add type inference for the `options` prop [`#189`](https://github.com/janosh/svelte-widgets/pull/189) [`#78`](https://github.com/janosh/svelte-widgets/issues/78)
 - merge ExampleCode.svelte with CollapsibleCode.svelte [`56ff99b`](https://github.com/janosh/svelte-widgets/commit/56ff99bcc378c5582b303aa1c03302cdbceb3076)
 - pnpm add -D svelte-zoo to outsource some site components and icons [`f2a387c`](https://github.com/janosh/svelte-widgets/commit/f2a387cbcc9b1471c4f76fb0df2b7c2a09c52951)
 - restore reactive searchText block in loading example [`846da66`](https://github.com/janosh/svelte-widgets/commit/846da66af058ac1f448c8aaa513d12fb4c2ac4cc)
@@ -444,7 +443,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Set `&lt;base href="/svelte-multiselect" /&gt;` `if !dev && !prerendering` [`#172`](https://github.com/janosh/svelte-widgets/pull/172)
 - Publish docs to GitHub pages [`#170`](https://github.com/janosh/svelte-widgets/pull/170)
 - Contributing docs plus issue and PR templates with StackBlitz repro starter [`#169`](https://github.com/janosh/svelte-widgets/pull/169)
-- add missing about field to bug-report issue template (closes #171) [`#171`](https://github.com/janosh/svelte-widgets/issues/171)
+- add missing about field to bug-report issue template (closes [`#171`](https://github.com/janosh/svelte-widgets/issues/171)) [`#171`](https://github.com/janosh/svelte-widgets/issues/171)
 - fix prop form_input: set default value null to make it optional [`b150fe0`](https://github.com/janosh/svelte-widgets/commit/b150fe0032ebde82a319b23bd5e6b573e0c31721)
 
 ## [v8.1.0](https://github.com/janosh/svelte-widgets/compare/v8.0.4...v8.1.0)
@@ -455,7 +454,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Add `pnpm test` to readme [`#168`](https://github.com/janosh/svelte-widgets/pull/168)
 - Add class for maxSelectMsg [`#167`](https://github.com/janosh/svelte-widgets/pull/167)
 - Allow `required=1 | 2 | ...` to set minimum number of selected options for form submission [`#161`](https://github.com/janosh/svelte-widgets/pull/161)
-- Add minSelect prop (#166) [`#163`](https://github.com/janosh/svelte-widgets/issues/163) [`#163`](https://github.com/janosh/svelte-widgets/issues/163) [`#163`](https://github.com/janosh/svelte-widgets/issues/163)
+- Add minSelect prop [`#166`](https://github.com/janosh/svelte-widgets/pull/166) [`#163`](https://github.com/janosh/svelte-widgets/issues/163) [`#163`](https://github.com/janosh/svelte-widgets/issues/163) [`#163`](https://github.com/janosh/svelte-widgets/issues/163)
 - mv /max-select example to /min-max-select [`9838db8`](https://github.com/janosh/svelte-widgets/commit/9838db87d044a0d3d261c82ac1d654b9e32310d1)
 
 ## [v8.0.4](https://github.com/janosh/svelte-widgets/compare/v8.0.3...v8.0.4)
@@ -482,7 +481,7 @@ All notable changes to this project will be documented in this file. Dates are d
 - Link check CI and readme housekeeping [`#149`](https://github.com/janosh/svelte-widgets/pull/149)
 - REPL links for landing page examples [`#148`](https://github.com/janosh/svelte-widgets/pull/148)
 - Add Collapsible code blocks to usage examples [`#143`](https://github.com/janosh/svelte-widgets/pull/143)
-- REPL links for landing page examples (#148) [`#144`](https://github.com/janosh/svelte-widgets/issues/144) [`#145`](https://github.com/janosh/svelte-widgets/issues/145) [`#146`](https://github.com/janosh/svelte-widgets/issues/146) [`#147`](https://github.com/janosh/svelte-widgets/issues/147)
+- REPL links for landing page examples [`#148`](https://github.com/janosh/svelte-widgets/pull/148) [`#144`](https://github.com/janosh/svelte-widgets/issues/144) [`#145`](https://github.com/janosh/svelte-widgets/issues/145) [`#146`](https://github.com/janosh/svelte-widgets/issues/146) [`#147`](https://github.com/janosh/svelte-widgets/issues/147)
 
 ## [v8.0.1](https://github.com/janosh/svelte-widgets/compare/v8.0.0...v8.0.1)
 
@@ -530,7 +529,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Make selected a single value (not a length-1 array) if maxSelect=1 [`#123`](https://github.com/janosh/svelte-widgets/pull/123)
 - Fix TypeError: Cannot read properties of null (reading 'get_label') at MultiSelect.svelte:75 [`#122`](https://github.com/janosh/svelte-widgets/pull/122)
-- add stopPropagation to keydown handler (closes #114) [`#114`](https://github.com/janosh/svelte-widgets/issues/114)
+- add stopPropagation to keydown handler (closes [`#114`](https://github.com/janosh/svelte-widgets/issues/114)) [`#114`](https://github.com/janosh/svelte-widgets/issues/114)
 
 ## [v6.1.0](https://github.com/janosh/svelte-widgets/compare/v6.0.3...v6.1.0)
 
@@ -620,7 +619,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - v5 release [`#76`](https://github.com/janosh/svelte-widgets/pull/76)
 - Work with string options as is, don't convert to objects internally [`#75`](https://github.com/janosh/svelte-widgets/pull/75)
-- v5 release (#76) [`#57`](https://github.com/janosh/svelte-widgets/issues/57)
+- v5 release [`#76`](https://github.com/janosh/svelte-widgets/pull/76) [`#57`](https://github.com/janosh/svelte-widgets/issues/57)
 
 ## [v4.0.6](https://github.com/janosh/svelte-widgets/compare/v4.0.5...v4.0.6)
 
@@ -641,7 +640,7 @@ All notable changes to this project will be documented in this file. Dates are d
 > 30 March 2022
 
 - Move examples to new `src/routes/demos` dir [`#63`](https://github.com/janosh/svelte-widgets/pull/63)
-- make ToC position fixed (closes #64) [`#64`](https://github.com/janosh/svelte-widgets/issues/64)
+- make ToC position fixed (closes [`#64`](https://github.com/janosh/svelte-widgets/issues/64)) [`#64`](https://github.com/janosh/svelte-widgets/issues/64)
 - check for undefined (not falsy) value in rawOp processing (fixes #65) [`#65`](https://github.com/janosh/svelte-widgets/issues/65)
 - LanguageSnippet change SVG icons src repo to vscode-icons for more coverage [`92390e9`](https://github.com/janosh/svelte-widgets/commit/92390e937a063b2b0c88e0ac6f9a9d8f3cb1eadd)
 - more preselected slots in Examples.svelte [`cd0a01a`](https://github.com/janosh/svelte-widgets/commit/cd0a01a7a6b319299642b3c24c5caea8dc9dc24d)
@@ -651,8 +650,8 @@ All notable changes to this project will be documented in this file. Dates are d
 > 23 March 2022
 
 - Add `aria-label` to hidden `.form-control` input [`#62`](https://github.com/janosh/svelte-widgets/pull/62)
-- Add `aria-label` to hidden `.form-control` input (#62) [`#58`](https://github.com/janosh/svelte-widgets/issues/58) [`#35`](https://github.com/janosh/svelte-widgets/issues/35)
-- fix dropdown closing when clicking between list items (closes #61) [`#61`](https://github.com/janosh/svelte-widgets/issues/61)
+- Add `aria-label` to hidden `.form-control` input [`#62`](https://github.com/janosh/svelte-widgets/pull/62) [`#58`](https://github.com/janosh/svelte-widgets/issues/58) [`#35`](https://github.com/janosh/svelte-widgets/issues/35)
+- fix dropdown closing when clicking between list items (closes [`#61`](https://github.com/janosh/svelte-widgets/issues/61)) [`#61`](https://github.com/janosh/svelte-widgets/issues/61)
 - svelte.config.js add kit.prerender.default: true, mv src/{global,app}.d.ts [`4a84913`](https://github.com/janosh/svelte-widgets/commit/4a8491380e08bad137ca7bdda9ee4ddd38abe3d6)
 
 ## [v4.0.2](https://github.com/janosh/svelte-widgets/compare/v4.0.1...v4.0.2)
@@ -661,8 +660,8 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Improve a11y [`#60`](https://github.com/janosh/svelte-widgets/pull/60)
 - Convert tests to Playwright [`#59`](https://github.com/janosh/svelte-widgets/pull/59)
-- Convert tests to Playwright (#59) [`#58`](https://github.com/janosh/svelte-widgets/issues/58)
-- add and document prop invalid (closes #47) [`#47`](https://github.com/janosh/svelte-widgets/issues/47)
+- Convert tests to Playwright [`#59`](https://github.com/janosh/svelte-widgets/pull/59) [`#58`](https://github.com/janosh/svelte-widgets/issues/58)
+- add and document prop invalid (closes [`#47`](https://github.com/janosh/svelte-widgets/issues/47)) [`#47`](https://github.com/janosh/svelte-widgets/issues/47)
 - set width (not height) on svg icons and as px (not em) so they don't shrink with fluid typography on mobile screens [`ba77f93`](https://github.com/janosh/svelte-widgets/commit/ba77f93b23b375bb650411b580406f1f7d55f365)
 
 ## [v4.0.1](https://github.com/janosh/svelte-widgets/compare/v4.0.0...v4.0.1)
@@ -674,31 +673,31 @@ All notable changes to this project will be documented in this file. Dates are d
 - Readme document test runner config to avoid transpiling errors in downstream testing [`#54`](https://github.com/janosh/svelte-widgets/pull/54)
 - More tests [`#51`](https://github.com/janosh/svelte-widgets/pull/51)
 - Add `vitest` [`#50`](https://github.com/janosh/svelte-widgets/pull/50)
-- Rename readonly to disabled (#55) [`#45`](https://github.com/janosh/svelte-widgets/issues/45)
+- Rename readonly to disabled [`#55`](https://github.com/janosh/svelte-widgets/pull/55) [`#45`](https://github.com/janosh/svelte-widgets/issues/45)
 - close options dropdown list on input blur (fixes #53) [`#53`](https://github.com/janosh/svelte-widgets/issues/53)
-- CSS and UX tweaks (#52) [`#44`](https://github.com/janosh/svelte-widgets/issues/44) [`#44`](https://github.com/janosh/svelte-widgets/issues/44) [`#44`](https://github.com/janosh/svelte-widgets/issues/44)
-- Readme document test runner config to avoid transpiling errors in downstream testing (#54) [`#48`](https://github.com/janosh/svelte-widgets/issues/48)
+- CSS and UX tweaks [`#52`](https://github.com/janosh/svelte-widgets/pull/52) [`#44`](https://github.com/janosh/svelte-widgets/issues/44) [`#44`](https://github.com/janosh/svelte-widgets/issues/44) [`#44`](https://github.com/janosh/svelte-widgets/issues/44)
+- Readme document test runner config to avoid transpiling errors in downstream testing [`#54`](https://github.com/janosh/svelte-widgets/pull/54) [`#48`](https://github.com/janosh/svelte-widgets/issues/48)
 
 # [v4.0.0](https://github.com/janosh/svelte-widgets/compare/v3.3.0...v4.0.0)
 
 > 21 February 2022
 
-- Implement `allowUserOptions`, `autoScroll` and `loading` (closes #39) [`#41`](https://github.com/janosh/svelte-widgets/pull/41)
+- Implement `allowUserOptions`, `autoScroll` and `loading` (closes [`#39`](https://github.com/janosh/svelte-widgets/issues/39)) [`#41`](https://github.com/janosh/svelte-widgets/pull/41)
 - define DispatchEvents type used to annotate createEventDispatcher() [`#32`](https://github.com/janosh/svelte-widgets/pull/32)
-- add prop required to prevent form submission if no options selected (closes #42) [`#42`](https://github.com/janosh/svelte-widgets/issues/42)
-- Implement `allowUserOptions`, `autoScroll` and `loading` (closes #39) (#41) [`#39`](https://github.com/janosh/svelte-widgets/issues/39) [`#39`](https://github.com/janosh/svelte-widgets/issues/39)
+- add prop required to prevent form submission if no options selected (closes [`#42`](https://github.com/janosh/svelte-widgets/issues/42)) [`#42`](https://github.com/janosh/svelte-widgets/issues/42)
+- Implement `allowUserOptions`, `autoScroll` and `loading` (closes [`#39`](https://github.com/janosh/svelte-widgets/issues/39)) [`#41`](https://github.com/janosh/svelte-widgets/pull/41) [`#39`](https://github.com/janosh/svelte-widgets/issues/39) [`#39`](https://github.com/janosh/svelte-widgets/issues/39)
 
 ## [v3.3.0](https://github.com/janosh/svelte-widgets/compare/v3.2.3...v3.3.0)
 
 > 20 February 2022
 
-- by default, only show maxSelectMsg if maxSelect != null and &gt; 1 (closes #37) [`#37`](https://github.com/janosh/svelte-widgets/issues/37)
-- add CSS var --sms-options-shadow defaults to subtle black shadow around dropdown list (0 0 14pt -8pt black) (closes #36) [`#36`](https://github.com/janosh/svelte-widgets/issues/36)
-- add prop liActiveOptionClass = '' (closes #35) [`#35`](https://github.com/janosh/svelte-widgets/issues/35)
-- turn searchText = and showOptions = false into bindable props (closes #33) [`#33`](https://github.com/janosh/svelte-widgets/issues/33)
-- document missing noOptionsMsg prop (closes #34) [`#34`](https://github.com/janosh/svelte-widgets/issues/34)
-- ensure custom class names (outerDivClass, ulOptionsClass) come last (closes #38) [`#38`](https://github.com/janosh/svelte-widgets/issues/38)
-- fix ToC scroll to heading (closes #31) [`#31`](https://github.com/janosh/svelte-widgets/issues/31)
+- by default, only show maxSelectMsg if maxSelect != null and &gt; 1 (closes [`#37`](https://github.com/janosh/svelte-widgets/issues/37)) [`#37`](https://github.com/janosh/svelte-widgets/issues/37)
+- add CSS var --sms-options-shadow defaults to subtle black shadow around dropdown list (0 0 14pt -8pt black) (closes [`#36`](https://github.com/janosh/svelte-widgets/issues/36)) [`#36`](https://github.com/janosh/svelte-widgets/issues/36)
+- add prop liActiveOptionClass = '' (closes [`#35`](https://github.com/janosh/svelte-widgets/issues/35)) [`#35`](https://github.com/janosh/svelte-widgets/issues/35)
+- turn searchText = and showOptions = false into bindable props (closes [`#33`](https://github.com/janosh/svelte-widgets/issues/33)) [`#33`](https://github.com/janosh/svelte-widgets/issues/33)
+- document missing noOptionsMsg prop (closes [`#34`](https://github.com/janosh/svelte-widgets/issues/34)) [`#34`](https://github.com/janosh/svelte-widgets/issues/34)
+- ensure custom class names (outerDivClass, ulOptionsClass) come last (closes [`#38`](https://github.com/janosh/svelte-widgets/issues/38)) [`#38`](https://github.com/janosh/svelte-widgets/issues/38)
+- fix ToC scroll to heading (closes [`#31`](https://github.com/janosh/svelte-widgets/issues/31)) [`#31`](https://github.com/janosh/svelte-widgets/issues/31)
 - only show remove all btn when maxSelect !== 1 (for #37) [`64cfd8a`](https://github.com/janosh/svelte-widgets/commit/64cfd8a1108e19aae12e65c3ad17177f09a066d8)
 
 ## [v3.2.3](https://github.com/janosh/svelte-widgets/compare/v3.2.2...v3.2.3)
@@ -712,19 +711,19 @@ All notable changes to this project will be documented in this file. Dates are d
 > 16 February 2022
 
 - Expose filter method [`#29`](https://github.com/janosh/svelte-widgets/pull/29)
-- readme improve docs on css variables and granular control through :global() selectors (closes #27) [`#27`](https://github.com/janosh/svelte-widgets/issues/27)
+- readme improve docs on css variables and granular control through :global() selectors (closes [`#27`](https://github.com/janosh/svelte-widgets/issues/27)) [`#27`](https://github.com/janosh/svelte-widgets/issues/27)
 
 ## [v3.2.1](https://github.com/janosh/svelte-widgets/compare/v3.2.0...v3.2.1)
 
 > 7 February 2022
 
-- mv input outside ul.selected for better HTML semantics (closes #26) [`#26`](https://github.com/janosh/svelte-widgets/issues/26)
+- mv input outside ul.selected for better HTML semantics (closes [`#26`](https://github.com/janosh/svelte-widgets/issues/26)) [`#26`](https://github.com/janosh/svelte-widgets/issues/26)
 
 ## [v3.2.0](https://github.com/janosh/svelte-widgets/compare/v3.1.1...v3.2.0)
 
 > 3 February 2022
 
-- apply id prop to &lt;input&gt; instead of outer div (closes #25) [`#25`](https://github.com/janosh/svelte-widgets/issues/25)
+- apply id prop to &lt;input&gt; instead of outer div (closes [`#25`](https://github.com/janosh/svelte-widgets/issues/25)) [`#25`](https://github.com/janosh/svelte-widgets/issues/25)
 - add eslint commit hook + update deps [`6ad44b8`](https://github.com/janosh/svelte-widgets/commit/6ad44b85057aef71eae19293de80f9d42f91f87b)
 - v.3.2.0 [`71ff2d1`](https://github.com/janosh/svelte-widgets/commit/71ff2d192caccacbe41f83949c14d7d4ca87d590)
 - add readme badge to document minimum svelte version (for #24) [`7d9fe5a`](https://github.com/janosh/svelte-widgets/commit/7d9fe5a977b56dab95069b64321f0718e0d61f08)
@@ -733,14 +732,14 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 25 January 2022
 
-- wiggle the maxSelect msg on hitting selection limit (closes #19) [`#19`](https://github.com/janosh/svelte-widgets/issues/19)
+- wiggle the maxSelect msg on hitting selection limit (closes [`#19`](https://github.com/janosh/svelte-widgets/issues/19)) [`#19`](https://github.com/janosh/svelte-widgets/issues/19)
 - readme better docs for CSS variables, rename slots {options,selected}Renderer -&gt; render{options,selected} [`c8ab724`](https://github.com/janosh/svelte-widgets/commit/c8ab7241506cfe6b5930d098150a251e85c52afd)
 
 ## [v3.1.0](https://github.com/janosh/svelte-widgets/compare/v3.0.1...v3.1.0)
 
 > 22 January 2022
 
-- add selectedRenderer + optionRenderer named slots (closes #21) [`#21`](https://github.com/janosh/svelte-widgets/issues/21)
+- add selectedRenderer + optionRenderer named slots (closes [`#21`](https://github.com/janosh/svelte-widgets/issues/21)) [`#21`](https://github.com/janosh/svelte-widgets/issues/21)
 - docs site use unmodified readme with slot to insert examples, yarn add svelte-github-corner [`1072691`](https://github.com/janosh/svelte-widgets/commit/10726916ea2a72560cd8ee6f2806526bf932e771)
 - readme add note on type exports for TS users, add error page that redirects to index [`dde76c8`](https://github.com/janosh/svelte-widgets/commit/dde76c8b92408b7fddca0b555a63c2b1bfd0dbe8)
 
@@ -758,7 +757,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 29 December 2021
 
-- ensure active option is scrolled into view if needed (closes #15), breaking change: renames tokens to options [`#15`](https://github.com/janosh/svelte-widgets/issues/15)
+- ensure active option is scrolled into view if needed (closes [`#15`](https://github.com/janosh/svelte-widgets/issues/15)), breaking change: renames tokens to options [`#15`](https://github.com/janosh/svelte-widgets/issues/15)
 
 # [v2.0.0](https://github.com/janosh/svelte-widgets/compare/v1.2.2...v2.0.0)
 
@@ -766,7 +765,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 - Convert options from simple strings to objects [`#16`](https://github.com/janosh/svelte-widgets/pull/16)
 - Add local to transition:fly [`#14`](https://github.com/janosh/svelte-widgets/pull/14)
-- add onClickOutside action, used to replace input.on:blur() for hiding options (closes #18) [`#18`](https://github.com/janosh/svelte-widgets/issues/18)
+- add onClickOutside action, used to replace input.on:blur() for hiding options (closes [`#18`](https://github.com/janosh/svelte-widgets/issues/18)) [`#18`](https://github.com/janosh/svelte-widgets/issues/18)
 - update deps [`fb90f93`](https://github.com/janosh/svelte-widgets/commit/fb90f936fa0d49f81e6c9c60986dd04749ea6a67)
 - more keyboard friendliness by showing remove button focus and triggering on space bar or enter key [`b87d22b`](https://github.com/janosh/svelte-widgets/commit/b87d22bc5706acd18e1e79c40b3845f2ee3615b2)
 - add plausible [`0557c0f`](https://github.com/janosh/svelte-widgets/commit/0557c0f2bbef80820540302af29c79b7ac89023b)
@@ -775,7 +774,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 27 October 2021
 
-- set &lt;input&gt; width back to 1pt as it's only needed to tab into, focus and blur &lt;MultiSelect&gt; (closes #12) [`#12`](https://github.com/janosh/svelte-widgets/issues/12)
+- set &lt;input&gt; width back to 1pt as it's only needed to tab into, focus and blur &lt;MultiSelect&gt; (closes [`#12`](https://github.com/janosh/svelte-widgets/issues/12)) [`#12`](https://github.com/janosh/svelte-widgets/issues/12)
 - update readme [`45c7993`](https://github.com/janosh/svelte-widgets/commit/45c7993398c986499d4c0729177620cbec719cb7)
 
 ## [v1.2.1](https://github.com/janosh/svelte-widgets/compare/v1.2.0...v1.2.1)
@@ -788,13 +787,13 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 12 October 2021
 
-- add src/lib/index.ts for package path export '.' (closes #11) [`#11`](https://github.com/janosh/svelte-widgets/issues/11)
+- add src/lib/index.ts for package path export '.' (closes [`#11`](https://github.com/janosh/svelte-widgets/issues/11)) [`#11`](https://github.com/janosh/svelte-widgets/issues/11)
 
 ## [v1.1.13](https://github.com/janosh/svelte-widgets/compare/v1.1.12...v1.1.13)
 
 > 12 October 2021
 
-- add src/lib/index.ts for package path export '.' (closes #11) [`#11`](https://github.com/janosh/svelte-widgets/issues/11)
+- add src/lib/index.ts for package path export '.' (closes [`#11`](https://github.com/janosh/svelte-widgets/issues/11)) [`#11`](https://github.com/janosh/svelte-widgets/issues/11)
 
 ## [v1.1.12](https://github.com/janosh/svelte-widgets/compare/v1.1.11...v1.1.12)
 
@@ -808,7 +807,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 3 September 2021
 
-- fix removeAll button not dispatching remove and change events (closes #7) [`#7`](https://github.com/janosh/svelte-widgets/issues/7)
+- fix removeAll button not dispatching remove and change events (closes [`#7`](https://github.com/janosh/svelte-widgets/issues/7)) [`#7`](https://github.com/janosh/svelte-widgets/issues/7)
 - remove @tsconfig/svelte, update deps [`9b2c231`](https://github.com/janosh/svelte-widgets/commit/9b2c23181f4a96bd9d002f535dd669153e772b72)
 - add type=(add|remove) detail to 'change' event dispatch [`8290458`](https://github.com/janosh/svelte-widgets/commit/8290458b898292a28d65710d6941f193fb9964aa)
 
@@ -816,7 +815,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 12 August 2021
 
-- add on:change event and document events in readme (closes #5) [`#5`](https://github.com/janosh/svelte-widgets/issues/5)
+- add on:change event and document events in readme (closes [`#5`](https://github.com/janosh/svelte-widgets/issues/5)) [`#5`](https://github.com/janosh/svelte-widgets/issues/5)
 
 ## [v1.1.9](https://github.com/janosh/svelte-widgets/compare/v1.1.8...v1.1.9)
 
@@ -836,13 +835,13 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 5 July 2021
 
-- add css classes as props for use with tailwind (closes #3) [`#3`](https://github.com/janosh/svelte-widgets/issues/3)
+- add css classes as props for use with tailwind (closes [`#3`](https://github.com/janosh/svelte-widgets/issues/3)) [`#3`](https://github.com/janosh/svelte-widgets/issues/3)
 
 ## [v1.1.6](https://github.com/janosh/svelte-widgets/compare/v1.1.5...v1.1.6)
 
 > 23 June 2021
 
-- fix: don't remove tags if search string is non-empty, open options on clicking selected tags (#2) [`5ffed50`](https://github.com/janosh/svelte-widgets/commit/5ffed50617f47dba6ffbafd6ce266fa6e064c7de)
+- fix: don't remove tags if search string is non-empty, open options on clicking selected tags [`#2`](https://github.com/janosh/svelte-widgets/pull/2) [`5ffed50`](https://github.com/janosh/svelte-widgets/commit/5ffed50617f47dba6ffbafd6ce266fa6e064c7de)
 - update svelte-toc to fix deploy [`d5279dd`](https://github.com/janosh/svelte-widgets/commit/d5279dd11279509493030aeb26295873929b2253)
 
 ## [v1.1.5](https://github.com/janosh/svelte-widgets/compare/v1.1.4...v1.1.5)
@@ -861,7 +860,7 @@ All notable changes to this project will be documented in this file. Dates are d
 
 > 20 June 2021
 
-- replace prop single with maxSelect to specify any number of selectable options, add class single to div.multiselect if maxSelect===1 (#2) [`36e916f`](https://github.com/janosh/svelte-widgets/commit/36e916f4a42d395c394ddff47364a17fd22a7ec1)
+- replace prop single with maxSelect to specify any number of selectable options, add class single to div.multiselect if maxSelect===1 [`#2`](https://github.com/janosh/svelte-widgets/pull/2) [`36e916f`](https://github.com/janosh/svelte-widgets/commit/36e916f4a42d395c394ddff47364a17fd22a7ec1)
 - add linked headings [`2eedf9a`](https://github.com/janosh/svelte-widgets/commit/2eedf9aa24512ff96f8ccff564d3a1fa7615388a)
 
 ## [v1.1.2](https://github.com/janosh/svelte-widgets/compare/v1.1.1...v1.1.2)

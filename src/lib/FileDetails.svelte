@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes, HTMLDetailsAttributes } from 'svelte/elements'
+  import type {
+    HTMLAttributes,
+    HTMLButtonAttributes,
+    HTMLDetailsAttributes,
+  } from 'svelte/elements'
   import type { HastNode } from './live-examples/hast'
   import { escape_html_text, hast_to_html } from './live-examples/hast'
   import { chain_handlers } from './utils'
@@ -27,7 +31,7 @@
     default_lang?: string
     as?: string
     title_snippet?: Snippet<[{ idx: number } & File]>
-    button_props?: HTMLAttributes<HTMLButtonElement>
+    button_props?: Omit<HTMLButtonAttributes, `type`>
     details_props?: HTMLDetailsAttributes
   } & HTMLAttributes<HTMLOListElement> = $props()
 
@@ -127,6 +131,7 @@
   <button
     title={toggle_all_btn_title}
     {...button_props}
+    type="button"
     onclick={chain_handlers(toggle_all, button_props?.onclick)}
   >
     {any_open ? `Close` : `Open`} all

@@ -4,7 +4,7 @@ Group related options together with visual headers. Add a `group` key to option 
 
 ### Basic Grouping
 
-```svelte example id="basic-grouping"
+```svelte example id="basic-grouping-demo"
 <script lang="ts">
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'
@@ -41,7 +41,7 @@ Group related options together with visual headers. Add a `group` key to option 
 
 Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpandsCollapsedGroups` or `keyboardExpandsCollapsedGroups` for auto-expansion:
 
-```svelte example id="collapsible-groups"
+```svelte example id="collapsible-groups-demo"
 <script lang="ts">
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'
@@ -245,7 +245,7 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
 
 Use the `groupHeader` snippet for complete control over header rendering:
 
-```svelte example id="custom-group-header"
+```svelte example id="custom-group-header-demo"
 <script lang="ts">
   import MultiSelect from '$lib'
   import type { ObjectOption } from '$lib/types'

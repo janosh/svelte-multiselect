@@ -270,9 +270,9 @@ Props ordered by how often you'll reach for them.
    | `batchSize`  | `number`  | `50`    | Number of options to load per batch         |
    | `onOpen`     | `boolean` | `true`  | Whether to load options when dropdown opens |
 
-   Features automatic state management, debounced search, infinite scroll pagination, and loading indicators. See the [infinite-scroll demo](https://janosh.github.io/svelte-widgets/infinite-scroll) for live examples.
+   Features automatic state management, debounced search, infinite scroll pagination, and loading indicators. See the [infinite-scroll demo](https://svelte-widgets.janosh.dev/infinite-scroll) for live examples.
 
-   Passing `options` alongside `loadOptions` combines both sources: the static options are filtered client-side with `filterFunc` and rendered above the loaded batches. Since they need neither the debounce nor a request, they appear on the first keystroke, which is what lets [`PageSearch`](https://janosh.github.io/svelte-widgets/command-menu) match known routes instantly while its Pagefind index is still loading.
+   Passing `options` alongside `loadOptions` combines both sources: the static options are filtered client-side with `filterFunc` and rendered above the loaded batches. Since they need neither the debounce nor a request, they appear on the first keystroke, which is what lets [`PageSearch`](https://svelte-widgets.janosh.dev/command-menu) match known routes instantly while its Pagefind index is still loading.
 
 1. ```ts
    activeIndex: number | null = null  // bindable
@@ -361,7 +361,7 @@ Group related options together with visual headers. Add a `group` key to your op
 <MultiSelect {options} collapsibleGroups groupSelectAll />
 ```
 
-See the [grouping demo](https://janosh.github.io/svelte-widgets/grouping) for live examples.
+See the [grouping demo](https://svelte-widgets.janosh.dev/grouping) for live examples.
 
 1. ```ts
    collapsibleGroups: boolean = false
@@ -509,7 +509,7 @@ See the [grouping demo](https://janosh.github.io/svelte-widgets/grouping) for li
    selectedDisplay: 'chips' | 'input' = 'chips'
    ```
 
-   How selected options are shown. `'chips'` renders them as removable tags inside the input. `'input'` writes the selected label straight into the text input (combobox/datalist style) and is only valid with `maxSelect={1}`; other values log a config error and fall back to chips. See the [input-dropdown demo](https://janosh.github.io/svelte-widgets/input-dropdown).
+   How selected options are shown. `'chips'` renders them as removable tags inside the input. `'input'` writes the selected label straight into the text input (combobox/datalist style) and is only valid with `maxSelect={1}`; other values log a config error and fall back to chips. See the [input-dropdown demo](https://svelte-widgets.janosh.dev/input-dropdown).
 
 1. ```ts
    virtualList: boolean | { itemHeight?: number; overscan?: number } = false

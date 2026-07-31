@@ -7,14 +7,18 @@
 // Quoted attributes may contain `>`; only an unquoted `>` ends the opening tag.
 const heading_attrs = String.raw`(?:[^>"']|"[^"]*"|'[^']*')*`
 const heading_pattern = String.raw`<(?<tag>h[1-6])(?<attrs>${heading_attrs})>(?<inner>[\s\S]*?)<\/\k<tag>>`
-const heading_regex_line_start = new RegExp(String.raw`^\s*${heading_pattern}`, `gimu`)
-const heading_regex_after_tag = new RegExp(String.raw`(?<=>)\s*${heading_pattern}`, `giu`)
+const heading_regex = new RegExp(String.raw`(?:^|(?<=>))\s*${heading_pattern}`, `gimu`)
+const opening_tag_regex = new RegExp(
+  String.raw`<[A-Za-z][^\s/>]*(?<attrs>${heading_attrs})>`,
+  `gu`,
+)
 const excluded_heading_content_regex = new RegExp(
-  String.raw`<!--[\s\S]*?-->|<(?<excluded_tag>pre|script|style|textarea|title)\b${heading_attrs}>[\s\S]*?<\/\k<excluded_tag>\s*>`,
+  String.raw`<!--[\s\S]*?-->|<(?<excluded_tag>pre|script|style|textarea|title)(?=[\s>])${heading_attrs}>[\s\S]*?<\/\k<excluded_tag>\s*>`,
   `giu`,
 )
 const heading_attr_regex =
   /(?:^|\s)(?<name>[^\s"'=<>`]+)(?:(?<equals>\s*=\s*)(?:"(?<double>[^"]*)"|'(?<single>[^']*)'|(?<unquoted>[^\s"'=<>`]+))?)?/gu
+const has_static_id_attr = /(?:^|\s)id\s*=/iu
 const html_string_expression_regex = /\{@html\s+(?<json>"(?:\\.|[^"\\])*")\s*\}/gu
 const katex_annotation_regex =
   /<annotation\b[^>]*encoding="application\/x-tex"[^>]*>(?<tex>[\s\S]*?)<\/annotation>/iu
@@ -22,7 +26,6 @@ const katex_annotation_regex =
 const has_heading = /<h[1-6]/iu
 
 type TextInsertion = { index: number; text: string }
-type HeadingMatch = { attrs: string; inner: string; start: number; tag: string }
 
 const BASE64 = `ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/`
 
@@ -176,7 +179,7 @@ const without_attr_expressions = (attrs: string): string => {
   return result
 }
 
-const get_heading_id_attr = (attrs: string): string | undefined => {
+const get_static_id_attr = (attrs: string): string | undefined => {
   for (const match of without_attr_expressions(attrs).matchAll(heading_attr_regex)) {
     const { double, equals, name, single, unquoted } = match.groups ?? {}
     if (name?.toLowerCase() !== `id` || equals === undefined) continue
@@ -243,25 +246,9 @@ export function heading_ids() {
         if (!base_id) return null
         return unique_heading_id(base_id, used_ids)
       }
-      // Both regexes scan the whole file and can match the same heading, so key by
-      // source offset and keep the first hit.
-      const matches_by_start = new Map<number, HeadingMatch>()
-      const collect_heading_matches = (heading_regex: RegExp): void => {
-        for (const match of content.matchAll(heading_regex)) {
-          if (match.index === undefined || !match.groups) continue
-          const { attrs, inner, tag } = match.groups
-          if (attrs === undefined || inner === undefined || !tag) continue
-          const start = match.index + match[0].indexOf(`<${tag}`)
-          if (!matches_by_start.has(start)) {
-            matches_by_start.set(start, { attrs, inner, start, tag })
-          }
-        }
-      }
 
-      // both passes scan the whole file, so skip them when there is no heading
+      // Skip the full-file scans when no heading can match.
       if (has_heading.test(content)) {
-        collect_heading_matches(heading_regex_line_start)
-        collect_heading_matches(heading_regex_after_tag)
         const excluded_ranges = Array.from(
           content.matchAll(excluded_heading_content_regex),
           (match) => ({
@@ -270,27 +257,32 @@ export function heading_ids() {
             tag: match.groups?.excluded_tag?.toLowerCase() ?? null,
           }),
         )
-        // excluded_by is undefined when no range contains the heading and null when the
-        // containing range is a comment, which has no tag to report.
-        const headings = [...matches_by_start.values()]
-          .map((match) => ({
-            ...match,
-            excluded_by: excluded_ranges.find(
-              ({ end, start }) => match.start >= start && match.start < end,
-            )?.tag,
-            existing_id: get_heading_id_attr(match.attrs),
-          }))
-          .toSorted((left, right) => left.start - right.start)
-        // Reserve explicit IDs before generating any automatic ones, including IDs that
-        // appear later in source order, because explicit author choices take precedence.
-        for (const { excluded_by, existing_id } of headings) {
-          // A heading inside <pre> still creates a real DOM ID. Comments, script, and style
-          // contents do not, so reserving their source-only IDs would create false collisions.
-          if (excluded_by !== undefined && excluded_by !== `pre`) continue
+        // Strictly inside an excluded span. The span's own opening tag sits at `start`
+        // and must stay eligible so its rendered `id` still reserves a collision slot.
+        const is_inside_excluded = (
+          index: number,
+          range: { start: number; end: number },
+        ) => index > range.start && index < range.end
+        // Explicit IDs anywhere in rendered markup win, including later source elements.
+        for (const match of content.matchAll(opening_tag_regex)) {
+          const attrs = match.groups?.attrs
+          if (attrs === undefined || !has_static_id_attr.test(attrs)) continue
+          const excluded = excluded_ranges.find((range) =>
+            is_inside_excluded(match.index, range),
+          )
+          if (excluded && excluded.tag !== `pre`) continue
+          const existing_id = get_static_id_attr(attrs)
           if (existing_id) used_ids.add(existing_id)
         }
-        for (const { excluded_by, existing_id, inner, start, tag } of headings) {
-          if (excluded_by !== undefined || existing_id !== undefined) continue
+        for (const match of content.matchAll(heading_regex)) {
+          if (!match.groups) continue
+          const { attrs, inner, tag } = match.groups
+          if (attrs === undefined || inner === undefined || !tag) continue
+          const start = match.index + match[0].indexOf(`<${tag}`)
+          const excluded = excluded_ranges.some((range) =>
+            is_inside_excluded(start, range),
+          )
+          if (excluded || get_static_id_attr(attrs) !== undefined) continue
           const id = get_heading_id(inner)
           if (!id) continue
           insertions.push({ index: start + tag.length + 1, text: ` id="${id}"` })

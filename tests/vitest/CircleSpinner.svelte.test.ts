@@ -17,7 +17,7 @@ test.each([
   (_label, props, expected_size, expected_color, expected_duration) => {
     mount(CircleSpinner, { target: document.body, props })
 
-    const div = doc_query(`div`)
+    const div = doc_query(`.circle-spinner`)
     expect(div.style.width).toBe(expected_size)
     expect(div.style.height).toBe(expected_size)
     expect(div.style.borderColor).toBe(
@@ -26,3 +26,12 @@ test.each([
     expect(div.style.getPropertyValue(`--duration`)).toBe(expected_duration)
   },
 )
+
+test(`forwards host style and class via ...rest`, () => {
+  mount(CircleSpinner, {
+    target: document.body,
+    props: { style: `margin: 0`, class: `in-button` },
+  })
+  const div = doc_query(`.circle-spinner.in-button`)
+  expect(div.style.margin).toBe(`0px`)
+})

@@ -46,3 +46,20 @@ export const apply_theme_mode = (mode: ThemeMode): void => {
     console.error(`Failed to set theme mode ${mode} in localStorage`, error)
   }
 }
+
+export const listen_theme_storage = (): (() => void) => {
+  if (
+    typeof document === `undefined` ||
+    typeof globalThis.addEventListener !== `function`
+  )
+    throw new TypeError(`listen_theme_storage() is client-only`)
+  const on_storage = ({ key, storageArea: storage_area }: StorageEvent) => {
+    if (
+      storage_area === localStorage &&
+      (key === null || key === `theme` || key === `theme_mode`)
+    )
+      apply_theme_mode(resolve_theme_mode())
+  }
+  globalThis.addEventListener(`storage`, on_storage)
+  return () => globalThis.removeEventListener(`storage`, on_storage)
+}

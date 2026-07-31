@@ -73,16 +73,30 @@ test(`losing the target hides while portalled but not once deactivated`, () => {
   action.destroy()
 })
 
-test(`destroy detaches viewport listeners only when portalled`, () => {
+test(`queues one positioning pass when activated by an update`, async () => {
+  const { target, node } = create_fixture()
+  const rect_spy = vi.spyOn(target, `getBoundingClientRect`)
+  const action = portal_action(node, { active: false, open: true, target_node: target })
+
+  action.update({ active: true, open: true, target_node: target })
+  await tick()
+  expect(rect_spy).toHaveBeenCalledOnce()
+  action.destroy()
+})
+
+test(`destroy detaches viewport listeners and cancels queued positioning`, async () => {
   const { home, target, node } = create_fixture()
   const remove_spy = vi.spyOn(globalThis, `removeEventListener`)
+  const rect_spy = vi.spyOn(target, `getBoundingClientRect`)
 
   // never portalled, so Svelte owns removal and the action must leave the node alone
   portal_action(node, { active: false, open: true, target_node: target }).destroy()
   expect(node.parentNode).toBe(home)
   const baseline = remove_spy.mock.calls.length
 
-  portal_action(node, { active: true, open: true, target_node: target }).destroy()
+  const action = portal_action(node, { active: true, open: true, target_node: target })
+  action.destroy()
+  await tick()
   // the exact pairs matter: scroll must be removed with capture=true or the
   // capturing listener added on activate stays bound forever
   expect(
@@ -92,4 +106,5 @@ test(`destroy detaches viewport listeners only when portalled`, () => {
     [`resize`, undefined],
   ])
   expect(node.isConnected).toBe(false)
+  expect(rect_spy).not.toHaveBeenCalled()
 })

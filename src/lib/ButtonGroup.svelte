@@ -1,6 +1,6 @@
 <script module lang="ts">
   import type { IconName } from './icons'
-  import { is_object, step_focus } from './utils'
+  import { chain_handlers, is_object, step_focus } from './utils'
 
   // Only `value` is required; the rest are display extras any option shape may omit
   export type ButtonGroupOption<Value extends string = string> = {
@@ -35,17 +35,19 @@
 
 <script lang="ts" generics="Value extends string = string">
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLButtonAttributes } from 'svelte/elements'
   import { tooltip, type TooltipOptions } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
 
-  type Props = Omit<HTMLAttributes<HTMLDivElement>, `children`> & {
+  type CommonProps<Value extends string> = {
     options: ButtonGroupOptions<Value>
     label?: string // aria-label for the group, since a bare row of buttons has none
     disabled?: boolean // disables every option, on top of per-option `disabled`
     // opt-in trailing asc/desc button; null (default) renders no arrow at all
     sort_order?: `asc` | `desc` | null
+    // the sort arrow sits outside the radiogroup; style/attrs go here, not on the host
+    sort_button_props?: Omit<HTMLButtonAttributes, `aria-label` | `disabled` | `type`>
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     // sibling of the button rather than content of it, so an option can carry a
     // trailing link or badge without nesting interactive content inside a button.
@@ -57,20 +59,19 @@
     // `content` comes from each option's own `tooltip`; the rest is yours, which is
     // what lets a consumer opt into allow_html for rich tooltips
     tooltip_options?: Omit<TooltipOptions, `content`>
-    tooltip_placement?: `top` | `bottom` | `left` | `right`
     // a div cannot legally sit inside phrasing content, so a group rendered in a
     // heading or a paragraph needs to be a span
     as?: string
-    // on_change rides the discriminant: a single-select consumer's handler takes one
-    // value, so widening it to Value | Value[] made their own callbacks unassignable
-  } & (
-      | {
-          multiple?: false
-          selected?: Value | null
-          on_change?: (selected: Value) => void
-        }
-      | { multiple: true; selected?: Value[]; on_change?: (selected: Value[]) => void }
-    )
+  }
+  // Literal arms keep on_change narrow; `multiple: boolean` covers `multiple={flag}`
+  type SelectionProps<Value> =
+    | { multiple?: false; selected?: Value | null; on_change?: (selected: Value) => void }
+    | { multiple: true; selected?: Value[]; on_change?: (selected: Value[]) => void }
+    | {
+        multiple: boolean
+        selected?: Value | Value[] | null
+        on_change?: (selected: Value | Value[]) => void
+      }
 
   let {
     options,
@@ -79,14 +80,16 @@
     label,
     disabled = false,
     sort_order = $bindable(null),
+    sort_button_props,
     option,
     option_suffix,
     on_change,
     tooltip_options,
-    tooltip_placement = `bottom`,
     as = `div`,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLAttributes<HTMLDivElement>, `children`> &
+    CommonProps<Value> &
+    SelectionProps<Value> = $props()
 
   const option_list = $derived(
     (Array.isArray(options) ? options : Object.entries(options)).map(to_option<Value>),
@@ -109,14 +112,12 @@
   })
 
   function select(value: Value) {
-    if (multiple) {
-      selected = selected_values.includes(value)
+    if (!multiple && selected === value) return // re-picking the checked radio changes nothing
+    selected = multiple
+      ? selected_values.includes(value)
         ? selected_values.filter((val) => val !== value)
         : [...selected_values, value]
-    } else {
-      if (selected === value) return // re-picking the checked radio changes nothing
-      selected = value
-    }
+      : value
     // The discriminated union is right for consumers, but TS cannot correlate it with
     // the `multiple` local, so the call is widened back to what this branch just set
     ;(on_change as ((selected: Value | Value[]) => void) | undefined)?.(selected)
@@ -146,11 +147,7 @@
     disabled={disabled || opt.disabled}
     data-value={opt.value}
     onclick={() => select(opt.value)}
-    {@attach tooltip({
-      placement: tooltip_placement,
-      ...tooltip_options,
-      content: opt.tooltip,
-    })}
+    {@attach tooltip({ ...tooltip_options, content: opt.tooltip })}
   >
     {#if option}
       {@render option({ option: opt, selected: is_selected })}
@@ -185,13 +182,17 @@
   </span>
   {#if sort_order}
     <button
+      {...sort_button_props}
       type="button"
-      class="sort-order"
       {disabled}
       aria-label="Sorted {sort_order === `asc`
         ? `ascending, activate to sort descending`
         : `descending, activate to sort ascending`}"
-      onclick={() => (sort_order = sort_order === `asc` ? `desc` : `asc`)}
+      class={[`sort-order`, sort_button_props?.class]}
+      onclick={chain_handlers(
+        () => (sort_order = sort_order === `asc` ? `desc` : `asc`),
+        sort_button_props?.onclick,
+      )}
     >
       {sort_order === `asc` ? `↑` : `↓`}
     </button>
@@ -219,7 +220,7 @@
        everywhere else. Box and state colours live here so slotted content renders inside
        the pill, while padding stays on the button so its edges still toggle. */
     .option,
-    button:not(.option > *) {
+    button:not(.option > button) {
       display: inline-flex;
       align-items: center;
       background: var(--btn-group-btn-bg, transparent);
@@ -256,15 +257,6 @@
         border-color: var(--btn-group-btn-active-border-color, transparent);
       }
     }
-    /* inside a pill the button drops its own box rather than nesting a second one in it.
-       Dropping the border rather than making it transparent keeps the pill the size of
-       an unwrapped one and lets the button fill it, so clicks on its edges still toggle. */
-    .option > button {
-      background: none;
-      color: inherit;
-      border: none;
-      border-radius: inherit;
-    }
     button {
       display: inline-flex;
       align-items: center;
@@ -276,6 +268,18 @@
       font-family: var(--btn-group-btn-font-family, inherit);
       font-size: var(--btn-group-btn-font-size, inherit);
       cursor: var(--btn-group-btn-cursor, pointer);
+    }
+    /* after `button`'s padding shorthand so padding-right is not reset; inside a pill
+       the button drops its own box rather than nesting a second one in it. Dropping the
+       border rather than making it transparent keeps the pill the size of an unwrapped
+       one and lets the button fill it, so clicks on its edges still toggle. Right padding
+       shrinks by default so a trailing suffix (link, badge) sits in that former gap. */
+    .option > button {
+      background: none;
+      color: inherit;
+      border: none;
+      border-radius: inherit;
+      padding-right: var(--btn-group-option-btn-padding-right, 0.5ex);
     }
     button:disabled {
       opacity: var(--btn-group-btn-disabled-opacity, 0.5);

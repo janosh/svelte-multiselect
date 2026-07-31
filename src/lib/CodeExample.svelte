@@ -1,7 +1,11 @@
 <script lang="ts">
   // see svelte.config.ts where this component is set as the live-examples Wrapper
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type {
+    HTMLAnchorAttributes,
+    HTMLAttributes,
+    HTMLButtonAttributes,
+  } from 'svelte/elements'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
   import { chain_handlers } from './utils'
@@ -13,8 +17,10 @@
     title,
     example,
     code,
-    link_props, // Applied after computed attributes (href, title, etc.), allowing override
+    // applied after the computed `title` and `target`/`rel`, so those stay overridable
+    link_props,
     button_props,
+    ...rest
   }: {
     // src+meta are passed in by live-examples remark plugin
     src?: string // code fence content, dedented by the remark plugin
@@ -36,11 +42,22 @@
     title?: Snippet<[]>
     example?: Snippet<[]>
     code?: Snippet<[]>
-    link_props?: HTMLAttributes<HTMLAnchorElement>
-    button_props?: HTMLAttributes<HTMLButtonElement>
-  } = $props()
+    // one bag is shared by every external link, so an `href` on it could only ever
+    // point the repl, github and repo icons at the same URL
+    link_props?: Omit<HTMLAnchorAttributes, `href`>
+    button_props?: Omit<HTMLButtonAttributes, `type`>
+  } & Omit<HTMLAttributes<HTMLDivElement>, `title`> = $props()
 
-  let { id, collapsible, repl, github, repo, file, filename, lang } = $derived(meta)
+  let {
+    id: meta_id,
+    collapsible,
+    repl,
+    github,
+    repo,
+    file,
+    filename,
+    lang,
+  } = $derived(meta)
   let code_above = $derived(meta.code_above ?? collapsible) // if code is collapsed, render code above example by default
   // mdsvex transform emits the current page's path as meta.filename, so fall back
   // to it when meta.file is unset (github: true is documented to link there)
@@ -63,11 +80,11 @@
 <nav>
   {#each external_links as { cond, href, icon } (icon)}
     <a
-      {href}
       {...links}
       title={icon}
-      style:display={cond ? `inline-block` : `none`}
       {...link_props}
+      {href}
+      style:display={cond ? `inline-block` : `none`}
     >
       <Icon {icon} />
     </a>
@@ -76,6 +93,7 @@
     {@render title?.()}
     <button
       {...button_props}
+      type="button"
       onclick={chain_handlers(() => (open = !open), button_props?.onclick)}
     >
       <Icon icon={open ? `Collapse` : `Expand`} />
@@ -84,7 +102,12 @@
   {/if}
 </nav>
 <!-- wrap in div with id for precise CSS selectors in playwright E2E tests -->
-<div {id} class="code-example" class:code-above={code_above}>
+<div
+  {...rest}
+  id={meta_id ?? rest.id}
+  class={[`code-example`, rest.class]}
+  class:code-above={code_above}
+>
   {@render example?.()}
   <pre class:open>{#if lang}<span class="lang-label">{lang}</span>{/if}<code
       >{#if code}{@render code()}{:else}{src}{/if}</code

@@ -16,8 +16,6 @@ jobs:
       - name: Discover broken links
         uses: lycheeverse/lychee-action@v2
         with:
-          # Skip links into our own deployed docs: those pages come from this repo's
-          # build, so checking them against the live site fails any PR that adds one
-          # until it merges and deploys. The prerender crawl already validates them.
-          # Pending changelog tags are created after merge.
-          args: --exclude '%7B' --exclude '^file://' --exclude '^https://janosh\.github\.io/svelte-widgets' --exclude '^https://github\.com/janosh/svelte-widgets/compare/' --root-dir . --accept 100..=103,200..=299,403,429,502,503 -- ./**/*.{md,svelte,ts}
+          # Deployed docs and unreleased compare tags are unavailable until after merge.
+          # The prerender crawl validates internal docs links.
+          args: --exclude '%7B' --exclude '^file://' --exclude '^https://svelte-widgets\.janosh\.dev' --exclude '^https://github\.com/janosh/svelte-widgets/compare/' --root-dir . --accept 100..=103,200..=299,403,429,502,503 -- ./**/*.{md,svelte,ts}

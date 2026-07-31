@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
 
   let {
     checked = $bindable(false),
@@ -10,9 +10,11 @@
     ...rest
   }: Omit<HTMLAttributes<HTMLLabelElement>, 'children'> & {
     checked?: boolean
+    // the input's keydown hook, chained ahead of the Enter handling below
     onkeydown?: (event: KeyboardEvent) => void
     children?: Snippet<[{ checked: boolean }]>
-    input_props?: HTMLAttributes<HTMLInputElement>
+    // `checked`/`type` would detach bind:checked; use the `onkeydown` prop above instead
+    input_props?: Omit<HTMLInputAttributes, `checked` | `onkeydown` | `type`>
   } = $props()
 
   // normally input type=checkbox toggles on space bar, this handler also responds to enter
@@ -27,7 +29,7 @@
 
 <label {...rest}>
   {@render children?.({ checked })}
-  <input type="checkbox" bind:checked {...input_props} onkeydown={handle_keydown} />
+  <input {...input_props} type="checkbox" bind:checked onkeydown={handle_keydown} />
   <span></span>
 </label>
 

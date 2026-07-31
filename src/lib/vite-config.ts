@@ -56,7 +56,7 @@ const error_rules = [
   eslint-plugin-vitest/require-awaited-expect-poll`,
   // tier 1: zero-violation guard rails
   `no-var no-self-compare prefer-arrow-callback no-array-constructor no-new-wrappers
-  prefer-numeric-literals default-case-last no-object-constructor
+  prefer-numeric-literals default-case-last no-object-constructor no-unreachable-loop
   @typescript-eslint/prefer-enum-initializers
   @typescript-eslint/prefer-literal-enum-member
   @typescript-eslint/consistent-type-assertions eslint-plugin-unicorn/prefer-array-some
@@ -74,6 +74,12 @@ const error_rules = [
   eslint-plugin-unicorn/no-unreadable-iife
   eslint-plugin-unicorn/consistent-empty-array-spread
   eslint-plugin-unicorn/no-unnecessary-slice-end oxc/bad-bitwise-operator
+  eslint-plugin-unicorn/no-confusing-array-with
+  eslint-plugin-unicorn/no-array-fill-with-reference-type
+  eslint-plugin-unicorn/explicit-timer-delay @typescript-eslint/no-floating-promises
+  @typescript-eslint/await-thenable @typescript-eslint/no-misused-spread
+  @typescript-eslint/no-for-in-array @typescript-eslint/no-array-delete
+  @typescript-eslint/no-base-to-string @typescript-eslint/require-array-sort-compare
   eslint-plugin-vitest/no-identical-title eslint-plugin-vitest/prefer-comparison-matcher
   eslint-plugin-vitest/prefer-equality-matcher eslint-plugin-vitest/prefer-to-contain
   eslint-plugin-vitest/prefer-hooks-on-top eslint-plugin-vitest/prefer-hooks-in-order
@@ -93,10 +99,14 @@ const error_rules = [
   eslint-plugin-unicorn/no-useless-collection-argument
   eslint-plugin-unicorn/prefer-structured-clone
   eslint-plugin-unicorn/consistent-date-clone eslint-plugin-unicorn/relative-url-style
+  eslint-plugin-unicorn/prefer-single-call
   eslint-plugin-import/first eslint-plugin-import/newline-after-import
   oxc/branches-sharing-code eslint-plugin-vitest/prefer-to-be prefer-object-spread
   @typescript-eslint/prefer-for-of eslint-plugin-unicorn/prefer-string-raw
-  eslint-plugin-unicorn/prefer-modern-math-apis eslint-plugin-unicorn/prefer-regexp-test`,
+  eslint-plugin-unicorn/prefer-modern-math-apis eslint-plugin-unicorn/prefer-regexp-test
+  @typescript-eslint/no-unnecessary-type-arguments @typescript-eslint/no-unnecessary-type-parameters
+  @typescript-eslint/no-useless-default-assignment
+  @typescript-eslint/use-unknown-in-catch-callback-variable`,
   // tier 3: larger but worthwhile
   `@typescript-eslint/prefer-nullish-coalescing
   eslint-plugin-unicorn/prefer-string-replace-all @typescript-eslint/dot-notation radix

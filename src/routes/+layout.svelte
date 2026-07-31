@@ -6,7 +6,7 @@
   import type { Pathname } from '$app/types'
   import { CopyButton, GitHubCorner, PageSearch, slug_to_title, Toc } from '$lib'
   import { highlight_matches } from '$lib/attachments'
-  import { name, repository } from '$root/package.json'
+  import { repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
   import favicon from '$site/favicon.svg'
   import type { Snippet } from 'svelte'
@@ -15,7 +15,6 @@
   import { demo_labels, routes } from './(demos)'
 
   let { children }: { children?: Snippet<[]> } = $props()
-  let toc_desktop = $state(true)
   let page_search_query = $state(``)
 
   // resolve's arg type distributes over the Pathname union, so a dynamic route can't
@@ -76,10 +75,13 @@
 </svelte:head>
 
 {#if !is_home}
-  <h1>
-    <img src={favicon} alt={name} height="50" width="50" />&ensp;Svelte Widgets
-  </h1>
-  <DemoNav --nav-item-padding="1pt 4pt" />
+  <header class="site-header">
+    <a class="brand" href={resolve_path(`/`)}>
+      <img src={favicon} alt="" width="28" height="28" />
+      Svelte Widgets
+    </a>
+    <DemoNav />
+  </header>
 {/if}
 
 <PageSearch
@@ -97,33 +99,21 @@
 
 <CopyButton global global_selector="pre:not(li > pre) > code" />
 
-<div
-  data-pagefind-body
-  style="display: contents"
-  {@attach highlight_matches({
-    query: page_search_query,
-    css_class: `page-search-match`,
-    duration_ms: 8000,
-  })}
->
-  {@render children?.()}
-</div>
+<div class="docs-body">
+  <div
+    data-pagefind-body
+    style="display: contents"
+    {@attach highlight_matches({
+      query: page_search_query,
+      css_class: `page-search-match`,
+      duration_ms: 8000,
+    })}
+  >
+    {@render children?.()}
+  </div>
 
-<Toc
-  headingSelector="main > :where(h2, h3)"
-  breakpoint={1500}
-  minItems={5}
-  bind:desktop={toc_desktop}
-  asideProps={{
-    style: toc_desktop
-      ? `position: fixed; right: 2em; font-size: 0.7rem; max-width: 17rem;`
-      : ``,
-  }}
-  openButtonProps={{ style: `display: flex; padding: 3px;` }}
-  --toc-mobile-bg="light-dark(#fff, #222226)"
-  --toc-padding="1em 0 1em 1em"
-  --toc-active-color="var(--accent)"
-/>
+  <Toc headingSelector="main > :where(h2, h3)" breakpoint={1100} minItems={5} />
+</div>
 
 <Footer {edit_href} />
 
