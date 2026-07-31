@@ -63,11 +63,15 @@
     // heading or a paragraph needs to be a span
     as?: string
   }
-  // on_change rides the discriminant: a single-select consumer's handler takes one
-  // value, so widening it to Value | Value[] made their own callbacks unassignable
+  // Literal arms keep on_change narrow; `multiple: boolean` covers `multiple={flag}`
   type SelectionProps<Value> =
     | { multiple?: false; selected?: Value | null; on_change?: (selected: Value) => void }
     | { multiple: true; selected?: Value[]; on_change?: (selected: Value[]) => void }
+    | {
+        multiple: boolean
+        selected?: Value | Value[] | null
+        on_change?: (selected: Value | Value[]) => void
+      }
 
   let {
     options,

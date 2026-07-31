@@ -8501,35 +8501,42 @@ test(`press on the portalled dropdown does not close it`, async () => {
   await unmount(app)
 })
 
-// A portalled dropdown skips the input's blur close so a touch can still land on an
-// option (issue #335), leaving click_outside and dismiss_on in charge.
-test(`dismiss_on='release' keeps a portalled dropdown open until click`, async () => {
-  const props = $state<MultiSelectProps>({
-    options: [1, 2, 3],
-    dismiss_on: `release`,
-    portal: { active: true },
-  })
-  const app = mount(MultiSelect, { target: document.body, props })
-  await tick()
-  const is_open = () => doc_query(`div.multiselect`).classList.contains(`open`)
-  const input = doc_query<HTMLInputElement>(`input[autocomplete]`)
-  input.focus()
-  await tick()
-  expect(is_open()).toBe(true)
+// Portalled blur must not close (issue #335); in-place skips blur (it closes on its own).
+test.each([
+  [`portalled`, { portal: { active: true } }],
+  [`in-place`, {}],
+] as const)(
+  `dismiss_on='release' keeps a %s dropdown open until click`,
+  async (_label, extra) => {
+    const props = $state<MultiSelectProps>({
+      options: [1, 2, 3],
+      dismiss_on: `release`,
+      open: true,
+      ...extra,
+    })
+    const app = mount(MultiSelect, { target: document.body, props })
+    await tick()
+    const is_open = () => doc_query(`div.multiselect`).classList.contains(`open`)
+    expect(is_open()).toBe(true)
 
-  const outside = document.createElement(`button`)
-  document.body.append(outside)
-  outside.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
-  input.dispatchEvent(new FocusEvent(`blur`, { relatedTarget: outside }))
-  await tick()
-  expect(is_open()).toBe(true)
+    const outside = document.createElement(`button`)
+    document.body.append(outside)
+    outside.dispatchEvent(new PointerEvent(`pointerdown`, { bubbles: true }))
+    if (`portal` in extra) {
+      doc_query(`input[autocomplete]`).dispatchEvent(
+        new FocusEvent(`blur`, { relatedTarget: outside }),
+      )
+    }
+    await tick()
+    expect(is_open()).toBe(true)
 
-  outside.dispatchEvent(new PointerEvent(`click`, { bubbles: true }))
-  await tick()
-  expect(is_open()).toBe(false)
-  outside.remove()
-  await unmount(app)
-})
+    outside.dispatchEvent(new PointerEvent(`click`, { bubbles: true, detail: 1 }))
+    await tick()
+    expect(is_open()).toBe(false)
+    outside.remove()
+    await unmount(app)
+  },
+)
 
 test(`searchExpandsCollapsedGroups: manually collapsed group stays collapsed until the search changes`, async () => {
   mount(MultiSelect, {

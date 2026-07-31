@@ -184,6 +184,7 @@ describe(`heading_ids preprocessor`, () => {
     [`<div id="same"></div>\n<h2>Same</h2>`, `same-1`],
     [`<h2>Foo</h2>\n<custom-card id="foo"></custom-card>`, `foo-1`],
     [`<script id="same"></script>\n<h2>Same</h2>`, `same-1`],
+    [`<script id="same"></script><h2>Same</h2>`, `same-1`], // id on excluded host; abutting end
   ])(`reserves static element IDs before generating headings`, (source, expected_id) => {
     expect(preprocess(source).code).toBe(
       source.replace(`<h2>`, `<h2 id="${expected_id}">`),

@@ -94,8 +94,7 @@ describe(`ButtonGroup`, () => {
     )
   })
 
-  // `multiple` discriminates the props union, so each mode arrives as a literal object
-  // rather than a boolean the body branches on — a widened `boolean` matches neither arm
+  // literal arms keep handlers narrow; a boolean `multiple` uses the Value | Value[] arm
   test.each([
     [`radiogroup`, `radio`, `aria-checked`, `aria-pressed`, { selected: `beta` }],
     [

@@ -337,10 +337,18 @@ describe(`toast queue reducer`, () => {
 })
 
 describe(`ToastStore`, () => {
-  afterEach(() => void vi.useRealTimers())
+  const stores: ToastStore<string>[] = []
+  const track = <Priority extends string>(created: ToastStore<Priority>) => (
+    stores.push(created),
+    created
+  )
+  afterEach(() => {
+    for (const created of stores.splice(0)) created.destroy()
+    vi.useRealTimers()
+  })
 
   test(`show returns an id and exposes active, pending and items`, () => {
-    const store = new ToastStore()
+    const store = track(new ToastStore())
     const first_id = store.show(`a`)
     store.show(`b`)
     store.show(`c`)
@@ -362,7 +370,7 @@ describe(`ToastStore`, () => {
     [`a custom ladder`, { priorities: hive_ladder }, `watch`, `action`],
   ] as const)(`stickiness follows %s`, (_desc, options, sticky, fleeting) => {
     fake_clock()
-    const store = new ToastStore(options)
+    const store = track(new ToastStore(options))
     store.show(`sticky`, { priority: sticky })
     store.show(`fleeting`, { priority: fleeting })
 
@@ -380,7 +388,7 @@ describe(`ToastStore`, () => {
 
   test(`pause banks the remainder and resume spends exactly that, never more`, () => {
     fake_clock()
-    const store = new ToastStore()
+    const store = track(new ToastStore())
     store.show(`a`, { duration_ms: 1000 })
 
     vi.advanceTimersByTime(300)
@@ -408,7 +416,7 @@ describe(`ToastStore`, () => {
     [`timeout`, () => vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS)],
   ] as const)(`on_close reports reason=%s`, (reason, act) => {
     fake_clock()
-    const store = new ToastStore()
+    const store = track(new ToastStore())
     const on_close = vi.fn<ToastCloseHandler>()
     const on_click = vi.fn()
     store.show(`a`, { on_close, action: { label: `Undo`, on_click } })
@@ -421,7 +429,7 @@ describe(`ToastStore`, () => {
   })
 
   test(`an overflowed toast reports on_close too`, () => {
-    const store = new ToastStore({ max_pending: 1 })
+    const store = track(new ToastStore({ max_pending: 1 }))
     const on_close = vi.fn<ToastCloseHandler>()
     store.show(`active`)
     store.show(`kept`)
@@ -432,7 +440,7 @@ describe(`ToastStore`, () => {
   })
 
   test(`clear takes a predicate and defaults to everything`, () => {
-    const store = new ToastStore()
+    const store = track(new ToastStore())
     store.show(`keep`, { priority: `error` })
     store.show(`drop`)
 
@@ -445,7 +453,7 @@ describe(`ToastStore`, () => {
 
   test(`destroy drops the queue and its timer but keeps the ladder and ids`, () => {
     fake_clock()
-    const store = new ToastStore({ priorities: hive_ladder })
+    const store = track(new ToastStore({ priorities: hive_ladder }))
     // construction stays inert, which is what makes the module-scoped `toast` safe to
     // import during SSR: nothing is scheduled until something is shown
     expect(vi.getTimerCount()).toBe(0)
