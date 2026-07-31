@@ -3515,6 +3515,7 @@ describe(`file_drop`, () => {
   const cleanups: (() => void)[] = []
   afterEach(() => {
     for (const cleanup of cleanups.splice(0)) cleanup()
+    vi.unstubAllGlobals()
   })
   const attach_file_drop = (
     options: Parameters<typeof file_drop>[0],
@@ -3745,29 +3746,43 @@ describe(`file_drop`, () => {
   it(`uses reportError when asynchronous processing fails without on_error`, async () => {
     const report_error = vi.fn()
     vi.stubGlobal(`reportError`, report_error)
-    try {
-      const failure = new Error(`consumer rejected files`)
-      const on_files = vi.fn((files: File[], signal: AbortSignal) => {
-        if (files[0]?.name === `second.txt`) throw failure
-        return pending_until_aborted(signal)
-      })
-      const { node } = attach_file_drop({ on_files })
+    const failure = new Error(`consumer rejected files`)
+    const on_files = vi.fn((files: File[], signal: AbortSignal) => {
+      if (files[0]?.name === `second.txt`) throw failure
+      return pending_until_aborted(signal)
+    })
+    const { node } = attach_file_drop({ on_files })
 
-      const first_transfer = data_transfer([new File([``], `first.txt`)])
-      node.dispatchEvent(drag_event(`drop`, first_transfer))
-      await vi.waitFor(() => expect(on_files).toHaveBeenCalledOnce())
-      const second_transfer = data_transfer([new File([``], `second.txt`)])
-      node.dispatchEvent(drag_event(`drop`, second_transfer))
-      await vi.waitFor(() =>
-        expect(report_error).toHaveBeenCalledExactlyOnceWith(failure),
-      )
-      expect(on_files.mock.calls.map(([, signal]) => signal.aborted)).toEqual([
-        true,
-        false,
-      ])
-    } finally {
-      vi.unstubAllGlobals()
-    }
+    const first_transfer = data_transfer([new File([``], `first.txt`)])
+    node.dispatchEvent(drag_event(`drop`, first_transfer))
+    await vi.waitFor(() => expect(on_files).toHaveBeenCalledOnce())
+    const second_transfer = data_transfer([new File([``], `second.txt`)])
+    node.dispatchEvent(drag_event(`drop`, second_transfer))
+    await vi.waitFor(() => expect(report_error).toHaveBeenCalledExactlyOnceWith(failure))
+    expect(on_files.mock.calls.map(([, signal]) => signal.aborted)).toEqual([true, false])
+  })
+
+  it(`uses reportError when on_error itself fails`, async () => {
+    const report_error = vi.fn()
+    vi.stubGlobal(`reportError`, report_error)
+    const initial_failure = new Error(`consumer rejected files`)
+    const reporting_error = new Error(`error reporter failed`)
+    const on_error = vi.fn(() => {
+      throw reporting_error
+    })
+    const { node } = attach_file_drop({
+      on_files: vi.fn(() => {
+        throw initial_failure
+      }),
+      on_error,
+    })
+
+    const transfer = data_transfer([new File([``], `file.txt`)])
+    node.dispatchEvent(drag_event(`drop`, transfer))
+    await vi.waitFor(() =>
+      expect(report_error).toHaveBeenCalledExactlyOnceWith(reporting_error),
+    )
+    expect(on_error).toHaveBeenCalledExactlyOnceWith(initial_failure)
   })
 
   it(`cleanup removes handlers, resets state, and restores the prior data attribute`, () => {

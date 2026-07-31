@@ -8,7 +8,7 @@
   type SheetControls = { close: () => void }
   type TriggerProps = {
     onclick: () => void
-    'aria-controls': string
+    'aria-controls': string | undefined
     'aria-expanded': boolean
     'aria-haspopup': `dialog`
   }
@@ -58,7 +58,7 @@
   const controls: SheetControls = { close: () => close(`close`) }
   const trigger_props: TriggerProps = $derived({
     onclick: () => (open = true),
-    'aria-controls': sheet_id,
+    'aria-controls': open ? sheet_id : undefined,
     'aria-expanded': open,
     'aria-haspopup': `dialog`,
   })

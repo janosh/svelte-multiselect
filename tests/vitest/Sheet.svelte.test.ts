@@ -31,6 +31,7 @@ describe(`Sheet`, () => {
     mount_sheet({ id: `settings-sheet` })
     expect(surface()).toBeNull()
     expect(trigger().getAttribute(`aria-expanded`)).toBe(`false`)
+    expect(trigger().getAttribute(`aria-controls`)).toBeNull()
 
     trigger().focus()
     trigger().click()
@@ -83,6 +84,7 @@ describe(`Sheet`, () => {
     expect(surface()).toBeNull()
     expect(on_close).toHaveBeenCalledWith({ via })
     expect(document.activeElement).toBe(trigger())
+    expect(trigger().getAttribute(`aria-controls`)).toBeNull()
   })
 
   test(`snippet controls close through the controlled state`, async () => {

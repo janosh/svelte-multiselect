@@ -705,6 +705,8 @@ which is how `ContextMenu` hangs a menu off the pointer.
 
   let names = $state<string[]>([])
   let drag_active = $state(false)
+  const accepted_file_types = `image/*,.pdf`
+  const allow_multiple = true
   const show_files = (files: File[]) => (names = files.map(({ name }) => name))
 </script>
 
@@ -712,8 +714,8 @@ which is how `ContextMenu` hangs a menu off the pointer.
   data-active={drag_active}
   style="display: block; padding: 1rem; border: 1px dashed currentColor"
   {@attach file_drop({
-    accept: `image/*,.pdf`,
-    multiple: true,
+    accept: accepted_file_types,
+    multiple: allow_multiple,
     on_drag_active: (active) => (drag_active = active),
     on_files: async (files, signal) => {
       await Promise.all(files.map((file) => file.arrayBuffer()))
@@ -722,14 +724,20 @@ which is how `ContextMenu` hangs a menu off the pointer.
     on_error: (error) => (names = [`Error: ${String(error)}`]),
   })}
 >
-  {drag_active ? `Release files` : `Drop images or PDFs`}
+  {drag_active
+    ? `Release files`
+    : `Drop ${allow_multiple ? `files` : `a file`} matching ${accepted_file_types}`}
   <input
     type="file"
-    accept="image/*,.pdf"
-    multiple
+    accept={accepted_file_types}
+    multiple={allow_multiple}
     onchange={(event) =>
       show_files(
-        filter_accepted_files(event.currentTarget.files ?? [], `image/*,.pdf`, true),
+        filter_accepted_files(
+          event.currentTarget.files ?? [],
+          accepted_file_types,
+          allow_multiple,
+        ),
       )}
   />
 </label>

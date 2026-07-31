@@ -132,6 +132,11 @@ describe(`Popover`, () => {
     trigger().click()
     await tick()
 
+    press(doc_query(`[data-testid="popover-item"]`))
+    document.body.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
+    await tick()
+    expect(surface()).not.toBeNull()
+
     press(document.body)
     await tick()
     expect(surface()).not.toBeNull()

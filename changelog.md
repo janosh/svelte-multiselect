@@ -4,7 +4,7 @@
 
 > 30 July 2026
 
-- Add native `<dialog>` `Sheet` edge panels with nested top-layer stacking and browser-managed inertness, snippet-driven `Tabs`, and single/multiple `Accordion` with optional non-collapsible single selection
+- **Breaking:** `Sheet` now uses native `<dialog>` with nested top-layer stacking and browser-managed inertness; its bindable `surface` is `HTMLDialogElement | null` instead of `HTMLDivElement | null`, so migrate bound refs to `HTMLDialogElement` and replace div-only attributes with valid dialog attributes. Also add snippet-driven `Tabs` and single/multiple `Accordion` with optional non-collapsible single selection
 - Add `file_drop` attachment with accept filtering, directory expansion, explicit drop errors and cooperative `AbortSignal` cancellation for superseded callbacks
 - Add hover/focus triggers and delays to `Popover`, honor explicit popup IDs and keep `role`, `aria-haspopup` and mounted `aria-controls` references aligned; also add rich snippet bodies and validated `ask_prompt()` requests to queued dialogs
 - Add headless `apply_theme_mode`, `resolve_theme_mode`, `system_preference`, cross-tab `listen_theme_storage` and shared `theme` state under `svelte-widgets/theme`; apply the docs site's saved theme before first paint
