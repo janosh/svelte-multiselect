@@ -257,13 +257,18 @@ export function heading_ids() {
             tag: match.groups?.excluded_tag?.toLowerCase() ?? null,
           }),
         )
+        // Strictly inside an excluded span. The span's own opening tag sits at `start`
+        // and must stay eligible so its rendered `id` still reserves a collision slot.
+        const is_inside_excluded = (
+          index: number,
+          range: { start: number; end: number },
+        ) => index > range.start && index < range.end
         // Explicit IDs anywhere in rendered markup win, including later source elements.
         for (const match of content.matchAll(opening_tag_regex)) {
           const attrs = match.groups?.attrs
           if (attrs === undefined || !has_static_id_attr.test(attrs)) continue
-          // A strict start comparison keeps the excluded element's own rendered ID eligible.
-          const excluded = excluded_ranges.find(
-            ({ end, start }) => match.index > start && match.index < end,
+          const excluded = excluded_ranges.find((range) =>
+            is_inside_excluded(match.index, range),
           )
           if (excluded && excluded.tag !== `pre`) continue
           const existing_id = get_static_id_attr(attrs)
@@ -274,8 +279,8 @@ export function heading_ids() {
           const { attrs, inner, tag } = match.groups
           if (attrs === undefined || inner === undefined || !tag) continue
           const start = match.index + match[0].indexOf(`<${tag}`)
-          const excluded = excluded_ranges.some(
-            (range) => start >= range.start && start < range.end,
+          const excluded = excluded_ranges.some((range) =>
+            is_inside_excluded(start, range),
           )
           if (excluded || get_static_id_attr(attrs) !== undefined) continue
           const id = get_heading_id(inner)

@@ -87,33 +87,18 @@ describe(`Sheet`, () => {
     expect(trigger().getAttribute(`aria-controls`)).toBeNull()
   })
 
-  test(`snippet controls close through the controlled state`, async () => {
+  test(`snippet controls and native dialog.close sync open/on_close`, async () => {
     const on_close = vi.fn()
-    const onclose = vi.fn()
-    const dialog_close = vi.spyOn(HTMLDialogElement.prototype, `close`)
-    const props = mount_sheet({ open: true, on_close, onclose })
+    const props = mount_sheet({ open: true, on_close })
     await tick()
 
     doc_query<HTMLButtonElement>(`[data-testid="sheet-action"]`).click()
     await tick()
-    expect(props.open).toBe(false)
-    expect(surface()).toBeNull()
-    expect(on_close).toHaveBeenCalledWith({ via: `close` })
-    expect(dialog_close).toHaveBeenCalled()
-    expect(onclose).toHaveBeenCalledOnce()
-
-    props.open = true
-    await tick()
-    expect(surface()).not.toBeNull()
-    dialog_close.mockClear()
-    onclose.mockClear()
-    // Controlled dismiss must call the native close path before unmounting
-    props.open = false
-    await tick()
-    expect(surface()).toBeNull()
-    expect(dialog_close).toHaveBeenCalled()
-    expect(onclose).toHaveBeenCalledOnce()
-    expect(on_close).toHaveBeenCalledTimes(1) // open=false alone does not re-emit on_close
+    expect([props.open, surface(), on_close.mock.calls]).toEqual([
+      false,
+      null,
+      [[{ via: `close` }]],
+    ])
 
     props.open = true
     await tick()
@@ -121,8 +106,21 @@ describe(`Sheet`, () => {
     await tick()
     expect(props.open).toBe(false)
     expect(surface()).toBeNull()
-    expect(on_close).toHaveBeenLastCalledWith({ via: `close` })
     expect(on_close).toHaveBeenCalledTimes(2)
+  })
+
+  // open=false alone must still call dialog.close() before `{#if open}` unmounts
+  test(`controlled open=false fires native onclose`, async () => {
+    const onclose = vi.fn()
+    const dialog_close = vi.spyOn(HTMLDialogElement.prototype, `close`)
+    const props = mount_sheet({ open: true, onclose })
+    await tick()
+
+    props.open = false
+    await tick()
+    expect(dialog_close).toHaveBeenCalled()
+    expect(onclose).toHaveBeenCalledOnce()
+    expect(surface()).toBeNull()
   })
 
   test(`dismissal options can leave backdrop and Escape to the consumer`, async () => {

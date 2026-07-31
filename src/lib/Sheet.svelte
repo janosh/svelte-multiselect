@@ -63,13 +63,7 @@
     'aria-haspopup': `dialog`,
   })
 
-  const handle_cancel = (event: Event) => {
-    if (close_on_escape) close(`escape`)
-    else event.preventDefault()
-  }
-
-  // Close before `{#if open}` tears the dialog down, so the native `close` event (and
-  // consumer `onclose`) still fire. showModal runs after mount once `surface` is bound.
+  // `$effect.pre` closes before `{#if open}` unmounts so native `onclose` still fires.
   $effect.pre(() => {
     if (!open && surface?.open) surface.close()
   })
@@ -95,7 +89,10 @@
     {@attach focus_trap({
       restore: trigger_wrapper?.querySelector(tabbable_selector) ?? undefined,
     })}
-    oncancel={chain_handlers(handle_cancel, rest.oncancel)}
+    oncancel={chain_handlers((event) => {
+      if (close_on_escape) close(`escape`)
+      else event.preventDefault()
+    }, rest.oncancel)}
     onclose={chain_handlers(() => close(`close`), rest.onclose)}
   >
     {#if header}<header>{@render header(controls)}</header>{/if}
