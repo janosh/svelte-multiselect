@@ -1,43 +1,8 @@
-<script module lang="ts">
-  // Single-sheet modal chrome: one open sheet makes every other body child inert and
-  // locks document scroll. Nested sheets are unsupported.
-  let sheet_is_open = false
-
-  const activate_modal_sheet = (host: HTMLElement): (() => void) => {
-    if (sheet_is_open) {
-      throw new Error(
-        `Sheet does not support nested or concurrent open sheets; close the open sheet first`,
-      )
-    }
-
-    const { body } = host.ownerDocument
-    const body_style = body.style
-    const inert_attributes = new Map<Element, string | null>()
-    for (const sibling of body.children) {
-      if (sibling === host) continue
-      inert_attributes.set(sibling, sibling.getAttribute(`inert`))
-      sibling.setAttribute(`inert`, ``)
-    }
-    const overflow_value = body_style.getPropertyValue(`overflow`)
-    const overflow_priority = body_style.getPropertyPriority(`overflow`)
-    sheet_is_open = true
-    body_style.setProperty(`overflow`, `hidden`)
-
-    return () => {
-      for (const [element, inert_attribute] of inert_attributes) {
-        if (inert_attribute === null) element.removeAttribute(`inert`)
-        else element.setAttribute(`inert`, inert_attribute)
-      }
-      body_style.setProperty(`overflow`, overflow_value, overflow_priority)
-      sheet_is_open = false
-    }
-  }
-</script>
-
 <script lang="ts">
-  import { untrack, type Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
-  import { click_outside, focus_trap, portal, tabbable_selector } from './attachments'
+  import type { Snippet } from 'svelte'
+  import type { HTMLDialogAttributes } from 'svelte/elements'
+  import { backdrop_dismiss, focus_trap, tabbable_selector } from './attachments'
+  import { chain_handlers } from './utils'
 
   type SheetSide = `top` | `right` | `bottom` | `left`
   type SheetControls = { close: () => void }
@@ -49,12 +14,12 @@
   }
   type CloseVia = `pointer` | `escape` | `close`
 
-  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children`> {
+  interface Props extends Omit<HTMLDialogAttributes, `children`> {
     open?: boolean
     side?: SheetSide
     close_on_backdrop?: boolean
     close_on_escape?: boolean
-    surface?: HTMLDivElement | null
+    surface?: HTMLDialogElement | null
     // Snippets remain owned by the declaring parent. Sheet renders them in that
     // parent's scope and only supplies stable controls; it does not retain them.
     trigger?: Snippet<[TriggerProps]>
@@ -76,7 +41,7 @@
     footer,
     children,
     on_close,
-    id = generated_id,
+    id,
     'aria-label': aria_label,
     'aria-labelledby': aria_labelledby,
     ...rest
@@ -84,18 +49,6 @@
 
   const sheet_id = $derived(id ?? generated_id)
   let trigger_wrapper = $state<HTMLSpanElement | null>(null)
-  let portal_host = $state<HTMLElement | null>(null)
-  const portal_target = typeof document === `undefined` ? null : document.body
-  // `portal` restores its node to the source anchor on cleanup. A component teardown
-  // must then remove that restored host rather than leave an empty portal behind.
-  const sheet_portal = (node: Element): (() => void) | undefined => {
-    const restore = portal(portal_target)(node)
-    if (!restore) return undefined
-    return () => {
-      restore()
-      node.remove()
-    }
-  }
 
   const close = (via: CloseVia) => {
     if (!open) return
@@ -110,10 +63,13 @@
     'aria-haspopup': `dialog`,
   })
 
-  $effect.pre(() => {
-    if (!open || !portal_host) return
-    const host = portal_host
-    return untrack(() => activate_modal_sheet(host))
+  const handle_cancel = (event: Event) => {
+    if (close_on_escape) close(`escape`)
+    else event.preventDefault()
+  }
+
+  $effect(() => {
+    if (surface && !surface.open) surface.showModal()
   })
 </script>
 
@@ -121,62 +77,45 @@
   {@render trigger?.(trigger_props)}
 </span>
 
-<div
-  bind:this={portal_host}
-  class="sheet-portal"
-  style="display: contents"
-  {@attach sheet_portal}
->
-  {#if open}
-    <div class="sheet-layer">
-      <div class="sheet-backdrop" aria-hidden="true"></div>
-      <div
-        bind:this={surface}
-        {...rest}
-        id={sheet_id}
-        class={[`sheet`, rest.class]}
-        data-side={side}
-        role="dialog"
-        aria-modal="true"
-        aria-label={aria_label ?? (aria_labelledby ? undefined : `Sheet`)}
-        aria-labelledby={aria_labelledby}
-        {@attach click_outside({
-          enabled: close_on_backdrop,
-          inside: [trigger_wrapper],
-          callback: () => close(`pointer`),
-        })}
-        {@attach focus_trap({
-          restore: trigger_wrapper?.querySelector(tabbable_selector) ?? undefined,
-          on_escape: close_on_escape ? () => close(`escape`) : undefined,
-        })}
-      >
-        {#if header}<header>{@render header(controls)}</header>{/if}
-        <div class="sheet-content">{@render children(controls)}</div>
-        {#if footer}<footer>{@render footer(controls)}</footer>{/if}
-      </div>
-    </div>
-  {/if}
-</div>
+{#if open}
+  <dialog
+    bind:this={surface}
+    {...rest}
+    id={sheet_id}
+    class={[`sheet`, rest.class]}
+    data-side={side}
+    aria-label={aria_label ?? (aria_labelledby ? undefined : `Sheet`)}
+    aria-labelledby={aria_labelledby}
+    {@attach backdrop_dismiss(() => close_on_backdrop && close(`pointer`))}
+    {@attach focus_trap({
+      restore: trigger_wrapper?.querySelector(tabbable_selector) ?? undefined,
+    })}
+    oncancel={chain_handlers(handle_cancel, rest.oncancel)}
+    onclose={chain_handlers(() => close(`close`), rest.onclose)}
+  >
+    {#if header}<header>{@render header(controls)}</header>{/if}
+    <div class="sheet-content">{@render children(controls)}</div>
+    {#if footer}<footer>{@render footer(controls)}</footer>{/if}
+  </dialog>
+{/if}
 
 <style>
-  .sheet-layer {
-    position: fixed;
-    z-index: var(--sheet-z-index, 50);
-    inset: 0;
-    isolation: isolate;
+  :global(:root:has(dialog.sheet[open])) {
+    overflow: hidden;
   }
-  .sheet-backdrop {
-    position: absolute;
-    z-index: -1;
-    inset: 0;
-    background: var(--sheet-backdrop, rgba(0, 0, 0, 0.42));
-    backdrop-filter: var(--sheet-backdrop-filter, blur(2px));
+  .sheet:not([open]) {
+    display: none;
   }
   .sheet {
-    position: absolute;
+    position: fixed;
     box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    inset: auto;
+    margin: 0;
+    padding: 0;
+    width: auto;
+    height: auto;
     max-width: 100vw;
     max-height: 100vh;
     overflow: hidden;
@@ -184,6 +123,10 @@
     background: var(--sheet-bg, light-dark(#fff, #2a2a2e));
     color: var(--sheet-color, inherit);
     box-shadow: var(--sheet-shadow, 0 0 18px rgba(0, 0, 0, 0.3));
+  }
+  .sheet::backdrop {
+    background: var(--sheet-backdrop, rgba(0, 0, 0, 0.42));
+    backdrop-filter: var(--sheet-backdrop-filter, blur(2px));
   }
   .sheet:is([data-side='right'], [data-side='left']) {
     top: 0;

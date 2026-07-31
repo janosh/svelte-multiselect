@@ -1,18 +1,15 @@
 import type { ComponentProps } from 'svelte'
-import { flushSync, mount, tick, unmount } from 'svelte'
+import { mount, tick, unmount } from 'svelte'
 import { afterEach, describe, expect, test, vi } from 'vite-plus/test'
-import { doc_query, escape_key, pointer_event } from './index'
+import { doc_query, pointer_event } from './index'
 import TestSheet from './TestSheet.svelte'
 
 describe(`Sheet`, () => {
   type SheetProps = ComponentProps<typeof TestSheet>
   const mounted: Record<string, unknown>[] = []
 
-  // Awaited: teardown releases the module-level single-open-sheet latch, so a pending
-  // unmount would make the next test's open throw.
   afterEach(async () => {
     await Promise.all(mounted.splice(0).map((app) => unmount(app)))
-    document.body.style.removeProperty(`overflow`)
   })
 
   const mount_sheet = (extra: Partial<SheetProps> = {}) => {
@@ -21,9 +18,16 @@ describe(`Sheet`, () => {
     return props
   }
   const trigger = () => doc_query<HTMLButtonElement>(`[data-testid="sheet-trigger"]`)
-  const surface = () => document.querySelector<HTMLElement>(`.sheet`)
+  const surface = () => document.querySelector<HTMLDialogElement>(`dialog.sheet`)
+  const press_dialog_at = (dialog: HTMLDialogElement, client_x = 0, client_y = 0) => {
+    dialog.getBoundingClientRect = () =>
+      ({ top: 10, right: 110, bottom: 110, left: 10 }) as DOMRect
+    dialog.dispatchEvent(pointer_event(`pointerdown`, client_x, client_y))
+    dialog.dispatchEvent(pointer_event(`click`, client_x, client_y))
+  }
 
-  test(`trigger opens an accessible portalled dialog and moves focus inside`, async () => {
+  test(`trigger opens a native dialog and moves focus inside`, async () => {
+    const show_modal = vi.spyOn(HTMLDialogElement.prototype, `showModal`)
     mount_sheet({ id: `settings-sheet` })
     expect(surface()).toBeNull()
     expect(trigger().getAttribute(`aria-expanded`)).toBe(`false`)
@@ -32,17 +36,21 @@ describe(`Sheet`, () => {
     trigger().click()
     await tick()
 
-    const dialog = doc_query(`.sheet`)
-    expect(dialog.parentElement?.classList.contains(`sheet-layer`)).toBe(true)
-    expect(dialog.closest(`.sheet-portal`)?.parentElement).toBe(document.body)
-    expect(dialog.getAttribute(`role`)).toBe(`dialog`)
-    expect(dialog.getAttribute(`aria-modal`)).toBe(`true`)
+    const dialog = doc_query<HTMLDialogElement>(`dialog.sheet`)
+    expect(show_modal).toHaveBeenCalledOnce()
+    expect(dialog.closest(`[data-testid="sheet-home"]`)).not.toBeNull()
     expect(dialog.getAttribute(`aria-labelledby`)).toBe(`test-sheet-title`)
     expect(dialog.id).toBe(`settings-sheet`)
     expect(dialog.id).toBe(trigger().getAttribute(`aria-controls`))
     expect(trigger().getAttribute(`aria-expanded`)).toBe(`true`)
     expect(document.activeElement).toBe(doc_query(`[data-testid="sheet-close"]`))
     expect(doc_query(`[data-testid="sheet-footer"]`).textContent).toBe(`Unsaved changes`)
+
+    const closed_clone = dialog.cloneNode(true) as HTMLDialogElement
+    closed_clone.removeAttribute(`open`)
+    document.body.append(closed_clone)
+    expect(getComputedStyle(closed_clone).display).toBe(`none`)
+    closed_clone.remove()
   })
 
   test.each([`top`, `right`, `bottom`, `left`] as const)(
@@ -55,38 +63,26 @@ describe(`Sheet`, () => {
   )
 
   test.each([
-    [`Escape`, `escape`, () => document.dispatchEvent(escape_key())],
-    [
-      `the backdrop`,
-      `pointer`,
-      () =>
-        doc_query(`.sheet-backdrop`).dispatchEvent(pointer_event(`pointerdown`, 0, 0)),
-    ],
-  ] as const)(`%s closes and restores focus`, async (_label, via, dismiss) => {
+    [`Escape`, `escape`],
+    [`the backdrop`, `pointer`],
+  ] as const)(`%s closes and restores focus`, async (_label, via) => {
     const on_close = vi.fn()
     mount_sheet({ on_close })
     trigger().focus()
     trigger().click()
     await tick()
 
-    dismiss()
+    const dialog = doc_query<HTMLDialogElement>(`dialog.sheet`)
+    if (via === `pointer`) {
+      press_dialog_at(dialog, 50, 50)
+      expect(surface()).toBe(dialog)
+      press_dialog_at(dialog)
+    } else dialog.dispatchEvent(new Event(`cancel`, { cancelable: true }))
     await tick()
 
     expect(surface()).toBeNull()
     expect(on_close).toHaveBeenCalledWith({ via })
     expect(document.activeElement).toBe(trigger())
-  })
-
-  test(`presses inside do not dismiss`, async () => {
-    const on_close = vi.fn()
-    mount_sheet({ open: true, on_close })
-    await tick()
-
-    doc_query(`.sheet`).dispatchEvent(pointer_event(`pointerdown`, 0, 0))
-    await tick()
-
-    expect(surface()).not.toBeNull()
-    expect(on_close).not.toHaveBeenCalled()
   })
 
   test(`snippet controls close through the controlled state`, async () => {
@@ -107,6 +103,15 @@ describe(`Sheet`, () => {
     await tick()
     expect(surface()).toBeNull()
     expect(on_close).toHaveBeenCalledTimes(1)
+
+    props.open = true
+    await tick()
+    doc_query<HTMLDialogElement>(`dialog.sheet`).close()
+    await tick()
+    expect(props.open).toBe(false)
+    expect(surface()).toBeNull()
+    expect(on_close).toHaveBeenLastCalledWith({ via: `close` })
+    expect(on_close).toHaveBeenCalledTimes(2)
   })
 
   test(`dismissal options can leave backdrop and Escape to the consumer`, async () => {
@@ -117,92 +122,45 @@ describe(`Sheet`, () => {
     })
     await tick()
 
-    doc_query(`.sheet-backdrop`).dispatchEvent(pointer_event(`pointerdown`, 0, 0))
-    document.dispatchEvent(escape_key())
+    const dialog = doc_query<HTMLDialogElement>(`dialog.sheet`)
+    press_dialog_at(dialog)
+    const cancel = new Event(`cancel`, { cancelable: true })
+    dialog.dispatchEvent(cancel)
     await tick()
 
-    expect(surface()).not.toBeNull()
+    expect(surface()).toBe(dialog)
+    expect(dialog.open).toBe(true)
+    expect(cancel.defaultPrevented).toBe(true)
   })
 
-  test(`Tab stays in the sheet`, async () => {
-    mount_sheet({ open: true })
+  test(`nested native dialogs stack and close independently`, async () => {
+    mount_sheet({ open: true, nested: true })
     await tick()
-    const close_button = doc_query<HTMLButtonElement>(`[data-testid="sheet-close"]`)
-    const action_button = doc_query<HTMLButtonElement>(`[data-testid="sheet-action"]`)
 
-    expect(document.activeElement).toBe(close_button)
-    close_button.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `Tab`, bubbles: true }),
-    )
-    expect(document.activeElement).toBe(action_button)
-    action_button.dispatchEvent(
-      new KeyboardEvent(`keydown`, { key: `Tab`, bubbles: true }),
-    )
-    expect(document.activeElement).toBe(close_button)
+    const dialogs = [...document.querySelectorAll<HTMLDialogElement>(`dialog.sheet`)]
+    expect(dialogs).toHaveLength(2)
+    expect(dialogs.every(({ open }) => open)).toBe(true)
+    expect(dialogs[0].contains(dialogs[1])).toBe(true)
+
+    dialogs[1].dispatchEvent(new Event(`cancel`, { cancelable: true }))
+    await tick()
+    expect(document.querySelectorAll(`dialog.sheet`)).toHaveLength(1)
+    expect(dialogs[0].open).toBe(true)
   })
 
-  test(`open sheet makes background inert and restores prior overflow`, async () => {
-    const background = document.createElement(`main`)
-    const already_inert = document.createElement(`aside`)
-    already_inert.setAttribute(`inert`, `preserved`)
-    document.body.append(background, already_inert)
-    document.body.style.setProperty(`overflow`, `clip`, `important`)
-
-    const props = mount_sheet({ open: true })
-    await tick()
-    expect(background.hasAttribute(`inert`)).toBe(true)
-    expect(already_inert.getAttribute(`inert`)).toBe(``)
-    expect(document.body.style.getPropertyValue(`overflow`)).toBe(`hidden`)
-    expect(document.body.style.getPropertyPriority(`overflow`)).toBe(``)
-    expect(
-      doc_query(`[data-testid="sheet-surface"]`)
-        .closest(`.sheet-portal`)
-        ?.hasAttribute(`inert`),
-    ).toBe(false)
-
-    props.open = false
-    await tick()
-    expect(background.hasAttribute(`inert`)).toBe(false)
-    expect(already_inert.getAttribute(`inert`)).toBe(`preserved`)
-    expect(document.body.style.getPropertyValue(`overflow`)).toBe(`clip`)
-    expect(document.body.style.getPropertyPriority(`overflow`)).toBe(`important`)
-  })
-
-  // The single shared inert/scroll-lock state cannot describe two open sheets, so the
-  // second one fails loudly rather than silently stealing the first one's restore data.
-  test(`a second concurrently open sheet throws`, async () => {
-    mount_sheet({ open: true })
-    const second = mount_sheet()
-    await tick()
-
-    expect(() => {
-      second.open = true
-      flushSync()
-    }).toThrow(/does not support nested or concurrent open sheets/u)
-
-    second.open = false
-    await tick()
-  })
-
-  test(`unmount removes the portal host and its listeners`, async () => {
+  test(`unmount removes an open native dialog without reporting a close`, async () => {
     const on_close = vi.fn()
-    const background = document.createElement(`main`)
-    document.body.append(background)
-    document.body.style.overflow = `scroll`
     mount_sheet({ open: true, on_close })
     await tick()
-    expect(background.hasAttribute(`inert`)).toBe(true)
-    expect(document.body.style.overflow).toBe(`hidden`)
+    const dialog = doc_query<HTMLDialogElement>(`dialog.sheet`)
+    expect(dialog.open).toBe(true)
 
     const app = mounted.pop()
     if (!app) throw new Error(`Sheet test app was not mounted`)
     await unmount(app)
-    document.dispatchEvent(escape_key())
     await tick()
 
-    expect(document.querySelector(`.sheet-portal`)).toBeNull()
+    expect(document.querySelector(`dialog.sheet`)).toBeNull()
     expect(on_close).not.toHaveBeenCalled()
-    expect(background.hasAttribute(`inert`)).toBe(false)
-    expect(document.body.style.overflow).toBe(`scroll`)
   })
 })

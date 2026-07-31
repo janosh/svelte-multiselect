@@ -23,7 +23,7 @@
 
 ## Accordion
 
-`Accordion` uses real heading buttons and regions. Set `multiple` to bind an array of open values. It is also headless: `.accordion-item`, `.accordion-trigger`, `.accordion-panel` and `data-state` are the styling hooks.
+`Accordion` uses real heading buttons and regions. Set `multiple` to bind an array of open values, or set `collapsible={false}` in single mode to keep the open item from closing itself. It is also headless: `.accordion-item`, `.accordion-trigger`, `.accordion-panel` and `data-state` are the styling hooks.
 
 ```svelte example id="patterns-accordion"
 <script lang="ts">
@@ -46,7 +46,7 @@
 
 ## Sheet
 
-`Sheet` portals to the document body, traps focus, dismisses from its backdrop or Escape and returns focus to its trigger.
+`Sheet` uses a native modal `<dialog>`, dismisses from its backdrop or Escape and returns focus to its trigger. Keep overlays inside its dialog; portalling them to `body` moves them outside the modal subtree and makes them inert.
 
 ```svelte example id="patterns-sheet"
 <script lang="ts">

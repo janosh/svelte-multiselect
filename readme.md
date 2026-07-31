@@ -33,7 +33,7 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `ContextMenu`      | Right-click menu anchored to the pointer, with arrow-key navigation                     | [docs](https://janosh.github.io/svelte-widgets/popover#contextmenu)          |
 | `ConfirmDialog`    | Promise-based dialog queue, so two racing prompts can't share one answer                | [docs](https://janosh.github.io/svelte-widgets/dialogs)                      |
 | `DraggablePane`    | Floating panel you can drag by its header, resize and reset to its anchor               | [docs](https://janosh.github.io/svelte-widgets/draggable-pane)               |
-| `Sheet`            | Portalled edge panel with backdrop dismissal and focus restoration                      | [docs](https://janosh.github.io/svelte-widgets/patterns#sheet)               |
+| `Sheet`            | Native modal edge panel with backdrop dismissal and focus restoration                   | [docs](https://janosh.github.io/svelte-widgets/patterns#sheet)               |
 | `Tabs`             | Controlled ARIA tabs with automatic or manual keyboard activation                       | [docs](https://janosh.github.io/svelte-widgets/patterns#tabs)                |
 | `Accordion`        | Single or multi-open disclosure group with snippet-rendered content                     | [docs](https://janosh.github.io/svelte-widgets/patterns#accordion)           |
 | `Toast`            | Notification queue with priorities, dedupe and pause-on-hover                           | [docs](https://janosh.github.io/svelte-widgets/toast)                        |
@@ -44,7 +44,7 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `CopyButton`       | Copy-to-clipboard button with pending, success and error states                         | [docs](https://janosh.github.io/svelte-widgets/copy-button)                  |
 | `ButtonGroup`      | Segmented control over a set of options, single or multi select                         | [docs](https://janosh.github.io/svelte-widgets/button-group)                 |
 | `FullscreenButton` | Fullscreen toggle scoped to one wrapper, so viewers don't fight over the flag           | [docs](https://janosh.github.io/svelte-widgets/fullscreen)                   |
-| `ThemeToggle`      | Light/dark/system theme cycler that persists the choice                                 | [docs](https://janosh.github.io/svelte-widgets/extras#themetoggle)           |
+| `ThemeToggle`      | Light/dark/system theme cycler with persistence and cross-tab synchronization           | [docs](https://janosh.github.io/svelte-widgets/extras#themetoggle)           |
 | `Toggle`           | Accessible switch with a bindable `checked`                                             | [docs](https://janosh.github.io/svelte-widgets/extras#toggle)                |
 | `CodeExample`      | Collapsible source viewer used by the live examples                                     | [docs](https://janosh.github.io/svelte-widgets/extras#codeexample)           |
 | `FileDetails`      | Collapsible `<details>` viewer for a set of files                                       | [docs](https://janosh.github.io/svelte-widgets/extras#filedetails)           |
@@ -57,7 +57,7 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `LiteYouTubeEmbed` | YouTube poster that only loads the player iframe once clicked                           | [docs](https://janosh.github.io/svelte-widgets/site-chrome#liteyoutubeembed) |
 | `Wiggle`           | Spring-animated shake wrapper                                                           | [docs](https://janosh.github.io/svelte-widgets/wiggle)                       |
 
-Fifteen [attachments](https://janosh.github.io/svelte-widgets/attachments) ship alongside them and work on any element. Fourteen come from `svelte-widgets/attachments`: `backdrop_dismiss`, `click_outside`, `contrast_color`, `draggable`, `file_drop`, `float`, `focus_trap`, `forward_window_keydown`, `highlight_matches`, `hotkey`, `portal`, `resizable`, `sortable` and `tooltip`. The fifteenth, `heading_anchors`, has its own `svelte-widgets/heading-anchors` subpath. `dismiss_on_outside_press` is the lower-level multi-surface primitive behind `click_outside`.
+Fifteen [attachments](https://janosh.github.io/svelte-widgets/attachments) work on any element: fourteen come from `svelte-widgets/attachments`, while `heading_anchors` has its own subpath. `dismiss_on_outside_press` is the lower-level multi-surface primitive behind `click_outside`.
 
 ```svelte
 <script>
@@ -150,17 +150,16 @@ import { heading_anchors } from 'svelte-widgets/heading-anchors'
 | `/utils`                            | Positioning, fuzzy matching, hotkeys and general helpers   |
 | `/vite-config`                      | This repository's Vite Plus configuration helper           |
 
-For `$…$` and `$$…$$` math in mdsvex, run `katex_preprocess()` before and after mdsvex so markdown never sees the rendered HTML, then `heading_ids()` last:
+For `$…$` and `$$…$$` math in mdsvex, wrap mdsvex with `katex_preprocess()` and run `heading_ids()` last:
 
 ```ts
 import { mdsvex } from 'mdsvex'
 import { heading_ids } from 'svelte-widgets/heading-anchors'
 import { katex_preprocess } from 'svelte-widgets/katex'
 
-const { before: katex_before, after: katex_after } = katex_preprocess()
-
+const katex = katex_preprocess()
 export default {
-  preprocess: [katex_before, mdsvex({ extensions: [`.md`] }), katex_after, heading_ids()],
+  preprocess: [katex.before, mdsvex({ extensions: [`.md`] }), katex.after, heading_ids()],
 }
 ```
 
