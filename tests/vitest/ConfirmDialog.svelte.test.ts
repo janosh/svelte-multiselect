@@ -1,7 +1,7 @@
 import ConfirmDialog from '$lib/ConfirmDialog.svelte'
 import type { DialogChoice } from '$lib/dialogs.svelte'
 import { ask_prompt, dialog_queue, request_choice } from '$lib/dialogs.svelte'
-import { createRawSnippet, mount, tick, unmount } from 'svelte'
+import { type ComponentProps, createRawSnippet, mount, tick, unmount } from 'svelte'
 import { render } from 'svelte/server'
 import { afterEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query, track } from './index'
@@ -29,7 +29,7 @@ const write_choices: DialogChoice<`cancel` | `write`>[] = [
   { id: `write`, label: `Write`, tone: `accent` },
 ]
 
-const mount_dialog = async (props: Record<string, unknown> = {}) => {
+const mount_dialog = async (props: ComponentProps<typeof ConfirmDialog> = {}) => {
   mounted.push(mount(ConfirmDialog, { target: document.body, props }))
   await flush()
   return doc_query<HTMLDialogElement>(`dialog.confirm-dialog`)
@@ -99,6 +99,8 @@ test(`prompt validation stays open, reports the error, then resolves the value`,
       class: `prompt-field`,
       style: `font-size: 1.1em`,
       maxlength: 12,
+      placeholder: `host fallback`,
+      'aria-describedby': `consumer-hint`,
       oninput,
     },
   })
@@ -118,10 +120,12 @@ test(`prompt validation stays open, reports the error, then resolves the value`,
   expect(document.activeElement).toBe(input)
   expect([input.value, input.placeholder]).toEqual([`draft`, `my-workspace`])
   expect(input.classList.contains(`prompt-field`)).toBe(true)
-  expect([input.getAttribute(`style`), input.maxLength]).toEqual([
-    `font-size: 1.1em;`,
+  expect([input.type, input.style.fontSize, input.maxLength]).toEqual([
+    `text`,
+    `1.1em`,
     12,
   ])
+  expect(input.getAttribute(`aria-describedby`)).toBe(`consumer-hint`)
   expect(doc_query(`dialog label span`).textContent).toBe(`Workspace name`)
   expect(buttons().map((button) => button.textContent?.trim())).toEqual([
     `Cancel`,
@@ -136,14 +140,17 @@ test(`prompt validation stays open, reports the error, then resolves the value`,
   await flush()
   expect(answer.settled).toBe(false)
   expect(dialog.open).toBe(true)
-  expect(doc_query(`[role="alert"]`).textContent?.trim()).toBe(`Enter a workspace name`)
+  const alert = doc_query(`[role="alert"]`)
+  expect(alert.textContent?.trim()).toBe(`Enter a workspace name`)
   expect(input.getAttribute(`aria-invalid`)).toBe(`true`)
+  expect(input.getAttribute(`aria-describedby`)).toBe(`consumer-hint ${alert.id}`)
 
   input.value = `widgets`
   input.dispatchEvent(new InputEvent(`input`, { bubbles: true }))
   await tick()
   expect(document.querySelector(`[role="alert"]`)).toBeNull()
   expect(input.getAttribute(`aria-invalid`)).toBeNull()
+  expect(input.getAttribute(`aria-describedby`)).toBe(`consumer-hint`)
   expect(oninput).toHaveBeenCalledTimes(2)
   doc_query<HTMLFormElement>(`dialog form`).dispatchEvent(
     new SubmitEvent(`submit`, { bubbles: true, cancelable: true }),

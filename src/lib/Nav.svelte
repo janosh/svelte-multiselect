@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLButtonAttributes } from 'svelte/elements'
   import type { TooltipOptions } from './attachments'
   import { click_outside, focus_trap, tooltip } from './attachments'
   import Icon from './Icon.svelte'
@@ -45,7 +45,7 @@
     menu_props?: HTMLAttributes<HTMLDivElement>
     link_props?: HTMLAttributes<HTMLAnchorElement>
     // mobile menu toggle; style/class land here rather than on the <nav> host
-    burger_props?: HTMLAttributes<HTMLButtonElement>
+    burger_props?: Omit<HTMLButtonAttributes, `aria-controls` | `aria-expanded` | `type`>
     page?: { url: { pathname: string } }
     labels?: Record<string, string>
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
@@ -325,11 +325,11 @@
   })}
 >
   <button
-    type="button"
     aria-label="Toggle navigation menu"
+    {...burger_props}
+    type="button"
     aria-expanded={is_open}
     aria-controls={panel_id}
-    {...burger_props}
     class={[`burger`, burger_props?.class]}
     onclick={chain_handlers(() => (is_open = !is_open), burger_props?.onclick)}
   >

@@ -282,8 +282,6 @@ Control when mobile burger menu appears with the `breakpoint` prop (default: 767
 <Nav {routes} breakpoint={1024} />
 ```
 
-Style the mobile toggle with `burger_props` (sibling of `link_props` / `menu_props`); host `style` does not reach the burger button. `onclick` chains with the open/close toggle.
-
 ## Styling
 
 Customize via CSS variables:
@@ -302,3 +300,5 @@ nav {
   --nav-separator-margin: 0 0.25em;
 }
 ```
+
+Style the mobile toggle with `burger_props` (sibling of `link_props` / `menu_props`); host `style` does not reach the burger button. Its `aria-label` can be customized and `onclick` chains with the open/close toggle, while component-owned `type`, `aria-expanded` and `aria-controls` stay intact.

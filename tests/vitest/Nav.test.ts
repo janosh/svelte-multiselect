@@ -117,11 +117,20 @@ describe(`Nav`, () => {
 
   test(`applies custom props and chains the burger click`, async () => {
     const onclick = vi.fn()
+    const burger_props = {
+      style: `opacity: 0.5`,
+      class: `custom-burger`,
+      'aria-label': `Open site menu`,
+      onclick,
+    } satisfies NonNullable<ComponentProps<typeof Nav>[`burger_props`]>
+    Reflect.set(burger_props, `type`, `submit`)
+    Reflect.set(burger_props, `aria-expanded`, true)
+    Reflect.set(burger_props, `aria-controls`, `wrong-panel`)
     mount_nav({
       routes: default_routes,
       class: `custom-class`,
       menu_props: { style: `background: red;` },
-      burger_props: { style: `opacity: 0.5`, class: `custom-burger`, onclick },
+      burger_props,
     })
     const nav = doc_query(`nav`)
     const menu = doc_query(`.menu`)
@@ -130,6 +139,12 @@ describe(`Nav`, () => {
     expect(menu.getAttribute(`style`)).toBe(`background: red;`)
     expect(burger.classList.contains(`custom-burger`)).toBe(true)
     expect(burger.getAttribute(`style`)).toBe(`opacity: 0.5;`)
+    expect([
+      burger.getAttribute(`type`),
+      burger.getAttribute(`aria-label`),
+      burger.getAttribute(`aria-expanded`),
+      burger.getAttribute(`aria-controls`),
+    ]).toEqual([`button`, `Open site menu`, `false`, menu.id])
     await click(burger)
     expect(burger.getAttribute(`aria-expanded`)).toBe(`true`)
     expect(onclick).toHaveBeenCalledOnce()

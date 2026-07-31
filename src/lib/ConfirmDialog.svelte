@@ -5,7 +5,7 @@
 <script lang="ts">
   // Mount once high in the app tree; it renders the head of the shared dialog queue.
   import { onMount } from 'svelte'
-  import type { HTMLAttributes, HTMLDialogAttributes } from 'svelte/elements'
+  import type { HTMLDialogAttributes, HTMLInputAttributes } from 'svelte/elements'
   import { backdrop_dismiss, focus_trap } from './attachments'
   import {
     answer_dialog,
@@ -22,7 +22,7 @@
     ...rest
   }: Omit<HTMLDialogAttributes, `children`> & {
     // prompt <input> only; choice dialogs ignore this
-    input_props?: HTMLAttributes<HTMLInputElement>
+    input_props?: Omit<HTMLInputAttributes, `aria-invalid` | `type` | `value`>
   } = $props()
 
   const request = $derived(dialog_queue[0])
@@ -37,6 +37,11 @@
     void request
     return ``
   })
+  const input_described_by = $derived(
+    [input_props?.[`aria-describedby`], validation_message && error_id]
+      .filter(Boolean)
+      .join(` `) || undefined,
+  )
 
   // submit_prompt no-ops unless a prompt is at the head of the queue, so the form needs
   // no guard of its own.
@@ -109,15 +114,16 @@
           <label>
             <span>{request.input_label}</span>
             <input
-              placeholder={request.placeholder}
               {...input_props}
+              type="text"
+              placeholder={request.placeholder || input_props?.placeholder}
               bind:value={prompt_value}
               oninput={chain_handlers(
                 () => (validation_message = ``),
                 input_props?.oninput,
               )}
               aria-invalid={validation_message ? `true` : undefined}
-              aria-describedby={validation_message ? error_id : undefined}
+              aria-describedby={input_described_by}
             />
           </label>
           {#if validation_message}

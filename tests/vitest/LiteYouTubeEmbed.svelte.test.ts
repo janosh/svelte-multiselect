@@ -1,5 +1,5 @@
 import LiteYouTubeEmbed from '$lib/LiteYouTubeEmbed.svelte'
-import { mount, tick } from 'svelte'
+import { type ComponentProps, mount, tick } from 'svelte'
 import { afterAll, describe, expect, test, vi } from 'vite-plus/test'
 import { doc_query } from './index'
 
@@ -22,7 +22,7 @@ afterAll(() => {
   settings.fetch.interceptor = original_interceptor
 })
 describe(`LiteYouTubeEmbed`, () => {
-  const mount_embed = (props: Record<string, unknown> = {}) => {
+  const mount_embed = (props: Partial<ComponentProps<typeof LiteYouTubeEmbed>> = {}) => {
     const state_props = $state({ video_id: `abc123`, ...props })
     mount(LiteYouTubeEmbed, { target: document.body, props: state_props })
     return state_props
@@ -145,24 +145,33 @@ describe(`LiteYouTubeEmbed`, () => {
   })
 
   test(`forwards host and nested props and makes the active play button inert`, async () => {
-    mount_embed({
+    const nested_props = {
       class: `my-embed`,
       style: `--lite-youtube-bg: navy`,
       play_btn_props: { class: `big-play`, style: `opacity: 0.9`, title: `Go` },
       iframe_props: { loading: `lazy`, referrerpolicy: `no-referrer` },
-    })
+    } satisfies Partial<ComponentProps<typeof LiteYouTubeEmbed>>
+    // Untyped consumers must not override attributes owned by the component.
+    Reflect.set(nested_props.play_btn_props, `type`, `submit`)
+    Reflect.set(nested_props.play_btn_props, `aria-label`, `Wrong label`)
+    Reflect.set(nested_props.iframe_props, `src`, `https://example.com/wrong`)
+    Reflect.set(nested_props.iframe_props, `srcdoc`, `<h1>Wrong document</h1>`)
+    Reflect.set(nested_props.iframe_props, `title`, `Wrong title`)
+    mount_embed(nested_props)
     await tick()
 
     const wrapper = doc_query(`div.lite-youtube`)
-    const play = doc_query(`button.play-btn`)
+    const play = doc_query<HTMLButtonElement>(`button.play-btn`)
     expect(wrapper.classList.contains(`my-embed`)).toBe(true)
     expect(wrapper.classList.contains(`activated`)).toBe(false)
     expect(wrapper.getAttribute(`style`)).toBe(`--lite-youtube-bg: navy;`)
     expect(play.classList.contains(`big-play`)).toBe(true)
-    expect([play.getAttribute(`style`), play.getAttribute(`title`)]).toEqual([
+    expect([play.type, play.getAttribute(`style`), play.getAttribute(`title`)]).toEqual([
+      `button`,
       `opacity: 0.9;`,
       `Go`,
     ])
+    expect(play.getAttribute(`aria-label`)).toBe(`Play`)
     expect(play.hasAttribute(`inert`)).toBe(false)
 
     click(`button.play-btn`)
@@ -173,6 +182,9 @@ describe(`LiteYouTubeEmbed`, () => {
     expect([
       iframe.getAttribute(`loading`),
       iframe.getAttribute(`referrerpolicy`),
-    ]).toEqual([`lazy`, `no-referrer`])
+      iframe.getAttribute(`title`),
+      iframe.hasAttribute(`srcdoc`),
+    ]).toEqual([`lazy`, `no-referrer`, `YouTube video player`, false])
+    expect(iframe.getAttribute(`src`)).toContain(`/embed/abc123`)
   })
 })
