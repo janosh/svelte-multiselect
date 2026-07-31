@@ -31,11 +31,12 @@ export { default as Toggle } from './Toggle.svelte'
 export { default as ThemeToggle } from './ThemeToggle.svelte'
 export {
   apply_theme_mode,
+  listen_theme_storage,
   resolve_theme_mode,
   system_preference,
   theme,
-} from './theme.svelte'
-export type { ThemeMode } from './theme.svelte'
+  type ThemeMode,
+} from './theme.svelte.ts'
 export type * from './types'
 export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'

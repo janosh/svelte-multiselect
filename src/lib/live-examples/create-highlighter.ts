@@ -27,9 +27,11 @@ export const optional_peer_error = `svelte-widgets/live-examples requires option
 const create_instance = async (grammars: readonly Grammar[]): Promise<StarryNight> => {
   // only the import is guarded: a grammar that fails to compile is a caller's bad input,
   // not an absent peer dependency, and must not be reported as one
-  const { createStarryNight } = await import(`@wooorm/starry-night`).catch((cause) => {
-    throw new Error(optional_peer_error, { cause })
-  })
+  const { createStarryNight } = await import(`@wooorm/starry-night`).catch(
+    (cause: unknown) => {
+      throw new Error(optional_peer_error, { cause })
+    },
+  )
   return createStarryNight(grammars)
 }
 

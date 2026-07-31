@@ -2,12 +2,11 @@
 @import '@wooorm/starry-night/style/both';
 
 :root {
-  /* Core theme colors */
   --accent: light-dark(#4a7abf, cornflowerblue);
   --accent-hover: orange;
   --main-max-width: 50em;
-
-  /* Derived colors using light-dark for theme awareness */
+  --toc-width: 13rem;
+  --nav-link-active-color: var(--accent);
   --bg: light-dark(#fafafa, #141418);
   --text: light-dark(#222, #ccc);
   --text-muted: light-dark(#666, #999);
@@ -17,23 +16,21 @@
   --footer-bg: light-dark(#ebebeb, #0b0b0b);
   --border: light-dark(#ddd, rgba(255, 255, 255, 0.15));
   --pre-bg: light-dark(rgba(0, 0, 20, 0.03), rgba(0, 0, 0, 0.3));
-
   --github-corner-bg: light-dark(#222, #eee);
   --github-corner-color: light-dark(#fafafa, #1a1a1a);
 }
-/* Ensure starry-night token colors follow explicit theme toggle, not only OS preference. */
-html[data-theme='dark'] {
-  /* Keep this minimal: the common token colors that dominate Svelte/TS examples. */
-  --color-prettylights-syntax-comment: #9198a1;
-  --color-prettylights-syntax-constant: #79c0ff;
-  --color-prettylights-syntax-entity: #d2a8ff;
-  --color-prettylights-syntax-entity-tag: #7ee787;
-  --color-prettylights-syntax-keyword: #ff7b72;
-  --color-prettylights-syntax-storage-modifier-import: #f0f6fc;
-  --color-prettylights-syntax-string: #a5d6ff;
-  --color-prettylights-syntax-variable: #ffa657;
+/* starry-night's both.css keys off prefers-color-scheme; re-pin to html color-scheme
+   so ThemeToggle (light while OS is dark, and vice versa) stays readable */
+:root {
+  --color-prettylights-syntax-comment: light-dark(#59636e, #9198a1);
+  --color-prettylights-syntax-constant: light-dark(#0550ae, #79c0ff);
+  --color-prettylights-syntax-entity: light-dark(#6639ba, #d2a8ff);
+  --color-prettylights-syntax-entity-tag: light-dark(#0550ae, #7ee787);
+  --color-prettylights-syntax-keyword: light-dark(#cf222e, #ff7b72);
+  --color-prettylights-syntax-storage-modifier-import: light-dark(#1f2328, #f0f6fc);
+  --color-prettylights-syntax-string: light-dark(#0a3069, #a5d6ff);
+  --color-prettylights-syntax-variable: light-dark(#953800, #ffa657);
 }
-/* Default to dark theme for docs site, respects user preference */
 html {
   color-scheme: dark light;
 }
@@ -57,6 +54,62 @@ body > div {
   flex: 1;
   display: flex;
   flex-direction: column;
+}
+/* brand + nav stack; content grid picks up a side TOC when one renders */
+.site-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  max-width: var(--main-max-width);
+  margin: 0 auto 1.5rem;
+  nav {
+    margin: 0;
+    .menu {
+      place-content: start;
+      padding: 0;
+    }
+  }
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  font-weight: 700;
+  color: inherit;
+  text-decoration: none;
+}
+.docs-body {
+  /* Toc defaults to 3ex items; pin size + theme tokens the layout relies on */
+  --toc-font-size: 0.85rem;
+  --toc-li-font-size-base: 1em;
+  --toc-li-font-size-min: 0.9em;
+  --toc-min-width: 0;
+  --toc-mobile-bg: var(--surface);
+  --toc-active-color: var(--accent);
+  display: grid;
+  gap: 2rem;
+  align-items: start;
+  max-width: calc(var(--main-max-width) + 2rem + var(--toc-width));
+  margin: 0 auto 3em;
+  flex: 1;
+  @media (min-width: 1100px) {
+    &:has(aside.toc > nav) {
+      grid-template-columns: minmax(0, 1fr) var(--toc-width);
+    }
+  }
+  aside.toc a {
+    color: inherit; /* Toc uses :where(); else global `a` paints every item accent */
+  }
+  aside.toc.mobile {
+    width: 0;
+    height: 0;
+    min-width: 0;
+    margin: 0;
+    overflow: visible; /* fixed FAB must not occupy a grid track */
+  }
+  main {
+    margin: 0;
+  }
 }
 main {
   max-width: var(--main-max-width);

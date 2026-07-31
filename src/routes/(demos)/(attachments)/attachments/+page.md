@@ -696,14 +696,17 @@ which is how `ContextMenu` hangs a menu off the pointer.
 
 ### `file_drop`
 
-`file_drop` expands dropped directories, applies the same MIME/extension accept syntax as a file input and reports processing errors. A drop with no accepted files is ignored. A newer drop supersedes expansion work that has not reached `on_files`; a callback already running is left to finish.
+`file_drop` expands directories, applies file-input MIME/extension filtering and reports processing errors. Drops without accepted files are ignored. `on_files` receives an `AbortSignal`; each newer accepted drop or cleanup/recreation cooperatively aborts the previous callback.
 
 ```svelte example id="attachments-file-drop"
 <script lang="ts">
   import { file_drop } from '$lib/attachments'
+  import { filter_accepted_files } from '$lib/file-drop'
 
   let names = $state<string[]>([])
   let drag_active = $state(false)
+  const accepted_file_types = `image/*,.pdf`
+  const allow_multiple = true
   const show_files = (files: File[]) => (names = files.map(({ name }) => name))
 </script>
 
@@ -711,19 +714,31 @@ which is how `ContextMenu` hangs a menu off the pointer.
   data-active={drag_active}
   style="display: block; padding: 1rem; border: 1px dashed currentColor"
   {@attach file_drop({
-    accept: `image/*,.pdf`,
-    multiple: true,
+    accept: accepted_file_types,
+    multiple: allow_multiple,
     on_drag_active: (active) => (drag_active = active),
-    on_files: show_files,
+    on_files: async (files, signal) => {
+      await Promise.all(files.map((file) => file.arrayBuffer()))
+      if (!signal.aborted) show_files(files)
+    },
     on_error: (error) => (names = [`Error: ${String(error)}`]),
   })}
 >
-  {drag_active ? `Release files` : `Drop images or PDFs`}
+  {drag_active
+    ? `Release files`
+    : `Drop images or PDFs (${accepted_file_types}; multiple: ${allow_multiple})`}
   <input
     type="file"
-    accept="image/*,.pdf"
-    multiple
-    onchange={(event) => show_files(Array.from(event.currentTarget.files ?? []))}
+    accept={accepted_file_types}
+    multiple={allow_multiple}
+    onchange={(event) =>
+      show_files(
+        filter_accepted_files(
+          event.currentTarget.files ?? [],
+          accepted_file_types,
+          allow_multiple,
+        ),
+      )}
   />
 </label>
 <p aria-live="polite">{names.join(`, `) || `No files selected`}</p>

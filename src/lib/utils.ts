@@ -174,7 +174,7 @@ const resolve_mod = (shortcut: string): string =>
 const KEY_TOKENS: Record<string, string> = { ',': `comma`, '+': `plus`, ' ': `space` }
 const TOKEN_KEYS: Record<string, string> = { comma: `,`, plus: `+`, space: ` ` }
 
-export function split_shortcut(shortcut: string): string[] {
+function split_shortcut(shortcut: string): string[] {
   const parts = shortcut
     .toLowerCase()
     .split(`+`)

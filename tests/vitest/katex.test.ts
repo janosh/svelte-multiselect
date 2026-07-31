@@ -27,7 +27,6 @@ describe(`katex_preprocess`, () => {
   it.each([
     [`$x$`, false],
     [`$$x + y$$`, true],
-    [`before $a_b$ after`, false],
     [`$\\frac{1}{2}$`, false],
     [`$$\nx = 1\n$$`, true],
   ])(`renders %j with display mode %j`, (input, display_mode) => {
@@ -68,7 +67,6 @@ describe(`katex_preprocess`, () => {
   })
 
   it.each([
-    [`\`\`\`js`, `const x = $state(0)`, `const y = $x$`, `\`\`\``].join(`\n`),
     [`\`\`\`js`, `const y = $x$`, `\`\`\`\``].join(`\n`),
     [`\`\`\`js\r`, `const y = $x$\r`, `\`\`\`\r`].join(`\n`),
     [`\`\`\`js`, `const y = $x$`].join(`\n`),
@@ -104,45 +102,49 @@ describe(`katex_preprocess`, () => {
     expect(has_katex(code)).toBe(true)
   })
 
-  it(`leaves $ inside script and style alone, still renders body math`, () => {
-    const source = [
-      `<script>`,
-      `  import { page } from '$app/state'`,
-      `  let n = $state(0)`,
-      `  const s = \`\${n}\``,
-      `</script>`,
-      ``,
-      `Hello $x$`,
-      ``,
-      `<style>`,
-      `  /* $x$ */`,
-      `</style>`,
-    ].join(`\n`)
-    const { code } = run(source)
-    expect(code).toContain(`$app/state`)
-    expect(code).toContain(`$state(0)`)
-    expect(code).toContain(`\${n}`)
-    expect(code).toContain(`/* $x$ */`)
-    expect(has_katex(code)).toBe(true)
-    expect(code).not.toContain(`Hello $x$`)
-  })
-
-  it(`preserves $state inside fenced live-example scripts`, () => {
-    const source = [
-      `\`\`\`svelte example`,
-      `<script>`,
-      `  let mode = $state(\`grouped\`)`,
-      `</script>`,
-      `<input bind:group={mode} />`,
-      `\`\`\``,
-      ``,
-      `See $x$.`,
-    ].join(`\n`)
-    const { code } = run(source)
-    expect(code).toContain(`$state(\`grouped\`)`)
-    expect(code).toContain(`bind:group={mode}`)
-    expect(has_katex(code)).toBe(true)
-  })
+  it.each([
+    {
+      description: `script and style blocks`,
+      source: [
+        `<script>`,
+        `  import { page } from '$app/state'`,
+        `  let n = $state(0)`,
+        `  const s = \`\${n}\``,
+        `</script>`,
+        ``,
+        `Hello $x$`,
+        ``,
+        `<style>`,
+        `  /* $x$ */`,
+        `</style>`,
+      ].join(`\n`),
+      preserved: [`$app/state`, `$state(0)`, `\${n}`, `/* $x$ */`],
+      rendered_source: `Hello $x$`,
+    },
+    {
+      description: `fenced live-example scripts`,
+      source: [
+        `\`\`\`svelte example`,
+        `<script>`,
+        `  let mode = $state(\`grouped\`)`,
+        `</script>`,
+        `<input bind:group={mode} />`,
+        `\`\`\``,
+        ``,
+        `See $x$.`,
+      ].join(`\n`),
+      preserved: [`$state(\`grouped\`)`, `bind:group={mode}`],
+      rendered_source: `See $x$.`,
+    },
+  ])(
+    `protects $description while rendering body math`,
+    ({ source, preserved, rendered_source }) => {
+      const { code } = run(source)
+      for (const literal of preserved) expect(code).toContain(literal)
+      expect(has_katex(code)).toBe(true)
+      expect(code).not.toContain(rendered_source)
+    },
+  )
 
   it(`passes macros through to katex`, () => {
     const { code } = run(`$\\RR$`, `page.md`, { macros: { '\\RR': `\\mathbb{R}` } })

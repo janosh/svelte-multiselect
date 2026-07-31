@@ -2,12 +2,14 @@
   import Sheet from '$lib/Sheet.svelte'
   import type { ComponentProps } from 'svelte'
 
-  // Compile-time coverage: Sheet accepts native div attributes while its parameterized
+  // Compile-time coverage: Sheet accepts native dialog attributes while its parameterized
   // children snippet remains a snippet rather than HTMLAttributes.children.
   let {
     open = $bindable(false),
+    nested = false,
     ...props
-  }: Omit<ComponentProps<typeof Sheet>, `children`> = $props()
+  }: Omit<ComponentProps<typeof Sheet>, `children`> & { nested?: boolean } = $props()
+  let nested_open = $state(true)
 </script>
 
 <div data-testid="sheet-home">
@@ -26,6 +28,15 @@
     {/snippet}
     {#snippet children({ close })}
       <button type="button" data-testid="sheet-action" onclick={close}>Save</button>
+      {#if nested}
+        <Sheet
+          bind:open={nested_open}
+          aria-label="Nested sheet"
+          data-testid="nested-sheet"
+        >
+          Nested content
+        </Sheet>
+      {/if}
     {/snippet}
     {#snippet footer()}
       <small data-testid="sheet-footer">Unsaved changes</small>

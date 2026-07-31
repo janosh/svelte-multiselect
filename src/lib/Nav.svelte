@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type {
+    HTMLAnchorAttributes,
+    HTMLAttributes,
+    HTMLButtonAttributes,
+  } from 'svelte/elements'
   import type { TooltipOptions } from './attachments'
   import { click_outside, focus_trap, tooltip } from './attachments'
   import Icon from './Icon.svelte'
@@ -26,6 +30,7 @@
     link,
     menu_props,
     link_props,
+    burger_props,
     page,
     labels,
     tooltips,
@@ -41,8 +46,12 @@
     children?: Snippet<[{ is_open: boolean; panel_id: string; routes: NavRoute[] }]>
     item?: Snippet<[ItemSnippetParams]>
     link?: Snippet<[{ href: string; label: string; isActive: boolean }]>
-    menu_props?: HTMLAttributes<HTMLDivElement>
-    link_props?: HTMLAttributes<HTMLAnchorElement>
+    menu_props?: Omit<HTMLAttributes<HTMLDivElement>, `id`>
+    // `href` and `aria-current` stay component-owned: one shared bag cannot carry a
+    // per-route destination, and overriding it would point every link at the same page
+    link_props?: Omit<HTMLAnchorAttributes, `aria-current` | `href`>
+    // mobile menu toggle; style/class land here rather than on the <nav> host
+    burger_props?: Omit<HTMLButtonAttributes, `aria-controls` | `aria-expanded` | `type`>
     page?: { url: { pathname: string } }
     labels?: Record<string, string>
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
@@ -298,11 +307,11 @@
     })}
   {:else}
     <a
-      href={parsed_route.href}
-      aria-current={is_current(parsed_route.href)}
-      class={parsed_route.class}
       {...link_props}
       {...get_external_attrs(parsed_route)}
+      href={parsed_route.href}
+      aria-current={is_current(parsed_route.href)}
+      class={[parsed_route.class, link_props?.class]}
       style={`${formatted.style}; ${link_props?.style ?? ``}; ${parsed_route.style ?? ``}`}
       onclick={link_click_handler(parsed_route)}
       {@attach item_tooltip}
@@ -322,12 +331,13 @@
   })}
 >
   <button
-    class="burger"
-    type="button"
-    onclick={() => (is_open = !is_open)}
     aria-label="Toggle navigation menu"
+    {...burger_props}
+    type="button"
     aria-expanded={is_open}
     aria-controls={panel_id}
+    class={[`burger`, burger_props?.class]}
+    onclick={chain_handlers(() => (is_open = !is_open), burger_props?.onclick)}
   >
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>
@@ -337,10 +347,10 @@
   <!-- Escape is also handled on window, but a consumer onkeydown that stops propagation
   would prevent that, so close from the element too -->
   <div
-    id={panel_id}
-    class="menu"
-    class:open={is_open}
     {...menu_props}
+    id={panel_id}
+    class={[`menu`, menu_props?.class]}
+    class:open={is_open}
     onkeydown={chain_handlers(onkeydown, menu_props?.onkeydown)}
   >
     {#each routes as route, route_idx (get_route_key(route, route_idx))}
@@ -458,9 +468,9 @@
                 })}
               {:else}
                 <a
+                  {...link_props}
                   href={child_href}
                   aria-current={is_current(child_href)}
-                  {...link_props}
                   style={`${child_formatted.style}; ${link_props?.style ?? ``}`}
                   onclick={link_click_handler({ href: child_href })}
                   onkeydown={dropdown_item_keydown_handler(parsed_route.href)}

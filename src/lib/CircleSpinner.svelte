@@ -1,17 +1,22 @@
 <script lang="ts">
+  import type { HTMLAttributes } from 'svelte/elements'
+
   let {
     color = `cornflowerblue`,
     duration = `1.5s`,
     size = `1em`,
+    ...rest
   }: {
     color?: string
     duration?: string
     size?: string
-  } = $props()
+  } & HTMLAttributes<HTMLDivElement> = $props()
 </script>
 
 <div
-  style="--duration: {duration}"
+  {...rest}
+  class={[`circle-spinner`, rest.class]}
+  style:--duration={duration}
   style:border-color="{color} transparent {color}
   {color}"
   style:width={size}
@@ -19,7 +24,7 @@
 ></div>
 
 <style>
-  div {
+  .circle-spinner {
     display: inline-block;
     vertical-align: middle;
     margin: 0 3pt;

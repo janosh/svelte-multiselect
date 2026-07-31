@@ -1,5 +1,5 @@
 import { SubpageGrid } from '$lib'
-import { icon_data, type IconName } from '$lib/icons'
+import { icon_data } from '$lib/icons'
 import MultiSelectPage from '$root/src/routes/(demos)/(multiselect)/multiselect/+page.md'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
@@ -7,10 +7,10 @@ import { expect, test, vi } from 'vite-plus/test'
 // stands in for a configured base path, which is what resolve() prefixes
 vi.mock(`$app/paths`, () => ({ resolve: (path: string) => `/docs${path}` }))
 
-test(`renders one card per tuple subpage in order`, () => {
-  const subpages: [string, string, string][] = [
+test(`renders tuple subpages in order with default and per-page icons`, () => {
+  const subpages: [string, string, string, icon?: 'Copy'][] = [
     [`Basics`, `/basics`, `Basics overview`],
-    [`Styling`, `/styling`, `Styling overview`],
+    [`Styling`, `/styling`, `Styling overview`, `Copy`],
   ]
   mount(SubpageGrid, {
     target: document.body,
@@ -28,14 +28,14 @@ test(`renders one card per tuple subpage in order`, () => {
       card.getAttribute(`href`),
       card.querySelector(`h2`)?.textContent,
       card.querySelector(`div > p`)?.textContent,
-      card.querySelector(`svg.icon`)?.tagName, // every card carries the chevron
+      card.querySelector(`svg.icon path`)?.getAttribute(`d`),
     ]),
   ).toEqual(
-    subpages.map(([page_title, href, description]) => [
+    subpages.map(([page_title, href, description, icon]) => [
       href,
       page_title,
       description,
-      `svg`,
+      icon_data[icon ?? `ChevronRight`].d,
     ]),
   )
 })
@@ -53,30 +53,38 @@ test(`overview pages link to base-prefixed sibling routes`, () => {
   expect(hrefs).toContain(`/docs/form`)
 })
 
-test(`per-page icons override the fallback, which is itself configurable`, () => {
-  const icons_for = (subpages: [string, string, string, IconName?][], props = {}) => {
-    document.body.innerHTML = ``
-    mount(SubpageGrid, {
-      target: document.body,
-      props: { title: `Demo`, subtitle: `sub`, subpages, ...props },
-    })
-    return [...document.querySelectorAll(`nav.grid a.card svg.icon`)].map(
-      (svg) => svg.innerHTML,
-    )
-  }
-  const pages: [string, string, string, IconName?][] = [
-    [`Plain`, `/plain`, `no icon`],
-    [`Marked`, `/marked`, `with icon`, `Copy`],
-  ]
-  const [chevron, explicit] = icons_for(pages)
-  expect(explicit).not.toBe(chevron)
-  // pin the default: a typo silently renders Icon's Alert fallback
-  const chevron_path = icon_data.ChevronRight.d
-  expect(chevron_path).toEqual(expect.any(String))
-  expect(chevron).toContain(chevron_path)
-  const [fallback, still_explicit] = icons_for(pages, { fallback_icon: `Check` })
-  expect(fallback).not.toBe(chevron)
-  expect(still_explicit).toBe(explicit)
+test(`fallback_icon replaces the default icon`, () => {
+  mount(SubpageGrid, {
+    target: document.body,
+    props: {
+      title: `Demo`,
+      subtitle: `sub`,
+      subpages: [
+        [`Plain`, `/plain`, `no icon`],
+        [`Explicit`, `/explicit`, `per-page icon`, `Copy`],
+      ],
+      fallback_icon: `Check`,
+    },
+  })
+
+  expect(
+    [...document.querySelectorAll(`svg.icon path`)].map((path) => path.getAttribute(`d`)),
+  ).toEqual([icon_data.Check.d, icon_data.Copy.d])
+})
+
+test(`forwards host style via ...rest`, () => {
+  mount(SubpageGrid, {
+    target: document.body,
+    props: {
+      title: `Demo`,
+      subtitle: `sub`,
+      subpages: [[`Plain`, `/plain`, `no icon`]],
+      style: `max-width: 40rem`,
+    },
+  })
+  expect(document.querySelector(`.subpage-grid`)?.getAttribute(`style`)).toContain(
+    `max-width: 40rem`,
+  )
 })
 
 // an href is a destination, not an identity: two cards may point at one page under

@@ -23,86 +23,88 @@ describe(`Accordion`, () => {
     ...document.querySelectorAll<HTMLButtonElement>(`button.accordion-trigger`),
   ]
   const panels = () => [...document.querySelectorAll<HTMLDivElement>(`[role="region"]`)]
-
-  test(`ComponentProps remains usable through Partial`, () => {
-    const consumer_props: Partial<Props> = {
-      multiple: true,
-      value: [`alpha`],
-      on_change: vi.fn(),
-    }
-    expect(consumer_props).toMatchObject({ multiple: true, value: [`alpha`] })
-  })
+  const click_trigger = async (trigger_idx: number) => {
+    triggers()[trigger_idx].click()
+    await tick()
+  }
 
   test(`renders heading buttons linked to labelled regions`, async () => {
     const props = mount_accordion({ value: `gamma`, heading_level: 4 })
     expect(document.querySelectorAll(`h4.accordion-heading`)).toHaveLength(3)
-    const initial_ids = triggers().map((trigger) => trigger.id)
+    const trigger_nodes = triggers()
+    const panel_nodes = panels()
+    const initial_ids = trigger_nodes.map((trigger) => trigger.id)
     expect(
-      triggers().map((trigger, trigger_idx) => [
-        trigger.textContent?.trim(),
-        trigger.getAttribute(`aria-expanded`),
-        trigger.getAttribute(`aria-disabled`),
-        trigger.getAttribute(`aria-controls`),
-        panels()[trigger_idx].id,
-        panels()[trigger_idx].getAttribute(`aria-labelledby`),
-        panels()[trigger_idx].hidden,
-      ]),
+      trigger_nodes.map((trigger, trigger_idx) => {
+        const panel = panel_nodes[trigger_idx]
+        return [
+          trigger.textContent?.trim(),
+          trigger.getAttribute(`aria-expanded`),
+          trigger.getAttribute(`aria-disabled`),
+          panel.hidden,
+          trigger.getAttribute(`aria-controls`) === panel.id,
+          panel.getAttribute(`aria-labelledby`) === trigger.id,
+        ]
+      }),
     ).toEqual([
-      [`Alpha`, `false`, null, panels()[0].id, panels()[0].id, triggers()[0].id, true],
-      [
-        `Disabled`,
-        `false`,
-        `true`,
-        panels()[1].id,
-        panels()[1].id,
-        triggers()[1].id,
-        true,
-      ],
-      [`Gamma`, `true`, null, panels()[2].id, panels()[2].id, triggers()[2].id, false],
+      [`Alpha`, `false`, null, true, true, true],
+      [`Disabled`, `false`, `true`, true, true, true],
+      [`Gamma`, `true`, null, false, true, true],
     ])
 
     props.value = `alpha`
     await tick()
-    expect(triggers().map((trigger) => trigger.id)).toEqual(initial_ids)
-    expect(triggers().map((trigger) => trigger.getAttribute(`aria-expanded`))).toEqual([
-      `true`,
-      `false`,
-      `false`,
-    ])
+    expect(trigger_nodes.map((trigger) => trigger.id)).toEqual(initial_ids)
+    expect(trigger_nodes.map((trigger) => trigger.getAttribute(`aria-expanded`))).toEqual(
+      [`true`, `false`, `false`],
+    )
   })
 
-  test(`single mode controls one open item and permits collapsing it`, async () => {
+  test(`single mode controls one open item and honors collapsible`, async () => {
     const on_change = vi.fn()
     const props = mount_accordion({ value: null, on_change })
 
-    triggers()[0].click()
-    await tick()
+    await click_trigger(0)
     expect(props.value).toBe(`alpha`)
     expect(panels().map((panel) => panel.hidden)).toEqual([false, true, true])
     expect(on_change).toHaveBeenLastCalledWith(`alpha`)
 
-    triggers()[2].click()
-    await tick()
+    await click_trigger(2)
     expect(props.value).toBe(`gamma`)
     expect(panels().map((panel) => panel.hidden)).toEqual([true, true, false])
     expect(on_change).toHaveBeenLastCalledWith(`gamma`)
 
-    triggers()[2].click()
-    await tick()
+    props.collapsible = false
+    await click_trigger(2)
+    expect(props.value).toBe(`gamma`)
+    expect(on_change).toHaveBeenCalledTimes(2)
+    expect(triggers()[2].getAttribute(`aria-disabled`)).toBe(`true`)
+
+    await click_trigger(0)
+    expect(props.value).toBe(`alpha`)
+    expect(on_change).toHaveBeenLastCalledWith(`alpha`)
+    expect(triggers()[0].getAttribute(`aria-disabled`)).toBe(`true`)
+
+    props.collapsible = true
+    await click_trigger(0)
     expect(props.value).toBeNull()
     expect(on_change).toHaveBeenLastCalledWith(null)
 
     triggers()[1].click()
     expect(props.value).toBeNull()
-    expect(on_change).toHaveBeenCalledTimes(3)
+    expect(on_change).toHaveBeenCalledTimes(4)
   })
 
   test(`multiple mode adds and removes controlled values independently`, async () => {
     const on_change = vi.fn()
-    const props = mount_accordion({ multiple: true, value: [`alpha`], on_change })
+    const props = mount_accordion({
+      multiple: true,
+      collapsible: false,
+      value: [`alpha`],
+      on_change,
+    })
 
-    triggers()[2].click()
-    await tick()
+    await click_trigger(2)
     expect(props.value).toEqual([`alpha`, `gamma`])
     expect(triggers().map((trigger) => trigger.getAttribute(`aria-expanded`))).toEqual([
       `true`,
@@ -111,8 +113,7 @@ describe(`Accordion`, () => {
     ])
     expect(on_change).toHaveBeenLastCalledWith([`alpha`, `gamma`])
 
-    triggers()[0].click()
-    await tick()
+    await click_trigger(0)
     expect(props.value).toEqual([`gamma`])
     expect(on_change).toHaveBeenLastCalledWith([`gamma`])
   })
@@ -120,22 +121,16 @@ describe(`Accordion`, () => {
   // An uncontrolled accordion falls back to the empty shape for its mode, and a value
   // whose shape belongs to the other mode reads as nothing open rather than throwing.
   test.each([
-    [`uncontrolled single`, {}, [true, true, true]],
-    [`uncontrolled multiple`, { multiple: true }, [true, true, true]],
-    [`array value in single mode`, { value: [`alpha`] }, [true, true, true]],
-    [
-      `single value in multiple mode`,
-      { multiple: true, value: `alpha` },
-      [true, true, true],
-    ],
-    [
-      `matching multiple value`,
-      { multiple: true, value: [`alpha`, `gamma`] },
-      [false, true, false],
-    ],
-  ] as [string, Partial<Props>, boolean[]][])(`%s`, (_name, props, hidden) => {
+    [`uncontrolled single`, {}, []],
+    [`uncontrolled multiple`, { multiple: true }, []],
+    [`array value in single mode`, { value: [`alpha`] }, []],
+    [`single value in multiple mode`, { multiple: true, value: `alpha` }, []],
+    [`matching multiple value`, { multiple: true, value: [`alpha`, `gamma`] }, [0, 2]],
+  ] as [string, Partial<Props>, number[]][])(`%s`, (_name, props, open_panel_indices) => {
     mount_accordion(props)
-    expect(panels().map((panel) => panel.hidden)).toEqual(hidden)
+    expect(
+      panels().flatMap((panel, panel_idx) => (panel.hidden ? [] : [panel_idx])),
+    ).toEqual(open_panel_indices)
   })
 
   test(`arrow, Home and End keys move focus across enabled headings`, () => {

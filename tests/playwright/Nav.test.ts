@@ -1,6 +1,45 @@
 import type { Locator, Page } from '@playwright/test'
 import { expect, test } from '@playwright/test'
 
+// oxlint-disable-next-line vitest/prefer-each -- Playwright test has no each API
+for (const [stored_theme, color_scheme] of [
+  [`dark`, `light`],
+  [`system`, `dark`],
+] as const) {
+  test(`${stored_theme} theme is applied before body parsing and hydration`, async ({
+    page,
+  }) => {
+    await page.emulateMedia({ colorScheme: color_scheme })
+    await page.addInitScript((theme_mode) => {
+      localStorage.setItem(`theme`, theme_mode)
+      const snapshot_promise = new Promise((resolve) => {
+        const observer = new MutationObserver(() => {
+          const theme = document.documentElement?.dataset.theme
+          if (!theme) return
+          observer.disconnect()
+          resolve({
+            body_present: Boolean(document.body),
+            theme,
+          })
+        })
+        observer.observe(document, { attributes: true, childList: true, subtree: true })
+      })
+      Object.assign(globalThis, { __theme_prepaint_snapshot: snapshot_promise })
+    }, stored_theme)
+    await page.goto(`/`)
+    const snapshot = await page.evaluate(() => {
+      const browser_global = globalThis as typeof globalThis & {
+        __theme_prepaint_snapshot: Promise<{ body_present: boolean; theme: string }>
+      }
+      return browser_global.__theme_prepaint_snapshot
+    })
+    expect(snapshot).toEqual({
+      body_present: false,
+      theme: `dark`,
+    })
+  })
+}
+
 test.describe(`Nav dropdown`, () => {
   const hover_open = async (
     page: Page,

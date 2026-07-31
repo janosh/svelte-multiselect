@@ -30,7 +30,6 @@
     triggers = [`k`],
     close_keys = [`Escape`],
     fade_duration = 200,
-    dialog_style = ``,
     open = $bindable(false),
     dialog = $bindable(null),
     input = $bindable(null),
@@ -59,7 +58,6 @@
     triggers?: string[]
     close_keys?: string[]
     fade_duration?: number // in ms
-    dialog_style?: string // inline style for the dialog element
     open?: boolean
     dialog?: HTMLDialogElement | null
     input?: HTMLInputElement | null
@@ -272,7 +270,6 @@
   <dialog
     bind:this={dialog}
     transition:fade={{ duration: fade_duration }}
-    style={dialog_style}
     aria-label={aria_label}
     {...dialog_props}
     onclose={chain_handlers(close_menu, dialog_props?.onclose)}

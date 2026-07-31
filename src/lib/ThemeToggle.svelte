@@ -5,6 +5,7 @@
   import Icon from './Icon.svelte'
   import {
     apply_theme_mode,
+    listen_theme_storage,
     resolve_theme_mode,
     theme,
     THEME_MODE_CYCLE,
@@ -37,7 +38,11 @@
       if (theme.mode === `system`) apply_theme_mode(`system`)
     }
     mql.addEventListener(`change`, on_change)
-    return () => mql.removeEventListener(`change`, on_change)
+    const stop_storage_listener = listen_theme_storage()
+    return () => {
+      mql.removeEventListener(`change`, on_change)
+      stop_storage_listener()
+    }
   })
 </script>
 

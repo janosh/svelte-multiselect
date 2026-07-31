@@ -50,8 +50,7 @@ down to its poster.
 `player_params` becomes the player's query string verbatim — `start`, `list`, `autoplay`
 and anything else YouTube accepts. It defaults to `{ autoplay: 1 }` and replaces that
 default when set, so pass `autoplay: 1` along with the rest to keep playing on click.
-`nocookie={false}` opts into the tracking host, and `--lite-youtube-bg` themes the
-letterbox behind the poster.
+`nocookie={false}` opts into the tracking host, and `--lite-youtube-bg` themes the letterbox behind the poster. Nested chrome takes `play_btn_props` and `iframe_props`, including iframe attributes such as `loading`, `referrerpolicy` and `sandbox`; the component keeps ownership of button state plus iframe `src`, `srcdoc` and `title`.
 
 ```svelte example id="lite-youtube-demo"
 <script lang="ts">

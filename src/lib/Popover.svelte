@@ -5,6 +5,8 @@
   import { click_outside, float, focus_trap, tabbable_selector } from './attachments'
   import { chain_handlers, type Placement } from './utils'
 
+  type PopupRole = `alertdialog` | `dialog` | `menu` | `listbox` | `tree` | `grid`
+  type PopupHasPopup = Exclude<PopupRole, `alertdialog`>
   // Attributes for the trigger to spread, so consumers keep their own markup
   type TriggerProps = {
     onclick?: (event: MouseEvent) => void
@@ -13,12 +15,12 @@
     onfocusin?: (event: FocusEvent) => void
     onfocusout?: (event: FocusEvent) => void
     'aria-expanded': boolean
-    'aria-haspopup': `dialog`
-    'aria-controls': string
+    'aria-haspopup': PopupHasPopup
+    'aria-controls': string | undefined
   }
   type TriggerMode = `click` | `hover` | `focus`
 
-  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children`> {
+  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children` | `role`> {
     open?: boolean
     placement?: Placement | `auto`
     align?: `center` | `start`
@@ -33,6 +35,7 @@
     open_delay?: number
     close_delay?: number
     surface?: HTMLDivElement | null
+    role?: PopupRole
     // Snippets remain owned by the component that declares them. Popover invokes the
     // trigger and body in that owner's scope; it does not retain either past teardown.
     trigger?: Snippet<[TriggerProps]>
@@ -41,6 +44,7 @@
     on_close?: (detail: { via: `pointer` | `escape` | `trigger` }) => void
   }
 
+  const generated_id = $props.id()
   let {
     open = $bindable(false),
     placement = `bottom`,
@@ -59,17 +63,16 @@
     trigger_mode = `click`,
     children,
     on_close,
+    id,
+    role = `dialog`,
     ...rest
   }: Props = $props()
 
-  const surface_id = $props.id()
+  const surface_id = $derived(id ?? generated_id)
   let trigger_wrapper = $state<HTMLSpanElement | null>(null)
   // The wrapper is `display: contents` and has no box of its own — measuring it would
   // pin every popover to the viewport corner. Anchor to what the snippet rendered.
   const anchor = $derived(trigger_wrapper?.firstElementChild ?? trigger_wrapper)
-  const resolved_close_delay = $derived(
-    close_delay ?? (trigger_mode === `click` ? 0 : 150),
-  )
   let open_timeout: ReturnType<typeof setTimeout> | undefined
   let close_timeout: ReturnType<typeof setTimeout> | undefined
   let pointer_inside = false
@@ -128,10 +131,13 @@
     clear_timeouts()
     if (!open) return
     const scheduled_mode = trigger_mode
-    close_timeout = setTimeout(() => {
-      close_timeout = undefined
-      if (trigger_mode === scheduled_mode) close(`trigger`)
-    }, resolved_close_delay)
+    close_timeout = setTimeout(
+      () => {
+        close_timeout = undefined
+        if (trigger_mode === scheduled_mode) close(`trigger`)
+      },
+      close_delay ?? (trigger_mode === `click` ? 0 : 150),
+    )
   }
   const contains_interaction_target = (target: EventTarget | null) =>
     target instanceof Node &&
@@ -168,8 +174,8 @@
   const trigger_props: TriggerProps = $derived.by(() => {
     const aria = {
       'aria-expanded': open,
-      'aria-haspopup': `dialog` as const,
-      'aria-controls': surface_id,
+      'aria-haspopup': role === `alertdialog` ? `dialog` : role,
+      'aria-controls': open ? surface_id : undefined,
     }
     // the press already went through click_outside, which counts the trigger as
     // inside — so this click toggles rather than fighting a dismissal
@@ -192,9 +198,9 @@
 {#if open}
   <div
     bind:this={surface}
-    role="dialog"
     {...rest}
     id={surface_id}
+    {role}
     aria-label={rest[`aria-label`] ?? (rest[`aria-labelledby`] ? undefined : `Popover`)}
     class={[`popover`, rest.class]}
     {@attach float({ anchor, placement, align, offset, padding, match_width, strategy })}
