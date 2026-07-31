@@ -59,7 +59,6 @@
     // `content` comes from each option's own `tooltip`; the rest is yours, which is
     // what lets a consumer opt into allow_html for rich tooltips
     tooltip_options?: Omit<TooltipOptions, `content`>
-    tooltip_placement?: `top` | `bottom` | `left` | `right`
     // a div cannot legally sit inside phrasing content, so a group rendered in a
     // heading or a paragraph needs to be a span
     as?: string
@@ -82,7 +81,6 @@
     option_suffix,
     on_change,
     tooltip_options,
-    tooltip_placement = `bottom`,
     as = `div`,
     ...rest
   }: Omit<HTMLAttributes<HTMLDivElement>, `children`> &
@@ -145,11 +143,7 @@
     disabled={disabled || opt.disabled}
     data-value={opt.value}
     onclick={() => select(opt.value)}
-    {@attach tooltip({
-      placement: tooltip_placement,
-      ...tooltip_options,
-      content: opt.tooltip,
-    })}
+    {@attach tooltip({ ...tooltip_options, content: opt.tooltip })}
   >
     {#if option}
       {@render option({ option: opt, selected: is_selected })}

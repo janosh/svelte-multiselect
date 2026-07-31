@@ -1,24 +1,31 @@
-import type { Option, OptionStyle } from '$lib'
+import type { CmdAction, Option, OptionStyle } from '$lib'
 import {
   chain_handlers,
+  cmd_action_matches,
   compute_position,
   event_to_combo,
+  format_cmd_metadata,
   format_shortcut,
   fuzzy_match,
+  fuzzy_match_indices,
   get_label,
   get_option_key,
   get_style,
   get_uuid,
   has_group,
+  is_editable_event_target,
+  is_modifier_chord,
   is_object,
   matches_shortcut,
   normalize_combo,
   parse_shortcut,
   sanitize_shortcut_overrides,
   slug_to_title,
+  step_focus,
+  values_equal,
 } from '$lib/utils'
-import { afterEach, assert, describe, expect, test, vi } from 'vite-plus/test'
-import { stub_prop } from './index'
+import { afterEach, assert, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
+import { doc_query, stub_prop } from './index'
 
 // RFC 4122 v4 is xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx (y = 8/9/a/b); the timestamp+counter
 // fallback used when crypto is unavailable only guarantees the generic UUID shape
@@ -572,5 +579,238 @@ describe(`chain_handlers`, () => {
     }
     expect(() => chain_handlers(boom, later)(new MouseEvent(`click`))).toThrow(`boom`)
     expect(later).not.toHaveBeenCalled()
+  })
+})
+
+describe(`values_equal`, () => {
+  // MultiSelect syncs `value`/`selected` through this on every change, so a false
+  // negative is an assignment loop against a wrapper that clones arrays (#309, #369)
+  test.each([
+    [`null vs undefined`, null, undefined, true],
+    [`null vs empty array`, null, [], true],
+    [`undefined vs empty array`, undefined, [], true],
+    [`empty vs non-empty array`, [], [`a`], false],
+    [`same items in order`, [`a`, `b`], [`a`, `b`], true],
+    [`same items reordered`, [`a`, `b`], [`b`, `a`], false],
+    [`different lengths`, [`a`], [`a`, `b`], false],
+    [`equal objects compared by identity`, [{ id: 1 }], [{ id: 1 }], false],
+    [`equal primitives`, 3, 3, true],
+    [`primitive vs array`, 3, [3], false],
+    [`zero vs empty array`, 0, [], false], // 0 is a real value, not an empty state
+    [`empty string vs empty array`, ``, [], false],
+  ] as const)(`%s`, (_desc, val1, val2, expected) => {
+    expect(values_equal(val1, val2)).toBe(expected)
+    expect(values_equal(val2, val1)).toBe(expected) // symmetric
+  })
+
+  test(`the same array reference is equal to itself`, () => {
+    const items = [{ id: 1 }]
+    expect(values_equal(items, items)).toBe(true)
+  })
+})
+
+describe(`fuzzy_match_indices`, () => {
+  test.each([
+    [`abc`, `abc`, [0, 1, 2]],
+    [`ac`, `abc`, [0, 2]], // subsequence, not substring
+    [`tageoo`, `tasks/geo-opt`, [0, 1, 6, 7, 8, 10]],
+    [`AB`, `ab`, [0, 1]], // case-insensitive both ways
+    [`ab`, `AB`, [0, 1]],
+    [`ba`, `abc`, null], // order matters
+    [`abcd`, `abc`, null],
+    [``, `abc`, []], // empty search matches with no indices
+    [``, ``, []],
+    [`a`, ``, null],
+    [`aa`, `aba`, [0, 2]], // repeats consume distinct positions
+    [`aa`, `ab`, null],
+  ])(`(%j, %j)`, (search, target, expected) => {
+    expect(fuzzy_match_indices(search, target)).toEqual(expected)
+  })
+
+  // the indices drive highlight spans, so they must stay offsets into the original
+  // target even though matching runs against a whitespace-normalized copy
+  test.each([
+    [`a  b`, `a b`, [0, 1, 2]], // a run in the search collapses to a single space
+    [`a b`, `a\tb`, [0, 1, 2]], // any target whitespace reads as a plain space
+    [`a b`, `a\nb`, [0, 1, 2]],
+    [`a\tb`, `a b`, [0, 1, 2]], // ...and so does any search whitespace
+    [`a b`, `a  b`, [0, 1, 3]], // target runs are not collapsed, so `b` stays at 3
+  ])(`normalizes whitespace: (%j, %j)`, (search, target, expected) => {
+    expect(fuzzy_match_indices(search, target)).toEqual(expected)
+  })
+
+  test(`indices are strictly increasing and index the original target`, () => {
+    const target = `tasks/geo-opt`
+    const indices = fuzzy_match_indices(`tgo`, target)
+    assert(indices !== null)
+    expect(indices.map((idx) => target[idx]).join(``)).toBe(`tgo`)
+    expect(indices).toEqual([...indices].toSorted((a, b) => a - b))
+  })
+})
+
+describe(`is_editable_event_target`, () => {
+  afterEach(() => {
+    document.body.innerHTML = ``
+  })
+
+  test.each([
+    [`<input />`, `input`, true],
+    [`<textarea></textarea>`, `textarea`, true],
+    [`<select></select>`, `select`, true],
+    [`<div contenteditable="true"></div>`, `div`, true],
+    [`<div contenteditable=""></div>`, `div`, true],
+    [`<div contenteditable="false"></div>`, `div`, false],
+    [`<div></div>`, `div`, false],
+    [`<button></button>`, `button`, false], // a button is focusable, not editable
+    // closest() walks up, so a span inside an editable region counts as typing
+    [`<div contenteditable="true"><span></span></div>`, `span`, true],
+    [`<div contenteditable="false"><span></span></div>`, `span`, false],
+  ])(`%s -> %s`, (html, selector, expected) => {
+    document.body.innerHTML = html
+    expect(is_editable_event_target(doc_query(selector))).toBe(expected)
+  })
+
+  test.each([[null], [new EventTarget()]])(`non-Element target %j is false`, (target) => {
+    expect(is_editable_event_target(target)).toBe(false)
+  })
+})
+
+describe(`is_modifier_chord`, () => {
+  // Shift is excluded on purpose: it types capitals, so `shift+a` is still typing
+  test.each([
+    [{ altKey: true }, true],
+    [{ ctrlKey: true }, true],
+    [{ metaKey: true }, true],
+    [{ shiftKey: true }, false],
+    [{}, false],
+    [{ shiftKey: true, ctrlKey: true }, true],
+  ])(`%j -> %s`, (init, expected) => {
+    expect(is_modifier_chord(new KeyboardEvent(`keydown`, init))).toBe(expected)
+  })
+})
+
+describe(`format_cmd_metadata`, () => {
+  test.each([
+    [[`a`, `b`], `a · b`],
+    [[`solo`], `solo`],
+    [[], ``],
+    [`plain`, `plain`],
+    [undefined, ``],
+  ])(`%j -> %j`, (metadata, expected) => {
+    expect(format_cmd_metadata(metadata)).toBe(expected)
+  })
+})
+
+describe(`cmd_action_matches`, () => {
+  const action: CmdAction = {
+    label: `Toggle theme`,
+    action: () => {},
+    description: `Switch between light and dark`,
+    badge: `New`,
+    group: `Appearance`,
+    keywords: [`colour`, `scheme`],
+    metadata: [`site`, `chrome`],
+    shortcut: `mod+j`,
+  }
+
+  test.each([
+    [`label`, `toggle`],
+    [`description`, `dark`],
+    [`badge`, `new`],
+    [`group`, `appearance`],
+    [`keyword`, `colour`],
+    [`metadata entry`, `chrome`],
+    [`shortcut`, `mod+j`],
+  ])(`matches on %s`, (_field, search) => {
+    expect(cmd_action_matches(action, search)).toBe(true)
+  })
+
+  // every term must hit, and terms may land in different fields of the same action
+  test.each([
+    [`toggle appearance`, true],
+    [`toggle nonsense`, false],
+    [`   `, true], // a blank search filters nothing out
+    [``, true],
+  ])(`multi-term search %j -> %s`, (search, expected) => {
+    expect(cmd_action_matches(action, search)).toBe(expected)
+  })
+
+  test.each([
+    [`tgtm`, true, true], // subsequence of "toggle theme", fuzzy only
+    [`tgtm`, false, false],
+    [`toggle`, false, true], // substring still matches with fuzzy off
+  ])(`%j with fuzzy=%s -> %s`, (search, fuzzy, expected) => {
+    expect(cmd_action_matches(action, search, fuzzy)).toBe(expected)
+  })
+
+  test(`an action with only a label does not throw on absent fields`, () => {
+    const bare: CmdAction = { label: `Bare`, action: () => {} }
+    expect(cmd_action_matches(bare, `bare`)).toBe(true)
+    expect(cmd_action_matches(bare, `missing`)).toBe(false)
+  })
+})
+
+describe(`step_focus`, () => {
+  let items: HTMLButtonElement[] = []
+  beforeEach(() => {
+    document.body.innerHTML = `<button>0</button><button>1</button><button>2</button>`
+    items = [...document.querySelectorAll(`button`)]
+  })
+  afterEach(() => {
+    document.body.innerHTML = ``
+  })
+
+  const press = (key: string, options?: { horizontal?: boolean }) => {
+    const event = new KeyboardEvent(`keydown`, { key, cancelable: true })
+    const target = step_focus(event, items, options)
+    return { target, event }
+  }
+
+  // -1 is focus entering from outside the list: each key lands where it implies
+  test.each([
+    [-1, `ArrowDown`, 0],
+    [-1, `ArrowUp`, 2],
+    [-1, `Home`, 0],
+    [-1, `End`, 2],
+    [0, `ArrowDown`, 1],
+    [0, `ArrowUp`, 2], // wraps backwards off the first item
+    [2, `ArrowDown`, 0], // wraps forwards off the last
+    [1, `Home`, 0],
+    [1, `End`, 2],
+  ])(`from idx %s, %s focuses idx %s`, (from, key, expected) => {
+    if (from >= 0) items[from].focus()
+    const { target, event } = press(key)
+    expect(target).toBe(items[expected])
+    expect(document.activeElement).toBe(items[expected])
+    expect(event.defaultPrevented).toBe(true)
+  })
+
+  // Left/Right are opt-in so a vertical menu leaves them to the page's own handling
+  test.each([
+    [`ArrowRight`, false, undefined],
+    [`ArrowLeft`, false, undefined],
+    [`ArrowRight`, true, 1],
+    [`ArrowLeft`, true, 2],
+  ])(`%s with horizontal=%s`, (key, horizontal, expected) => {
+    items[0].focus()
+    const { target, event } = press(key, { horizontal })
+    expect(target).toBe(expected === undefined ? undefined : items[expected])
+    expect(event.defaultPrevented).toBe(expected !== undefined)
+  })
+
+  test.each([`Tab`, `Enter`, `a`, `Escape`, `PageDown`])(`leaves %s untouched`, (key) => {
+    items[0].focus()
+    const { target, event } = press(key)
+    expect(target).toBeUndefined()
+    expect(event.defaultPrevented).toBe(false)
+    expect(document.activeElement).toBe(items[0])
+  })
+
+  // an empty list must not preventDefault, or a menu with no items would swallow arrows
+  test(`an empty list is a no-op that leaves the event alone`, () => {
+    items = []
+    const { target, event } = press(`ArrowDown`)
+    expect(target).toBeUndefined()
+    expect(event.defaultPrevented).toBe(false)
   })
 })

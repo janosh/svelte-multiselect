@@ -5127,6 +5127,16 @@ describe(`option grouping feature`, () => {
     [...document.querySelectorAll(`ul.options > li.group-header`)].map((header) =>
       header.querySelector(`.group-label`)?.textContent?.trim(),
     )
+  const group_select_all_btn = (group: string) =>
+    find_group_header(group).querySelector<HTMLButtonElement>(`button.group-select-all`)
+  const genre_options = grouped_options.filter(
+    (opt) => typeof opt === `object` && opt.group === `Genre`,
+  )
+  const all_disabled_options = [
+    { label: `X`, group: `AllDisabled`, disabled: true },
+    { label: `Y`, group: `AllDisabled`, disabled: true },
+    { label: `Z`, group: `HasEnabled` },
+  ]
 
   test(`renders group headers and options correctly`, async () => {
     mount(MultiSelect, {
@@ -5311,23 +5321,43 @@ describe(`option grouping feature`, () => {
     },
   )
 
-  test(`group select-all button disabled when maxSelect reached`, async () => {
+  // The button's resting state is a pure function of the group's options and the
+  // current selection, so every combination is one mount and two reads
+  test.each([
+    [
+      `maxSelect already reached`,
+      { selected: [grouped_options[0], grouped_options[1]], maxSelect: 2 },
+      `Genre`,
+      { disabled: true, label: `Select all` },
+    ],
+    [
+      `every selectable option in the group is selected`,
+      { selected: genre_options, keepSelectedInDropdown: `plain` as const },
+      `Genre`,
+      { disabled: false, label: `Deselect all` },
+    ],
+    [
+      `every option in the group is disabled`,
+      { options: all_disabled_options },
+      `AllDisabled`,
+      { disabled: true, label: `Select all` },
+    ],
+    [
+      `a sibling group still has enabled options`,
+      { options: all_disabled_options },
+      `HasEnabled`,
+      { disabled: false, label: `Select all` },
+    ],
+  ])(`group select-all when %s`, async (_desc, props, group, expected) => {
     mount(MultiSelect, {
       target: document.body,
-      props: {
-        options: grouped_options,
-        groupSelectAll: true,
-        selected: [grouped_options[0], grouped_options[1]],
-        maxSelect: 2,
-        open: true,
-      },
+      props: { options: grouped_options, groupSelectAll: true, open: true, ...props },
     })
     await tick()
 
-    const genre_btn = find_group_header(`Genre`).querySelector<HTMLButtonElement>(
-      `button.group-select-all`,
-    )
-    expect(genre_btn?.disabled).toBe(true)
+    const btn = group_select_all_btn(group)
+    expect(btn?.disabled).toBe(expected.disabled)
+    expect(btn?.textContent?.trim()).toBe(expected.label)
   })
 
   test(`group select-all partial fill fires onmaxreached with correct payload`, async () => {
@@ -5357,56 +5387,6 @@ describe(`option grouping feature`, () => {
     expect(onmaxreached_spy).toHaveBeenCalledWith(
       expect.objectContaining({ maxSelect: 2 }),
     )
-  })
-
-  test(`group select-all shows deselect when all selectable options in group already selected`, async () => {
-    const genre_opts = grouped_options.filter(
-      (opt) => typeof opt === `object` && opt.group === `Genre`,
-    )
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: grouped_options,
-        groupSelectAll: true,
-        keepSelectedInDropdown: `plain`,
-        selected: genre_opts,
-        open: true,
-      },
-    })
-    await tick()
-
-    const genre_btn = find_group_header(`Genre`).querySelector<HTMLButtonElement>(
-      `button.group-select-all`,
-    )
-    expect(genre_btn?.textContent?.trim()).toBe(`Deselect all`)
-    expect(genre_btn?.disabled).toBe(false)
-  })
-
-  test(`group select-all disabled when all group options are disabled`, async () => {
-    const all_disabled_options = [
-      { label: `X`, group: `AllDisabled`, disabled: true },
-      { label: `Y`, group: `AllDisabled`, disabled: true },
-      { label: `Z`, group: `HasEnabled` },
-    ]
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        options: all_disabled_options,
-        groupSelectAll: true,
-        open: true,
-      },
-    })
-    await tick()
-
-    const disabled_btn = find_group_header(
-      `AllDisabled`,
-    ).querySelector<HTMLButtonElement>(`button.group-select-all`)
-    expect(disabled_btn?.disabled).toBe(true)
-
-    const enabled_btn = find_group_header(`HasEnabled`).querySelector<HTMLButtonElement>(
-      `button.group-select-all`,
-    )
-    expect(enabled_btn?.disabled).toBe(false)
   })
 
   test.each([

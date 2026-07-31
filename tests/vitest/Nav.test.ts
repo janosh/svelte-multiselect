@@ -126,10 +126,19 @@ describe(`Nav`, () => {
     Reflect.set(burger_props, `type`, `submit`)
     Reflect.set(burger_props, `aria-expanded`, true)
     Reflect.set(burger_props, `aria-controls`, `wrong-panel`)
+    // component-owned keys the nested bags must not be able to replace: a shared bag
+    // cannot carry a per-route href, and the menu's id is the burger's aria-controls
+    const menu_props = { style: `background: red;`, class: `custom-menu` }
+    Reflect.set(menu_props, `id`, `wrong-panel`)
+    const link_props = { class: `custom-link` }
+    Reflect.set(link_props, `href`, `/hijacked`)
+    Reflect.set(link_props, `aria-current`, `page`)
     mount_nav({
       routes: default_routes,
       class: `custom-class`,
-      menu_props: { style: `background: red;` },
+      page: { url: { pathname: `/` } },
+      menu_props,
+      link_props,
       burger_props,
     })
     const nav = doc_query(`nav`)
@@ -137,6 +146,11 @@ describe(`Nav`, () => {
     const burger = doc_query(`.burger`)
     expect(nav.classList.contains(`custom-class`)).toBe(true)
     expect(menu.getAttribute(`style`)).toBe(`background: red;`)
+    // consumer class merges with the component's own rather than replacing it
+    expect([...menu.classList]).toContain(`custom-menu`)
+    expect([...menu.classList]).toContain(`menu`)
+    expect(menu.id).toBe(burger.getAttribute(`aria-controls`))
+    expect(menu.id.startsWith(`nav-menu-`)).toBe(true)
     expect(burger.classList.contains(`custom-burger`)).toBe(true)
     expect(burger.getAttribute(`style`)).toBe(`opacity: 0.5;`)
     expect([
@@ -145,6 +159,17 @@ describe(`Nav`, () => {
       burger.getAttribute(`aria-expanded`),
       burger.getAttribute(`aria-controls`),
     ]).toEqual([`button`, `Open site menu`, `false`, menu.id])
+
+    const links = [...document.querySelectorAll(`.menu a`)]
+    expect(links.map((link) => link.getAttribute(`href`))).toEqual(default_routes)
+    // aria-current still tracks the active route instead of marking every link
+    expect(links.map((link) => link.getAttribute(`aria-current`))).toEqual([
+      `page`,
+      null,
+      null,
+    ])
+    links.forEach((link) => expect([...link.classList]).toContain(`custom-link`))
+
     await click(burger)
     expect(burger.getAttribute(`aria-expanded`)).toBe(`true`)
     expect(onclick).toHaveBeenCalledOnce()

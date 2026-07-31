@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onDestroy, type Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLButtonAttributes } from 'svelte/elements'
   import type { ResizableOptions } from './attachments'
   import { click_outside, draggable, resizable, tooltip } from './attachments'
   import Icon from './Icon.svelte'
@@ -45,7 +45,7 @@
     children: Snippet<[PaneState]>
     // Replaces the toggle button's content, for icons this library doesn't bundle
     toggle?: Snippet<[PaneState]>
-    toggle_props?: HTMLAttributes<HTMLButtonElement>
+    toggle_props?: Omit<HTMLButtonAttributes, `aria-expanded` | `type`>
     open_icon?: IconName
     closed_icon?: IconName
     // Sizing the bundled icon is the common case; reach for `toggle` only to replace it
@@ -53,7 +53,9 @@
     // Gap between the toggle button's bottom-right corner and the pane's
     offset?: { x?: number; y?: number }
     max_width?: string
-    pane_props?: HTMLAttributes<HTMLDivElement>
+    // `aria-label` is deliberately absent from the Omit: several panes on a page need
+    // distinct names. The rest describe the dialog itself and stay component-owned.
+    pane_props?: Omit<HTMLAttributes<HTMLDivElement>, `aria-modal` | `role`>
     // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
     dismiss_on?: `press` | `release`

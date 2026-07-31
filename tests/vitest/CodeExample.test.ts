@@ -23,11 +23,14 @@ const append_code_block = (text: string) => {
 
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const onclick = vi.fn()
+  const button_props = { onclick }
+  // Omit'd from the prop type; a bare button inside a form would submit it on toggle
+  Reflect.set(button_props, `type`, `submit`)
   const props = {
     id: `host-id`,
     meta: { collapsible: true, id },
     src,
-    button_props: { onclick },
+    button_props,
   }
   mount(CodeExample, { target: document.body, props })
 
@@ -36,6 +39,7 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   expect(document.querySelector(`nav`)).not.toBeNull()
 
   const toggle_button = doc_query<HTMLButtonElement>(`nav > button`)
+  expect(toggle_button.type).toBe(`button`)
   expect(toggle_button.textContent).toContain(`View code`)
   const pre_closed = doc_query<HTMLPreElement>(`pre`)
   expect(pre_closed.classList.contains(`open`)).toBe(false)
@@ -91,11 +95,16 @@ test.each([
 ] as const)(
   `renders the %s link in nav and hides the unconfigured one`,
   (shown_title, meta, expected_href) => {
-    mount(CodeExample, { target: document.body, props: { meta, src } })
+    // one bag is shared by every external link, so an href on it could only point the
+    // repl and github icons at the same URL. `title` stays overridable by design.
+    const link_props = { class: `consumer-link` }
+    Reflect.set(link_props, `href`, `/hijacked`)
+    mount(CodeExample, { target: document.body, props: { meta, src, link_props } })
     const link = (title: string) =>
       doc_query<HTMLAnchorElement>(`nav a[title="${title}"]`)
 
     expect(link(shown_title).getAttribute(`href`)).toBe(expected_href)
+    expect([...link(shown_title).classList]).toContain(`consumer-link`)
     expect(link(shown_title).getAttribute(`target`)).toBe(`_blank`)
     expect(link(shown_title).getAttribute(`rel`)).toBe(`noreferrer`)
     expect(link(shown_title).style.display).toBe(`inline-block`)

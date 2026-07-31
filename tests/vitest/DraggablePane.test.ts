@@ -486,26 +486,26 @@ describe(`DraggablePane`, () => {
 
   test(`spreads consumer props without losing its own class, role or click`, async () => {
     const onclick = vi.fn()
-    const { toggle, pane } = await setup({
-      pane_props: {
-        class: `consumer-pane`,
-        id: `my-pane`,
-        role: `region`,
-        'data-resize': `both`,
-        'aria-label': `Structure controls`,
-      },
-      toggle_props: {
-        class: `consumer-toggle`,
-        title: `Options`,
-        type: `submit`,
-        onclick,
-      },
-    })
+    const pane_props = {
+      class: `consumer-pane`,
+      id: `my-pane`,
+      'data-resize': `both`,
+      'aria-label': `Structure controls`,
+    }
+    const toggle_props = { class: `consumer-toggle`, title: `Options`, onclick }
+    // Omit'd from the prop types; set reflectively to prove the runtime ordering holds
+    // for JS consumers too
+    Reflect.set(pane_props, `role`, `region`)
+    Reflect.set(pane_props, `aria-modal`, `true`)
+    Reflect.set(toggle_props, `type`, `submit`)
+    const { toggle, pane } = await setup({ pane_props, toggle_props })
 
     expect(pane.id).toBe(`my-pane`)
-    // role, data-resize and type sit after the spread, so a consumer cannot clobber
-    // them: a `region` pane loses its dialog semantics, a `submit` toggle posts the form
+    // role, aria-modal, data-resize and type sit after the spread, so a consumer cannot
+    // clobber them: a `region` pane loses its dialog semantics, an `aria-modal` one traps
+    // screen readers inside non-modal chrome, a `submit` toggle posts the form
     expect([pane.getAttribute(`role`), pane.dataset.resize]).toEqual([`dialog`, `none`])
+    expect(pane.getAttribute(`aria-modal`)).toBe(`false`)
     expect(toggle.getAttribute(`type`)).toBe(`button`)
     // the other side of the ordering: aria-label sits before the spread, so a page with
     // several panes can rename them apart rather than reading three "Draggable pane"s

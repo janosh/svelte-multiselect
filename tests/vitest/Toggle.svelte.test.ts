@@ -64,18 +64,21 @@ describe(`Toggle`, () => {
     expect(get_input().checked).toBe(false)
   })
 
-  test(`applies custom class and styles`, () => {
+  test(`applies custom class and styles, keeps input_props off owned attrs`, () => {
+    const input_props = { style: `width: 20px;` }
+    // `type` and `checked` are Omit'd from the prop type; a JS consumer bypassing that
+    // must still not swap the element out or detach bind:checked
+    Reflect.set(input_props, `type`, `radio`)
+    Reflect.set(input_props, `checked`, true)
     mount(Toggle, {
       target: document.body,
-      props: {
-        class: `custom-class`,
-        style: `margin: 10px;`,
-        input_props: { style: `width: 20px;` },
-      },
+      props: { class: `custom-class`, style: `margin: 10px;`, input_props },
     })
     expect(doc_query(`label`).classList.contains(`custom-class`)).toBe(true)
     expect(doc_query(`label`).getAttribute(`style`)).toBe(`margin: 10px;`)
     expect(doc_query(`input`).getAttribute(`style`)).toBe(`width: 20px;`)
+    expect(get_input().type).toBe(`checkbox`)
+    expect(get_input().checked).toBe(false)
   })
 
   test.each([

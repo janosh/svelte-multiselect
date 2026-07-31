@@ -1,7 +1,11 @@
 <script lang="ts">
   // see svelte.config.ts where this component is set as the live-examples Wrapper
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type {
+    HTMLAnchorAttributes,
+    HTMLAttributes,
+    HTMLButtonAttributes,
+  } from 'svelte/elements'
   import Icon from './Icon.svelte'
   import type { IconName } from './icons'
   import { chain_handlers } from './utils'
@@ -13,7 +17,8 @@
     title,
     example,
     code,
-    link_props, // Applied after computed attributes (href, title, etc.), allowing override
+    // applied after the computed `title` and `target`/`rel`, so those stay overridable
+    link_props,
     button_props,
     ...rest
   }: {
@@ -37,8 +42,10 @@
     title?: Snippet<[]>
     example?: Snippet<[]>
     code?: Snippet<[]>
-    link_props?: HTMLAttributes<HTMLAnchorElement>
-    button_props?: HTMLAttributes<HTMLButtonElement>
+    // one bag is shared by every external link, so an `href` on it could only ever
+    // point the repl, github and repo icons at the same URL
+    link_props?: Omit<HTMLAnchorAttributes, `href`>
+    button_props?: Omit<HTMLButtonAttributes, `type`>
   } & Omit<HTMLAttributes<HTMLDivElement>, `title`> = $props()
 
   let {
@@ -73,11 +80,11 @@
 <nav>
   {#each external_links as { cond, href, icon } (icon)}
     <a
-      {href}
       {...links}
       title={icon}
-      style:display={cond ? `inline-block` : `none`}
       {...link_props}
+      {href}
+      style:display={cond ? `inline-block` : `none`}
     >
       <Icon {icon} />
     </a>
@@ -86,6 +93,7 @@
     {@render title?.()}
     <button
       {...button_props}
+      type="button"
       onclick={chain_handlers(() => (open = !open), button_props?.onclick)}
     >
       <Icon icon={open ? `Collapse` : `Expand`} />
