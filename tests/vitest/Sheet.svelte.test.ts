@@ -89,7 +89,9 @@ describe(`Sheet`, () => {
 
   test(`snippet controls close through the controlled state`, async () => {
     const on_close = vi.fn()
-    const props = mount_sheet({ open: true, on_close })
+    const onclose = vi.fn()
+    const dialog_close = vi.spyOn(HTMLDialogElement.prototype, `close`)
+    const props = mount_sheet({ open: true, on_close, onclose })
     await tick()
 
     doc_query<HTMLButtonElement>(`[data-testid="sheet-action"]`).click()
@@ -97,14 +99,21 @@ describe(`Sheet`, () => {
     expect(props.open).toBe(false)
     expect(surface()).toBeNull()
     expect(on_close).toHaveBeenCalledWith({ via: `close` })
+    expect(dialog_close).toHaveBeenCalled()
+    expect(onclose).toHaveBeenCalledOnce()
 
     props.open = true
     await tick()
     expect(surface()).not.toBeNull()
+    dialog_close.mockClear()
+    onclose.mockClear()
+    // Controlled dismiss must call the native close path before unmounting
     props.open = false
     await tick()
     expect(surface()).toBeNull()
-    expect(on_close).toHaveBeenCalledTimes(1)
+    expect(dialog_close).toHaveBeenCalled()
+    expect(onclose).toHaveBeenCalledOnce()
+    expect(on_close).toHaveBeenCalledTimes(1) // open=false alone does not re-emit on_close
 
     props.open = true
     await tick()

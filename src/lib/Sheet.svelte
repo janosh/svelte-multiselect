@@ -68,8 +68,13 @@
     else event.preventDefault()
   }
 
+  // Close before `{#if open}` tears the dialog down, so the native `close` event (and
+  // consumer `onclose`) still fire. showModal runs after mount once `surface` is bound.
+  $effect.pre(() => {
+    if (!open && surface?.open) surface.close()
+  })
   $effect(() => {
-    if (surface && !surface.open) surface.showModal()
+    if (open && surface && !surface.open) surface.showModal()
   })
 </script>
 
