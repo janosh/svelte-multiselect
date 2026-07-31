@@ -283,10 +283,16 @@ describe(`ButtonGroup`, () => {
     expect(document.querySelector(`.sort-order`)).toBeNull()
 
     const onclick = vi.fn()
+    const sort_button_props = {
+      class: `sort-extra`,
+      style: `font-size: 1.2em`,
+      type: `submit` as const,
+      onclick,
+    }
     mount_group({
       options: letters,
       sort_order: `asc`,
-      sort_button_props: { class: `sort-extra`, style: `font-size: 1.2em`, onclick },
+      sort_button_props,
     })
 
     const arrow = doc_query<HTMLButtonElement>(`.sort-order`)
@@ -305,6 +311,7 @@ describe(`ButtonGroup`, () => {
     expect(arrow.closest(`.options`)).toBeNull()
     expect(arrow.classList.contains(`sort-extra`)).toBe(true)
     expect(arrow.getAttribute(`style`)).toBe(`font-size: 1.2em;`)
+    expect(arrow.type).toBe(`button`)
 
     arrow.click()
     await tick()

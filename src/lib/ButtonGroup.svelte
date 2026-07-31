@@ -35,19 +35,19 @@
 
 <script lang="ts" generics="Value extends string = string">
   import type { Snippet } from 'svelte'
-  import type { HTMLAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLButtonAttributes } from 'svelte/elements'
   import { tooltip, type TooltipOptions } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
 
-  type Props = Omit<HTMLAttributes<HTMLDivElement>, `children`> & {
+  type CommonProps<Value extends string> = {
     options: ButtonGroupOptions<Value>
     label?: string // aria-label for the group, since a bare row of buttons has none
     disabled?: boolean // disables every option, on top of per-option `disabled`
     // opt-in trailing asc/desc button; null (default) renders no arrow at all
     sort_order?: `asc` | `desc` | null
     // the sort arrow sits outside the radiogroup; style/attrs go here, not on the host
-    sort_button_props?: HTMLAttributes<HTMLButtonElement>
+    sort_button_props?: Omit<HTMLButtonAttributes, `aria-label` | `disabled` | `type`>
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     // sibling of the button rather than content of it, so an option can carry a
     // trailing link or badge without nesting interactive content inside a button.
@@ -63,16 +63,12 @@
     // a div cannot legally sit inside phrasing content, so a group rendered in a
     // heading or a paragraph needs to be a span
     as?: string
-    // on_change rides the discriminant: a single-select consumer's handler takes one
-    // value, so widening it to Value | Value[] made their own callbacks unassignable
-  } & (
-      | {
-          multiple?: false
-          selected?: Value | null
-          on_change?: (selected: Value) => void
-        }
-      | { multiple: true; selected?: Value[]; on_change?: (selected: Value[]) => void }
-    )
+  }
+  // on_change rides the discriminant: a single-select consumer's handler takes one
+  // value, so widening it to Value | Value[] made their own callbacks unassignable
+  type SelectionProps<Value> =
+    | { multiple?: false; selected?: Value | null; on_change?: (selected: Value) => void }
+    | { multiple: true; selected?: Value[]; on_change?: (selected: Value[]) => void }
 
   let {
     options,
@@ -89,7 +85,9 @@
     tooltip_placement = `bottom`,
     as = `div`,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLAttributes<HTMLDivElement>, `children`> &
+    CommonProps<Value> &
+    SelectionProps<Value> = $props()
 
   const option_list = $derived(
     (Array.isArray(options) ? options : Object.entries(options)).map(to_option<Value>),
@@ -112,14 +110,12 @@
   })
 
   function select(value: Value) {
-    if (multiple) {
-      selected = selected_values.includes(value)
+    if (!multiple && selected === value) return // re-picking the checked radio changes nothing
+    selected = multiple
+      ? selected_values.includes(value)
         ? selected_values.filter((val) => val !== value)
         : [...selected_values, value]
-    } else {
-      if (selected === value) return // re-picking the checked radio changes nothing
-      selected = value
-    }
+      : value
     // The discriminated union is right for consumers, but TS cannot correlate it with
     // the `multiple` local, so the call is widened back to what this branch just set
     ;(on_change as ((selected: Value | Value[]) => void) | undefined)?.(selected)
@@ -188,12 +184,12 @@
   </span>
   {#if sort_order}
     <button
+      {...sort_button_props}
       type="button"
       {disabled}
       aria-label="Sorted {sort_order === `asc`
         ? `ascending, activate to sort descending`
         : `descending, activate to sort ascending`}"
-      {...sort_button_props}
       class={[`sort-order`, sort_button_props?.class]}
       onclick={chain_handlers(
         () => (sort_order = sort_order === `asc` ? `desc` : `asc`),
@@ -226,7 +222,7 @@
        everywhere else. Box and state colours live here so slotted content renders inside
        the pill, while padding stays on the button so its edges still toggle. */
     .option,
-    button:not(.option > *) {
+    button:not(.option > button) {
       display: inline-flex;
       align-items: center;
       background: var(--btn-group-btn-bg, transparent);
