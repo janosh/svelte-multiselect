@@ -15,6 +15,7 @@
     code,
     link_props, // Applied after computed attributes (href, title, etc.), allowing override
     button_props,
+    ...rest
   }: {
     // src+meta are passed in by live-examples remark plugin
     src?: string // code fence content, dedented by the remark plugin
@@ -38,9 +39,18 @@
     code?: Snippet<[]>
     link_props?: HTMLAttributes<HTMLAnchorElement>
     button_props?: HTMLAttributes<HTMLButtonElement>
-  } = $props()
+  } & Omit<HTMLAttributes<HTMLDivElement>, `title`> = $props()
 
-  let { id, collapsible, repl, github, repo, file, filename, lang } = $derived(meta)
+  let {
+    id: meta_id,
+    collapsible,
+    repl,
+    github,
+    repo,
+    file,
+    filename,
+    lang,
+  } = $derived(meta)
   let code_above = $derived(meta.code_above ?? collapsible) // if code is collapsed, render code above example by default
   // mdsvex transform emits the current page's path as meta.filename, so fall back
   // to it when meta.file is unset (github: true is documented to link there)
@@ -84,7 +94,12 @@
   {/if}
 </nav>
 <!-- wrap in div with id for precise CSS selectors in playwright E2E tests -->
-<div {id} class="code-example" class:code-above={code_above}>
+<div
+  {...rest}
+  id={meta_id ?? rest.id}
+  class={[`code-example`, rest.class]}
+  class:code-above={code_above}
+>
   {@render example?.()}
   <pre class:open>{#if lang}<span class="lang-label">{lang}</span>{/if}<code
       >{#if code}{@render code()}{:else}{src}{/if}</code

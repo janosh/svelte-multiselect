@@ -282,7 +282,12 @@ describe(`ButtonGroup`, () => {
     mount_group({ options: letters })
     expect(document.querySelector(`.sort-order`)).toBeNull()
 
-    mount_group({ options: letters, sort_order: `asc` })
+    const onclick = vi.fn()
+    mount_group({
+      options: letters,
+      sort_order: `asc`,
+      sort_button_props: { class: `sort-extra`, style: `font-size: 1.2em`, onclick },
+    })
 
     const arrow = doc_query<HTMLButtonElement>(`.sort-order`)
     // the label states the direction and what activating does. No aria-pressed: APG is
@@ -298,14 +303,18 @@ describe(`ButtonGroup`, () => {
     expect(arrow.hasAttribute(`aria-pressed`)).toBe(false)
     // it sits outside the radiogroup, which may only own radios
     expect(arrow.closest(`.options`)).toBeNull()
+    expect(arrow.classList.contains(`sort-extra`)).toBe(true)
+    expect(arrow.getAttribute(`style`)).toBe(`font-size: 1.2em;`)
 
     arrow.click()
     await tick()
     expect(arrow_state()).toEqual([`↓`, descending])
+    expect(onclick).toHaveBeenCalledOnce()
 
     arrow.click()
     await tick()
     expect(arrow_state()).toEqual([`↑`, ascending])
+    expect(onclick).toHaveBeenCalledTimes(2)
   })
 
   test(`renders per-option icon and spinner, and forwards class and rest props`, () => {
@@ -470,11 +479,15 @@ describe(`ButtonGroup`, () => {
       `bg border btn-active-bg btn-active-border-color btn-active-color btn-bg ` +
         `btn-border btn-color btn-cursor btn-disabled-opacity btn-font-family ` +
         `btn-font-size btn-gap btn-hover-bg btn-hover-color btn-hover-transform ` +
-        `btn-padding btn-radius btn-transition display gap justify-content padding radius`,
+        `btn-padding btn-radius btn-transition display gap justify-content ` +
+        `option-btn-padding-right padding radius`,
     )
     // hover colour chains to the resting one, so setting only that survives hover
     expect(styles).toMatch(
       /--btn-group-btn-hover-color,\s*var\(\s*--btn-group-btn-color/u,
+    )
+    expect(styles).toContain(
+      `padding-right: var(--btn-group-option-btn-padding-right, 0.5ex)`,
     )
   })
 })

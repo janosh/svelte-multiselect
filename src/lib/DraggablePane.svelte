@@ -87,16 +87,16 @@
     dragging,
   })
 
-  // empty list also disables the attachment below, so edges and disabled cannot drift
-  const edges_by_resize = {
+  // One mapping drives the attachment, its disabled state and the content gutters.
+  const edges_by_resize: Record<typeof resize, NonNullable<ResizableOptions[`edges`]>> = {
     both: [`right`, `bottom`],
     width: [`right`],
     height: [`bottom`],
     none: [],
-  } satisfies Record<typeof resize, NonNullable<ResizableOptions[`edges`]>>
+  }
   const resize_edges = $derived(edges_by_resize[resize])
-  const gutter = (side: `width` | `height`) =>
-    resize === `both` || resize === side ? `${resize_gutter_px}px` : null
+  const gutter = (edge: `right` | `bottom`) =>
+    resize_edges.includes(edge) ? `${resize_gutter_px}px` : null
 
   const close_pane = (via: CloseVia) => {
     show = false
@@ -220,8 +220,8 @@ aria-label sits before the spread, so a page with several panes renames them via
   style:top="{fallback_position.top}px"
   style:left="{fallback_position.left}px"
   style:display={show ? `grid` : `none`}
-  style:padding-right={gutter(`width`)}
-  style:padding-bottom={gutter(`height`)}
+  style:padding-right={gutter(`right`)}
+  style:padding-bottom={gutter(`bottom`)}
   class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
   class:pane-open={show}
   {@attach draggable({

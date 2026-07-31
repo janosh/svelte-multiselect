@@ -103,9 +103,11 @@ Everything themable hangs off `--btn-group-*`: `display`, `gap`, `padding`, `bg`
 `btn-radius`, `btn-bg`, `btn-color`, `btn-border`, `btn-gap`, `btn-cursor`,
 `btn-transition`, `btn-hover-bg`, `btn-hover-color`, `btn-hover-transform`,
 `btn-active-bg`, `btn-active-color`, `btn-active-border-color`, `btn-disabled-opacity`,
-`btn-font-family`, `btn-font-size` on the buttons. The component lays its buttons out in
-a wrapping flex row and takes no position of its own, so placing it is the call site's
-job.
+`btn-font-family`, `btn-font-size` on the buttons. When `option_suffix` wraps an option,
+`--btn-group-option-btn-padding-right` (default `0.5ex`) tightens the button's right
+padding so the suffix sits in that gap. The component lays its buttons out in a wrapping
+flex row and takes no position of its own, so placing it is the call site's job. Pass
+`style` (or any other host attribute) through `...rest` on the root.
 
 Two only pay off together: a hover lift needs `btn-hover-transform` _and_
 `btn-transition`, since neither animates alone. `btn-hover-color` falls back to

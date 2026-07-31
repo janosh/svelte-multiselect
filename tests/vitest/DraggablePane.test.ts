@@ -70,6 +70,10 @@ describe(`DraggablePane`, () => {
     // press-started-inside exemption
     return target.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
   }
+  const release_pointer = () =>
+    globalThis.dispatchEvent(
+      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
+    )
   // returns false once a handler cancels the key, i.e. the pane swallowed it
   const escape = () => document.dispatchEvent(escape_key())
   const is_open = (pane: HTMLElement) => pane.style.display === `grid`
@@ -83,9 +87,7 @@ describe(`DraggablePane`, () => {
   ) => {
     target.dispatchEvent(pointer_event(`pointerdown`, start_x, start_y))
     globalThis.dispatchEvent(pointer_event(`pointermove`, end_x, end_y))
-    globalThis.dispatchEvent(
-      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
-    )
+    release_pointer()
   }
   const drag_by = (dx: number, dy: number) =>
     drag(doc_query(`.drag-handle`), [0, 0], [dx, dy])
@@ -135,22 +137,6 @@ describe(`DraggablePane`, () => {
     expect(on_close).toHaveBeenCalledWith({ via })
   })
 
-  // A press behind the pane — panning the content it floats over — must not make it vanish
-  // mid-gesture. One reason for the `release` default; the click half is covered above.
-  test.each([
-    [`release`, true],
-    [`press`, false],
-  ] as const)(
-    `with dismiss_on=%s, a bare outside pointerdown leaves the pane open: %s`,
-    async (dismiss_on, stays_open) => {
-      const { pane } = await open_pane({ dismiss_on })
-
-      press(document.body)
-      await tick()
-      expect(is_open(pane)).toBe(stays_open)
-    },
-  )
-
   // dismiss_on undefined leaves the pane's own default in force, which is what pins it
   const mount_toggles = async (dismiss_on?: `press` | `release`, show = false) => {
     const props = { dismiss_on, show }
@@ -187,14 +173,14 @@ describe(`DraggablePane`, () => {
     },
   )
 
-  // The price of that default: only the pane's own toggle counts as `inside`, so an outside
-  // trigger that opens on the press is closed again by the click ending the same gesture
+  // `release` keeps a pane open during a bare press behind it, but closes an outside trigger
+  // that opened on the same gesture. `press` has the inverse behavior.
   test.each([
-    [`press`, true],
-    [`release`, false],
+    [`press`, true, false],
+    [`release`, false, true],
   ] as const)(
-    `dismiss_on=%s, a pane opened by an outside pointerdown trigger stays open: %s`,
-    async (dismiss_on, stays_open) => {
+    `dismiss_on=%s times outside pointer gestures`,
+    async (dismiss_on, stays_open_after_click, stays_open_after_press) => {
       const { pane, trigger } = await mount_toggles(dismiss_on)
 
       press(trigger)
@@ -202,8 +188,15 @@ describe(`DraggablePane`, () => {
       expect(is_open(pane)).toBe(true)
       trigger.dispatchEvent(new MouseEvent(`click`, { bubbles: true, detail: 1 }))
       await tick()
+      expect(is_open(pane)).toBe(stays_open_after_click)
 
-      expect(is_open(pane)).toBe(stays_open)
+      // A second press opens in both modes; no click follows, as when panning behind the pane.
+      press(trigger)
+      await tick()
+      expect(is_open(pane)).toBe(true)
+      press(document.body)
+      await tick()
+      expect(is_open(pane)).toBe(stays_open_after_press)
     },
   )
 
@@ -348,9 +341,7 @@ describe(`DraggablePane`, () => {
     expect(on_drag_start).toHaveBeenCalledTimes(1)
     expect(pane.dataset.dragging).toBe(`true`)
 
-    globalThis.dispatchEvent(
-      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
-    )
+    release_pointer()
     await tick()
     expect(pane.dataset.dragging).toBe(`false`)
   })
@@ -381,20 +372,26 @@ describe(`DraggablePane`, () => {
     expect(toggle_btn.getAttribute(`aria-expanded`)).toBe(`true`)
   })
 
-  // resizable grabs each edge with a strip of its own, so `resize` shows up as which
-  // strips exist — that mapping is the whole of what the prop does
   test.each([
-    [`both`, [`bottom`, `right`]],
-    [`width`, [`right`]],
-    [`height`, [`bottom`]],
-    [`none`, []],
-  ] as const)(`resize=%s puts grab strips on %o`, async (resize, expected_edges) => {
-    const { pane } = await open_pane({ resize })
-    const strips = [...pane.querySelectorAll(`[data-resize-edge]`)]
-    expect(strips.map((strip) => strip.getAttribute(`data-resize-edge`))).toEqual(
-      expected_edges,
-    )
-  })
+    [`both`, [`bottom`, `right`], `8px`, `8px`, true],
+    [`width`, [`right`], `8px`, ``, false],
+    [`height`, [`bottom`], ``, `8px`, false],
+    [`none`, [], ``, ``, false],
+  ] as const)(
+    `resize=%s configures edge strips, gutters and grip`,
+    async (resize, expected_edges, padding_right, padding_bottom, has_grip) => {
+      const { pane } = await setup({ resize })
+      const strips = [...pane.querySelectorAll(`[data-resize-edge]`)]
+      expect(strips.map((strip) => strip.getAttribute(`data-resize-edge`))).toEqual(
+        expected_edges,
+      )
+      expect([pane.style.paddingRight, pane.style.paddingBottom]).toEqual([
+        padding_right,
+        padding_bottom,
+      ])
+      expect(Boolean(pane.querySelector(`.resize-grip`))).toBe(has_grip)
+    },
+  )
 
   test.each([
     [`both`, `right`, [545, 150], { width: `550px`, height: `300px` }],
@@ -423,25 +420,8 @@ describe(`DraggablePane`, () => {
     await tick()
 
     expect(document.querySelector(`.reset-button`)).not.toBeNull()
-    globalThis.dispatchEvent(
-      new PointerEvent(`pointerup`, { bubbles: true, isPrimary: true }),
-    )
+    release_pointer()
   })
-
-  test.each([
-    [`both`, `8px`, `8px`],
-    [`width`, `8px`, ``],
-    [`height`, ``, `8px`],
-    [`none`, ``, ``],
-  ] as const)(
-    `resize=%s reserves a %s / %s grab gutter clear of the content`,
-    async (resize, padding_right, padding_bottom) => {
-      const { pane } = await setup({ resize })
-      expect(pane.style.paddingRight).toBe(padding_right)
-      expect(pane.style.paddingBottom).toBe(padding_bottom)
-      expect(Boolean(pane.querySelector(`.resize-grip`))).toBe(resize === `both`)
-    },
-  )
 
   // The pane dismisses on the click, which browsers (and Playwright) synthesize even after
   // a resize that ends outside it — click_outside exempts it because the pointerdown was

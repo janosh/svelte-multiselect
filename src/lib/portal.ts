@@ -4,12 +4,10 @@ import { compute_position } from './utils'
 
 type PortalActionParams = PortalParams & { open: boolean }
 
-// MultiSelect's portal helper. Kept as a Svelte action and applied via
-// `fromAction` so `update` can activate/deactivate without tearing down the
-// portalled node. Stays separate from caret-based floating geometry because it
-// owns element-width matching and restoration to the dropdown's original DOM
-// position. Repositioning is deferred a microtask so offsetHeight is measured after the
-// dropdown's contents render. No SSR guard: Svelte only invokes actions on the client.
+// MultiSelect keeps this as an action wrapped by `fromAction`, so updates can toggle
+// portalling without replacing the node. It also owns width matching and DOM restoration.
+// Reposition after a tick so rendered dropdown content contributes to offsetHeight.
+// No SSR guard: Svelte only invokes actions on the client.
 export function portal_action(node: HTMLElement, initial_params: PortalActionParams) {
   let params = initial_params
   let home_parent: ParentNode | null = null
@@ -62,7 +60,6 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
     node.style.position = `fixed`
     globalThis.addEventListener(`scroll`, update_position, true)
     globalThis.addEventListener(`resize`, update_position)
-    reposition()
   }
 
   const deactivate = () => {
@@ -84,7 +81,10 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
     home_anchor = null
   }
 
-  if (initial_params.active) activate()
+  if (initial_params.active) {
+    activate()
+    reposition()
+  }
 
   return {
     update(next_params: PortalActionParams) {
@@ -96,6 +96,8 @@ export function portal_action(node: HTMLElement, initial_params: PortalActionPar
     destroy() {
       if (!home_parent) return
       stop_tracking_viewport()
+      home_parent = null
+      home_anchor = null
       node.remove()
     },
   }

@@ -286,33 +286,21 @@ describe(`Toc`, () => {
     expect(doc_query(`aside.toc li > a`).getAttribute(`href`)).toBe(`#real`)
   })
 
-  test(`autoIds shares Unicode slugs and -1 duplicate suffixes`, async () => {
-    set_body(`
-      <div id="déjà-vu"></div>
-      <h2>Déjà vu!</h2>
-      <h2>Déjà vu?</h2>
-      <h3 id="custom-id">Custom</h3>
-    `)
-
-    mount_toc()
-    await tick()
-
-    const headings = document.querySelectorAll<HTMLHeadingElement>(`body > :is(h2, h3)`)
-    expect([...headings].map((heading) => heading.id)).toEqual([
-      `déjà-vu-1`,
-      `déjà-vu-2`,
-      `custom-id`,
-    ])
-    expect(
-      [...document.querySelectorAll<HTMLAnchorElement>(`aside.toc li > a`)].map(
-        (anchor) => anchor.getAttribute(`href`),
-      ),
-    ).toEqual([`#d%C3%A9j%C3%A0-vu-1`, `#d%C3%A9j%C3%A0-vu-2`, `#custom-id`])
-  })
-
-  test(`autoIds avoids collisions with already suffixed slugs`, async () => {
-    set_body(`<h2>Foo</h2><h2>Foo</h2><h3>Foo 1</h3>`)
-
+  test.each([
+    {
+      description: `shares Unicode slugs and -1 duplicate suffixes`,
+      html: `<div id="déjà-vu"></div><h2>Déjà vu!</h2><h2>Déjà vu?</h2><h3 id="custom-id">Custom</h3>`,
+      expected_ids: [`déjà-vu-1`, `déjà-vu-2`, `custom-id`],
+      expected_hrefs: [`#d%C3%A9j%C3%A0-vu-1`, `#d%C3%A9j%C3%A0-vu-2`, `#custom-id`],
+    },
+    {
+      description: `avoids collisions with already suffixed slugs`,
+      html: `<h2>Foo</h2><h2>Foo</h2><h3>Foo 1</h3>`,
+      expected_ids: [`foo`, `foo-1`, `foo-1-1`],
+      expected_hrefs: [`#foo`, `#foo-1`, `#foo-1-1`],
+    },
+  ])(`autoIds $description`, async ({ html, expected_ids, expected_hrefs }) => {
+    set_body(html)
     mount_toc()
     await tick()
 
@@ -320,7 +308,12 @@ describe(`Toc`, () => {
       [...document.querySelectorAll<HTMLHeadingElement>(`body > :is(h2, h3)`)].map(
         ({ id }) => id,
       ),
-    ).toEqual([`foo`, `foo-1`, `foo-1-1`])
+    ).toEqual(expected_ids)
+    expect(
+      [...document.querySelectorAll<HTMLAnchorElement>(`aside.toc li > a`)].map(
+        (anchor) => anchor.getAttribute(`href`),
+      ),
+    ).toEqual(expected_hrefs)
   })
 
   test(`autoIds=false leaves headings without ids or hrefs`, async () => {

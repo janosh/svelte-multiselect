@@ -23,7 +23,12 @@ const append_code_block = (text: string) => {
 
 test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const onclick = vi.fn()
-  const props = { meta: { collapsible: true, id }, src, button_props: { onclick } }
+  const props = {
+    id: `host-id`,
+    meta: { collapsible: true, id },
+    src,
+    button_props: { onclick },
+  }
   mount(CodeExample, { target: document.body, props })
 
   // collapsible defaults code_above to true, which orders the <pre> above the example
@@ -45,6 +50,25 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   expect(doc_query(`pre.open > code`).textContent).toBe(src)
   expect(toggle_button.textContent).toContain(`Close`)
   expect(onclick).toHaveBeenCalledOnce()
+})
+
+test(`forwards host attributes when metadata does not override the ID`, () => {
+  mount(CodeExample, {
+    target: document.body,
+    props: {
+      id: `host-id`,
+      class: `host-class`,
+      style: `max-width: 40rem`,
+      'data-testid': `example`,
+    },
+  })
+  const host = doc_query(`div.code-example`)
+  expect([host.id, host.classList.contains(`host-class`), host.style.maxWidth]).toEqual([
+    `host-id`,
+    true,
+    `40rem`,
+  ])
+  expect(host.dataset.testid).toBe(`example`)
 })
 
 // both links always render and toggle via display, so a lost `cond` ships a dead link

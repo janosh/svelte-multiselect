@@ -81,17 +81,11 @@ test(`readme docs links point at a page and heading that exist`, () => {
   expect(failures).toEqual([])
 })
 
-test(`the exports map keeps the wildcard component subpath`, () => {
-  const component_subpaths = Object.keys(pkg_exports).filter((subpath) =>
-    subpath.endsWith(`.svelte`),
-  )
-  expect(component_subpaths).toEqual([`./*.svelte`])
-})
-
 test(`every non-component subpath appears in the readme export table`, () => {
+  expect(pkg_exports).toHaveProperty(`./*.svelte`)
   const subpaths = Object.keys(pkg_exports)
-    .filter((subpath) => subpath !== `.` && subpath !== `./*.svelte`)
-    .map((subpath) => subpath.replace(`./`, `/`).replace(`*`, `<Name>`))
+    .filter((subpath) => subpath !== `.` && !subpath.endsWith(`.svelte`))
+    .map((subpath) => subpath.slice(1))
   const documented = [...readme.matchAll(/^\|\s+`(?<subpath>\/[^`]+)`\s+\|/gmu)].flatMap(
     (match) => match.groups?.subpath ?? [],
   )

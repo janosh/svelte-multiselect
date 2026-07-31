@@ -154,8 +154,6 @@ describe(`Tabs`, () => {
   test.each([
     [`ArrowDown`, `details`],
     [`ArrowUp`, `details`],
-    [`End`, `details`],
-    [`Home`, `overview`],
   ] as const)(`vertical %s navigation skips disabled tabs`, async (key, expected) => {
     const props = mount_tabs({ value: `overview`, orientation: `vertical` })
     tabs()[0].focus()

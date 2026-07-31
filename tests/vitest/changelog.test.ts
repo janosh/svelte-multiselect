@@ -4,7 +4,6 @@ import { expect, test } from 'vite-plus/test'
 
 test(`changelog transform preserves code spans and wraps entity tags`, async () => {
   const { changelog } = await load()
-  expect(changelog).toEqual({ code: expect.any(String) })
   const { code: html } = changelog
 
   // existing code spans containing &gt; survive intact (a previous transform

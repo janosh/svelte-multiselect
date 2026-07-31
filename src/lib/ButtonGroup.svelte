@@ -1,6 +1,6 @@
 <script module lang="ts">
   import type { IconName } from './icons'
-  import { is_object, step_focus } from './utils'
+  import { chain_handlers, is_object, step_focus } from './utils'
 
   // Only `value` is required; the rest are display extras any option shape may omit
   export type ButtonGroupOption<Value extends string = string> = {
@@ -46,6 +46,8 @@
     disabled?: boolean // disables every option, on top of per-option `disabled`
     // opt-in trailing asc/desc button; null (default) renders no arrow at all
     sort_order?: `asc` | `desc` | null
+    // the sort arrow sits outside the radiogroup; style/attrs go here, not on the host
+    sort_button_props?: HTMLAttributes<HTMLButtonElement>
     option?: Snippet<[{ option: ButtonGroupOption<Value>; selected: boolean }]>
     // sibling of the button rather than content of it, so an option can carry a
     // trailing link or badge without nesting interactive content inside a button.
@@ -79,6 +81,7 @@
     label,
     disabled = false,
     sort_order = $bindable(null),
+    sort_button_props,
     option,
     option_suffix,
     on_change,
@@ -186,12 +189,16 @@
   {#if sort_order}
     <button
       type="button"
-      class="sort-order"
       {disabled}
       aria-label="Sorted {sort_order === `asc`
         ? `ascending, activate to sort descending`
         : `descending, activate to sort ascending`}"
-      onclick={() => (sort_order = sort_order === `asc` ? `desc` : `asc`)}
+      {...sort_button_props}
+      class={[`sort-order`, sort_button_props?.class]}
+      onclick={chain_handlers(
+        () => (sort_order = sort_order === `asc` ? `desc` : `asc`),
+        sort_button_props?.onclick,
+      )}
     >
       {sort_order === `asc` ? `↑` : `↓`}
     </button>
@@ -256,15 +263,6 @@
         border-color: var(--btn-group-btn-active-border-color, transparent);
       }
     }
-    /* inside a pill the button drops its own box rather than nesting a second one in it.
-       Dropping the border rather than making it transparent keeps the pill the size of
-       an unwrapped one and lets the button fill it, so clicks on its edges still toggle. */
-    .option > button {
-      background: none;
-      color: inherit;
-      border: none;
-      border-radius: inherit;
-    }
     button {
       display: inline-flex;
       align-items: center;
@@ -276,6 +274,18 @@
       font-family: var(--btn-group-btn-font-family, inherit);
       font-size: var(--btn-group-btn-font-size, inherit);
       cursor: var(--btn-group-btn-cursor, pointer);
+    }
+    /* after `button`'s padding shorthand so padding-right is not reset; inside a pill
+       the button drops its own box rather than nesting a second one in it. Dropping the
+       border rather than making it transparent keeps the pill the size of an unwrapped
+       one and lets the button fill it, so clicks on its edges still toggle. Right padding
+       shrinks by default so a trailing suffix (link, badge) sits in that former gap. */
+    .option > button {
+      background: none;
+      color: inherit;
+      border: none;
+      border-radius: inherit;
+      padding-right: var(--btn-group-option-btn-padding-right, 0.5ex);
     }
     button:disabled {
       opacity: var(--btn-group-btn-disabled-opacity, 0.5);
