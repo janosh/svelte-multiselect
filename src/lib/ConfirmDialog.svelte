@@ -5,7 +5,7 @@
 <script lang="ts">
   // Mount once high in the app tree; it renders the head of the shared dialog queue.
   import { onMount } from 'svelte'
-  import type { HTMLDialogAttributes } from 'svelte/elements'
+  import type { HTMLAttributes, HTMLDialogAttributes } from 'svelte/elements'
   import { backdrop_dismiss, focus_trap } from './attachments'
   import {
     answer_dialog,
@@ -17,7 +17,13 @@
   import { chain_handlers } from './utils'
 
   // An app mounting this alongside its own dialogs needs its card class on the element
-  let { ...rest }: Omit<HTMLDialogAttributes, `children`> = $props()
+  let {
+    input_props,
+    ...rest
+  }: Omit<HTMLDialogAttributes, `children`> & {
+    // prompt <input> only; choice dialogs ignore this
+    input_props?: HTMLAttributes<HTMLInputElement>
+  } = $props()
 
   const request = $derived(dialog_queue[0])
   const component_id = $props.id()
@@ -103,9 +109,13 @@
           <label>
             <span>{request.input_label}</span>
             <input
-              bind:value={prompt_value}
-              oninput={() => (validation_message = ``)}
               placeholder={request.placeholder}
+              {...input_props}
+              bind:value={prompt_value}
+              oninput={chain_handlers(
+                () => (validation_message = ``),
+                input_props?.oninput,
+              )}
               aria-invalid={validation_message ? `true` : undefined}
               aria-describedby={validation_message ? error_id : undefined}
             />

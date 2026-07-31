@@ -144,19 +144,35 @@ describe(`LiteYouTubeEmbed`, () => {
     expect(fetched).toEqual([])
   })
 
-  test(`keeps consumer attributes and makes the active play button inert`, async () => {
-    mount_embed({ class: `my-embed`, style: `--lite-youtube-bg: navy` })
+  test(`forwards host and nested props and makes the active play button inert`, async () => {
+    mount_embed({
+      class: `my-embed`,
+      style: `--lite-youtube-bg: navy`,
+      play_btn_props: { class: `big-play`, style: `opacity: 0.9`, title: `Go` },
+      iframe_props: { loading: `lazy`, referrerpolicy: `no-referrer` },
+    })
     await tick()
 
     const wrapper = doc_query(`div.lite-youtube`)
+    const play = doc_query(`button.play-btn`)
     expect(wrapper.classList.contains(`my-embed`)).toBe(true)
     expect(wrapper.classList.contains(`activated`)).toBe(false)
     expect(wrapper.getAttribute(`style`)).toBe(`--lite-youtube-bg: navy;`)
-    expect(doc_query(`button.play-btn`).hasAttribute(`inert`)).toBe(false)
+    expect(play.classList.contains(`big-play`)).toBe(true)
+    expect([play.getAttribute(`style`), play.getAttribute(`title`)]).toEqual([
+      `opacity: 0.9;`,
+      `Go`,
+    ])
+    expect(play.hasAttribute(`inert`)).toBe(false)
 
     click(`button.play-btn`)
     await tick()
     expect(wrapper.classList.contains(`activated`)).toBe(true)
-    expect(doc_query(`button.play-btn`).hasAttribute(`inert`)).toBe(true)
+    expect(play.hasAttribute(`inert`)).toBe(true)
+    const iframe = doc_query(`iframe`)
+    expect([
+      iframe.getAttribute(`loading`),
+      iframe.getAttribute(`referrerpolicy`),
+    ]).toEqual([`lazy`, `no-referrer`])
   })
 })

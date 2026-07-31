@@ -26,6 +26,7 @@
     link,
     menu_props,
     link_props,
+    burger_props,
     page,
     labels,
     tooltips,
@@ -43,6 +44,8 @@
     link?: Snippet<[{ href: string; label: string; isActive: boolean }]>
     menu_props?: HTMLAttributes<HTMLDivElement>
     link_props?: HTMLAttributes<HTMLAnchorElement>
+    // mobile menu toggle; style/class land here rather than on the <nav> host
+    burger_props?: HTMLAttributes<HTMLButtonElement>
     page?: { url: { pathname: string } }
     labels?: Record<string, string>
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
@@ -322,12 +325,13 @@
   })}
 >
   <button
-    class="burger"
     type="button"
-    onclick={() => (is_open = !is_open)}
     aria-label="Toggle navigation menu"
     aria-expanded={is_open}
     aria-controls={panel_id}
+    {...burger_props}
+    class={[`burger`, burger_props?.class]}
+    onclick={chain_handlers(() => (is_open = !is_open), burger_props?.onclick)}
   >
     <span aria-hidden="true"></span>
     <span aria-hidden="true"></span>

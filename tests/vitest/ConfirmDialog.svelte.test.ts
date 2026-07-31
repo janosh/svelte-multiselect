@@ -3,7 +3,7 @@ import type { DialogChoice } from '$lib/dialogs.svelte'
 import { ask_prompt, dialog_queue, request_choice } from '$lib/dialogs.svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { render } from 'svelte/server'
-import { afterEach, expect, test } from 'vite-plus/test'
+import { afterEach, expect, test, vi } from 'vite-plus/test'
 import { doc_query, track } from './index'
 
 // happy-dom implements <dialog>: showModal(), .open, close() and the close event all
@@ -29,8 +29,8 @@ const write_choices: DialogChoice<`cancel` | `write`>[] = [
   { id: `write`, label: `Write`, tone: `accent` },
 ]
 
-const mount_dialog = async () => {
-  mounted.push(mount(ConfirmDialog, { target: document.body }))
+const mount_dialog = async (props: Record<string, unknown> = {}) => {
+  mounted.push(mount(ConfirmDialog, { target: document.body, props }))
   await flush()
   return doc_query<HTMLDialogElement>(`dialog.confirm-dialog`)
 }
@@ -93,7 +93,15 @@ test(`renders a typed rich body snippet`, async () => {
 })
 
 test(`prompt validation stays open, reports the error, then resolves the value`, async () => {
-  const dialog = await mount_dialog()
+  const oninput = vi.fn()
+  const dialog = await mount_dialog({
+    input_props: {
+      class: `prompt-field`,
+      style: `font-size: 1.1em`,
+      maxlength: 12,
+      oninput,
+    },
+  })
   const answer = track(
     ask_prompt(`Name this workspace`, `New workspace`, {
       initial_value: `draft`,
@@ -109,6 +117,11 @@ test(`prompt validation stays open, reports the error, then resolves the value`,
   expect(dialog.open).toBe(true)
   expect(document.activeElement).toBe(input)
   expect([input.value, input.placeholder]).toEqual([`draft`, `my-workspace`])
+  expect(input.classList.contains(`prompt-field`)).toBe(true)
+  expect([input.getAttribute(`style`), input.maxLength]).toEqual([
+    `font-size: 1.1em;`,
+    12,
+  ])
   expect(doc_query(`dialog label span`).textContent).toBe(`Workspace name`)
   expect(buttons().map((button) => button.textContent?.trim())).toEqual([
     `Cancel`,
@@ -131,6 +144,7 @@ test(`prompt validation stays open, reports the error, then resolves the value`,
   await tick()
   expect(document.querySelector(`[role="alert"]`)).toBeNull()
   expect(input.getAttribute(`aria-invalid`)).toBeNull()
+  expect(oninput).toHaveBeenCalledTimes(2)
   doc_query<HTMLFormElement>(`dialog form`).dispatchEvent(
     new SubmitEvent(`submit`, { bubbles: true, cancelable: true }),
   )

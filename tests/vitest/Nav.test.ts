@@ -115,16 +115,24 @@ describe(`Nav`, () => {
     expect(link_props.onclick).toHaveBeenCalledOnce()
   })
 
-  test(`applies custom props`, () => {
+  test(`applies custom props and chains the burger click`, async () => {
+    const onclick = vi.fn()
     mount_nav({
       routes: default_routes,
       class: `custom-class`,
       menu_props: { style: `background: red;` },
+      burger_props: { style: `opacity: 0.5`, class: `custom-burger`, onclick },
     })
     const nav = doc_query(`nav`)
     const menu = doc_query(`.menu`)
+    const burger = doc_query(`.burger`)
     expect(nav.classList.contains(`custom-class`)).toBe(true)
     expect(menu.getAttribute(`style`)).toBe(`background: red;`)
+    expect(burger.classList.contains(`custom-burger`)).toBe(true)
+    expect(burger.getAttribute(`style`)).toBe(`opacity: 0.5;`)
+    await click(burger)
+    expect(burger.getAttribute(`aria-expanded`)).toBe(`true`)
+    expect(onclick).toHaveBeenCalledOnce()
   })
 
   test.each([

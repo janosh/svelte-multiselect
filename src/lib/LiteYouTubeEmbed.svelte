@@ -11,6 +11,8 @@
     iframe_title = `YouTube video player`,
     nocookie = true, // youtube-nocookie.com doesn't set tracking cookies until playback
     player_params = { autoplay: 1 },
+    play_btn_props,
+    iframe_props,
     ...rest
   }: Omit<HTMLAttributes<HTMLDivElement>, `children`> & {
     video_id: string
@@ -21,6 +23,8 @@
     // YouTube player params verbatim, e.g. start, list, autoplay. replaces the default,
     // so pass autoplay: 1 along with anything else to keep playing on click
     player_params?: Record<string, string | number>
+    play_btn_props?: HTMLAttributes<HTMLButtonElement>
+    iframe_props?: HTMLAttributes<HTMLIFrameElement>
   } = $props()
 
   // $derived is writable: the click below sets it true, a new video_id snaps it back
@@ -62,15 +66,21 @@
     </picture>
   {/key}
   <!-- opacity alone would leave the active play button in the tab order and a11y tree -->
-  <button type="button" class="play-btn" aria-label={play_label} inert={activated}
+  <button
+    type="button"
+    {...play_btn_props}
+    class={[`play-btn`, play_btn_props?.class]}
+    aria-label={play_label}
+    inert={activated}
   ></button>
   {#if activated}
     <iframe
       width="560"
       height="315"
-      title={iframe_title}
       allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture"
       allowfullscreen
+      {...iframe_props}
+      title={iframe_title}
       src={iframe_src}
     ></iframe>
   {/if}

@@ -1,10 +1,5 @@
 # Changelog
 
-## Unreleased
-
-- `ButtonGroup`: add `--btn-group-option-btn-padding-right` (default `0.5ex`) so `option_suffix` content sits in the button's former right padding without consumer `:global` CSS
-- Spread host `...rest` (incl. `style`/`class`) on `CircleSpinner`, `CodeExample`, and `SubpageGrid` — the components that previously had no rest props. `Toc`/`DraggablePane` already expose host attrs via `asideProps`/`pane_props`
-
 ## [v1.2.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.2.0)
 
 > 30 July 2026

@@ -18,7 +18,7 @@ Two details carry their weight:
 - **`dismiss_id` decides what Escape means.** A dismissal resolves with that id, never with
   the accented choice, so a stray keypress is never read as consent.
 
-Choices are arbitrary in number. `ask_confirm(body, title, confirm_label = 'OK')` is the two-button shorthand and resolves to a boolean. A body can be text or a trusted Svelte snippet. `ask_prompt(body, title, options)` adds a text field, returns `string | null` and keeps the dialog open when its validator returns an error message.
+Choices are arbitrary in number. `ask_confirm(body, title, confirm_label = 'OK')` is the two-button shorthand and resolves to a boolean. A body can be text or a trusted Svelte snippet. `ask_prompt(body, title, options)` adds a text field, returns `string | null` and keeps the dialog open when its validator returns an error message. Theme the prompt field with `input_props` on `ConfirmDialog` (choice dialogs ignore it); `oninput` chains so validation still clears.
 
 ```svelte example id="confirm-dialog-demo"
 <script lang="ts">

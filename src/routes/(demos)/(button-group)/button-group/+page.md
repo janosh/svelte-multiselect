@@ -15,6 +15,7 @@ skipping disabled options) and carry the selection with focus, Home and End jump
 either end.
 
 `sort_order` is opt-in — leave it `null` (the default) and no arrow renders.
+Style the arrow with `sort_button_props` (it sits outside the radiogroup, so host `style` does not reach it).
 
 ```svelte example id="button-group-single"
 <script lang="ts">
