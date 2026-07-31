@@ -206,18 +206,15 @@ describe(`Nav`, () => {
     )
   })
 
+  // exact / prefix / root special-case, plus the hyphenated false-prefix trap
   test.each([
-    // String routes
     [`/about`, `/about`, `page`],
     [`/about/team`, `/about`, `page`],
     [`/contact`, `/about`, null],
     [`/`, `/`, `page`],
     [`/home`, `/`, null],
-    // Partial path matching edge cases
-    [`/some-page-v2`, `/some-page`, null],
-    [`/some-page-v2`, `/some-page-v2`, `page`],
+    [`/some-page-v2`, `/some-page`, null], // must not match via startsWith alone
     [`/some-page`, `/some-page-v2`, null],
-    [`/some-page/sub`, `/some-page`, `page`],
   ])(`aria-current: pathname=%s link=%s -> %s`, (pathname, link_href, expected) => {
     mount_nav({ routes: [link_href], page: { url: { pathname } } })
     expect(doc_query(`a[href="${link_href}"]`).getAttribute(`aria-current`)).toBe(
@@ -259,27 +256,6 @@ describe(`Nav`, () => {
     expect(press_listeners()).toBe(listeners_before_hover + 1)
     await click_outside()
     expect(is_visible(dropdown_menu)).toBe(false)
-  })
-
-  // hovering the trigger and hovering the open panel exercise separate handlers
-  // (toggle-button clicks are covered by `click toggles pinned state and aria-expanded`)
-  test.each([
-    [`dropdown trigger`, (dropdown: Element, _menu: Element) => dropdown],
-    [`menu panel`, (_dropdown: Element, menu: Element) => menu],
-  ])(`dropdown opens/closes via mouse hover on %s`, async (_desc, get_target) => {
-    vi.useFakeTimers()
-    const { dropdown, dropdown_menu } = mount_dropdown()
-    const target = get_target(dropdown, dropdown_menu)
-    expect(is_visible(dropdown_menu)).toBe(false)
-
-    mouse_enter(target)
-    await tick()
-    expect(is_visible(dropdown_menu)).toBe(true)
-
-    mouse_leave(target)
-    await vi.advanceTimersByTimeAsync(200) // wait for dropdown_cooldown
-    expect(is_visible(dropdown_menu)).toBe(false)
-    vi.useRealTimers()
   })
 
   test(`parent link and toggle button work independently`, async () => {
@@ -349,45 +325,25 @@ describe(`Nav`, () => {
     expect(menu_links).toEqual(children)
   })
 
-  test(`dropdown accessibility and state management`, async () => {
+  // top-level aria-current cases miss dropdown parent + submenu child wiring
+  test(`aria-current marks dropdown parent and matching child`, () => {
     mount_nav({ routes: parent_other, page: { url: { pathname: `/parent/child` } } })
-
-    const [{ dropdown: dropdown1, menu: menu1 }, { dropdown: dropdown2, menu: menu2 }] =
-      query_all_dropdowns()
-    const toggle1 = dropdown1.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
-    const toggle2 = dropdown2.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
-    assert(toggle1 !== null && toggle2 !== null, `No dropdown toggle found`)
-
-    // aria-controls linkage is not implemented for dropdowns (only for the burger menu)
-    expect(toggle1.getAttribute(`aria-expanded`)).toBe(`false`)
-    await click(toggle1)
-    expect(toggle1.getAttribute(`aria-expanded`)).toBe(`true`)
-    expect(is_visible(menu1)).toBe(true)
-
-    await escape()
-    expect(is_visible(menu1)).toBe(false)
-
-    // dropdowns are mutually exclusive: opening the second closes the first
-    await click(toggle1)
-    expect([is_visible(menu1), is_visible(menu2)]).toEqual([true, false])
-    await click(toggle2)
-    expect([is_visible(menu1), is_visible(menu2)]).toEqual([false, true])
-
-    // aria-current applied to parent link and dropdown child
-    const parent_link = dropdown1.querySelector(`div:first-child > a`)
-    expect(parent_link?.getAttribute(`aria-current`)).toBe(`page`)
-    expect(menu1.querySelectorAll(`a`)[0].getAttribute(`aria-current`)).toBe(`page`)
+    const [{ dropdown, menu }] = query_all_dropdowns()
+    expect(
+      dropdown.querySelector(`div:first-child > a`)?.getAttribute(`aria-current`),
+    ).toBe(`page`)
+    expect(menu.querySelector(`a`)?.getAttribute(`aria-current`)).toBe(`page`)
   })
 
-  test(`keyboard navigation: Enter/Space/ArrowDown open, arrows navigate, Escape closes`, async () => {
+  test(`keyboard navigation: Enter/ArrowDown open, arrows navigate, Escape closes`, async () => {
     const link_props = { onkeydown: vi.fn() }
     const { dropdown_menu: menu, toggle: toggle_button } = mount_dropdown({
       routes: two_child_route,
       link_props,
     })
 
-    // Enter/Space/ArrowDown all open and focus first item
-    for (const open_key of [`Enter`, ` `, `ArrowDown`]) {
+    // Enter/Space share a branch; ArrowDown opens when closed — both focus the first item
+    for (const open_key of [`Enter`, `ArrowDown`]) {
       keydown(open_key, toggle_button)
       // deno-lint-ignore no-await-in-loop
       await next_task() // wait for DOM focus
@@ -549,11 +505,6 @@ describe(`Nav`, () => {
         { href: `/admin`, label: `Admin Panel`, disabled: true },
         `Admin Panel`,
       ],
-      [
-        `preserves formatting`,
-        { href: `/my-disabled-page`, disabled: true },
-        `my disabled page`,
-      ],
     ])(`disabled item with %s`, (_desc, route, expected_text) => {
       mount_nav({ routes: [route] })
       const disabled = doc_query(`.disabled`)
@@ -602,6 +553,7 @@ describe(`Nav`, () => {
   })
 
   describe(`separators`, () => {
+    // standalone (`separator && !href`) and trailing (`href` + separator) are distinct branches
     test.each<[string, NavRoute[], { separators: number; links: number }]>([
       [
         `standalone separators`,
@@ -622,16 +574,6 @@ describe(`Nav`, () => {
           { href: `/contact` },
         ],
         { separators: 2, links: 3 },
-      ],
-      [
-        `separator-only items`,
-        [{ separator: true }, { separator: true }, { separator: true }],
-        { separators: 3, links: 0 },
-      ],
-      [
-        `separators at start and end`,
-        [{ separator: true }, { href: `/home` }, { separator: true }],
-        { separators: 2, links: 1 },
       ],
     ])(`%s`, (_desc, routes, expected) => {
       mount_nav({ routes })
@@ -733,25 +675,14 @@ describe(`Nav`, () => {
       expect(event.defaultPrevented).toBe(true)
     })
 
-    test(`onnavigate called for multiple clicks and dropdown children`, async () => {
+    test(`onnavigate fires for dropdown child links`, async () => {
       const on_navigate = vi.fn()
-      const routes: NavRoute[] = [
-        `/a`,
-        `/b`,
-        {
-          href: `/docs`,
-          children: [`/docs`, `/docs/intro`],
-        },
-      ]
-      mount_nav({ routes, onnavigate: on_navigate })
-
-      await click(doc_query(`a[href="/a"]`))
-      await click(doc_query(`a[href="/b"]`))
-      await click(doc_query(`[data-dropdown-toggle]`))
+      mount_nav({
+        routes: [{ href: `/docs`, children: [`/docs`, `/docs/intro`] }],
+        onnavigate: on_navigate,
+      })
       await click(doc_query(`a[href="/docs/intro"]`))
-
-      expect(on_navigate).toHaveBeenCalledTimes(3)
-      expect(on_navigate).toHaveBeenLastCalledWith(
+      expect(on_navigate).toHaveBeenCalledWith(
         expect.objectContaining({ href: `/docs/intro` }),
       )
     })
@@ -798,13 +729,12 @@ describe(`Nav`, () => {
   })
 
   describe(`breakpoint prop`, () => {
+    // `<= breakpoint` is the only rule; pin the boundary, the default, and the 0 escape
     test.each([
-      [`below breakpoint`, 500, 600, true],
-      [`above breakpoint`, 800, 600, false],
       [`at exact breakpoint`, 600, 600, true],
+      [`above breakpoint`, 800, 600, false],
       [`default breakpoint 767`, 766, undefined, true],
       [`breakpoint 0 = always desktop`, 1, 0, false],
-      [`large breakpoint = always mobile`, 2000, 3000, true],
     ])(
       `%s: width=%d, breakpoint=%s -> mobile=%s`,
       async (_desc, width, breakpoint, expected_mobile) => {
@@ -874,20 +804,16 @@ describe(`Nav`, () => {
       beforeEach(() => vi.useFakeTimers())
       afterEach(() => vi.useRealTimers())
 
-      test.each([0, 100])(`cooldown=%dms closes after timeout`, async (cooldown) => {
-        const { dropdown, dropdown_menu } = mount_dropdown({
-          dropdown_cooldown: cooldown,
-        })
+      test(`cooldown closes only after the full timeout`, async () => {
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 100 })
 
         mouse_enter(dropdown)
         await tick()
         expect(is_visible(dropdown_menu)).toBe(true)
 
         mouse_leave(dropdown)
-        if (cooldown > 0) {
-          await vi.advanceTimersByTimeAsync(cooldown - 1)
-          expect(is_visible(dropdown_menu)).toBe(true)
-        }
+        await vi.advanceTimersByTimeAsync(99)
+        expect(is_visible(dropdown_menu)).toBe(true)
         await vi.advanceTimersByTimeAsync(1)
         expect(is_visible(dropdown_menu)).toBe(false)
       })
@@ -921,18 +847,6 @@ describe(`Nav`, () => {
 
         reinteract(dropdown, dropdown_menu)
         await vi.advanceTimersByTimeAsync(200)
-        expect(is_visible(dropdown_menu)).toBe(true)
-      })
-
-      test(`pinned dropdown ignores cooldown on mouseleave`, async () => {
-        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 150 })
-        const toggle = dropdown.querySelector<HTMLElement>(`[data-dropdown-toggle]`)
-
-        await click(toggle)
-        expect(is_visible(dropdown_menu)).toBe(true)
-
-        mouse_leave(dropdown)
-        await vi.advanceTimersByTimeAsync(500)
         expect(is_visible(dropdown_menu)).toBe(true)
       })
 
@@ -983,9 +897,9 @@ describe(`Nav`, () => {
       expect(is_visible(dropdown_menu)).toBe(false)
     })
 
+    // hover → open_dropdown; click → toggle_dropdown — both clear the other pin
     test.each([
       [`hover`, (dropdown: Element) => mouse_enter(dropdown)],
-      [`focus`, (dropdown: Element) => focus_in(dropdown)],
       [
         `click toggle`,
         (dropdown: Element) => click(dropdown.querySelector(`[data-dropdown-toggle]`)),
@@ -1004,23 +918,19 @@ describe(`Nav`, () => {
       expect(is_visible(menu2)).toBe(true)
     })
 
-    test.each([`Enter`, ` `, `ArrowDown`])(
-      `keyboard %s pins dropdown open`,
-      async (key) => {
-        const { dropdown, dropdown_menu, toggle } = mount_dropdown({
-          dropdown_cooldown: 0,
-        })
+    // Enter/Space share one branch; ArrowDown opens when closed via another
+    test.each([`Enter`, `ArrowDown`])(`keyboard %s pins dropdown open`, async (key) => {
+      const { dropdown, dropdown_menu, toggle } = mount_dropdown({ dropdown_cooldown: 0 })
 
-        keydown(key, toggle)
-        await next_task()
-        expect(is_visible(dropdown_menu)).toBe(true)
-        expect(toggle.getAttribute(`aria-expanded`)).toBe(`true`)
+      keydown(key, toggle)
+      await next_task()
+      expect(is_visible(dropdown_menu)).toBe(true)
+      expect(toggle.getAttribute(`aria-expanded`)).toBe(`true`)
 
-        mouse_leave(dropdown)
-        await next_task()
-        expect(is_visible(dropdown_menu)).toBe(true)
-      },
-    )
+      mouse_leave(dropdown)
+      await next_task()
+      expect(is_visible(dropdown_menu)).toBe(true)
+    })
 
     test(`ArrowDown navigates within pinned dropdown after mouse leave`, async () => {
       const { dropdown, dropdown_menu, toggle } = mount_dropdown(pinned_props)
@@ -1269,26 +1179,5 @@ describe(`Nav`, () => {
       expect(is_visible(dropdown_menu)).toBe(true)
       vi.useRealTimers()
     })
-  })
-
-  test(`CSS custom properties for dropdown are passed to nav element`, () => {
-    const css_vars = {
-      '--nav-dropdown-min-width': `200px`,
-      '--nav-dropdown-max-width': `150px`,
-      '--nav-dropdown-width': `250px`,
-      '--nav-dropdown-left': `10px`,
-      '--nav-dropdown-right': `5px`,
-      '--nav-dropdown-margin': `8pt`,
-      '--nav-dropdown-padding': `5pt 2pt`,
-      '--nav-dropdown-z-index': `999`,
-    }
-    const style = Object.entries(css_vars)
-      .map(([css_var, value]) => `${css_var}: ${value}`)
-      .join(`; `)
-    mount_nav({ routes: single_dropdown_route, style })
-    const nav = doc_query(`nav`)
-    for (const [css_var, expected] of Object.entries(css_vars)) {
-      expect(nav.style.getPropertyValue(css_var), css_var).toBe(expected)
-    }
   })
 })

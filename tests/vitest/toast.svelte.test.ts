@@ -260,14 +260,13 @@ describe(`toast queue reducer`, () => {
     const queued = activate_toast_action(queue, `toast-2`, 0)
     expect(queued.effects[0].toast.message).toBe(`b`)
     expect(queued.queue.active?.message).toBe(`a`)
-  })
 
-  test(`activating a toast with no action is a no-op`, () => {
-    const queue = add(create_toast_queue(), `a`).queue
-    const transition = activate_toast_action(queue, `toast-1`, 0)
-
-    expect(transition.effects).toEqual([])
-    expect(transition.queue.active?.message).toBe(`a`)
+    // without an action the id is inert — dismiss is the only way out
+    const plain = add(create_toast_queue(), `plain`).queue
+    expect(activate_toast_action(plain, `toast-1`, 0)).toEqual({
+      queue: plain,
+      effects: [],
+    })
   })
 
   describe(`custom priority ladder`, () => {
@@ -498,14 +497,17 @@ describe(`<Toast />`, () => {
     // screen readers, so neither may be conditional on there being a toast
     expect(polite().getAttribute(`role`)).toBe(`status`)
     expect(assertive().getAttribute(`role`)).toBe(`alert`)
+    // the whole toast is read, not just the changed word
+    expect(polite().getAttribute(`aria-atomic`)).toBe(`true`)
+    expect(assertive().getAttribute(`aria-atomic`)).toBe(`true`)
     expect(polite().textContent?.trim()).toBe(``)
     expect(document.querySelector(`.toast`)).toBeNull()
   })
 
+  // One non-sticky rung plus both sticky ones: the polite path is shared, but each sticky
+  // priority must interrupt on its own or a notice that never leaves can go unread.
   test.each([
     [`info`, `polite`],
-    [`progress`, `polite`],
-    [`success`, `polite`],
     [`warning`, `assertive`],
     [`error`, `assertive`],
   ] as const)(`a %s toast renders into the %s region`, async (priority, region) => {
@@ -518,8 +520,6 @@ describe(`<Toast />`, () => {
     expect(used.textContent).toContain(`hello`)
     expect(empty.textContent?.trim()).toBe(``)
     expect(doc_query(`.toast`).dataset.priority).toBe(priority)
-    // the whole toast is read, not just the changed word
-    expect(used.getAttribute(`aria-atomic`)).toBe(`true`)
   })
 
   test(`a store built on a custom ladder drives the component`, async () => {
@@ -614,26 +614,24 @@ describe(`<Toast />`, () => {
     expect(document.querySelector(`.toast-message`)).toBeNull()
   })
 
-  // the edge rules themselves live in CSS, keyed off this attribute, so that a consumer
-  // can restyle placement without the component writing inline styles they can't beat
-  test.each([`top-left`, `top-center`, `bottom-right`] as const)(
-    `position=%s reaches the stylesheet as a data attribute`,
-    (position) => {
-      render({ position })
-      expect(doc_query(`.toast-stack`).dataset.position).toBe(position)
-    },
-  )
-
   test(`consumer attributes survive alongside the component's own`, async () => {
     fake_clock()
     const onpointerenter = vi.fn()
     // Svelte 5 accepts objects and arrays here; interpolating `class` into a string
     // instead of merging the ClassValue flattens this one to `[object Object]`
     const consumer_class = [`mine`, { flagged: true }]
-    const store = render({ class: consumer_class, id: `notifications`, onpointerenter })
+    // position is a data attribute so consumers can restyle placement in CSS without the
+    // component writing inline styles they can't beat
+    const store = render({
+      class: consumer_class,
+      id: `notifications`,
+      position: `top-center`,
+      onpointerenter,
+    })
 
     const stack = doc_query(`.toast-stack`)
     expect(stack.id).toBe(`notifications`)
+    expect(stack.dataset.position).toBe(`top-center`)
     const classes = [...stack.classList].filter((name) => !name.startsWith(`svelte-`))
     expect(classes.toSorted()).toEqual([`flagged`, `mine`, `toast-stack`])
 
@@ -647,17 +645,31 @@ describe(`<Toast />`, () => {
     expect(store.active?.message).toBe(`a`)
   })
 
-  // Both suspensions bank the unspent remainder rather than restarting the clock, and
-  // focus does it on its own — the second case has hover pausing switched off entirely.
+  // Suspensions bank the unspent remainder rather than restarting the clock. Focus pauses
+  // on its own; hover is policy (`pause_on_hover`) applied on top of pointer state.
   test.each([
-    [`hovering the stack`, {}, `pointerenter`, `pointerleave`],
     [
-      `focus entering it, with pause_on_hover off`,
+      `hovering the stack suspends the countdown`,
+      {},
+      `pointerenter`,
+      `pointerleave`,
+      true,
+    ],
+    [
+      `focus suspends even with pause_on_hover off`,
       { pause_on_hover: false },
       `focusin`,
       `focusout`,
+      true,
     ],
-  ] as const)(`%s suspends the countdown`, async (_desc, props, suspend, release) => {
+    [
+      `hovering with pause_on_hover off leaves the clock running`,
+      { pause_on_hover: false },
+      `pointerenter`,
+      `pointerleave`,
+      false,
+    ],
+  ] as const)(`%s`, async (_desc, props, suspend, release, suspends) => {
     fake_clock()
     const store = render(props)
     store.show(`a`, { duration_ms: 1000, action: { label: `Undo` } })
@@ -673,6 +685,11 @@ describe(`<Toast />`, () => {
 
     vi.advanceTimersByTime(400)
     fire(suspend)
+    if (!suspends) {
+      vi.advanceTimersByTime(600)
+      expect(store.active).toBeNull()
+      return
+    }
     vi.advanceTimersByTime(5000)
     expect(store.active?.message).toBe(`a`)
 
@@ -699,36 +716,23 @@ describe(`<Toast />`, () => {
     expect(store.active?.message).toBe(`first`)
   })
 
-  test(`pause_on_hover={false} keeps the clock running under the pointer`, async () => {
-    fake_clock()
-    const store = render({ pause_on_hover: false })
-    store.show(`a`, { duration_ms: 1000 })
-    await tick()
-
-    doc_query(`.toast-stack`).dispatchEvent(new PointerEvent(`pointerenter`))
-    vi.advanceTimersByTime(1000)
-    expect(store.active).toBeNull()
-  })
-
-  test(`the focus hotkey moves the keyboard to the toast's first control`, async () => {
-    const store = render()
-    store.show(`a`, { action: { label: `Undo` } })
-    await tick()
-
-    press_focus_hotkey()
-    expect(document.activeElement).toBe(doc_query(`.toast-action`))
-  })
-
-  test(`the focus hotkey is inert when the toast has no controls`, async () => {
-    const store = render({ dismissible: false })
-    store.show(`a`)
+  test.each([
+    [
+      `moves the keyboard to the toast's first control`,
+      {},
+      { action: { label: `Undo` } },
+    ],
+    // nothing focusable in the card, so the hotkey leaves the keyboard where it is
+    [`is inert when the toast has no controls`, { dismissible: false }, {}],
+  ] as const)(`the focus hotkey %s`, async (_desc, props, request) => {
+    const store = render(props)
+    store.show(`a`, request)
     await tick()
     const before = document.activeElement
+    const target = document.querySelector(`.toast-action`)
 
-    // nothing focusable in the card, so the hotkey leaves the keyboard where it is
-    expect(document.querySelector(`.toast button`)).toBeNull()
     press_focus_hotkey()
-    expect(document.activeElement).toBe(before)
+    expect(document.activeElement).toBe(target ?? before)
   })
 
   // every route out of the toast unmounts the button holding focus, so each one has to
@@ -789,7 +793,7 @@ describe(`<Toast />`, () => {
   // Reactive props rather than `track`: the pointer is already inside the stack when the
   // flag flips, so the pause has to come from the prop change and not a fresh pointerenter
   test(`flipping pause_on_hover acts on an already-hovered stack`, async () => {
-    vi.useFakeTimers()
+    fake_clock()
     const store = new ToastStore()
     const props = $state({ store, pause_on_hover: false })
     mounted.push(mount(Toast, { target: document.body, props }))

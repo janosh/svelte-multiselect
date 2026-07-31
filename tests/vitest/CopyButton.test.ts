@@ -445,3 +445,30 @@ test(`global mode skip_selector=null falls back to rendered tag`, async () => {
 
   void unmount(component)
 })
+
+// initial scan only sees nodes present at mount; later pre>code must ride the observer
+test(`global mode mounts on pre > code added after the controller`, async () => {
+  const component = await mount_global({ global: true })
+  const { pre } = create_pre_with_code(`dynamically added code`)
+  await tick()
+
+  expect(get_single_mounted_button(pre)).toBeInstanceOf(HTMLButtonElement)
+
+  void unmount(component)
+})
+
+// mounting into a pre is itself a childList mutation; as=a must not stack a second anchor
+test(`global mode as=a does not remount when the observer re-enters`, async () => {
+  const component = await mount_global({ global: true, as: `a` })
+  const { pre } = create_pre_with_code(`test code`)
+  await tick()
+
+  expect(pre.querySelectorAll(`a[data-sms-copy]`)).toHaveLength(1)
+
+  document.body.append(document.createElement(`div`))
+  await tick()
+
+  expect(pre.querySelectorAll(`a[data-sms-copy]`)).toHaveLength(1)
+
+  void unmount(component)
+})

@@ -27,12 +27,8 @@ test(`copy writes the text and flags the key for the feedback window`, async () 
   expect([...copied]).toEqual([`install-cmd`])
   await vi.advanceTimersByTimeAsync(1)
   expect([...copied]).toEqual([])
-})
 
-test(`the key defaults to the copied text`, async () => {
-  const { copied, copy } = create_clipboard_feedback()
-  await copy(`git status`)
-
+  await copy(`git status`) // key defaults to the text
   expect([...copied]).toEqual([`git status`])
 })
 

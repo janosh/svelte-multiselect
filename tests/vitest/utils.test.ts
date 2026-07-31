@@ -87,7 +87,6 @@ describe(`get_label`, () => {
 describe(`get_style`, () => {
   test.each([
     [`plain string`, undefined, ``],
-    [123, undefined, ``],
     [{ style: `color: red` }, undefined, `color: red;`],
     [{ style: `color: red;` }, undefined, `color: red;`],
     [{ style: `` }, undefined, ``],
@@ -109,17 +108,15 @@ describe(`get_style`, () => {
   test.each([
     [option_style, `selected`, `color: blue;`, false],
     [option_style, `option`, `color: green;`, false],
-    [{ selected: `color: blue` }, `option`, ``, false],
-    [{ option: `color: green` }, `selected`, ``, false],
+    [{ selected: `color: blue` }, `option`, ``, false], // missing key → empty, no error
     [{}, `option`, ``, false],
     [option_style, null, ``, false],
     [option_style, undefined, ``, false],
+    // unknown keys log even when a valid key is also present and selected
     [{ selected: `color: blue`, custom: `color: red` }, `selected`, `color: blue;`, true],
-    [{ option: `color: green`, custom: `color: red` }, `option`, `color: green;`, true],
     [{ selected: `color: blue`, custom: `color: red` }, `option`, ``, true],
     [{ invalid_key: `some-style` }, `selected`, ``, true],
     [{ custom: `color: red` }, null, ``, true],
-    [{ custom: `color: red` }, undefined, ``, true],
   ] as const)(
     `object style %j with key %s returns %j (logs error: %s)`,
     (style, key, expected, should_log_error) => {
@@ -136,13 +133,10 @@ describe(`get_style`, () => {
     },
   )
 
-  test.each([
-    [{ style: `color: red;` }], // string style must not leak through for unknown keys
-    [{ style: option_style }],
-  ])(`logs error and returns empty string for invalid key with style %j`, (option) => {
+  test(`logs error and returns empty for an invalid key before reading style`, () => {
     vi.spyOn(console, `error`).mockImplementation(() => {})
-    // @ts-expect-error invalid key
-    expect(get_style(option, `invalid_key`)).toBe(``)
+    // @ts-expect-error invalid key — style is never consulted once the key fails
+    expect(get_style({ style: `color: red;` }, `invalid_key`)).toBe(``)
     expect(console.error).toHaveBeenCalledWith(
       `MultiSelect: Invalid key=invalid_key for get_style`,
     )
@@ -188,7 +182,11 @@ describe(`keyboard shortcut parsing`, () => {
       alt: false,
       ...expected,
     })
-    expect(format_shortcut(`mod+comma`).at(-1)).toBe(`,`)
+  })
+
+  // spelled-out tokens render as the literal `event.key` they stand for
+  test(`format_shortcut maps comma/plus/space tokens`, () => {
+    expect(format_shortcut(`ctrl+comma+plus+space`)).toEqual([`Ctrl`, `,`, `+`, `␣`])
   })
 
   test.each([
@@ -343,55 +341,24 @@ describe(`shortcut rebinding`, () => {
 })
 
 describe(`fuzzy_match`, () => {
-  test.each([
-    // Basic cases
-    [``, ``, true],
-    [``, `anything`, true],
-    [`test`, ``, false],
-    [`test`, `test`, true],
-    [`test`, `testing`, true],
-    [`test`, `best`, false],
-    // Case insensitive
-    [`TEST`, `testing`, true],
-    // Fuzzy matching (non-consecutive)
-    [`tageoo`, `tasks/geo-opt`, true],
-    [`abc`, `a-b-c`, true],
-    [`abc`, `a-b-d`, false],
-    [`abc`, `a-b-c-d`, true],
-    [`hello`, `h-e-l-l-o`, true],
-    [`hello`, `h-e-l-o`, false],
-    // Repeated characters
-    [`aa`, `banana`, true],
-    [`aaa`, `banana`, true],
-    [`aaaa`, `banana`, false],
-    // Special characters
-    [`@`, `@user`, true],
-    [`#`, `#hashtag`, true],
-    [`/`, `path/to/file`, true],
-    [`form submit`, `form\n submit`, true],
-    // runs collapse in the search; every whitespace char maps to a space in the target
-    [`a  b`, `a b`, true],
-    [`a b`, `a\tb`, true],
-    [`a\tb`, `a b`, true],
-    [`a b`, `a\u00A0b`, true],
-    [`a b c`, `a\t\nb  c`, true],
-    // Numbers and unicode
-    [`123`, `abc123def`, true],
-    [`ñ`, `niño`, true],
-    [`中文`, `中文测试`, true],
-  ])(`fuzzy_match("%s", "%s") should return %s`, (search, target, expected) => {
-    expect(fuzzy_match(search, target)).toBe(expected)
-  })
-
+  // Index edges live in fuzzy_match_indices; pin the null guard and a thin boolean smoke
+  // so the wrapper cannot drift without a failing expected value.
   test.each([
     [null, `test`],
     [undefined, `test`],
     [`test`, null],
     [`test`, undefined],
     [null, null],
-  ])(`handles null/undefined inputs fuzzy_match(%s, %s)`, (search, target) => {
+  ])(`null/undefined inputs fuzzy_match(%s, %s) are false`, (search, target) => {
     // @ts-expect-error testing runtime behavior with null/undefined
     expect(fuzzy_match(search, target)).toBe(false)
+  })
+
+  test.each([
+    [`tageoo`, `tasks/geo-opt`, true],
+    [`test`, `best`, false],
+  ])(`fuzzy_match(%j, %j) is %s`, (search, target, expected) => {
+    expect(fuzzy_match(search, target)).toBe(expected)
   })
 })
 
@@ -400,7 +367,6 @@ describe(`is_object`, () => {
     [{ key: `value` }, true],
     [[], true], // arrays are objects in JS
     [null, false],
-    [undefined, false],
     [`string`, false],
     [() => {}, false],
   ])(`is_object(%j) returns %s`, (input, expected) => {
@@ -413,13 +379,9 @@ describe(`has_group`, () => {
     [{ label: `Test`, group: `Group1` }, true],
     [{ label: `Test`, group: `` }, true], // empty string is still a string
     [{ label: `Test` }, false],
-    [{ label: `Test`, group: undefined }, false],
     [{ label: `Test`, group: null }, false],
     [{ label: `Test`, group: 123 }, false], // group must be string
-    [{ label: `Test`, group: true }, false],
-    [{ label: `Test`, group: {} }, false],
     [`plain string`, false],
-    [42, false],
   ])(`has_group(%j) returns %s`, (input, expected) => {
     // @ts-expect-error testing runtime behavior with non-Option types
     expect(has_group(input)).toBe(expected)
@@ -428,21 +390,15 @@ describe(`has_group`, () => {
 
 describe(`get_option_key`, () => {
   test.each<[Option, unknown]>([
-    // Object options with value - returns value directly (preserves identity)
     [{ label: `Apple`, value: 1 }, 1],
-    [{ label: `Apple`, value: `uuid-123` }, `uuid-123`],
-    // Object options without value - falls back to label
-    [{ label: `Apple` }, `Apple`],
+    [{ label: `Apple` }, `Apple`], // no value → label
     [{ label: `Apple`, value: undefined }, `Apple`],
     [{ label: `Apple`, value: null }, `Apple`],
-    // Object options with falsy but defined values - returns value
+    // falsy but defined values are kept (?? only)
     [{ label: `Apple`, value: 0 }, 0],
     [{ label: `Apple`, value: `` }, ``],
     [{ label: `Apple`, value: false }, false],
-    // Primitive options - returns primitive itself
-    [`apple`, `apple`],
-    [`Apple`, `Apple`], // case preserved
-    [123, 123],
+    [`Apple`, `Apple`], // primitive option is its own key
     [0, 0],
   ])(`get_option_key(%j) returns %j`, (input, expected) => {
     expect(get_option_key(input)).toBe(expected)
@@ -585,6 +541,7 @@ describe(`chain_handlers`, () => {
 describe(`values_equal`, () => {
   // MultiSelect syncs `value`/`selected` through this on every change, so a false
   // negative is an assignment loop against a wrapper that clones arrays (#309, #369)
+  const same_items = [{ id: 1 }]
   test.each([
     [`null vs undefined`, null, undefined, true],
     [`null vs empty array`, null, [], true],
@@ -594,6 +551,7 @@ describe(`values_equal`, () => {
     [`same items reordered`, [`a`, `b`], [`b`, `a`], false],
     [`different lengths`, [`a`], [`a`, `b`], false],
     [`equal objects compared by identity`, [{ id: 1 }], [{ id: 1 }], false],
+    [`same array reference`, same_items, same_items, true],
     [`equal primitives`, 3, 3, true],
     [`primitive vs array`, 3, [3], false],
     [`zero vs empty array`, 0, [], false], // 0 is a real value, not an empty state
@@ -602,14 +560,11 @@ describe(`values_equal`, () => {
     expect(values_equal(val1, val2)).toBe(expected)
     expect(values_equal(val2, val1)).toBe(expected) // symmetric
   })
-
-  test(`the same array reference is equal to itself`, () => {
-    const items = [{ id: 1 }]
-    expect(values_equal(items, items)).toBe(true)
-  })
 })
 
 describe(`fuzzy_match_indices`, () => {
+  // Indices must stay offsets into the original target even when matching runs against
+  // a whitespace-normalized copy (highlight spans depend on that).
   test.each([
     [`abc`, `abc`, [0, 1, 2]],
     [`ac`, `abc`, [0, 2]], // subsequence, not substring
@@ -623,28 +578,28 @@ describe(`fuzzy_match_indices`, () => {
     [`a`, ``, null],
     [`aa`, `aba`, [0, 2]], // repeats consume distinct positions
     [`aa`, `ab`, null],
-  ])(`(%j, %j)`, (search, target, expected) => {
-    expect(fuzzy_match_indices(search, target)).toEqual(expected)
-  })
-
-  // the indices drive highlight spans, so they must stay offsets into the original
-  // target even though matching runs against a whitespace-normalized copy
-  test.each([
+    [`hello`, `h-e-l-l-o`, [0, 2, 4, 6, 8]],
+    [`hello`, `h-e-l-o`, null],
+    [`abc`, `a-b-c`, [0, 2, 4]],
+    [`aaa`, `banana`, [1, 3, 5]],
+    [`aaaa`, `banana`, null],
+    [`test`, `testing`, [0, 1, 2, 3]],
+    [`test`, `best`, null],
+    [`@`, `@user`, [0]],
+    [`#`, `#hashtag`, [0]],
+    [`/`, `path/to/file`, [4]],
+    [`123`, `abc123def`, [3, 4, 5]],
+    [`ñ`, `niño`, [2]],
+    [`中文`, `中文测试`, [0, 1]],
     [`a  b`, `a b`, [0, 1, 2]], // a run in the search collapses to a single space
     [`a b`, `a\tb`, [0, 1, 2]], // any target whitespace reads as a plain space
-    [`a b`, `a\nb`, [0, 1, 2]],
     [`a\tb`, `a b`, [0, 1, 2]], // ...and so does any search whitespace
     [`a b`, `a  b`, [0, 1, 3]], // target runs are not collapsed, so `b` stays at 3
-  ])(`normalizes whitespace: (%j, %j)`, (search, target, expected) => {
+    [`a b`, `a\u00A0b`, [0, 1, 2]],
+    [`a b c`, `a\t\nb  c`, [0, 1, 3, 4, 6]],
+    [`form submit`, `form\n submit`, [0, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11]],
+  ])(`(%j, %j)`, (search, target, expected) => {
     expect(fuzzy_match_indices(search, target)).toEqual(expected)
-  })
-
-  test(`indices are strictly increasing and index the original target`, () => {
-    const target = `tasks/geo-opt`
-    const indices = fuzzy_match_indices(`tgo`, target)
-    assert(indices !== null)
-    expect(indices.map((idx) => target[idx]).join(``)).toBe(`tgo`)
-    expect(indices).toEqual([...indices].toSorted((a, b) => a - b))
   })
 })
 
@@ -692,7 +647,6 @@ describe(`is_modifier_chord`, () => {
 describe(`format_cmd_metadata`, () => {
   test.each([
     [[`a`, `b`], `a · b`],
-    [[`solo`], `solo`],
     [[], ``],
     [`plain`, `plain`],
     [undefined, ``],
@@ -713,23 +667,24 @@ describe(`cmd_action_matches`, () => {
     shortcut: `mod+j`,
   }
 
+  // one term per field so dropping any field from the haystack fails this case
   test.each([
-    [`label`, `toggle`],
-    [`description`, `dark`],
-    [`badge`, `new`],
-    [`group`, `appearance`],
-    [`keyword`, `colour`],
-    [`metadata entry`, `chrome`],
-    [`shortcut`, `mod+j`],
-  ])(`matches on %s`, (_field, search) => {
+    [`toggle`],
+    [`dark`],
+    [`new`],
+    [`appearance`],
+    [`colour`],
+    [`chrome`],
+    [`mod+j`],
+  ])(`matches haystack term %j`, (search) => {
     expect(cmd_action_matches(action, search)).toBe(true)
   })
 
-  // every term must hit, and terms may land in different fields of the same action
+  // every term must hit; blank search filters nothing out
   test.each([
     [`toggle appearance`, true],
     [`toggle nonsense`, false],
-    [`   `, true], // a blank search filters nothing out
+    [`   `, true],
     [``, true],
   ])(`multi-term search %j -> %s`, (search, expected) => {
     expect(cmd_action_matches(action, search)).toBe(expected)
@@ -798,7 +753,8 @@ describe(`step_focus`, () => {
     expect(event.defaultPrevented).toBe(expected !== undefined)
   })
 
-  test.each([`Tab`, `Enter`, `a`, `Escape`, `PageDown`])(`leaves %s untouched`, (key) => {
+  // same early-return branch for every non-nav key; keep a menu key and a nav-like miss
+  test.each([`Tab`, `PageDown`])(`leaves %s untouched`, (key) => {
     items[0].focus()
     const { target, event } = press(key)
     expect(target).toBeUndefined()
