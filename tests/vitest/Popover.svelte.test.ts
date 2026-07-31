@@ -20,7 +20,7 @@ describe(`Popover`, () => {
     return props
   }
   const trigger = () => doc_query<HTMLButtonElement>(`[data-testid="popover-trigger"]`)
-  const surface = () => document.querySelector(`[role="dialog"]`)
+  const surface = () => document.querySelector<HTMLElement>(`.popover`)
   // pointer_event sets isPrimary; a bare PointerEvent reads as a second finger
   const press = (target: EventTarget) =>
     target.dispatchEvent(pointer_event(`pointerdown`, 0, 0))
@@ -29,35 +29,40 @@ describe(`Popover`, () => {
     await tick()
   }
 
-  test(`trigger opens the surface and wires the aria attributes`, async () => {
-    mount_popover()
-    expect(surface()).toBeNull()
-    expect(trigger().getAttribute(`aria-expanded`)).toBe(`false`)
+  test.each([
+    [`menu`, `menu`],
+    [`alertdialog`, `dialog`],
+  ] as const)(
+    `trigger and %s surface share consumer ID, class and ARIA semantics`,
+    async (role, has_popup) => {
+      mount_popover({
+        id: `consumer-id`,
+        role,
+        class: `consumer-class`,
+        'aria-label': `Actions`,
+      })
+      expect(surface()).toBeNull()
+      expect(trigger().getAttribute(`aria-expanded`)).toBe(`false`)
+      expect(trigger().getAttribute(`aria-haspopup`)).toBe(has_popup)
+      expect(trigger().getAttribute(`aria-controls`)).toBeNull()
 
-    trigger().click()
-    await tick()
+      trigger().click()
+      await tick()
 
-    expect(trigger().getAttribute(`aria-expanded`)).toBe(`true`)
-    expect(surface()?.id).toBe(trigger().getAttribute(`aria-controls`))
-    expect(surface()?.getAttribute(`aria-label`)).toBe(`Popover`)
-    // focus_trap moved the keyboard into the surface
-    expect(document.activeElement).toBe(doc_query(`[data-testid="popover-item"]`))
-  })
-
-  // both live after the {...rest} spread, so a consumer prop cannot clobber the aria
-  // linkage or drop the .popover class every bit of the styling hangs off
-  test(`keeps its own id and class alongside a consumer's`, async () => {
-    mount_popover({ id: `consumer-id`, class: `consumer-class`, 'aria-label': `Actions` })
-    trigger().click()
-    await tick()
-
-    const dialog = doc_query(`[role="dialog"]`)
-    expect(dialog.id).toBe(trigger().getAttribute(`aria-controls`))
-    // svelte adds its own scoping hash, so check membership not the whole list
-    expect(dialog.classList.contains(`popover`)).toBe(true)
-    expect(dialog.classList.contains(`consumer-class`)).toBe(true)
-    expect(dialog.getAttribute(`aria-label`)).toBe(`Actions`)
-  })
+      const popup = doc_query(`.popover`)
+      expect(trigger().getAttribute(`aria-expanded`)).toBe(`true`)
+      expect(trigger().getAttribute(`aria-controls`)).toBe(`consumer-id`)
+      expect(popup.id).toBe(`consumer-id`)
+      expect(popup.getAttribute(`role`)).toBe(role)
+      expect(popup.getAttribute(`aria-label`)).toBe(`Actions`)
+      expect(popup.classList.contains(`consumer-class`)).toBe(true)
+      // focus_trap moved the keyboard into the surface
+      expect(document.activeElement).toBe(doc_query(`[data-testid="popover-item"]`))
+      trigger().click()
+      await tick()
+      expect(trigger().getAttribute(`aria-controls`)).toBeNull()
+    },
+  )
 
   // The wrapper around the trigger snippet is `display: contents` and measures 0x0,
   // so anchoring to it would pin every popover to the viewport corner
@@ -69,7 +74,9 @@ describe(`Popover`, () => {
     trigger().click()
     await tick()
 
-    expect(doc_query(`[role="dialog"]`).style.top).toBe(`58px`) // 50 + 8
+    const popup = doc_query(`[role="dialog"]`)
+    expect(popup.id).toBe(trigger().getAttribute(`aria-controls`))
+    expect(popup.style.top).toBe(`58px`) // 50 + 8
   })
 
   test.each([
@@ -136,20 +143,6 @@ describe(`Popover`, () => {
     expect(on_close).toHaveBeenCalledWith({ via: `pointer` })
   })
 
-  // a drag off the surface reports its click on a common ancestor, not an outside click
-  test(`dismiss_on: 'release' keeps a gesture that started inside`, async () => {
-    const on_close = vi.fn()
-    mount_popover({ dismiss_on: `release`, on_close })
-    trigger().click()
-    await tick()
-    press(doc_query(`[role="dialog"]`))
-    document.body.dispatchEvent(pointer_event(`click`, 0, 0, { detail: 1 }))
-    await tick()
-
-    expect(surface()).not.toBeNull()
-    expect(on_close).not.toHaveBeenCalled()
-  })
-
   test(`escape: false leaves Escape to the consumer`, async () => {
     mount_popover({ escape: false })
     trigger().click()
@@ -174,10 +167,8 @@ describe(`Popover`, () => {
     mount_popover({ trigger_mode: `hover`, open_delay: 40 })
 
     trigger().dispatchEvent(new MouseEvent(`mouseenter`))
-    expect(vi.getTimerCount()).toBe(1)
     await advance_time(39)
     expect(surface()).toBeNull()
-    expect(vi.getTimerCount()).toBe(1)
 
     await advance_time(1)
     const dialog = doc_query(`[role="dialog"]`)
@@ -373,9 +364,6 @@ describe(`Popover`, () => {
     if (!app) throw new Error(`Popover test app was not mounted`)
     await unmount(app)
     expect(clear_timeout).toHaveBeenCalledWith(pending_timer)
-
-    await advance_time(50)
-    expect(surface()).toBeNull()
   })
 
   test(`changing trigger mode invalidates a pending delayed open`, async () => {

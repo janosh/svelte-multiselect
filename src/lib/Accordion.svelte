@@ -13,6 +13,7 @@
     trigger?: Snippet<[{ item: AccordionItem<Value>; open: boolean }]>
     panel?: Snippet<[{ item: AccordionItem<Value>; open: boolean }]>
     multiple?: boolean
+    collapsible?: boolean
     value?: AccordionValue<Value>
     on_change?: (value: AccordionValue<Value>) => void
   }
@@ -20,6 +21,7 @@
   let {
     items,
     multiple = false,
+    collapsible = true,
     value = $bindable(multiple ? [] : null),
     heading_level = 3,
     trigger,
@@ -36,13 +38,9 @@
     if (Array.isArray(value)) return multiple ? value : []
     return multiple || value == null ? [] : [value]
   })
-  const trigger_id = (item: AccordionItem<Value>) =>
-    `${base_id}-trigger-${encodeURIComponent(item.value)}`
-  const panel_id = (item: AccordionItem<Value>) =>
-    `${base_id}-panel-${encodeURIComponent(item.value)}`
-
   function toggle(item: AccordionItem<Value>) {
     const is_open = open_values.includes(item.value)
+    if (!multiple && is_open && !collapsible) return
     const next_value: AccordionValue<Value> = multiple
       ? is_open
         ? open_values.filter((entry) => entry !== item.value)
@@ -79,16 +77,21 @@
   onkeydown={chain_handlers(handle_keydown, rest.onkeydown)}
 >
   {#each items as item (item.value)}
+    {@const encoded_value = encodeURIComponent(item.value)}
+    {@const trigger_id = `${base_id}-trigger-${encoded_value}`}
+    {@const panel_id = `${base_id}-panel-${encoded_value}`}
     {@const open = open_values.includes(item.value)}
     <div class="accordion-item" data-state={open ? `open` : `closed`}>
       <svelte:element this={`h${heading_level}`} class="accordion-heading">
         <button
           class="accordion-trigger"
           type="button"
-          id={trigger_id(item)}
-          aria-controls={panel_id(item)}
+          id={trigger_id}
+          aria-controls={panel_id}
           aria-expanded={open}
-          aria-disabled={item.disabled || undefined}
+          aria-disabled={item.disabled ||
+            (open && !multiple && !collapsible) ||
+            undefined}
           disabled={item.disabled}
           onclick={() => toggle(item)}
         >
@@ -102,8 +105,8 @@
       <div
         class="accordion-panel"
         role="region"
-        id={panel_id(item)}
-        aria-labelledby={trigger_id(item)}
+        id={panel_id}
+        aria-labelledby={trigger_id}
         hidden={!open}
         data-state={open ? `open` : `closed`}
       >
