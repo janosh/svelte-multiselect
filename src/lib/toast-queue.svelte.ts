@@ -86,7 +86,7 @@ export interface ToastItem<Priority extends string = ToastPriority> {
 }
 
 export interface ToastQueue<Priority extends string = ToastPriority> {
-  active: ToastItem<Priority> | null
+  active_toast: ToastItem<Priority> | null
   pending: readonly ToastItem<Priority>[]
   next_id: number
   max_pending: number
@@ -153,7 +153,7 @@ const rebalance_queue = <Priority extends string>(
   queue: ToastQueue<Priority>,
   now_ms: number,
 ): ToastQueueTransition<Priority> => {
-  let { active } = queue
+  let { active_toast } = queue
   const rank = (toast: ToastItem<Priority>) =>
     priority_rank(queue.priorities, toast.priority)
   const highest_first = (left: ToastItem<Priority>, right: ToastItem<Priority>) =>
@@ -162,14 +162,14 @@ const rebalance_queue = <Priority extends string>(
     left.seq - right.seq
   const pending = queue.pending.map((toast) => pause_visibility_timeout(toast, now_ms))
   pending.sort(highest_first)
-  if (!active) {
+  if (!active_toast) {
     const promoted = pending.shift()
-    active = promoted ? start_visibility_timeout(promoted, now_ms) : null
-  } else if (pending[0] && rank(pending[0]) > rank(active)) {
+    active_toast = promoted ? start_visibility_timeout(promoted, now_ms) : null
+  } else if (pending[0] && rank(pending[0]) > rank(active_toast)) {
     const [next_up] = pending.splice(0, 1)
-    pending.push(pause_visibility_timeout(active, now_ms))
+    pending.push(pause_visibility_timeout(active_toast, now_ms))
     pending.sort(highest_first)
-    active = start_visibility_timeout(next_up, now_ms)
+    active_toast = start_visibility_timeout(next_up, now_ms)
   }
 
   const overflow: ToastItem<Priority>[] = []
@@ -181,7 +181,7 @@ const rebalance_queue = <Priority extends string>(
     overflow.push(...pending.splice(overflow_idx, 1))
   }
   return {
-    queue: { ...queue, active, pending },
+    queue: { ...queue, active_toast, pending },
     effects: overflow.map((toast) => ({ reason: `overflow`, toast })),
   }
 }
@@ -191,9 +191,9 @@ const remove_toast = <Priority extends string>(
   toast_id: string,
   now_ms: number,
 ): [ToastQueue<Priority>, ToastItem<Priority> | null] => {
-  const { active } = queue
-  if (active?.id === toast_id) {
-    return [rebalance_queue({ ...queue, active: null }, now_ms).queue, active]
+  const { active_toast } = queue
+  if (active_toast?.id === toast_id) {
+    return [rebalance_queue({ ...queue, active_toast: null }, now_ms).queue, active_toast]
   }
   const pending_idx = queue.pending.findIndex((toast) => toast.id === toast_id)
   if (pending_idx === -1) return [queue, null]
@@ -229,7 +229,7 @@ export const create_toast_queue = <const Priority extends string = ToastPriority
     )
   }
   return {
-    active: null,
+    active_toast: null,
     pending: [],
     next_id: 1,
     max_pending,
@@ -242,15 +242,18 @@ export const expire_toasts = <Priority extends string>(
   queue: ToastQueue<Priority>,
   now_ms: number,
 ): ToastQueueTransition<Priority> => {
-  const expired = [queue.active, ...queue.pending].filter(
+  const expired = [queue.active_toast, ...queue.pending].filter(
     (toast): toast is ToastItem<Priority> => toast !== null && is_expired(toast, now_ms),
   )
   if (expired.length === 0) return { queue, effects: [] }
 
-  const active = queue.active && !is_expired(queue.active, now_ms) ? queue.active : null
+  const active_toast =
+    queue.active_toast && !is_expired(queue.active_toast, now_ms)
+      ? queue.active_toast
+      : null
   const pending = queue.pending.filter((toast) => !is_expired(toast, now_ms))
   return {
-    queue: rebalance_queue({ ...queue, active, pending }, now_ms).queue,
+    queue: rebalance_queue({ ...queue, active_toast, pending }, now_ms).queue,
     effects: expired.map((toast) => ({ reason: `timeout`, toast })),
   }
 }
@@ -271,7 +274,7 @@ export const enqueue_toast = <Priority extends string>(
   const rank = priority_rank(queue.priorities, priority)
   const expires_at_ms = request.expires_at_ms ?? null
   const dedupe_key = request.dedupe_key ?? request.message
-  const existing = [queue.active, ...queue.pending].find(
+  const existing = [queue.active_toast, ...queue.pending].find(
     (toast) => toast?.dedupe_key === dedupe_key,
   )
 
@@ -304,11 +307,11 @@ export const enqueue_toast = <Priority extends string>(
         queue: without_existing,
         effects: [{ reason: `timeout`, toast: updated }],
       }
-    } else if (queue.active?.id === existing.id) {
-      const active = request_is_lower_priority
+    } else if (queue.active_toast?.id === existing.id) {
+      const active_toast = request_is_lower_priority
         ? updated
         : start_visibility_timeout(updated, now_ms)
-      transition = { queue: { ...queue, active }, effects: [] }
+      transition = { queue: { ...queue, active_toast }, effects: [] }
     } else {
       const pending = queue.pending.map((toast) =>
         toast.id === existing.id ? updated : toast,
@@ -370,8 +373,8 @@ export const activate_toast_action = <Priority extends string>(
   // A click already dispatched by the browser wins over a delayed expiry
   // timer. Remove the target first, then expire unrelated queue items.
   const toast =
-    queue.active?.id === toast_id
-      ? queue.active
+    queue.active_toast?.id === toast_id
+      ? queue.active_toast
       : queue.pending.find((item) => item.id === toast_id)
   if (!toast?.action) return expire_toasts(queue, now_ms)
   const [without_target] = remove_toast(queue, toast_id, now_ms)
@@ -418,8 +421,8 @@ export class ToastStore<Priority extends string = ToastPriority> {
       options.sticky_priorities ?? this.#queue.priorities.slice(-2)
   }
 
-  get active(): ToastItem<Priority> | null {
-    return this.#queue.active
+  get active_toast(): ToastItem<Priority> | null {
+    return this.#queue.active_toast
   }
   get pending(): readonly ToastItem<Priority>[] {
     return this.#queue.pending
@@ -435,8 +438,8 @@ export class ToastStore<Priority extends string = ToastPriority> {
   }
   // Everything the queue is holding, visible one first
   get items(): readonly ToastItem<Priority>[] {
-    const { active, pending } = this.#queue
-    return active ? [active, ...pending] : pending
+    const { active_toast, pending } = this.#queue
+    return active_toast ? [active_toast, ...pending] : pending
   }
 
   show(message: string, options: ToastOptions<Priority> = {}): string {
@@ -485,22 +488,22 @@ export class ToastStore<Priority extends string = ToastPriority> {
   // WCAG 2.2.1: an auto-dismissing message must stop counting down while the user is
   // reading it or reaching for its button. Only the visible toast has a running clock.
   pause(): void {
-    const { active } = this.#queue
+    const { active_toast } = this.#queue
     // a null deadline means already paused, or never counting in the first place
-    if (!active || active.expires_at_ms === null) return
-    const paused = pause_visibility_timeout(active, Date.now())
-    if (paused === active) return // an absolute deadline has no budget to bank
-    this.#apply({ queue: { ...this.#queue, active: paused }, effects: [] })
+    if (!active_toast || active_toast.expires_at_ms === null) return
+    const paused = pause_visibility_timeout(active_toast, Date.now())
+    if (paused === active_toast) return // an absolute deadline has no budget to bank
+    this.#apply({ queue: { ...this.#queue, active_toast: paused }, effects: [] })
   }
 
   resume(): void {
-    const { active } = this.#queue
+    const { active_toast } = this.#queue
     // Nothing to resume unless a toast is actually paused: resuming a running one
     // would hand it a second full duration rather than the remainder it had left.
-    if (active?.expires_at_ms !== null) return
-    const resumed = start_visibility_timeout(active, Date.now())
-    if (resumed === active) return
-    this.#apply({ queue: { ...this.#queue, active: resumed }, effects: [] })
+    if (active_toast?.expires_at_ms !== null) return
+    const resumed = start_visibility_timeout(active_toast, Date.now())
+    if (resumed === active_toast) return
+    this.#apply({ queue: { ...this.#queue, active_toast: resumed }, effects: [] })
   }
 
   // Drops the pending timer and every toast without firing on_close, for teardown
@@ -509,7 +512,7 @@ export class ToastStore<Priority extends string = ToastPriority> {
   // shown after it.
   destroy(): void {
     clearTimeout(this.#timer)
-    this.#queue = { ...this.#queue, active: null, pending: [] }
+    this.#queue = { ...this.#queue, active_toast: null, pending: [] }
   }
 
   #apply(transition: ToastQueueTransition<Priority>): void {

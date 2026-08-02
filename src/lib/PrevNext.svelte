@@ -90,15 +90,15 @@
     )
       return
     const key_map = onkeyup({ prev, next })
-    const to = key_map[event.key]
-    if (to === undefined) return
+    const target_href = key_map[event.key]
+    if (target_href === undefined) return
 
     const { replace_state, no_scroll } = nav_options
     const [scroll_x, scroll_y] = no_scroll
       ? [globalThis.scrollX, globalThis.scrollY]
       : [0, 0]
     const goto = globalThis.history[replace_state ? `replaceState` : `pushState`]
-    goto.call(globalThis.history, {}, ``, to)
+    goto.call(globalThis.history, {}, ``, target_href)
 
     if (no_scroll) globalThis.scrollTo(scroll_x, scroll_y)
   }

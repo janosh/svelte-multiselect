@@ -23,7 +23,11 @@ export const frontend_libs: FrontendLib[] = [
   [`Ember JS`, `JavaScript`, `emberjs/ember.js`],
   [`Backbone`, `JavaScript`, `jashkenas/backbone`],
   [`Preact`, `JavaScript`, `preactjs/preact`],
-].map(([label, lang, handle]) => ({ label, lang, repo: `https://github.com/${handle}` }))
+].map(([label, lang, github_slug]) => ({
+  label,
+  lang,
+  repo: `https://github.com/${github_slug}`,
+}))
 
 export const ml_libs =
   `TensorFlow PyTorch scikit-learn Spark Torch Huggingface Keras Caffe Theano CNTK JAX fast.ai Lightning XGBoost MXNet`

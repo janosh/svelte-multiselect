@@ -3,13 +3,19 @@
   "version": "1.2.0",
   "description": "Accessible, keyboard-friendly Svelte components and attachments",
   "keywords": [
+    "accessibility",
+    "attachments",
     "command-palette",
     "components",
-    "form",
-    "input",
+    "masonry",
     "multi-select",
     "popover",
-    "svelte"
+    "svelte",
+    "sveltekit",
+    "table-of-contents",
+    "toast",
+    "typescript",
+    "ui"
   ],
   "homepage": "https://svelte-widgets.janosh.dev",
   "bugs": "https://github.com/janosh/svelte-widgets/issues",

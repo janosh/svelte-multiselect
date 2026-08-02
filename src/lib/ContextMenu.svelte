@@ -5,22 +5,6 @@
   import type { CmdAction } from './types'
   import { chain_handlers, type CmdSection, format_shortcut, step_focus } from './utils'
 
-  interface Props extends HTMLAttributes<HTMLMenuElement> {
-    actions: (CmdAction | CmdSection)[]
-    // Where the menu is open, as viewport coordinates. null while closed.
-    at?: { x: number; y: number } | null
-    // Region the right-click applies to. Omit and the whole document qualifies.
-    children?: Snippet
-    disabled?: boolean
-    // Merged over `{ escape: true }`. `dismiss_on: 'release'` for right-click toggles.
-    dismiss?: DismissConfig
-    item?: Snippet<[{ action: CmdAction; section?: CmdSection; checked?: boolean }]>
-    on_select?: (action: CmdAction, section?: CmdSection) => void
-    // What picks up the opening right-click: the region when `children` is given, the
-    // document otherwise. `none` installs neither, for a consumer that sets `at` itself.
-    trigger?: `body` | `region` | `none`
-  }
-
   let {
     actions,
     at = $bindable(null),
@@ -31,7 +15,16 @@
     on_select,
     trigger,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLAttributes<HTMLMenuElement>, `children`> & {
+    actions: (CmdAction | CmdSection)[]
+    at?: { x: number; y: number } | null
+    children?: Snippet
+    disabled?: boolean
+    dismiss?: DismissConfig
+    item?: Snippet<[{ action: CmdAction; section?: CmdSection; checked?: boolean }]>
+    on_select?: (action: CmdAction, section?: CmdSection) => void
+    trigger?: `body` | `region` | `none`
+  } = $props()
 
   const trigger_mode = $derived(trigger ?? (children ? `region` : `body`))
   // the region element only renders with `children`, so this combination installs no

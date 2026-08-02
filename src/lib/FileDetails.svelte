@@ -36,34 +36,34 @@
   } & HTMLAttributes<HTMLOListElement> = $props()
 
   // Use reactive state for node refs to avoid binding_property_non_reactive warning
-  let node_refs = $state<(HTMLDetailsElement | null)[]>([])
+  let details_els = $state<(HTMLDetailsElement | null)[]>([])
 
   // DOM `open` isn't reactive, so track it in $state synced from the toggle event
   // and toggle_all, plus the $effect below (toggle doesn't fire for pre-opened details)
-  let any_open = $state(false)
-  const sync_any_open = () => {
-    any_open = node_refs.some((node) => node?.open)
+  let has_open_details = $state(false)
+  const sync_open_state = () => {
+    has_open_details = details_els.some((node) => node?.open)
   }
 
-  // Trim stale refs when files shrink and sync node_refs back to files.node for external access
+  // Trim stale refs when files shrink and sync details_els back to files.node for external access
   $effect(() => {
-    if (node_refs.length > files.length) {
-      node_refs.splice(files.length)
+    if (details_els.length > files.length) {
+      details_els.splice(files.length)
     }
-    for (const [idx, node] of node_refs.entries()) {
+    for (const [idx, node] of details_els.entries()) {
       if (files[idx]) files[idx].node = node
     }
     // initialize label for pre-opened <details> (their toggle event doesn't fire on mount)
-    sync_any_open()
+    sync_open_state()
   })
 
   function toggle_all() {
-    const should_close = node_refs.some((node) => node?.open)
-    for (const node of node_refs) {
+    const should_close = details_els.some((node) => node?.open)
+    for (const node of details_els) {
       if (!node) continue
       node.open = !should_close
     }
-    sync_any_open()
+    sync_open_state()
   }
 
   // Map file extensions that differ from their starry-night language flag
@@ -134,7 +134,7 @@
     type="button"
     onclick={chain_handlers(toggle_all, button_props?.onclick)}
   >
-    {any_open ? `Close` : `Open`} all
+    {has_open_details ? `Close` : `Open`} all
   </button>
 {/if}
 
@@ -146,10 +146,10 @@
     {@const cache_key = `${language}:${content}`}
     <li>
       <details
-        bind:this={node_refs[idx]}
+        bind:this={details_els[idx]}
         {...details_props}
         ontoggle={(event) => {
-          sync_any_open()
+          sync_open_state()
           details_props?.ontoggle?.(event)
         }}
       >
