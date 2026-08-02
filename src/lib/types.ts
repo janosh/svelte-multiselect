@@ -372,7 +372,7 @@ export type NavRouteObject = {
   [key: string]: unknown // allow additional custom properties
 } & ({ href: string } | { separator: true; href?: string })
 
-// NavRoute supports multiple formats for backward compatibility:
+// NavRoute shorthand formats:
 // - string: path only ("/about")
 // - [string, string]: [path, custom_label] ("/about", "About Us")
 // - [string, string[]]: [parent_path, child_paths] ("/docs", ["/docs/intro"])

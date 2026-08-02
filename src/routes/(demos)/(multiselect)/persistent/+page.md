@@ -4,7 +4,7 @@ This example shows how to combine MultiSelect with `sessionStorage` to persist t
 
 ```svelte example id="languages"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
   import { onMount } from 'svelte'
@@ -41,7 +41,7 @@ Tests that binding to reactive wrappers (Svelte stores, Superforms, etc.) that c
 
 ```svelte example id="store-binding"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { type Writable, writable } from 'svelte/store'
 
   // Regression test for issue #309: store subscriptions would cause infinite

@@ -2,7 +2,7 @@
 
 ```svelte example id="foods"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   const options: string[] = [...Array(7).keys()].map((idx) => `Option ${idx + 1}`)
   let selected: string[] = $state(options.slice(0, 2))

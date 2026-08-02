@@ -10,7 +10,7 @@
 
 ```svelte example id="languages"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
@@ -51,7 +51,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   function handle_submit(event: SubmitEvent): void {
     const form_entries = [...new FormData(event.target as HTMLFormElement)]
@@ -75,7 +75,7 @@ When setting an integer value for `maxSelect` Multiselect will
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   function handle_submit(event: SubmitEvent): void {
     const form_entries = [...new FormData(event.target as HTMLFormElement)]
@@ -101,7 +101,7 @@ Use `selectAllOption` to add a "Select all" button at the top of the dropdown. I
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   const fruits: string[] = [
     `Apple`,
@@ -131,7 +131,7 @@ Pass a string to customize the label:
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   interface ColorOption extends ObjectOption {
@@ -171,7 +171,7 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   interface ColorOption extends ObjectOption {
@@ -196,7 +196,7 @@ For single select (`maxSelect={1}`), you can use `bind:value` to initialize the 
 ```svelte example
 <script lang="ts">
   // for https://github.com/janosh/svelte-widgets/issues/249
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   const red_pill = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`

@@ -29,8 +29,8 @@
     ...rest
   }: Props = $props()
 
-  const component_id = $props.id()
-  const base_id = `tabs-${component_id}`
+  const unique_id = $props.id()
+  const base_id = `tabs-${unique_id}`
   const enabled_items = $derived(items.filter((item) => !item.disabled))
   const selected_value = $derived(
     enabled_items.some((item) => item.value === value) ? value : enabled_items[0]?.value,

@@ -118,7 +118,7 @@
   // scrolling in chrome. see https://github.com/janosh/svelte-toc/issues/57
   let page_has_scrolled: boolean = $state(false)
   // tracks whether TOC overlaps with any hideOnIntersect elements (desktop only)
-  let intersecting: boolean = $state(false)
+  let is_overlapping_hide_target: boolean = $state(false)
   // tracks the target heading during programmatic scrolls (click/keyboard-initiated)
   // prevents scroll events from incorrectly updating activeHeading during smooth scroll
   let scroll_target: HTMLHeadingElement | null = $state(null)
@@ -383,10 +383,10 @@
       ))
     const heading_entries: { data: TocHeadingData; heading: HTMLHeadingElement }[] = []
     for (const [idx, heading] of (queried_headings ?? []).entries()) {
-      const data = getHeadingData(heading)
-      if (data === null) continue
+      const heading_meta = getHeadingData(heading)
+      if (heading_meta === null) continue
       heading_entries.push({
-        data: normalize_heading_data(heading, data, idx, get_used_ids),
+        data: normalize_heading_data(heading, heading_meta, idx, get_used_ids),
         heading,
       })
     }
@@ -501,12 +501,12 @@
   // check if TOC overlaps with any hideOnIntersect elements (desktop only)
   function check_toc_overlap() {
     if (!hideOnIntersect || !aside || !desktop) {
-      intersecting = false
+      is_overlapping_hide_target = false
       return
     }
 
     const toc = aside.getBoundingClientRect()
-    intersecting = hide_on_intersect_elements().some((element) => {
+    is_overlapping_hide_target = hide_on_intersect_elements().some((element) => {
       const rect = element.getBoundingClientRect()
       return !(
         toc.right < rect.left ||
@@ -648,15 +648,15 @@
   class:collapsible={collapse_mode}
   class:desktop
   class:hidden={hide}
-  class:intersecting
+  class:intersecting={is_overlapping_hide_target}
   class:mobile={!desktop}
   bind:this={aside}
   hidden={hide}
-  aria-hidden={hide || intersecting}
+  aria-hidden={hide || is_overlapping_hide_target}
   {@attach (node) => {
     // while intersecting the aside is only opacity: 0, so without inert it stays in the
     // tab order while aria-hidden tells assistive tech it is gone
-    node.toggleAttribute(`inert`, intersecting)
+    node.toggleAttribute(`inert`, is_overlapping_hide_target)
   }}
 >
   {#if !open && !desktop && headings.length >= minItems}

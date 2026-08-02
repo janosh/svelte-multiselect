@@ -107,8 +107,8 @@
   // selection pointing at no rendered option would otherwise leave nothing tabbable.
   const roving_value = $derived.by(() => {
     if (multiple) return null
-    const checked = enabled_options.find((opt) => opt.value === selected_values[0])
-    return (checked ?? enabled_options[0])?.value
+    const checked_option = enabled_options.find((opt) => opt.value === selected_values[0])
+    return (checked_option ?? enabled_options[0])?.value
   })
 
   function select(value: Value) {

@@ -4,7 +4,7 @@ This demo logs common selection, dropdown, search, activation, and native input 
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 

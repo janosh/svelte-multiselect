@@ -33,14 +33,14 @@
     if (theme.mode === `system`) apply_theme_mode(resolve_theme_mode())
     is_hydrated = true
 
-    const mql = matchMedia(`(prefers-color-scheme: dark)`)
+    const color_scheme_query = matchMedia(`(prefers-color-scheme: dark)`)
     const on_change = () => {
       if (theme.mode === `system`) apply_theme_mode(`system`)
     }
-    mql.addEventListener(`change`, on_change)
+    color_scheme_query.addEventListener(`change`, on_change)
     const stop_storage_listener = listen_theme_storage()
     return () => {
-      mql.removeEventListener(`change`, on_change)
+      color_scheme_query.removeEventListener(`change`, on_change)
       stop_storage_listener()
     }
   })

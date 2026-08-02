@@ -8,7 +8,19 @@
 
   // Priorities are widened to `string` throughout: the component renders whatever
   // ladder its store was built with and never ranks anything itself.
-  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children`> {
+  let {
+    store = default_store,
+    position = `bottom-right`,
+    dismissible = true,
+    pause_on_hover = true,
+    // Option+T types `†` on Apple keyboards, so the shortcut is bound under both
+    // spellings rather than silently doing nothing on macOS
+    focus_hotkey = [`alt+t`, `alt+†`],
+    assertive,
+    dismiss_label = `Dismiss notification`,
+    children,
+    ...rest
+  }: Omit<HTMLAttributes<HTMLDivElement>, `children`> & {
     store?: ToastStore<string>
     position?: ToastPosition
     dismissible?: boolean
@@ -22,47 +34,33 @@
     assertive?: readonly string[]
     dismiss_label?: string
     children?: Snippet<[ToastItem<string>]>
-  }
-
-  let {
-    store = default_store,
-    position = `bottom-right`,
-    dismissible = true,
-    pause_on_hover = true,
-    // Option+T types `†` on Apple keyboards, so the shortcut is bound under both
-    // spellings rather than silently doing nothing on macOS
-    focus_hotkey = [`alt+t`, `alt+†`],
-    assertive,
-    dismiss_label = `Dismiss notification`,
-    children,
-    ...rest
-  }: Props = $props()
+  } = $props()
 
   let stack: HTMLDivElement | null = $state(null)
-  let hovered = $state(false)
-  let focused = $state(false)
+  let is_hovered = $state(false)
+  let is_focused = $state(false)
 
-  const active = $derived(store.active)
+  const active_toast = $derived(store.active_toast)
   // read off the store's own sticky set, not a second copy of its top-two rule: a toast
   // held on screen until dismissed has to interrupt, or it can sit there unread. Deriving
   // it here let a custom sticky_priorities be announced politely while never leaving.
   const assertive_priorities = $derived(assertive ?? store.sticky_priorities)
   const is_assertive = $derived(
-    active !== null && assertive_priorities.includes(active.priority),
+    active_toast !== null && assertive_priorities.includes(active_toast.priority),
   )
 
-  // `hovered` records where the pointer is; pause_on_hover is policy applied on top, so
+  // `is_hovered` records where the pointer is; pause_on_hover is policy applied on top, so
   // flipping the prop over an already-hovered stack takes effect without a fresh enter
-  const should_pause = $derived((hovered && pause_on_hover) || focused)
+  const should_pause = $derived((is_hovered && pause_on_hover) || is_focused)
   // Called straight from the handlers, not left to the effect below: an effect flushes a
   // microtask later, and a toast whose timer expires in between is already gone.
   const sync_pause = () => (should_pause ? store.pause() : store.resume())
   const set_hovered = (value: boolean) => {
-    hovered = value
+    is_hovered = value
     sync_pause()
   }
   const set_focused = (value: boolean) => {
-    focused = value
+    is_focused = value
     sync_pause()
   }
   // Covers what the handlers cannot: a toast promoted under a pointer that never left has
@@ -70,7 +68,7 @@
   // early-return when there is nothing to do, so the queue change they cause settles.
   $effect(() => {
     void should_pause // pinned as a dependency, so a bare prop flip re-runs this too
-    if (active) untrack(sync_pause)
+    if (active_toast) untrack(sync_pause)
   })
 
   // Where the keyboard was before focus_hotkey pulled it in: removing the toast unmounts
@@ -100,11 +98,11 @@
   }
 
   // The buttons below restore focus themselves, since dismissing one toast can promote
-  // the next and leave `active` non-null. This covers every other way the last toast
+  // the next and leave `active_toast` non-null. This covers every other way the last toast
   // leaves — an absolute deadline that focus cannot pause, or the consumer clearing the
   // queue — where there is no click to hang the restore off.
   $effect(() => {
-    if (!active) void restore_focus()
+    if (!active_toast) void restore_focus()
   })
 
   const dismiss = (id: string) => {
@@ -125,7 +123,9 @@
   // toast — a global Escape would fight every dialog for the same key. Gated on
   // `dismissible` too, or it stays the one way to close a toast declared undismissable.
   const escape_binding = $derived(
-    active && dismissible ? [{ keys: `Escape`, handler: () => dismiss(active.id) }] : [],
+    active_toast && dismissible
+      ? [{ keys: `Escape`, handler: () => dismiss(active_toast.id) }]
+      : [],
   )
 </script>
 
@@ -178,13 +178,13 @@ is just as unreliable. -->
   {@attach hotkey({ bindings: escape_binding })}
 >
   <div role="status" aria-live="polite" aria-atomic="true">
-    {#if active && !is_assertive}
-      {#key active.id}{@render toast_card(active)}{/key}
+    {#if active_toast && !is_assertive}
+      {#key active_toast.id}{@render toast_card(active_toast)}{/key}
     {/if}
   </div>
   <div role="alert" aria-live="assertive" aria-atomic="true">
-    {#if active && is_assertive}
-      {#key active.id}{@render toast_card(active)}{/key}
+    {#if active_toast && is_assertive}
+      {#key active_toast.id}{@render toast_card(active_toast)}{/key}
     {/if}
   </div>
 </div>

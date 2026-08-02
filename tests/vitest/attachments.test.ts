@@ -694,6 +694,50 @@ describe(`tooltip`, () => {
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
 
+    it(`cleanup during hide_delay cancels the pending hide`, () => {
+      const [element, cleanup] = attach_tooltip(`cleanup`, {
+        delay: 0,
+        hide_delay: 200,
+      })
+      trigger_tooltip(element)
+
+      element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+      expect(vi.getTimerCount()).toBe(1)
+      cleanup?.()
+
+      expect(vi.getTimerCount()).toBe(0)
+      expect(document.querySelector(`.custom-tooltip`)).toBeNull()
+    })
+
+    // leave then blur both schedule hide; without clearing the first timer id, a re-show
+    // is wiped when that orphaned timeout fires
+    it(`hide_delay clears prior hide timer on re-show`, () => {
+      const element = show_tooltip({ hide_delay: 200, delay: 0 })
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+
+      element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+      element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
+      vi.advanceTimersByTime(50)
+      element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      vi.advanceTimersByTime(0) // delay: 0 show
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+
+      vi.advanceTimersByTime(200)
+      expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
+    })
+
+    it(`stale hide events do not cancel another element's pending tooltip`, () => {
+      const first = show_tooltip({ hide_delay: 200, delay: 0 }, `first`)
+      const [second] = attach_tooltip(`second`, { hide_delay: 200, delay: 100 })
+
+      first.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
+      second.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
+      first.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
+      vi.advanceTimersByTime(100)
+
+      expect(doc_query(`.tooltip-content`).textContent).toBe(`second`)
+    })
+
     it(`mouseleave before delay expires cancels pending tooltip`, () => {
       const [element] = attach_tooltip(`delayed tooltip`, { delay: 100 })
 

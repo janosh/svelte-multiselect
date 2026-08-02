@@ -15,7 +15,7 @@ dropdown too small.
   import DraggablePane from '$lib/DraggablePane.svelte'
   import { Toggle } from '$lib'
 
-  let show = $state(false)
+  let open = $state(false)
   let persistent = $state(false)
   let resize = $state<`both` | `width` | `height` | `none`>(`both`)
   let last_close = $state(``)
@@ -38,7 +38,7 @@ dropdown too small.
 >
   <div style="display: flex; justify-content: flex-end">
     <DraggablePane
-      bind:show
+      bind:open
       {persistent}
       {resize}
       on_close={({ via }) => (last_close = via)}
@@ -57,7 +57,7 @@ dropdown too small.
 </div>
 ```
 
-The `children` snippet receives `{ show, show_controls, has_been_dragged, dragging }`,
+The `children` snippet receives `{ open, show_controls, has_been_dragged, dragging }`,
 so content can react to the pane's own chrome — pausing an animation while the pane is
 being dragged over it, for instance.
 
@@ -80,8 +80,8 @@ click handling, stays with the component. It receives the same state as `childre
   style="position: relative; height: 10em; padding: 6pt; border: 1px dashed gray; border-radius: 5pt; display: flex; justify-content: flex-end"
 >
   <DraggablePane toggle_props={{ title: `Layer info` }}>
-    {#snippet toggle({ show })}
-      <span style="font-size: 0.8em; padding: 0 2pt">{show ? `Hide` : `Info`}</span>
+    {#snippet toggle({ open })}
+      <span style="font-size: 0.8em; padding: 0 2pt">{open ? `Hide` : `Info`}</span>
     {/snippet}
     {#snippet children()}
       <p style="margin: 0">Text, an inline SVG, an icon from another set — anything.</p>

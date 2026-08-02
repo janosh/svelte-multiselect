@@ -14,11 +14,19 @@ test(`renders tuple subpages in order with default and per-page icons`, () => {
   ]
   mount(SubpageGrid, {
     target: document.body,
-    props: { title: `Demo`, subtitle: `Demo subtitle`, subpages },
+    props: {
+      title: `Demo`,
+      subtitle: `Demo subtitle`,
+      subpages,
+      style: `max-width: 40rem`,
+    },
   })
 
   expect(document.querySelector(`h1`)?.textContent).toBe(`Demo`)
   expect(document.querySelector(`.subtitle`)?.textContent).toBe(`Demo subtitle`)
+  expect(document.querySelector(`.subpage-grid`)?.getAttribute(`style`)).toContain(
+    `max-width: 40rem`,
+  )
 
   const cards = [...document.querySelectorAll<HTMLAnchorElement>(`nav.grid a.card`)]
   expect(cards).toHaveLength(subpages.length)
@@ -70,21 +78,6 @@ test(`fallback_icon replaces the default icon`, () => {
   expect(
     [...document.querySelectorAll(`svg.icon path`)].map((path) => path.getAttribute(`d`)),
   ).toEqual([icon_data.Check.d, icon_data.Copy.d])
-})
-
-test(`forwards host style via ...rest`, () => {
-  mount(SubpageGrid, {
-    target: document.body,
-    props: {
-      title: `Demo`,
-      subtitle: `sub`,
-      subpages: [[`Plain`, `/plain`, `no icon`]],
-      style: `max-width: 40rem`,
-    },
-  })
-  expect(document.querySelector(`.subpage-grid`)?.getAttribute(`style`)).toContain(
-    `max-width: 40rem`,
-  )
 })
 
 // an href is a destination, not an identity: two cards may point at one page under

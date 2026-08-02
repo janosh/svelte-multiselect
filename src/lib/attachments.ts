@@ -23,8 +23,8 @@ const follow_pointer = (
   on_move: (event: PointerEvent) => void,
   on_end: (event: PointerEvent) => void,
 ) => {
-  const ac = new AbortController()
-  const { signal } = ac
+  const abort_controller = new AbortController()
+  const { signal } = abort_controller
   target.setPointerCapture(pointer_id)
   const on_pointer = (event: PointerEvent) => {
     if (event.pointerId !== pointer_id) return
@@ -36,7 +36,7 @@ const follow_pointer = (
   }
   target.addEventListener(`lostpointercapture`, on_pointer, { signal })
   return () => {
-    ac.abort() // before release, or lostpointercapture re-enters on_end
+    abort_controller.abort() // before release, or lostpointercapture re-enters on_end
     if (target.hasPointerCapture(pointer_id)) target.releasePointerCapture(pointer_id)
   }
 }
@@ -191,7 +191,7 @@ export const draggable =
     const node = element
 
     let dragging = false
-    let unfollow: (() => void) | undefined
+    let stop_pointer_follow: (() => void) | undefined
     let start = { x: 0, y: 0 }
     const initial = { left: 0, top: 0 }
 
@@ -204,13 +204,13 @@ export const draggable =
       )
       return undefined
     }
-    const handle = found
+    const drag_handle = found
 
-    function handle_pointerdown(event: PointerEvent) {
+    function on_pointerdown(event: PointerEvent) {
       // `dragging` bars a second primary pointer mid-drag (mouse while a touch is down),
       // which would strand the first follower's listeners past cleanup.
       if (dragging || !is_primary_press(event)) return
-      if (!(event.target instanceof Node) || !handle.contains(event.target)) return
+      if (!(event.target instanceof Node) || !drag_handle.contains(event.target)) return
 
       dragging = true
 
@@ -230,19 +230,19 @@ export const draggable =
       node.style.right = `auto` // Prevent conflict with left
       start = { x: event.clientX, y: event.clientY }
       document.body.style.userSelect = `none` // Prevent text selection during drag
-      handle.style.cursor = `grabbing`
+      drag_handle.style.cursor = `grabbing`
 
-      unfollow = follow_pointer(
-        handle,
+      stop_pointer_follow = follow_pointer(
+        drag_handle,
         event.pointerId,
-        handle_pointermove,
-        handle_pointerup,
+        on_pointermove,
+        on_pointerup,
       )
 
       options.on_drag_start?.(event)
     }
 
-    function handle_pointermove(event: PointerEvent) {
+    function on_pointermove(event: PointerEvent) {
       if (!dragging) return
 
       const dx = event.clientX - start.x
@@ -253,29 +253,32 @@ export const draggable =
       options.on_drag?.(event)
     }
 
-    function handle_pointerup(event: PointerEvent) {
+    function on_pointerup(event: PointerEvent) {
       if (!dragging) return
 
       dragging = false
       event.stopPropagation()
       document.body.style.userSelect = ``
-      handle.style.cursor = `grab`
-      unfollow?.()
+      drag_handle.style.cursor = `grab`
+      stop_pointer_follow?.()
       options.on_drag_end?.(event)
     }
 
     // restore consumer inline styles on teardown rather than blanking them
-    const prev = { cursor: handle.style.cursor, touch_action: handle.style.touchAction }
-    handle.addEventListener(`pointerdown`, handle_pointerdown)
-    handle.style.cursor = `grab`
-    handle.style.touchAction = `none` // else the browser pans and the drag never moves
+    const previous_styles = {
+      cursor: drag_handle.style.cursor,
+      touch_action: drag_handle.style.touchAction,
+    }
+    drag_handle.addEventListener(`pointerdown`, on_pointerdown)
+    drag_handle.style.cursor = `grab`
+    drag_handle.style.touchAction = `none` // else the browser pans and the drag never moves
 
     return () => {
-      unfollow?.()
+      stop_pointer_follow?.()
       if (dragging) document.body.style.userSelect = ``
-      handle.removeEventListener(`pointerdown`, handle_pointerdown)
-      handle.style.cursor = prev.cursor
-      handle.style.touchAction = prev.touch_action
+      drag_handle.removeEventListener(`pointerdown`, on_pointerdown)
+      drag_handle.style.cursor = previous_styles.cursor
+      drag_handle.style.touchAction = previous_styles.touch_action
     }
   }
 
@@ -310,7 +313,7 @@ export const resizable =
 
     type Edge = `top` | `right` | `bottom` | `left`
     let active_edge: Edge | null = null
-    let unfollow: (() => void) | undefined
+    let stop_pointer_follow: (() => void) | undefined
     let start = { x: 0, y: 0 }
     let initial = {
       width: 0,
@@ -368,7 +371,12 @@ export const resizable =
       }
       document.body.style.userSelect = `none`
       on_resize_start?.(event, { width: initial.width, height: initial.height })
-      unfollow = follow_pointer(node, event.pointerId, on_pointermove, on_pointerup)
+      stop_pointer_follow = follow_pointer(
+        node,
+        event.pointerId,
+        on_pointermove,
+        on_pointerup,
+      )
     }
 
     function on_pointermove(event: PointerEvent) {
@@ -408,7 +416,7 @@ export const resizable =
       if (!active_edge) return
       document.body.style.userSelect = ``
       on_resize_end?.(event, { width: node.offsetWidth, height: node.offsetHeight })
-      unfollow?.()
+      stop_pointer_follow?.()
       active_edge = null
     }
 
@@ -424,32 +432,36 @@ export const resizable =
     }
 
     // Paint order: `right` over `bottom`, so a corner press resizes width
-    const strips = new AbortController()
-    const { signal } = strips
-    const handles = ([`top`, `left`, `bottom`, `right`] as const)
+    const abort_controller = new AbortController()
+    const { signal } = abort_controller
+    const resize_strips = ([`top`, `left`, `bottom`, `right`] as const)
       .filter((edge) => edges.includes(edge))
       .map((edge) => {
-        const handle = document.createElement(`div`)
+        const resize_strip = document.createElement(`div`)
         const across = edge === `left` || edge === `right`
         const cross = across ? ([`top`, `bottom`] as const) : ([`left`, `right`] as const)
-        handle.dataset.resizeEdge = edge
-        handle.style.cssText = `position: absolute; touch-action: none;
+        resize_strip.dataset.resizeEdge = edge
+        resize_strip.style.cssText = `position: absolute; touch-action: none;
           cursor: ${across ? `ew` : `ns`}-resize;
           ${across ? `width` : `height`}: ${handle_size}px;
           ${[edge, ...cross].map((side) => `${side}: ${inset(side)}px`).join(`; `)}`
-        handle.addEventListener(`pointerdown`, (event) => on_pointerdown(event, edge), {
-          signal,
-        })
-        handle.addEventListener(`dblclick`, on_dblclick, { signal })
-        node.append(handle)
-        return handle
+        resize_strip.addEventListener(
+          `pointerdown`,
+          (event) => on_pointerdown(event, edge),
+          {
+            signal,
+          },
+        )
+        resize_strip.addEventListener(`dblclick`, on_dblclick, { signal })
+        node.append(resize_strip)
+        return resize_strip
       })
 
     return () => {
-      unfollow?.()
+      stop_pointer_follow?.()
       if (active_edge) document.body.style.userSelect = ``
-      strips.abort() // removal alone leaves a retained strip ref able to fire on_pointerdown
-      for (const handle of handles) handle.remove()
+      abort_controller.abort() // removal alone leaves a retained strip ref able to fire on_pointerdown
+      for (const strip of resize_strips) strip.remove()
     }
   }
 
@@ -626,7 +638,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
     search.replaceAll(/[.*+?^${}()|[\]\\]/gu, `\\$&`).replaceAll(` `, `\\s+`),
     `gu`,
   )
-  let active = true
+  let is_attached = true
   let did_scroll = false
   let effect_cleanup: (() => void) | undefined
   let timeout: ReturnType<typeof setTimeout> | undefined
@@ -695,13 +707,13 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
   }
 
   const update_highlight = () => {
-    if (!active) return
+    if (!is_attached) return
     observer.disconnect()
     try {
       const previous_cleanup = effect_cleanup
       effect_cleanup = undefined
       previous_cleanup?.()
-      if (!active) return
+      if (!is_attached) return
       const tree_walker = node.ownerDocument.createTreeWalker(
         node,
         NodeFilter.SHOW_TEXT,
@@ -726,7 +738,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
           ? () => next_effect_cleanup()
           : undefined
     } finally {
-      if (active && observe_mutations !== false)
+      if (is_attached && observe_mutations !== false)
         observer.observe(node, { childList: true, subtree: true, characterData: true })
     }
   }
@@ -736,8 +748,8 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 
   const observer = new MutationObserver(debounce ? trigger : update_highlight)
   const cleanup = () => {
-    if (!active) return
-    active = false
+    if (!is_attached) return
+    is_attached = false
     if (timeout !== undefined) clearTimeout(timeout)
     cancel()
     observer.disconnect()
@@ -764,7 +776,7 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
-let current_tooltip: (HTMLElement & { owner_element?: HTMLElement }) | null = null
+let current_tooltip: (HTMLElement & { owner_element: HTMLElement }) | null = null
 let show_timeout: ReturnType<typeof setTimeout> | undefined
 let hide_timeout: ReturnType<typeof setTimeout> | undefined
 // Element that scheduled the pending show_timeout. owner_element is only set once
@@ -773,17 +785,17 @@ let hide_timeout: ReturnType<typeof setTimeout> | undefined
 let show_timeout_owner: HTMLElement | null = null
 
 function clear_tooltip() {
-  if (show_timeout) clearTimeout(show_timeout)
+  clearTimeout(show_timeout)
+  show_timeout = undefined
   show_timeout_owner = null
-  if (hide_timeout) clearTimeout(hide_timeout)
-  if (current_tooltip) {
-    current_tooltip.owner_element?.removeAttribute(`aria-describedby`)
-    current_tooltip.remove()
-    current_tooltip = null
-  }
+  clearTimeout(hide_timeout)
+  hide_timeout = undefined
+  current_tooltip?.owner_element.removeAttribute(`aria-describedby`)
+  current_tooltip?.remove()
+  current_tooltip = null
 }
 
-// whether the element owns the visible tooltip or a pending (delayed) show
+// whether the element owns the visible tooltip or a pending show
 const owns_tooltip_state = (element: HTMLElement): boolean =>
   current_tooltip?.owner_element === element || show_timeout_owner === element
 
@@ -903,14 +915,15 @@ export const tooltip =
       }
 
       const apply_triangle_style = (
-        el: HTMLElement,
+        triangle_el: HTMLElement,
         placement: Placement,
         px: number,
         color: string,
       ) => {
-        el.style.cssText = `position: absolute; width: 0; height: 0; pointer-events: none;`
+        triangle_el.style.cssText = `position: absolute; width: 0; height: 0; pointer-events: none;`
         const vert = placement === `top` || placement === `bottom`
-        const set = (prop: string, val: string) => el.style.setProperty(prop, val)
+        const set = (prop: string, css_value: string) =>
+          triangle_el.style.setProperty(prop, css_value)
         set(vert ? `left` : `top`, `calc(50% - ${px}px)`)
         set(opposite[placement], `-${px}px`)
         set(`border-${vert ? `left` : `top`}`, `${px}px solid transparent`)
@@ -1077,6 +1090,7 @@ export const tooltip =
 
         show_timeout_owner = element
         show_timeout = setTimeout(() => {
+          show_timeout = undefined
           show_timeout_owner = null
           const tooltip_el = document.createElement(`div`)
           tooltip_el.className = `custom-tooltip`
@@ -1187,11 +1201,22 @@ export const tooltip =
       }
 
       function hide_tooltip() {
-        if (show_timeout) clearTimeout(show_timeout)
+        // A stale leave/blur from the previous trigger must not cancel the next
+        // trigger's pending show or schedule a timer that removes its tooltip.
+        if (!owns_tooltip_state(element)) return
+        if (show_timeout_owner === element) {
+          clearTimeout(show_timeout)
+          show_timeout = undefined
+          show_timeout_owner = null
+        }
+        if (current_tooltip?.owner_element !== element) return
+        // leave/blur both call this; clear any pending hide so a later show isn't
+        // wiped by a stale timer from the first hide event
+        clearTimeout(hide_timeout)
+        hide_timeout = undefined
         const delay = options.hide_delay ?? 0
-        if (delay > 0) {
-          hide_timeout = setTimeout(() => clear_tooltip(), delay)
-        } else clear_tooltip()
+        if (delay > 0) hide_timeout = setTimeout(clear_tooltip, delay)
+        else clear_tooltip()
       }
 
       function handle_scroll(event: Event) {
@@ -1313,16 +1338,16 @@ type KeyLayer = (event: KeyboardEvent) => void
 
 const key_layer_stack = (wants: (event: KeyboardEvent) => boolean) => {
   const layers: KeyLayer[] = []
-  const handle = (event: KeyboardEvent) => {
+  const on_keydown = (event: KeyboardEvent) => {
     if (!event.defaultPrevented && wants(event)) layers.at(-1)?.(event)
   }
   return (layer: KeyLayer) => {
-    if (layers.length === 0) document.addEventListener(`keydown`, handle, true)
+    if (layers.length === 0) document.addEventListener(`keydown`, on_keydown, true)
     layers.push(layer)
     return () => {
       const idx = layers.indexOf(layer)
       if (idx !== -1) layers.splice(idx, 1)
-      if (layers.length === 0) document.removeEventListener(`keydown`, handle, true)
+      if (layers.length === 0) document.removeEventListener(`keydown`, on_keydown, true)
     }
   }
 }
@@ -1613,11 +1638,11 @@ export const hotkey =
     if (!enabled || bindings.length === 0) return undefined
 
     const target: EventTarget = global ? document : node
-    const handle = (event: Event) => {
+    const on_keydown = (event: Event) => {
       if (event instanceof KeyboardEvent) run_hotkeys(event, bindings)
     }
-    target.addEventListener(`keydown`, handle)
-    return () => target.removeEventListener(`keydown`, handle)
+    target.addEventListener(`keydown`, on_keydown)
+    return () => target.removeEventListener(`keydown`, on_keydown)
   }
 
 export interface FocusTrapOptions {
@@ -2187,11 +2212,11 @@ export const forward_window_keydown =
     const { handle, enabled = true } = options
     if (!enabled) return undefined
 
-    let hovered = false
-    const on_enter = () => (hovered = true)
-    const on_leave = () => (hovered = false)
+    let is_hovered = false
+    const on_enter = () => (is_hovered = true)
+    const on_leave = () => (is_hovered = false)
     const on_keydown = (event: Event) => {
-      if (!hovered || !(event instanceof KeyboardEvent)) return
+      if (!is_hovered || !(event instanceof KeyboardEvent)) return
       // The root itself may be focusable so keyboard users can aim shortcuts at it.
       // Any other focused element, including one retargeted through a shadow root, keeps
       // its own keys. composedPath()[0] exposes that original shadow-DOM target.

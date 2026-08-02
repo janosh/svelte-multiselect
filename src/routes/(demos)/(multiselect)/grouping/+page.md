@@ -6,7 +6,7 @@ Group related options together with visual headers. Add a `group` key to option 
 
 ```svelte example id="basic-grouping-demo"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   const options: ObjectOption[] = Object.entries({
@@ -43,7 +43,7 @@ Enable `collapsibleGroups` to let users collapse/expand groups. Use `searchExpan
 
 ```svelte example id="collapsible-groups-demo"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   const options: ObjectOption[] = Object.entries({
@@ -102,7 +102,7 @@ Enable `groupSelectAll` to add a toggle button to each group header:
 
 ```svelte example id="group-select-all"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   const options: ObjectOption[] = Object.entries({
@@ -132,7 +132,7 @@ Use `ungroupedPosition` for options without a `group` key, and `groupSortOrder` 
 
 ```svelte example id="ungrouped-sorting"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   // Ungrouped options (no group key) mixed with grouped options
@@ -187,7 +187,7 @@ Use `stickyGroupHeaders` for long lists. Grouping also works with `loadOptions`:
 
 ```svelte example id="sticky-dynamic"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult, ObjectOption } from '$lib/types'
 
   interface TeamMember extends ObjectOption {
@@ -247,7 +247,7 @@ Use the `groupHeader` snippet for complete control over header rendering:
 
 ```svelte example id="custom-group-header-demo"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   const options: ObjectOption[] = Object.entries({

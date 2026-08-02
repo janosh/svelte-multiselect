@@ -1,7 +1,7 @@
 <script lang="ts">
   // Internal test page for playwright e2e tests (tests/playwright/MultiSelect.test.ts):
   // virtualList windowing needs real browser layout (happy-dom reports clientHeight 0)
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   const virtual_options = Array.from({ length: 2000 }, (_, idx) => `Option ${idx}`)
 </script>

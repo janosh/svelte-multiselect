@@ -5,14 +5,14 @@
 
   let {
     dismiss_on,
-    show = $bindable(false),
-  }: { dismiss_on?: `press` | `release`; show?: boolean } = $props()
+    open = $bindable(false),
+  }: { dismiss_on?: `press` | `release`; open?: boolean } = $props()
 </script>
 
-<input type="checkbox" bind:checked={show} />
-<button data-testid="pointerdown-trigger" onpointerdown={() => (show = true)}>open</button
+<input type="checkbox" bind:checked={open} />
+<button data-testid="pointerdown-trigger" onpointerdown={() => (open = true)}>open</button
 >
-<DraggablePane bind:show {dismiss_on}>
+<DraggablePane bind:open {dismiss_on}>
   {#snippet children()}
     <div data-testid="content">pane content</div>
   {/snippet}

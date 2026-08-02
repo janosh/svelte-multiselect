@@ -4,6 +4,8 @@
 
 > 30 July 2026
 
+- **Breaking:** Remove `ToastQueue.active` and `ToastStore.active` in favor of `active_toast`. Consumers should replace `queue.active` with `queue.active_toast` and `store.active` with `store.active_toast`; code constructing `ToastQueue` objects directly must rename the `active` field to `active_toast`.
+- **Breaking:** Drop the MultiSelect default export from the package barrel; use `import { MultiSelect } from 'svelte-widgets'`. Stop reading the legacy `theme_mode` localStorage key (only `theme`). Remove the `Element.prototype.scrollIntoViewIfNeeded` polyfill from barrel import; MultiSelect scrolls with standard `scrollIntoView`.
 - Add three accessible components: `Sheet` for portalled edge panels, snippet-driven `Tabs` with automatic/manual activation and `Accordion` with single/multiple expansion [`#436`](https://github.com/janosh/svelte-widgets/pull/436)
 - Add `file_drop` attachment with accept filtering, directory expansion and explicit drop errors [`#436`](https://github.com/janosh/svelte-widgets/pull/436)
 - Add hover/focus triggers and open/close delays to `Popover`

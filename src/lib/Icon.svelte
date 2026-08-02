@@ -17,7 +17,7 @@
       | { icon?: never; path: string; viewBox?: string; stroke?: string }
     ) = $props()
 
-  const data: IconData = $derived.by(() => {
+  const resolved_icon: IconData = $derived.by(() => {
     if (path) return { d: path, viewBox, stroke }
     if (icon && icon in icon_data) return icon_data[icon]
     console.error(`Icon '${icon}' not found`)
@@ -27,17 +27,17 @@
 
 <svg
   role="img"
-  viewBox={data.viewBox}
-  fill={data.fill ?? (data.stroke ? `none` : `currentColor`)}
-  stroke={data.stroke}
+  viewBox={resolved_icon.viewBox}
+  fill={resolved_icon.fill ?? (resolved_icon.stroke ? `none` : `currentColor`)}
+  stroke={resolved_icon.stroke}
   {...rest}
 >
-  {#if `markup` in data}
+  {#if `markup` in resolved_icon}
     <!-- several shapes rather than one `d`. Only registry glyphs reach {@html}; a
     caller's `path` always becomes the `d` below, so markup in it cannot inject nodes -->
-    {@html data.markup}
+    {@html resolved_icon.markup}
   {:else}
-    <path d={data.d} />
+    <path d={resolved_icon.d} />
   {/if}
 </svg>
 

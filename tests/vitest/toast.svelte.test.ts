@@ -52,7 +52,7 @@ describe(`toast queue reducer`, () => {
     const first = add(create_toast_queue(), `first`).queue
     const { queue } = add(first, `second`, { priority })
 
-    expect(queue.active?.message).toBe(preempts ? `second` : `first`)
+    expect(queue.active_toast?.message).toBe(preempts ? `second` : `first`)
     expect(messages(queue.pending)).toEqual([preempts ? `first` : `second`])
   })
 
@@ -60,7 +60,7 @@ describe(`toast queue reducer`, () => {
     // `a` is seen for 200 ms of its 1000 ms budget before `b` interrupts it, so it must
     // come back with 800 ms left rather than a fresh 1000 or the 800 it never spends
     const first = add(create_toast_queue(), `a`, { visible_duration_ms: 1000 }).queue
-    expect(first.active?.expires_at_ms).toBe(1000)
+    expect(first.active_toast?.expires_at_ms).toBe(1000)
 
     const interrupted = add(
       first,
@@ -68,16 +68,18 @@ describe(`toast queue reducer`, () => {
       { priority: `error`, visible_duration_ms: 500 },
       200,
     ).queue
-    expect(interrupted.active?.message).toBe(`b`)
-    expect(interrupted.active?.expires_at_ms).toBe(700)
+    expect(interrupted.active_toast?.message).toBe(`b`)
+    expect(interrupted.active_toast?.expires_at_ms).toBe(700)
     // paused: no deadline runs while the toast is off screen
     expect(interrupted.pending[0].expires_at_ms).toBeNull()
     expect(interrupted.pending[0].visible_duration_ms).toBe(800)
 
     const resumed = expire_toasts(interrupted, 700)
-    expect(resumed.effects).toEqual([{ reason: `timeout`, toast: interrupted.active }])
-    expect(resumed.queue.active?.message).toBe(`a`)
-    expect(resumed.queue.active?.expires_at_ms).toBe(1500) // 700 + the banked 800
+    expect(resumed.effects).toEqual([
+      { reason: `timeout`, toast: interrupted.active_toast },
+    ])
+    expect(resumed.queue.active_toast?.message).toBe(`a`)
+    expect(resumed.queue.active_toast?.expires_at_ms).toBe(1500) // 700 + the banked 800
   })
 
   test.each([
@@ -156,7 +158,7 @@ describe(`toast queue reducer`, () => {
       const repeat = add(first, `saving`)
 
       expect(repeat.deduplicated).toBe(true)
-      expect(repeat.toast_id).toBe(first.active?.id)
+      expect(repeat.toast_id).toBe(first.active_toast?.id)
       expect(repeat.queue.pending).toEqual([])
 
       // a match further back is updated where it sits and re-ranked from there, so a
@@ -165,7 +167,7 @@ describe(`toast queue reducer`, () => {
       queue = add(queue, `queued`, { dedupe_key: `job` }).queue
       const louder = add(queue, `louder`, { dedupe_key: `job`, priority: `error` })
 
-      expect(louder.queue.active?.message).toBe(`louder`)
+      expect(louder.queue.active_toast?.message).toBe(`louder`)
       expect(messages(louder.queue.pending)).toEqual([`on screen`])
     })
 
@@ -207,11 +209,11 @@ describe(`toast queue reducer`, () => {
           100,
         )
 
-        expect(queue.active?.message).toBe(`second text`)
-        expect(queue.active?.priority).toBe(rank)
-        expect(queue.active?.action).toEqual(action)
-        expect(queue.active?.visible_duration_ms).toBe(budget)
-        expect(queue.active?.expires_at_ms).toBe(deadline)
+        expect(queue.active_toast?.message).toBe(`second text`)
+        expect(queue.active_toast?.priority).toBe(rank)
+        expect(queue.active_toast?.action).toEqual(action)
+        expect(queue.active_toast?.visible_duration_ms).toBe(budget)
+        expect(queue.active_toast?.expires_at_ms).toBe(deadline)
       },
     )
 
@@ -224,7 +226,7 @@ describe(`toast queue reducer`, () => {
         100,
       )
 
-      expect(queue.active).toBeNull()
+      expect(queue.active_toast).toBeNull()
       expect(effects.map((effect) => effect.reason)).toEqual([`timeout`])
     })
   })
@@ -234,7 +236,7 @@ describe(`toast queue reducer`, () => {
       expires_at_ms: -1,
     })
 
-    expect(queue.active).toBeNull()
+    expect(queue.active_toast).toBeNull()
     expect(effects.map((effect) => effect.reason)).toEqual([`timeout`])
     expect(queue.next_id).toBe(2) // the id is still spent, so seq stays monotonic
   })
@@ -254,12 +256,12 @@ describe(`toast queue reducer`, () => {
 
     expect(transition.effects.map((effect) => effect.reason)).toEqual([`action`])
     expect(transition.effects[0].toast.message).toBe(`a`)
-    expect(transition.queue.active?.message).toBe(`b`)
+    expect(transition.queue.active_toast?.message).toBe(`b`)
 
     // a queued toast's action fires too: `show` hands back an id that outlives the wait
     const queued = activate_toast_action(queue, `toast-2`, 0)
     expect(queued.effects[0].toast.message).toBe(`b`)
-    expect(queued.queue.active?.message).toBe(`a`)
+    expect(queued.queue.active_toast?.message).toBe(`a`)
 
     // without an action the id is inert — dismiss is the only way out
     const plain = add(create_toast_queue(), `plain`).queue
@@ -278,12 +280,12 @@ describe(`toast queue reducer`, () => {
       for (const priority of [`info`, `action`, `watch`] as const) {
         queue = add(queue, priority, { priority }).queue
       }
-      expect(queue.active?.message).toBe(`watch`)
+      expect(queue.active_toast?.message).toBe(`watch`)
       expect(messages(queue.pending)).toEqual([`action`, `info`])
 
       // and the bottom rung stays at the bottom rather than sinking below nothing
       queue = add(queue, `progress`, { priority: `progress` }).queue
-      expect(queue.active?.message).toBe(`watch`)
+      expect(queue.active_toast?.message).toBe(`watch`)
       expect(messages(queue.pending)).toEqual([`action`, `info`, `progress`])
     })
 
@@ -296,7 +298,7 @@ describe(`toast queue reducer`, () => {
         priorities: [`low`, `high`],
         default_priority: `low`,
       })
-      expect(add(queue, `plain`).queue.active?.priority).toBe(`low`)
+      expect(add(queue, `plain`).queue.active_toast?.priority).toBe(`low`)
     })
 
     test.each([
@@ -347,19 +349,19 @@ describe(`ToastStore`, () => {
     vi.useRealTimers()
   })
 
-  test(`show returns an id and exposes active, pending and items`, () => {
+  test(`show returns an id and exposes active_toast, pending and items`, () => {
     const store = track(new ToastStore())
     const first_id = store.show(`a`)
     store.show(`b`)
     store.show(`c`)
 
-    expect(store.active?.id).toBe(first_id)
-    expect(store.active?.seq).toBe(1)
+    expect(store.active_toast?.id).toBe(first_id)
+    expect(store.active_toast?.seq).toBe(1)
     expect(messages(store.pending)).toEqual([`b`, `c`])
     expect(messages(store.items)).toEqual([`a`, `b`, `c`])
 
     store.dismiss(first_id)
-    expect(store.active?.message).toBe(`b`)
+    expect(store.active_toast?.message).toBe(`b`)
     expect(messages(store.pending)).toEqual([`c`])
   })
 
@@ -374,16 +376,16 @@ describe(`ToastStore`, () => {
     store.show(`sticky`, { priority: sticky })
     store.show(`fleeting`, { priority: fleeting })
 
-    expect(store.active?.message).toBe(`sticky`)
+    expect(store.active_toast?.message).toBe(`sticky`)
     vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS * 3)
     expect(messages(store.items)).toEqual([`sticky`, `fleeting`]) // neither clock ran
 
     store.dismiss(`toast-1`)
-    expect(store.active?.message).toBe(`fleeting`)
+    expect(store.active_toast?.message).toBe(`fleeting`)
     vi.advanceTimersByTime(DEFAULT_TOAST_DURATION_MS - 1)
-    expect(store.active?.message).toBe(`fleeting`)
+    expect(store.active_toast?.message).toBe(`fleeting`)
     vi.advanceTimersByTime(1)
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
   })
 
   test(`pause banks the remainder and resume spends exactly that, never more`, () => {
@@ -394,20 +396,20 @@ describe(`ToastStore`, () => {
     vi.advanceTimersByTime(300)
     store.pause()
     vi.advanceTimersByTime(10_000)
-    expect(store.active?.message).toBe(`a`) // paused toasts outlive their duration
+    expect(store.active_toast?.message).toBe(`a`) // paused toasts outlive their duration
 
     store.resume()
     vi.advanceTimersByTime(699)
-    expect(store.active?.message).toBe(`a`)
+    expect(store.active_toast?.message).toBe(`a`)
     vi.advanceTimersByTime(1)
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
 
     // resuming one that was never paused is a no-op, not a second full duration
     store.show(`b`, { duration_ms: 1000 })
     vi.advanceTimersByTime(300)
     store.resume()
     vi.advanceTimersByTime(700)
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
   })
 
   test.each([
@@ -594,7 +596,7 @@ describe(`<Toast />`, () => {
     await tick()
 
     expect(on_click).toHaveBeenCalledOnce()
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
     expect(document.querySelector(`.toast`)).toBeNull()
   })
 
@@ -607,7 +609,7 @@ describe(`<Toast />`, () => {
     expect(button.getAttribute(`aria-label`)).toBe(`Close`)
     button.click()
     await tick()
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
   })
 
   test(`a children snippet replaces the message markup`, async () => {
@@ -650,7 +652,7 @@ describe(`<Toast />`, () => {
     stack.dispatchEvent(new PointerEvent(`pointerenter`))
     expect(onpointerenter).toHaveBeenCalledOnce()
     vi.advanceTimersByTime(5000)
-    expect(store.active?.message).toBe(`a`)
+    expect(store.active_toast?.message).toBe(`a`)
   })
 
   // Suspensions bank the unspent remainder rather than restarting the clock. Focus pauses
@@ -695,17 +697,17 @@ describe(`<Toast />`, () => {
     fire(suspend)
     if (!suspends) {
       vi.advanceTimersByTime(600)
-      expect(store.active).toBeNull()
+      expect(store.active_toast).toBeNull()
       return
     }
     vi.advanceTimersByTime(5000)
-    expect(store.active?.message).toBe(`a`)
+    expect(store.active_toast?.message).toBe(`a`)
 
     fire(release)
     vi.advanceTimersByTime(599)
-    expect(store.active?.message).toBe(`a`) // 600 ms was left, not a fresh 1000
+    expect(store.active_toast?.message).toBe(`a`) // 600 ms was left, not a fresh 1000
     vi.advanceTimersByTime(1)
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
   })
 
   test(`a toast promoted under the pointer starts out paused`, async () => {
@@ -719,9 +721,9 @@ describe(`<Toast />`, () => {
     store.dismiss(`toast-2`) // back to `first`, promoted with the pointer never moving
     await tick()
 
-    expect(store.active?.message).toBe(`first`)
+    expect(store.active_toast?.message).toBe(`first`)
     vi.advanceTimersByTime(5000)
-    expect(store.active?.message).toBe(`first`)
+    expect(store.active_toast?.message).toBe(`first`)
   })
 
   test.each([
@@ -771,7 +773,7 @@ describe(`<Toast />`, () => {
     await tick()
     await tick() // restore_focus waits a tick for the toast to leave the DOM
 
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
     expect(document.activeElement).toBe(moved_on ? elsewhere : opener)
   })
 
@@ -790,11 +792,11 @@ describe(`<Toast />`, () => {
 
       document.body.dispatchEvent(escape_key())
       await tick()
-      expect(store.active?.message).toBe(`a`)
+      expect(store.active_toast?.message).toBe(`a`)
 
       doc_query(`.toast`).dispatchEvent(escape_key())
       await tick()
-      expect(store.active?.message).toBe(left_on_screen)
+      expect(store.active_toast?.message).toBe(left_on_screen)
     },
   )
 
@@ -814,13 +816,13 @@ describe(`<Toast />`, () => {
     props.pause_on_hover = true
     await tick()
     vi.advanceTimersByTime(5000)
-    expect(store.active?.message).toBe(`a`) // paused without the pointer re-entering
+    expect(store.active_toast?.message).toBe(`a`) // paused without the pointer re-entering
 
     props.pause_on_hover = false
     await tick()
     vi.advanceTimersByTime(599)
-    expect(store.active?.message).toBe(`a`) // 600 ms was banked at the flip, not a fresh 1000
+    expect(store.active_toast?.message).toBe(`a`) // 600 ms was banked at the flip, not a fresh 1000
     vi.advanceTimersByTime(1)
-    expect(store.active).toBeNull()
+    expect(store.active_toast).toBeNull()
   })
 })

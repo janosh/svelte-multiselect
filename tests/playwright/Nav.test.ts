@@ -40,6 +40,44 @@ for (const [stored_theme, color_scheme] of [
   })
 }
 
+test(`generated Nav and MultiSelect ids survive hydration`, async ({ page }) => {
+  const hydration_warnings: string[] = []
+  page.on(`console`, (message) => {
+    const text = message.text()
+    if (/hydration_attribute_changed|changed.*server.*client/iu.test(text)) {
+      hydration_warnings.push(text)
+    }
+  })
+  // This route renders MultiSelect directly during SSR; live-example routes mount
+  // their demo components client-side and cannot expose an SSR/client ID mismatch.
+  const response = await page.goto(`/range-select`, { waitUntil: `networkidle` })
+  const server_html = await response?.text()
+  if (!server_html) throw new Error(`Missing SSR response body for /range-select`)
+  const server_panel_id = /aria-controls="(?<panel_id>nav-menu-[^"]+)"/u.exec(server_html)
+    ?.groups?.panel_id
+  const server_listbox_id = /id="(?<listbox_id>sms-[^"]+-listbox)"/u.exec(server_html)
+    ?.groups?.listbox_id
+
+  const nav_toggle = page.locator(`button.burger`)
+  const panel_id = await nav_toggle.getAttribute(`aria-controls`)
+  expect(panel_id).toMatch(/^nav-menu-/u)
+  expect(panel_id).toBe(server_panel_id)
+  await expect(page.locator(`[id="${panel_id}"]`)).toHaveCount(1)
+
+  const input = page.locator(`main input[autocomplete]`)
+  const listbox_id = await input.getAttribute(`aria-controls`)
+  expect(listbox_id).toMatch(/^sms-.+-listbox$/u)
+  expect(listbox_id).toBe(server_listbox_id)
+  await expect(page.locator(`[id="${listbox_id}"]`)).toHaveCount(1)
+
+  await input.click()
+  await input.press(`ArrowDown`)
+  const active_id = await input.getAttribute(`aria-activedescendant`)
+  expect(active_id).toMatch(/^sms-.+-opt-/u)
+  await expect(page.locator(`[id="${active_id}"]`)).toHaveCount(1)
+  expect(hydration_warnings).toEqual([])
+})
+
 test.describe(`Nav dropdown`, () => {
   const hover_open = async (
     page: Page,

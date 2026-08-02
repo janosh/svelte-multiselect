@@ -16,7 +16,7 @@ export const system_preference = (): `light` | `dark` =>
 
 export const resolve_theme_mode = (): ThemeMode => {
   try {
-    const saved = localStorage.getItem(`theme`) ?? localStorage.getItem(`theme_mode`)
+    const saved = localStorage.getItem(`theme`)
     if (saved === `light` || saved === `dark` || saved === `system`) return saved
   } catch (error) {
     console.error(`Failed to get theme mode from localStorage`, error)
@@ -41,7 +41,6 @@ export const apply_theme_mode = (mode: ThemeMode): void => {
   theme_mode = mode
   try {
     localStorage.setItem(`theme`, mode)
-    localStorage.removeItem(`theme_mode`) // retire legacy key
   } catch (error) {
     console.error(`Failed to set theme mode ${mode} in localStorage`, error)
   }
@@ -54,10 +53,7 @@ export const listen_theme_storage = (): (() => void) => {
   )
     throw new TypeError(`listen_theme_storage() is client-only`)
   const on_storage = ({ key, storageArea: storage_area }: StorageEvent) => {
-    if (
-      storage_area === localStorage &&
-      (key === null || key === `theme` || key === `theme_mode`)
-    )
+    if (storage_area === localStorage && (key === null || key === `theme`))
       apply_theme_mode(resolve_theme_mode())
   }
   globalThis.addEventListener(`storage`, on_storage)

@@ -140,8 +140,8 @@ describe(`DraggablePane`, () => {
   })
 
   // dismiss_on undefined leaves the pane's own default in force, which is what pins it
-  const mount_toggles = async (dismiss_on?: `press` | `release`, show = false) => {
-    const props = { dismiss_on, show }
+  const mount_toggles = async (dismiss_on?: `press` | `release`, open = false) => {
+    const props = { dismiss_on, open }
     mounted.push(mount(TestPaneExternalToggles, { target: document.body, props }))
     await tick()
     return {
@@ -160,7 +160,7 @@ describe(`DraggablePane`, () => {
     [`release`, false, `release`],
     [`the default`, false, undefined],
   ] as const)(
-    `dismiss_on=%s, an outside checkbox bound to show reopens the pane: %s`,
+    `dismiss_on=%s, an outside checkbox bound to open reopens the pane: %s`,
     async (_label, reopens, dismiss_on) => {
       const { pane, checkbox } = await mount_toggles(dismiss_on, true)
       expect(is_open(pane)).toBe(true)
@@ -360,10 +360,10 @@ describe(`DraggablePane`, () => {
         return `<span data-testid="custom-toggle">custom</span>`
       },
     }))
-    const { toggle: toggle_btn } = await setup({ show: true, toggle })
+    const { toggle: toggle_btn } = await setup({ open: true, toggle })
 
     const pane_state = {
-      show: true,
+      open: true,
       show_controls: false,
       has_been_dragged: false,
       dragging: false,
@@ -414,6 +414,26 @@ describe(`DraggablePane`, () => {
       expect({ width: pane.style.width, height: pane.style.height }).toEqual(expected)
     },
   )
+
+  // The corner grip is `pointer-events: none` decoration sized to sit over the gutter,
+  // so the double-click that undoes a manual resize has to reach the strip beneath it.
+  test(`double-clicking the corner resets a manual resize`, async () => {
+    const { pane } = await open_pane({ resize: `both` })
+    mock_rect(pane, { left: 0, top: 0, width: 450, height: 300 })
+
+    drag(strip_of(pane, `right`), [445, 295], [545, 150])
+    await tick()
+    expect(pane.style.width).toBe(`550px`)
+
+    // aimed at the grip, which paints under the right strip at the corner
+    strip_of(pane, `right`).dispatchEvent(pointer_event(`dblclick`, 445, 295))
+    await tick()
+
+    expect({ width: pane.style.width, height: pane.style.height }).toEqual({
+      width: ``,
+      height: ``,
+    })
+  })
 
   test(`a resize opts the pane out of repositioning and reveals the controls`, async () => {
     const { pane } = await open_pane({ resize: `both` })

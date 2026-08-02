@@ -4,7 +4,7 @@ Toggle the checkbox to enable/disable the component. When disabled, it shows a c
 
 ```svelte example id="disabled-input-title"
 <script lang="ts">
-  import MultiSelect, { Toggle } from '$lib'
+  import { MultiSelect, Toggle } from '$lib'
 
   let disabled = $state(true)
   let selected: string[] = $state([`Svelte`])

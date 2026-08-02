@@ -4,7 +4,7 @@ import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
-import MultiSelect from '$lib'
+import { MultiSelect } from '$lib'
 import type { LoadOptionsParams, MultiSelectProps, PortalParams } from '$lib/types'
 import { get_label } from '$lib/utils'
 
@@ -1110,6 +1110,18 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     expect(input.getAttribute(`aria-activedescendant`)).toMatch(/^my-select-opt-/u)
   })
 
+  test(`unique id stays stable across ticks when id prop is omitted`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`], open: true },
+    })
+    const listbox_id = doc_query(`ul.options`).id
+    expect(listbox_id).toMatch(/^sms-.+-listbox$/u)
+    await tick()
+    expect(doc_query(`ul.options`).id).toBe(listbox_id)
+    expect(get_input().getAttribute(`aria-controls`)).toBe(listbox_id)
+  })
+
   test(`aria-label can be passed via rest props for accessible name`, () => {
     mount(MultiSelect, {
       target: document.body,
@@ -1206,10 +1218,11 @@ test(`children snippet receives type='selected' for pills and type='option' for 
   const option_spans = document.querySelectorAll<HTMLElement>(
     `ul.options [data-testid="multiselect-child"]`,
   )
-  expect(option_spans.length).toBeGreaterThan(0)
-  for (const span of option_spans) {
-    expect(span.dataset.type).toBe(`option`)
-  }
+  // selected items stay out of the dropdown unless keepSelectedInDropdown is set
+  expect([...option_spans].map((span) => [span.dataset.type, span.textContent])).toEqual([
+    [`option`, `Green`],
+    [`option`, `Blue`],
+  ])
 })
 
 test(`option snippet receives selected, active, and disabled booleans`, async () => {
@@ -1444,13 +1457,13 @@ test(`autoScroll=false skips scrolling active options into view`, async () => {
   })
 
   const options = [...document.querySelectorAll<HTMLElement>(`ul.options > li`)]
-  for (const option of options) option.scrollIntoViewIfNeeded = vi.fn()
+  for (const option of options) option.scrollIntoView = vi.fn()
   get_input().dispatchEvent(fresh_key(`ArrowDown`))
   await tick()
 
   expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`first`)
   for (const option of options) {
-    expect(option.scrollIntoViewIfNeeded).not.toHaveBeenCalled()
+    expect(option.scrollIntoView).not.toHaveBeenCalled()
   }
 })
 
@@ -1714,8 +1727,8 @@ test(`autoScroll scopes active option lookup to current instance`, async () => {
     second_target.querySelector<HTMLElement>(`ul.options > li`),
   ]
   if (!first_active || !second_option) throw new Error(`Expected both option lists`)
-  first_active.scrollIntoViewIfNeeded = vi.fn()
-  second_option.scrollIntoViewIfNeeded = vi.fn()
+  first_active.scrollIntoView = vi.fn()
+  second_option.scrollIntoView = vi.fn()
 
   second_target
     .querySelector<HTMLInputElement>(`input[autocomplete]`)
@@ -1723,8 +1736,8 @@ test(`autoScroll scopes active option lookup to current instance`, async () => {
   await tick()
   await tick()
 
-  expect(first_active.scrollIntoViewIfNeeded).not.toHaveBeenCalled()
-  expect(second_option.scrollIntoViewIfNeeded).toHaveBeenCalledOnce()
+  expect(first_active.scrollIntoView).not.toHaveBeenCalled()
+  expect(second_option.scrollIntoView).toHaveBeenCalledOnce()
 })
 
 async function setup_user_message(search_text = `Purple`) {
@@ -2142,79 +2155,70 @@ test(`can remove user-created selected option which is not in dropdown list`, as
 })
 
 // https://github.com/janosh/svelte-widgets/issues/409
-// whitespace-only input must never be added as an option (was converted to 0 via Number("  "))
-test.each<[string, MultiSelectProps]>([
-  [`string options`, { options: [`a`, `b`], allowUserOptions: true }],
-  [`numeric options`, { options: [1, 2, 3], allowUserOptions: true }],
-])(`whitespace-only input rejected: %s`, async (_label, extra_props) => {
-  const onadd_spy = vi.fn()
-
-  mount(MultiSelect, {
-    target: document.body,
-    props: { ...extra_props, onadd: onadd_spy, open: true },
-  })
-
-  const input = get_input()
-  input.focus()
-  await type_search_text(`    `, input)
-
-  input.dispatchEvent(fresh_key(`Enter`))
-  await tick()
-
-  expect(onadd_spy).not.toHaveBeenCalled()
-  expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
-})
-
-// https://github.com/janosh/svelte-widgets/issues/409
-// with loadOptions returning [], effective_options[0] is undefined which triggered Number coercion
-// pressing Enter twice also triggered each_key_duplicate since both resolved to key 0
-test(`whitespace-only input rejected with loadOptions (root cause path)`, async () => {
-  vi.useFakeTimers()
-  try {
-    const onadd_spy = vi.fn()
-    const fetch_fn = vi.fn().mockResolvedValue({ options: [], hasMore: false })
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
-        allowUserOptions: true,
-        onadd: onadd_spy,
-        open: true,
+// whitespace-only input must never be added (was coerced via Number("  ") / key 0 duplicates)
+test.each([
+  {
+    label: `string options`,
+    props: { options: [`a`, `b`], allowUserOptions: true } satisfies MultiSelectProps,
+  },
+  {
+    label: `numeric options`,
+    props: { options: [1, 2, 3], allowUserOptions: true } satisfies MultiSelectProps,
+  },
+  {
+    label: `empty options hides dropdown`,
+    props: { options: [], allowUserOptions: true } satisfies MultiSelectProps,
+    search: ` `,
+    hide_dropdown: true,
+  },
+  {
+    label: `loadOptions empty (double Enter)`,
+    props: {
+      loadOptions: {
+        fetch: vi.fn().mockResolvedValue({ options: [], hasMore: false }),
+        debounceMs: 0,
       },
-    })
-    await vi.runAllTimersAsync()
+      allowUserOptions: true,
+    } satisfies MultiSelectProps,
+    double_enter: true,
+  },
+])(
+  `whitespace-only input rejected: $label`,
+  async ({ props, search = `    `, double_enter = false, hide_dropdown = false }) => {
+    const uses_timers = `loadOptions` in props
+    if (uses_timers) vi.useFakeTimers()
+    try {
+      const onadd_spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: { ...props, onadd: onadd_spy, open: true },
+      })
+      if (uses_timers) await vi.runAllTimersAsync()
 
-    const input = get_input()
-    input.focus()
-    await type_search_text(`    `, input)
-    await vi.runAllTimersAsync()
+      const input = get_input()
+      input.focus()
+      await type_search_text(search, input)
+      if (uses_timers) await vi.runAllTimersAsync()
 
-    input.dispatchEvent(fresh_key(`Enter`))
-    await vi.runAllTimersAsync()
-    // second Enter previously caused each_key_duplicate since both resolved to key 0
-    input.dispatchEvent(fresh_key(`Enter`))
-    await vi.runAllTimersAsync()
+      if (hide_dropdown) {
+        expect(document.querySelector(`ul.options`)).toBeNull()
+      }
 
-    expect(onadd_spy).not.toHaveBeenCalled()
-    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
-  } finally {
-    vi.useRealTimers()
-  }
-})
+      input.dispatchEvent(fresh_key(`Enter`))
+      if (uses_timers) await vi.runAllTimersAsync()
+      else await tick()
+      if (double_enter) {
+        input.dispatchEvent(fresh_key(`Enter`))
+        await vi.runAllTimersAsync()
+      }
 
-// whitespace-only input should not mount the options dropdown when there are no options
-test(`whitespace-only input does not mount options dropdown`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: { options: [], allowUserOptions: true, open: true },
-  })
-
-  const input = get_input()
-  await type_search_text(` `, input)
-
-  expect(document.querySelector(`ul.options`)).toBeNull()
-})
+      expect(onadd_spy).not.toHaveBeenCalled()
+      expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+    } finally {
+      if (uses_timers) vi.useRealTimers()
+    }
+  },
+)
 
 test.each([[[1]], [[1, 2]], [[1, 2, 3]]])(
   `does not render remove buttons if selected.length <= minSelect`,
@@ -8473,7 +8477,7 @@ test(`toggling portal.active at runtime portals and un-portals the dropdown`, as
   expect(back_inside.dataset.placement).toBeUndefined()
 })
 
-// The click_outside attachment receives `inside: [ul_options]`, which is undefined
+// The click_outside attachment receives `inside: [options_list_el]`, which is undefined
 // until bind:this lands. Attachments re-run on reactive reads, so the portalled list
 // must count as inside once bound — otherwise pressing it would close the dropdown.
 test(`press on the portalled dropdown does not close it`, async () => {

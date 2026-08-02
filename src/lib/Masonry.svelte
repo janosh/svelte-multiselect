@@ -66,7 +66,7 @@
   } = $props()
 
   // Needed over a random uuid so the id survives hydration.
-  const masonry_id = $props.id()
+  const unique_id = $props.id()
 
   // Height tracking for column balancing and virtualization
   // Use plain Map (not reactive) to avoid triggering re-renders on every measurement
@@ -168,9 +168,9 @@
     const heights: number[] = Array.from({ length: num_cols }, () => 0)
 
     for (const [idx, item] of items.entries()) {
-      const col = pick_col(heights, item)
-      cols[col].push(get_item_record(item, idx))
-      heights[col] += get_height(item) + gap
+      const col_idx = pick_col(heights, item)
+      cols[col_idx].push(get_item_record(item, idx))
+      heights[col_idx] += get_height(item) + gap
     }
     return cols
   }
@@ -188,8 +188,8 @@
 
     return distribute(num_cols, (heights, item) => {
       const id = getId(item)
-      const col = stable_assignments.get(id)
-      if (col !== undefined && col < num_cols) return col
+      const col_idx = stable_assignments.get(id)
+      if (col_idx !== undefined && col_idx < num_cols) return col_idx
       // New or out-of-range item - assign to shortest
       const new_col = shortest_col(heights)
       stable_assignments.set(id, new_col)
@@ -201,12 +201,12 @@
   function column_balanced_to_cols(num_cols: number): ItemRecord[][] {
     const total_height = items.reduce((sum, item) => sum + get_height(item) + gap, 0)
     const target_per_col = total_height / num_cols
-    let col = 0
+    let col_idx = 0
 
     return distribute(num_cols, (heights) => {
       // Move to next column once the current one exceeded its target height
-      if (heights[col] >= target_per_col && col < num_cols - 1) col++
-      return col
+      if (heights[col_idx] >= target_per_col && col_idx < num_cols - 1) col_idx++
+      return col_idx
     })
   }
 
@@ -249,12 +249,14 @@
   // Container query rules: breakpoint(n) = (minColWidth + gap) * n - gap
   let container_query_css = $derived(
     Array.from({ length: n_cols - 1 }, (_, idx) => {
-      const col = idx + 1
-      const max_width = (minColWidth + gap) * (col + 1) - gap - 1
+      const col_count = idx + 1
+      const max_width = (minColWidth + gap) * (col_count + 1) - gap - 1
       const min_width =
-        col === 1 ? `` : `(min-width: ${(minColWidth + gap) * col - gap}px) and `
-      return `@container masonry ${min_width}(max-width: ${max_width}px) { [data-masonry-id="${masonry_id}"] > .col:nth-child(n+${
-        col + 1
+        col_count === 1
+          ? ``
+          : `(min-width: ${(minColWidth + gap) * col_count - gap}px) and `
+      return `@container masonry ${min_width}(max-width: ${max_width}px) { [data-masonry-id="${unique_id}"] > .col:nth-child(n+${
+        col_count + 1
       }) { display: none !important; } }`
     }).join(`\n`),
   )
@@ -296,15 +298,15 @@
     }
   })
 
-  // Binary search: find first index where arr[i] >= target
-  function binary_search_ge(arr: number[], target: number): number {
-    let [lo, hi] = [0, arr.length]
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1
-      if (arr[mid] < target) lo = mid + 1
-      else hi = mid
+  // Binary search: find first index where cumulative_heights[idx] >= target
+  function binary_search_ge(cumulative_heights: number[], target: number): number {
+    let [low_idx, high_idx] = [0, cumulative_heights.length]
+    while (low_idx < high_idx) {
+      const mid_idx = (low_idx + high_idx) >>> 1
+      if (cumulative_heights[mid_idx] < target) low_idx = mid_idx + 1
+      else high_idx = mid_idx
     }
-    return lo
+    return low_idx
   }
 
   // Scroll state with requestAnimationFrame throttling
@@ -325,9 +327,9 @@
   // When virtualizing: use ONLY estimates, never measured heights, so they can't drift
   // When not virtualizing: use measured heights (accurate balancing)
   let prefix_heights = $derived(
-    items_to_cols.map((col) => {
+    items_to_cols.map((column_items) => {
       let sum = 0
-      return col.map(({ item }) => {
+      return column_items.map(({ item }) => {
         // `||` for the same reason as get_height: a 0 estimate is meaningless, and `??`
         // here would collapse the scroll window to gaps alone
         sum += (virtualize ? getEstimatedHeight?.(item) || 150 : get_height(item)) + gap
@@ -400,7 +402,7 @@
   style="display: flex; width: 100%; justify-content: center; box-sizing: border-box; {rest.style ??
     ``}"
   class={[`masonry`, rest.class]}
-  data-masonry-id={masonry_id}
+  data-masonry-id={unique_id}
 >
   {#each items_to_cols as col, col_idx (col_idx)}
     {@const { start, end, pad_top, pad_bottom } = col_windows[col_idx]}

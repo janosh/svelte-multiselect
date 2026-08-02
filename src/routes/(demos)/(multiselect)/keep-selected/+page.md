@@ -4,7 +4,7 @@ Configure how selected options behave in the dropdown. Try different modes:
 
 ```svelte example id="keep-selected-interactive"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { languages } from '$site/options'
 
   const keep_selected_options = [

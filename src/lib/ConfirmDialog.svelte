@@ -26,10 +26,10 @@
   } = $props()
 
   const request = $derived(dialog_queue[0])
-  const component_id = $props.id()
-  const title_id = `confirm-dialog-${component_id}-title`
-  const error_id = `confirm-dialog-${component_id}-error`
-  let dialog_el = $state<HTMLDialogElement | null>(null)
+  const unique_id = $props.id()
+  const title_id = `confirm-dialog-${unique_id}-title`
+  const error_id = `confirm-dialog-${unique_id}-error`
+  let dialog = $state<HTMLDialogElement | null>(null)
   let prompt_value = $derived(request?.kind === `prompt` ? request.initial_value : ``)
   // Writable derived on `request`: submitting an invalid value assigns the error, and
   // advancing the queue re-runs this and clears it, so no stale error survives a request.
@@ -47,17 +47,17 @@
   // no guard of its own.
   const submit_current_prompt = (event: SubmitEvent) => {
     event.preventDefault()
-    const result = submit_prompt(prompt_value)
-    if (result.status === `invalid`) validation_message = result.message
+    const prompt_result = submit_prompt(prompt_value)
+    if (prompt_result.status === `invalid`) validation_message = prompt_result.message
   }
 
   // showModal() puts the dialog in the top layer with native Escape handling. focus_trap
   // re-runs on every request, which is what moves the keyboard into each new question
   // (answering removes the button that had focus) and hands it back to the opener.
   $effect(() => {
-    if (!dialog_el) return
-    if (!request) dialog_el.close()
-    else if (!dialog_el.open) dialog_el.showModal()
+    if (!dialog) return
+    if (!request) dialog.close()
+    else if (!dialog.open) dialog.showModal()
   })
 
   // Register only in the browser: SSR must not mutate this process-global queue.
@@ -71,7 +71,7 @@
 </script>
 
 <dialog
-  bind:this={dialog_el}
+  bind:this={dialog}
   {...rest}
   class={[`confirm-dialog`, rest.class]}
   aria-labelledby={title_id}

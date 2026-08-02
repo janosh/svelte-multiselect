@@ -316,28 +316,31 @@ export const sync_owned_highlight = (
     classes = new Map()
     owned_highlights.set(registry, classes)
   }
-  let state = classes.get(css_class)
-  if (!state) {
+  let highlight_entry = classes.get(css_class)
+  if (!highlight_entry) {
     if (!ranges) return
-    state = { owners: new Map(), previous: registry.get(css_class) }
-    classes.set(css_class, state)
+    highlight_entry = { owners: new Map(), previous: registry.get(css_class) }
+    classes.set(css_class, highlight_entry)
   }
-  if (ranges) state.owners.set(owner, ranges)
-  else state.owners.delete(owner)
+  if (ranges) highlight_entry.owners.set(owner, ranges)
+  else highlight_entry.owners.delete(owner)
   const current = registry.get(css_class)
-  if (state.owners.size === 0) {
+  if (highlight_entry.owners.size === 0) {
     classes.delete(css_class)
-    if (current !== state.installed) return
-    if (state.previous) registry.set(css_class, state.previous)
+    if (current !== highlight_entry.installed) return
+    if (highlight_entry.previous) registry.set(css_class, highlight_entry.previous)
     else registry.delete(css_class)
     return
   }
   // Yield to another writer that has taken the name, but not to a vacant one: a
   // CSS.highlights.clear() elsewhere on the page empties the registry without any new
   // owner, and reading that as a takeover would strand this highlight permanently.
-  if (state.installed && current && current !== state.installed) return
-  state.installed = new Highlight(...[...state.owners.values()].flat())
-  registry.set(css_class, state.installed)
+  if (highlight_entry.installed && current && current !== highlight_entry.installed)
+    return
+  highlight_entry.installed = new Highlight(
+    ...[...highlight_entry.owners.values()].flat(),
+  )
+  registry.set(css_class, highlight_entry.installed)
 }
 
 // Register ranges under a CSS Custom Highlight name, returning a release function.

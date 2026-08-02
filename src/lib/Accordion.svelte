@@ -30,8 +30,8 @@
     ...rest
   }: Props = $props()
 
-  const component_id = $props.id()
-  const base_id = `accordion-${component_id}`
+  const unique_id = $props.id()
+  const base_id = `accordion-${unique_id}`
   // `value` is an array in multiple mode and a single value or null otherwise. Anything
   // that does not match the current mode reads as nothing open.
   const open_values = $derived.by(() => {

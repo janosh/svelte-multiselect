@@ -11,14 +11,14 @@
   // Handed to both snippets so they can react to the pane's own chrome — a plot pausing
   // its animation while the pane is being dragged over it, say.
   type PaneState = {
-    show: boolean
+    open: boolean
     show_controls: boolean
     has_been_dragged: boolean
     dragging: boolean
   }
 
   let {
-    show = $bindable(false),
+    open = $bindable(false),
     children,
     toggle,
     toggle_props = {},
@@ -41,7 +41,7 @@
     has_been_dragged = $bindable(false),
     dragging = $bindable(false),
   }: {
-    show?: boolean
+    open?: boolean
     children: Snippet<[PaneState]>
     // Replaces the toggle button's content, for icons this library doesn't bundle
     toggle?: Snippet<[PaneState]>
@@ -59,7 +59,7 @@
     // Only Escape and the close button dismiss — ignore outside presses
     persistent?: boolean
     dismiss_on?: `press` | `release`
-    // Outside controls that drive `show`; the pane's own toggle is always included. Elements
+    // Outside controls that drive `open`; the pane's own toggle is always included. Elements
     // only — click_outside's selector form needs its `scope` guard, which this does not expose
     inside?: (Element | null | undefined)[]
     resize?: `both` | `width` | `height` | `none`
@@ -83,7 +83,7 @@
   const fallback_position = { left: 50, top: 50 }
 
   const pane_state = $derived({
-    show,
+    open,
     show_controls: has_been_dragged,
     has_been_dragged,
     dragging,
@@ -101,10 +101,10 @@
     resize_edges.includes(edge) ? `${resize_gutter_px}px` : null
 
   const close_pane = (via: CloseVia) => {
-    show = false
+    open = false
     on_close?.({ via })
   }
-  const toggle_pane = () => (show ? close_pane(`toggle`) : (show = true))
+  const toggle_pane = () => (open ? close_pane(`toggle`) : (open = true))
 
   const clamp_to_viewport = (value: number, upper: number) =>
     Math.max(viewport_margin_px, Math.min(value, upper))
@@ -173,7 +173,7 @@
   }
 
   const reanchor = () => {
-    if (show && toggle_btn && !has_been_dragged) position_pane()
+    if (open && toggle_btn && !has_been_dragged) position_pane()
   }
   $effect(reanchor)
 
@@ -193,17 +193,17 @@
   bind:this={toggle_btn}
   {...toggle_props}
   type="button"
-  aria-expanded={show}
+  aria-expanded={open}
   onclick={chain_handlers(toggle_pane, toggle_props.onclick)}
   class={[`pane-toggle`, toggle_props.class]}
   {@attach tooltip({
-    content: toggle_props.title ?? (show ? `Close pane` : `Open pane`),
+    content: toggle_props.title ?? (open ? `Close pane` : `Open pane`),
   })}
 >
   {#if toggle}
     {@render toggle(pane_state)}
   {:else}
-    <Icon icon={show ? open_icon : closed_icon} style={icon_style} />
+    <Icon icon={open ? open_icon : closed_icon} style={icon_style} />
   {/if}
 </button>
 
@@ -221,11 +221,11 @@ aria-label sits before the spread, so a page with several panes renames them via
   style:max-width={max_width}
   style:top="{fallback_position.top}px"
   style:left="{fallback_position.left}px"
-  style:display={show ? `grid` : `none`}
+  style:display={open ? `grid` : `none`}
   style:padding-right={gutter(`right`)}
   style:padding-bottom={gutter(`bottom`)}
   class={[`draggable-pane`, `toc-exclude`, pane_props.class]}
-  class:pane-open={show}
+  class:pane-open={open}
   {@attach draggable({
     handle_selector: `.drag-handle`,
     on_drag_start: () => {
@@ -244,7 +244,7 @@ aria-label sits before the spread, so a page with several panes renames them via
     on_resize_start: () => (has_been_dragged = true),
   })}
   {@attach click_outside({
-    enabled: show,
+    enabled: open,
     inside: [toggle_btn, ...inside],
     escape: true,
     dismiss_on,

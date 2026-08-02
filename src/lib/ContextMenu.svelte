@@ -5,14 +5,14 @@
   import type { CmdAction } from './types'
   import { chain_handlers, type CmdSection, format_shortcut, step_focus } from './utils'
 
-  interface Props extends HTMLAttributes<HTMLMenuElement> {
+  interface Props extends Omit<HTMLAttributes<HTMLMenuElement>, `children`> {
     actions: (CmdAction | CmdSection)[]
     // Where the menu is open, as viewport coordinates. null while closed.
     at?: { x: number; y: number } | null
     // Region the right-click applies to. Omit and the whole document qualifies.
     children?: Snippet
     disabled?: boolean
-    // Merged over `{ escape: true }`. `dismiss_on: 'release'` for right-click toggles.
+    // Merged over `{ escape: true }`. `dismiss_on: 'release'` supports right-click toggles.
     dismiss?: DismissConfig
     item?: Snippet<[{ action: CmdAction; section?: CmdSection; checked?: boolean }]>
     on_select?: (action: CmdAction, section?: CmdSection) => void

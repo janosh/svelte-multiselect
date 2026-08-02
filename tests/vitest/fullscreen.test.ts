@@ -192,7 +192,7 @@ describe(`flag <-> browser sync`, () => {
   test(`a rejected exit is reported and leaves the browser in fullscreen`, async () => {
     const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
     const on_request_error = vi.fn()
-    const { button, wrapper } = mount_button({ on_request_error })
+    const { button, flag, wrapper } = mount_button({ on_request_error })
 
     button.click()
     await settle()
@@ -204,7 +204,32 @@ describe(`flag <-> browser sync`, () => {
 
     expect(console_error).toHaveBeenCalledOnce()
     expect(on_request_error).toHaveBeenCalledExactlyOnceWith(exit_error)
+    expect(document.exitFullscreen).toHaveBeenCalledOnce()
     expect(document.fullscreenElement).toBe(wrapper)
+    // flag must match the browser or aria-pressed / the next click would lie
+    expect(get(flag)).toBe(true)
+  })
+
+  test(`a stale exit rejection does not re-enter after an external exit`, async () => {
+    vi.spyOn(console, `error`).mockImplementation(() => {})
+    const { button, flag, wrapper } = mount_button()
+
+    button.click()
+    await settle()
+    const exit_request = Promise.withResolvers<undefined>()
+    document.exitFullscreen = vi.fn(() => exit_request.promise.then(() => undefined))
+
+    button.click()
+    await tick()
+    expect(document.exitFullscreen).toHaveBeenCalledOnce()
+
+    await set_fullscreen_element(null)
+    exit_request.reject(new Error(`stale exit rejection`))
+    await settle()
+
+    expect(document.fullscreenElement).toBeNull()
+    expect(get(flag)).toBe(false)
+    expect(request_calls).toEqual([wrapper])
   })
 
   test(`unmounting stops tracking fullscreenchange`, async () => {

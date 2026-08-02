@@ -71,25 +71,15 @@ test(`icon_props.style is appended after the default transform`, async () => {
 })
 
 test.each([
-  [`theme`, `light`, `light`, `Sun`],
-  [`theme`, `dark`, `dark`, `Moon`],
-  [`theme`, `system`, `light`, `Monitor`],
-  [`theme`, `blue`, `light`, `Monitor`],
-  [`theme_mode`, `dark`, `dark`, `Moon`],
-] as const)(`mount applies %s=%s`, async (storage_key, stored, effective, icon_name) => {
-  localStorage.setItem(storage_key, stored)
+  [`light`, `light`, `Sun`],
+  [`dark`, `dark`, `Moon`],
+  [`system`, `light`, `Monitor`],
+  [`blue`, `light`, `Monitor`],
+] as const)(`mount applies theme=%s`, async (stored, effective, icon_name) => {
+  localStorage.setItem(`theme`, stored)
   await mount_theme_toggle()
   expect(applied_theme()).toEqual([effective, effective])
   expect(rendered_icon_path()).toBe(icon_data[icon_name].d)
-})
-
-// the rows above cover each key alone, so nothing pins which one wins when both exist
-test(`theme key takes precedence over the legacy theme_mode key`, async () => {
-  localStorage.setItem(`theme_mode`, `dark`)
-  localStorage.setItem(`theme`, `light`)
-  await mount_theme_toggle()
-  expect(applied_theme()).toEqual([`light`, `light`])
-  expect(localStorage.getItem(`theme_mode`)).toBeNull() // retired on apply
 })
 
 test(`gracefully degrades when localStorage throws`, async () => {
@@ -164,7 +154,7 @@ test(`system mode reapplies theme when media query changes`, async () => {
   expect(applied_theme()).toEqual([`dark`, `dark`])
 })
 
-test(`storage events synchronize current and legacy theme keys until unmount`, async () => {
+test(`storage events synchronize the theme key until unmount`, async () => {
   const dispatch_storage = async (key: string | null, storage_area = localStorage) => {
     globalThis.dispatchEvent(
       new StorageEvent(`storage`, { key, storageArea: storage_area }),
@@ -177,7 +167,6 @@ test(`storage events synchronize current and legacy theme keys until unmount`, a
   localStorage.setItem(`theme`, `dark`)
   await dispatch_storage(`theme`)
   expect(applied_theme()).toEqual([`dark`, `dark`])
-  expect(rendered_icon_path()).toBe(icon_data.Moon.d)
 
   localStorage.setItem(`theme`, `light`)
   await dispatch_storage(`unrelated`)
@@ -186,12 +175,6 @@ test(`storage events synchronize current and legacy theme keys until unmount`, a
   sessionStorage.setItem(`theme`, `dark`)
   await dispatch_storage(`theme`, sessionStorage)
   expect(applied_theme()).toEqual([`dark`, `dark`])
-
-  localStorage.removeItem(`theme`)
-  localStorage.setItem(`theme_mode`, `light`)
-  await dispatch_storage(`theme_mode`)
-  expect(applied_theme()).toEqual([`light`, `light`])
-  expect(localStorage.getItem(`theme_mode`)).toBeNull()
 
   localStorage.clear()
   await dispatch_storage(null)

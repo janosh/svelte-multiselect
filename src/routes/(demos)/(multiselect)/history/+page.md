@@ -6,7 +6,7 @@ Selection history is **enabled by default** with a max of 50 entries, letting us
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 

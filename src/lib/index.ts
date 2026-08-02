@@ -19,7 +19,7 @@ export { default as Icon } from './Icon.svelte'
 export { icon_data, type IconName } from './icons'
 export { default as LiteYouTubeEmbed } from './LiteYouTubeEmbed.svelte'
 export { default as Masonry } from './Masonry.svelte'
-export { default, default as MultiSelect } from './MultiSelect.svelte'
+export { default as MultiSelect } from './MultiSelect.svelte'
 export { default as Nav } from './Nav.svelte'
 export { default as PrevNext } from './PrevNext.svelte'
 export { default as Sheet } from './Sheet.svelte'
@@ -40,33 +40,3 @@ export {
 export type * from './types'
 export * from './utils'
 export { default as Wiggle } from './Wiggle.svelte'
-
-// Firefox lacks support for scrollIntoViewIfNeeded (https://caniuse.com/scrollintoviewifneeded).
-// See https://github.com/janosh/svelte-widgets/issues/87
-// Polyfill copied from
-// https://github.com/nuxodin/lazyfill/blob/a8e63/polyfills/Element/prototype/scrollIntoViewIfNeeded.js
-export function scroll_into_view_if_needed_polyfill(
-  element: Element,
-  centerIfNeeded: boolean = true,
-): IntersectionObserver {
-  const observer = new IntersectionObserver(([entry], obs) => {
-    obs.disconnect()
-    const ratio = entry.intersectionRatio
-    if (ratio >= 1) return
-    const place = ratio <= 0 && centerIfNeeded ? `center` : `nearest`
-    element.scrollIntoView({ block: place, inline: place })
-  })
-  observer.observe(element)
-
-  return observer
-}
-
-if (
-  typeof Element !== `undefined` &&
-  !Element.prototype?.scrollIntoViewIfNeeded &&
-  typeof IntersectionObserver !== `undefined`
-) {
-  Element.prototype.scrollIntoViewIfNeeded = function scrollIntoViewIfNeeded() {
-    scroll_into_view_if_needed_polyfill(this)
-  }
-}

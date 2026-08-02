@@ -1,5 +1,20 @@
 import { expect, test } from '@playwright/test'
 
+test(`closing the native dialog restores focus to the opener`, async ({ page }) => {
+  await page.goto(`/command-menu`, { waitUntil: `networkidle` })
+  const opener = page.getByRole(`button`, { name: `View code` }).first()
+  await opener.focus()
+
+  await page.keyboard.press(`Control+n`)
+  const dialog = page.getByRole(`dialog`, { name: `Command menu` })
+  await expect(dialog).toBeVisible()
+  await expect(dialog.getByRole(`combobox`)).toBeFocused()
+
+  await page.keyboard.press(`Escape`)
+  await expect(dialog).toBeHidden()
+  await expect(opener).toBeFocused()
+})
+
 // close_if_outside reads composedPath() rather than event.target, which only matters once
 // the menu sits in a shadow root: by the time the click reaches window its target is the
 // host element, so containment against the dialog fails. happy-dom retargets nothing, so

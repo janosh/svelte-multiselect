@@ -476,12 +476,20 @@ describe(`Masonry bindable props`, () => {
 
 describe(`Masonry default rendering`, () => {
   test(`renders string items as spans with correct content`, () => {
-    mount_masonry({ items: [`apple`, `banana`, `cherry`] })
+    const items = [`apple`, `banana`, `cherry`, `date`, `elderberry`, `fig`]
+    mount_masonry({ items, masonryWidth: 500, minColWidth: 200 })
     const spans = document.querySelectorAll(`div.masonry > div.col > div > span`) // default rendering
-    expect(spans).toHaveLength(3)
-    expect(Array.from(spans).map((span) => span.textContent)).toEqual(
-      expect.arrayContaining([`apple`, `banana`, `cherry`]),
-    )
+    expect(spans).toHaveLength(items.length)
+    // Default balanced-stable placement alternates equal-height items across 2 columns,
+    // while DOM order is grouped by column.
+    expect(Array.from(spans).map((span) => span.textContent)).toEqual([
+      `apple`,
+      `cherry`,
+      `elderberry`,
+      `banana`,
+      `date`,
+      `fig`,
+    ])
   })
 
   test(`passes rest props to container div`, () => {

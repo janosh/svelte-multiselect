@@ -14,22 +14,7 @@
   }
   type CloseVia = `pointer` | `escape` | `close`
 
-  interface Props extends Omit<HTMLDialogAttributes, `children`> {
-    open?: boolean
-    side?: SheetSide
-    close_on_backdrop?: boolean
-    close_on_escape?: boolean
-    surface?: HTMLDialogElement | null
-    // Snippets remain owned by the declaring parent. Sheet renders them in that
-    // parent's scope and only supplies stable controls; it does not retain them.
-    trigger?: Snippet<[TriggerProps]>
-    header?: Snippet<[SheetControls]>
-    footer?: Snippet<[SheetControls]>
-    children: Snippet<[SheetControls]>
-    on_close?: (detail: { via: CloseVia }) => void
-  }
-
-  const generated_id = $props.id()
+  const unique_id = $props.id()
   let {
     open = $bindable(false),
     side = `right`,
@@ -45,9 +30,22 @@
     'aria-label': aria_label,
     'aria-labelledby': aria_labelledby,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLDialogAttributes, `children`> & {
+    open?: boolean
+    side?: SheetSide
+    close_on_backdrop?: boolean
+    close_on_escape?: boolean
+    surface?: HTMLDialogElement | null
+    // Snippets remain owned by the declaring parent. Sheet renders them in that
+    // parent's scope and only supplies stable controls; it does not retain them.
+    trigger?: Snippet<[TriggerProps]>
+    header?: Snippet<[SheetControls]>
+    footer?: Snippet<[SheetControls]>
+    children: Snippet<[SheetControls]>
+    on_close?: (detail: { via: CloseVia }) => void
+  } = $props()
 
-  const sheet_id = $derived(id ?? generated_id)
+  const sheet_id = $derived(id ?? unique_id)
   let trigger_wrapper = $state<HTMLSpanElement | null>(null)
 
   const close = (via: CloseVia) => {
