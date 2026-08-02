@@ -776,34 +776,28 @@ export const highlight_matches = (ops: HighlightOptions) => (node: HTMLElement) 
 }
 
 // Global tooltip state to ensure only one tooltip is shown at a time
-let current_tooltip: (HTMLElement & { owner_element?: HTMLElement }) | null = null
+let current_tooltip: (HTMLElement & { owner_element: HTMLElement }) | null = null
 let show_timeout: ReturnType<typeof setTimeout> | undefined
 let hide_timeout: ReturnType<typeof setTimeout> | undefined
 // Element that scheduled the pending show_timeout. owner_element is only set once
 // the timeout fires, so pending shows need their own ownership tracking to let
 // cleanup of one tooltip instance leave another instance's pending show alone.
 let show_timeout_owner: HTMLElement | null = null
-let hide_timeout_owner: HTMLElement | null = null
 
 function clear_tooltip() {
-  if (show_timeout !== undefined) clearTimeout(show_timeout)
+  clearTimeout(show_timeout)
   show_timeout = undefined
   show_timeout_owner = null
-  if (hide_timeout !== undefined) clearTimeout(hide_timeout)
+  clearTimeout(hide_timeout)
   hide_timeout = undefined
-  hide_timeout_owner = null
-  if (current_tooltip) {
-    current_tooltip.owner_element?.removeAttribute(`aria-describedby`)
-    current_tooltip.remove()
-    current_tooltip = null
-  }
+  current_tooltip?.owner_element.removeAttribute(`aria-describedby`)
+  current_tooltip?.remove()
+  current_tooltip = null
 }
 
-// whether the element owns the visible tooltip or a pending show/hide
+// whether the element owns the visible tooltip or a pending show
 const owns_tooltip_state = (element: HTMLElement): boolean =>
-  current_tooltip?.owner_element === element ||
-  show_timeout_owner === element ||
-  hide_timeout_owner === element
+  current_tooltip?.owner_element === element || show_timeout_owner === element
 
 export interface TooltipOptions {
   content?: string
@@ -1218,18 +1212,11 @@ export const tooltip =
         if (current_tooltip?.owner_element !== element) return
         // leave/blur both call this; clear any pending hide so a later show isn't
         // wiped by a stale timer from the first hide event
-        if (hide_timeout_owner === element) {
-          clearTimeout(hide_timeout)
-          hide_timeout = undefined
-          hide_timeout_owner = null
-        }
+        clearTimeout(hide_timeout)
+        hide_timeout = undefined
         const delay = options.hide_delay ?? 0
-        if (delay > 0) {
-          hide_timeout_owner = element
-          hide_timeout = setTimeout(() => {
-            if (hide_timeout_owner === element) clear_tooltip()
-          }, delay)
-        } else clear_tooltip()
+        if (delay > 0) hide_timeout = setTimeout(clear_tooltip, delay)
+        else clear_tooltip()
       }
 
       function handle_scroll(event: Event) {

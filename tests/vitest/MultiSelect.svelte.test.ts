@@ -2160,26 +2160,16 @@ test.each([
   {
     label: `string options`,
     props: { options: [`a`, `b`], allowUserOptions: true } satisfies MultiSelectProps,
-    search: `    `,
-    double_enter: false,
-    hide_dropdown: false,
-    use_timers: false,
   },
   {
     label: `numeric options`,
     props: { options: [1, 2, 3], allowUserOptions: true } satisfies MultiSelectProps,
-    search: `    `,
-    double_enter: false,
-    hide_dropdown: false,
-    use_timers: false,
   },
   {
     label: `empty options hides dropdown`,
     props: { options: [], allowUserOptions: true } satisfies MultiSelectProps,
     search: ` `,
-    double_enter: false,
     hide_dropdown: true,
-    use_timers: false,
   },
   {
     label: `loadOptions empty (double Enter)`,
@@ -2190,34 +2180,32 @@ test.each([
       },
       allowUserOptions: true,
     } satisfies MultiSelectProps,
-    search: `    `,
     double_enter: true,
-    hide_dropdown: false,
-    use_timers: true,
   },
 ])(
-  `whitespace-only input rejected: %s`,
-  async ({ label: _label, props, search, double_enter, hide_dropdown, use_timers }) => {
-    if (use_timers) vi.useFakeTimers()
+  `whitespace-only input rejected: $label`,
+  async ({ props, search = `    `, double_enter = false, hide_dropdown = false }) => {
+    const uses_timers = `loadOptions` in props
+    if (uses_timers) vi.useFakeTimers()
     try {
       const onadd_spy = vi.fn()
       mount(MultiSelect, {
         target: document.body,
         props: { ...props, onadd: onadd_spy, open: true },
       })
-      if (use_timers) await vi.runAllTimersAsync()
+      if (uses_timers) await vi.runAllTimersAsync()
 
       const input = get_input()
       input.focus()
       await type_search_text(search, input)
-      if (use_timers) await vi.runAllTimersAsync()
+      if (uses_timers) await vi.runAllTimersAsync()
 
       if (hide_dropdown) {
         expect(document.querySelector(`ul.options`)).toBeNull()
       }
 
       input.dispatchEvent(fresh_key(`Enter`))
-      if (use_timers) await vi.runAllTimersAsync()
+      if (uses_timers) await vi.runAllTimersAsync()
       else await tick()
       if (double_enter) {
         input.dispatchEvent(fresh_key(`Enter`))
@@ -2227,7 +2215,7 @@ test.each([
       expect(onadd_spy).not.toHaveBeenCalled()
       expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
     } finally {
-      if (use_timers) vi.useRealTimers()
+      if (uses_timers) vi.useRealTimers()
     }
   },
 )

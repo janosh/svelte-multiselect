@@ -353,52 +353,40 @@ test(`keeps dialog open when clicking inside the menu`, async () => {
   expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
-// open=false alone must still call dialog.close() before `{#if open}` unmounts
-test(`controlled open=false fires native onclose`, async () => {
-  const onclose = vi.fn()
-  const dialog_close = vi.spyOn(HTMLDialogElement.prototype, `close`)
-  const props = $state({
-    open: true,
-    actions: mock_actions,
-    fade_duration: 0,
-    dialog_props: { onclose },
-  })
-  mount(CommandMenu, { target: document.body, props })
-  await tick()
+// open=false must call dialog.close() before `{#if open}` unmounts, including while
+// an outro keeps the closed element mounted.
+test.each([0, 50])(
+  `controlled close fires native onclose once (fade_duration=%i)`,
+  async (fade_duration) => {
+    vi.useFakeTimers()
+    try {
+      const onclose = vi.fn()
+      const dialog_close = vi.spyOn(HTMLDialogElement.prototype, `close`)
+      const props = $state({
+        open: true,
+        actions: mock_actions,
+        fade_duration,
+        dialog_props: { onclose },
+      })
+      mount(CommandMenu, { target: document.body, props })
+      await tick()
 
-  props.open = false
-  await tick()
-  expect(dialog_close).toHaveBeenCalled()
-  expect(onclose).toHaveBeenCalledOnce()
-  expect(document.querySelector(`dialog`)).toBeNull()
-})
+      const dialog = doc_query<HTMLDialogElement>(`dialog`)
+      props.open = false
+      await tick()
 
-test(`controlled close fires onclose once while a fade outro runs`, async () => {
-  vi.useFakeTimers()
-  try {
-    const onclose = vi.fn()
-    const props = $state({
-      open: true,
-      actions: mock_actions,
-      fade_duration: 50,
-      dialog_props: { onclose },
-    })
-    mount(CommandMenu, { target: document.body, props })
-    await tick()
-
-    const dialog = doc_query<HTMLDialogElement>(`dialog`)
-    props.open = false
-    await tick()
-
-    expect(dialog.open).toBe(false)
-    expect(onclose).toHaveBeenCalledOnce()
-    await vi.runAllTimersAsync()
-    await tick()
-    expect(onclose).toHaveBeenCalledOnce()
-  } finally {
-    vi.useRealTimers()
-  }
-})
+      expect(dialog.open).toBe(false)
+      expect(dialog_close).toHaveBeenCalled()
+      expect(onclose).toHaveBeenCalledOnce()
+      if (fade_duration === 0) expect(document.querySelector(`dialog`)).toBeNull()
+      await vi.runAllTimersAsync()
+      await tick()
+      expect(onclose).toHaveBeenCalledOnce()
+    } finally {
+      vi.useRealTimers()
+    }
+  },
+)
 
 test(`an onclose callback can reopen without another close event`, async () => {
   const props = $state({

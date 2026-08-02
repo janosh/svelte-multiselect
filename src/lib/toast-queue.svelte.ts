@@ -124,6 +124,9 @@ export interface EnqueueToastTransition<
 const is_expired = (toast: ToastItem<string>, now_ms: number): boolean =>
   toast.expires_at_ms !== null && toast.expires_at_ms <= now_ms
 
+const queued_toasts = <Priority extends string>(queue: ToastQueue<Priority>) =>
+  queue.active_toast ? [queue.active_toast, ...queue.pending] : queue.pending
+
 // Bank the unspent part of a visibility budget. A toast pushed back into the queue has
 // not been read, so its clock stops until it is on screen again.
 const pause_visibility_timeout = <Priority extends string>(
@@ -242,9 +245,7 @@ export const expire_toasts = <Priority extends string>(
   queue: ToastQueue<Priority>,
   now_ms: number,
 ): ToastQueueTransition<Priority> => {
-  const expired = [queue.active_toast, ...queue.pending].filter(
-    (toast): toast is ToastItem<Priority> => toast !== null && is_expired(toast, now_ms),
-  )
+  const expired = queued_toasts(queue).filter((toast) => is_expired(toast, now_ms))
   if (expired.length === 0) return { queue, effects: [] }
 
   const active_toast =
@@ -274,9 +275,7 @@ export const enqueue_toast = <Priority extends string>(
   const rank = priority_rank(queue.priorities, priority)
   const expires_at_ms = request.expires_at_ms ?? null
   const dedupe_key = request.dedupe_key ?? request.message
-  const existing = [queue.active_toast, ...queue.pending].find(
-    (toast) => toast?.dedupe_key === dedupe_key,
-  )
+  const existing = queued_toasts(queue).find((toast) => toast.dedupe_key === dedupe_key)
 
   if (existing) {
     const existing_rank = priority_rank(queue.priorities, existing.priority)
@@ -372,10 +371,7 @@ export const activate_toast_action = <Priority extends string>(
 ): ToastQueueTransition<Priority> => {
   // A click already dispatched by the browser wins over a delayed expiry
   // timer. Remove the target first, then expire unrelated queue items.
-  const toast =
-    queue.active_toast?.id === toast_id
-      ? queue.active_toast
-      : queue.pending.find((item) => item.id === toast_id)
+  const toast = queued_toasts(queue).find((item) => item.id === toast_id)
   if (!toast?.action) return expire_toasts(queue, now_ms)
   const [without_target] = remove_toast(queue, toast_id, now_ms)
   const expired_transition = expire_toasts(without_target, now_ms)
@@ -438,8 +434,7 @@ export class ToastStore<Priority extends string = ToastPriority> {
   }
   // Everything the queue is holding, visible one first
   get items(): readonly ToastItem<Priority>[] {
-    const { active_toast, pending } = this.#queue
-    return active_toast ? [active_toast, ...pending] : pending
+    return queued_toasts(this.#queue)
   }
 
   show(message: string, options: ToastOptions<Priority> = {}): string {
