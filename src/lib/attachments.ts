@@ -206,7 +206,7 @@ export const draggable =
     }
     const drag_handle = found
 
-    function handle_pointerdown(event: PointerEvent) {
+    function on_pointerdown(event: PointerEvent) {
       // `dragging` bars a second primary pointer mid-drag (mouse while a touch is down),
       // which would strand the first follower's listeners past cleanup.
       if (dragging || !is_primary_press(event)) return
@@ -235,14 +235,14 @@ export const draggable =
       stop_pointer_follow = follow_pointer(
         drag_handle,
         event.pointerId,
-        handle_pointermove,
-        handle_pointerup,
+        on_pointermove,
+        on_pointerup,
       )
 
       options.on_drag_start?.(event)
     }
 
-    function handle_pointermove(event: PointerEvent) {
+    function on_pointermove(event: PointerEvent) {
       if (!dragging) return
 
       const dx = event.clientX - start.x
@@ -253,7 +253,7 @@ export const draggable =
       options.on_drag?.(event)
     }
 
-    function handle_pointerup(event: PointerEvent) {
+    function on_pointerup(event: PointerEvent) {
       if (!dragging) return
 
       dragging = false
@@ -265,20 +265,20 @@ export const draggable =
     }
 
     // restore consumer inline styles on teardown rather than blanking them
-    const prev = {
+    const previous_styles = {
       cursor: drag_handle.style.cursor,
       touch_action: drag_handle.style.touchAction,
     }
-    drag_handle.addEventListener(`pointerdown`, handle_pointerdown)
+    drag_handle.addEventListener(`pointerdown`, on_pointerdown)
     drag_handle.style.cursor = `grab`
     drag_handle.style.touchAction = `none` // else the browser pans and the drag never moves
 
     return () => {
       stop_pointer_follow?.()
       if (dragging) document.body.style.userSelect = ``
-      drag_handle.removeEventListener(`pointerdown`, handle_pointerdown)
-      drag_handle.style.cursor = prev.cursor
-      drag_handle.style.touchAction = prev.touch_action
+      drag_handle.removeEventListener(`pointerdown`, on_pointerdown)
+      drag_handle.style.cursor = previous_styles.cursor
+      drag_handle.style.touchAction = previous_styles.touch_action
     }
   }
 
@@ -432,9 +432,9 @@ export const resizable =
     }
 
     // Paint order: `right` over `bottom`, so a corner press resizes width
-    const strips = new AbortController()
-    const { signal } = strips
-    const handles = ([`top`, `left`, `bottom`, `right`] as const)
+    const abort_controller = new AbortController()
+    const { signal } = abort_controller
+    const resize_strips = ([`top`, `left`, `bottom`, `right`] as const)
       .filter((edge) => edges.includes(edge))
       .map((edge) => {
         const resize_strip = document.createElement(`div`)
@@ -460,8 +460,8 @@ export const resizable =
     return () => {
       stop_pointer_follow?.()
       if (active_edge) document.body.style.userSelect = ``
-      strips.abort() // removal alone leaves a retained strip ref able to fire on_pointerdown
-      for (const strip of handles) strip.remove()
+      abort_controller.abort() // removal alone leaves a retained strip ref able to fire on_pointerdown
+      for (const strip of resize_strips) strip.remove()
     }
   }
 
@@ -1651,11 +1651,11 @@ export const hotkey =
     if (!enabled || bindings.length === 0) return undefined
 
     const target: EventTarget = global ? document : node
-    const on_key = (event: Event) => {
+    const on_keydown = (event: Event) => {
       if (event instanceof KeyboardEvent) run_hotkeys(event, bindings)
     }
-    target.addEventListener(`keydown`, on_key)
-    return () => target.removeEventListener(`keydown`, on_key)
+    target.addEventListener(`keydown`, on_keydown)
+    return () => target.removeEventListener(`keydown`, on_keydown)
   }
 
 export interface FocusTrapOptions {

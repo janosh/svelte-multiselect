@@ -255,20 +255,22 @@
   // maxVisibleChips: chips beyond the limit collapse into a "+N more" toggle.
   // chip_limit normalizes invalid values to null (error logged in the validation
   // effect) so they can't leak a nonsensical "+N more" chip into the template.
-  let are_chips_expanded = $state(false)
+  let is_chip_list_expanded = $state(false)
   const chip_limit = $derived(
     maxVisibleChips !== null && Number.isInteger(maxVisibleChips) && maxVisibleChips >= 0
       ? maxVisibleChips
       : null,
   )
   const visible_chips = $derived(
-    chip_limit !== null && !are_chips_expanded ? selected.slice(0, chip_limit) : selected,
+    chip_limit !== null && !is_chip_list_expanded
+      ? selected.slice(0, chip_limit)
+      : selected,
   )
   const hidden_chip_count = $derived(selected.length - visible_chips.length)
   // keyboard chip navigation must never highlight an unrendered chip — auto-expand
   $effect(() => {
     if (highlighted_idx === null) return
-    if (chip_limit !== null && highlighted_idx >= chip_limit) are_chips_expanded = true
+    if (chip_limit !== null && highlighted_idx >= chip_limit) is_chip_list_expanded = true
     // Clamp when selected changes externally (undo/redo, parent prop, select_all)
     if (highlighted_idx >= selected.length) {
       highlighted_idx = selected.length > 0 ? selected.length - 1 : null
@@ -611,23 +613,23 @@
   // symbols stay stable when filtering temporarily removes a group.
   const header_key_cache = new Map<string, symbol>()
   const header_key = (group: string): symbol => {
-    const cached = header_key_cache.get(group) ?? Symbol(`multiselect-header-${group}`)
-    header_key_cache.set(group, cached)
-    return cached
+    const header_symbol = header_key_cache.get(group) ?? Symbol(`sms-header-${group}`)
+    header_key_cache.set(group, header_symbol)
+    return header_symbol
   }
   const render_rows = $derived.by((): RenderRow[] => {
     const rows: RenderRow[] = []
     let flat_idx = 0
-    grouped_options.forEach(({ group, options: opts, collapsed }, group_idx) => {
+    grouped_options.forEach(({ group, options: group_items, collapsed }, group_idx) => {
       if (group !== null) {
         rows.push({ kind: `header`, group_idx, render_key: header_key(group) })
       }
       if (collapsed && collapsibleGroups) return
-      opts.forEach((opt, local_idx) => {
+      group_items.forEach((option_item, local_idx) => {
         if (flat_idx < visible_navigable_count) {
           rows.push({
             kind: `option`,
-            option: opt,
+            option: option_item,
             flat_idx,
             render_key: option_render_keys[group_idx][local_idx],
           })
@@ -685,14 +687,14 @@
   // nested arrays aligned with grouped_options: option_render_keys[group_idx][local_idx]
   let option_render_keys = $derived.by(() => {
     const occurrence_counts = new Map<unknown, number>()
-    return grouped_options.map(({ options: opts }) =>
-      opts.map((opt) => {
-        const base_key = key(opt)
+    return grouped_options.map(({ options: group_items }) =>
+      group_items.map((option_item) => {
+        const base_key = key(option_item)
         const occurrence = occurrence_counts.get(base_key) ?? 0
         occurrence_counts.set(base_key, occurrence + 1)
         if (occurrence === 0) return base_key
         const cached = dup_key_cache.get(base_key) ?? []
-        cached[occurrence - 1] ??= Symbol(`multiselect-dup-${occurrence}`)
+        cached[occurrence - 1] ??= Symbol(`sms-dup-${occurrence}`)
         dup_key_cache.set(base_key, cached)
         return cached[occurrence - 1]
       }),
@@ -707,14 +709,15 @@
   }
   let group_header_state = $derived.by(() => {
     const state = new Map<string, GroupHeaderState>()
-    for (const { group, options: opts, collapsed } of grouped_options) {
+    for (const { group, options: group_items, collapsed } of grouped_options) {
       if (group === null) continue
-      const selectable = get_selectable_options(opts, collapsed)
+      const selectable = get_selectable_options(group_items, collapsed)
       const all_selected =
         selectable.length > 0 &&
         selectable.every((opt) => selected_keys_set.has(key(opt)))
       const selected_count = keepSelectedInDropdown
-        ? opts.filter((opt) => selected_keys_set.has(key(opt))).length
+        ? group_items.filter((option_item) => selected_keys_set.has(key(option_item)))
+            .length
         : 0
       state.set(group, { all_selected, selected_count, selectable })
     }
@@ -1004,10 +1007,10 @@
   )
 
   // Selected chips are plain list items, so left/right chip highlighting stays visual.
-  const user_msg_id = $derived(`${base_id}-user-msg`)
+  const user_message_id = $derived(`${base_id}-user-msg`)
   const active_option_id = $derived(
     is_user_message_active
-      ? user_msg_id
+      ? user_message_id
       : activeIndex !== null && activeIndex < navigable_options.length
         ? `${base_id}-opt-${activeIndex}`
         : undefined,
@@ -1337,9 +1340,9 @@
     activeIndex = null
     for (let offset = 1; offset <= total; offset++) {
       const next_idx = (start_idx + direction * offset + total) % total
-      const is_user_msg = has_user_message && next_idx === visible_navigable_count
+      const is_user_message = has_user_message && next_idx === visible_navigable_count
       const next_option = navigable_options[next_idx]
-      if (is_user_msg || (next_option !== undefined && !is_disabled(next_option))) {
+      if (is_user_message || (next_option !== undefined && !is_disabled(next_option))) {
         activeIndex = next_idx
         break
       }
@@ -2156,17 +2159,17 @@
           <button
             type="button"
             class="more-chips"
-            aria-expanded={are_chips_expanded}
+            aria-expanded={is_chip_list_expanded}
             onclick={(event) => {
               event.stopPropagation()
-              are_chips_expanded = !are_chips_expanded
+              is_chip_list_expanded = !is_chip_list_expanded
               // clear a beyond-limit highlight, else the auto-expand effect would
               // instantly undo this collapse (making "show less" a no-op)
-              if (!are_chips_expanded) highlighted_idx = null
+              if (!is_chip_list_expanded) highlighted_idx = null
             }}
             onmouseup={(event) => event.stopPropagation()}
           >
-            {are_chips_expanded ? `show less` : `+${hidden_chip_count} more`}
+            {is_chip_list_expanded ? `show less` : `+${hidden_chip_count} more`}
           </button>
         </li>
       {/if}
@@ -2453,7 +2456,7 @@
         {@const handle_create = (event: Event) =>
           can_add_user_option && add(searchText as Option, event)}
         <li
-          id={user_msg_id}
+          id={user_message_id}
           onclick={handle_create}
           onkeydown={can_add_user_option ? if_enter_or_space(handle_create) : undefined}
           title={msgType !== `no-match` ? msg : ``}

@@ -101,10 +101,10 @@
   // focus_inside would stay true and wedge close_if_interaction_ended on the branch that
   // only cancels the pending close. focus_trap then hands focus back to the trigger, and
   // in hover/focus modes that focusin would reopen what was just dismissed.
-  let was_previously_open = false
+  let was_open = false
   let trap_was_enabled = false
   $effect.pre(() => {
-    if (was_previously_open && !open) {
+    if (was_open && !open) {
       focus_open_blocked =
         focus_inside &&
         trap_was_enabled &&
@@ -112,7 +112,7 @@
       focus_inside = false
       pointer_inside = false
     }
-    was_previously_open = open
+    was_open = open
     trap_was_enabled = trap_focus
   })
 

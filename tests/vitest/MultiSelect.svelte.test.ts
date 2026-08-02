@@ -8490,7 +8490,7 @@ test(`toggling portal.active at runtime portals and un-portals the dropdown`, as
   expect(back_inside.dataset.placement).toBeUndefined()
 })
 
-// The click_outside attachment receives `inside: [ul_options]`, which is undefined
+// The click_outside attachment receives `inside: [options_list_el]`, which is undefined
 // until bind:this lands. Attachments re-run on reactive reads, so the portalled list
 // must count as inside once bound — otherwise pressing it would close the dropdown.
 test(`press on the portalled dropdown does not close it`, async () => {

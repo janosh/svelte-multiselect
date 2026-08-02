@@ -133,7 +133,7 @@ test(`toggle all label reflects pre-opened details on mount`, async () => {
     { title: `file2`, content: `content2` },
   ]
   // details render open from the start - the toggle event never fires on mount,
-  // so the label must be initialized from node_refs in the sync $effect
+  // so the label must be initialized from detail_elements in the sync $effect
   mount_files({ files, details_props: { open: true } })
   await tick()
 
@@ -141,7 +141,7 @@ test(`toggle all label reflects pre-opened details on mount`, async () => {
   expect(doc_query(`button[title='Toggle all']`).textContent).toContain(`Close all`)
 })
 
-test(`node refs are trimmed when files are removed to prevent memory leaks`, async () => {
+test(`detail element refs are trimmed when files are removed to prevent memory leaks`, async () => {
   type FileWithNode = { title: string; content: string; node?: HTMLDetailsElement | null }
   const reactive_files: FileWithNode[] = $state([
     { title: `file1`, content: `content1` },

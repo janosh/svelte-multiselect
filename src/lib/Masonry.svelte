@@ -298,15 +298,15 @@
     }
   })
 
-  // Binary search: find first index where arr[i] >= target
-  function binary_search_ge(prefix_heights: number[], target: number): number {
-    let [lo, hi] = [0, prefix_heights.length]
-    while (lo < hi) {
-      const mid = (lo + hi) >>> 1
-      if (prefix_heights[mid] < target) lo = mid + 1
-      else hi = mid
+  // Binary search: find first index where cumulative_heights[idx] >= target
+  function binary_search_ge(cumulative_heights: number[], target: number): number {
+    let [low_idx, high_idx] = [0, cumulative_heights.length]
+    while (low_idx < high_idx) {
+      const mid_idx = (low_idx + high_idx) >>> 1
+      if (cumulative_heights[mid_idx] < target) low_idx = mid_idx + 1
+      else high_idx = mid_idx
     }
-    return lo
+    return low_idx
   }
 
   // Scroll state with requestAnimationFrame throttling

@@ -349,7 +349,7 @@ describe(`ToastStore`, () => {
     vi.useRealTimers()
   })
 
-  test(`show returns an id and exposes active, pending and items`, () => {
+  test(`show returns an id and exposes active_toast, pending and items`, () => {
     const store = track(new ToastStore())
     const first_id = store.show(`a`)
     store.show(`b`)
