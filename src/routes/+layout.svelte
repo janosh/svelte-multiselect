@@ -6,6 +6,7 @@
   import type { Pathname } from '$app/types'
   import { CopyButton, GitHubCorner, PageSearch, slug_to_title, Toc } from '$lib'
   import { highlight_matches } from '$lib/attachments'
+  import { apply_theme_mode, resolve_theme_mode } from '$lib/theme.svelte'
   import { repository } from '$root/package.json'
   import { DemoNav, Footer } from '$site'
   import favicon from '$site/favicon.svg'
@@ -55,17 +56,8 @@
 
   afterNavigate(() => (page_search_query = ``))
 
-  if (browser) {
-    const saved_theme = localStorage.getItem(`theme`)
-    let effective_theme = saved_theme
-    if (effective_theme !== `light` && effective_theme !== `dark`) {
-      effective_theme = matchMedia(`(prefers-color-scheme: dark)`).matches
-        ? `dark`
-        : `light`
-    }
-    document.documentElement.style.colorScheme = effective_theme
-    document.documentElement.dataset.theme = effective_theme
-  }
+  // FOUC script in app.html already painted; this syncs shared theme state for ThemeToggle.
+  if (browser) apply_theme_mode(resolve_theme_mode())
 </script>
 
 <svelte:head>

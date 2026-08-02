@@ -490,10 +490,10 @@
   // non-disabled options, limited to those rendered under maxOptions unless
   // skip_visibility_check (collapsed groups select their full contents)
   const get_selectable_options = (
-    options_in_group: Option[],
+    opts: Option[],
     skip_visibility_check = false,
   ): Option[] =>
-    options_in_group.filter(
+    opts.filter(
       (opt) =>
         !is_disabled(opt) &&
         (skip_visibility_check || is_option_visible(navigable_index_map.get(opt) ?? -1)),
@@ -716,8 +716,7 @@
         selectable.length > 0 &&
         selectable.every((opt) => selected_keys_set.has(key(opt)))
       const selected_count = keepSelectedInDropdown
-        ? group_items.filter((option_item) => selected_keys_set.has(key(option_item)))
-            .length
+        ? group_items.filter((opt) => selected_keys_set.has(key(opt))).length
         : 0
       state.set(group, { all_selected, selected_count, selectable })
     }
@@ -1377,10 +1376,7 @@
           options_scroll_top = next_scroll_top
         }
       } else
-        options_list_el?.querySelector(`li.active`)?.scrollIntoView({
-          block: `nearest`,
-          inline: `nearest`,
-        })
+        options_list_el?.querySelector(`li.active`)?.scrollIntoView({ block: `nearest` })
     }
 
     // Fire onactivate for keyboard navigation only (not mouse hover)

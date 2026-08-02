@@ -1210,7 +1210,7 @@ export const tooltip =
         // A stale leave/blur from the previous trigger must not cancel the next
         // trigger's pending show or schedule a timer that removes its tooltip.
         if (!owns_tooltip_state(element)) return
-        if (show_timeout_owner === element && show_timeout !== undefined) {
+        if (show_timeout_owner === element) {
           clearTimeout(show_timeout)
           show_timeout = undefined
           show_timeout_owner = null
@@ -1218,7 +1218,7 @@ export const tooltip =
         if (current_tooltip?.owner_element !== element) return
         // leave/blur both call this; clear any pending hide so a later show isn't
         // wiped by a stale timer from the first hide event
-        if (hide_timeout_owner === element && hide_timeout !== undefined) {
+        if (hide_timeout_owner === element) {
           clearTimeout(hide_timeout)
           hide_timeout = undefined
           hide_timeout_owner = null

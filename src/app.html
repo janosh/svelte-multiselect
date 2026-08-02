@@ -13,7 +13,7 @@
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <!-- Keep this pre-hydration mirror of theme.svelte.ts resolve_theme_mode/apply_theme_mode synchronized. -->
+    <!-- FOUC mirror of apply_theme_mode: light/dark as-is; anything else via matchMedia. -->
     <script>
       {
         let effective_theme
