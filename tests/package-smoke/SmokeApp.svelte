@@ -1,9 +1,9 @@
 <script lang="ts">
-  import MultiSelect, {
+  import {
     Accordion,
     CommandMenu,
     fuzzy_match,
-    MultiSelect as NamedSelect,
+    MultiSelect,
     PageSearch,
     Sheet,
     Tabs,
@@ -26,7 +26,7 @@
   const katex_options: KatexOptions = { throwOnError: true }
   const package_api_works =
     DirectCommandMenu === CommandMenu &&
-    DirectMultiSelect === NamedSelect &&
+    DirectMultiSelect === MultiSelect &&
     DirectPageSearch === PageSearch &&
     typeof Accordion === `function` &&
     typeof Sheet === `function` &&

@@ -6,7 +6,7 @@ This example shows the JavaScript way of handling MultiSelect fields in form sub
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
 

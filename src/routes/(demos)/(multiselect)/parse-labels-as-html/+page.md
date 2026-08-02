@@ -8,7 +8,7 @@ When `parseLabelsAsHtml={true}`, MultiSelect renders HTML in option labels.
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   const red_pill: string = `🔴  &ensp; Red Pill (<a href="https://wikipedia.org/wiki/Red_pill_and_blue_pill">what?</a>)`

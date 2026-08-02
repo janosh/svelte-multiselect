@@ -4,7 +4,7 @@ import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { afterEach, beforeEach, describe, expect, test, vi } from 'vite-plus/test'
 
 import type { Option, OptionStyle } from '$lib'
-import MultiSelect from '$lib'
+import { MultiSelect } from '$lib'
 import type { LoadOptionsParams, MultiSelectProps, PortalParams } from '$lib/types'
 import { get_label } from '$lib/utils'
 
@@ -1457,13 +1457,13 @@ test(`autoScroll=false skips scrolling active options into view`, async () => {
   })
 
   const options = [...document.querySelectorAll<HTMLElement>(`ul.options > li`)]
-  for (const option of options) option.scrollIntoViewIfNeeded = vi.fn()
+  for (const option of options) option.scrollIntoView = vi.fn()
   get_input().dispatchEvent(fresh_key(`ArrowDown`))
   await tick()
 
   expect(doc_query(`ul.options > li.active`).textContent?.trim()).toBe(`first`)
   for (const option of options) {
-    expect(option.scrollIntoViewIfNeeded).not.toHaveBeenCalled()
+    expect(option.scrollIntoView).not.toHaveBeenCalled()
   }
 })
 
@@ -1727,8 +1727,8 @@ test(`autoScroll scopes active option lookup to current instance`, async () => {
     second_target.querySelector<HTMLElement>(`ul.options > li`),
   ]
   if (!first_active || !second_option) throw new Error(`Expected both option lists`)
-  first_active.scrollIntoViewIfNeeded = vi.fn()
-  second_option.scrollIntoViewIfNeeded = vi.fn()
+  first_active.scrollIntoView = vi.fn()
+  second_option.scrollIntoView = vi.fn()
 
   second_target
     .querySelector<HTMLInputElement>(`input[autocomplete]`)
@@ -1736,8 +1736,8 @@ test(`autoScroll scopes active option lookup to current instance`, async () => {
   await tick()
   await tick()
 
-  expect(first_active.scrollIntoViewIfNeeded).not.toHaveBeenCalled()
-  expect(second_option.scrollIntoViewIfNeeded).toHaveBeenCalledOnce()
+  expect(first_active.scrollIntoView).not.toHaveBeenCalled()
+  expect(second_option.scrollIntoView).toHaveBeenCalledOnce()
 })
 
 async function setup_user_message(search_text = `Purple`) {
@@ -2214,7 +2214,6 @@ test.each([
 
       if (hide_dropdown) {
         expect(document.querySelector(`ul.options`)).toBeNull()
-        return
       }
 
       input.dispatchEvent(fresh_key(`Enter`))

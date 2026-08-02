@@ -13,13 +13,12 @@
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <!-- Keep this pre-hydration mirror of theme.svelte.ts resolve_theme_mode/apply_theme_mode synchronized, including saved-theme fallbacks and light/dark/system support. -->
+    <!-- Keep this pre-hydration mirror of theme.svelte.ts resolve_theme_mode/apply_theme_mode synchronized. -->
     <script>
       {
         let effective_theme
         try {
-          effective_theme =
-            localStorage.getItem(`theme`) ?? localStorage.getItem(`theme_mode`)
+          effective_theme = localStorage.getItem(`theme`)
         } catch {}
         if (effective_theme !== `light` && effective_theme !== `dark`)
           effective_theme = globalThis.matchMedia?.(`(prefers-color-scheme: dark)`)

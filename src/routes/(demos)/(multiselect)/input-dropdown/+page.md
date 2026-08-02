@@ -15,7 +15,7 @@ with `aria-selected="true"`.
 
 ```svelte example id="input-dropdown"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   interface ColorOption extends ObjectOption {
@@ -61,7 +61,7 @@ provided.
 
 ```svelte example id="quiet-datalist"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   let tag_text = $state(``)
 </script>

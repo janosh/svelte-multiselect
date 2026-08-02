@@ -480,10 +480,16 @@ describe(`Masonry default rendering`, () => {
     mount_masonry({ items, masonryWidth: 500, minColWidth: 200 })
     const spans = document.querySelectorAll(`div.masonry > div.col > div > span`) // default rendering
     expect(spans).toHaveLength(items.length)
-    // Multi-column DOM order is grouped by column, not source order.
-    expect(Array.from(spans).map((span) => span.textContent)).toEqual(
-      expect.arrayContaining(items),
-    )
+    // Default balanced-stable placement alternates equal-height items across 2 columns,
+    // while DOM order is grouped by column.
+    expect(Array.from(spans).map((span) => span.textContent)).toEqual([
+      `apple`,
+      `cherry`,
+      `elderberry`,
+      `banana`,
+      `date`,
+      `fig`,
+    ])
   })
 
   test(`passes rest props to container div`, () => {

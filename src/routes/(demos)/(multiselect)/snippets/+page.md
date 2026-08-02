@@ -10,7 +10,7 @@
 
 ```svelte example id="languages-1"
 <script lang="ts">
-  import MultiSelect, { Icon } from '$lib'
+  import { MultiSelect, Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet, MinusIcon } from '$site'
 </script>
@@ -44,7 +44,7 @@ This example also moves the expand icon to the right side of the input via `expa
 
 ```svelte example id="languages-2"
 <script lang="ts">
-  import MultiSelect, { Icon } from '$lib'
+  import { MultiSelect, Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
@@ -81,7 +81,7 @@ This example also moves the expand icon to the right side of the input via `expa
 
 ```svelte example id="languages-3"
 <script lang="ts">
-  import MultiSelect, { Icon } from '$lib'
+  import { MultiSelect, Icon } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 

@@ -1363,8 +1363,8 @@
         !is_user_message_active
       ) {
         // In virtual mode the active li may not be rendered: scroll by row offset
-        // instead of scrollIntoViewIfNeeded. Clamp scroll so the active row lies
-        // within [row_bottom - viewport, row_top] (no-op when already in view).
+        // instead of scrollIntoView. Clamp scroll so the active row lies within
+        // [row_bottom - viewport, row_top] (no-op when already in view).
         const { item_height } = virtual_window
         const row_top = (option_row_indices[activeIndex] ?? activeIndex) * item_height
         const next_scroll_top = Math.min(
@@ -1376,7 +1376,11 @@
           // scrollTop assignment doesn't fire scroll events in happy-dom, sync state directly
           options_scroll_top = next_scroll_top
         }
-      } else options_list_el?.querySelector(`li.active`)?.scrollIntoViewIfNeeded?.()
+      } else
+        options_list_el?.querySelector(`li.active`)?.scrollIntoView({
+          block: `nearest`,
+          inline: `nearest`,
+        })
     }
 
     // Fire onactivate for keyboard navigation only (not mouse hover)
@@ -2467,11 +2471,9 @@
           onblur={() => (is_user_message_active = false)}
           role="option"
           aria-selected="false"
-          class="
-              user-msg {liUserMsgClass} {is_user_message_active
+          class="user-msg {liUserMsgClass} {is_user_message_active
             ? liActiveUserMsgClass
-            : ``}
-            "
+            : ``}"
           style:cursor={{
             dupe: `not-allowed`,
             create: `pointer`,

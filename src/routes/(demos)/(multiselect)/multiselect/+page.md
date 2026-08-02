@@ -48,7 +48,7 @@ subtitle="Keyboard-friendly, accessible multi-select with grouping, async loadin
 
 ```svelte
 <script>
-  import MultiSelect from 'svelte-widgets'
+  import { MultiSelect } from 'svelte-widgets'
 
   const ui_libs = [`Svelte`, `React`, `Vue`, `Angular`, `...`]
 

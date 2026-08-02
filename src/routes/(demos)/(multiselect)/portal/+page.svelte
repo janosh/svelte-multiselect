@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { get_label } from '$lib/utils'
   import { languages, octicons } from '$site/options'
 

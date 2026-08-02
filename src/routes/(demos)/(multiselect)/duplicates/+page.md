@@ -2,7 +2,7 @@
 
 ```svelte example id="duplicates-demo"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { ObjectOption } from '$lib/types'
 
   interface IdOption extends ObjectOption {

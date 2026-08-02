@@ -8,7 +8,7 @@ This example shows the SvelteKit form action way of handling MultiSelect fields 
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { ColorSnippet } from '$site'
   import { colors } from '$site/options'
   import { repository } from '$root/package.json'

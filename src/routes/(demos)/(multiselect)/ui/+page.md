@@ -4,7 +4,7 @@
 
 ```svelte example id="foods"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { foods } from '$site/options'
 
   // golden-angle hue rotation gives distinct colors that stay identical
@@ -31,7 +31,7 @@
 
 ```svelte example id="retain-focus"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   const options = [`Svelte`, `Solid`, `React`]
 </script>

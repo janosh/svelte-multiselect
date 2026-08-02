@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { MultiSelectProps } from '$lib/types'
 
   let {

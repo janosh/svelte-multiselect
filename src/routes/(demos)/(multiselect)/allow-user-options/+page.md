@@ -4,7 +4,7 @@
 
 ```svelte example id="foods"
 <script lang="ts">
-  import MultiSelect, { Toggle } from '$lib'
+  import { MultiSelect, Toggle } from '$lib'
   import { foods } from '$site/options'
 
   let selected: string[] = $state(
@@ -45,7 +45,7 @@
 
 ```svelte example id="languages"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
@@ -73,7 +73,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
 
 ```svelte example id="no-default-options"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
 
   let selected: string[] = $state([])
 </script>
@@ -96,7 +96,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
 
 ```svelte example id="parse-paste"
 <script lang="ts">
-  import MultiSelect, { CopyButton } from '$lib'
+  import { MultiSelect, CopyButton } from '$lib'
 
   let selected: string[] = $state([])
   let log: string[] = $state([])

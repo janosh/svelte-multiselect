@@ -9,7 +9,7 @@ Type to filter, click or arrow-key to pick. `selected` is bindable in both direc
 
 ```svelte example
 <script lang="ts">
-  import MultiSelect from 'svelte-widgets'
+  import { MultiSelect } from 'svelte-widgets'
 
   const fruits: string[] = ['Apple', 'Banana', 'Cherry', 'Date', 'Elderberry']
   let selected: string[] = $state([])

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { Test2WayBindProps } from './index'
 
   let {

@@ -8,7 +8,7 @@ Provide a `loadOptions` function that fetches data:
 
 ```svelte example id="load-basic"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
   // Simulated large dataset - in practice, this would be a database/API
@@ -49,7 +49,7 @@ Connect to a real API:
 
 ```svelte example id="load-api"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult, ObjectOption } from '$lib/types'
 
   interface User extends ObjectOption {
@@ -103,7 +103,7 @@ For advanced control, pass an object with `fetch` function and config:
 
 ```svelte example id="load-config"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
   const all_items: string[] = Array.from({ length: 500 }, (_, idx) => `Option ${idx + 1}`)
@@ -137,7 +137,7 @@ Use object options with custom snippets:
 
 ```svelte example id="load-objects"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult, ObjectOption } from '$lib/types'
 
   interface Language extends ObjectOption {
@@ -189,7 +189,7 @@ By default, options load when the dropdown opens. Set `onOpen: false` to disable
 
 ```svelte example id="load-lazy"
 <script lang="ts">
-  import MultiSelect from '$lib'
+  import { MultiSelect } from '$lib'
   import type { LoadOptionsParams, LoadOptionsResult } from '$lib/types'
 
   const items: string[] = Array.from({ length: 100 }, (_, idx) => `Item ${idx + 1}`)
