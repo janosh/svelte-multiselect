@@ -476,11 +476,13 @@ describe(`Masonry bindable props`, () => {
 
 describe(`Masonry default rendering`, () => {
   test(`renders string items as spans with correct content`, () => {
-    mount_masonry({ items: [`apple`, `banana`, `cherry`] })
+    const items = [`apple`, `banana`, `cherry`, `date`, `elderberry`, `fig`]
+    mount_masonry({ items, masonryWidth: 500, minColWidth: 200 })
     const spans = document.querySelectorAll(`div.masonry > div.col > div > span`) // default rendering
-    expect(spans).toHaveLength(3)
+    expect(spans).toHaveLength(items.length)
+    // Multi-column DOM order is grouped by column, not source order.
     expect(Array.from(spans).map((span) => span.textContent)).toEqual(
-      expect.arrayContaining([`apple`, `banana`, `cherry`]),
+      expect.arrayContaining(items),
     )
   })
 

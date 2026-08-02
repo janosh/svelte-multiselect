@@ -27,12 +27,12 @@ export function get_page_background(
 
 // Two-way sync between a bindable `fullscreen` flag and the browser's fullscreen state,
 // scoped to one wrapper element. Creates $effects, so call during component init.
-export function sync_fullscreen(opts: FullscreenSyncOptions): void {
+export function sync_fullscreen(options: FullscreenSyncOptions): void {
   // flag -> browser
   $effect(() => {
-    const wrapper = opts.get_wrapper()
+    const wrapper = options.get_wrapper()
     if (!wrapper) return
-    const fullscreen = opts.get_fullscreen()
+    const fullscreen = options.get_fullscreen()
     const fullscreen_element = document.fullscreenElement
 
     if (fullscreen && fullscreen_element !== wrapper) {
@@ -40,27 +40,31 @@ export function sync_fullscreen(opts: FullscreenSyncOptions): void {
         // The browser refused (no user gesture, permissions policy), so the flag is now
         // lying about the document. Clearing it both tells the consumer the truth and
         // lets the next true transition be seen as a change worth retrying.
-        opts.set_fullscreen(false)
+        options.set_fullscreen(false)
         console.error(`requestFullscreen failed for`, wrapper, error)
-        opts.on_request_error?.(error)
+        options.on_request_error?.(error)
       })
     } else if (!fullscreen && fullscreen_element === wrapper) {
       document.exitFullscreen().catch((error: unknown) => {
+        // Exit refused while still fullscreen — put the flag back so UI/ARIA match
+        // the document. If the browser exited independently while this request was
+        // pending, restoring true would immediately request fullscreen again.
+        if (document.fullscreenElement === wrapper) options.set_fullscreen(true)
         console.error(`exitFullscreen failed for`, wrapper, error)
-        opts.on_request_error?.(error)
+        options.on_request_error?.(error)
       })
     }
 
     // a fullscreened element inherits nothing from the page and would render on black.
     // Dropped again on the way out so a later theme switch cannot be read off a stale value.
-    const bg_css_var = opts.get_bg_css_var?.() ?? `--fullscreen-bg`
+    const bg_css_var = options.get_bg_css_var?.() ?? `--fullscreen-bg`
     if (fullscreen) wrapper.style.setProperty(bg_css_var, get_page_background())
     else wrapper.style.removeProperty(bg_css_var)
   })
 
   // browser -> flag, covering Esc, F11 and programmatic exits
   $effect(() => {
-    const wrapper = opts.get_wrapper()
+    const wrapper = options.get_wrapper()
     if (!wrapper) return undefined
 
     const handle_change = () => {
@@ -68,9 +72,9 @@ export function sync_fullscreen(opts: FullscreenSyncOptions): void {
       // would flip every mounted flag whenever any element goes fullscreen, and each
       // flipped flag then fires its own requestFullscreen
       const is_fullscreen = document.fullscreenElement === wrapper
-      if (is_fullscreen === opts.get_fullscreen()) return
-      opts.set_fullscreen(is_fullscreen)
-      opts.on_change?.(is_fullscreen)
+      if (is_fullscreen === options.get_fullscreen()) return
+      options.set_fullscreen(is_fullscreen)
+      options.on_change?.(is_fullscreen)
     }
     document.addEventListener(`fullscreenchange`, handle_change)
     return () => document.removeEventListener(`fullscreenchange`, handle_change)

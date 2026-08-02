@@ -1110,6 +1110,18 @@ describe(`VoiceOver/screen reader accessibility (issue #118)`, () => {
     expect(input.getAttribute(`aria-activedescendant`)).toMatch(/^my-select-opt-/u)
   })
 
+  test(`unique id stays stable across ticks when id prop is omitted`, async () => {
+    mount(MultiSelect, {
+      target: document.body,
+      props: { options: [`foo`, `bar`], open: true },
+    })
+    const listbox_id = doc_query(`ul.options`).id
+    expect(listbox_id).toMatch(/^sms-.+-listbox$/u)
+    await tick()
+    expect(doc_query(`ul.options`).id).toBe(listbox_id)
+    expect(get_input().getAttribute(`aria-controls`)).toBe(listbox_id)
+  })
+
   test(`aria-label can be passed via rest props for accessible name`, () => {
     mount(MultiSelect, {
       target: document.body,
@@ -1206,10 +1218,11 @@ test(`children snippet receives type='selected' for pills and type='option' for 
   const option_spans = document.querySelectorAll<HTMLElement>(
     `ul.options [data-testid="multiselect-child"]`,
   )
-  expect(option_spans.length).toBeGreaterThan(0)
-  for (const span of option_spans) {
-    expect(span.dataset.type).toBe(`option`)
-  }
+  // selected items stay out of the dropdown unless keepSelectedInDropdown is set
+  expect([...option_spans].map((span) => [span.dataset.type, span.textContent])).toEqual([
+    [`option`, `Green`],
+    [`option`, `Blue`],
+  ])
 })
 
 test(`option snippet receives selected, active, and disabled booleans`, async () => {
@@ -2142,79 +2155,83 @@ test(`can remove user-created selected option which is not in dropdown list`, as
 })
 
 // https://github.com/janosh/svelte-widgets/issues/409
-// whitespace-only input must never be added as an option (was converted to 0 via Number("  "))
-test.each<[string, MultiSelectProps]>([
-  [`string options`, { options: [`a`, `b`], allowUserOptions: true }],
-  [`numeric options`, { options: [1, 2, 3], allowUserOptions: true }],
-])(`whitespace-only input rejected: %s`, async (_label, extra_props) => {
-  const onadd_spy = vi.fn()
-
-  mount(MultiSelect, {
-    target: document.body,
-    props: { ...extra_props, onadd: onadd_spy, open: true },
-  })
-
-  const input = get_input()
-  input.focus()
-  await type_search_text(`    `, input)
-
-  input.dispatchEvent(fresh_key(`Enter`))
-  await tick()
-
-  expect(onadd_spy).not.toHaveBeenCalled()
-  expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
-})
-
-// https://github.com/janosh/svelte-widgets/issues/409
-// with loadOptions returning [], effective_options[0] is undefined which triggered Number coercion
-// pressing Enter twice also triggered each_key_duplicate since both resolved to key 0
-test(`whitespace-only input rejected with loadOptions (root cause path)`, async () => {
-  vi.useFakeTimers()
-  try {
-    const onadd_spy = vi.fn()
-    const fetch_fn = vi.fn().mockResolvedValue({ options: [], hasMore: false })
-
-    mount(MultiSelect, {
-      target: document.body,
-      props: {
-        loadOptions: { fetch: fetch_fn, debounceMs: 0 },
-        allowUserOptions: true,
-        onadd: onadd_spy,
-        open: true,
+// whitespace-only input must never be added (was coerced via Number("  ") / key 0 duplicates)
+test.each([
+  {
+    label: `string options`,
+    props: { options: [`a`, `b`], allowUserOptions: true } satisfies MultiSelectProps,
+    search: `    `,
+    double_enter: false,
+    hide_dropdown: false,
+    use_timers: false,
+  },
+  {
+    label: `numeric options`,
+    props: { options: [1, 2, 3], allowUserOptions: true } satisfies MultiSelectProps,
+    search: `    `,
+    double_enter: false,
+    hide_dropdown: false,
+    use_timers: false,
+  },
+  {
+    label: `empty options hides dropdown`,
+    props: { options: [], allowUserOptions: true } satisfies MultiSelectProps,
+    search: ` `,
+    double_enter: false,
+    hide_dropdown: true,
+    use_timers: false,
+  },
+  {
+    label: `loadOptions empty (double Enter)`,
+    props: {
+      loadOptions: {
+        fetch: vi.fn().mockResolvedValue({ options: [], hasMore: false }),
+        debounceMs: 0,
       },
-    })
-    await vi.runAllTimersAsync()
+      allowUserOptions: true,
+    } satisfies MultiSelectProps,
+    search: `    `,
+    double_enter: true,
+    hide_dropdown: false,
+    use_timers: true,
+  },
+])(
+  `whitespace-only input rejected: %s`,
+  async ({ label: _label, props, search, double_enter, hide_dropdown, use_timers }) => {
+    if (use_timers) vi.useFakeTimers()
+    try {
+      const onadd_spy = vi.fn()
+      mount(MultiSelect, {
+        target: document.body,
+        props: { ...props, onadd: onadd_spy, open: true },
+      })
+      if (use_timers) await vi.runAllTimersAsync()
 
-    const input = get_input()
-    input.focus()
-    await type_search_text(`    `, input)
-    await vi.runAllTimersAsync()
+      const input = get_input()
+      input.focus()
+      await type_search_text(search, input)
+      if (use_timers) await vi.runAllTimersAsync()
 
-    input.dispatchEvent(fresh_key(`Enter`))
-    await vi.runAllTimersAsync()
-    // second Enter previously caused each_key_duplicate since both resolved to key 0
-    input.dispatchEvent(fresh_key(`Enter`))
-    await vi.runAllTimersAsync()
+      if (hide_dropdown) {
+        expect(document.querySelector(`ul.options`)).toBeNull()
+        return
+      }
 
-    expect(onadd_spy).not.toHaveBeenCalled()
-    expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
-  } finally {
-    vi.useRealTimers()
-  }
-})
+      input.dispatchEvent(fresh_key(`Enter`))
+      if (use_timers) await vi.runAllTimersAsync()
+      else await tick()
+      if (double_enter) {
+        input.dispatchEvent(fresh_key(`Enter`))
+        await vi.runAllTimersAsync()
+      }
 
-// whitespace-only input should not mount the options dropdown when there are no options
-test(`whitespace-only input does not mount options dropdown`, async () => {
-  mount(MultiSelect, {
-    target: document.body,
-    props: { options: [], allowUserOptions: true, open: true },
-  })
-
-  const input = get_input()
-  await type_search_text(` `, input)
-
-  expect(document.querySelector(`ul.options`)).toBeNull()
-})
+      expect(onadd_spy).not.toHaveBeenCalled()
+      expect(document.querySelectorAll(`ul.selected li`)).toHaveLength(0)
+    } finally {
+      if (use_timers) vi.useRealTimers()
+    }
+  },
+)
 
 test.each([[[1]], [[1, 2]], [[1, 2, 3]]])(
   `does not render remove buttons if selected.length <= minSelect`,

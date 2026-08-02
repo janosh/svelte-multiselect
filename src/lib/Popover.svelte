@@ -19,32 +19,8 @@
     'aria-controls': string | undefined
   }
   type TriggerMode = `click` | `hover` | `focus`
+  const unique_id = $props.id()
 
-  interface Props extends Omit<HTMLAttributes<HTMLDivElement>, `children` | `role`> {
-    open?: boolean
-    placement?: Placement | `auto`
-    align?: `center` | `start`
-    offset?: number
-    padding?: number // closest the surface may come to a viewport edge
-    match_width?: boolean // size the surface to the trigger, for dropdown-like menus
-    // `fixed` escapes overflow: hidden ancestors but is clipped by a transformed one
-    strategy?: `fixed` | `absolute`
-    escape?: boolean
-    dismiss_on?: DismissConfig[`dismiss_on`] // see dismiss_on_outside_press
-    trap_focus?: boolean
-    open_delay?: number
-    close_delay?: number
-    surface?: HTMLDivElement | null
-    role?: PopupRole
-    // Snippets remain owned by the component that declares them. Popover invokes the
-    // trigger and body in that owner's scope; it does not retain either past teardown.
-    trigger?: Snippet<[TriggerProps]>
-    trigger_mode?: TriggerMode
-    children: Snippet
-    on_close?: (detail: { via: `pointer` | `escape` | `trigger` }) => void
-  }
-
-  const generated_id = $props.id()
   let {
     open = $bindable(false),
     placement = `bottom`,
@@ -66,9 +42,31 @@
     id,
     role = `dialog`,
     ...rest
-  }: Props = $props()
+  }: Omit<HTMLAttributes<HTMLDivElement>, `children` | `role`> & {
+    open?: boolean
+    placement?: Placement | `auto`
+    align?: `center` | `start`
+    offset?: number
+    padding?: number // closest the surface may come to a viewport edge
+    match_width?: boolean // size the surface to the trigger, for dropdown-like menus
+    // `fixed` escapes overflow: hidden ancestors but is clipped by a transformed one
+    strategy?: `fixed` | `absolute`
+    escape?: boolean
+    dismiss_on?: DismissConfig[`dismiss_on`] // see dismiss_on_outside_press
+    trap_focus?: boolean
+    open_delay?: number
+    close_delay?: number
+    surface?: HTMLDivElement | null
+    role?: PopupRole
+    // Snippets remain owned by the component that declares them. Popover invokes the
+    // trigger and body in that owner's scope; it does not retain either past teardown.
+    trigger?: Snippet<[TriggerProps]>
+    trigger_mode?: TriggerMode
+    children: Snippet
+    on_close?: (detail: { via: `pointer` | `escape` | `trigger` }) => void
+  } = $props()
 
-  const surface_id = $derived(id ?? generated_id)
+  const surface_id = $derived(id ?? unique_id)
   let trigger_wrapper = $state<HTMLSpanElement | null>(null)
   // The wrapper is `display: contents` and has no box of its own — measuring it would
   // pin every popover to the viewport corner. Anchor to what the snippet rendered.
@@ -103,10 +101,10 @@
   // focus_inside would stay true and wedge close_if_interaction_ended on the branch that
   // only cancels the pending close. focus_trap then hands focus back to the trigger, and
   // in hover/focus modes that focusin would reopen what was just dismissed.
-  let was_open = false
+  let was_previously_open = false
   let trap_was_enabled = false
   $effect.pre(() => {
-    if (was_open && !open) {
+    if (was_previously_open && !open) {
       focus_open_blocked =
         focus_inside &&
         trap_was_enabled &&
@@ -114,7 +112,7 @@
       focus_inside = false
       pointer_inside = false
     }
-    was_open = open
+    was_previously_open = open
     trap_was_enabled = trap_focus
   })
 

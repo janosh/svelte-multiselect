@@ -162,6 +162,10 @@
           action.shortcut || action.description || action.badge || action.metadata,
       ),
   )
+  // `$effect.pre` closes before `{#if open}` unmounts so native `onclose` still fires.
+  $effect.pre(() => {
+    if (!open && dialog?.open) dialog.close()
+  })
   $effect(() => {
     if (!open) return
     if (dialog && !dialog.open) {

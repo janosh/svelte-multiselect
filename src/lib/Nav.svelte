@@ -9,7 +9,7 @@
   import { click_outside, focus_trap, tooltip } from './attachments'
   import Icon from './Icon.svelte'
   import type { NavRoute, NavRouteObject } from './types'
-  import { chain_handlers, get_uuid } from './utils'
+  import { chain_handlers } from './utils'
 
   type NavLinkRouteObject = NavRouteObject & { href: string }
 
@@ -74,7 +74,9 @@
   let is_touch_device = $state(false)
   let is_mobile = $state(false)
   let hide_timeout: ReturnType<typeof setTimeout> | null = null
-  const panel_id = `nav-menu-${get_uuid()}`
+  // `$props.id()` survives hydration; a random uuid would mismatch aria-controls
+  const unique_id = $props.id()
+  const panel_id = `nav-menu-${unique_id}`
 
   // Track previous is_open state for callbacks. Deliberately not $state: it's
   // written inside the $effect below, which would re-trigger the effect if reactive.
@@ -167,9 +169,9 @@
       return
     }
 
-    const dropdown_is_open = hovered_dropdown === href || pinned_dropdown === href
+    const is_dropdown_open = hovered_dropdown === href || pinned_dropdown === href
     // Arrow key navigation within open dropdown
-    if (dropdown_is_open && (key === `ArrowDown` || key === `ArrowUp`)) {
+    if (is_dropdown_open && (key === `ArrowDown` || key === `ArrowUp`)) {
       event.preventDefault()
       const direction = key === `ArrowDown` ? 1 : -1
       focused_item_index = Math.max(
@@ -180,7 +182,7 @@
     }
 
     // Open dropdown with ArrowDown when closed
-    if (!dropdown_is_open && key === `ArrowDown`) {
+    if (!is_dropdown_open && key === `ArrowDown`) {
       event.preventDefault()
       toggle_dropdown(href, true)
     }
@@ -240,8 +242,8 @@
     const content = route.tooltip ?? (route.href ? tooltips?.[route.href] : undefined)
     if (!content) return
     // Support both string (content only) and object (full options) formats
-    const opts = typeof content === `string` ? { content } : content
-    return tooltip({ ...tooltip_options, ...opts })
+    const tooltip_overrides = typeof content === `string` ? { content } : content
+    return tooltip({ ...tooltip_options, ...tooltip_overrides })
   }
 
   function handle_link_click(event: MouseEvent, route: NavLinkRouteObject) {
@@ -373,7 +375,7 @@
           (route) => route !== parsed_route.href,
         )}
         {@const is_pinned = pinned_dropdown === parsed_route.href}
-        {@const dropdown_open = hovered_dropdown === parsed_route.href || is_pinned}
+        {@const is_dropdown_open = hovered_dropdown === parsed_route.href || is_pinned}
         <!-- svelte-ignore a11y_no_static_element_interactions -- native navigation links keep semantics; mouse handlers only control hover disclosure -->
         <div
           class="dropdown"
@@ -423,10 +425,10 @@
             <button
               type="button"
               class="dropdown-toggle"
-              class:open={dropdown_open}
+              class:open={is_dropdown_open}
               data-dropdown-toggle
               aria-label="Toggle {formatted.label} submenu"
-              aria-expanded={dropdown_open}
+              aria-expanded={is_dropdown_open}
               aria-haspopup="true"
               onclick={() => toggle_dropdown(parsed_route.href, false)}
               onkeydown={(event: KeyboardEvent) =>
@@ -437,7 +439,7 @@
           </div>
           <!-- svelte-ignore a11y_no_static_element_interactions -- hover keeps the native-link submenu open while traversing it -->
           <div
-            class:visible={dropdown_open}
+            class:visible={is_dropdown_open}
             data-submenu
             tabindex="-1"
             onmouseenter={() => open_dropdown(parsed_route.href, true)}

@@ -353,6 +353,76 @@ test(`keeps dialog open when clicking inside the menu`, async () => {
   expect(document.querySelector(`dialog`)).toBeInstanceOf(HTMLDialogElement)
 })
 
+// open=false alone must still call dialog.close() before `{#if open}` unmounts
+test(`controlled open=false fires native onclose`, async () => {
+  const onclose = vi.fn()
+  const dialog_close = vi.spyOn(HTMLDialogElement.prototype, `close`)
+  const props = $state({
+    open: true,
+    actions: mock_actions,
+    fade_duration: 0,
+    dialog_props: { onclose },
+  })
+  mount(CommandMenu, { target: document.body, props })
+  await tick()
+
+  props.open = false
+  await tick()
+  expect(dialog_close).toHaveBeenCalled()
+  expect(onclose).toHaveBeenCalledOnce()
+  expect(document.querySelector(`dialog`)).toBeNull()
+})
+
+test(`controlled close fires onclose once while a fade outro runs`, async () => {
+  vi.useFakeTimers()
+  try {
+    const onclose = vi.fn()
+    const props = $state({
+      open: true,
+      actions: mock_actions,
+      fade_duration: 50,
+      dialog_props: { onclose },
+    })
+    mount(CommandMenu, { target: document.body, props })
+    await tick()
+
+    const dialog = doc_query<HTMLDialogElement>(`dialog`)
+    props.open = false
+    await tick()
+
+    expect(dialog.open).toBe(false)
+    expect(onclose).toHaveBeenCalledOnce()
+    await vi.runAllTimersAsync()
+    await tick()
+    expect(onclose).toHaveBeenCalledOnce()
+  } finally {
+    vi.useRealTimers()
+  }
+})
+
+test(`an onclose callback can reopen without another close event`, async () => {
+  const props = $state({
+    open: true,
+    actions: mock_actions,
+    fade_duration: 50,
+    dialog_props: {
+      onclose: vi.fn(() => {
+        props.open = true
+      }),
+    },
+  })
+  mount(CommandMenu, { target: document.body, props })
+  await tick()
+
+  props.open = false
+  await tick()
+  await tick()
+
+  expect(props.open).toBe(true)
+  expect(props.dialog_props.onclose).toHaveBeenCalledOnce()
+  expect(doc_query<HTMLDialogElement>(`dialog`).open).toBe(true)
+})
+
 test(`non-modal fallback closes on click of an unrelated page multiselect`, async () => {
   // force the non-modal fallback so outside clicks land on real page elements (with a
   // modal dialog they'd hit the backdrop instead, which is covered above)
@@ -468,7 +538,7 @@ test(`native dialog close resets state and forwards dialog_props.onclose`, async
   expect(dialog.classList.contains(`custom-dialog`)).toBe(true)
   expect(dialog.getAttribute(`aria-label`)).toBe(`Command menu`)
 
-  dialog.dispatchEvent(new Event(`close`))
+  dialog.close()
   await tick()
 
   expect(on_close).toHaveBeenCalledOnce()
