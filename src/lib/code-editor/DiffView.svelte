@@ -223,7 +223,6 @@
   const line_noun = (count: number): `line` | `lines` => (count === 1 ? `line` : `lines`)
   const line_count_label = (result: DiffResult): string =>
     `${result.newLineCount} ${line_noun(result.newLineCount)}`
-
   const is_change_row = (entry: DisplayRow | undefined): boolean =>
     (entry?.kind === `pair` || entry?.kind === `single`) && entry.row_kind !== `equal`
 
@@ -385,15 +384,12 @@
         {#each visible_rows as entry, entry_idx (row_window.start + entry_idx)}
           {#if entry.kind === `gap`}
             <button
-              aria-expanded={expanded_gaps.has(entry.gap_idx)}
+              aria-expanded="false"
               class="diff-gap"
-              onclick={() => {
-                if (!expanded_gaps.delete(entry.gap_idx)) expanded_gaps.add(entry.gap_idx)
-              }}
+              onclick={() => expanded_gaps.add(entry.gap_idx)}
               type="button"
             >
-              {expanded_gaps.has(entry.gap_idx) ? `⌃` : `⋯`}
-              {entry.skipped} unchanged {line_noun(entry.skipped)}
+              ⋯ {entry.skipped} unchanged {line_noun(entry.skipped)}
             </button>
           {:else if entry.kind === `pair`}
             <div class="diff-row pair">

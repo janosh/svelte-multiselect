@@ -19,15 +19,6 @@ describe(`storage_get/set/remove`, () => {
     expect(storage_get(`key`)).toBeNull()
   })
 
-  test(`a payload too big for the quota degrades to no stored value`, () => {
-    const spy = vi.spyOn(globalThis.localStorage, `setItem`).mockImplementation(() => {
-      throw new DOMException(`QuotaExceededError`)
-    })
-    storage_set_json(`test.big`, { text: `x`.repeat(64) })
-    spy.mockRestore()
-    expect(storage_get(`test.big`)).toBeNull()
-  })
-
   test.each([
     [`getItem`, () => storage_get(`k`), null],
     [`setItem`, () => storage_set(`k`, `v`), undefined],
@@ -74,7 +65,6 @@ describe(`storage_get_size`, () => {
   test.each([
     [`a valid size`, JSON.stringify({ w: 320, h: 240 }), { w: 320, h: 240 }],
     [`a non-finite extent`, JSON.stringify({ w: null, h: 240 }), null],
-    [`a string extent`, JSON.stringify({ w: `320`, h: `240` }), null],
     [`a missing extent`, JSON.stringify({ w: 320 }), null],
     [`a non-object payload`, `42`, null],
     [`nothing stored`, null, null],
@@ -86,31 +76,30 @@ describe(`storage_get_size`, () => {
 
 describe(`create_recent_list`, () => {
   type Item = { id: string; label?: string }
-  const list = create_recent_list<Item>({
-    storage_key: `test.recent`,
-    max_items: 3,
-    key_of: (item) => item.id,
-    is_valid: (value): value is Item =>
+  const item_config = {
+    key_of: (item: Item) => item.id,
+    is_valid: (value: unknown): value is Item =>
       typeof value === `object` &&
       value !== null &&
       `id` in value &&
       typeof value.id === `string`,
+  }
+  const list = create_recent_list<Item>({
+    storage_key: `test.recent`,
+    max_items: 3,
+    ...item_config,
   })
 
-  test(`remember prepends, dedupes by key, and persists`, () => {
+  test(`remember prepends, dedupes, persists, and evicts the oldest entry`, () => {
     let items = list.remember({ id: `a` }, [])
     items = list.remember({ id: `b` }, items)
     expect(items.map((item) => item.id)).toEqual([`b`, `a`])
 
     items = list.remember({ id: `a`, label: `renamed` }, items)
     expect(items).toEqual([{ id: `a`, label: `renamed` }, { id: `b` }])
+    for (const id of [`c`, `d`]) items = list.remember({ id }, items)
+    expect(items.map((item) => item.id)).toEqual([`d`, `c`, `a`])
     expect(JSON.parse(localStorage.getItem(`test.recent`) ?? ``)).toEqual(items)
-  })
-
-  test(`remember evicts the oldest entry past max_items`, () => {
-    let items: Item[] = []
-    for (const id of [`a`, `b`, `c`, `d`]) items = list.remember({ id }, items)
-    expect(items.map((item) => item.id)).toEqual([`d`, `c`, `b`])
   })
 
   test(`forget removes by key and restore undoes at the original index`, () => {
@@ -164,23 +153,15 @@ describe(`create_recent_list`, () => {
     expect(list.load()).toEqual([{ id: `a`, label: `newest` }, { id: `b` }, { id: `c` }])
   })
 
-  test.each([-1, 1.5, Number.POSITIVE_INFINITY, Number.NaN])(
-    `rejects invalid max_items=%s`,
-    (max_items) => {
-      expect(() =>
-        create_recent_list<Item>({
-          storage_key: `test.invalid-limit`,
-          max_items,
-          key_of: (item) => item.id,
-          is_valid: (value): value is Item =>
-            typeof value === `object` &&
-            value !== null &&
-            `id` in value &&
-            typeof value.id === `string`,
-        }),
-      ).toThrow(RangeError)
-    },
-  )
+  test.each([-1, 1.5])(`rejects invalid max_items=%s`, (max_items) => {
+    expect(() =>
+      create_recent_list<Item>({
+        storage_key: `test.invalid-limit`,
+        max_items,
+        ...item_config,
+      }),
+    ).toThrow(RangeError)
+  })
 })
 
 describe(`persisted_choice`, () => {

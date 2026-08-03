@@ -170,9 +170,21 @@ describe(`rows and layouts`, () => {
       diff_row(`insert`, null, diff_line(3, `added`)),
     ]
     await mount_diff(
-      rows_result(rows, { added: 2, removed: 2, oldLineCount: 5, newLineCount: 3 }),
+      rows_result(rows, {
+        added: 2,
+        removed: 2,
+        language: `Python`,
+        oldLineCount: 5,
+        newLineCount: 3,
+        truncated: true,
+      }),
     )
 
+    const summary = query_element(`.panel-summary`)
+    expect(summary.textContent).toContain(`Python`)
+    expect(text_of(summary.querySelector(`.added`))).toBe(`+2`)
+    expect(text_of(summary.querySelector(`.removed`))).toBe(`-2`)
+    expect(query_element(`[data-note='truncated']`).textContent).toContain(`still exact`)
     const visual_rows = [...document.querySelectorAll(`.diff-row.pair`)]
     expect(visual_rows).toHaveLength(4)
     expect([...visual_rows[1].querySelectorAll(`.gutter`)].map(text_of)).toEqual([
@@ -187,7 +199,7 @@ describe(`rows and layouts`, () => {
     expect(query_element(`[data-spacer='old']`)).toBeDefined()
   })
 
-  test(`toggles between split and unified without duplicating context`, async () => {
+  test(`toggles between unified and split without duplicating context`, async () => {
     const rows = [
       diff_row(`equal`, diff_line(1, `keep me`), diff_line(1, `keep me`)),
       diff_row(`replace`, diff_line(2, `was here`), diff_line(2, `is here`)),
@@ -201,10 +213,10 @@ describe(`rows and layouts`, () => {
       `dropped`,
       `arrived`,
     ])
-    await mount_diff(rows_result(rows, { oldLineCount: 3, newLineCount: 3 }))
+    await mount_diff(rows_result(rows, { oldLineCount: 3, newLineCount: 3 }), {
+      options: { ...DEFAULT_OPTIONS, layout: `unified` },
+    })
 
-    expect(new SvelteSet(code_texts())).toEqual(expected)
-    await click(query_element(`.segmented button[aria-pressed='false']`))
     expect(document.querySelectorAll(`.diff-row.unified`)).toHaveLength(5)
     expect(new SvelteSet(code_texts())).toEqual(expected)
     expect(text_of(query_element(`.diff-row-delete`))).toBe(`was here`)
@@ -212,13 +224,9 @@ describe(`rows and layouts`, () => {
 
     await click(query_element(`.segmented button[aria-pressed='false']`))
     expect(document.querySelectorAll(`.diff-row.pair`)).toHaveLength(4)
-  })
-
-  test(`supports an initial unified layout`, async () => {
-    await mount_diff(rows_result([simple_change]), {
-      options: { ...DEFAULT_OPTIONS, layout: `unified` },
-    })
-    expect(document.querySelectorAll(`.diff-row.unified`)).toHaveLength(2)
+    expect(new SvelteSet(code_texts())).toEqual(expected)
+    await click(query_element(`.segmented button[aria-pressed='false']`))
+    expect(document.querySelectorAll(`.diff-row.unified`)).toHaveLength(5)
   })
 
   test(`renders created files as one untoned column`, async () => {
@@ -270,6 +278,7 @@ test(`elided gaps expand using source lines and remain independent`, async () =>
     expect.stringMatching(/4 unchanged lines$/u),
     expect.stringMatching(/1 unchanged line$/u),
   ])
+  expect(gaps[0].getAttribute(`aria-expanded`)).toBe(`false`)
   await click(gaps[0])
   const expanded = query_by_text(`.diff-row.pair`, `three`)
   expect([...expanded.querySelectorAll(`.gutter`)].map(text_of)).toEqual([`3`, `3`])
@@ -334,22 +343,6 @@ test.each([
 )
 
 describe(`states and backend wiring`, () => {
-  test(`renders header metadata and truncation state`, async () => {
-    await mount_diff(
-      rows_result([simple_change], {
-        added: 3,
-        removed: 2,
-        language: `Python`,
-        truncated: true,
-      }),
-    )
-    const summary = query_element(`.panel-summary`)
-    expect(summary.textContent).toContain(`Python`)
-    expect(text_of(summary.querySelector(`.added`))).toBe(`+3`)
-    expect(text_of(summary.querySelector(`.removed`))).toBe(`-2`)
-    expect(query_element(`[data-note='truncated']`).textContent).toContain(`still exact`)
-  })
-
   test(`renders an identical-input empty state`, async () => {
     await mount_diff(diff_result({ oldLineCount: 9, newLineCount: 9 }))
     expect(query_element(`[data-empty]`).textContent).toContain(`No changes`)

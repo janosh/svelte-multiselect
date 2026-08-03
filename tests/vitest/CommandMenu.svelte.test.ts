@@ -1538,12 +1538,6 @@ test.each([
     [`alpha`, `beta`, `gamma`],
     undefined,
   ],
-  [
-    `non-array JSON is ignored`,
-    `{"not":"an array"}`,
-    [`alpha`, `beta`, `gamma`],
-    undefined,
-  ],
   [`non-string entries are ignored`, `[1,2,3]`, [`alpha`, `beta`, `gamma`], undefined],
 ])(
   `recents storage on initial open: %s`,

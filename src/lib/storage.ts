@@ -23,10 +23,8 @@ export const storage_remove = (key: string): void =>
   guarded(() => globalThis.localStorage?.removeItem(key), undefined)
 
 // Parsed storage is untrusted; callers must narrow before use.
-export const storage_get_json = (key: string, fallback: unknown): unknown => {
-  const stored = storage_get(key)
-  return stored === null ? fallback : guarded((): unknown => JSON.parse(stored), fallback)
-}
+export const storage_get_json = (key: string, fallback: unknown): unknown =>
+  guarded((): unknown => JSON.parse(storage_get(key) ?? ``), fallback)
 
 export const storage_set_json = (key: string, value: object): void => {
   // Cyclic values, BigInts and throwing toJSON methods are not persistable.
@@ -55,7 +53,7 @@ export const persisted_choice = <T extends string>(
   return options.find((option) => option === stored) ?? fallback
 }
 
-export type RecentListConfig<T> = {
+type RecentListConfig<T> = {
   storage_key: string
   max_items: number // non-negative integer
   key_of: (item: T) => string

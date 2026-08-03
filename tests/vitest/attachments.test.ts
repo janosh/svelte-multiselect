@@ -32,6 +32,7 @@ import {
   mock_rect,
   pointer_event,
   press_key as dispatch_key,
+  stub_css_highlights,
   stub_prop,
 } from './index'
 
@@ -2122,30 +2123,11 @@ describe(`highlight_matches`, () => {
 
   beforeEach(() => {
     mock_element = document.createElement(`div`)
-    mock_css_highlights = new Map()
-    clear_highlights_spy = vi.fn(() => mock_css_highlights.clear())
-    set_highlights_spy = vi.fn((key: string, value: unknown) =>
-      mock_css_highlights.set(key, value),
-    )
-    delete_highlights_spy = vi.fn((key: string) => mock_css_highlights.delete(key))
-
-    vi.stubGlobal(`CSS`, {
-      highlights: {
-        clear: clear_highlights_spy,
-        get: (key: string) => mock_css_highlights.get(key),
-        set: set_highlights_spy,
-        delete: delete_highlights_spy,
-      },
-    })
-    vi.stubGlobal(
-      `Highlight`,
-      class MockHighlight {
-        ranges: Range[]
-        constructor(...ranges: Range[]) {
-          this.ranges = ranges
-        }
-      },
-    )
+    const stub = stub_css_highlights()
+    mock_css_highlights = stub.registry
+    clear_highlights_spy = stub.clear_spy
+    set_highlights_spy = stub.set_spy
+    delete_highlights_spy = stub.delete_spy
   })
 
   // the timing cases below opt into fake timers individually, so undo it centrally

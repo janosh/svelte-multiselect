@@ -73,7 +73,7 @@ test.each([
   expect(css_class_for(class_name, emphasized)).toBe(expected)
 })
 
-test(`editor CSS styles every generated token class`, () => {
+test(`editor CSS styles every token and defines readable dark defaults`, () => {
   const editor_css = readFileSync(`src/lib/code-editor/editor.css`, `utf-8`)
 
   for (const class_name of TOKEN_CLASS_NAMES) {
@@ -82,10 +82,6 @@ test(`editor CSS styles every generated token class`, () => {
   for (const row_class of [`insert`, `delete`]) {
     expect(editor_css).toMatch(new RegExp(`\\.diff-row-${row_class} \\.tok-emph\\s*\\{`))
   }
-})
-
-test(`editor CSS defines readable dark defaults for plain text and the active gutter`, () => {
-  const editor_css = readFileSync(`src/lib/code-editor/editor.css`, `utf-8`)
   const dark_palette =
     /:root\[data-theme='dark'\],[\s\S]*?\n}/.exec(editor_css)?.[0] ?? ``
   expect(dark_palette).toContain(

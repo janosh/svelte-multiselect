@@ -21,7 +21,6 @@
     root,
     on_close,
     label = `page`,
-    css_class,
     only_within,
     also_ignore,
     before_search,
@@ -29,7 +28,6 @@
   }: Props = $props()
 
   const find = create_find_state(() => ({
-    css_class,
     only_within,
     also_ignore,
     before_search,

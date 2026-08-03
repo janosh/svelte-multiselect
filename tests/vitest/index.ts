@@ -1,5 +1,5 @@
 import type { MultiSelectProps } from '$lib'
-import { assert, vi } from 'vite-plus/test'
+import { assert, onTestFinished, vi } from 'vite-plus/test'
 
 // Generic return type keeps call sites concise for DOM-specific assertions.
 // eslint-disable-next-line @typescript-eslint/no-unnecessary-type-parameters
@@ -84,6 +84,33 @@ export const press_key = (
   const event = key_event(key, init)
   target.dispatchEvent(event)
   return event
+}
+
+// happy-dom implements neither CSS.highlights nor Highlight.
+export const stub_css_highlights = () => {
+  const registry = new Map<string, unknown>()
+  const clear_spy = vi.fn(() => registry.clear())
+  const set_spy = vi.fn((key: string, value: unknown) => registry.set(key, value))
+  const delete_spy = vi.fn((key: string) => registry.delete(key))
+  vi.stubGlobal(`CSS`, {
+    highlights: {
+      clear: clear_spy,
+      get: (key: string) => registry.get(key),
+      set: set_spy,
+      delete: delete_spy,
+    },
+  })
+  vi.stubGlobal(
+    `Highlight`,
+    class {
+      readonly ranges: readonly Range[]
+      constructor(...ranges: Range[]) {
+        this.ranges = ranges
+      }
+    },
+  )
+  onTestFinished(() => void vi.unstubAllGlobals())
+  return { registry, clear_spy, set_spy, delete_spy }
 }
 
 // Tracking settlement (rather than awaiting) is the only way to assert a promise is

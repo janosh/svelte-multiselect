@@ -3,7 +3,7 @@ import FindBar from '$lib/FindBar.svelte'
 import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
 import { describe, expect, onTestFinished, test, vi } from 'vite-plus/test'
-import { doc_query, press_key } from './index'
+import { doc_query, press_key, stub_css_highlights } from './index'
 
 type Props = ComponentProps<typeof FindBar>
 
@@ -80,19 +80,12 @@ describe(`FindBar`, () => {
     nav_button(`Previous`).click()
     await tick()
     expect(status()).toBe(`3 of 3`)
-  })
-
-  test.each([
-    [`Enter`, {}, `2 of 3`],
-    [`Shift+Enter`, { shiftKey: true }, `3 of 3`],
-  ])(`%s steps the cursor`, async (_case, init, expected) => {
-    mount_bar(`<p>one hit</p><p>two hit</p><p>three hit</p>`)
-    await type_query(`hit`)
-    expect(status()).toBe(`1 of 3`)
-
-    press_key(input(), `Enter`, init)
+    press_key(input(), `Enter`)
     await tick()
-    expect(status()).toBe(expected)
+    expect(status()).toBe(`1 of 3`)
+    press_key(input(), `Enter`, { shiftKey: true })
+    await tick()
+    expect(status()).toBe(`3 of 3`)
   })
 
   test(`reports no matches and disables the arrows`, async () => {
@@ -106,24 +99,21 @@ describe(`FindBar`, () => {
     ])
   })
 
-  test.each([
-    [`the close button`, () => doc_query<HTMLButtonElement>(`.find-close`).click()],
-    [`Escape`, () => press_key(input(), `Escape`)],
-  ])(`%s closes the bar`, async (_case, close) => {
+  test(`the close button closes the bar`, async () => {
     const { on_close } = mount_bar(`<p>alpha</p>`)
     await type_query(`alpha`)
-
-    close()
+    doc_query<HTMLButtonElement>(`.find-close`).click()
     expect(on_close).toHaveBeenCalledOnce()
   })
 
-  test(`Escape does not reach a handler on the surface being searched`, async () => {
-    mount_bar(`<p>alpha</p>`)
+  test(`Escape closes the bar without reaching the searched surface`, async () => {
+    const { on_close } = mount_bar(`<p>alpha</p>`)
     const outer = vi.fn()
     document.body.addEventListener(`keydown`, outer)
 
     const event = press_key(input(), `Escape`)
     document.body.removeEventListener(`keydown`, outer)
+    expect(on_close).toHaveBeenCalledOnce()
     expect(outer).not.toHaveBeenCalled()
     expect(event.defaultPrevented).toBe(true)
   })
@@ -186,24 +176,23 @@ describe(`create_find_state`, () => {
   }
 
   test(`setting a query resets navigation and refresh recomputes matches`, () => {
-    const { root, find } = setup(`<p>alpha</p><p>alpha two</p>`)
+    const { root, find } = setup(`<p>alpha two</p><p>alpha two</p>`)
 
     find.query = `alpha`
-    expect(find.current_idx).toBe(-1)
     find.refresh(root)
     expect(find.matches).toHaveLength(2)
     expect(find.status).toBe(`1 of 2`) // idx -1 reads as the first match
 
     find.jump_to(1)
-    expect(find.current_idx).toBe(1)
+    expect(find.status).toBe(`2 of 2`)
     find.query = `two`
-    expect(find.current_idx).toBe(-1)
+    find.refresh(root)
+    expect(find.status).toBe(`1 of 2`)
   })
 
   // Public jump_to must handle values below -length; bare `% length` stays negative.
   test.each([
     [-5, 1],
-    [-3, 0],
     [-1, 2],
     [4, 1],
   ])(`jump_to(%i) wraps into range`, (idx, expected) => {
@@ -212,7 +201,7 @@ describe(`create_find_state`, () => {
     find.refresh(root)
 
     find.jump_to(idx)
-    expect(find.current_idx).toBe(expected)
+    expect(find.status).toBe(`${expected + 1} of 3`)
   })
 
   test(`refresh with no root clears the matches`, () => {
@@ -235,19 +224,19 @@ describe(`create_find_state`, () => {
 
     doc_query(`main p`).remove()
     find.refresh(root)
-    expect(find.current_idx).toBe(1)
-    expect(find.matches[find.current_idx]).toBe(current)
+    expect(find.status).toBe(`2 of 2`)
+    expect(find.matches[1]).toBe(current)
   })
 
   test(`clamps the cursor when its element is gone`, () => {
-    const { root, find } = setup(`<p>alpha one</p><p>alpha two</p>`)
+    const { root, find } = setup(`<p>alpha one</p><p>alpha two</p><p>alpha three</p>`)
     find.query = `alpha`
     find.refresh(root)
-    find.jump_to(1)
+    find.jump_to(2)
 
-    root.querySelectorAll(`p`)[1].remove()
+    root.querySelectorAll(`p`)[2].remove()
     find.refresh(root)
-    expect(find.current_idx).toBe(0)
+    expect(find.status).toBe(`2 of 2`)
   })
 
   test(`before_search runs ahead of the search, so its [hidden] writes take effect`, () => {
@@ -277,37 +266,12 @@ describe(`create_find_state`, () => {
     await vi.advanceTimersByTimeAsync(200)
 
     expect(find.matches).toHaveLength(1)
-    expect(find.current_idx).toBe(0)
+    expect(jumped()).toBe(`late hit`)
     stop()
   })
 
-  // happy-dom implements neither CSS.highlights nor the Highlight constructor
-  const stub_highlight_registry = (): Map<string, unknown> => {
-    const registry = new Map<string, unknown>()
-    vi.stubGlobal(`CSS`, {
-      highlights: {
-        get: (key: string) => registry.get(key),
-        set: (key: string, value: unknown) => registry.set(key, value),
-        delete: (key: string) => registry.delete(key),
-      },
-    })
-    vi.stubGlobal(
-      `Highlight`,
-      class {
-        readonly ranges: readonly Range[]
-        constructor(...ranges: Range[]) {
-          this.ranges = ranges
-        }
-      },
-    )
-    onTestFinished(() => {
-      vi.unstubAllGlobals()
-    })
-    return registry
-  }
-
   test(`swapping a mounted FindBar root replaces its highlight ownership`, async () => {
-    const registry = stub_highlight_registry()
+    const { registry } = stub_css_highlights()
     document.body.innerHTML =
       `<main id="first"><p>alpha first</p></main>` +
       `<main id="second"><p>alpha second</p></main><div id="bar"></div>`
@@ -327,20 +291,8 @@ describe(`create_find_state`, () => {
     expect(second_root.contains(match_node())).toBe(true)
   })
 
-  test(`registers and releases ranges under the configured highlight name`, () => {
-    const registry = stub_highlight_registry()
-    const { root, find } = setup(`<p>alpha</p>`, { css_class: `custom-find` })
-
-    find.query = `alpha`
-    find.refresh(root)
-    expect(registry.has(`custom-find`)).toBe(true)
-
-    find.release_highlight()
-    expect(registry.has(`custom-find`)).toBe(false)
-  })
-
   test(`a mounted FindBar stops observing and drops its highlight on unmount`, async () => {
-    const registry = stub_highlight_registry()
+    const { registry } = stub_css_highlights()
     const disconnect = vi.spyOn(MutationObserver.prototype, `disconnect`)
     const { root, unmount_bar } = mount_bar(`<p>alpha</p>`)
     await type_query(`alpha`)

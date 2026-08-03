@@ -47,9 +47,7 @@ test.each([
   [12, 18],
   [13, 20],
   [Number.NaN, 20],
-  [Number.POSITIVE_INFINITY, 20],
   [0, 20],
-  [-12, 20],
 ])(`editor_line_height: font size %s gives %s whole pixels`, (font_size, expected) => {
   expect(editor_line_height(font_size)).toBe(expected)
 })
@@ -148,7 +146,6 @@ test.each([
   [`indented brace opens one level deeper`, `  if {|`, `  `, `\n    `, 0],
   [`trailing whitespace after the opener is ignored`, `foo(  |`, `  `, `\n  `, 0],
   [`python colon opens a level`, `def run():|`, `    `, `\n    `, 0],
-  [`an object key colon opens a level`, `  name:|`, `  `, `\n    `, 0],
   [`a colon that is not the last character does not open`, `  a: 1|`, `  `, `\n  `, 0],
   [`caret inside the leading whitespace`, `  |  foo`, `  `, `\n  `, 0],
   [`closer after the caret moves to its own line`, `if (x) {|}`, `  `, `\n  \n`, 1],

@@ -1,52 +1,35 @@
-// Find-in-page primitives that match across DOM node boundaries. Unlike the
-// highlight_matches attachment, which tests one text node at a time, these
-// concatenate every text node inside a block element before matching, so a query
-// can straddle inline markup (`<b>fo</b>o` matches `foo`).
+// Find across DOM node boundaries by matching concatenated text within block elements.
 
-// Block-level elements a match is attributed to. Text inside one of them is
-// treated as a single string regardless of the inline markup splitting it up.
+// Block elements define match segments regardless of nested inline markup.
 export const DEFAULT_SEGMENT_SELECTOR =
   `p, li, td, th, pre, blockquote, h1, h2, h3, h4, h5, h6, button, label, ` +
   `[role="row"], [role="cell"]`
 
-// Line breaks and replaced elements interrupt a run of text mid-segment: no
-// visible text crosses them, so no match may either.
+// No visible text crosses line breaks or replaced elements.
 const BREAK_SELECTOR = `br, hr, input, textarea, select, img, canvas, svg, video, audio, iframe`
 
-// Elements that introduce no visual break, so text either side of one reads as
-// continuous even where no DEFAULT_SEGMENT_SELECTOR ancestor groups it
+// Inline wrappers do not split otherwise unsegmented text.
 const INLINE_SELECTOR =
   `a, abbr, b, bdi, bdo, cite, code, data, del, dfn, em, i, ins, kbd, mark, q, ` +
   `ruby, s, samp, small, span, strong, sub, sup, time, u, var`
 
-// CSS-hidden content is not detected: getComputedStyle() per element would force
-// layout-sensitive traversal. Ordinary hidden content is cheap to exclude, while
-// hidden="until-found" stays searchable like it does in the browser's find-in-page.
+// Avoid layout-sensitive getComputedStyle checks; cheap hidden content is excluded,
+// while hidden="until-found" stays searchable like native find-in-page.
 const NON_RENDERED_SELECTOR = `script, style, noscript, [hidden]:not([hidden="until-found" i])`
 const FORM_CONTROL_SELECTOR = `textarea, select`
 
-// Same shape as the node_filter of the highlight_matches attachment: return one of
-// the NodeFilter constants to accept or reject a text node.
+// Return a NodeFilter constant to accept or reject a text node.
 export type TextSearchNodeFilter = (node: Node) => number
 
 export type TextSearchOptions = {
-  // Ordered subsequence matching. A fuzzy match highlights the shortest span found
-  // by the greedy scan, including any skipped characters inside that span.
+  // Ordered subsequences highlight their shortest greedy span.
   fuzzy?: boolean
   node_filter?: TextSearchNodeFilter
   segment_selector?: string
 }
 
-// One hit: the range it covers and the block element it was attributed to.
+// One hit: its range and containing block element.
 export type TextMatch = { element: Element; range: Range }
-
-// matches: deduped containing elements in document order. Use occurrences to reach
-// every hit, including multiple hits in one element.
-export type TextSearchResult = {
-  matches: Element[]
-  ranges: Range[]
-  occurrences: TextMatch[]
-}
 
 type SegmentNode = { node: Text; start: number; end: number }
 type TextSegment = { element: Element; nodes: SegmentNode[]; text: string }
@@ -62,8 +45,7 @@ const text_segments = (
 
   const visit = (node: Node): void => {
     if (node instanceof Text) {
-      // empty text nodes span no offsets, and Svelte emits them as anchors between
-      // elements, so ending the segment on one would defeat cross-node matching
+      // Svelte emits empty text anchors; they must not split segments.
       if (!node.data) return
       const parent = node.parentElement
       if (!parent || node_filter(node) !== NodeFilter.FILTER_ACCEPT) {
@@ -74,8 +56,7 @@ const text_segments = (
       let element: Element = parent
       if (enclosing && root.contains(enclosing)) element = enclosing
       else {
-        // no block ancestor inside root, so climb out of inline wrappers instead:
-        // grouping by the immediate parent would split <div>fo<b>o</b></div>
+        // Climb inline wrappers so <div>fo<b>o</b></div> remains one segment.
         while (element !== root && element.matches(INLINE_SELECTOR)) {
           const next_element = element.parentElement
           if (!next_element) break
@@ -91,9 +72,7 @@ const text_segments = (
       segment.nodes.push({ node, start, end: segment.text.length })
       return
     }
-    // Source text, not content: a hit inside one would scroll the reader to nothing. The
-    // segment carries on across it rather than breaking, since the text either side of a
-    // <script> renders as one continuous run.
+    // Source text is invisible, but surrounding rendered text stays continuous.
     if (node instanceof Element && node.matches(NON_RENDERED_SELECTOR)) return
     const is_break =
       node !== root && node instanceof Element && node.matches(break_selector)
@@ -113,9 +92,8 @@ type NormalizedText = { text: string; offsets: MatchBounds[] }
 
 const WHITESPACE = /\s/u
 
-// offsets[i] brackets the source code point(s) that produced normalized unit i.
-// Canonical decomposition and lowercasing can expand a character (é → e + ◌́,
-// İ → i + ◌̇), astral characters span two UTF-16 units, and whitespace collapses.
+// Each normalized unit maps back to its source bounds despite case/decomposition
+// expansion, astral UTF-16 pairs, and collapsed whitespace.
 type NormalizedToken = MatchBounds & { char: string }
 
 const normalize_with_offsets = (source: string): NormalizedText => {
@@ -149,9 +127,7 @@ const normalize_with_offsets = (source: string): NormalizedText => {
     const next_idx = source_idx + char.length
     if (WHITESPACE.test(char)) {
       flush_tokens()
-      // collapse runs so a query with single spaces matches source-formatted markup.
-      // The rest of the run needs no offsets: queries are trimmed, so no match can
-      // begin or end inside one.
+      // Collapse whitespace; trimmed queries cannot start or end inside the remainder.
       if (!in_whitespace) {
         text += ` `
         offsets.push({ start: source_idx, end: next_idx })
@@ -159,8 +135,7 @@ const normalize_with_offsets = (source: string): NormalizedText => {
       }
     } else {
       in_whitespace = false
-      // toLowerCase leaves final sigma distinct from medial sigma, but readers
-      // searching for one mean the other
+      // Readers treat final and medial sigma as equivalent.
       const normalized_char = char.toLowerCase().replaceAll(`ς`, `σ`).normalize(`NFD`)
       for (const normalized_code_point of normalized_char) {
         tokens.push({
@@ -176,11 +151,7 @@ const normalize_with_offsets = (source: string): NormalizedText => {
   return { text, offsets }
 }
 
-// First node reaching min_end. `end` is a running sum of node lengths, so it never
-// decreases and the boundary can be binary searched — non-decreasing is all that needs
-// to hold, so the empty-node guard above is not load-bearing here. Scanning from the
-// front for each of many matches in a segment split across many text nodes is quadratic,
-// and a highlighted code block is one segment of hundreds of nodes.
+// Binary-search cumulative node ends to avoid quadratic scans over tokenized blocks.
 const node_reaching = (nodes: SegmentNode[], min_end: number): SegmentNode => {
   let low = 0
   let high = nodes.length - 1
@@ -269,34 +240,27 @@ export const search_text = (
   root: Element,
   query: string,
   options: TextSearchOptions = {},
-): TextSearchResult => {
+): TextMatch[] => {
   const {
     fuzzy = false,
     node_filter = () => NodeFilter.FILTER_ACCEPT,
     segment_selector = DEFAULT_SEGMENT_SELECTOR,
   } = options
   const normalized_query = normalize_with_offsets(query).text.trim()
-  if (!normalized_query) return { matches: [], ranges: [], occurrences: [] }
+  if (!normalized_query) return []
 
-  const occurrences: TextMatch[] = []
-  const matched_elements = new Set<Element>()
+  const matches: TextMatch[] = []
   for (const segment of text_segments(root, node_filter, segment_selector)) {
     const { text, offsets } = normalize_with_offsets(segment.text)
     for (const { start, end } of match_bounds(text, normalized_query, fuzzy)) {
       const source = source_bounds(offsets, start, end)
-      occurrences.push({
+      matches.push({
         element: segment.element,
         range: range_for_match(segment, source.start, source.end),
       })
-      matched_elements.add(segment.element)
     }
   }
-  // Derive ranges from occurrences so the lists cannot diverge.
-  return {
-    matches: [...matched_elements],
-    ranges: occurrences.map((occurrence) => occurrence.range),
-    occurrences,
-  }
+  return matches
 }
 
 export type HighlightRangesOptions = { css_class?: string; disabled?: boolean }
@@ -307,18 +271,11 @@ type OwnedHighlight = {
   installed?: Highlight
 }
 
-// Register/release one owner's ranges under a CSS Custom Highlight name shared by
-// several of them: the registry holds the union until the last owner goes, then the
-// name reverts to whatever held it before. An outside writer taking the name over
-// wins — this yields it rather than stomping them.
-//
-// One store for the whole package, so highlight_matches and highlight_ranges union
-// their ranges instead of overwriting each other when they share a name. Keyed by
-// registry so a stubbed CSS.highlights cannot leak state into the real one.
+// Union package-owned ranges by registry and name. Releasing the last owner restores
+// the previous highlight; outside writers retain ownership.
 const owned_highlights = new WeakMap<HighlightRegistry, Map<string, OwnedHighlight>>()
 
-// Callers own the feature detection: a registry from an environment with no `Highlight`
-// constructor throws here rather than silently registering nothing.
+// Callers handle feature detection; a missing Highlight constructor throws.
 export const sync_owned_highlight = (
   registry: HighlightRegistry,
   css_class: string,
@@ -347,9 +304,7 @@ export const sync_owned_highlight = (
     else registry.delete(css_class)
     return
   }
-  // Yield to another writer that has taken the name, but not to a vacant one: a
-  // CSS.highlights.clear() elsewhere on the page empties the registry without any new
-  // owner, and reading that as a takeover would strand this highlight permanently.
+  // Yield to another writer, but reclaim a name merely cleared from the registry.
   if (highlight_entry.installed && current && current !== highlight_entry.installed)
     return
   highlight_entry.installed = new Highlight(
@@ -358,10 +313,8 @@ export const sync_owned_highlight = (
   registry.set(css_class, highlight_entry.installed)
 }
 
-// Register ranges under a CSS Custom Highlight name, returning a release function.
-// Several callers may share one name; the registry holds the union of their ranges
-// until the last one releases. Returns undefined where the API is unavailable, in
-// which case callers can still style the ranges themselves.
+// Register ranges and return their release; same-name callers share the union.
+// Returns undefined where CSS Custom Highlights are unavailable.
 export const highlight_ranges = (
   ranges: readonly Range[],
   options: HighlightRangesOptions = {},
@@ -391,9 +344,7 @@ export const create_burst_debounce = (
   let timeout: ReturnType<typeof setTimeout> | undefined
   let burst_started_at: number | undefined
 
-  // The burst is over either way, so the next trigger opens a new one and gets the full
-  // debounce_ms — carrying the old start forward would fire it against a max_wait window
-  // that had already run out.
+  // Reset the max-wait window for the next burst.
   const cancel = (): void => {
     clearTimeout(timeout)
     timeout = undefined
@@ -448,8 +399,7 @@ export type SearchJump = {
   clear: () => void
 }
 
-// Scroll the current match into view and mark it with a temporary class, so a
-// CSS animation can draw attention to it without the caller tracking timers.
+// Scroll to a match and mark it temporarily for CSS animation.
 export const create_search_jump = (options: SearchJumpOptions = {}): SearchJump => {
   const { class_name = `search-match-jump`, duration_ms = 2000, on_clear } = options
   let marked: Element | null = null

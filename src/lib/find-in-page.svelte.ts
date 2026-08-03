@@ -1,6 +1,5 @@
-// Reactive find state: query, matches, current hit, highlights, and mutation observer.
-// Custom chrome should call refresh and observe from separate effects so query updates
-// do not restart the observer.
+// Reactive query, matches, cursor, highlights, and mutation observer. Call refresh and
+// observe from separate effects so query updates do not restart observation.
 
 import { untrack } from 'svelte'
 import {
@@ -11,20 +10,15 @@ import {
   type TextMatch,
 } from './text-search'
 
-// Invisible in the UI, where hits would scroll nowhere. search_text already skips
-// script/style/[hidden]/controls.
-export const IGNORED_SELECTOR = `[aria-hidden="true"], .sr-only`
+// Skip invisible UI; search_text already excludes source, hidden content, and controls.
+const IGNORED_SELECTOR = `[aria-hidden="true"], .sr-only`
 
 export type FindOptions = {
-  // CSS Custom Highlight name; shared names union their ranges in the registry.
-  css_class?: string
-  // Limit matches to these selectors when only a few regions amid open-ended chrome
-  // are searchable.
+  // Restrict matches to selected regions.
   only_within?: string
-  // Further selectors to exclude, on top of IGNORED_SELECTOR rather than instead of it
+  // Further selectors to exclude, on top of the defaults rather than instead of them.
   also_ignore?: string
-  // Called with the trimmed query before search; hide non-matches here because
-  // search_text skips [hidden].
+  // Runs before search; hide non-matches here because search_text skips [hidden].
   before_search?: (query: string) => void
 }
 
@@ -45,7 +39,6 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
   }
 
   let query = $state(``)
-  // One per hit; search_text.matches is element-deduped and would skip later same-element hits.
   let occurrences = $state<TextMatch[]>([])
   let current_idx = $state(-1)
   let release: (() => void) | undefined
@@ -74,10 +67,9 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
 
   // Pass root per call so late-mounted/swapped containers are never searched stale.
   const refresh = (root?: Element | null): void => {
-    const { css_class = `find-match`, before_search } = get_options()
+    const { before_search } = get_options()
     before_search?.(query.trim())
-    // Avoid retriggering caller effects on our writes. Ranges are rebuilt, so preserve
-    // cursor by element and ordinal within it rather than range identity.
+    // Preserve cursor by element and ordinal because ranges are rebuilt.
     const [previous, previous_idx, ordinal_within_element] = untrack(() => {
       const current = occurrences[current_idx]
       const ordinal = current
@@ -87,19 +79,25 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
         : 0
       return [current, current_idx, ordinal] as const
     })
-    const result = root
+    const next_occurrences = root
       ? search_text(root, query, { node_filter: make_node_filter() })
-      : { ranges: [], occurrences: [] }
-    occurrences = result.occurrences
+      : []
+    occurrences = next_occurrences
     // Keep the same hit across re-search when it survives.
-    const same_element = result.occurrences.flatMap((hit, hit_idx) =>
+    const same_element = next_occurrences.flatMap((hit, hit_idx) =>
       previous && hit.element === previous.element ? [hit_idx] : [],
     )
     const preserved_idx =
       same_element[Math.min(ordinal_within_element, same_element.length - 1)]
-    current_idx = preserved_idx ?? Math.min(previous_idx, result.occurrences.length - 1)
+    current_idx = preserved_idx ?? Math.min(previous_idx, next_occurrences.length - 1)
     release?.()
-    release = highlight_ranges(result.ranges, { css_class, disabled: !root })
+    release = highlight_ranges(
+      next_occurrences.map((hit) => hit.range),
+      {
+        css_class: `find-match`,
+        disabled: !root,
+      },
+    )
   }
 
   // Re-search after DOM mutations settle; returns an effect teardown.
@@ -108,7 +106,7 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
       if (!query.trim()) return
       const had_matches = occurrences.length > 0
       refresh(root)
-      // First matches after empty: select the first new hit.
+      // Select the first hit after an empty result.
       if (!had_matches && occurrences.length > 0) jump_to(0)
     })
     return () => {
@@ -121,22 +119,15 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
     get query(): string {
       return query
     },
-    // New query invalidates the old cursor.
+    // A new query invalidates the old cursor.
     set query(next: string) {
       jump.clear()
       query = next
       current_idx = -1
     },
-    // All hits in document order, one entry per hit.
-    get occurrences(): readonly TextMatch[] {
-      return occurrences
-    },
-    // Elements aligned with occurrences, repeated per hit; not search_text.matches.
+    // Elements aligned with occurrences, repeated per hit.
     get matches(): readonly Element[] {
       return occurrences.map((hit) => hit.element)
-    },
-    get current_idx(): number {
-      return current_idx
     },
     // Empty while idle so aria-live stays quiet.
     get status(): string {
@@ -148,7 +139,7 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
     step,
     refresh,
     observe,
-    // refresh effect teardown: drop this owner's ranges from the shared registry.
+    // Drop this owner's ranges from the shared registry.
     release_highlight: (): void => {
       release?.()
       release = undefined
