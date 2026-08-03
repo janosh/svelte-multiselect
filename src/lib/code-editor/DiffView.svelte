@@ -44,9 +44,8 @@
     new_label?: string
     // A created file has no meaningful "before": render the new text as one plain
     // column instead of a diff whose left half is nothing but spacer rows. The header
-    // goes with it. The layout toggle has no second side to show, and the only caller
-    // that creates files (the chat transcript) already names the file and its line
-    // count in its own card header.
+    // goes with it: the layout toggle has no second side to show, and a caller
+    // rendering a created file normally names it in its own surrounding chrome.
     single_col?: boolean
     // Called once per failed diff, in addition to the inline error row.
     on_error?: (message: string) => void
@@ -112,8 +111,13 @@
     } catch (error) {
       if (generation !== load_generation) return
       diff = null
-      error_message = to_error(error).message
-      on_error?.(error_message)
+      // Reported from the local, NOT read back off `error_message`. A backend that
+      // fails synchronously (a missing one throws in resolve_diff_backend) runs this
+      // inside the $effect, where reading the state just written makes the effect
+      // depend on itself and run a second time — diffing and reporting twice.
+      const message = to_error(error).message
+      error_message = message
+      on_error?.(message)
     } finally {
       if (generation === load_generation) is_loading = false
     }
@@ -255,7 +259,7 @@
     const next =
       direction === 1
         ? change_anchors.find((row_idx) => row_idx > current)
-        : change_anchors.toReversed().find((row_idx) => row_idx < current)
+        : change_anchors.findLast((row_idx) => row_idx < current)
     if (next !== undefined) scroll_to_row(next)
   }
 
@@ -279,7 +283,6 @@
     aria-label={label}
     aria-pressed={layout === option}
     class="icon-btn"
-    class:selected={layout === option}
     onclick={() => (layout = option)}
     title={label}
     type="button"
@@ -298,7 +301,9 @@
     class="icon-btn"
     disabled={change_anchors.length === 0}
     onclick={() => go_to_change(direction)}
-    type="button">{glyph}</button
+    title={label}
+    type="button"
+    {@attach tooltip()}>{glyph}</button
   >
 {/snippet}
 
@@ -309,7 +314,8 @@
 {#snippet code_cell(line: DiffLine | null, row_class: string, side: string)}
   <!-- The cell is `white-space: pre`, so any text node Svelte kept between the token
   spans would render as a real space and shift indented code. Svelte trims whitespace at
-  fragment boundaries, so this is safe; diff-view.test.ts pins the reassembled text. -->
+  fragment boundaries, so this is safe; code-editor-diff-view.svelte.test.ts pins the
+  reassembled text of an indented line. -->
   {#if line}
     <span class="code {row_class}" data-side={side}>
       {#each render_tokens(line.text, line.spans) as token (token.start)}

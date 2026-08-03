@@ -9,6 +9,10 @@
  *   .tok-emph         an intra-line diff change; colored by its row's context
  *   .diff-row-insert  added line   (wraps .tok-emph to pick the add color)
  *   .diff-row-delete  removed line (wraps .tok-emph to pick the del color)
+ *
+ * --editor-selection-bg and --editor-gutter-active-color are consumed by a host's own
+ * editor surface, not by DiffView, so nothing in this package reads them. They belong
+ * here anyway: an editor sharing this palette must not fork its own copy.
  */
 
 :root {
@@ -57,9 +61,11 @@
 
 :root[data-theme='dark'],
 :root[data-theme='black'] {
+  --editor-gutter-active-color: var(--text-color, #c9d1d9);
   --editor-selection-bg: rgba(84, 150, 255, 0.35);
 
   /* GitHub Dark. */
+  --tok-plain: var(--text-color, #c9d1d9);
   --tok-comment: #8b949e;
   --tok-string: #a5d6ff;
   --tok-escape: #7ee787;

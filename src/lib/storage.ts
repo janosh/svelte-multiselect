@@ -4,7 +4,7 @@
 // top of it: a persisted enum choice and a most-recently-used list.
 
 import { SvelteSet } from 'svelte/reactivity'
-import { is_object } from './utils'
+import { clamp, is_object } from './utils'
 
 export const storage_get = (key: string): string | null => {
   try {
@@ -121,9 +121,11 @@ export const create_recent_list = <T>(config: RecentListConfig<T>) => {
     // Re-insert a just-forgotten item at its original position (undo support)
     restore: (item: T, index: number, items: T[]): T[] => {
       const rest = without(items, key_of(item))
-      const clamped = Number.isFinite(index)
-        ? Math.min(Math.max(Math.floor(index), 0), rest.length)
-        : 0
+      const clamped = clamp(
+        Number.isFinite(index) ? Math.floor(index) : 0,
+        0,
+        rest.length,
+      )
       return persist(
         [...rest.slice(0, clamped), item, ...rest.slice(clamped)].slice(0, max_items),
       )

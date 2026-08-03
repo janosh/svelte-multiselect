@@ -6,8 +6,7 @@
   import { tick } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { tooltip } from './attachments'
-  import { create_find_state } from './find-in-page.svelte'
-  import type { FindOptions } from './find-in-page.svelte'
+  import { create_find_state, type FindOptions } from './find-in-page.svelte'
   import Icon from './Icon.svelte'
 
   type Props = Omit<HTMLAttributes<HTMLDivElement>, `children`> &

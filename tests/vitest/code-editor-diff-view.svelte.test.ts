@@ -76,6 +76,12 @@ interface MountOptions {
   single_col?: boolean
   on_error?: (message: string) => void
   use_default_backend?: boolean
+  // Reject every diff_text call with this instead of resolving. `unknown` because a
+  // backend crossing an IPC or worker boundary can reject with a plain value.
+  rejects_with?: unknown
+  // Mount with neither a `backend` prop nor a registered default, so the resolver
+  // itself is what fails.
+  no_backend?: boolean
 }
 
 const flush_async = async (): Promise<void> => {
@@ -102,11 +108,20 @@ const query_by_text = (selector: string, text: string): Element => {
 }
 
 const mount_diff = async (
-  result: DiffResult | Error,
-  { use_default_backend = false, options = DEFAULT_OPTIONS, ...rest }: MountOptions = {},
+  result: DiffResult,
+  {
+    use_default_backend = false,
+    no_backend = false,
+    rejects_with,
+    options = DEFAULT_OPTIONS,
+    ...rest
+  }: MountOptions = {},
 ) => {
   const diff_text = vi.fn(async (_args: DiffTextArgs) => {
-    if (result instanceof Error) throw result
+    // A non-Error rejection is exactly what a backend across an IPC, worker or fetch
+    // boundary can produce, so the tests below have to be able to send one.
+    // oxlint-disable-next-line typescript/only-throw-error
+    if (rejects_with !== undefined) throw rejects_with
     return result
   })
   if (use_default_backend) {
@@ -120,7 +135,7 @@ const mount_diff = async (
     new_text: ``,
     filename: `main.rs`,
     options,
-    ...(use_default_backend ? {} : { backend: { diff_text } }),
+    ...(use_default_backend || no_backend ? {} : { backend: { diff_text } }),
     ...rest,
   }
   const instance = mount(DiffView, { target: document.body, props })
@@ -299,11 +314,57 @@ describe(`states and backend wiring`, () => {
     expect(query_element(`[data-empty]`).textContent).toContain(`9 lines`)
   })
 
-  test(`reports backend failures inline and through on_error`, async () => {
+  // A backend reaching the component over IPC, a worker or fetch can reject with
+  // anything, and an unconfigured one fails in the resolver before any call is made.
+  // All three have to reach the same inline alert rather than an unhandled rejection.
+  test.each([
+    [`an Error`, { rejects_with: new Error(`backend exploded`) }, `backend exploded`],
+    [`a non-Error rejection`, { rejects_with: `string failure` }, `string failure`],
+    [`no backend at all`, { no_backend: true }, `No DiffBackend available`],
+  ])(`reports %s inline and through on_error`, async (_case, failure, message) => {
     const on_error = vi.fn()
-    await mount_diff(new Error(`backend exploded`), { on_error })
-    expect(query_element(`[role='alert']`).textContent).toContain(`backend exploded`)
-    expect(on_error).toHaveBeenCalledWith(`backend exploded`)
+    await mount_diff(diff_result(), { ...failure, on_error })
+
+    expect(query_element(`[role='alert']`).textContent).toContain(message)
+    expect(on_error).toHaveBeenCalledOnce()
+    expect(on_error.mock.calls[0][0]).toContain(message)
+    expect(document.querySelector(`[data-empty]`)).toBeNull()
+  })
+
+  test(`a slow first diff cannot overwrite the result of a later one`, async () => {
+    // Retyping in an editor re-diffs on every keystroke, so responses routinely land
+    // out of order; without the generation guard the stale one wins and the pane shows
+    // a diff of text nobody has anymore.
+    const resolvers: ((result: DiffResult) => void)[] = []
+    const diff_text = vi.fn(
+      (_args: DiffTextArgs) =>
+        new Promise<DiffResult>((resolve) => resolvers.push(resolve)),
+    )
+    // $state so reassigning a prop re-runs the component's effect the way a parent
+    // re-render would; that is why this file carries the `.svelte` infix.
+    const props = $state({
+      old_text: `a`,
+      new_text: `stale`,
+      filename: `main.rs`,
+      options: DEFAULT_OPTIONS,
+      backend: { diff_text },
+    })
+    const instance = mount(DiffView, { target: document.body, props })
+    onTestFinished(() => unmount(instance))
+    await flush_async()
+
+    props.new_text = `fresh`
+    await flush_async()
+    expect(resolvers).toHaveLength(2)
+
+    const line_result = (text: string) =>
+      rows_result([diff_row(`insert`, null, diff_line(1, text))], { newLineCount: 1 })
+    resolvers[1](line_result(`fresh`)) // newer request answers first
+    await flush_async()
+    resolvers[0](line_result(`stale`))
+    await flush_async()
+
+    expect(code_texts()).toEqual([`fresh`])
   })
 
   test(`uses the registered backend and forwards reactive diff arguments`, async () => {
@@ -316,7 +377,9 @@ describe(`states and backend wiring`, () => {
         use_default_backend: true,
       },
     )
-    expect(diff_text).toHaveBeenCalledWith({
+    // Exactly once: the load effect must not re-run off its own state writes, or every
+    // mount pays for two diffs of a document that can be megabytes.
+    expect(diff_text).toHaveBeenCalledExactlyOnceWith({
       oldText: `left`,
       newText: `right`,
       filename: `main.rs`,

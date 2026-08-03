@@ -24,6 +24,9 @@ export function get_uuid(): string {
 export const is_object = (val: unknown): val is Record<string, unknown> =>
   typeof val === `object` && val !== null
 
+export const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max)
+
 export const slug_to_title = (slug: string): string =>
   slug
     .replaceAll(`-`, ` `)

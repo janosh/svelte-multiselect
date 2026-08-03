@@ -85,3 +85,13 @@ test(`editor CSS styles every generated token class`, () => {
     expect(editor_css).toMatch(new RegExp(`\\.diff-row-${row_class} \\.tok-emph\\s*\\{`))
   }
 })
+
+test(`editor CSS defines readable dark defaults for plain text and the active gutter`, () => {
+  const editor_css = readFileSync(`src/lib/code-editor/editor.css`, `utf-8`)
+  const dark_palette =
+    /:root\[data-theme='dark'\],[\s\S]*?\n}/.exec(editor_css)?.[0] ?? ``
+  expect(dark_palette).toContain(
+    `--editor-gutter-active-color: var(--text-color, #c9d1d9);`,
+  )
+  expect(dark_palette).toContain(`--tok-plain: var(--text-color, #c9d1d9);`)
+})

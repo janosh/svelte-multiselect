@@ -79,14 +79,13 @@
   let recent_action_ids = $state<string[]>([])
 
   const get_action_id = (action: CmdAction): string => `${action.id ?? action.label}`
-  const recent_limit = $derived(
-    Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
-  )
   const recent_actions = $derived.by(() =>
     recent_actions_key
       ? create_recent_list<string>({
           storage_key: recent_actions_key,
-          max_items: recent_limit,
+          max_items: Number.isFinite(max_recent)
+            ? Math.max(0, Math.floor(max_recent))
+            : 20,
           key_of: (action_id) => action_id,
           is_valid: (value): value is string => typeof value === `string`,
         })
@@ -133,7 +132,7 @@
 
   // recently triggered actions first (most recent on top), rest keep original order
   const sorted_actions = $derived.by(() => {
-    if (!recent_actions_key || !action_ids_are_unique || recent_action_ids.length === 0)
+    if (!recent_actions || !action_ids_are_unique || recent_action_ids.length === 0)
       return actions
     // drop stale persisted ids (actions removed/renamed since) so they don't
     // occupy low ranks and push real recents below non-recent actions

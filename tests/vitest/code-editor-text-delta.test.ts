@@ -2,6 +2,7 @@ import {
   apply_splice,
   build_line_index,
   derive_line_splice,
+  editor_text,
   line_at_offset,
   line_index_length,
   line_index_text,
@@ -74,13 +75,19 @@ test.each([
   expect(line_at_offset(three_lines, offset)).toBe(line_idx)
 })
 
+// A textarea reports LF-only, BOM-free text, so the index has to be built in that
+// shape: one unit of drift makes `value_length` mismatch on the very first keystroke
+// and every edit of the session falls back to a full resend.
 test.each([
   [`trailing crlf`, `one\r\ntwo\r\n`, [`one`, `two`, ``]],
   [`mixed cr, crlf, lf`, `one\r\ntwo\rthree\nfour`, [`one`, `two`, `three`, `four`]],
+  [`a leading BOM`, `\uFEFFone\r\ntwo`, [`one`, `two`]],
+  [`a BOM later in the text, which is real content`, `a\uFEFFb`, [`a\uFEFFb`]],
 ])(`build_line_index normalizes %s to match the textarea`, (_label, text, lines) => {
   const index = build_line_index(text)
   expect(index.lines).toEqual(lines)
   expect(line_index_length(index)).toBe(lines.join(`\n`).length)
+  expect(editor_text(text)).toBe(lines.join(`\n`))
 })
 
 test.each<[string, string, string, boolean]>([
@@ -99,6 +106,9 @@ test.each<[string, string, string, boolean]>([
   [`al|pha\nbeta`, `insertFromDrop`, `alxpha\nbeta`, false],
   [`al|pha\nbeta`, `insertReplacementText`, `alpha\nbeta`, false],
   [`al|pha\nbeta`, `formatBold`, `alpha\nbeta`, false],
+  [`al|pha\nbeta`, `constructor`, `alxpha\nbeta`, false],
+  [`al|pha\nbeta`, `toString`, `alxpha\nbeta`, false],
+  [`al|pha\nbeta`, `valueOf`, `alxpha\nbeta`, false],
   [`al|pha\nbeta`, ``, `alxpha\nbeta`, false],
 ])(`derive_line_splice %s + %s`, (before_marked, input_type, next_value, derivable) => {
   const { splice } = derive_for(before_marked, input_type, next_value)

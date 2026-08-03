@@ -40,6 +40,18 @@ const type_query = async (query: string) => {
 const jumped = () => document.querySelector(`.search-match-jump`)?.textContent
 
 describe(`FindBar`, () => {
+  // Focus is the caller's call, not the component's: a bar rendered alongside its
+  // content (rather than opened on a hotkey) must not steal focus on mount.
+  test(`focus_input focuses and selects the query, and mounting does not`, async () => {
+    const { bar } = mount_bar(`<p>alpha</p>`)
+    await type_query(`alpha`)
+    expect(document.activeElement).not.toBe(input())
+
+    bar.focus_input()
+    expect(document.activeElement).toBe(input())
+    expect([input().selectionStart, input().selectionEnd]).toEqual([0, `alpha`.length])
+  })
+
   test(`counts matches, walks them with the arrows and wraps at both ends`, async () => {
     mount_bar(`<p>alpha</p><p>beta alpha</p><ul><li>alpha</li></ul>`)
     expect(status()).toBe(``) // quiet until there is something to say

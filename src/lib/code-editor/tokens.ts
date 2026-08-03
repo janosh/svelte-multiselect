@@ -1,14 +1,14 @@
-// Decoder for the flat span encoding the Rust backend sends (SpanList in types.ts).
-// Its offsets are UTF-16 code units, matching Rust's `encode_utf16`, so they index a JS
-// string directly: slicing a line by span offsets is always correct, including for
-// astral-plane characters (an emoji spans two code units and never gets split, because
-// the backend never emits a boundary inside a surrogate pair).
+// Decoder for the flat span encoding a backend sends (SpanList in types.ts). Its
+// offsets are UTF-16 code units, so they index a JS string directly: slicing a line by
+// span offsets is always correct, including for astral-plane characters (an emoji spans
+// two code units and never gets split, because the backend never emits a boundary
+// inside a surrogate pair).
 //
 // The decoder is deliberately defensive. A malformed span list is a backend bug, but
 // throwing here would blank the whole editor; every degradation below falls back to
 // unstyled text instead.
 
-import { clamp } from './edit-ops'
+import { clamp } from '../utils'
 import { CLASS_MASK, EMPHASIS_BIT, TOKEN_CLASS_NAMES } from './types'
 import type { SpanList, TokenClassName } from './types'
 
@@ -98,6 +98,6 @@ export const render_tokens = (text: string, spans: SpanList): RenderedToken[] =>
 // source of truth for those names: `tok-<name>` is styled from the `--tok-<name>`
 // variables in editor.css, and `tok-emph` is the intra-line diff highlight, which
 // composes with any class and takes its color from the enclosing row.
-// tests/editor/token-css.test.ts fails if editor.css drifts.
+// tests/vitest/code-editor-tokens.test.ts fails if editor.css drifts.
 export const css_class_for = (class_name: TokenClassName, emphasized: boolean): string =>
   emphasized ? `tok-${class_name} tok-emph` : `tok-${class_name}`

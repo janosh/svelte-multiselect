@@ -5,10 +5,11 @@
 // `textarea.selectionStart` and the span offsets in types.ts.
 //
 // The tail of the file (from `editor_line_height` down) is a second, unrelated group:
-// view-layer arithmetic shared by anything that renders lines, including the diff and
-// the chat's file-edit cards, none of which hold an `EditorState`.
+// view-layer arithmetic shared by anything that renders lines, DiffView included, none
+// of which hold an `EditorState`.
 
 import { SvelteSet } from 'svelte/reactivity'
+import { clamp } from '../utils'
 
 export interface EditorState {
   text: string
@@ -54,9 +55,6 @@ export const apply_range_edit = (state: EditorState, edit: RangeEdit): EditorSta
   selection_start: edit.selection_start,
   selection_end: edit.selection_end,
 })
-
-export const clamp = (value: number, low: number, high: number): number =>
-  Math.min(Math.max(value, low), high)
 
 // Selections arriving from a DOM textarea are always sane, but tests and
 // programmatic callers are not, and an inverted selection would silently corrupt
@@ -316,10 +314,9 @@ export const auto_close_pair = (
 // Row height for both the editor and the diff view, in whole pixels. Integer rather
 // than a unitless multiplier because the editor stacks a transparent textarea on a
 // token overlay: a fractional line height rounds differently in the two layers and
-// drifts them apart by whole lines over a few thousand rows. Shared so the two views
-// cannot disagree. They previously used 1.5 and 1.55, which agree at the default 13px
-// and differ by a pixel at most other sizes the settings schema allows, so rows jumped
-// when switching between them.
+// drifts them apart by whole lines over a few thousand rows. Shared so an editor and a
+// diff rendered side by side cannot pick multipliers that agree at one font size and
+// differ by a pixel at every other, making rows jump when switching between them.
 export const editor_line_height = (font_size: number): number => {
   // Zero and negative sizes fall back rather than clamping: they are as unusable as
   // NaN, and clamping would give 1px rows that make the virtualizer render everything.

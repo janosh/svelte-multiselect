@@ -1,11 +1,11 @@
-// Turns a textarea `input` event into a line splice for the Rust backend
+// Turns a textarea `input` event into a line splice for an `EditorBackend`
 // (ApplyEditArgs in types.ts) without re-splitting the document on every keystroke:
 // splitting a 50k-line file per character is O(document) per keypress and reallocates
 // it whole each time, which is what makes naive editors unusable on large files.
 //
 // THE INVARIANT: returning `null` is ALWAYS safe, returning a wrong splice NEVER is.
 // `null` means "I cannot prove what changed, resend the whole document" and costs one
-// full `editor_set_text` round trip; a wrong splice desynchronizes the backend's line
+// full `set_text` round trip; a wrong splice desynchronizes the backend's line
 // buffer from what the user sees, so every later highlight paints the wrong tokens
 // onto the wrong lines and nothing tells the user. Every ambiguous case below
 // therefore bails out. The backend's cross-check is a safety net, not
@@ -13,10 +13,10 @@
 // catches a mis-derived splice.
 //
 // Offsets are UTF-16 code units (what `selectionStart` reports). A textarea's `value`
-// is always LF regardless of the file's real EOL, so CRLF handling belongs on the
-// Rust side, not here.
+// is always LF regardless of the file's real EOL, so reproducing CRLF on save belongs
+// to the backend (see `OpenDocResult.eol`), not here.
 
-import { clamp } from './edit-ops'
+import { clamp } from '../utils'
 
 export interface LineIndex {
   lines: string[]
@@ -56,25 +56,28 @@ const CONTEXT_CHECK_CHARS = 32
 // so a full resync is affordable.
 type ChangeShape = `replace_selection` | `delete_backward` | `delete_forward`
 
-const INPUT_TYPE_SHAPES: Record<string, ChangeShape | undefined> = {
-  insertText: `replace_selection`,
-  insertFromPaste: `replace_selection`,
-  insertFromPasteAsQuotation: `replace_selection`,
-  insertFromYank: `replace_selection`,
-  insertLineBreak: `replace_selection`,
-  insertParagraph: `replace_selection`,
-  // Cut and "delete the selection" replace exactly the selected range.
-  deleteByCut: `replace_selection`,
-  deleteContent: `replace_selection`,
-  deleteContentBackward: `delete_backward`,
-  deleteWordBackward: `delete_backward`,
-  deleteSoftLineBackward: `delete_backward`,
-  deleteHardLineBackward: `delete_backward`,
-  deleteContentForward: `delete_forward`,
-  deleteWordForward: `delete_forward`,
-  deleteSoftLineForward: `delete_forward`,
-  deleteHardLineForward: `delete_forward`,
-}
+const INPUT_TYPE_SHAPES: Record<string, ChangeShape | undefined> = Object.assign(
+  Object.create(null),
+  {
+    insertText: `replace_selection`,
+    insertFromPaste: `replace_selection`,
+    insertFromPasteAsQuotation: `replace_selection`,
+    insertFromYank: `replace_selection`,
+    insertLineBreak: `replace_selection`,
+    insertParagraph: `replace_selection`,
+    // Cut and "delete the selection" replace exactly the selected range.
+    deleteByCut: `replace_selection`,
+    deleteContent: `replace_selection`,
+    deleteContentBackward: `delete_backward`,
+    deleteWordBackward: `delete_backward`,
+    deleteSoftLineBackward: `delete_backward`,
+    deleteHardLineBackward: `delete_backward`,
+    deleteContentForward: `delete_forward`,
+    deleteWordForward: `delete_forward`,
+    deleteSoftLineForward: `delete_forward`,
+    deleteHardLineForward: `delete_forward`,
+  },
+)
 
 const refresh_starts = (index: LineIndex, from_line: number): void => {
   const { lines, starts } = index
@@ -92,18 +95,20 @@ const refresh_starts = (index: LineIndex, from_line: number): void => {
   starts[lines.length] = Math.max(0, offset - 1) // -1: no final separator exists
 }
 
+// Public because a host that strips a BOM on open has to write the same one back on
+// save; sharing the constant is what keeps the two ends from disagreeing.
 export const BOM = `\uFEFF`
 
-// The shape a textarea hands text back in: LF endings and no BOM. The editor
-// buffer, the line index behind it and the agent's file tools all have to agree
-// on this. When they disagreed, saving a CRLF file silently rewrote every line.
+// The shape a textarea hands text back in: LF endings and no BOM. The editor buffer,
+// the line index behind it and any host code that writes the file all have to agree on
+// this. When they disagreed, saving a CRLF file silently rewrote every line.
 export const editor_text = (raw: string): string =>
   (raw.startsWith(BOM) ? raw.slice(BOM.length) : raw).replaceAll(/\r\n?/g, `\n`)
 
 // Line endings are normalized here rather than trusted to the caller: an index built
 // straight from file text would be longer than the always-LF textarea by one unit per
 // CRLF, `value_length` would never match, and every keystroke of the whole session
-// would fall back to a full resync. A Windows-authored INCAR would never use the
+// would fall back to a full resync, so a Windows-authored file would never use the
 // incremental path at all. Lone CRs too, as the textarea normalizes those as well.
 export const build_line_index = (text: string): LineIndex => {
   const index: LineIndex = { lines: editor_text(text).split(`\n`), starts: [] }
