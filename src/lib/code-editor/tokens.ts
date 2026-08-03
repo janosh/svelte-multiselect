@@ -1,12 +1,8 @@
-// Decoder for the flat span encoding a backend sends (SpanList in types.ts). Its
-// offsets are UTF-16 code units, so they index a JS string directly: slicing a line by
-// span offsets is always correct, including for astral-plane characters (an emoji spans
-// two code units and never gets split, because the backend never emits a boundary
-// inside a surrogate pair).
+// Decode backend SpanList (types.ts). UTF-16 offsets index JS strings directly; the
+// backend never emits a boundary inside a surrogate pair.
 //
-// The decoder is deliberately defensive. A malformed span list is a backend bug, but
-// throwing here would blank the whole editor; every degradation below falls back to
-// unstyled text instead.
+// Malformed spans are a backend bug, but throwing would blank the editor; fall back to
+// unstyled text.
 
 import { clamp } from '../utils'
 import { CLASS_MASK, EMPHASIS_BIT, TOKEN_CLASS_NAMES } from './types'
@@ -21,13 +17,8 @@ export interface DecodedSpan {
 
 const PLAIN: TokenClassName = `plain`
 
-// Decode one line's spans into a gap-free, non-overlapping, strictly increasing list
-// of ranges covering `[0, line_length)`. Two degenerate inputs the renderers rely on:
-// `line_length === 0` returns `[]` (an empty line has nothing to paint, and a
-// zero-width span would produce a stray empty `<span>` per line), and an empty or
-// entirely unusable span list on a non-empty line returns a single Plain span covering
-// the line, so callers never special-case the "not highlighted / past the highlight
-// size limit" path.
+// Gap-free ranges covering [0, line_length). Empty lines yield []; unusable spans on a
+// non-empty line yield one Plain span, so renderers need no unhighlighted special case.
 export const decode_spans = (spans: SpanList, line_length: number): DecodedSpan[] => {
   const length = Number.isFinite(line_length) ? Math.max(0, Math.floor(line_length)) : 0
   if (length === 0) return []
@@ -74,8 +65,7 @@ export const decode_spans = (spans: SpanList, line_length: number): DecodedSpan[
       emphasized: (packed & EMPHASIS_BIT) !== 0,
     })
   }
-  // Never empty: the guards above ensure at least one pair covers a non-empty line,
-  // and a gap before the first span is filled by the prefix push.
+  // Non-empty lines always yield a span; prefix gaps are filled above.
   return decoded
 }
 
@@ -85,8 +75,7 @@ export interface RenderedToken {
   css: string
 }
 
-// One line's spans resolved into the pieces a renderer emits. Shared by the editor and
-// the diff view, keeping the wire rule for UTF-16 span slicing in one place.
+// Shared editor/diff tokenization; UTF-16 slicing stays in one place.
 export const render_tokens = (text: string, spans: SpanList): RenderedToken[] =>
   decode_spans(spans, text.length).map((span) => ({
     start: span.start,
@@ -94,10 +83,7 @@ export const render_tokens = (text: string, spans: SpanList): RenderedToken[] =>
     css: css_class_for(span.class_name, span.emphasized),
   }))
 
-// The class string every renderer (editor and diff) puts on a token element, and the
-// source of truth for those names: `tok-<name>` is styled from the `--tok-<name>`
-// variables in editor.css, and `tok-emph` is the intra-line diff highlight, which
-// composes with any class and takes its color from the enclosing row.
-// tests/vitest/code-editor-tokens.test.ts fails if editor.css drifts.
+// tok-<name> maps to --tok-<name> in editor.css; tok-emph gets intra-line diff color
+// from its row. code-editor-tokens.test.ts guards CSS class drift.
 export const css_class_for = (class_name: TokenClassName, emphasized: boolean): string =>
   emphasized ? `tok-${class_name} tok-emph` : `tok-${class_name}`

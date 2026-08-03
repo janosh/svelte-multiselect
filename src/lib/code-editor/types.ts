@@ -1,17 +1,8 @@
-// Data shapes the editor and diff renderers consume, and the two backend
-// contracts that produce them.
+// Wire shapes for editor/diff renderers and their backends. Hosts supply expensive
+// span/diff work; components only render.
 //
-// Neither component computes anything expensive itself: syntax spans and diffs
-// come from a backend the host supplies. That keeps the engine free — a native
-// process over IPC, a WASM module, a web worker, a server route — while the
-// components stay pure rendering.
-//
-// CASING: every field below is a payload crossing a process or worker boundary,
-// so these mirror a wire format rather than following the codebase's snake_case
-// convention for code we author. camelCase is what Tauri, JSON-RPC and most HTTP
-// APIs produce, so a host adapter can forward these objects untouched instead of
-// rebuilding each one field by field. Method names stay snake_case: those are
-// this library's own API.
+// Payload fields stay camelCase for Tauri/JSON-RPC/HTTP forwarding; library method
+// names stay snake_case.
 
 // Semantic token classes. The index is the wire value and the string is the
 // `--tok-<name>` CSS variable suffix, so the renderer needs no other lookup.
@@ -41,10 +32,8 @@ export type TokenClassName = (typeof TOKEN_CLASS_NAMES)[number]
 export const EMPHASIS_BIT = 0x80
 export const CLASS_MASK = 0x7f
 
-// A contiguous tiling of one line as flat `[start, packed, start, packed, ...]` pairs,
-// each span running until the next `start` or the end of the line, so no end offset is
-// transmitted. `start` is a UTF-16 code unit offset, so it indexes a JS string
-// directly. An empty list means the whole line is unstyled.
+// Flat [start, packed, ...] tiling; each span ends at the next start or EOL. Starts are
+// UTF-16 offsets. Empty means the whole line is unstyled.
 export type SpanList = number[]
 
 export type Eol = `lf` | `crlf`
@@ -70,11 +59,8 @@ export interface DiffLine {
   spans: SpanList
 }
 
-// Side-by-side renders `old` on the left and `new` on the right, substituting a spacer
-// where a side is absent; a `replace` row carries both sides with emphasis spans on
-// each. Unified walks the same rows but must NOT emit both sides of an `equal` row
-// (same text on both) or every context line doubles: emit one line showing both line
-// numbers, and split only `delete`, `insert` and `replace`.
+// Side-by-side renders old/new with spacers; replace carries both with emphasis.
+// Unified must emit equal once with both numbers or every context line doubles.
 export interface DiffRow {
   kind: RowKind
   old: DiffLine | null
@@ -82,9 +68,8 @@ export interface DiffRow {
 }
 
 export interface DiffHunk {
-  // 1-BASED, matching DiffLine.lineNo. Expanding the elided run above a hunk derives
-  // its first line as `oldStart - skippedBefore`, so a switch to 0-based would
-  // silently show neighbouring lines rather than fail.
+  // 1-based like DiffLine.lineNo; expanded gaps start at oldStart - skippedBefore.
+  // 0-based would silently show the wrong neighbors.
   oldStart: number
   newStart: number
   // Unchanged lines elided before this hunk, for the "N unchanged lines" expander.
@@ -99,13 +84,9 @@ export interface DiffResult {
   language: string
   oldLineCount: number
   newLineCount: number
-  // Unchanged lines elided after the last hunk, counted on the new side in the
-  // same convention as newLineCount so the trailing separator never mixes the
-  // two. Applies to both sides: the run is unchanged, so each elides the same.
+  // Trailing unchanged lines, counted like newLineCount; both sides elide equally.
   skippedAfter: number
-  // Without these, a change that only adds or removes the final newline renders
-  // as a row whose two columns show identical text with no emphasis. Mark the
-  // side that lacks one, as git does.
+  // Marks final-newline-only changes, whose text rows otherwise look identical.
   oldEndsWithNewline: boolean
   newEndsWithNewline: boolean
   // A guard fired (diff deadline, or lines too long to word-diff). The result is
@@ -151,16 +132,10 @@ export interface ApplyEditArgs {
   startLine: number
   removedCount: number
   insertedLines: string[]
-  // The frontend's predicted line count after the splice, and NOT a check on the
-  // derivation: both sides compute `their_line_count - removedCount +
-  // insertedLines.length`, so those terms cancel and the comparison reduces to "did
-  // the two buffers already agree on their line count". Detecting a desynchronized
-  // buffer is worth having, but a wrong splice with the right line count passes
-  // unnoticed. expectedTotalLength catches that.
+  // Predicted post-splice count only detects prior line-count desync; a wrong splice
+  // with the right count passes. expectedTotalLength guards the derivation.
   expectedLineCount: number
-  // UTF-16 length of the textarea value the splice was derived from, read off the
-  // value itself rather than recomputed from the splice. The one field that can
-  // disagree with a bad derivation, so the one that actually guards it.
+  // UTF-16 textarea length read directly from the value: the real derivation guard.
   expectedTotalLength: number
 }
 
@@ -182,9 +157,7 @@ export interface DiffTextArgs {
   contextLines: number
 }
 
-// A stateful syntax-highlighting engine. `open_doc` registers a buffer the
-// remaining calls address by id, so the engine can highlight incrementally
-// instead of re-parsing the document on every keystroke.
+// Stateful highlighter: open_doc registers a buffer; later calls address it by id.
 export interface EditorBackend {
   open_doc: (args: OpenDocArgs) => Promise<OpenDocResult>
   // Spans for `[startLine, endLine)`, one entry per line.
@@ -202,9 +175,7 @@ export interface DiffBackend {
 
 // === Default backends ===
 //
-// DiffView accepts a `backend` override, but an app normally has one diff engine and
-// would otherwise thread it through every call site. Register it once at startup and
-// keep the override for tests or exceptional views.
+// Register the usual DiffBackend once; the prop override remains for tests/special views.
 
 let default_diff_backend: DiffBackend | null = null
 

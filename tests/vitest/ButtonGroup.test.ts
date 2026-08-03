@@ -415,9 +415,7 @@ describe(`ButtonGroup`, () => {
   // matbench-discovery's SelectToggle put an info link inside the button, which is an
   // invalid content model. The `option` snippet renders inside the button and so cannot
   // fix it; this one is a sibling, which is the whole point.
-  // The wrapper is opt-in because a downstream consumer turned the component down partly
-  // over its `.segmented > button` rules, which stop matching once every button gains a
-  // parent.
+  // Opt-in: wrappers break consumers' `.segmented > button` selectors.
   test.each([
     [`options`, `nothing is slotted`, undefined, 0],
     [`option`, `a suffix is slotted`, info_link, 3],

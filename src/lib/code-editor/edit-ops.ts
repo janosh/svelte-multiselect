@@ -75,9 +75,24 @@ const touched_line_range = (
 
 const leading_whitespace = (line: string): string => /^[ \t]*/.exec(line)?.[0] ?? ``
 
+// Map a column through a rewrite; positions before its first difference stay fixed.
+// Positions inside removed text collapse to that difference.
+const map_rewritten_column = (
+  line: string,
+  next_line: string,
+  column: number,
+): number => {
+  const limit = Math.min(line.length, next_line.length)
+  let edit_column = 0
+  while (edit_column < limit && line[edit_column] === next_line[edit_column])
+    edit_column++
+  if (column < edit_column) return column
+  return Math.max(edit_column, column + next_line.length - line.length)
+}
+
 // Rewrite touched lines as one RangeEdit. make_rewrite sees the full block first;
-// null skips a no-op that would collapse selection. The first-line delta shifts
-// selection_start; total delta shifts selection_end.
+// null skips a no-op that would collapse selection. Selection endpoints map through
+// their own line's edit; preceding line deltas shift only the end's line start.
 const rewrite_block = (
   state: EditorState,
   make_rewrite: (lines: string[]) => ((line: string) => string) | null,
@@ -88,30 +103,39 @@ const rewrite_block = (
   const rewrite_line = make_rewrite(lines)
   if (!rewrite_line) return null
 
-  let first_delta = 0
   let total_delta = 0
-  const next_block = lines
-    .map((line, line_idx) => {
-      const next_line = rewrite_line(line)
-      const delta = next_line.length - line.length
-      if (line_idx === 0) first_delta = delta
-      total_delta += delta
-      return next_line
-    })
-    .join(`\n`)
+  const next_lines = lines.map((line) => {
+    const next_line = rewrite_line(line)
+    total_delta += next_line.length - line.length
+    return next_line
+  })
   // A no-op would cost an undo entry, emit a pointless splice, and swallow the key.
   if (total_delta === 0) return null
 
+  const first_line = lines[0]
+  const next_first_line = next_lines[0]
   const next_start =
-    sel_start <= block_start
+    sel_start === block_start && sel_start < sel_end
       ? block_start
-      : Math.max(block_start, sel_start + first_delta)
+      : block_start +
+        map_rewritten_column(first_line, next_first_line, sel_start - block_start)
+  const last_line_idx = lines.length - 1
+  const last_line = lines[last_line_idx]
+  const next_last_line = next_lines[last_line_idx]
+  const last_line_start = block_end - last_line.length
+  const next_last_line_start =
+    last_line_start + total_delta - (next_last_line.length - last_line.length)
+  const next_end =
+    sel_end > block_end
+      ? sel_end + total_delta
+      : next_last_line_start +
+        map_rewritten_column(last_line, next_last_line, sel_end - last_line_start)
   return {
     range_start: block_start,
     range_end: block_end,
-    replacement: next_block,
+    replacement: next_lines.join(`\n`),
     selection_start: next_start,
-    selection_end: Math.max(next_start, sel_end + total_delta),
+    selection_end: Math.max(next_start, next_end),
   }
 }
 
@@ -284,7 +308,7 @@ export const split_text_lines = (text: string): string[] => {
 export const count_lines = (text: string): number =>
   text === `` ? 0 : split_text_lines(text).length
 
-interface LineWindow {
+export interface LineWindow {
   start: number // inclusive line index
   end: number // exclusive line index
 }

@@ -40,10 +40,8 @@ export type TextSearchOptions = {
 // One hit: the range it covers and the block element it was attributed to.
 export type TextMatch = { element: Element; range: Range }
 
-// matches lists the block elements containing at least one range, in document order.
-// It is DEDUPLICATED, so two hits inside one paragraph collapse to a single entry —
-// step through `occurrences` instead when every hit needs to be reachable, and use
-// `matches` only to address the containing elements.
+// matches: deduped containing elements in document order. Use occurrences to reach
+// every hit, including multiple hits in one element.
 export type TextSearchResult = {
   matches: Element[]
   ranges: Range[]
@@ -293,8 +291,7 @@ export const search_text = (
       matched_elements.add(segment.element)
     }
   }
-  // Derived rather than accumulated in parallel, so a range can never go missing from
-  // one list while the other still counts it.
+  // Derive ranges from occurrences so the lists cannot diverge.
   return {
     matches: [...matched_elements],
     ranges: occurrences.map((occurrence) => occurrence.range),

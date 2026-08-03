@@ -1,14 +1,10 @@
-// localStorage that never throws: a disabled store, a private-mode window or a full
-// quota degrades every call to a no-op, so persistence stays best-effort and the UI
-// state it backs still works in memory. Plus the two patterns that keep reappearing on
-// top of it: a persisted enum choice and a most-recently-used list.
+// Best-effort localStorage: disabled/private/full stores become no-ops so in-memory UI
+// state still works. Also provides persisted choices and MRU lists.
 
 import { SvelteSet } from 'svelte/reactivity'
 import { clamp, is_object } from './utils'
 
-// The one place the best-effort policy lives: a quota, a private-mode window or a
-// disabled store throws rather than failing softly, and none of that is worth
-// propagating to a caller whose state already works in memory.
+// Single catch-all for storage failures; callers retain working state in memory.
 const guarded = <Result>(access: () => Result, fallback: Result): Result => {
   try {
     return access()
@@ -26,8 +22,7 @@ export const storage_set = (key: string, value: string): void =>
 export const storage_remove = (key: string): void =>
   guarded(() => globalThis.localStorage?.removeItem(key), undefined)
 
-// Parsed storage is untrusted, so the fallback's type must not pretend to validate it.
-// Callers narrow the result before putting it into typed state.
+// Parsed storage is untrusted; callers must narrow before use.
 export const storage_get_json = (key: string, fallback: unknown): unknown => {
   const stored = storage_get(key)
   return stored === null ? fallback : guarded((): unknown => JSON.parse(stored), fallback)
@@ -42,8 +37,7 @@ export const storage_set_json = (key: string, value: object): void => {
 const is_finite_number = (value: unknown): value is number =>
   typeof value === `number` && Number.isFinite(value)
 
-// Persisted box size for a resizable panel. Invalid or missing sizes come back null so
-// the caller falls through to its own default.
+// Persisted panel size; null when missing/invalid so callers use their default.
 export const storage_get_size = (key: string): { w: number; h: number } | null => {
   const size: unknown = storage_get_json(key, null)
   if (!is_object(size)) return null
@@ -51,9 +45,7 @@ export const storage_get_size = (key: string): { w: number; h: number } | null =
   return is_finite_number(w) && is_finite_number(h) ? { w, h } : null
 }
 
-// Persisted enum preference: the stored value while it is still one of `options`, else
-// `fallback`. Pair with `storage_set(key, value)` on change so UI toggles (chart type,
-// time window, metric mode) survive a reload.
+// Stored option while valid, otherwise fallback. Pair with storage_set on change.
 export const persisted_choice = <T extends string>(
   key: string,
   options: readonly T[],
@@ -67,14 +59,11 @@ export type RecentListConfig<T> = {
   storage_key: string
   max_items: number // non-negative integer
   key_of: (item: T) => string
-  // Entries failing this are dropped on load, so a stale or hand-edited payload
-  // cannot put junk in front of the user
+  // Drop invalid or stale entries on load.
   is_valid: (value: unknown) => value is T
 }
 
-// Most-recently-used list persisted to localStorage, deduped by `key_of`. Every method
-// takes and returns the list rather than holding it, so the caller keeps owning the
-// state (a `$state` array, a store, a plain field) and each write is one assignment.
+// Persisted MRU list deduped by key_of. Methods take/return lists; callers own state.
 export const create_recent_list = <T>(config: RecentListConfig<T>) => {
   const { storage_key, max_items, key_of, is_valid } = config
   if (!Number.isInteger(max_items) || max_items < 0) {

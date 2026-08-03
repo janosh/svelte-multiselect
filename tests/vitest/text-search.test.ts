@@ -56,8 +56,7 @@ describe(`search_text`, () => {
     [`noscript source`, `<p>hi <noscript>hi there</noscript></p>`, `hi`, 1],
     // skipping the subtree, not breaking on it: `fo` and `od` render as one run
     [`text either side of a script`, `<p>fo<script>x</script>od</p>`, `food`, 1],
-    // form controls and hidden content: also present in the DOM but not readable, so a
-    // hit inside one would scroll the reader to nothing
+    // Unreadable controls/hidden content would produce hits that scroll nowhere.
     [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, `secret`, 0],
     [`select`, `<p>before<select><option>secret</option></select>after</p>`, `secret`, 0],
     [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, `secret`, 0],
@@ -173,8 +172,7 @@ describe(`search_text`, () => {
       [2, 4],
       [0, 2],
     ])
-    // `matches` collapses the two hits in the first paragraph, so a caller stepping
-    // through hits needs `occurrences`, which keeps one record per range.
+    // matches dedupes by element; occurrences keeps one record per range.
     expect(matches).toHaveLength(2)
     expect(ranges).toEqual(occurrences.map((hit) => hit.range))
     expect(occurrences.map((hit) => hit.element)).toEqual([
@@ -365,8 +363,7 @@ describe(`highlight_ranges`, () => {
     expect(registry.get(`text-search-match`)).toBe(foreign)
   })
 
-  // Distinct from the reclaim case above: there the name is yielded on WRITE, here the
-  // last owner leaving must not restore its own bookkeeping over the new writer.
+  // Unlike reclaim-on-write above, release after takeover must preserve the new writer.
   it(`releasing after a takeover leaves the new writer's highlight in place`, () => {
     const ranges = search(`<p>alpha</p>`, `alpha`)
     const release_first = highlight_ranges(ranges)

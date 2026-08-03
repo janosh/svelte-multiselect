@@ -76,11 +76,7 @@ interface MountOptions {
   single_col?: boolean
   on_error?: (message: string) => void
   use_default_backend?: boolean
-  // Reject every diff_text call with this instead of resolving. `unknown` because a
-  // backend crossing an IPC or worker boundary can reject with a plain value.
   rejects_with?: unknown
-  // Mount with neither a `backend` prop nor a registered default, so the resolver
-  // itself is what fails.
   no_backend?: boolean
 }
 
@@ -123,8 +119,6 @@ const mount_diff = async (
   }: MountOptions = {},
 ) => {
   const diff_text = vi.fn(async (_args: DiffTextArgs) => {
-    // A non-Error rejection is exactly what a backend across an IPC, worker or fetch
-    // boundary can produce, so the tests below have to be able to send one.
     // oxlint-disable-next-line typescript/only-throw-error
     if (rejects_with !== undefined) throw rejects_with
     return result
@@ -283,9 +277,8 @@ test(`elided gaps expand using source lines and remain independent`, async () =>
 })
 
 test(`gap lines missing a side stay context instead of reading as edits`, async () => {
-  // skippedBefore reaches past the start of the old side, so those reconstructed lines
-  // exist only on the new one. They are unchanged by definition; signing them +/- would
-  // present untouched code as an edit.
+  // Four rows yield new-only `a`–`c`, then old `only one` paired with new `d`;
+  // unified equal rows prefer `row.old`, so offset reconstruction omits `d`.
   const row = diff_row(`replace`, diff_line(2, `old two`), diff_line(5, `new five`))
   const hunk = hunk_of([row], { oldStart: 2, newStart: 5, skippedBefore: 4 })
   await mount_diff(
@@ -310,7 +303,6 @@ test(`gap lines missing a side stay context instead of reading as edits`, async 
       text_of(diff_row_element.querySelector(`.sign`)).trim(),
     ],
   )
-  // All four elided lines are context, including the three with no old-side counterpart.
   expect(signs_by_text).toEqual([
     [`a`, ``],
     [`b`, ``],
@@ -364,9 +356,6 @@ describe(`states and backend wiring`, () => {
     expect(query_element(`[data-empty]`).textContent).toContain(`9 lines`)
   })
 
-  // A backend reaching the component over IPC, a worker or fetch can reject with
-  // anything, and an unconfigured one fails in the resolver before any call is made.
-  // All three have to reach the same inline alert rather than an unhandled rejection.
   test.each([
     [`an Error`, { rejects_with: new Error(`backend exploded`) }, `backend exploded`],
     [`a non-Error rejection`, { rejects_with: `string failure` }, `string failure`],
@@ -381,16 +370,12 @@ describe(`states and backend wiring`, () => {
   })
 
   test(`a slow first diff cannot overwrite the result of a later one`, async () => {
-    // Retyping in an editor re-diffs on every keystroke, so responses routinely land
-    // out of order; without the generation guard the stale one wins and the pane shows
-    // a diff of text nobody has anymore.
     const resolvers: ((result: DiffResult) => void)[] = []
     const diff_text = vi.fn(
       (_args: DiffTextArgs) =>
         new Promise<DiffResult>((resolve) => resolvers.push(resolve)),
     )
-    // $state so reassigning a prop re-runs the component's effect the way a parent
-    // re-render would; that is why this file carries the `.svelte` infix.
+    // Reactive props make reassignment rerun effects (hence `.svelte.test.ts`).
     const props = $state({
       old_text: `a`,
       new_text: `stale`,
@@ -426,8 +411,7 @@ describe(`states and backend wiring`, () => {
         use_default_backend: true,
       },
     )
-    // Exactly once: the load effect must not re-run off its own state writes, or every
-    // mount pays for two diffs of a document that can be megabytes.
+    // The load effect must not refire on its own writes and double-diff large docs.
     expect(diff_text).toHaveBeenCalledExactlyOnceWith({
       oldText: `left`,
       newText: `right`,

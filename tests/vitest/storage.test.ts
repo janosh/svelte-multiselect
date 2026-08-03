@@ -20,9 +20,6 @@ describe(`storage_get/set/remove`, () => {
   })
 
   test(`a payload too big for the quota degrades to no stored value`, () => {
-    // What editor drafts and view histories ride on: an over-quota write is swallowed,
-    // so a typing user never sees an exception. The state is merely not there next
-    // launch. Capping the payloads is the caller's job.
     const spy = vi.spyOn(globalThis.localStorage, `setItem`).mockImplementation(() => {
       throw new DOMException(`QuotaExceededError`)
     })
@@ -51,8 +48,7 @@ describe(`storage_get/set/remove`, () => {
   test.each([
     [`corrupt JSON`, `{not json`, { ok: true }],
     [`nothing stored`, null, { ok: true }],
-    // the fallback describes nothing that did parse: a payload of another shape comes
-    // straight back, which is why the return is `unknown` rather than the fallback's type
+    // Wrong-shaped JSON stays unknown rather than adopting the fallback's type.
     [`a payload of another shape`, `[1,2,3]`, [1, 2, 3]],
   ])(`storage_get_json on %s`, (_case, stored, expected) => {
     if (stored !== null) localStorage.setItem(`test.json`, stored)
@@ -61,10 +57,7 @@ describe(`storage_get/set/remove`, () => {
 
   test(`storage_get_json makes the caller narrow before using the value`, () => {
     localStorage.setItem(`test.json`, `{"ok":true}`)
-    // @ts-expect-error a generic inferring T from the fallback would assert a shape onto
-    // whatever localStorage happens to hold; corrupt or version-skewed data would then
-    // flow into typed state unchecked. Narrow it (create_recent_list's `is_valid` is the
-    // house pattern) rather than widening this signature back.
+    // @ts-expect-error the fallback must not assert a shape; narrow like is_valid instead
     const typed: { ok: boolean } = storage_get_json(`test.json`, { ok: false })
     expect(typed.ok).toBe(true)
   })
@@ -109,8 +102,6 @@ describe(`create_recent_list`, () => {
     items = list.remember({ id: `b` }, items)
     expect(items.map((item) => item.id)).toEqual([`b`, `a`])
 
-    // re-remembering an existing key moves it to the front and keeps ONE copy,
-    // adopting the new payload
     items = list.remember({ id: `a`, label: `renamed` }, items)
     expect(items).toEqual([{ id: `a`, label: `renamed` }, { id: `b` }])
     expect(JSON.parse(localStorage.getItem(`test.recent`) ?? ``)).toEqual(items)

@@ -1,8 +1,6 @@
 <script lang="ts">
-  // Side-by-side / unified renderer for a `DiffBackend` payload. The backend
-  // already pairs a deleted line with its replacement into one `replace` row, so the
-  // columns stay aligned without re-deriving the pairing here. The only derived data
-  // is the flat row list (hunks + elisions + no-newline markers) virtualization walks.
+  // Side-by-side/unified DiffBackend renderer. The backend already pairs replacements;
+  // we only flatten hunks, elisions, and no-newline markers for virtualization.
   import { untrack } from 'svelte'
   import { SvelteSet } from 'svelte/reactivity'
   import { tooltip } from '../attachments'
@@ -39,33 +37,27 @@
     // `context_lines` re-diffs when it changes, `layout` seeds the toggle once,
     // `font_size` drives the integral row height.
     options: DiffViewOptions
-    // Column headings; the defaults suit an unsaved-changes diff, file history revisions.
+    // Column headings for unsaved-changes or history diffs.
     old_label?: string
     new_label?: string
-    // A created file has no meaningful "before": render the new text as one plain
-    // column instead of a diff whose left half is nothing but spacer rows. The header
-    // goes with it: the layout toggle has no second side to show, and a caller
-    // rendering a created file normally names it in its own surrounding chrome.
+    // Created file: one plain column, no empty left side or header/layout toggle.
     single_col?: boolean
     // Called once per failed diff, in addition to the inline error row.
     on_error?: (message: string) => void
-    // Overrides the backend registered with `set_diff_backend`, for tests and
-    // for a host running more than one diff engine.
+    // Override set_diff_backend for tests or multi-engine hosts.
     backend?: DiffBackend
   } = $props()
 
   type Side = `old` | `new`
-  // `solo` is the single-column mode: it builds rows the way unified does (one per
-  // populated side) but renders them without the old gutter, sign column and tones.
+  // Single-column mode: unified-shaped rows without old gutter, signs, or tones.
   type RowLayout = DiffLayout | `solo`
   // Which side a cell is toned as; `equal` is unchanged context and takes no tone.
   type Cell = Side | `equal`
   // Both gutter numbers, since a unified row shows the other side's number too.
   type Gutters = { old_no: number | null; new_no: number | null }
 
-  // One rendered line of the scroller. Side-by-side emits a `pair` per DiffRow so
-  // both columns share one visual row; unified emits one `single` per populated side.
-  // Keeping the shapes apart (vs branching in row markup) keeps one flat list indexable.
+  // One scroller row: side-by-side emits a pair; unified/solo a single per side.
+  // Separate shapes keep the virtualized list flat and indexable.
   type DisplayRow =
     | { kind: `gap`; gap_idx: number; skipped: number }
     | { kind: `pair`; row_kind: RowKind; old: DiffLine | null; new: DiffLine | null }
@@ -79,8 +71,7 @@
   let diff = $state<DiffResult | null>(null)
   let error_message = $state<string | null>(null)
   let is_loading = $state(false)
-  // Seeded from the option, then owned by the toggle: an option change while the view
-  // is open must not yank the layout away. The untrack means "initial value only".
+  // Seed once from options; the toggle owns layout afterward.
   let layout = $state<DiffLayout>(untrack(() => options.layout))
   const row_layout = $derived<RowLayout>(single_col ? `solo` : layout)
   let scroll_top = $state(0)
@@ -89,9 +80,7 @@
   // Gap index -> expanded. The trailing gap uses index `hunks.length`.
   const expanded_gaps = new SvelteSet<number>()
 
-  // Row grid and virtualization arithmetic must agree exactly or rows drift out of the
-  // viewport they were computed for, so height is derived once as an integer and passed
-  // to CSS, never measured back from the DOM. Same reason editor.css keeps it integral.
+  // Share one integer height with CSS; measuring it back from DOM can drift virtualization.
   const row_height = $derived(editor_line_height(options.font_size))
 
   let load_generation = 0
@@ -106,15 +95,13 @@
       diff = result
       error_message = null
       expanded_gaps.clear()
-      // New rows at every offset: a kept scroll position would land somewhere unrelated.
+      // New diff rows invalidate the old scroll offset.
       scroll_to_row(0)
     } catch (error) {
       if (generation !== load_generation) return
       diff = null
-      // Reported from the local, NOT read back off `error_message`. A backend that
-      // fails synchronously (a missing one throws in resolve_diff_backend) runs this
-      // inside the $effect, where reading the state just written makes the effect
-      // depend on itself and run a second time — diffing and reporting twice.
+      // Use the local, not error_message: reading that state inside this $effect would
+      // self-subscribe and double-report synchronous resolver failures.
       const message = to_error(error).message
       error_message = message
       on_error?.(message)
@@ -132,9 +119,8 @@
     })
   })
 
-  // Expanded context is reconstructed from the props: `DiffResult` carries line text
-  // only for the hunks it kept. Those lines are unchanged by definition so their text is
-  // right, but they have no spans and render unhighlighted, unlike in-hunk context.
+  // Rebuild expanded gaps from props; DiffResult only keeps hunk lines. Gap text is
+  // unchanged but has no spans, so renders unhighlighted.
   const old_lines = $derived(split_text_lines(old_text))
   const new_lines = $derived(split_text_lines(new_text))
 
@@ -157,16 +143,14 @@
 
   const single_rows_of = (row: DiffRow): DisplayRow[] => {
     const base = { kind: `single`, row_kind: row.kind } as const
-    // An equal row holds the same text on both sides; emitting it twice would
-    // duplicate it. One-sided reconstructed gap rows are still unsigned context.
+    // Emit equal text once; one-sided reconstructed gaps remain unsigned context.
     if (row.kind === `equal`) {
       const line = row.old ?? row.new
       if (!line) return []
       const [old_no, new_no] = [row.old?.lineNo ?? null, row.new?.lineNo ?? null]
       return [{ ...base, side: `equal`, line, old_no, new_no }]
     }
-    // Deleted side first, then inserted, which is the order a unified diff reads
-    // in. Only the side a line came from carries its number.
+    // Unified order is delete then insert; only the source side gets a line number.
     return ([`old`, `new`] as const).flatMap((side) => {
       const line = row[side]
       if (!line) return []
@@ -191,8 +175,7 @@
     }
 
     result.hunks.forEach((hunk, hunk_idx) => {
-      // `oldStart`/`newStart` are 1-based, so the elided run ends on the line before
-      // them and is `skippedBefore` lines long on both sides.
+      // 1-based starts: the elided run is [start - skippedBefore, start).
       const skipped = hunk.skippedBefore
       push_gap(hunk_idx, skipped, [hunk.oldStart - skipped, hunk.newStart - skipped])
       for (const row of hunk.rows) rows.push(...rows_of(row))
@@ -236,8 +219,7 @@
   const pad_top = $derived(row_window.start * row_height)
   const pad_bottom = $derived((display_rows.length - row_window.end) * row_height)
 
-  // A helper, not inlined: Svelte keeps the newline between two adjacent expressions in
-  // markup, so the count and its unit would render with a line break between them.
+  // Keep as helper: Svelte preserves newlines between adjacent markup expressions.
   const line_noun = (count: number): `line` | `lines` => (count === 1 ? `line` : `lines`)
   const line_count_label = (result: DiffResult): string =>
     `${result.newLineCount} ${line_noun(result.newLineCount)}`
@@ -267,15 +249,12 @@
     if (next !== undefined) scroll_to_row(next)
   }
 
-  // `.diff-row-delete`/`.diff-row-insert` must sit on the element WRAPPING a line's
-  // spans, on both sides of a `replace` row: editor.css colors `.tok-emph` by that
-  // ancestor, so a missing class renders word highlighting with no background at all.
-  // The `equal` cell is the row's kind in side-by-side, the row's side in unified.
+  // Must wrap token spans on both replace sides: editor.css colors .tok-emph through
+  // this ancestor. `equal` is row kind side-by-side, row side in unified.
   const cell_class = (side: Cell): string =>
     side === `old` ? `diff-row-delete` : side === `new` ? `diff-row-insert` : ``
 
-  // An absent side gets the spacer fill so the columns read as one aligned grid; a
-  // present side of a changed row gets the +/- marker color.
+  // Absent side gets spacer fill; changed present side gets +/- tone.
   const gutter_tone = (line: DiffLine | null, row_kind: RowKind, side: Side): string =>
     !line ? `spacer` : row_kind === `equal` ? `` : side === `old` ? `del` : `ins`
 
@@ -316,10 +295,8 @@
 {/snippet}
 
 {#snippet code_cell(line: DiffLine | null, row_class: string, side: string)}
-  <!-- The cell is `white-space: pre`, so any text node Svelte kept between the token
-  spans would render as a real space and shift indented code. Svelte trims whitespace at
-  fragment boundaries, so this is safe; code-editor-diff-view.svelte.test.ts pins the
-  reassembled text of an indented line. -->
+  <!-- white-space: pre makes stray text nodes real spaces. Fragment-boundary trimming
+  avoids them; the diff-view test pins indented-line reassembly. -->
   {#if line}
     <span class="code {row_class}" data-side={side}>
       {#each render_tokens(line.text, line.spans) as token (token.start)}
@@ -569,8 +546,7 @@
     border-start-end-radius: 0;
     border-end-end-radius: 0;
   }
-  /* Rarely used, so a quiet icon pair rather than labeled buttons. Sized on the button,
-     not the wrapper: `.icon-btn` declares --icon-size itself, so inherited never wins. */
+  /* Quiet icon toggle; size the button because .icon-btn sets --icon-size itself. */
   .layout-toggle .icon-btn {
     --icon-btn-size: 18px;
     --icon-size: 12px;
@@ -610,8 +586,7 @@
     outline: 2px solid color-mix(in srgb, var(--active-color, #6ea8ff) 60%, transparent);
     outline-offset: -2px;
   }
-  /* max-content so a long line scrolls horizontally instead of being clipped;
-     both columns then share the widest line's width and stay aligned. */
+  /* max-content lets long lines scroll and keeps both columns equally wide. */
   .diff-body {
     min-width: max-content;
   }

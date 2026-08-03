@@ -81,8 +81,7 @@ test.each([
   expect(rendered_icon_path()).toBe(icon_data[icon_name].d)
 })
 
-// A blocked store is an expected condition (private mode, a storage-off policy), not a
-// fault worth logging on every read, so the helpers behind this swallow it in silence.
+// Storage failure is expected (for example private mode) and must not log errors.
 test(`gracefully degrades when localStorage throws`, async () => {
   disable_storage()
   const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})

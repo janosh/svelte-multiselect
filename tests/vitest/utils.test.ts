@@ -209,15 +209,13 @@ describe(`shortcut rebinding`, () => {
   afterEach(() => Reflect.deleteProperty(globalThis.navigator, `userAgent`))
   const keydown = (init: KeyboardEventInit) => new KeyboardEvent(`keydown`, init)
 
-  // Some libraries spell the platform's primary modifier `meta` on every platform, which
-  // this repo reads as the literal Meta key; `mod` is the token that resolves per platform
+  // Here meta is literal; mod is the platform's primary modifier.
   test.each([
     [mac, { key: `k`, metaKey: true }, `mod+k`],
     [linux, { key: `k`, ctrlKey: true }, `mod+k`],
     [mac, { key: `k`, ctrlKey: true }, `ctrl+k`], // Ctrl is its own modifier on a Mac
     [linux, { key: `k`, metaKey: true }, `meta+k`], // ...as is the Windows key elsewhere
-    // both held: the primary becomes `mod`, the other stays itself, so the two
-    // combos such a library collapses into `meta+k` stay distinct
+    // Libraries aliasing primary as meta must not collapse both-held combinations.
     [linux, { key: `k`, ctrlKey: true, metaKey: true }, `mod+meta+k`],
     [mac, { key: `k`, ctrlKey: true, metaKey: true }, `mod+ctrl+k`],
     // modifier order is fixed regardless of which flags are set

@@ -19,8 +19,6 @@ const state = (text: string, start: number, end = start): EditorState => ({
   selection_end: end,
 })
 
-// Render a state as text with `|` at the caret (or `[...]` around a selection) so
-// expectations read like what the user sees.
 const marked = ({ text, selection_start: start, selection_end: end }: EditorState) => {
   if (start === end) return `${text.slice(0, start)}|${text.slice(start)}`
   return `${text.slice(0, start)}[${text.slice(start, end)}]${text.slice(end)}`
@@ -90,8 +88,6 @@ test.each([
 })
 
 test(`toggle_line_comment survives a block larger than the argument limit`, () => {
-  // Deriving the comment column by spreading one argument per line throws a
-  // RangeError here rather than commenting anything.
   const lines = Array.from(
     { length: 200_000 },
     (_unused, idx) => `${` `.repeat(idx % 4)}x`,
@@ -99,7 +95,7 @@ test(`toggle_line_comment survives a block larger than the argument limit`, () =
   const text = lines.join(`\n`)
   const edit = toggle_line_comment(state(text, 0, text.length), `#`)
 
-  // The shallowest indentation in the block is 0, so every line is commented there.
+  // Minimum indent is 0, so all lines are commented at column 0.
   expect(edit?.replacement.split(`\n`).at(-1)).toBe(`# ${lines.at(-1)}`)
 })
 
@@ -110,6 +106,12 @@ test.each([
   [`uncommenting tolerates a missing space`, `[//one\n// two]`, `//`, `[one\ntwo]`],
   [`blank lines are skipped, not counted`, `[one\n\ntwo]`, `#`, `[# one\n\n# two]`],
   [`collapsed selection toggles the caret's line`, `one\nt|wo`, `#`, `one\n# t|wo`],
+  [
+    `selection endpoints before the comment column stay before it`,
+    `  [  one\n  ]  two`,
+    `#`,
+    `  [  # one\n  ]  # two`,
+  ],
 ])(`toggle_line_comment: %s`, (_label, before_marked, token, expected) => {
   expect(block_op(toggle_line_comment, before_marked, token)).toBe(expected)
 })

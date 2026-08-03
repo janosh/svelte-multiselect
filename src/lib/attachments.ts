@@ -17,7 +17,7 @@ const css_px = (css_length: string): number => {
   return trimmed ? Number(trimmed.replace(/px$/, ``)) : NaN
 }
 
-// Color components are all fractions of full intensity, so this range is the common one.
+// Color channels are 0..1 fractions.
 const clamp_unit = (value: number): number => clamp(value, 0, 1)
 
 // Capture on `target` so a pointer over an iframe keeps reporting; window listeners still

@@ -1,8 +1,7 @@
 <script lang="ts">
-  // In-DOM find-in-page bar: type to highlight every match under `root`, Enter and
-  // Shift+Enter to walk them, Escape to close. Style the matches themselves with a
-  // ::highlight(find-match) rule; a CSS Custom Highlight cannot be scoped to a
-  // component. Where this chrome does not fit, build your own over create_find_state.
+  // Find-in-page bar over root: Enter/Shift+Enter step; Escape closes. Style matches
+  // with ::highlight(find-match), which cannot be component-scoped. For custom chrome,
+  // use create_find_state.
   import { tick } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import { tooltip } from './attachments'
@@ -11,10 +10,10 @@
 
   type Props = Omit<HTMLAttributes<HTMLDivElement>, `children`> &
     FindOptions & {
-      // Subtree the query runs over, undefined until the caller's container mounts
+      // Search root; undefined until the container mounts.
       root?: Element
       on_close: () => void
-      // Names the searched region in the placeholder and the accessible labels
+      // Region name for placeholder and accessible labels.
       label?: string
     }
 
@@ -45,14 +44,14 @@
 
   const update_query = async (next_query: string): Promise<void> => {
     find.query = next_query
-    await tick() // let the effect below re-search before jumping into the new matches
+    await tick() // let the refresh effect search before jumping
     find.jump_to(0)
   }
 
   const handle_keydown = (event: KeyboardEvent): void => {
     if (event.key === `Escape`) {
       event.preventDefault()
-      // an outer Escape handler would otherwise close the surface being searched
+      // Keep outer Escape handlers from closing the searched surface.
       event.stopPropagation()
       on_close()
     } else if (event.key === `Enter`) {
@@ -62,7 +61,7 @@
   }
 
   $effect(() => {
-    // refresh reads find.query, making this effect re-run after each input update.
+    // Re-runs when find.query changes.
     find.refresh(root)
     return find.release_highlight
   })
@@ -104,8 +103,7 @@
 </div>
 
 <style>
-  /* Floats over the searched region by default; override with an inline `style`, which
-     always outranks these. */
+  /* Default float; inline style overrides these rules. */
   .find-bar {
     position: absolute;
     z-index: var(--find-bar-z-index, 50);
@@ -150,8 +148,7 @@
     font: inherit;
     font-size: 0.78rem;
   }
-  /* fixed track: without it the input resizes as the count grows from `1 of 3` to
-     `12 of 480`, shifting the caret under the typing user */
+  /* Fixed width prevents growing match counts from shifting the caret. */
   .find-status {
     flex: none;
     min-inline-size: 4rem;
@@ -181,7 +178,7 @@
   .find-close {
     font-size: 1rem;
   }
-  /* too narrow to float beside the content, so span the region instead of clipping */
+  /* Span narrow viewports instead of clipping. */
   @media (max-width: 34rem) {
     .find-bar {
       inset-inline: 0.45rem;

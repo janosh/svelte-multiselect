@@ -15,8 +15,7 @@ const span = (
   emphasized = false,
 ): DecodedSpan => ({ start, end, class_name, emphasized })
 
-// A renamed class would otherwise become -1 here, silently turning every case below
-// into a test of the out-of-range fallback that still passes.
+// Fail on unknown names so renames cannot silently test the fallback.
 const token_id = (name: string): number => {
   const idx = TOKEN_CLASS_NAMES.indexOf(name as (typeof TOKEN_CLASS_NAMES)[number])
   if (idx === -1) throw new Error(`no token class named ${name}`)
@@ -48,8 +47,7 @@ describe(`decode_spans`, () => {
     [`out-of-range class`, [0, 99, 2, KEYWORD], 4, [span(0, 2), span(2, 4, `keyword`)]],
     [`starts past the line end collapse to plain`, [20, KEYWORD], 5, [span(0, 5)]],
     [
-      // Starts are forced monotonic, squeezing the earlier span to zero width; the
-      // tiling stays contiguous either way.
+      // Clamping non-monotonic starts collapses the earlier span to zero width.
       `non-monotonic starts still tile the line`,
       [5, COMMENT, 2, KEYWORD],
       10,

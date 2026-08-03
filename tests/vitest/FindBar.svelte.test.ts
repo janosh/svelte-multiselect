@@ -34,7 +34,7 @@ const status = () => doc_query(`.find-status`).textContent?.trim()
 const nav_button = (name: `Previous` | `Next`) =>
   doc_query<HTMLButtonElement>(`.find-bar button[aria-label="${name} match"]`)
 
-// Typing goes through the real input event, so the component's own async update runs
+// Use a real input event so FindBar's async path runs.
 const type_query = async (query: string) => {
   const element = input()
   element.value = query
@@ -46,8 +46,6 @@ const type_query = async (query: string) => {
 const jumped = () => document.querySelector(`.search-match-jump`)?.textContent
 
 describe(`FindBar`, () => {
-  // Focus is the caller's call, not the component's: a bar rendered alongside its
-  // content (rather than opened on a hotkey) must not steal focus on mount.
   test(`focus_input focuses and selects the query, and mounting does not`, async () => {
     const { bar } = mount_bar(`<p>alpha</p>`)
     await type_query(`alpha`)
@@ -60,10 +58,12 @@ describe(`FindBar`, () => {
 
   test(`counts every hit, walks them with the arrows and wraps at both ends`, async () => {
     // The second paragraph has two hits: navigation is per occurrence, not per element.
+    const disconnect = vi.spyOn(MutationObserver.prototype, `disconnect`)
     mount_bar(`<p>alpha</p><p>beta alpha alpha</p>`)
-    expect(status()).toBe(``) // quiet until there is something to say
+    expect(status()).toBe(``)
 
     await type_query(`alpha`)
+    expect(disconnect).not.toHaveBeenCalled()
     expect(status()).toBe(`1 of 3`)
     expect(jumped()).toBe(`alpha`)
 
@@ -72,7 +72,6 @@ describe(`FindBar`, () => {
     expect(status()).toBe(`2 of 3`)
     expect(jumped()).toBe(`beta alpha alpha`)
 
-    // wrap forwards off the end, then backwards off the front
     for (const expected_status of [`3 of 3`, `1 of 3`]) {
       nav_button(`Next`).click()
       await tick()
@@ -85,7 +84,6 @@ describe(`FindBar`, () => {
 
   test.each([
     [`Enter`, {}, `2 of 3`],
-    // from the first match a backward step wraps around to the last
     [`Shift+Enter`, { shiftKey: true }, `3 of 3`],
   ])(`%s steps the cursor`, async (_case, init, expected) => {
     mount_bar(`<p>one hit</p><p>two hit</p><p>three hit</p>`)
@@ -152,9 +150,7 @@ describe(`FindBar`, () => {
     )
   })
 
-  // Four copies of the query: plain, aria-hidden, sr-only and .skip. The last is only
-  // excluded by also_ignore, which adds to the always-excluded two rather than
-  // replacing them.
+  // Fixture: plain, aria-hidden, sr-only, and .skip; also_ignore extends defaults.
   test.each([
     [`nothing extra`, undefined, `1 of 2`],
     [`also_ignore`, `.skip`, `1 of 1`],
@@ -168,8 +164,7 @@ describe(`FindBar`, () => {
     expect(status()).toBe(count)
   })
 
-  // only_within states what IS searchable, for a surface whose chrome is too open-ended
-  // to enumerate as exceptions; the always-excluded selectors still apply inside it.
+  // only_within scopes search; always-excluded selectors still apply inside.
   test.each([
     [`without only_within`, undefined, `1 of 3`],
     [`with only_within`, `.content`, `1 of 1`],
@@ -205,8 +200,7 @@ describe(`create_find_state`, () => {
     expect(find.current_idx).toBe(-1)
   })
 
-  // step() only ever produces -1..length, but jump_to is public and its wrap has to
-  // hold for anything: a bare `% length` returns negatives below -length
+  // Public jump_to must handle values below -length; bare `% length` stays negative.
   test.each([
     [-5, 1],
     [-3, 0],
@@ -239,7 +233,6 @@ describe(`create_find_state`, () => {
     find.jump_to(2)
     const current = find.matches[2]
 
-    // drop an earlier match; the cursor follows its element to the new index
     doc_query(`main p`).remove()
     find.refresh(root)
     expect(find.current_idx).toBe(1)
@@ -313,6 +306,27 @@ describe(`create_find_state`, () => {
     return registry
   }
 
+  test(`swapping a mounted FindBar root replaces its highlight ownership`, async () => {
+    const registry = stub_highlight_registry()
+    document.body.innerHTML =
+      `<main id="first"><p>alpha first</p></main>` +
+      `<main id="second"><p>alpha second</p></main><div id="bar"></div>`
+    const first_root = doc_query(`#first`)
+    const second_root = doc_query(`#second`)
+    const props = $state<Props>({ root: first_root, on_close: vi.fn() })
+    const bar = mount(FindBar, { target: doc_query(`#bar`), props })
+    onTestFinished(() => unmount(bar))
+    const match_node = () =>
+      (registry.get(`find-match`) as { ranges: Range[] }).ranges[0].startContainer
+
+    await type_query(`alpha`)
+    expect(first_root.contains(match_node())).toBe(true)
+
+    props.root = second_root
+    await tick()
+    expect(second_root.contains(match_node())).toBe(true)
+  })
+
   test(`registers and releases ranges under the configured highlight name`, () => {
     const registry = stub_highlight_registry()
     const { root, find } = setup(`<p>alpha</p>`, { css_class: `custom-find` })
@@ -335,7 +349,7 @@ describe(`create_find_state`, () => {
     await unmount_bar()
     await tick()
     expect(disconnect).toHaveBeenCalled()
-    // a stranded owner would keep painting matches over content nothing is searching
+    // Unmount must drop the highlight owner.
     expect(registry.has(`find-match`)).toBe(false)
     expect(root.isConnected).toBe(true) // the searched subtree is left alone
   })

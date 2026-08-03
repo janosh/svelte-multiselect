@@ -1,20 +1,12 @@
-// Turns a textarea `input` event into a line splice for an `EditorBackend`
-// (ApplyEditArgs in types.ts) without re-splitting the document on every keystroke:
-// splitting a 50k-line file per character is O(document) per keypress and reallocates
-// it whole each time, which is what makes naive editors unusable on large files.
+// Derive EditorBackend line splices from textarea input without re-splitting the whole
+// document per keystroke.
 //
-// THE INVARIANT: returning `null` is ALWAYS safe, returning a wrong splice NEVER is.
-// `null` means "I cannot prove what changed, resend the whole document" and costs one
-// full `set_text` round trip; a wrong splice desynchronizes the backend's line
-// buffer from what the user sees, so every later highlight paints the wrong tokens
-// onto the wrong lines and nothing tells the user. Every ambiguous case below
-// therefore bails out. The backend's cross-check is a safety net, not
-// a substitute: see `expectedLineCount` in types.ts for why only the total length
-// catches a mis-derived splice.
+// INVARIANT: null is always safe; a wrong splice never is. null triggers full set_text;
+// a wrong splice silently desynchronizes highlighting, so ambiguous cases bail. The
+// backend's expectedTotalLength is the real guard; expectedLineCount is not (types.ts).
 //
-// Offsets are UTF-16 code units (what `selectionStart` reports). A textarea's `value`
-// is always LF regardless of the file's real EOL, so reproducing CRLF on save belongs
-// to the backend (see `OpenDocResult.eol`), not here.
+// Offsets are UTF-16 (selectionStart). Textarea values are LF; the backend restores
+// file EOL on save (OpenDocResult.eol).
 
 import { clamp } from '../utils'
 
@@ -30,8 +22,7 @@ export interface LineSplice {
   removed_count: number
   inserted_lines: string[]
   expected_line_count: number
-  // UTF-16 length of the value this splice was derived from, read straight off
-  // `next_value` rather than computed from it. That independence is the point.
+  // UTF-16 length of next_value itself, not recomputed from the splice.
   expected_total_length: number
 }
 
@@ -48,12 +39,8 @@ export interface BeforeInputSnapshot {
 // be O(document); 32 catches essentially every mis-derivation while staying O(1).
 const CONTEXT_CHECK_CHARS = 32
 
-// Which range of the OLD text an input type made the browser replace. Anything not
-// listed derives to `null` on purpose: historyUndo/historyRedo restore an arbitrary
-// earlier state, composition (IME) mutates text across several events, drag/drop and
-// spellcheck replacements touch a range unrelated to the snapshotted selection, and
-// unknown future input types are rare and user-initiated,
-// so a full resync is affordable.
+// Old-text range replaced by each input type. Undo/redo, IME, drag/drop, spellcheck,
+// and unknown types intentionally return null because the snapshot cannot prove them.
 type ChangeShape = `replace_selection` | `delete_backward` | `delete_forward`
 
 const INPUT_TYPE_SHAPES: Record<string, ChangeShape | undefined> = Object.assign(
@@ -82,10 +69,7 @@ const INPUT_TYPE_SHAPES: Record<string, ChangeShape | undefined> = Object.assign
 const refresh_starts = (index: LineIndex, from_line: number): void => {
   const { lines, starts } = index
   const begin = clamp(Math.floor(from_line), 0, lines.length)
-  // Lines before `begin` are untouched, so line `begin` still starts right after line
-  // `begin - 1`, keeping a keystroke cheap. Deriving that offset from the
-  // previous line rather than reading `starts[begin]` matters when `begin` is the end
-  // of the array, where that entry is the total-length sentinel, not a line start.
+  // Start from the previous line; starts[begin] may be the total-length sentinel.
   let offset = begin === 0 ? 0 : starts[begin - 1] + lines[begin - 1].length + 1
   starts.length = lines.length + 1
   for (let line_idx = begin; line_idx < lines.length; line_idx++) {
@@ -99,17 +83,13 @@ const refresh_starts = (index: LineIndex, from_line: number): void => {
 // save; sharing the constant is what keeps the two ends from disagreeing.
 export const BOM = `\uFEFF`
 
-// The shape a textarea hands text back in: LF endings and no BOM. The editor buffer,
-// the line index behind it and any host code that writes the file all have to agree on
-// this. When they disagreed, saving a CRLF file silently rewrote every line.
+// Textarea shape: LF and no BOM. Buffer, line index, and save path must agree or saving
+// a CRLF file rewrites every line.
 export const editor_text = (raw: string): string =>
   (raw.startsWith(BOM) ? raw.slice(BOM.length) : raw).replaceAll(/\r\n?/g, `\n`)
 
-// Line endings are normalized here rather than trusted to the caller: an index built
-// straight from file text would be longer than the always-LF textarea by one unit per
-// CRLF, `value_length` would never match, and every keystroke of the whole session
-// would fall back to a full resync, so a Windows-authored file would never use the
-// incremental path at all. Lone CRs too, as the textarea normalizes those as well.
+// Normalize here: indexing raw CRLF/CR text disagrees with the LF textarea length and
+// forces every keystroke through full resync.
 export const build_line_index = (text: string): LineIndex => {
   const index: LineIndex = { lines: editor_text(text).split(`\n`), starts: [] }
   refresh_starts(index, 0)
@@ -157,10 +137,8 @@ const read_range = (index: LineIndex, from: number, to: number): string => {
   return out
 }
 
-// Cheap sanity check that the text immediately around the edit is untouched. It
-// cannot prove the derivation correct, but it catches the realistic failure mode: a
-// stale index, or an input type whose edit did not land where the snapshotted
-// selection said. The suffix sits `delta` further along in the new value.
+// O(1) check around the edit catches stale indices or edits landing elsewhere. It
+// cannot prove correctness; the suffix shifts by `delta` in next_value.
 const context_matches = (
   index: LineIndex,
   next_value: string,
@@ -206,10 +184,8 @@ export const derive_line_splice = (
   const sel_end = before.selection_end
   const delta = next_value.length - old_length
 
-  // With a non-empty selection every delete variant just removes the selection;
-  // only a collapsed caret makes Backspace/Delete reach outside it, and how far it
-  // reached follows from the length delta (which is what makes deleteWordBackward
-  // and friends work without knowing word rules).
+  // A selected range is the deletion. At a collapsed caret, length delta gives the
+  // extent, including deleteWord* without encoding word rules.
   let region_start = sel_start
   let region_end = sel_end
   if (sel_start === sel_end && shape !== `replace_selection`) {
@@ -229,17 +205,14 @@ export const derive_line_splice = (
   const block_start = index.starts[start_line]
   const new_block_end = index.starts[end_line] + index.lines[end_line].length + delta
   if (new_block_end < block_start || new_block_end > next_value.length) return null
-  // Both ends of the rewritten block must still be line boundaries in the new
-  // value; if they are not, the arithmetic drifted from reality and the splice
-  // would shift every following line.
+  // Rewritten block ends must remain line boundaries or later lines shift.
   if (block_start > 0 && next_value[block_start - 1] !== `\n`) return null
   if (new_block_end < next_value.length && next_value[new_block_end] !== `\n`) {
     return null
   }
   if (!context_matches(index, next_value, region_start, region_end, delta)) return null
 
-  // Slice only the affected range of the new value, so this module never touches the
-  // other 50k lines.
+  // Slice only the affected range, never the rest of the document.
   const inserted_lines = next_value.slice(block_start, new_block_end).split(`\n`)
   const removed_count = end_line - start_line + 1
   return {
@@ -258,10 +231,8 @@ export const derive_line_splice = (
 // instead. Only a huge paste gets here.
 const SPLICE_SPREAD_LIMIT = 10_000
 
-// Splices in place when that is safe and by rebuilding when it is not, so the caller
-// always assigns the result back. Shared with the token array the editor keeps
-// alongside the line index: the two must splice identically, and a second copy of
-// this threshold could drift from it silently.
+// Mutate when safe, otherwise rebuild; callers always reassign. Shared with the token
+// array so its spread limit cannot drift from the line index.
 export const splice_within_limits = <Item>(
   target: Item[],
   start: number,
@@ -275,9 +246,7 @@ export const splice_within_limits = <Item>(
   return [...target.slice(0, start), ...items, ...target.slice(start + removed_count)]
 }
 
-// Apply a splice to the index IN PLACE (returned for chaining). Only the offsets from
-// the splice point on are recomputed and no string is re-split, so the cost is the
-// tail of the document in cheap integer work, not the whole document in allocations.
+// Mutate the index and recompute offsets from the splice point only; no string re-split.
 export const apply_splice = (index: LineIndex, splice: LineSplice): LineIndex => {
   const start_line = clamp(Math.floor(splice.start_line), 0, index.lines.length)
   const removed_count = clamp(

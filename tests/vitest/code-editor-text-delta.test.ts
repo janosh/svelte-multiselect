@@ -32,7 +32,6 @@ const derive_for = (before_marked: string, input_type: string, next_value: strin
   return { index, splice: derive_line_splice(index, before, next_value) }
 }
 
-// Assert the derived splice reconstructs `next_value` exactly when applied.
 const round_trip = (before_marked: string, input_type: string, next_value: string) => {
   const { index, splice } = derive_for(before_marked, input_type, next_value)
   if (splice === null) throw new Error(`expected a splice for ${input_type}`)
@@ -75,9 +74,7 @@ test.each([
   expect(line_at_offset(three_lines, offset)).toBe(line_idx)
 })
 
-// A textarea reports LF-only, BOM-free text, so the index has to be built in that
-// shape: one unit of drift makes `value_length` mismatch on the very first keystroke
-// and every edit of the session falls back to a full resend.
+// Textareas are LF-only and BOM-free; any index drift forces full resync.
 test.each([
   [`trailing crlf`, `one\r\ntwo\r\n`, [`one`, `two`, ``]],
   [`mixed cr, crlf, lf`, `one\r\ntwo\rthree\nfour`, [`one`, `two`, `three`, `four`]],
