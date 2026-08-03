@@ -1,11 +1,22 @@
 # Changelog
 
+## [v1.3.0](https://github.com/janosh/svelte-widgets/compare/v1.2.0...v1.3.0)
+
+> 3 August 2026
+
+- **Breaking:** Rename `DraggablePane.show` to `open`, `ToastQueue.active` and `ToastStore.active` to `active_toast`, and the callback passed to `forward_window_keydown` from `handle` to `on_key`. Consumers constructing these objects directly must rename the corresponding fields [`#438`](https://github.com/janosh/svelte-widgets/pull/438)
+- **Breaking:** Drop the MultiSelect default export from the package barrel; use `import { MultiSelect } from 'svelte-widgets'`. Stop reading the legacy `theme_mode` localStorage key (only `theme`). Remove the `Element.prototype.scrollIntoViewIfNeeded` polyfill from barrel import; MultiSelect scrolls with standard `scrollIntoView` [`#438`](https://github.com/janosh/svelte-widgets/pull/438)
+- Add `FindBar` and the `svelte-widgets/find-in-page` headless API with per-occurrence navigation, DOM mutation observation, collapsed-details expansion and shared CSS Custom Highlight ownership [`#439`](https://github.com/janosh/svelte-widgets/pull/439)
+- Add `svelte-widgets/code-editor` with `DiffView`, pure editor transforms, incremental line splices, token rendering, injectable editor/diff backends and standalone editor CSS [`#439`](https://github.com/janosh/svelte-widgets/pull/439)
+- Add `svelte-widgets/storage` with guarded localStorage access, JSON and panel-size helpers, persisted choices and deduplicated MRU lists; CommandMenu and theme persistence now use the shared primitives [`#439`](https://github.com/janosh/svelte-widgets/pull/439)
+- Back `Sheet` with the native modal dialog lifecycle, synchronize theme changes across tabs and before first paint, reserve generated heading IDs and add nested attribute bags for customizing component-owned controls safely [`#437`](https://github.com/janosh/svelte-widgets/pull/437)
+- Expand interaction APIs with cooperative file-drop cancellation, non-collapsible single accordions and aligned Popover ARIA relationships [`#437`](https://github.com/janosh/svelte-widgets/pull/437)
+- Fix CommandMenu and Sheet teardown, tooltip timer leaks, rejected fullscreen exits, SSR-stable IDs, duplicate DiffView backend calls and unreadable dark editor token defaults [`#437`](https://github.com/janosh/svelte-widgets/pull/437) [`#438`](https://github.com/janosh/svelte-widgets/pull/438) [`#439`](https://github.com/janosh/svelte-widgets/pull/439)
+
 ## [v1.2.0](https://github.com/janosh/svelte-widgets/compare/v1.1.0...v1.2.0)
 
 > 30 July 2026
 
-- **Breaking:** Remove `ToastQueue.active` and `ToastStore.active` in favor of `active_toast`. Consumers should replace `queue.active` with `queue.active_toast` and `store.active` with `store.active_toast`; code constructing `ToastQueue` objects directly must rename the `active` field to `active_toast`.
-- **Breaking:** Drop the MultiSelect default export from the package barrel; use `import { MultiSelect } from 'svelte-widgets'`. Stop reading the legacy `theme_mode` localStorage key (only `theme`). Remove the `Element.prototype.scrollIntoViewIfNeeded` polyfill from barrel import; MultiSelect scrolls with standard `scrollIntoView`.
 - Add three accessible components: `Sheet` for portalled edge panels, snippet-driven `Tabs` with automatic/manual activation and `Accordion` with single/multiple expansion [`#436`](https://github.com/janosh/svelte-widgets/pull/436)
 - Add `file_drop` attachment with accept filtering, directory expansion and explicit drop errors [`#436`](https://github.com/janosh/svelte-widgets/pull/436)
 - Add hover/focus triggers and open/close delays to `Popover`

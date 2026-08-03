@@ -44,7 +44,6 @@ const disable_storage = () => {
     throw new DOMException(`storage disabled`)
   }
   vi.stubGlobal(`localStorage`, { getItem: throw_disabled, setItem: throw_disabled })
-  return vi.spyOn(console, `error`).mockImplementation(() => {})
 }
 
 test(`initial render stays hidden until hydration`, async () => {
@@ -82,8 +81,10 @@ test.each([
   expect(rendered_icon_path()).toBe(icon_data[icon_name].d)
 })
 
+// Storage failure is expected (for example private mode) and must not log errors.
 test(`gracefully degrades when localStorage throws`, async () => {
-  const console_error = disable_storage()
+  disable_storage()
+  const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
 
   const button = await mount_theme_toggle()
   expect(button.style.visibility).toBe(`visible`)
@@ -92,15 +93,7 @@ test(`gracefully degrades when localStorage throws`, async () => {
   button.click()
   await tick()
   expect(applied_theme()).toEqual([`dark`, `dark`])
-
-  expect(console_error).toHaveBeenCalledWith(
-    expect.stringContaining(`Failed to get theme mode from localStorage`),
-    expect.anything(),
-  )
-  expect(console_error).toHaveBeenCalledWith(
-    expect.stringContaining(`Failed to set theme mode`),
-    expect.anything(),
-  )
+  expect(console_error).not.toHaveBeenCalled()
 })
 
 test(`mount preserves an externally applied theme when storage is unavailable`, async () => {

@@ -36,6 +36,7 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `Sheet`            | Native modal edge panel with backdrop dismissal and focus restoration                   | [docs](https://svelte-widgets.janosh.dev/patterns#sheet)               |
 | `Tabs`             | Controlled ARIA tabs with automatic or manual keyboard activation                       | [docs](https://svelte-widgets.janosh.dev/patterns#tabs)                |
 | `Accordion`        | Single or multi-open disclosure group with snippet-rendered content                     | [docs](https://svelte-widgets.janosh.dev/patterns#accordion)           |
+| `FindBar`          | In-DOM find-in-page bar that highlights, counts and steps through matches               | [docs](https://svelte-widgets.janosh.dev/patterns#findbar)             |
 | `Toast`            | Notification queue with priorities, dedupe and pause-on-hover                           | [docs](https://svelte-widgets.janosh.dev/toast)                        |
 | `Nav`              | Navigation bar with dropdowns, pinning and active-route styling                         | [docs](https://svelte-widgets.janosh.dev/nav)                          |
 | `Toc`              | Sticky table of contents that finds and tracks its own headings                         | [docs](https://svelte-widgets.janosh.dev/toc)                          |
@@ -134,8 +135,11 @@ import { heading_anchors } from 'svelte-widgets/heading-anchors'
 | ----------------------------------- | ---------------------------------------------------------- |
 | `/attachments`                      | Element attachments and dismissal primitives               |
 | `/clipboard`                        | Clipboard feedback state                                   |
+| `/code-editor`                      | Backend-agnostic diff rendering and editor primitives      |
+| `/code-editor/editor.css`           | Shared syntax-token and diff-view styles                   |
 | `/dialogs`                          | Queued choice, confirmation and prompt requests            |
 | `/file-drop`                        | Directory expansion and accept filtering                   |
+| `/find-in-page`                     | Reactive find-in-page cursor behind `FindBar`              |
 | `/fullscreen`                       | Shared fullscreen state                                    |
 | `/heading-anchors`                  | Heading ID preprocessor, slugger and anchor attachment     |
 | `/icons`                            | Dynamic icon registry                                      |
@@ -143,12 +147,15 @@ import { heading_anchors } from 'svelte-widgets/heading-anchors'
 | `/live-examples`                    | mdsvex live-example transform, Vite plugin and highlighter |
 | `/live-examples/create-highlighter` | Lightweight custom grammar highlighter factory             |
 | `/print`                            | Element printing                                           |
+| `/storage`                          | Non-throwing localStorage, persisted choices and MRU lists |
 | `/text-search`                      | Text ranges, highlighting and search-jump helpers          |
 | `/theme`                            | Headless light/dark/system state                           |
 | `/toast-queue`                      | Toast reducer and reactive store                           |
 | `/types`                            | Shared component/action types                              |
 | `/utils`                            | Positioning, fuzzy matching, hotkeys and general helpers   |
 | `/vite-config`                      | This repository's Vite Plus configuration helper           |
+
+`DiffView` takes a host-supplied `DiffBackend`, either through its `backend` prop or once per app with `set_diff_backend()`. Import `svelte-widgets/code-editor/editor.css` alongside it for the token palette and shared line metrics. The backend contract is runtime-agnostic, so the implementation can call a native process, worker, WASM module or server route.
 
 For `$…$` and `$$…$$` math in mdsvex, wrap mdsvex with `katex_preprocess()` and run `heading_ids()` last:
 

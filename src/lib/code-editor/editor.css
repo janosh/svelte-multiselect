@@ -1,0 +1,151 @@
+/* Shared unscoped editor/diff theme. Backends emit semantic classes; variables provide
+ * one light/dark palette and remain host-overridable.
+ *
+ * Class contract (`css_class_for` in tokens.ts is the source of truth):
+ *   .tok-<name>       one per TOKEN_CLASS_NAMES entry in types.ts
+ *   .tok-emph         intra-line diff; color from its row
+ *   .diff-row-insert  added line (sets .tok-emph color)
+ *   .diff-row-delete  removed line (sets .tok-emph color)
+ *
+ * --editor-selection-bg / --editor-gutter-active-color serve host editor surfaces
+ * (not DiffView) but stay here so editors do not fork the palette.
+ */
+
+:root {
+  /* Host code blocks can share --code-font with the editor. */
+  --editor-font: var(--code-font, ui-monospace, sfmono-regular, menlo, monospace);
+  --editor-font-size: 13px;
+  /* Must stay an INTEGER pixel value: a transparent <textarea> over a token <pre> can
+   * round fractional line boxes differently and drift by whole lines over long files. */
+  --editor-line-height: 20px;
+  --editor-gutter-color: var(--text-color-muted, #8b949e);
+  --editor-gutter-active-color: var(--text-color, #24292e);
+  --editor-selection-bg: rgba(84, 150, 255, 0.28);
+
+  /* GitHub Light; aliases let themes override shared colors once. */
+  --tok-plain: var(--text-color, #24292e);
+  --tok-comment: #6a737d;
+  --tok-string: #032f62;
+  --tok-escape: #22863a;
+  --tok-number: #005cc5;
+  --tok-constant: var(--tok-number);
+  --tok-keyword: #d73a49;
+  --tok-operator: var(--tok-keyword);
+  --tok-function: #6f42c1;
+  --tok-type: #6f42c1;
+  --tok-parameter: #24292e;
+  --tok-variable: #e36209;
+  --tok-tag: var(--tok-escape);
+  --tok-attribute: var(--tok-function);
+  --tok-punctuation: #57606a;
+  --tok-invalid: #b31d28;
+
+  /* Faint line backgrounds preserve syntax; stronger word backgrounds add emphasis. */
+  --diff-add-bg: rgba(46, 160, 67, 0.13);
+  --diff-del-bg: rgba(248, 81, 73, 0.13);
+  --diff-add-word-bg: rgba(46, 160, 67, 0.32);
+  --diff-del-word-bg: rgba(248, 81, 73, 0.32);
+  --diff-add-marker: #1a7f37;
+  --diff-del-marker: #cf222e;
+  /* Filler shown opposite an added or removed line in the side-by-side layout,
+   * so both columns stay row-aligned. */
+  --diff-spacer-bg: rgba(0, 0, 0, 0.03);
+  --diff-skip-bg: rgba(0, 0, 0, 0.03);
+}
+
+:root[data-theme='dark'],
+:root[data-theme='black'] {
+  --editor-gutter-active-color: var(--text-color, #c9d1d9);
+  --editor-selection-bg: rgba(84, 150, 255, 0.35);
+
+  /* GitHub Dark. */
+  --tok-plain: var(--text-color, #c9d1d9);
+  --tok-comment: #8b949e;
+  --tok-string: #a5d6ff;
+  --tok-escape: #7ee787;
+  --tok-number: #79c0ff;
+  --tok-keyword: #ff7b72;
+  --tok-function: #d2a8ff;
+  --tok-type: #ffa657;
+  --tok-parameter: #c9d1d9;
+  --tok-variable: #ffa657;
+  --tok-punctuation: #8b949e;
+  --tok-invalid: #ffa198;
+
+  --diff-add-bg: rgba(63, 185, 80, 0.15);
+  --diff-del-bg: rgba(248, 81, 73, 0.15);
+  --diff-add-word-bg: rgba(63, 185, 80, 0.4);
+  --diff-del-word-bg: rgba(248, 81, 73, 0.4);
+  --diff-add-marker: #3fb950;
+  --diff-del-marker: #f85149;
+  --diff-spacer-bg: rgba(255, 255, 255, 0.03);
+  --diff-skip-bg: rgba(255, 255, 255, 0.04);
+}
+
+/* The white theme is a higher-contrast light: darken the muted tones that read
+ * as washed out against pure white. */
+:root[data-theme='white'] {
+  --tok-comment: #5c6370;
+  --tok-punctuation: #44494f;
+}
+
+.tok-plain {
+  color: var(--tok-plain);
+}
+.tok-comment {
+  color: var(--tok-comment);
+  font-style: italic;
+}
+.tok-string {
+  color: var(--tok-string);
+}
+.tok-escape {
+  color: var(--tok-escape);
+}
+.tok-number {
+  color: var(--tok-number);
+}
+.tok-constant {
+  color: var(--tok-constant);
+}
+.tok-keyword {
+  color: var(--tok-keyword);
+}
+.tok-operator {
+  color: var(--tok-operator);
+}
+.tok-function {
+  color: var(--tok-function);
+}
+.tok-type {
+  color: var(--tok-type);
+}
+.tok-parameter {
+  color: var(--tok-parameter);
+}
+.tok-variable {
+  color: var(--tok-variable);
+}
+.tok-tag {
+  color: var(--tok-tag);
+}
+.tok-attribute {
+  color: var(--tok-attribute);
+}
+.tok-punctuation {
+  color: var(--tok-punctuation);
+}
+.tok-invalid {
+  color: var(--tok-invalid);
+  text-decoration: underline wavy;
+}
+
+/* Emphasis color comes from the add/delete row; rounding separates adjacent runs. */
+.diff-row-insert .tok-emph {
+  background: var(--diff-add-word-bg);
+  border-radius: 2px;
+}
+.diff-row-delete .tok-emph {
+  background: var(--diff-del-word-bg);
+  border-radius: 2px;
+}

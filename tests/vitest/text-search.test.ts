@@ -9,12 +9,14 @@ import {
   search_text,
 } from '$lib/text-search'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { doc_query } from './index'
+import { doc_query, stub_css_highlights } from './index'
 
 const render = (html: string): HTMLElement => {
   document.body.innerHTML = `<main>${html}</main>`
   return doc_query(`main`)
 }
+const ranges_of = (...args: Parameters<typeof search_text>): Range[] =>
+  search_text(...args).map((match) => match.range)
 
 // Endpoints rather than range.toString(): a range spanning node boundaries can
 // stringify correctly while starting in the wrong node at a coincidentally equal
@@ -30,11 +32,12 @@ describe(`search_text`, () => {
   it(`matches a query straddling inline element boundaries`, () => {
     const root = render(`<p>Hello <b>wo</b>rld</p>`)
 
-    const { matches, ranges } = search_text(root, `world`)
+    const matches = search_text(root, `world`)
+    const ranges = matches.map((match) => match.range)
 
     expect(ranges).toHaveLength(1)
     expect(range_bounds(ranges[0])).toEqual([`wo`, 0, `rld`, 3])
-    expect(matches).toEqual([doc_query(`p`)])
+    expect(matches[0].element).toBe(doc_query(`p`))
   })
 
   it.each([
@@ -56,8 +59,20 @@ describe(`search_text`, () => {
     [`noscript source`, `<p>hi <noscript>hi there</noscript></p>`, `hi`, 1],
     // skipping the subtree, not breaking on it: `fo` and `od` render as one run
     [`text either side of a script`, `<p>fo<script>x</script>od</p>`, `food`, 1],
+    // Unreadable controls/hidden content would produce hits that scroll nowhere.
+    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, `secret`, 0],
+    [`select`, `<p>before<select><option>secret</option></select>after</p>`, `secret`, 0],
+    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, `secret`, 0],
+    // hidden="until-found" stays searchable, like it does in the browser's own find
+    [
+      `hidden-until-found`,
+      `<p><span hidden="until-found">secret</span></p>`,
+      `secret`,
+      1,
+    ],
+    [`text either side of hidden content`, `<p>fo<span hidden>x</span>od</p>`, `food`, 1],
   ])(`%s`, (_desc, html, query, expected_count) => {
-    expect(search_text(render(html), query).ranges).toHaveLength(expected_count)
+    expect(search_text(render(html), query)).toHaveLength(expected_count)
   })
 
   it(`keeps a segment intact across empty text nodes`, () => {
@@ -66,14 +81,11 @@ describe(`search_text`, () => {
     const root = render(`<p><b>fo</b>o</p>`)
     doc_query(`p`).lastChild?.before(document.createTextNode(``))
 
-    expect(search_text(root, `foo`).ranges).toHaveLength(1)
+    expect(search_text(root, `foo`)).toHaveLength(1)
   })
 
   it(`returns nothing for an empty query`, () => {
-    expect(search_text(render(`<p>content</p>`), ``)).toEqual({
-      matches: [],
-      ranges: [],
-    })
+    expect(search_text(render(`<p>content</p>`), ``)).toEqual([])
   })
 
   it.each([
@@ -111,7 +123,7 @@ describe(`search_text`, () => {
     [`final sigma`, `<p>ΟΔΟΣ</p>`, `οδοσ`, [`ΟΔΟΣ`, 0, `ΟΔΟΣ`, 4]],
     [`medial sigma query`, `<p>ΟΔΟΣ</p>`, `οδος`, [`ΟΔΟΣ`, 0, `ΟΔΟΣ`, 4]],
   ])(`maps offsets back through %s`, (_desc, html, query, expected) => {
-    const [range, ...rest] = search_text(render(html), query).ranges
+    const [range, ...rest] = ranges_of(render(html), query)
     expect(rest).toEqual([])
     expect(range_bounds(range)).toEqual(expected)
   })
@@ -121,7 +133,7 @@ describe(`search_text`, () => {
     [`only reordered marks`, `\u0301\u0328`, 1],
   ])(`maps %s across canonically reordered combining marks`, (_desc, query, start) => {
     const source = `q\u0301\u0328`
-    const [range] = search_text(render(`<p>${source}</p>`), query).ranges
+    const [range] = ranges_of(render(`<p>${source}</p>`), query)
 
     expect(range_bounds(range)).toEqual([source, start, source, 3])
     expect(range.toString()).toBe(source.slice(start))
@@ -131,7 +143,7 @@ describe(`search_text`, () => {
     const prefix = `\u0063\u0061\u0066`
     const root = render(`<p>${prefix}<b>e</b>\u0301</p>`)
 
-    const { ranges } = search_text(root, `\u0063\u0061\u0066\u00E9`)
+    const ranges = ranges_of(root, `\u0063\u0061\u0066\u00E9`)
 
     expect(ranges).toHaveLength(1)
     expect(range_bounds(ranges[0])).toEqual([prefix, 0, `\u0301`, 1])
@@ -143,23 +155,28 @@ describe(`search_text`, () => {
   ])(`collapses whitespace runs in %s`, (_desc, query, expected) => {
     const root = render(`<p>form\n  <b>submit</b></p>`)
 
-    const { ranges } = search_text(root, query)
+    const ranges = ranges_of(root, query)
 
     expect(ranges).toHaveLength(1)
     expect(range_bounds(ranges[0])).toEqual(expected)
   })
 
-  it(`finds every non-overlapping occurrence and dedupes matched elements`, () => {
+  it(`reports every non-overlapping hit`, () => {
     const root = render(`<p>aaaa</p><p>aa</p>`)
+    const [first_paragraph, second_paragraph] = root.querySelectorAll(`p`)
 
-    const { matches, ranges } = search_text(root, `aa`)
+    const matches = search_text(root, `aa`)
 
-    expect(ranges.map((range) => [range.startOffset, range.endOffset])).toEqual([
+    expect(matches.map(({ range }) => [range.startOffset, range.endOffset])).toEqual([
       [0, 2],
       [2, 4],
       [0, 2],
     ])
-    expect(matches).toHaveLength(2)
+    expect(matches.map((match) => match.element)).toEqual([
+      first_paragraph,
+      first_paragraph,
+      second_paragraph,
+    ])
   })
 
   // Pins the binary search against the linear scan it replaced: a match on every
@@ -170,7 +187,7 @@ describe(`search_text`, () => {
     const root = render(`<p>${texts.map((text) => `<b>${text}</b>`).join(``)}</p>`)
 
     // `ba` straddles every boundary between consecutive nodes and nowhere else
-    const { ranges } = search_text(root, `ba`)
+    const ranges = ranges_of(root, `ba`)
 
     expect(ranges.map(range_bounds)).toEqual(
       texts.slice(0, -1).map((text, idx) => [text, text.length - 1, texts[idx + 1], 1]),
@@ -184,26 +201,11 @@ describe(`search_text`, () => {
         ? NodeFilter.FILTER_REJECT
         : NodeFilter.FILTER_ACCEPT
 
-    expect(search_text(root, `xx`, { node_filter }).ranges).toEqual([])
+    expect(search_text(root, `xx`, { node_filter })).toEqual([])
     // rejecting also ends the run, so the surrounding text must not concatenate
-    expect(search_text(root, `abcd`, { node_filter }).ranges).toEqual([])
+    expect(search_text(root, `abcd`, { node_filter })).toEqual([])
     // without the filter the same three text nodes are one continuous segment
-    expect(search_text(root, `abxxcd`).ranges).toHaveLength(1)
-  })
-
-  it.each([
-    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, 0],
-    [`select`, `<p>before<select><option>secret</option></select>after</p>`, 0],
-    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, 0],
-    [`hidden-until-found content`, `<p><span hidden="until-found">secret</span></p>`, 1],
-  ])(`handles %s`, (_desc, html, match_count) => {
-    expect(search_text(render(html), `secret`).ranges).toHaveLength(match_count)
-  })
-
-  it(`searches continuously across hidden content`, () => {
-    expect(
-      search_text(render(`<p>fo<span hidden>secret</span>od</p>`), `food`).ranges,
-    ).toHaveLength(1)
+    expect(search_text(root, `abxxcd`)).toHaveLength(1)
   })
 
   it(`honors a custom segment selector`, () => {
@@ -212,20 +214,19 @@ describe(`search_text`, () => {
     // extending the default selector is the intended way to teach the search about
     // markup it does not know: each .cell becomes its own segment
     const segment_selector = `${DEFAULT_SEGMENT_SELECTOR}, .cell`
-    expect(search_text(root, `abc`, { segment_selector }).ranges).toHaveLength(1)
-    expect(search_text(root, `abcd`, { segment_selector }).ranges).toEqual([])
+    expect(search_text(root, `abc`, { segment_selector })).toHaveLength(1)
+    expect(search_text(root, `abcd`, { segment_selector })).toEqual([])
     // and a selector reaching above them merges the two cells into one segment
-    expect(search_text(root, `abcd`, { segment_selector: `main` }).ranges).toHaveLength(1)
+    expect(search_text(root, `abcd`, { segment_selector: `main` })).toHaveLength(1)
   })
 
   it(`creates ranges from the root's own document`, () => {
     const other_doc = document.implementation.createHTMLDocument(`other`)
     other_doc.body.innerHTML = `<main><p>Hello <b>wo</b>rld</p></main>`
     const root = other_doc.body.firstElementChild
+    if (!root) throw new Error(`fixture has no root element`)
 
-    expect(root).not.toBeNull()
-    if (!root) return
-    const { ranges } = search_text(root, `world`)
+    const ranges = ranges_of(root, `world`)
     expect(ranges).toHaveLength(1)
     expect(ranges[0].startContainer.ownerDocument).toBe(other_doc)
   })
@@ -233,12 +234,8 @@ describe(`search_text`, () => {
   it(`fuzzy-matches the shortest non-overlapping ordered subsequences`, () => {
     const root = render(`<p>a----abc a-b-c</p>`)
 
-    expect(search_text(root, `abc`).ranges.map((range) => range.toString())).toEqual([
-      `abc`,
-    ])
-    expect(
-      search_text(root, `abc`, { fuzzy: true }).ranges.map((range) => range.toString()),
-    ).toEqual([`abc`, `a-b-c`])
+    expect(ranges_of(root, `abc`).map(String)).toEqual([`abc`])
+    expect(ranges_of(root, `abc`, { fuzzy: true }).map(String)).toEqual([`abc`, `a-b-c`])
   })
 })
 
@@ -247,33 +244,12 @@ describe(`highlight_ranges`, () => {
   let set_spy: ReturnType<typeof vi.fn>
   let delete_spy: ReturnType<typeof vi.fn>
 
-  // happy-dom implements neither CSS.highlights nor the Highlight constructor, so
-  // both are stubbed: the registry as a plain Map with spied set/delete, and
-  // Highlight as a class recording the ranges it was constructed with.
   beforeEach(() => {
-    registry = new Map()
-    set_spy = vi.fn((key: string, value: unknown) => registry.set(key, value))
-    delete_spy = vi.fn((key: string) => registry.delete(key))
-    vi.stubGlobal(`CSS`, {
-      highlights: {
-        get: (key: string) => registry.get(key),
-        set: set_spy,
-        delete: delete_spy,
-        clear: () => registry.clear(),
-      },
-    })
-    vi.stubGlobal(
-      `Highlight`,
-      class MockHighlight {
-        ranges: Range[]
-        constructor(...ranges: Range[]) {
-          this.ranges = ranges
-        }
-      },
-    )
+    const stub = stub_css_highlights()
+    registry = stub.registry
+    set_spy = stub.set_spy
+    delete_spy = stub.delete_spy
   })
-
-  afterEach(() => vi.unstubAllGlobals())
 
   const installed_ranges = (css_class = `text-search-match`): Range[] => {
     const highlight = registry.get(css_class)
@@ -284,8 +260,7 @@ describe(`highlight_ranges`, () => {
     return ranges
   }
 
-  const search = (html: string, query: string): Range[] =>
-    search_text(render(html), query).ranges
+  const search = (html: string, query: string): Range[] => ranges_of(render(html), query)
 
   it(`installs matched ranges and removes them on release`, () => {
     const ranges = search(`<p>Hello <b>wo</b>rld</p>`, `world`)
@@ -359,7 +334,8 @@ describe(`highlight_ranges`, () => {
     expect(registry.get(`text-search-match`)).toBe(foreign)
   })
 
-  it(`yields the name once another writer takes it over`, () => {
+  // Unlike reclaim-on-write above, release after takeover must preserve the new writer.
+  it(`releasing after a takeover leaves the new writer's highlight in place`, () => {
     const ranges = search(`<p>alpha</p>`, `alpha`)
     const release_first = highlight_ranges(ranges)
     const usurper = new globalThis.Highlight()
@@ -398,7 +374,7 @@ describe(`highlight_ranges`, () => {
     })(root)
     expect(installed_ranges(`shared`)).toHaveLength(1)
 
-    const release = highlight_ranges(search_text(root, `world`).ranges, {
+    const release = highlight_ranges(ranges_of(root, `world`), {
       css_class: `shared`,
     })
     // both owners share one store, so the name holds their union, not the last write

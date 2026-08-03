@@ -3,7 +3,13 @@ import { files_from_data_transfer, filter_accepted_files } from './file-drop'
 import type { TextMutationOptions, TextSearchNodeFilter } from './text-search'
 import { create_burst_debounce, sync_owned_highlight } from './text-search'
 import type { Hotkey, Placement, PositionOptions } from './utils'
-import { compute_position, fuzzy_match_indices, get_uuid, run_hotkeys } from './utils'
+import {
+  clamp,
+  compute_position,
+  fuzzy_match_indices,
+  get_uuid,
+  run_hotkeys,
+} from './utils'
 // Computed CSS lengths resolve to `<number>px`; strip the unit so Number() can coerce.
 // Empty and non-px values (e.g. `none`, `0.5rem`) yield NaN so callers can apply fallbacks.
 const css_px = (css_length: string): number => {
@@ -11,7 +17,8 @@ const css_px = (css_length: string): number => {
   return trimmed ? Number(trimmed.replace(/px$/, ``)) : NaN
 }
 
-const clamp = (value: number, min = 0, max = 1) => Math.max(min, Math.min(max, value))
+// Color channels are 0..1 fractions.
+const clamp_unit = (value: number): number => clamp(value, 0, 1)
 
 // Capture on `target` so a pointer over an iframe keeps reporting; window listeners still
 // get the bubbled moves. `lostpointercapture` is target-only — end there too. pointerId
@@ -1884,7 +1891,7 @@ const parse_percentage = (token: string): number =>
   parse_component(token, 1) / (token.endsWith(`%`) ? 1 : 100)
 // alpha is a 0..1 number or a percentage, and absent means opaque
 const parse_alpha = (token: string | undefined): number =>
-  token === undefined ? 1 : clamp(parse_component(token, 1))
+  token === undefined ? 1 : clamp_unit(parse_component(token, 1))
 // Junk anywhere in a component reaches here as NaN, so one check at the end rejects
 // the whole color rather than every parse site having to guard
 const finite_rgba = (
@@ -1939,7 +1946,7 @@ const XYZ_D50_TO_D65 = [
 ]
 
 const linear_srgb_to_rgb255 = (linear: Triple): Triple =>
-  linear.map((channel) => clamp(srgb_encode(channel)) * 255) as Triple
+  linear.map((channel) => clamp_unit(srgb_encode(channel)) * 255) as Triple
 
 const xyz_d65_to_rgb255 = (xyz: Triple): Triple =>
   linear_srgb_to_rgb255(dot3(XYZ_D65_TO_LINEAR_SRGB, xyz))
@@ -2094,8 +2101,8 @@ const function_to_rgb255 = (name: string, tokens: string[]): Triple | null => {
   const to_rgb255 = name === `hwb` ? hwb_to_rgb255 : hsl_to_rgb255
   return to_rgb255(
     parse_hue(tokens[0]),
-    clamp(parse_percentage(tokens[1])),
-    clamp(parse_percentage(tokens[2])),
+    clamp_unit(parse_percentage(tokens[1])),
+    clamp_unit(parse_percentage(tokens[2])),
   )
 }
 

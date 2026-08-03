@@ -32,6 +32,7 @@ import {
   mock_rect,
   pointer_event,
   press_key as dispatch_key,
+  stub_css_highlights,
   stub_prop,
 } from './index'
 
@@ -1730,8 +1731,7 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(outside)
   })
 
-  // The shape a downstream consumer's modals have: a layer element wrapping a backdrop button and the
-  // dialog beside it, where only the dialog belongs in the Tab cycle.
+  // Layered modal: backdrop button beside a dialog; only the dialog is in the Tab cycle.
   const make_layer = () => {
     const layer = create_element()
     const backdrop = document.createElement(`button`)
@@ -1816,8 +1816,7 @@ describe(`focus_trap`, () => {
     expect(on_inner).toHaveBeenCalledTimes(1)
   })
 
-  // ported from a downstream consumer's modal-focus test: focus that escapes comes back to the element
-  // that last held it inside, not to the entry point the trap opened on
+  // Recapture restores the last inside focus, not the trap's entry point.
   it(`recapture pulls focus back to the last element that held it inside`, async () => {
     const { surface, buttons } = make_surface()
     attach_trap(surface, { recapture: true })
@@ -2124,30 +2123,11 @@ describe(`highlight_matches`, () => {
 
   beforeEach(() => {
     mock_element = document.createElement(`div`)
-    mock_css_highlights = new Map()
-    clear_highlights_spy = vi.fn(() => mock_css_highlights.clear())
-    set_highlights_spy = vi.fn((key: string, value: unknown) =>
-      mock_css_highlights.set(key, value),
-    )
-    delete_highlights_spy = vi.fn((key: string) => mock_css_highlights.delete(key))
-
-    vi.stubGlobal(`CSS`, {
-      highlights: {
-        clear: clear_highlights_spy,
-        get: (key: string) => mock_css_highlights.get(key),
-        set: set_highlights_spy,
-        delete: delete_highlights_spy,
-      },
-    })
-    vi.stubGlobal(
-      `Highlight`,
-      class MockHighlight {
-        ranges: Range[]
-        constructor(...ranges: Range[]) {
-          this.ranges = ranges
-        }
-      },
-    )
+    const stub = stub_css_highlights()
+    mock_css_highlights = stub.registry
+    clear_highlights_spy = stub.clear_spy
+    set_highlights_spy = stub.set_spy
+    delete_highlights_spy = stub.delete_spy
   })
 
   // the timing cases below opt into fake timers individually, so undo it centrally

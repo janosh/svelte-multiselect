@@ -422,7 +422,7 @@
   // remote batches append behind them (e.g. PageSearch matching routes as you type).
   let effective_options = $derived.by(() => {
     const local_options = options ?? []
-    if (!loadOptions) return local_options
+    if (!load_options_config) return local_options
     const local_matches = local_options.filter((opt) =>
       matches_search(opt, effective_filter_text),
     )
@@ -1145,7 +1145,7 @@
         return
       }
       if (allowUserOptions === `append`) {
-        if (loadOptions) loaded_options = [...loaded_options, option_to_add]
+        if (load_options_config) loaded_options = [...loaded_options, option_to_add]
         else options = [...(options ?? []), option_to_add]
       }
     }
@@ -2483,7 +2483,7 @@
           {/if}
         </li>
       {/if}
-      {#if loadOptions && is_loading_options}
+      {#if load_options_config && is_loading_options}
         <li class="loading-more" role="status" aria-label="Loading more options">
           <CircleSpinner />
         </li>
