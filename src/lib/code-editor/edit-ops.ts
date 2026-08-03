@@ -1,14 +1,8 @@
-// Pure text transformations behind the editor's keyboard commands. Nothing here touches
-// a textarea: every function takes an `EditorState` snapshot and returns the state the
-// caller should apply, so the same logic runs identically in a test and in the
-// component. Offsets are UTF-16 code units throughout, matching
-// `textarea.selectionStart` and the span offsets in types.ts.
+// Pure EditorState transforms for keyboard commands; nothing here touches a textarea.
+// UTF-16 offsets match selectionStart and span offsets in types.ts.
 //
-// The tail of the file (from `editor_line_height` down) is a second, unrelated group:
-// view-layer arithmetic shared by anything that renders lines, DiffView included, none
-// of which hold an `EditorState`.
+// From editor_line_height down: view arithmetic shared with DiffView (no EditorState).
 
-import { SvelteSet } from 'svelte/reactivity'
 import { clamp } from '../utils'
 
 export interface EditorState {
@@ -17,22 +11,16 @@ export interface EditorState {
   selection_end: number
 }
 
-// A text insertion replacing the current selection. Callers that want the browser's
-// native undo stack should insert `insert_text` with `execCommand('insertText')` and
-// move the caret back `cursor_back` code units; callers that manage undo themselves
-// can use `apply_insertion`.
+// Insert over the selection. For native undo, use execCommand('insertText') and move
+// back `cursor_back` code units; own-undo callers use apply_insertion.
 export interface TextInsertion {
   insert_text: string
   cursor_back: number
 }
 
-// A replacement of one contiguous range, which is what every block command actually
-// is. Returning this rather than a rewritten document matters: assigning
-// `textarea.value` wipes the browser's undo stack, fires no `input` event (so the line
-// index and the backend both go silently stale) and rebuilds a multi-megabyte string
-// to insert two spaces. Applied as `setSelectionRange(range_start, range_end)` then
-// `execCommand('insertText', replacement)`, a RangeEdit keeps native undo and emits a
-// real `insertText` event that `derive_line_splice` handles like any other edit.
+// Contiguous replacement for block commands. Unlike assigning textarea.value, applying
+// this via setSelectionRange + execCommand preserves undo, emits `input` for
+// derive_line_splice, and avoids rebuilding the whole document.
 export interface RangeEdit {
   range_start: number
   range_end: number
@@ -41,12 +29,10 @@ export interface RangeEdit {
   selection_end: number
 }
 
-// A command over the lines a selection touches. The string argument is the
-// command's unit: the indent for indent/dedent, the comment token for toggling.
+// Whole-line command; `unit` is an indent or comment token.
 type BlockCommand = (state: EditorState, unit: string) => RangeEdit | null
 
-// For callers that manage their own undo, and for tests that want to assert on
-// the resulting document rather than on the edit.
+// For own-undo callers and tests that need the resulting document.
 export const apply_range_edit = (state: EditorState, edit: RangeEdit): EditorState => ({
   text:
     state.text.slice(0, edit.range_start) +
@@ -56,9 +42,8 @@ export const apply_range_edit = (state: EditorState, edit: RangeEdit): EditorSta
   selection_end: edit.selection_end,
 })
 
-// Selections arriving from a DOM textarea are always sane, but tests and
-// programmatic callers are not, and an inverted selection would silently corrupt
-// text rather than fail. A non-finite end falls back to the start, i.e. collapsed.
+// Clamp programmatic/test selections to prevent corruption; DOM selections are sane.
+// A non-finite end collapses at the start.
 const clamp_selection = (state: EditorState): [number, number] => {
   const limit = state.text.length
   const offset = (value: number, low: number): number =>
@@ -75,10 +60,8 @@ const line_end_offset = (text: string, offset: number): number => {
   return newline_idx === -1 ? text.length : newline_idx
 }
 
-// The offsets of the whole lines a selection touches, even partially. A selection
-// ending exactly at a line start (just past a newline) shows no highlight on that
-// line, so editors conventionally exclude it. Dragging down one full line then
-// hitting Tab should not indent the line below.
+// Whole lines touched, excluding a selection end exactly at the next line start so
+// selecting one full line does not indent the line below.
 const touched_line_range = (
   text: string,
   sel_start: number,
@@ -92,18 +75,12 @@ const touched_line_range = (
 
 const leading_whitespace = (line: string): string => /^[ \t]*/.exec(line)?.[0] ?? ``
 
-// Every block command has the same shape: take the whole lines the selection touches,
-// rewrite each one, and replace exactly that span. `make_rewrite` sees all the lines
-// first, so a command that has to survey the block before deciding (comment toggling
-// does) can do it once; returning `null` from it means there is nothing to do,
-// matching `auto_close_pair`, so the caller skips the DOM work rather than applying a
-// no-op edit that would still collapse the selection. The selection shift falls out of
-// the line lengths. The first line's delta moves selection_start; the block's total
-// delta moves selection_end, so callers cannot update one and accidentally let the
-// other drift.
+// Rewrite touched lines as one RangeEdit. make_rewrite sees the full block first;
+// null skips a no-op that would collapse selection. The first-line delta shifts
+// selection_start; total delta shifts selection_end.
 const rewrite_block = (
   state: EditorState,
-  make_rewrite: (lines: string[]) => ((line: string, line_idx: number) => string) | null,
+  make_rewrite: (lines: string[]) => ((line: string) => string) | null,
 ): RangeEdit | null => {
   const [sel_start, sel_end] = clamp_selection(state)
   const [block_start, block_end] = touched_line_range(state.text, sel_start, sel_end)
@@ -115,16 +92,14 @@ const rewrite_block = (
   let total_delta = 0
   const next_block = lines
     .map((line, line_idx) => {
-      const next_line = rewrite_line(line, line_idx)
+      const next_line = rewrite_line(line)
       const delta = next_line.length - line.length
       if (line_idx === 0) first_delta = delta
       total_delta += delta
       return next_line
     })
     .join(`\n`)
-  // Nothing changed, so there is no edit to make: a no-op one would cost an undo entry,
-  // emit an `input` event that sends a pointless splice to the backend. Because callers
-  // preventDefault when they get an edit, it would also swallow the keystroke.
+  // A no-op would cost an undo entry, emit a pointless splice, and swallow the key.
   if (total_delta === 0) return null
 
   const next_start =
@@ -143,8 +118,7 @@ const rewrite_block = (
 export const indent_selection: BlockCommand = (state, indent) => {
   const [sel_start, sel_end] = clamp_selection(state)
   if (indent === ``) return null
-  // A collapsed selection means Tab was pressed with no selection: users expect an
-  // indent inserted AT THE CURSOR (mid-line included), not at the line start.
+  // Collapsed Tab inserts at the caret, including mid-line.
   if (sel_start === sel_end) {
     const caret = sel_start + indent.length
     return {
@@ -159,9 +133,7 @@ export const indent_selection: BlockCommand = (state, indent) => {
   return rewrite_block(state, () => (line) => (line === `` ? line : indent + line))
 }
 
-// How many leading whitespace characters one dedent step removes. A tab always
-// counts as one full indent level regardless of the configured unit, which is what
-// makes dedent work on files that mix tabs and spaces.
+// Leading whitespace removed by one dedent. A tab is one full level even in mixed files.
 const dedent_width = (line: string, indent: string): number => {
   if (line.startsWith(`\t`)) return 1
   const unit_width = indent.includes(`\t`) ? 1 : Math.max(1, indent.length)
@@ -170,33 +142,27 @@ const dedent_width = (line: string, indent: string): number => {
   return width
 }
 
-// Unlike indent, dedent always works on whole lines: there is no meaningful "remove
-// an indent at the cursor" operation. Lines with less indentation than one unit (or
-// none at all) just lose whatever they have; dedent must never eat non-whitespace.
+// Dedent is always whole-line; short indents lose what they have, never non-whitespace.
 export const dedent_selection: BlockCommand = (state, indent) =>
   rewrite_block(state, () => (line) => line.slice(dedent_width(line, indent)))
 
-// Comment every touched line if any is uncommented; otherwise uncomment all. The
-// standard "toggle" semantics, which keeps a partially-commented block from
-// ping-ponging. Blank lines are left alone so toggling twice is a no-op.
+// Comment all if any line is uncommented; otherwise uncomment all. Leave blanks alone.
 export const toggle_line_comment: BlockCommand = (state, token) => {
   if (token === ``) return null
 
   return rewrite_block(state, (lines) => {
-    const content_idxs = new SvelteSet<number>()
-    // Survey once: use the shallowest indent without spreading huge selections into Math.min.
+    // Find the shallowest indent without spreading huge selections into Math.min.
     let all_commented = true
     let comment_column = Infinity
-    for (const [line_idx, line] of lines.entries()) {
+    for (const line of lines) {
       if (line.trim() === ``) continue
-      content_idxs.add(line_idx)
       all_commented &&= line.trimStart().startsWith(token)
       comment_column = Math.min(comment_column, leading_whitespace(line).length)
     }
-    if (content_idxs.size === 0) return null
+    if (!Number.isFinite(comment_column)) return null
 
-    return (line, line_idx) => {
-      if (!content_idxs.has(line_idx)) return line
+    return (line) => {
+      if (line.trim() === ``) return line
       if (!all_commented) {
         return `${line.slice(0, comment_column)}${token} ${line.slice(comment_column)}`
       }
@@ -212,17 +178,14 @@ export const toggle_line_comment: BlockCommand = (state, token) => {
 type CharMap = Record<string, string | undefined>
 const OPENER_TO_CLOSER: CharMap = { '(': `)`, '[': `]`, '{': `}` }
 
-// The text Enter should insert: a newline carrying the current line's indentation, one
-// level deeper after an opener. When the character right after the cursor is the
-// matching closer, that closer is pushed onto its own line at the outer indentation
-// and the caret left on the blank line between them (the classic brace expansion).
+// Enter keeps current indentation, adding one level after an opener. A matching closer
+// after the caret moves to its own outer-indented line, leaving the caret between.
 export const auto_indent_newline = (
   state: EditorState,
   indent: string,
 ): TextInsertion => {
   const [sel_start, sel_end] = clamp_selection(state)
-  // Taking the indentation from the text BEFORE the cursor (rather than the whole
-  // line) keeps Enter inside a line's leading whitespace sane.
+  // Use text before the caret so Enter inside leading whitespace stays sane.
   const before_cursor = state.text.slice(
     line_start_offset(state.text, sel_start),
     sel_start,
@@ -230,13 +193,11 @@ export const auto_indent_newline = (
   const base_indent = leading_whitespace(before_cursor)
   const last_char = before_cursor.trimEnd().at(-1) ?? ``
   const closer = OPENER_TO_CLOSER[last_char]
-  // A trailing `:` opens a block in Python and YAML, and in a brace language it is
-  // a label or object key, where the extra indent is also useful,
-  // so this needs no per-language switch.
+  // `:` opens Python/YAML blocks and also benefits brace-language labels/object keys.
   const opens = Boolean(closer) || last_char === `:`
   const inner_indent = opens ? base_indent + indent : base_indent
 
-  if (closer !== undefined && state.text.slice(sel_end, sel_end + 1) === closer) {
+  if (closer !== undefined && state.text[sel_end] === closer) {
     return {
       insert_text: `\n${inner_indent}\n${base_indent}`,
       cursor_back: base_indent.length + 1,
@@ -245,8 +206,7 @@ export const auto_indent_newline = (
   return { insert_text: `\n${inner_indent}`, cursor_back: 0 }
 }
 
-// Apply a TextInsertion to a state, for callers not routing through execCommand.
-// Kept here so the caret arithmetic exists in exactly one place.
+// Apply without execCommand; keeps caret arithmetic in one place.
 export const apply_insertion = (
   state: EditorState,
   insertion: TextInsertion,
@@ -265,21 +225,18 @@ export const apply_insertion = (
 }
 
 const CLOSER_TO_OPENER: CharMap = { ')': `(`, ']': `[`, '}': `{` }
-const QUOTES = new SvelteSet([`\``, `'`, `"`])
+const QUOTE_CHARS = `\`'"`
 // Unicode-aware so auto-close is not "smarter" inside non-ASCII identifiers.
 const WORD_CHAR_RE = /[\p{L}\p{N}_$]/u
 
-// Decide what typing `typed` should do, or null when the character should be
-// inserted normally by the browser. Two behaviors: closing over an existing closer
-// (type-over) and inserting a matching pair.
+// Handle type-over or pair insertion; null delegates normal insertion to the browser.
 export const auto_close_pair = (
   state: EditorState,
   typed: string,
 ): EditorState | null => {
   if (typed.length !== 1) return null
   const [sel_start, sel_end] = clamp_selection(state)
-  // With a range selected the browser replaces it; wrapping the selection in the
-  // pair would be a different (and unrequested) feature.
+  // Selected text is replaced normally; wrapping is not supported.
   if (sel_start !== sel_end) return null
 
   const next_char = state.text.slice(sel_start, sel_start + 1)
@@ -287,52 +244,43 @@ export const auto_close_pair = (
   // Both outcomes below leave the caret one code unit past where it started.
   const advanced = { selection_start: sel_start + 1, selection_end: sel_start + 1 }
 
-  // Type-over: the closer the user is typing is already there (we or they put it
-  // there), so walk past it instead of doubling it.
-  const closes = CLOSER_TO_OPENER[typed] !== undefined || QUOTES.has(typed)
-  if (next_char === typed && closes) return { text: state.text, ...advanced }
+  // Existing closer: advance instead of doubling it.
+  const is_quote = QUOTE_CHARS.includes(typed)
+  if (next_char === typed && (CLOSER_TO_OPENER[typed] !== undefined || is_quote))
+    return { text: state.text, ...advanced }
 
-  const closer = OPENER_TO_CLOSER[typed] ?? (QUOTES.has(typed) ? typed : undefined)
+  const closer = OPENER_TO_CLOSER[typed] ?? (is_quote ? typed : undefined)
   if (closer === undefined) return null
-  // Auto-closing in front of a word swallows the word inside the pair (`|foo` + `(`
-  // should not become `()foo`), so bail out.
-  if (next_char !== `` && WORD_CHAR_RE.test(next_char)) return null
+  // Do not auto-close before a word: `|foo` + `(` must not become `()foo`.
+  if (WORD_CHAR_RE.test(next_char)) return null
   // Apostrophes: `don|` + `'` must stay `don't`, and `''` must not become `'''`.
   // Only quotes need this. `foo(` is a normal call.
-  if (QUOTES.has(typed) && (prev_char === typed || WORD_CHAR_RE.test(prev_char))) {
+  if (is_quote && (prev_char === typed || WORD_CHAR_RE.test(prev_char))) {
     return null
   }
 
-  return {
-    text: state.text.slice(0, sel_start) + typed + closer + state.text.slice(sel_start),
-    ...advanced,
-  }
+  const text =
+    state.text.slice(0, sel_start) + typed + closer + state.text.slice(sel_start)
+  return { text, ...advanced }
 }
 
-// Row height for both the editor and the diff view, in whole pixels. Integer rather
-// than a unitless multiplier because the editor stacks a transparent textarea on a
-// token overlay: a fractional line height rounds differently in the two layers and
-// drifts them apart by whole lines over a few thousand rows. Shared so an editor and a
-// diff rendered side by side cannot pick multipliers that agree at one font size and
-// differ by a pixel at every other, making rows jump when switching between them.
+// Shared whole-pixel row height for editor and DiffView. Fractional heights round
+// differently in stacked textarea/token layers and drift over long files.
 export const editor_line_height = (font_size: number): number => {
-  // Zero and negative sizes fall back rather than clamping: they are as unusable as
-  // NaN, and clamping would give 1px rows that make the virtualizer render everything.
+  // Non-positive/NaN uses the default; 1px rows would make virtualization render all.
   const size = Number.isFinite(font_size) && font_size > 0 ? font_size : 13
   return Math.max(1, Math.round(size * 1.5))
 }
 
-// Lines as the BACKEND counts them: CRLF and lone CR normalize to LF first, and a
-// trailing newline terminates its line rather than opening an empty one. Shared so a
-// count shown next to a diff cannot disagree with the `DiffResult` it describes.
+// Backend line convention: CRLF/CR → LF; a trailing newline terminates its line without
+// adding a blank. Shared so displayed counts match DiffResult.
 export const split_text_lines = (text: string): string[] => {
-  const lines = text.replaceAll(`\r\n`, `\n`).replaceAll(`\r`, `\n`).split(`\n`)
+  const lines = text.replaceAll(/\r\n?/g, `\n`).split(`\n`)
   if (lines.length > 1 && lines.at(-1) === ``) lines.pop()
   return lines
 }
 
-// Same convention, except empty text counts zero rather than one blank line. This is
-// what `DiffResult.newLineCount` reports for it.
+// Same convention, but empty text is zero lines, matching DiffResult.newLineCount.
 export const count_lines = (text: string): number =>
   text === `` ? 0 : split_text_lines(text).length
 
@@ -344,10 +292,8 @@ interface LineWindow {
 const non_negative = (value: number): number =>
   Number.isFinite(value) ? Math.max(0, value) : 0
 
-// Which line indices a virtualized viewport needs to render. `line_height` comes from
-// `editor_line_height`, which is always at least 1, so there is no zero to guard: before
-// the first layout pass the VIEWPORT is what measures 0, and that still yields the one
-// partial row plus overscan the caller needs to render something worth measuring.
+// Visible indices for virtualization. line_height ≥ 1; a zero-height viewport still
+// returns one partial row plus overscan for initial measurement.
 export const visible_line_window = (
   scroll_top: number,
   viewport_height: number,
@@ -359,8 +305,7 @@ export const visible_line_window = (
   if (count === 0) return { start: 0, end: 0 }
   const rows = Math.floor(non_negative(overscan))
   const first_visible = Math.floor(non_negative(scroll_top) / line_height)
-  // +1 because a viewport that is not an exact multiple of the line height shows a
-  // partial row at the bottom.
+  // Include a possible partial row at the bottom.
   const visible_rows = Math.ceil(non_negative(viewport_height) / line_height) + 1
   const start = clamp(first_visible - rows, 0, count)
   return { start, end: clamp(first_visible + visible_rows + rows, start, count) }

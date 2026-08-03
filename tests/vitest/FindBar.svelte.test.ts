@@ -1,5 +1,4 @@
-import { create_find_state } from '$lib/find-in-page.svelte'
-import type { FindOptions } from '$lib/find-in-page.svelte'
+import { create_find_state, type FindOptions } from '$lib/find-in-page.svelte'
 import FindBar from '$lib/FindBar.svelte'
 import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
@@ -20,7 +19,14 @@ const mount_bar = (html: string, extra: Partial<Props> = {}) => {
     target: doc_query(`#bar`),
     props: { root, on_close, ...extra },
   })
-  return { bar, root, on_close }
+  let is_mounted = true
+  const unmount_bar = async (): Promise<void> => {
+    if (!is_mounted) return
+    is_mounted = false
+    await unmount(bar)
+  }
+  onTestFinished(unmount_bar)
+  return { bar, root, on_close, unmount_bar }
 }
 
 const input = () => doc_query<HTMLInputElement>(`.find-bar input`)
@@ -52,8 +58,9 @@ describe(`FindBar`, () => {
     expect([input().selectionStart, input().selectionEnd]).toEqual([0, `alpha`.length])
   })
 
-  test(`counts matches, walks them with the arrows and wraps at both ends`, async () => {
-    mount_bar(`<p>alpha</p><p>beta alpha</p><ul><li>alpha</li></ul>`)
+  test(`counts every hit, walks them with the arrows and wraps at both ends`, async () => {
+    // The second paragraph has two hits: navigation is per occurrence, not per element.
+    mount_bar(`<p>alpha</p><p>beta alpha alpha</p>`)
     expect(status()).toBe(``) // quiet until there is something to say
 
     await type_query(`alpha`)
@@ -63,12 +70,14 @@ describe(`FindBar`, () => {
     nav_button(`Next`).click()
     await tick()
     expect(status()).toBe(`2 of 3`)
-    expect(jumped()).toBe(`beta alpha`)
+    expect(jumped()).toBe(`beta alpha alpha`)
 
     // wrap forwards off the end, then backwards off the front
-    for (const _step of [0, 1]) nav_button(`Next`).click()
-    await tick()
-    expect(status()).toBe(`1 of 3`)
+    for (const expected_status of [`3 of 3`, `1 of 3`]) {
+      nav_button(`Next`).click()
+      await tick()
+      expect(status()).toBe(expected_status)
+    }
     nav_button(`Previous`).click()
     await tick()
     expect(status()).toBe(`3 of 3`)
@@ -121,13 +130,16 @@ describe(`FindBar`, () => {
     expect(event.defaultPrevented).toBe(true)
   })
 
-  test(`opens a collapsed <details> holding the match it jumps to`, async () => {
-    mount_bar(`<details><summary>head</summary><p>buried alpha</p></details>`)
-    const details = doc_query<HTMLDetailsElement>(`details`)
-    expect(details.open).toBe(false)
+  test(`opens every collapsed <details> ancestor holding a match`, async () => {
+    mount_bar(
+      `<details><summary>outer</summary><details><summary>inner</summary>` +
+        `<p>buried alpha</p></details></details>`,
+    )
+    const details = [...document.querySelectorAll<HTMLDetailsElement>(`details`)]
+    expect(details.map(({ open }) => open)).toEqual([false, false])
 
     await type_query(`buried`)
-    expect(details.open).toBe(true)
+    expect(details.map(({ open }) => open)).toEqual([true, true])
   })
 
   test(`labels the region, the input and the close button from one prop`, () => {
@@ -316,11 +328,11 @@ describe(`create_find_state`, () => {
   test(`a mounted FindBar stops observing and drops its highlight on unmount`, async () => {
     const registry = stub_highlight_registry()
     const disconnect = vi.spyOn(MutationObserver.prototype, `disconnect`)
-    const { bar, root } = mount_bar(`<p>alpha</p>`)
+    const { root, unmount_bar } = mount_bar(`<p>alpha</p>`)
     await type_query(`alpha`)
     expect(registry.has(`find-match`)).toBe(true)
 
-    await unmount(bar)
+    await unmount_bar()
     await tick()
     expect(disconnect).toHaveBeenCalled()
     // a stranded owner would keep painting matches over content nothing is searching

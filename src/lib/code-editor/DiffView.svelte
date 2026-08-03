@@ -143,12 +143,13 @@
     return text === undefined ? null : { lineNo: line_no, text, spans: [] }
   }
 
+  // Discard gap rows beyond both source texts when backend line counts disagree.
   const build_gap_rows = (old_from: number, new_from: number, count: number): DiffRow[] =>
     Array.from({ length: count }, (_unused, offset) => ({
       kind: `equal` as const,
       old: plain_line(old_lines, old_from + offset),
       new: plain_line(new_lines, new_from + offset),
-    }))
+    })).filter((row) => row.old !== null || row.new !== null)
 
   const pair_rows_of = (row: DiffRow): DisplayRow[] => [
     { kind: `pair`, row_kind: row.kind, old: row.old, new: row.new },
@@ -157,10 +158,12 @@
   const single_rows_of = (row: DiffRow): DisplayRow[] => {
     const base = { kind: `single`, row_kind: row.kind } as const
     // An equal row holds the same text on both sides; emitting it twice would
-    // duplicate every context line, so unified shows it once with both gutters.
-    if (row.kind === `equal` && row.old && row.new) {
-      const [old_no, new_no] = [row.old.lineNo, row.new.lineNo]
-      return [{ ...base, side: `equal`, line: row.old, old_no, new_no }]
+    // duplicate it. One-sided reconstructed gap rows are still unsigned context.
+    if (row.kind === `equal`) {
+      const line = row.old ?? row.new
+      if (!line) return []
+      const [old_no, new_no] = [row.old?.lineNo ?? null, row.new?.lineNo ?? null]
+      return [{ ...base, side: `equal`, line, old_no, new_no }]
     }
     // Deleted side first, then inserted, which is the order a unified diff reads
     // in. Only the side a line came from carries its number.
@@ -235,8 +238,9 @@
 
   // A helper, not inlined: Svelte keeps the newline between two adjacent expressions in
   // markup, so the count and its unit would render with a line break between them.
+  const line_noun = (count: number): `line` | `lines` => (count === 1 ? `line` : `lines`)
   const line_count_label = (result: DiffResult): string =>
-    `${result.newLineCount} ${result.newLineCount === 1 ? `line` : `lines`}`
+    `${result.newLineCount} ${line_noun(result.newLineCount)}`
 
   const is_change_row = (entry: DisplayRow | undefined): boolean =>
     (entry?.kind === `pair` || entry?.kind === `single`) && entry.row_kind !== `equal`
@@ -388,13 +392,17 @@
       {/if}
     </div>
   {:else}
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -- enables keyboard scrolling -->
     <div
+      aria-label="{old_label} → {new_label} diff"
       bind:this={scroll_container}
       bind:clientHeight={viewport_height}
       class="diff-scroll"
       onscroll={(event) => {
         scroll_top = event.currentTarget.scrollTop
       }}
+      role="region"
+      tabindex="0"
     >
       <div class="diff-body" style="padding-block: {pad_top}px {pad_bottom}px">
         {#each visible_rows as entry, entry_idx (row_window.start + entry_idx)}
@@ -408,7 +416,7 @@
               type="button"
             >
               {expanded_gaps.has(entry.gap_idx) ? `⌃` : `⋯`}
-              {entry.skipped} unchanged lines
+              {entry.skipped} unchanged {line_noun(entry.skipped)}
             </button>
           {:else if entry.kind === `pair`}
             <div class="diff-row pair">
@@ -597,6 +605,10 @@
     overflow: auto;
     font-family: var(--editor-font);
     font-size: var(--editor-font-size);
+  }
+  .diff-scroll:focus-visible {
+    outline: 2px solid color-mix(in srgb, var(--active-color, #6ea8ff) 60%, transparent);
+    outline-offset: -2px;
   }
   /* max-content so a long line scrolls horizontally instead of being clipped;
      both columns then share the widest line's width and stay aligned. */

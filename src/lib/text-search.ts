@@ -37,9 +37,18 @@ export type TextSearchOptions = {
   segment_selector?: string
 }
 
-// matches lists the block elements containing at least one range, in document
-// order, for callers stepping through hits
-export type TextSearchResult = { matches: Element[]; ranges: Range[] }
+// One hit: the range it covers and the block element it was attributed to.
+export type TextMatch = { element: Element; range: Range }
+
+// matches lists the block elements containing at least one range, in document order.
+// It is DEDUPLICATED, so two hits inside one paragraph collapse to a single entry —
+// step through `occurrences` instead when every hit needs to be reachable, and use
+// `matches` only to address the containing elements.
+export type TextSearchResult = {
+  matches: Element[]
+  ranges: Range[]
+  occurrences: TextMatch[]
+}
 
 type SegmentNode = { node: Text; start: number; end: number }
 type TextSegment = { element: Element; nodes: SegmentNode[]; text: string }
@@ -269,19 +278,28 @@ export const search_text = (
     segment_selector = DEFAULT_SEGMENT_SELECTOR,
   } = options
   const normalized_query = normalize_with_offsets(query).text.trim()
-  if (!normalized_query) return { matches: [], ranges: [] }
+  if (!normalized_query) return { matches: [], ranges: [], occurrences: [] }
 
-  const ranges: Range[] = []
+  const occurrences: TextMatch[] = []
   const matched_elements = new Set<Element>()
   for (const segment of text_segments(root, node_filter, segment_selector)) {
     const { text, offsets } = normalize_with_offsets(segment.text)
     for (const { start, end } of match_bounds(text, normalized_query, fuzzy)) {
       const source = source_bounds(offsets, start, end)
-      ranges.push(range_for_match(segment, source.start, source.end))
+      occurrences.push({
+        element: segment.element,
+        range: range_for_match(segment, source.start, source.end),
+      })
       matched_elements.add(segment.element)
     }
   }
-  return { matches: [...matched_elements], ranges }
+  // Derived rather than accumulated in parallel, so a range can never go missing from
+  // one list while the other still counts it.
+  return {
+    matches: [...matched_elements],
+    ranges: occurrences.map((occurrence) => occurrence.range),
+    occurrences,
+  }
 }
 
 export type HighlightRangesOptions = { css_class?: string; disabled?: boolean }

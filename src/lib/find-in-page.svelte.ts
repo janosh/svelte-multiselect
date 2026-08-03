@@ -13,6 +13,7 @@ import {
   highlight_ranges,
   observe_text_mutations,
   search_text,
+  type TextMatch,
 } from './text-search'
 
 // Always excluded: content that renders but that the reader does not see, so a hit in
@@ -40,32 +41,44 @@ export type FindOptions = {
 // Options come from a getter, not a snapshot, so a component can hand its own props
 // straight through without freezing them at creation time.
 export const create_find_state = (get_options: () => FindOptions = () => ({})) => {
-  const node_filter = (node: Node): number => {
+  const make_node_filter = () => {
     const { only_within, also_ignore } = get_options()
-    const parent = node.parentElement
-    if (only_within && !parent?.closest(only_within)) return NodeFilter.FILTER_REJECT
     const selector = also_ignore
       ? `${IGNORED_SELECTOR}, ${also_ignore}`
       : IGNORED_SELECTOR
-    return parent?.closest(selector) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT
+    return (node: Node): number => {
+      const parent = node.parentElement
+      if (only_within && !parent?.closest(only_within)) return NodeFilter.FILTER_REJECT
+      return parent?.closest(selector)
+        ? NodeFilter.FILTER_REJECT
+        : NodeFilter.FILTER_ACCEPT
+    }
   }
 
   let query = $state(``)
-  let matches = $state<Element[]>([])
+  // One entry per HIT, not per element: `search_text` deduplicates its `matches` by
+  // element, so counting those would report `1 of 1` for a paragraph containing the
+  // query twice and leave the second hit highlighted but unreachable.
+  let occurrences = $state<TextMatch[]>([])
   let current_idx = $state(-1)
   let release: (() => void) | undefined
   const jump = create_search_jump()
 
   // Wraps at both ends, for any idx: `% length` alone goes negative below -length
   const jump_to = (idx: number): void => {
-    const count = matches.length
+    const count = occurrences.length
     if (count === 0) return
     current_idx = ((idx % count) + count) % count
-    const match = matches[current_idx]
+    const match = occurrences[current_idx]?.element
     // A match inside a collapsed <details> has no box to scroll to, so reveal it the
     // way the browser's own find-in-page does.
-    const collapsed = match?.closest<HTMLDetailsElement>(`details:not([open])`)
-    if (collapsed) collapsed.open = true
+    let collapsed = match?.closest<HTMLDetailsElement>(`details:not([open])`) ?? null
+    while (collapsed) {
+      collapsed.open = true
+      collapsed =
+        collapsed.parentElement?.closest<HTMLDetailsElement>(`details:not([open])`) ??
+        null
+    }
     jump.start(match ?? null)
   }
 
@@ -80,18 +93,29 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
     const { css_class = `find-match`, before_search } = get_options()
     before_search?.(query.trim())
     // Untracked: a caller refreshing from an $effect must not re-run on its own writes.
-    const [previous, previous_idx] = untrack(() => [matches[current_idx], current_idx])
+    // Ranges are rebuilt by every search, so the cursor cannot be preserved by identity;
+    // an element plus how many of its hits precede the cursor does survive.
+    const [previous, previous_idx, ordinal_within_element] = untrack(() => {
+      const current = occurrences[current_idx]
+      const ordinal = current
+        ? occurrences
+            .slice(0, current_idx)
+            .filter((hit) => hit.element === current.element).length
+        : 0
+      return [current, current_idx, ordinal] as const
+    })
     const result = root
-      ? search_text(root, query, { node_filter })
-      : { matches: [], ranges: [] }
-    matches = result.matches
-    // Stay on the same element across a re-search where it survived, so a page mutating
+      ? search_text(root, query, { node_filter: make_node_filter() })
+      : { ranges: [], occurrences: [] }
+    occurrences = result.occurrences
+    // Stay on the same hit across a re-search where it survived, so a page mutating
     // under the reader does not walk the cursor down the list.
-    const preserved_idx = previous ? result.matches.indexOf(previous) : -1
-    current_idx =
-      preserved_idx >= 0
-        ? preserved_idx
-        : Math.min(previous_idx, result.matches.length - 1)
+    const same_element = result.occurrences.flatMap((hit, hit_idx) =>
+      previous && hit.element === previous.element ? [hit_idx] : [],
+    )
+    const preserved_idx =
+      same_element[Math.min(ordinal_within_element, same_element.length - 1)]
+    current_idx = preserved_idx ?? Math.min(previous_idx, result.occurrences.length - 1)
     release?.()
     release = highlight_ranges(result.ranges, { css_class, disabled: !root })
   }
@@ -101,11 +125,11 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
   const observe = (root: Element): (() => void) => {
     const stop = observe_text_mutations(root, () => {
       if (!query.trim()) return
-      const had_matches = matches.length > 0
+      const had_matches = occurrences.length > 0
       refresh(root)
       // Nothing matched before, so there is no cursor to preserve and the first new hit
       // is what the reader is waiting for.
-      if (!had_matches && matches.length > 0) jump_to(0)
+      if (!had_matches && occurrences.length > 0) jump_to(0)
     })
     return () => {
       stop()
@@ -123,8 +147,15 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
       query = next
       current_idx = -1
     },
+    // Every hit in document order, so `current_idx` indexes it directly. An element
+    // holding several hits appears once per hit.
+    get occurrences(): readonly TextMatch[] {
+      return occurrences
+    },
+    // The element behind each hit, positionally aligned with `occurrences` and so also
+    // repeated per hit — NOT the deduplicated element list `search_text` returns.
     get matches(): readonly Element[] {
-      return matches
+      return occurrences.map((hit) => hit.element)
     },
     get current_idx(): number {
       return current_idx
@@ -133,8 +164,8 @@ export const create_find_state = (get_options: () => FindOptions = () => ({})) =
     // something to say
     get status(): string {
       if (!query.trim()) return ``
-      if (matches.length === 0) return `No matches`
-      return `${Math.max(0, current_idx) + 1} of ${matches.length}`
+      if (occurrences.length === 0) return `No matches`
+      return `${Math.max(0, current_idx) + 1} of ${occurrences.length}`
     },
     jump_to,
     step,

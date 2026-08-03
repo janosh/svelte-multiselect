@@ -241,7 +241,9 @@ describe(`rows and layouts`, () => {
       }),
       { single_col: true, new_text: `first line\nsecond line` },
     )
-    expect(code_texts()).toContain(`first line`)
+    expect(code_texts()).toEqual([`first line`, `second line`])
+    expect(document.querySelectorAll(`.diff-row.solo`)).toHaveLength(3)
+    expect(document.querySelector(`.diff-row-delete, .diff-row-insert`)).toBeNull()
     expect(document.querySelector(`.panel-header`)).toBeNull()
     expect(document.querySelector(`[data-no-newline='old']`)).toBeNull()
     expect(text_of(query_element(`[data-no-newline='new']`))).toBe(
@@ -259,21 +261,64 @@ test(`elided gaps expand using source lines and remain independent`, async () =>
       hunks: [hunk],
       added: 1,
       removed: 1,
-      oldLineCount: 12,
-      newLineCount: 12,
-      skippedAfter: 7,
+      oldLineCount: 6,
+      newLineCount: 6,
+      skippedAfter: 1,
     }),
     {
-      old_text: `${context}old five\n`,
-      new_text: `${context}new five\n`,
+      old_text: `${context}old five\ntail`,
+      new_text: `${context}new five\ntail`,
     },
   )
 
-  expect(document.querySelectorAll(`.diff-gap`)).toHaveLength(2)
-  await click(query_element(`.diff-gap`))
+  const gaps = [...document.querySelectorAll(`.diff-gap`)]
+  expect(gaps.map((gap) => text_of(gap).trim())).toEqual([
+    expect.stringMatching(/4 unchanged lines$/u),
+    expect.stringMatching(/1 unchanged line$/u),
+  ])
+  await click(gaps[0])
   const expanded = query_by_text(`.diff-row.pair`, `three`)
   expect([...expanded.querySelectorAll(`.gutter`)].map(text_of)).toEqual([`3`, `3`])
   expect(document.querySelectorAll(`.diff-gap`)).toHaveLength(1)
+})
+
+test(`gap lines missing a side stay context instead of reading as edits`, async () => {
+  // skippedBefore reaches past the start of the old side, so those reconstructed lines
+  // exist only on the new one. They are unchanged by definition; signing them +/- would
+  // present untouched code as an edit.
+  const row = diff_row(`replace`, diff_line(2, `old two`), diff_line(5, `new five`))
+  const hunk = hunk_of([row], { oldStart: 2, newStart: 5, skippedBefore: 4 })
+  await mount_diff(
+    diff_result({
+      hunks: [hunk],
+      added: 1,
+      removed: 1,
+      oldLineCount: 2,
+      newLineCount: 5,
+    }),
+    {
+      old_text: `only one\nold two`,
+      new_text: `a\nb\nc\nd\nnew five`,
+      options: { ...DEFAULT_OPTIONS, layout: `unified` },
+    },
+  )
+
+  await click(query_element(`.diff-gap`))
+  const signs_by_text = [...document.querySelectorAll(`.diff-row.unified`)].map(
+    (diff_row_element) => [
+      text_of(diff_row_element.querySelector(`.code`)),
+      text_of(diff_row_element.querySelector(`.sign`)).trim(),
+    ],
+  )
+  // All four elided lines are context, including the three with no old-side counterpart.
+  expect(signs_by_text).toEqual([
+    [`a`, ``],
+    [`b`, ``],
+    [`c`, ``],
+    [`only one`, ``],
+    [`old two`, `-`],
+    [`new five`, `+`],
+  ])
 })
 
 test.each([
@@ -331,8 +376,7 @@ describe(`states and backend wiring`, () => {
     await mount_diff(diff_result(), { ...failure, on_error })
 
     expect(query_element(`[role='alert']`).textContent).toContain(message)
-    expect(on_error).toHaveBeenCalledOnce()
-    expect(on_error.mock.calls[0][0]).toContain(message)
+    expect(on_error).toHaveBeenCalledExactlyOnceWith(expect.stringContaining(message))
     expect(document.querySelector(`[data-empty]`)).toBeNull()
   })
 
@@ -359,8 +403,8 @@ describe(`states and backend wiring`, () => {
     await flush_async(`.diff-view[aria-busy='true']`)
 
     props.new_text = `fresh`
-    await flush_async(`.diff-view[aria-busy='true']`)
-    expect(resolvers).toHaveLength(2)
+    flushSync()
+    await vi.waitFor(() => expect(resolvers).toHaveLength(2))
 
     const line_result = (text: string) =>
       rows_result([diff_row(`insert`, null, diff_line(1, text))], { newLineCount: 1 })
@@ -372,7 +416,7 @@ describe(`states and backend wiring`, () => {
     expect(code_texts()).toEqual([`fresh`])
   })
 
-  test(`uses the registered backend and forwards reactive diff arguments`, async () => {
+  test(`uses the registered backend and forwards diff arguments once`, async () => {
     const diff_text = await mount_diff(
       diff_result({ oldLineCount: 1, newLineCount: 1 }),
       {

@@ -56,6 +56,19 @@ describe(`search_text`, () => {
     [`noscript source`, `<p>hi <noscript>hi there</noscript></p>`, `hi`, 1],
     // skipping the subtree, not breaking on it: `fo` and `od` render as one run
     [`text either side of a script`, `<p>fo<script>x</script>od</p>`, `food`, 1],
+    // form controls and hidden content: also present in the DOM but not readable, so a
+    // hit inside one would scroll the reader to nothing
+    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, `secret`, 0],
+    [`select`, `<p>before<select><option>secret</option></select>after</p>`, `secret`, 0],
+    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, `secret`, 0],
+    // hidden="until-found" stays searchable, like it does in the browser's own find
+    [
+      `hidden-until-found`,
+      `<p><span hidden="until-found">secret</span></p>`,
+      `secret`,
+      1,
+    ],
+    [`text either side of hidden content`, `<p>fo<span hidden>x</span>od</p>`, `food`, 1],
   ])(`%s`, (_desc, html, query, expected_count) => {
     expect(search_text(render(html), query).ranges).toHaveLength(expected_count)
   })
@@ -73,6 +86,7 @@ describe(`search_text`, () => {
     expect(search_text(render(`<p>content</p>`), ``)).toEqual({
       matches: [],
       ranges: [],
+      occurrences: [],
     })
   })
 
@@ -149,17 +163,25 @@ describe(`search_text`, () => {
     expect(range_bounds(ranges[0])).toEqual(expected)
   })
 
-  it(`finds every non-overlapping occurrence and dedupes matched elements`, () => {
+  it(`reports every non-overlapping hit, deduping only the element list`, () => {
     const root = render(`<p>aaaa</p><p>aa</p>`)
 
-    const { matches, ranges } = search_text(root, `aa`)
+    const { matches, ranges, occurrences } = search_text(root, `aa`)
 
     expect(ranges.map((range) => [range.startOffset, range.endOffset])).toEqual([
       [0, 2],
       [2, 4],
       [0, 2],
     ])
+    // `matches` collapses the two hits in the first paragraph, so a caller stepping
+    // through hits needs `occurrences`, which keeps one record per range.
     expect(matches).toHaveLength(2)
+    expect(ranges).toEqual(occurrences.map((hit) => hit.range))
+    expect(occurrences.map((hit) => hit.element)).toEqual([
+      matches[0],
+      matches[0],
+      matches[1],
+    ])
   })
 
   // Pins the binary search against the linear scan it replaced: a match on every
@@ -191,21 +213,6 @@ describe(`search_text`, () => {
     expect(search_text(root, `abxxcd`).ranges).toHaveLength(1)
   })
 
-  it.each([
-    [`textarea`, `<p>before<textarea>secret</textarea>after</p>`, 0],
-    [`select`, `<p>before<select><option>secret</option></select>after</p>`, 0],
-    [`hidden content`, `<p>before<span hidden>secret</span>after</p>`, 0],
-    [`hidden-until-found content`, `<p><span hidden="until-found">secret</span></p>`, 1],
-  ])(`handles %s`, (_desc, html, match_count) => {
-    expect(search_text(render(html), `secret`).ranges).toHaveLength(match_count)
-  })
-
-  it(`searches continuously across hidden content`, () => {
-    expect(
-      search_text(render(`<p>fo<span hidden>secret</span>od</p>`), `food`).ranges,
-    ).toHaveLength(1)
-  })
-
   it(`honors a custom segment selector`, () => {
     const root = render(`<div class="cell">ab<b>c</b></div><div class="cell">d</div>`)
 
@@ -222,9 +229,8 @@ describe(`search_text`, () => {
     const other_doc = document.implementation.createHTMLDocument(`other`)
     other_doc.body.innerHTML = `<main><p>Hello <b>wo</b>rld</p></main>`
     const root = other_doc.body.firstElementChild
+    if (!root) throw new Error(`fixture has no root element`)
 
-    expect(root).not.toBeNull()
-    if (!root) return
     const { ranges } = search_text(root, `world`)
     expect(ranges).toHaveLength(1)
     expect(ranges[0].startContainer.ownerDocument).toBe(other_doc)
@@ -359,7 +365,9 @@ describe(`highlight_ranges`, () => {
     expect(registry.get(`text-search-match`)).toBe(foreign)
   })
 
-  it(`yields the name once another writer takes it over`, () => {
+  // Distinct from the reclaim case above: there the name is yielded on WRITE, here the
+  // last owner leaving must not restore its own bookkeeping over the new writer.
+  it(`releasing after a takeover leaves the new writer's highlight in place`, () => {
     const ranges = search(`<p>alpha</p>`, `alpha`)
     const release_first = highlight_ranges(ranges)
     const usurper = new globalThis.Highlight()

@@ -62,6 +62,7 @@
   }
 
   $effect(() => {
+    // refresh reads find.query, making this effect re-run after each input update.
     find.refresh(root)
     return find.release_highlight
   })

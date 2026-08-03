@@ -48,6 +48,8 @@
 
 `FindBar` is an in-DOM find-in-page bar over `search_text`: it highlights every match under `root`, counts them, and walks them with Enter / Shift+Enter. Matches wear a CSS Custom Highlight, which is document-global and so cannot be styled from inside the component — add your own `::highlight(find-match)` rule. Where the chrome does not fit, `create_find_state` from `svelte-widgets/find-in-page` gives you the same cursor with no markup.
 
+Because this example renders the bar inside `root`, `also_ignore=".find-bar"` keeps its status text and controls out of the searchable section content.
+
 ```svelte example id="patterns-find-bar"
 <script lang="ts">
   import { FindBar } from '$lib'
@@ -58,7 +60,12 @@
 
 <div bind:this={root} style="position: relative; padding-top: 3rem">
   {#if open}
-    <FindBar {root} label="section" on_close={() => (open = false)} />
+    <FindBar
+      {root}
+      label="section"
+      also_ignore=".find-bar"
+      on_close={() => (open = false)}
+    />
   {:else}
     <button onclick={() => (open = true)}>Find in section</button>
   {/if}
