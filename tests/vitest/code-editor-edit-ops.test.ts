@@ -89,6 +89,20 @@ test.each([
   expect(block_op(dedent_selection, before_marked, indent)).toBe(expected)
 })
 
+test(`toggle_line_comment survives a block larger than the argument limit`, () => {
+  // Deriving the comment column by spreading one argument per line throws a
+  // RangeError here rather than commenting anything.
+  const lines = Array.from(
+    { length: 200_000 },
+    (_unused, idx) => `${` `.repeat(idx % 4)}x`,
+  )
+  const text = lines.join(`\n`)
+  const edit = toggle_line_comment(state(text, 0, text.length), `#`)
+
+  // The shallowest indentation in the block is 0, so every line is commented there.
+  expect(edit?.replacement.split(`\n`).at(-1)).toBe(`# ${lines.at(-1)}`)
+})
+
 test.each([
   [`uses the shallowest indentation`, `[  one\n    two]`, `#`, `[  # one\n  #   two]`],
   [`uncomments when every line is commented`, `[# one\n  # two]`, `#`, `[one\n  two]`],

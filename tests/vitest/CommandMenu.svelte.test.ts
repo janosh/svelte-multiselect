@@ -1444,8 +1444,10 @@ test(`global shortcuts skip disabled duplicate bindings`, async () => {
   expect(enabled_action).toHaveBeenCalledExactlyOnceWith(`save`)
 })
 
-test(`recent_actions_key ranks recently triggered actions first and persists them`, async () => {
+test(`recent_actions_key ranks, persists, and reloads recently triggered actions`, async () => {
   const storage_key = `test-cmd-recents`
+  const next_storage_key = `test-cmd-recents-next`
+  localStorage.setItem(next_storage_key, JSON.stringify([`beta`]))
   const actions = [`alpha`, `beta`, `gamma`].map((label) => ({
     label,
     action: vi.fn(),
@@ -1480,6 +1482,10 @@ test(`recent_actions_key ranks recently triggered actions first and persists the
   props.open = true
   await tick()
   expect(option_labels()).toEqual([`gamma`, `alpha`, `beta`])
+
+  props.recent_actions_key = next_storage_key
+  await tick()
+  expect(option_labels()).toEqual([`beta`, `alpha`, `gamma`])
 })
 
 test(`recent_actions_key uses action ids for duplicate labels`, async () => {

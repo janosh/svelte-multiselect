@@ -6,50 +6,41 @@
 import { SvelteSet } from 'svelte/reactivity'
 import { clamp, is_object } from './utils'
 
-export const storage_get = (key: string): string | null => {
+// The one place the best-effort policy lives: a quota, a private-mode window or a
+// disabled store throws rather than failing softly, and none of that is worth
+// propagating to a caller whose state already works in memory.
+const guarded = <Result>(access: () => Result, fallback: Result): Result => {
   try {
-    return globalThis.localStorage?.getItem(key) ?? null
-  } catch {
-    return null
-  }
-}
-
-export const storage_set = (key: string, value: string): void => {
-  try {
-    globalThis.localStorage?.setItem(key, value)
-  } catch {
-    // Ignore storage quota/private-mode failures. State still works in memory.
-  }
-}
-
-export const storage_remove = (key: string): void => {
-  try {
-    globalThis.localStorage?.removeItem(key)
-  } catch {
-    // Ignore storage failures.
-  }
-}
-
-// Parsed storage is untrusted, so the fallback's type must not pretend to validate it.
-// Callers narrow the result before putting it into typed state.
-export const storage_get_json = (key: string, fallback: unknown): unknown => {
-  const stored = storage_get(key)
-  if (stored === null) return fallback
-  try {
-    return JSON.parse(stored)
+    return access()
   } catch {
     return fallback
   }
 }
 
-export const storage_set_json = (key: string, value: object): void => {
-  try {
-    const serialized = JSON.stringify(value)
-    if (serialized !== undefined) storage_set(key, serialized)
-  } catch {
-    // Cyclic values, BigInts and throwing toJSON methods are not persistable.
-  }
+export const storage_get = (key: string): string | null =>
+  guarded(() => globalThis.localStorage?.getItem(key) ?? null, null)
+
+export const storage_set = (key: string, value: string): void =>
+  guarded(() => globalThis.localStorage?.setItem(key, value), undefined)
+
+export const storage_remove = (key: string): void =>
+  guarded(() => globalThis.localStorage?.removeItem(key), undefined)
+
+// Parsed storage is untrusted, so the fallback's type must not pretend to validate it.
+// Callers narrow the result before putting it into typed state.
+export const storage_get_json = (key: string, fallback: unknown): unknown => {
+  const stored = storage_get(key)
+  return stored === null ? fallback : guarded((): unknown => JSON.parse(stored), fallback)
 }
+
+export const storage_set_json = (key: string, value: object): void => {
+  // Cyclic values, BigInts and throwing toJSON methods are not persistable.
+  const serialized = guarded(() => JSON.stringify(value), undefined)
+  if (serialized !== undefined) storage_set(key, serialized)
+}
+
+const is_finite_number = (value: unknown): value is number =>
+  typeof value === `number` && Number.isFinite(value)
 
 // Persisted box size for a resizable panel. Invalid or missing sizes come back null so
 // the caller falls through to its own default.
@@ -57,12 +48,7 @@ export const storage_get_size = (key: string): { w: number; h: number } | null =
   const size: unknown = storage_get_json(key, null)
   if (!is_object(size)) return null
   const { w, h } = size
-  return typeof w === `number` &&
-    typeof h === `number` &&
-    Number.isFinite(w) &&
-    Number.isFinite(h)
-    ? { w, h }
-    : null
+  return is_finite_number(w) && is_finite_number(h) ? { w, h } : null
 }
 
 // Persisted enum preference: the stored value while it is still one of `options`, else

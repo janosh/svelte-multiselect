@@ -84,9 +84,14 @@ interface MountOptions {
   no_backend?: boolean
 }
 
-const flush_async = async (): Promise<void> => {
+const flush_async = async (
+  ready_selector = `.diff-view[aria-busy='false']`,
+): Promise<void> => {
   flushSync()
-  for (let flush_idx = 0; flush_idx < 8; flush_idx++) await Promise.resolve()
+  await Promise.resolve()
+  await vi.waitFor(() => {
+    expect(document.querySelector(ready_selector)).not.toBeNull()
+  })
   flushSync()
 }
 
@@ -351,10 +356,10 @@ describe(`states and backend wiring`, () => {
     })
     const instance = mount(DiffView, { target: document.body, props })
     onTestFinished(() => unmount(instance))
-    await flush_async()
+    await flush_async(`.diff-view[aria-busy='true']`)
 
     props.new_text = `fresh`
-    await flush_async()
+    await flush_async(`.diff-view[aria-busy='true']`)
     expect(resolvers).toHaveLength(2)
 
     const line_result = (text: string) =>
@@ -402,7 +407,8 @@ describe(`virtualization`, () => {
   test(`renders a bounded window and navigates to the next change`, async () => {
     await mount_diff(large_result(2000))
     expect(document.querySelectorAll(`.diff-row`).length).toBeLessThan(100)
-    expect(code_texts()).not.toContain(`line 1000`)
+    expect(code_texts()).not.toContain(`old 1000`)
+    expect(code_texts()).not.toContain(`new 1000`)
 
     const scroller = query_element<HTMLDivElement>(`.diff-scroll`)
     scroller.scrollTop = ROW_HEIGHT * 1000

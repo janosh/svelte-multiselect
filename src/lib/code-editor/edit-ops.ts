@@ -183,19 +183,17 @@ export const toggle_line_comment: BlockCommand = (state, token) => {
   if (token === ``) return null
 
   return rewrite_block(state, (lines) => {
-    const content_idxs = new SvelteSet(
-      lines.flatMap((line, line_idx) => (line.trim() === `` ? [] : [line_idx])),
-    )
+    const content_idxs = new SvelteSet<number>()
+    // Survey once: use the shallowest indent without spreading huge selections into Math.min.
+    let all_commented = true
+    let comment_column = Infinity
+    for (const [line_idx, line] of lines.entries()) {
+      if (line.trim() === ``) continue
+      content_idxs.add(line_idx)
+      all_commented &&= line.trimStart().startsWith(token)
+      comment_column = Math.min(comment_column, leading_whitespace(line).length)
+    }
     if (content_idxs.size === 0) return null
-
-    const all_commented = [...content_idxs].every((line_idx) =>
-      lines[line_idx].trimStart().startsWith(token),
-    )
-    // Comment at the block's shallowest indentation rather than column 0, so the
-    // code keeps its shape and re-indenting the block afterwards is unnecessary.
-    const comment_column = Math.min(
-      ...[...content_idxs].map((line_idx) => leading_whitespace(lines[line_idx]).length),
-    )
 
     return (line, line_idx) => {
       if (!content_idxs.has(line_idx)) return line
