@@ -1730,7 +1730,7 @@ describe(`focus_trap`, () => {
     expect(document.activeElement).toBe(outside)
   })
 
-  // The shape a downstream consumer's modals have: a layer element wrapping a backdrop button and the
+  // The shape a layered modal has: a layer element wrapping a backdrop button and the
   // dialog beside it, where only the dialog belongs in the Tab cycle.
   const make_layer = () => {
     const layer = create_element()
@@ -1816,8 +1816,8 @@ describe(`focus_trap`, () => {
     expect(on_inner).toHaveBeenCalledTimes(1)
   })
 
-  // ported from a downstream consumer's modal-focus test: focus that escapes comes back to the element
-  // that last held it inside, not to the entry point the trap opened on
+  // ported from a downstream modal-focus test: focus that escapes comes back to the
+  // element that last held it inside, not to the entry point the trap opened on
   it(`recapture pulls focus back to the last element that held it inside`, async () => {
     const { surface, buttons } = make_surface()
     attach_trap(surface, { recapture: true })
