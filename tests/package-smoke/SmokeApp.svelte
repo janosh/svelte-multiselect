@@ -2,6 +2,7 @@
   import {
     Accordion,
     CommandMenu,
+    FindBar,
     fuzzy_match,
     MultiSelect,
     PageSearch,
@@ -9,14 +10,20 @@
     Tabs,
   } from 'svelte-widgets'
   import DirectCommandMenu from 'svelte-widgets/CommandMenu.svelte'
+  import DirectFindBar from 'svelte-widgets/FindBar.svelte'
   import DirectMultiSelect from 'svelte-widgets/MultiSelect.svelte'
   import DirectPageSearch from 'svelte-widgets/PageSearch.svelte'
   import type { Option } from 'svelte-widgets'
   import { click_outside, file_drop } from 'svelte-widgets/attachments'
+  import { count_lines, DiffView } from 'svelte-widgets/code-editor'
+  // oxlint-disable-next-line import/no-unassigned-import -- verifies the CSS export bundles
+  import 'svelte-widgets/code-editor/editor.css'
   import { ask_prompt } from 'svelte-widgets/dialogs'
+  import { create_find_state } from 'svelte-widgets/find-in-page'
   import { icon_data as direct_icon_data } from 'svelte-widgets/icons'
   import { heading_ids } from 'svelte-widgets/heading-anchors'
   import type { KatexOptions } from 'svelte-widgets/katex'
+  import { storage_get } from 'svelte-widgets/storage'
   import { apply_theme_mode as apply_theme_from_subpath } from 'svelte-widgets/theme'
   import type { CmdAction } from 'svelte-widgets/types'
   import { get_label } from 'svelte-widgets/utils'
@@ -26,13 +33,19 @@
   const katex_options: KatexOptions = { throwOnError: true }
   const package_api_works =
     DirectCommandMenu === CommandMenu &&
+    DirectFindBar === FindBar &&
     DirectMultiSelect === MultiSelect &&
     DirectPageSearch === PageSearch &&
     typeof Accordion === `function` &&
+    typeof DiffView === `function` &&
+    typeof FindBar === `function` &&
     typeof Sheet === `function` &&
     typeof Tabs === `function` &&
     typeof ask_prompt === `function` &&
     typeof file_drop === `function` &&
+    typeof create_find_state === `function` &&
+    count_lines(`one\ntwo`) === 2 &&
+    storage_get(`package-smoke-missing`) === null &&
     typeof apply_theme_from_subpath === `function` &&
     typeof heading_ids === `function` &&
     Boolean(direct_icon_data.Alert) &&

@@ -26,7 +26,9 @@
     "dist"
   ],
   "type": "module",
-  "sideEffects": false,
+  "sideEffects": [
+    "./dist/code-editor/editor.css"
+  ],
   "types": "./dist/index.d.ts",
   "svelte": "./dist/index.js",
   "exports": {
@@ -80,6 +82,14 @@
       "types": "./dist/clipboard.svelte.d.ts",
       "default": "./dist/clipboard.svelte.js"
     },
+    "./code-editor": {
+      "types": "./dist/code-editor/index.d.ts",
+      "svelte": "./dist/code-editor/index.js",
+      "default": "./dist/code-editor/index.js"
+    },
+    "./code-editor/editor.css": {
+      "default": "./dist/code-editor/editor.css"
+    },
     "./dialogs": {
       "types": "./dist/dialogs.svelte.d.ts",
       "default": "./dist/dialogs.svelte.js"
@@ -88,6 +98,10 @@
       "types": "./dist/file-drop.d.ts",
       "default": "./dist/file-drop.js"
     },
+    "./find-in-page": {
+      "types": "./dist/find-in-page.svelte.d.ts",
+      "default": "./dist/find-in-page.svelte.js"
+    },
     "./fullscreen": {
       "types": "./dist/fullscreen.svelte.d.ts",
       "default": "./dist/fullscreen.svelte.js"
@@ -95,6 +109,10 @@
     "./print": {
       "types": "./dist/print.d.ts",
       "default": "./dist/print.js"
+    },
+    "./storage": {
+      "types": "./dist/storage.d.ts",
+      "default": "./dist/storage.js"
     },
     "./text-search": {
       "types": "./dist/text-search.d.ts",

@@ -1,9 +1,11 @@
 <script lang="ts" generics="Action extends CmdAction = CmdAction">
   import type { ComponentProps } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
+  import { SvelteMap, SvelteSet } from 'svelte/reactivity'
   import { fade } from 'svelte/transition'
   import { backdrop_dismiss } from './attachments'
   import MultiSelect from './MultiSelect.svelte'
+  import { create_recent_list } from './storage'
   import type { CmdAction, MultiSelectProps } from './types'
   import type { Hotkey } from './utils'
   import {
@@ -80,8 +82,18 @@
   const recent_limit = $derived(
     Number.isFinite(max_recent) ? Math.max(0, Math.floor(max_recent)) : 20,
   )
+  const recent_actions = $derived.by(() =>
+    recent_actions_key
+      ? create_recent_list<string>({
+          storage_key: recent_actions_key,
+          max_items: recent_limit,
+          key_of: (action_id) => action_id,
+          is_valid: (value): value is string => typeof value === `string`,
+        })
+      : null,
+  )
   const action_id_counts = $derived.by(() => {
-    const counts = new Map<string, number>()
+    const counts = new SvelteMap<string, number>()
     for (const action of actions) {
       const action_id = get_action_id(action)
       counts.set(action_id, (counts.get(action_id) ?? 0) + 1)
@@ -110,29 +122,13 @@
 
   // load persisted recents (client-only since $effect doesn't run during SSR)
   $effect(() => {
-    if (!recent_actions_key || !action_ids_are_unique) return
-    try {
-      const stored: unknown = JSON.parse(localStorage.getItem(recent_actions_key) ?? `[]`)
-      recent_action_ids = Array.isArray(stored)
-        ? stored.filter((recent) => typeof recent === `string`).slice(0, recent_limit)
-        : []
-    } catch {
-      recent_action_ids = [] // ignore corrupted storage
-    }
+    if (!recent_actions || !action_ids_are_unique) return
+    recent_action_ids = recent_actions.load()
   })
 
   function record_recent(action: Action) {
-    if (!recent_actions_key || !action_ids_are_unique) return
-    const action_id = get_action_id(action)
-    recent_action_ids = [
-      action_id,
-      ...recent_action_ids.filter((recent_id) => recent_id !== action_id),
-    ].slice(0, recent_limit)
-    try {
-      localStorage.setItem(recent_actions_key, JSON.stringify(recent_action_ids))
-    } catch {
-      // Storage full or unavailable; recents do not persist.
-    }
+    if (!recent_actions || !action_ids_are_unique) return
+    recent_action_ids = recent_actions.remember(get_action_id(action), recent_action_ids)
   }
 
   // recently triggered actions first (most recent on top), rest keep original order
@@ -141,8 +137,8 @@
       return actions
     // drop stale persisted ids (actions removed/renamed since) so they don't
     // occupy low ranks and push real recents below non-recent actions
-    const current_ids = new Set(actions.map(get_action_id))
-    const rank = new Map(
+    const current_ids = new SvelteSet(actions.map(get_action_id))
+    const rank = new SvelteMap(
       recent_action_ids
         .filter((recent_id) => current_ids.has(recent_id))
         .map((action_id, idx) => [action_id, idx]),

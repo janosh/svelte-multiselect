@@ -1,7 +1,10 @@
 // Headless theme helpers shared by ThemeToggle and callers that set theme without the
 // button (CommandMenu / PageSearch actions).
 
-export type ThemeMode = `light` | `dark` | `system`
+import { persisted_choice, storage_set } from './storage'
+
+const THEME_MODES = [`light`, `dark`, `system`] as const
+export type ThemeMode = (typeof THEME_MODES)[number]
 
 export const THEME_MODE_CYCLE = {
   light: `system`,
@@ -14,15 +17,8 @@ export const system_preference = (): `light` | `dark` =>
     ? `dark`
     : `light`
 
-export const resolve_theme_mode = (): ThemeMode => {
-  try {
-    const saved = localStorage.getItem(`theme`)
-    if (saved === `light` || saved === `dark` || saved === `system`) return saved
-  } catch (error) {
-    console.error(`Failed to get theme mode from localStorage`, error)
-  }
-  return `system`
-}
+export const resolve_theme_mode = (): ThemeMode =>
+  persisted_choice(`theme`, THEME_MODES, `system`)
 
 // Shared so ThemeToggle's icon stays in sync when apply_theme_mode is called elsewhere
 let theme_mode = $state<ThemeMode>(`system`)
@@ -39,11 +35,7 @@ export const apply_theme_mode = (mode: ThemeMode): void => {
   document.documentElement.style.colorScheme = effective
   document.documentElement.dataset.theme = effective
   theme_mode = mode
-  try {
-    localStorage.setItem(`theme`, mode)
-  } catch (error) {
-    console.error(`Failed to set theme mode ${mode} in localStorage`, error)
-  }
+  storage_set(`theme`, mode)
 }
 
 export const listen_theme_storage = (): (() => void) => {

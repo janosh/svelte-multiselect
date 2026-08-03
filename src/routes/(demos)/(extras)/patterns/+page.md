@@ -44,6 +44,41 @@
 </Accordion>
 ```
 
+## FindBar
+
+`FindBar` is an in-DOM find-in-page bar over `search_text`: it highlights every match under `root`, counts them, and walks them with Enter / Shift+Enter. Matches wear a CSS Custom Highlight, which is document-global and so cannot be styled from inside the component — add your own `::highlight(find-match)` rule. Where the chrome does not fit, `create_find_state` from `svelte-widgets/find-in-page` gives you the same cursor with no markup.
+
+```svelte example id="patterns-find-bar"
+<script lang="ts">
+  import { FindBar } from '$lib'
+
+  let root = $state<HTMLElement>()
+  let open = $state(true)
+</script>
+
+<div bind:this={root} style="position: relative; padding-top: 3rem">
+  {#if open}
+    <FindBar {root} label="section" on_close={() => (open = false)} />
+  {:else}
+    <button onclick={() => (open = true)}>Find in section</button>
+  {/if}
+  <p>
+    Ordered subsequence matching, whitespace collapsing and cross-node matches all come
+    from <code>search_text</code>, so a query can straddle inline markup.
+  </p>
+  <details>
+    <summary>Collapsed sections open on a jump</summary>
+    <p>Just like the browser's own find-in-page.</p>
+  </details>
+</div>
+
+<style>
+  :global(::highlight(find-match)) {
+    background: rgba(110, 168, 255, 0.35);
+  }
+</style>
+```
+
 ## Sheet
 
 `Sheet` uses a native modal `<dialog>`, dismisses from its backdrop or Escape and returns focus to its trigger. Keep overlays inside its dialog; portalling them to `body` moves them outside the modal subtree and makes them inert.
