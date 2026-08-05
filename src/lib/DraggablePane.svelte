@@ -4,7 +4,7 @@
   import type { ResizableOptions } from './attachments'
   import { click_outside, draggable, resizable, tooltip } from './attachments'
   import Icon from './Icon.svelte'
-  import type { IconName } from './icons'
+  import { Cross, DragIndicator, Expand, Reset, type IconData } from './icons'
   import { chain_handlers } from './utils'
 
   type CloseVia = `toggle` | `button` | `pointer` | `escape`
@@ -22,8 +22,8 @@
     children,
     toggle,
     toggle_props = {},
-    open_icon = `Cross`,
-    closed_icon = `Expand`,
+    open_icon = Cross,
+    closed_icon = Expand,
     icon_style,
     offset = { x: 5, y: 5 },
     max_width = `450px`,
@@ -46,8 +46,8 @@
     // Replaces the toggle button's content, for icons this library doesn't bundle
     toggle?: Snippet<[PaneState]>
     toggle_props?: Omit<HTMLButtonAttributes, `aria-expanded` | `type`>
-    open_icon?: IconName
-    closed_icon?: IconName
+    open_icon?: IconData
+    closed_icon?: IconData
     // Sizing the bundled icon is the common case; reach for `toggle` only to replace it
     icon_style?: string
     // Gap between the toggle button's bottom-right corner and the pane's
@@ -256,7 +256,7 @@ aria-label sits before the spread, so a page with several panes renames them via
 >
   <div class="control-tab">
     <span class="drag-handle" aria-hidden="true">
-      <Icon icon="DragIndicator" style="width: 100%; height: 100%" />
+      <Icon icon={DragIndicator} style="width: 100%; height: 100%" />
     </span>
     {#if has_been_dragged}
       <button
@@ -266,7 +266,7 @@ aria-label sits before the spread, so a page with several panes renames them via
         aria-label="Reset pane position"
         onclick={reset_position}
       >
-        <Icon icon="Reset" style="width: 100%; height: 100%" />
+        <Icon icon={Reset} style="width: 100%; height: 100%" />
       </button>
       <button
         type="button"
@@ -275,7 +275,7 @@ aria-label sits before the spread, so a page with several panes renames them via
         aria-label="Close pane"
         onclick={() => close_pane(`button`)}
       >
-        <Icon icon="Cross" style="width: 100%; height: 100%" />
+        <Icon icon={Cross} style="width: 100%; height: 100%" />
       </button>
     {/if}
   </div>

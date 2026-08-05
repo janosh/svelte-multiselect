@@ -97,6 +97,7 @@ You can start with no options and let users populate MultiSelect from scratch. I
 ```svelte example id="parse-paste"
 <script lang="ts">
   import { MultiSelect, CopyButton } from '$lib'
+  import { Alert, Check, Copy } from '$lib/icons'
 
   let selected: string[] = $state([])
   let log: string[] = $state([])
@@ -119,9 +120,9 @@ You can start with no options and let users populate MultiSelect from scratch. I
         content={text}
         style="padding: 0.3em 0.7em; border-radius: 4px; border: 1px solid var(--sms-border, light-dark(lightgray, #555)); background: var(--sms-options-bg, light-dark(white, #333)); cursor: pointer; font-size: 0.85em; white-space: nowrap"
         labels={{
-          ready: { icon: `Copy`, text: label },
-          success: { icon: `Check`, text: `Copied!` },
-          error: { icon: `Alert`, text: `Failed` },
+          ready: { icon: Copy, text: label },
+          success: { icon: Check, text: `Copied!` },
+          error: { icon: Alert, text: `Failed` },
         }}
       />
       <code style="font-size: 0.85em; opacity: 0.7">{text}</code>

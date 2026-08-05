@@ -1,19 +1,26 @@
 import { Icon } from '$lib'
-import { icon_data, type IconData, type IconName } from '$lib/icons'
+import * as icons from '$lib/icons'
+import type { IconData } from '$lib/icons'
 import { mount } from 'svelte'
-import { describe, expect, test, vi } from 'vite-plus/test'
+import { describe, expect, test } from 'vite-plus/test'
 import { doc_query } from './index'
 
 describe(`Icon`, () => {
   // Every entry, not a sample: the set is merged from another repo, and markup holding
   // several shapes rather than one `d` renders as nothing unless Icon spots the markup.
   // Offenders are collected so a bad merge names every icon it broke, not just the first.
-  test(`every icon renders its viewBox, fill, stroke and shape`, () => {
+  // Geometry collisions (two names, one path) are synonyms and land in the same list.
+  test(`every icon renders uniquely with correct viewBox, fill, stroke and shape`, () => {
     const offenders: string[] = []
+    const by_shape = new Map<string, string[]>()
     // annotated because the inferred literal types drop the optional keys entirely
-    for (const [name, entry] of Object.entries<IconData>(icon_data)) {
+    for (const [name, entry] of Object.entries<IconData>(icons)) {
+      // exactly one of d/markup is set, so this is the glyph's full geometry
+      const shape = entry.markup ?? entry.d
+      by_shape.set(shape, [...(by_shape.get(shape) ?? []), name])
+
       document.body.innerHTML = ``
-      mount(Icon, { target: document.body, props: { icon: name as IconName } })
+      mount(Icon, { target: document.body, props: { icon: entry } })
       const svg = doc_query<SVGSVGElement>(`svg`)
       const { viewBox, stroke, fill = stroke ? `none` : `currentColor` } = entry
 
@@ -30,18 +37,21 @@ describe(`Icon`, () => {
         offenders.push(`${name}: d`)
       }
     }
+    for (const names of by_shape.values()) {
+      if (names.length > 1) offenders.push(`duplicate geometry: ${names.join(` = `)}`)
+    }
     expect(offenders).toEqual([])
   })
 
   test.each([`Issues`, `Materials`, `Maximize`, `NeuralNetwork`, `Versions`] as const)(
     `defines %s as a currentColor stroke`,
     (name) => {
-      expect(icon_data[name].stroke).toBe(`currentColor`)
+      expect(icons[name].stroke).toBe(`currentColor`)
     },
   )
 
   test(`Histogram contains one baseline subpath`, () => {
-    expect(icon_data.Histogram.d.match(/M4 42h40/g)).toHaveLength(1)
+    expect(icons.Histogram.d.match(/M4 42h40/g)).toHaveLength(1)
   })
 
   test(`applies attributes via rest props`, () => {
@@ -53,7 +63,7 @@ describe(`Icon`, () => {
     } as const
     mount(Icon, {
       target: document.body,
-      props: { icon: `Check`, class: `custom-class`, ...rest_props },
+      props: { icon: icons.Check, class: `custom-class`, ...rest_props },
     })
 
     const svg = doc_query<SVGSVGElement>(`svg`)
@@ -80,7 +90,7 @@ describe(`Icon`, () => {
     expect(plain.querySelector(`path`)?.getAttribute(`d`)).toBe(`M5 5`)
     expect(plain.getAttribute(`viewBox`)).toBe(`0 0 10 10`)
 
-    // {@html} is reserved for icon_data, so a caller's path lands escaped in `d`
+    // {@html} is reserved for icons, so a caller's path lands escaped in `d`
     document.body.innerHTML = ``
     const injection = `<circle cx="12" r="10" />`
     mount(Icon, { target: document.body, props: { path: injection, stroke: `red` } })
@@ -91,23 +101,5 @@ describe(`Icon`, () => {
       `red`,
       `none`,
     ])
-  })
-
-  test(`logs an error and falls back to Alert for an invalid icon`, () => {
-    const invalid_icon = `NonExistentIcon`
-    const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
-
-    mount(Icon, {
-      target: document.body,
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-type-assertion -- invalid input
-      props: { icon: invalid_icon as IconName },
-    })
-
-    expect(console_error).toHaveBeenCalledWith(`Icon '${invalid_icon}' not found`)
-    const svg = doc_query<SVGSVGElement>(`svg`)
-    expect([
-      svg.getAttribute(`viewBox`),
-      svg.querySelector(`path`)?.getAttribute(`d`),
-    ]).toEqual([icon_data.Alert.viewBox, icon_data.Alert.d])
   })
 })

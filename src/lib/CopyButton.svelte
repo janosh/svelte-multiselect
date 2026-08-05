@@ -5,7 +5,7 @@
   // eslint-disable-next-line import/no-self-import -- global mode mounts this component onto external code blocks
   import Self from './CopyButton.svelte'
   import Icon from './Icon.svelte'
-  import type { IconName } from './icons'
+  import { Alert, Check, Copy, type IconData } from './icons'
   import { chain_handlers } from './utils'
 
   type State = `ready` | `success` | `error`
@@ -22,9 +22,9 @@
     skip_selector = `button`,
     as = `button`,
     labels = {
-      ready: { icon: `Copy`, text: `` },
-      success: { icon: `Check`, text: `` },
-      error: { icon: `Alert`, text: `` },
+      ready: { icon: Copy, text: `` },
+      success: { icon: Check, text: `` },
+      error: { icon: Alert, text: `` },
     },
     children,
     ...rest
@@ -39,9 +39,9 @@
     global?: boolean
     skip_selector?: string | null
     as?: string
-    labels?: Record<State, { icon: IconName; text: string }>
+    labels?: Record<State, { icon: IconData; text: string }>
     children?: Snippet<
-      [{ state: State; icon: IconName; text: string; disabled: boolean }]
+      [{ state: State; icon: IconData; text: string; disabled: boolean }]
     >
   } = $props()
 
@@ -149,8 +149,9 @@
     role="button"
     tabindex={disabled ? -1 : 0}
     aria-disabled={disabled || undefined}
-    {...as === `button` ? { disabled } : {}}
+    {...as === `button` ? { disabled, type: `button` } : {}}
     data-sms-copy=""
+    data-state={state}
     {...rest}
     onclick={chain_handlers(copy, rest.onclick)}
     onkeydown={chain_handlers(handle_copy_keydown, rest.onkeydown)}

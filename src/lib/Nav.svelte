@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { ChevronDown } from './icons'
   import type { Snippet } from 'svelte'
   import type {
     HTMLAnchorAttributes,
@@ -434,7 +435,7 @@
               onkeydown={(event: KeyboardEvent) =>
                 handle_dropdown_keydown(event, parsed_route.href, filtered_sub_routes)}
             >
-              <Icon icon="ChevronDown" style="width: 0.7em; height: 0.7em" />
+              <Icon icon={ChevronDown} style="width: 0.7em; height: 0.7em" />
             </button>
           </div>
           <!-- svelte-ignore a11y_no_static_element_interactions -- hover keeps the native-link submenu open while traversing it -->

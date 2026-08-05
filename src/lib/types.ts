@@ -2,7 +2,7 @@ import type { Snippet } from 'svelte'
 import type { FlipParams } from 'svelte/animate'
 import type { HTMLAttributes, HTMLInputAttributes } from 'svelte/elements'
 import type { DismissConfig } from './attachments'
-import type { IconName } from './icons'
+import type { IconData } from './icons/types'
 
 export type Option = string | number | ObjectOption
 
@@ -401,7 +401,7 @@ export type TocHeadingData = { id: string; level: number; title: string }
 export interface FooterLink {
   href: string
   label: string
-  icon?: IconName
+  icon?: IconData
   title?: string
   external?: boolean // adds target=_blank and rel=noopener noreferrer
 }

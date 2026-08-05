@@ -1,5 +1,5 @@
 <script module lang="ts">
-  import type { IconName } from './icons'
+  import type { IconData } from './icons/types'
   import { chain_handlers, is_object, step_focus } from './utils'
 
   // Only `value` is required; the rest are display extras any option shape may omit
@@ -7,7 +7,7 @@
     value: Value
     label?: string
     tooltip?: string
-    icon?: IconName
+    icon?: IconData
     disabled?: boolean
     loading?: boolean // trailing spinner, e.g. while this option's data loads
   }

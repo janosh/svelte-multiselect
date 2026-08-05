@@ -10,6 +10,7 @@ and reset timing.
 
 ```svelte example
 <script lang="ts">
+  import { Alert, Check, Copy } from '$lib/icons'
   import { tooltip } from '$lib/attachments'
   import { CopyButton } from '$lib'
 
@@ -24,9 +25,9 @@ and reset timing.
   let callback_events = $state<string[]>([])
 
   const labels = {
-    ready: { icon: `Copy`, text: `ready` },
-    success: { icon: `Check`, text: `success` },
-    error: { icon: `Alert`, text: `error` },
+    ready: { icon: Copy, text: `ready` },
+    success: { icon: Check, text: `success` },
+    error: { icon: Alert, text: `error` },
   } as const
 
   const push_event = (event_name: string, payload: string): void => {

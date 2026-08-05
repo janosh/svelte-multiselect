@@ -14,13 +14,14 @@ custom properties cover padding, background, gap and link color.
 
 ```svelte example id="footer-demo"
 <script lang="ts">
+  import { GitHub, Svelte } from '$lib/icons'
   import Footer from '$lib/Footer.svelte'
   import type { FooterLink } from '$lib'
 
   const repo = `https://github.com/janosh/svelte-widgets`
   const links: FooterLink[] = [
-    { href: `${repo}/issues`, label: `Issues`, icon: `GitHub`, external: true },
-    { href: `https://svelte.dev`, label: `Svelte`, icon: `Svelte`, external: true },
+    { href: `${repo}/issues`, label: `Issues`, icon: GitHub, external: true },
+    { href: `https://svelte.dev`, label: `Svelte`, icon: Svelte, external: true },
     { href: `multiselect`, label: `Docs` },
   ]
 </script>

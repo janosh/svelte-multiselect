@@ -1,6 +1,6 @@
 import FullscreenButton from '$lib/FullscreenButton.svelte'
 import { get_page_background, sync_fullscreen } from '$lib/fullscreen.svelte'
-import { icon_data } from '$lib/icons'
+import * as icons from '$lib/icons'
 import type { ComponentProps } from 'svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
 import { fromStore, get, writable } from 'svelte/store'
@@ -129,15 +129,15 @@ describe(`flag <-> browser sync`, () => {
     expect(document.fullscreenElement).toBe(wrapper)
     expect(button.getAttribute(`aria-pressed`)).toBe(`true`)
     expect(button.getAttribute(`aria-label`)).toBe(`Exit fullscreen`)
-    expect(icon_path(button)).toBe(icon_data.ExitFullscreen.d)
+    expect(icon_path(button)).toBe(icons.ExitFullscreen.d)
 
     button.click()
     await settle()
     expect(get(flag)).toBe(false)
     expect(document.exitFullscreen).toHaveBeenCalledTimes(1)
     expect(document.fullscreenElement).toBeNull()
-    expect(icon_path(button)).toBe(icon_data.Fullscreen.d)
-    expect(`FullscreenExit` in icon_data).toBe(false)
+    expect(icon_path(button)).toBe(icons.Fullscreen.d)
+    expect(`FullscreenExit` in icons).toBe(false)
   })
 
   test(`setting the flag from outside drives the browser`, async () => {
@@ -331,7 +331,7 @@ describe(`fullscreen background`, () => {
 describe(`button rendering`, () => {
   test(`custom icons, labels and class merge with the defaults`, () => {
     const { button } = mount_button({
-      icons: { enter: `Check`, exit: `Cross` },
+      icons: { enter: icons.Check, exit: icons.Cross },
       labels: { enter: `Grow`, exit: `Shrink` },
       class: `my-btn`,
       'aria-pressed': true, // spread before the real one, so it loses
@@ -343,7 +343,7 @@ describe(`button rendering`, () => {
     expect(button.title).toBe(`Grow`)
     expect(button.getAttribute(`aria-label`)).toBe(`Grow`)
     expect(button.getAttribute(`aria-pressed`)).toBe(`false`) // not the consumer's true
-    expect(icon_path(button)).toBe(icon_data.Check.d)
+    expect(icon_path(button)).toBe(icons.Check.d)
   })
 
   // a raw snippet's render() runs once, so each flag value gets its own mount rather

@@ -1,21 +1,21 @@
 <script lang="ts">
   import type { HTMLAttributes } from 'svelte/elements'
   import Icon from './Icon.svelte'
-  import type { IconName } from './icons'
+  import { ChevronRight, type IconData } from './icons'
 
-  type Subpage = [title: string, href: string, description: string, icon?: IconName]
+  type Subpage = [title: string, href: string, description: string, icon?: IconData]
 
   const {
     title,
     subtitle,
     subpages,
-    fallback_icon = `ChevronRight`,
+    fallback_icon = ChevronRight,
     ...rest
   }: {
     title: string
     subtitle: string
     subpages: Subpage[]
-    fallback_icon?: IconName
+    fallback_icon?: IconData
   } & HTMLAttributes<HTMLDivElement> = $props()
 </script>
 

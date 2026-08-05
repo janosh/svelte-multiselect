@@ -5,7 +5,7 @@ import {
   theme,
   ThemeToggle,
 } from '$lib'
-import { icon_data } from '$lib/icons'
+import * as icons from '$lib/icons'
 import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
 import { afterEach, beforeEach, expect, test, vi } from 'vite-plus/test'
@@ -78,7 +78,7 @@ test.each([
   localStorage.setItem(`theme`, stored)
   await mount_theme_toggle()
   expect(applied_theme()).toEqual([effective, effective])
-  expect(rendered_icon_path()).toBe(icon_data[icon_name].d)
+  expect(rendered_icon_path()).toBe(icons[icon_name].d)
 })
 
 // Storage failure is expected (for example private mode) and must not log errors.
@@ -104,7 +104,7 @@ test(`mount preserves an externally applied theme when storage is unavailable`, 
   await mount_theme_toggle()
 
   expect(applied_theme()).toEqual([`dark`, `dark`])
-  expect(rendered_icon_path()).toBe(icon_data.Moon.d)
+  expect(rendered_icon_path()).toBe(icons.Moon.d)
 })
 
 test(`click cycles through light -> system -> dark -> light`, async () => {
@@ -172,7 +172,7 @@ test(`storage events synchronize the theme key until unmount`, async () => {
   localStorage.clear()
   await dispatch_storage(null)
   expect(localStorage.getItem(`theme`)).toBe(`system`)
-  expect(rendered_icon_path()).toBe(icon_data.Monitor.d)
+  expect(rendered_icon_path()).toBe(icons.Monitor.d)
 
   const app = mounted.pop()
   if (!app) throw new Error(`ThemeToggle test app was not mounted`)
@@ -211,7 +211,7 @@ test(`apply_theme_mode keeps mounted ThemeToggles in sync`, async () => {
   expect(localStorage.getItem(`theme`)).toBe(`dark`)
   for (const button of buttons) {
     expect(button.getAttribute(`aria-label`)).toBe(`Switch to light theme`)
-    expect(button.querySelector(`path`)?.getAttribute(`d`)).toBe(icon_data.Moon.d)
+    expect(button.querySelector(`path`)?.getAttribute(`d`)).toBe(icons.Moon.d)
   }
 })
 
