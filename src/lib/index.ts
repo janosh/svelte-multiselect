@@ -1,5 +1,6 @@
 export * from './heading-anchors'
 export { default as Accordion } from './Accordion.svelte'
+export { default as ActionButton } from './ActionButton.svelte'
 export { default as ButtonGroup } from './ButtonGroup.svelte'
 export { default as CircleSpinner } from './CircleSpinner.svelte'
 export { default as CommandMenu } from './CommandMenu.svelte'

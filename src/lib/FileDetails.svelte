@@ -134,7 +134,8 @@
     type="button"
     onclick={chain_handlers(toggle_all, button_props?.onclick)}
   >
-    {has_open_details ? `Close` : `Open`} all
+    <span aria-hidden={has_open_details}>Open all</span>
+    <span aria-hidden={!has_open_details}>Close all</span>
   </button>
 {/if}
 
@@ -175,7 +176,16 @@
 
 <style>
   button {
+    display: inline-grid;
     float: inline-end;
+    width: fit-content;
+  }
+  button > span {
+    grid-area: 1 / 1;
+    text-align: center;
+  }
+  button > [aria-hidden='true'] {
+    visibility: hidden;
   }
   ol {
     padding: 0;

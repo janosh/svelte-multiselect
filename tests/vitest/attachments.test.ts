@@ -310,7 +310,7 @@ describe(`tooltip`, () => {
     const element = create_element()
     element.title = title
     mock_bounds(element)
-    return [element, setup_tooltip(element, { delay: 0, ...options })] as const
+    return [element, setup_tooltip(element, { delay_ms: 0, ...options })] as const
   }
 
   // Same, but also hovers the trigger so its tooltip becomes visible
@@ -332,7 +332,7 @@ describe(`tooltip`, () => {
       element.title = `styled tooltip`
       customize(element)
       mock_bounds(element)
-      setup_tooltip(element, { delay: 0, ...options })
+      setup_tooltip(element, { delay_ms: 0, ...options })
       trigger_tooltip(element)
     } finally {
       restore()
@@ -351,7 +351,7 @@ describe(`tooltip`, () => {
       [`data-title`, `data-title`, `Data title tooltip`, false],
     ])(`creates a tooltip from %s`, (_desc, attr, content, stores_title) => {
       const element = create_element()
-      const options = attr === `content` ? { content, delay: 0 } : { delay: 0 }
+      const options = attr === `content` ? { content, delay_ms: 0 } : { delay_ms: 0 }
       if (attr !== `content`) element.setAttribute(attr, content)
       mock_bounds(element)
 
@@ -385,7 +385,7 @@ describe(`tooltip`, () => {
       element.title = `Title content`
       element.setAttribute(`aria-label`, `Aria content`)
       mock_bounds(element)
-      setup_tooltip(element, { ...options, delay: 0 })
+      setup_tooltip(element, { ...options, delay_ms: 0 })
       trigger_tooltip(element)
 
       expect(element.getAttribute(`data-original-title`)).toBe(`Title content`)
@@ -502,7 +502,7 @@ describe(`tooltip`, () => {
       document.body.append(ancestor)
       element.title = `test`
       mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
+      setup_tooltip(element, { delay_ms: 0 })
       trigger_tooltip(element)
 
       const unrelated_scroll = new Event(`scroll`, { bubbles: true })
@@ -532,7 +532,7 @@ describe(`tooltip`, () => {
       const element = create_element(`button`)
       element.title = `focus tooltip`
       mock_bounds(element)
-      setup_tooltip(element, { delay: 0 })
+      setup_tooltip(element, { delay_ms: 0 })
 
       element.dispatchEvent(new FocusEvent(`focus`, { bubbles: true }))
       vi.runAllTimers()
@@ -557,8 +557,8 @@ describe(`tooltip`, () => {
     })
 
     it(`cleanup of one instance keeps another instance's pending show`, () => {
-      const [, cleanup_a] = attach_tooltip(`tooltip A`, { delay: 100 })
-      const [el_b] = attach_tooltip(`tooltip B`, { delay: 100 })
+      const [, cleanup_a] = attach_tooltip(`tooltip A`, { delay_ms: 100 })
+      const [el_b] = attach_tooltip(`tooltip B`, { delay_ms: 100 })
 
       el_b.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       cleanup_a?.() // must not cancel B's pending show timeout
@@ -568,7 +568,7 @@ describe(`tooltip`, () => {
     })
 
     it(`cleanup cancels its own pending show`, () => {
-      const [element, cleanup] = attach_tooltip(`own pending`, { delay: 100 })
+      const [element, cleanup] = attach_tooltip(`own pending`, { delay_ms: 100 })
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       cleanup?.()
@@ -578,7 +578,7 @@ describe(`tooltip`, () => {
     })
 
     it(`removing the element from the DOM cancels its pending show`, async () => {
-      const [element] = attach_tooltip(`pending on removed element`, { delay: 100 })
+      const [element] = attach_tooltip(`pending on removed element`, { delay_ms: 100 })
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       element.remove() // element leaves the DOM before the show delay elapses
@@ -670,7 +670,10 @@ describe(`tooltip`, () => {
           const element = create_element()
           element.title = `test`
           mock_bounds(element, trigger_bounds)
-          setup_tooltip(element, { delay: 0, placement: requested_placement ?? `bottom` })
+          setup_tooltip(element, {
+            delay_ms: 0,
+            placement: requested_placement ?? `bottom`,
+          })
 
           trigger_tooltip(element)
           const tooltip_el = doc_query(`.custom-tooltip`)
@@ -685,8 +688,8 @@ describe(`tooltip`, () => {
       },
     )
 
-    it(`hide_delay delays hiding`, () => {
-      const element = show_tooltip({ hide_delay: 200 })
+    it(`hide_delay_ms delays hiding`, () => {
+      const element = show_tooltip({ hide_delay_ms: 200 })
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
@@ -695,10 +698,10 @@ describe(`tooltip`, () => {
       expect(document.querySelector(`.custom-tooltip`)).toBeNull()
     })
 
-    it(`cleanup during hide_delay cancels the pending hide`, () => {
+    it(`cleanup during hide_delay_ms cancels the pending hide`, () => {
       const [element, cleanup] = attach_tooltip(`cleanup`, {
-        delay: 0,
-        hide_delay: 200,
+        delay_ms: 0,
+        hide_delay_ms: 200,
       })
       trigger_tooltip(element)
 
@@ -712,15 +715,15 @@ describe(`tooltip`, () => {
 
     // leave then blur both schedule hide; without clearing the first timer id, a re-show
     // is wiped when that orphaned timeout fires
-    it(`hide_delay clears prior hide timer on re-show`, () => {
-      const element = show_tooltip({ hide_delay: 200, delay: 0 })
+    it(`hide_delay_ms clears prior hide timer on re-show`, () => {
+      const element = show_tooltip({ hide_delay_ms: 200, delay_ms: 0 })
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       element.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
       element.dispatchEvent(new FocusEvent(`blur`, { bubbles: true }))
       vi.advanceTimersByTime(50)
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
-      vi.advanceTimersByTime(0) // delay: 0 show
+      vi.advanceTimersByTime(0) // delay_ms: 0 show
       expect(doc_query(`.custom-tooltip`)).toBeInstanceOf(HTMLElement)
 
       vi.advanceTimersByTime(200)
@@ -728,8 +731,8 @@ describe(`tooltip`, () => {
     })
 
     it(`stale hide events do not cancel another element's pending tooltip`, () => {
-      const first = show_tooltip({ hide_delay: 200, delay: 0 }, `first`)
-      const [second] = attach_tooltip(`second`, { hide_delay: 200, delay: 100 })
+      const first = show_tooltip({ hide_delay_ms: 200, delay_ms: 0 }, `first`)
+      const [second] = attach_tooltip(`second`, { hide_delay_ms: 200, delay_ms: 100 })
 
       first.dispatchEvent(new MouseEvent(`mouseleave`, { bubbles: true }))
       second.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
@@ -740,7 +743,7 @@ describe(`tooltip`, () => {
     })
 
     it(`mouseleave before delay expires cancels pending tooltip`, () => {
-      const [element] = attach_tooltip(`delayed tooltip`, { delay: 100 })
+      const [element] = attach_tooltip(`delayed tooltip`, { delay_ms: 100 })
 
       element.dispatchEvent(new MouseEvent(`mouseenter`, { bubbles: true }))
       vi.advanceTimersByTime(99)
@@ -950,7 +953,7 @@ describe(`tooltip`, () => {
         const element = create_element()
         element.title = `initial tooltip`
         mock_bounds(element, { left: 100, top: 120, width: 40, height: 20 })
-        setup_tooltip(element, { delay: 0, placement: `bottom` })
+        setup_tooltip(element, { delay_ms: 0, placement: `bottom` })
         trigger_tooltip(element)
         expect(doc_query(`.tooltip-content`).textContent).toBe(`initial tooltip`)
         expect(doc_query(`.custom-tooltip`).getAttribute(`data-placement`)).toBe(`top`)
@@ -999,7 +1002,7 @@ describe(`tooltip`, () => {
     ])(`converts %s newlines to <br/> in allow_html content`, (_desc, content) => {
       const element = create_element()
       mock_bounds(element)
-      setup_tooltip(element, { delay: 0, allow_html: true, content })
+      setup_tooltip(element, { delay_ms: 0, allow_html: true, content })
 
       trigger_tooltip(element)
       const content_el = doc_query(`.tooltip-content`)

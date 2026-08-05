@@ -169,7 +169,7 @@ describe(`Popover`, () => {
 
   test(`hover honors delays and stays open across the trigger-surface gap`, async () => {
     vi.useFakeTimers()
-    mount_popover({ trigger_mode: `hover`, open_delay: 40 })
+    mount_popover({ trigger_mode: `hover`, open_delay_ms: 40 })
 
     trigger().dispatchEvent(new MouseEvent(`mouseenter`))
     await advance_time(39)
@@ -198,7 +198,7 @@ describe(`Popover`, () => {
     `%s keeps focus transitions between trigger and surface open`,
     async (trigger_mode) => {
       vi.useFakeTimers()
-      mount_popover({ trigger_mode, close_delay: 25 })
+      mount_popover({ trigger_mode, close_delay_ms: 25 })
       const outside = document.createElement(`button`)
       document.body.append(outside)
 
@@ -223,7 +223,7 @@ describe(`Popover`, () => {
 
   test(`hover stays open while either pointer or focus remains inside`, async () => {
     vi.useFakeTimers()
-    mount_popover({ trigger_mode: `hover`, close_delay: 20 })
+    mount_popover({ trigger_mode: `hover`, close_delay_ms: 20 })
     const outside = document.createElement(`button`)
     document.body.append(outside)
 
@@ -299,7 +299,7 @@ describe(`Popover`, () => {
     `%s dismissal with focus inside stays closed`,
     async (trigger_mode) => {
       vi.useFakeTimers()
-      const props = mount_popover({ trigger_mode, open_delay: 0, close_delay: 10 })
+      const props = mount_popover({ trigger_mode, open_delay_ms: 0, close_delay_ms: 10 })
       trigger().focus()
       await advance_time(0)
       doc_query<HTMLButtonElement>(`[data-testid="popover-item"]`).focus()
@@ -318,8 +318,8 @@ describe(`Popover`, () => {
     vi.useFakeTimers()
     const props = mount_popover({
       trigger_mode: `hover`,
-      open_delay: 0,
-      close_delay: 10,
+      open_delay_ms: 0,
+      close_delay_ms: 10,
       trap_focus: false,
     })
     trigger().dispatchEvent(new MouseEvent(`mouseenter`))
@@ -357,7 +357,7 @@ describe(`Popover`, () => {
   // alone cannot tell a cancelled timer from one that still fires. Watch the timer id.
   test(`unmount cancels a pending delayed open`, async () => {
     vi.useFakeTimers()
-    mount_popover({ trigger_mode: `hover`, open_delay: 50 })
+    mount_popover({ trigger_mode: `hover`, open_delay_ms: 50 })
     await tick()
     const set_timeout = vi.spyOn(globalThis, `setTimeout`)
     const clear_timeout = vi.spyOn(globalThis, `clearTimeout`)
@@ -373,7 +373,7 @@ describe(`Popover`, () => {
 
   test(`changing trigger mode invalidates a pending delayed open`, async () => {
     vi.useFakeTimers()
-    const props = mount_popover({ trigger_mode: `hover`, open_delay: 50 })
+    const props = mount_popover({ trigger_mode: `hover`, open_delay_ms: 50 })
     trigger().dispatchEvent(new MouseEvent(`mouseenter`))
 
     props.trigger_mode = `click`

@@ -24,5 +24,5 @@
   global_selector=".copy-target"
   {disabled}
   on_copy_success={use_next_callback ? on_success_next : on_success_initial}
-  reset_sec={1}
+  reset_ms={1000}
 />

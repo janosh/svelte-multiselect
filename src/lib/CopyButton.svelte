@@ -1,20 +1,20 @@
 <script lang="ts">
   import type { Snippet } from 'svelte'
-  import { mount, onDestroy, unmount } from 'svelte'
+  import { mount, unmount } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   // eslint-disable-next-line import/no-self-import -- global mode mounts this component onto external code blocks
   import Self from './CopyButton.svelte'
-  import Icon from './Icon.svelte'
+  import ActionButton from './ActionButton.svelte'
   import { Alert, Check, Copy, type IconData } from './icons'
-  import { chain_handlers } from './utils'
+  import type { ActionButtonContent, ActionState } from './types'
 
-  type State = `ready` | `success` | `error`
+  type State = Exclude<ActionState, `pending`>
 
   let {
     content = ``,
     state = $bindable(`ready`),
     disabled = false,
-    reset_sec = 2,
+    reset_ms = 2000,
     on_copy_success = (_content: string) => {},
     on_copy_error = (_error: unknown, _content: string) => {},
     global_selector = null,
@@ -26,13 +26,13 @@
       success: { icon: Check, text: `` },
       error: { icon: Alert, text: `` },
     },
-    children,
+    children: copy_children,
     ...rest
   }: Omit<HTMLAttributes<HTMLButtonElement>, `children`> & {
     content?: string
     state?: State
     disabled?: boolean
-    reset_sec?: number
+    reset_ms?: number
     on_copy_success?: (content: string) => void
     on_copy_error?: (error: unknown, content: string) => void
     global_selector?: string | null
@@ -40,19 +40,11 @@
     skip_selector?: string | null
     as?: string
     labels?: Record<State, { icon: IconData; text: string }>
-    children?: Snippet<
-      [{ state: State; icon: IconData; text: string; disabled: boolean }]
-    >
+    children?: Snippet<[ActionButtonContent<State> & { icon: IconData }]>
   } = $props()
 
-  let reset_timeout: ReturnType<typeof setTimeout> | null = null
   const copy_button_selector = `[data-sms-copy]`
-  const clear_reset_timeout = (): void => {
-    if (reset_timeout === null) return
-    clearTimeout(reset_timeout)
-    reset_timeout = null
-  }
-  onDestroy(clear_reset_timeout)
+  const action_labels = $derived({ ...labels, pending: labels[state] })
 
   $effect(() => {
     if (!global && !global_selector) return
@@ -87,12 +79,11 @@
             as,
             labels,
             disabled,
-            reset_sec,
+            reset_ms,
             on_copy_success,
             on_copy_error,
             ...rest,
             style,
-            'data-sms-copy': ``,
           },
         })
         mounted_copy_buttons.push({ pre, component: mounted_copy_button })
@@ -112,73 +103,36 @@
     }
   })
 
-  async function copy() {
-    if (disabled || !content) return
-    clear_reset_timeout()
-    try {
-      await navigator.clipboard.writeText(content)
-      state = `success`
-      try {
-        on_copy_success(content)
-      } catch (error) {
-        console.error(error) // the copy succeeded, so a throwing callback is not a failure
-      }
-    } catch (error) {
-      console.error(error)
-      state = `error`
-      on_copy_error(error, content)
-    }
-    if (reset_sec <= 0) return
-    reset_timeout = setTimeout(() => {
-      state = `ready`
-      reset_timeout = null
-    }, reset_sec * 1000)
-  }
-
-  function handle_copy_keydown(event: KeyboardEvent) {
-    if (event.key !== `Enter` && event.key !== ` `) return
-    event.preventDefault()
-    copy()
+  const handle_action_state = (next_state: ActionState): void => {
+    if (next_state !== `pending`) state = next_state
   }
 </script>
 
+{#snippet copy_content({ state: action_state, disabled }: ActionButtonContent)}
+  {@const copy_state = action_state === `pending` ? state : action_state}
+  {@const { text, icon } = labels[copy_state]}
+  {@render copy_children?.({ state: copy_state, icon, text, disabled })}
+{/snippet}
+
 {#if !(global || global_selector)}
-  {@const { text, icon } = labels[state]}
-  <svelte:element
-    this={as}
-    role="button"
-    tabindex={disabled ? -1 : 0}
-    aria-disabled={disabled || undefined}
-    {...as === `button` ? { disabled, type: `button` } : {}}
-    data-sms-copy=""
-    data-state={state}
+  <ActionButton
     {...rest}
-    onclick={chain_handlers(copy, rest.onclick)}
-    onkeydown={chain_handlers(handle_copy_keydown, rest.onkeydown)}
-  >
-    {#if children}
-      {@render children({ state, icon, text, disabled })}
-    {:else}
-      <span>
-        <Icon {icon} />
-        {#if text}<span>{@html text}</span>{/if}
-      </span>
-    {/if}
-  </svelte:element>
+    action={() => navigator.clipboard.writeText(content)}
+    {state}
+    disabled={disabled || !content}
+    {reset_ms}
+    {as}
+    labels={action_labels}
+    on_state_change={handle_action_state}
+    on_success={() => on_copy_success(content)}
+    on_error={(error) => on_copy_error(error, content)}
+    data-sms-copy=""
+    children={copy_children ? copy_content : undefined}
+  />
 {/if}
 
 <style>
-  [data-sms-copy] > span {
-    display: inline-flex;
-    gap: 0.35em;
-    align-items: center;
-    line-height: 1;
-    vertical-align: middle;
-    > span {
-      line-height: 1;
-    }
-    :global(svg) {
-      display: block;
-    }
+  :global([data-sms-copy]) {
+    white-space: nowrap;
   }
 </style>

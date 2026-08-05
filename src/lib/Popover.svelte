@@ -32,8 +32,8 @@
     escape = true,
     dismiss_on = `press`,
     trap_focus = true,
-    open_delay = 0,
-    close_delay,
+    open_delay_ms = 0,
+    close_delay_ms,
     surface = $bindable(null),
     trigger,
     trigger_mode = `click`,
@@ -54,8 +54,8 @@
     escape?: boolean
     dismiss_on?: DismissConfig[`dismiss_on`] // see dismiss_on_outside_press
     trap_focus?: boolean
-    open_delay?: number
-    close_delay?: number
+    open_delay_ms?: number
+    close_delay_ms?: number
     surface?: HTMLDivElement | null
     role?: PopupRole
     // Snippets remain owned by the component that declares them. Popover invokes the
@@ -123,7 +123,7 @@
     open_timeout = setTimeout(() => {
       open_timeout = undefined
       if (trigger_mode === scheduled_mode) open = true
-    }, open_delay)
+    }, open_delay_ms)
   }
   const close_after_delay = () => {
     clear_timeouts()
@@ -134,7 +134,7 @@
         close_timeout = undefined
         if (trigger_mode === scheduled_mode) close(`trigger`)
       },
-      close_delay ?? (trigger_mode === `click` ? 0 : 150),
+      close_delay_ms ?? (trigger_mode === `click` ? 0 : 150),
     )
   }
   const contains_interaction_target = (target: EventTarget | null) =>

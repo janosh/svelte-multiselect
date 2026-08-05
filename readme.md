@@ -42,7 +42,8 @@ subpath import (`svelte-widgets/Toc.svelte`) so bundlers can skip the rest.
 | `Toc`              | Sticky table of contents that finds and tracks its own headings                         | [docs](https://svelte-widgets.janosh.dev/toc)                          |
 | `Masonry`          | Column-balancing masonry grid with SSR support and virtualization                       | [docs](https://svelte-widgets.janosh.dev/masonry)                      |
 | `Footer`           | Centered row of icon links, sized and themed with `--footer-*`                          | [docs](https://svelte-widgets.janosh.dev/site-chrome#footer)           |
-| `CopyButton`       | Copy-to-clipboard button with pending, success and error states                         | [docs](https://svelte-widgets.janosh.dev/copy-button)                  |
+| `ActionButton`     | Async action button with pending, success and error feedback                            | [docs](https://svelte-widgets.janosh.dev/action-button)                |
+| `CopyButton`       | Copy-to-clipboard button with success and error feedback                                | [docs](https://svelte-widgets.janosh.dev/action-button#copybutton)     |
 | `ButtonGroup`      | Segmented control over a set of options, single or multi select                         | [docs](https://svelte-widgets.janosh.dev/button-group)                 |
 | `FullscreenButton` | Fullscreen toggle scoped to one wrapper, so viewers don't fight over the flag           | [docs](https://svelte-widgets.janosh.dev/fullscreen)                   |
 | `ThemeToggle`      | Light/dark/system theme cycler with persistence and cross-tab synchronization           | [docs](https://svelte-widgets.janosh.dev/extras#themetoggle)           |

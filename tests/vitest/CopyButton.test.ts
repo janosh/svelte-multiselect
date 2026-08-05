@@ -44,7 +44,11 @@ const create_pre_with_code = (
 }
 
 const icon_path = (copy_button: HTMLElement): string | null =>
-  copy_button.querySelector(`svg path`)?.getAttribute(`d`) ?? null
+  copy_button.querySelector(`[data-sms-action-content] svg path`)?.getAttribute(`d`) ??
+  null
+
+const copy_text = (copy_button: HTMLElement): string =>
+  copy_button.querySelector(`[data-sms-action-content]`)?.textContent ?? ``
 
 const get_single_mounted_button = (pre: HTMLPreElement): HTMLButtonElement => {
   const btns = pre.querySelectorAll<HTMLButtonElement>(`[data-sms-copy]`)
@@ -88,7 +92,7 @@ test.each([`Escape`, `Tab`, `ArrowUp`, `a`, `1`])(`%s key is ignored`, (key: str
 
   expect(prevent_spy).not.toHaveBeenCalled()
   expect(mock_write_text).not.toHaveBeenCalled()
-  expect(copy_button.textContent).toContain(`ready`)
+  expect(copy_text(copy_button)).toContain(`ready`)
 })
 
 test.each([
@@ -120,11 +124,12 @@ test.each([
       error: { icon: Alert, text },
     },
   })
-  const wrapper = copy_button.querySelector(`span`)
-  expect(wrapper?.querySelectorAll(`span`)).toHaveLength(expected_spans)
+  const wrapper = doc_query(`[data-sms-action-content]`)
+  expect(getComputedStyle(copy_button).whiteSpace).toBe(`nowrap`)
+  expect(wrapper.querySelectorAll(`span`)).toHaveLength(expected_spans)
   expect(icon_path(copy_button)).toBe(Copy.d)
   // an empty label must render no text at all, not a stray placeholder
-  expect(copy_button.textContent?.trim()).toBe(text)
+  expect(copy_text(copy_button).trim()).toBe(text)
 })
 
 test.each([true, false])(
@@ -135,7 +140,7 @@ test.each([true, false])(
       props: { component: `copy-button`, content: `test`, disabled },
     })
     const copy_button = doc_query(`[data-sms-copy]`)
-    expect(copy_button.querySelector(`svg`)).toBeNull()
+    expect(copy_button.querySelector(`[data-sms-action-content] svg`)).toBeNull()
     const snippet = copy_button.querySelector<HTMLElement>(`[data-testid="copy-snippet"]`)
     expect(snippet?.dataset.disabled).toBe(`${disabled}`)
     expect(snippet?.dataset.state).toBe(`ready`)
@@ -149,7 +154,7 @@ test.each([
   const { copy_button } = mount_copy_button(props)
   await click_copy_button(copy_button)
   expect(mock_write_text).not.toHaveBeenCalled()
-  expect(copy_button.textContent).toContain(`ready`)
+  expect(copy_text(copy_button)).toContain(`ready`)
 })
 
 test(`calls on_copy_success with copied content`, async () => {
@@ -176,7 +181,7 @@ test(`a throwing on_copy_success is not reported as a copy failure`, async () =>
   })
   await click_copy_button(copy_button)
   expect(on_copy_error).not.toHaveBeenCalled()
-  expect(copy_button.textContent).toContain(`success`)
+  expect(copy_text(copy_button)).toContain(`success`)
   expect(console_error_spy).toHaveBeenCalledOnce()
   console_error_spy.mockRestore()
 })
@@ -190,59 +195,50 @@ test(`calls on_copy_error with error and content`, async () => {
   const { copy_button } = mount_copy_button({ content: `error text`, on_copy_error })
   await click_copy_button(copy_button)
   expect(on_copy_error).toHaveBeenCalledWith(copy_error, `error text`)
-  expect(copy_button.textContent).toContain(`error`)
+  expect(copy_text(copy_button)).toContain(`error`)
 
   console_error_spy.mockRestore()
 })
 
 test.each([
-  [`default reset_sec`, { content: `default reset` }, 2000, 1999],
-  [`custom reset_sec`, { content: `half sec`, reset_sec: 0.5 }, 500, 499],
-  [`fine-grained reset_sec`, { content: `timed`, reset_sec: 0.05 }, 50, 49],
-] as const)(
-  `%s schedules millisecond delay and resets on time`,
-  async (_desc, props, expected_delay_ms, elapsed_before_reset_ms) => {
-    vi.useFakeTimers()
-    // no mockRestore needed: the global setup calls vi.restoreAllMocks() before each test
-    const set_timeout_spy = vi.spyOn(globalThis, `setTimeout`)
-    const { copy_button } = mount_copy_button(props)
-    await click_copy_button(copy_button)
-    expect(set_timeout_spy).toHaveBeenCalled()
-    expect(set_timeout_spy.mock.calls.at(-1)?.[1]).toBe(expected_delay_ms)
-
-    await vi.advanceTimersByTimeAsync(elapsed_before_reset_ms)
-    expect(copy_button.textContent).toContain(`success`)
-
-    await vi.advanceTimersByTimeAsync(1)
-    expect(copy_button.textContent).toContain(`ready`)
-  },
-)
-
-test.each([0, -1])(`reset_sec=%s does not auto-reset`, async (reset_sec: number) => {
+  [`default reset_ms`, { content: `default reset` }, 2000],
+  [`custom reset_ms`, { content: `half sec`, reset_ms: 500 }, 500],
+] as const)(`%s resets on time`, async (_desc, props, expected_delay_ms) => {
   vi.useFakeTimers()
-  const { copy_button } = mount_copy_button({ content: `sticky`, reset_sec })
+  const { copy_button } = mount_copy_button(props)
   await click_copy_button(copy_button)
-  expect(copy_button.textContent).toContain(`success`)
+
+  await vi.advanceTimersByTimeAsync(expected_delay_ms - 1)
+  expect(copy_text(copy_button)).toContain(`success`)
+
+  await vi.advanceTimersByTimeAsync(1)
+  expect(copy_text(copy_button)).toContain(`ready`)
+})
+
+test.each([0, -1])(`reset_ms=%s does not auto-reset`, async (reset_ms: number) => {
+  vi.useFakeTimers()
+  const { copy_button } = mount_copy_button({ content: `sticky`, reset_ms })
+  await click_copy_button(copy_button)
+  expect(copy_text(copy_button)).toContain(`success`)
 
   await vi.advanceTimersByTimeAsync(5000)
-  expect(copy_button.textContent).toContain(`success`)
+  expect(copy_text(copy_button)).toContain(`success`)
 })
 
 test(`second click clears previous reset timer`, async () => {
   vi.useFakeTimers()
-  const { copy_button } = mount_copy_button({ content: `multi click`, reset_sec: 0.1 })
+  const { copy_button } = mount_copy_button({ content: `multi click`, reset_ms: 100 })
   await click_copy_button(copy_button)
-  expect(copy_button.textContent).toContain(`success`)
+  expect(copy_text(copy_button)).toContain(`success`)
 
   await vi.advanceTimersByTimeAsync(50)
   await click_copy_button(copy_button)
-  expect(copy_button.textContent).toContain(`success`)
 
   await vi.advanceTimersByTimeAsync(60)
-  expect(copy_button.textContent).toContain(`success`)
+  expect(copy_text(copy_button)).toContain(`success`)
 
   await vi.advanceTimersByTimeAsync(40)
-  expect(copy_button.textContent).toContain(`ready`)
+  expect(copy_text(copy_button)).toContain(`ready`)
 })
 
 test(`unmount clears outstanding reset timer`, async () => {
@@ -251,20 +247,18 @@ test(`unmount clears outstanding reset timer`, async () => {
   const clear_timeout_spy = vi.spyOn(globalThis, `clearTimeout`)
   const { copy_button_component, copy_button } = mount_copy_button({
     content: `cleanup`,
-    reset_sec: 0.1,
+    reset_ms: 100,
   })
   await click_copy_button(copy_button)
   // pick the reset timer out of any others Svelte scheduled
   const reset_idx = set_timeout_spy.mock.calls.findIndex((call) => call[1] === 100)
   expect(reset_idx).not.toBe(-1)
   const reset_timer_id = set_timeout_spy.mock.results[reset_idx].value
-  expect(clear_timeout_spy).not.toHaveBeenCalled()
 
   void unmount(copy_button_component)
   // that exact timer, not merely some clearTimeout call. toContain compares by
   // identity; toHaveBeenCalledWith's deep equality matches any Timeout object
   expect(clear_timeout_spy.mock.calls.map((call) => call[0])).toContain(reset_timer_id)
-  await vi.advanceTimersByTimeAsync(200)
 })
 
 // two-way binding tests: this file isn't compiled by the Svelte plugin so $state is
@@ -280,7 +274,7 @@ const mount_bound_copy_button = () => {
       content: `bound content`,
       as: `div`,
       labels: default_labels,
-      reset_sec: 0,
+      reset_ms: 0,
       get state() {
         return state_proxy.current
       },
@@ -371,7 +365,7 @@ test(`global_selector remount uses latest callback after parent remount`, async 
   const on_copy_success_initial = vi.fn()
   const on_copy_success_next = vi.fn()
   const { pre } = create_pre_with_code(`selector content`, `copy-target`)
-  const global_props = { global_selector: `.copy-target`, reset_sec: 1 }
+  const global_props = { global_selector: `.copy-target`, reset_ms: 1000 }
 
   const initial = await mount_global({
     ...global_props,

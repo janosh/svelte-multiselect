@@ -20,7 +20,7 @@
     aside = $bindable(),
     breakpoint = 1000,
     desktop = $bindable(true),
-    flashClickedHeadingsFor = 1500,
+    flash_clicked_headings_for_ms: flash_duration_ms = 1500,
     getHeadingData = (node: HTMLHeadingElement): TocHeadingData => ({
       id: node.id,
       level: Number(node.nodeName[1]),
@@ -65,7 +65,7 @@
     aside?: HTMLElement | undefined
     breakpoint?: number // in pixels (smaller window width is considered mobile, larger is desktop)
     desktop?: boolean
-    flashClickedHeadingsFor?: number
+    flash_clicked_headings_for_ms?: number
     getHeadingData?: (node: HTMLHeadingElement) => TocHeadingData | null
     // the result of document.querySelectorAll(headingSelector). can be useful for binding
     headings?: HTMLHeadingElement[]
@@ -287,9 +287,9 @@
     const id = heading_data[idx]?.id
     if (id) history.replaceState({}, ``, `#${id}`)
 
-    if (flashClickedHeadingsFor) {
+    if (flash_duration_ms) {
       node.classList.add(`toc-clicked`)
-      setTimeout(() => node.classList.remove(`toc-clicked`), flashClickedHeadingsFor)
+      setTimeout(() => node.classList.remove(`toc-clicked`), flash_duration_ms)
     }
   }
 

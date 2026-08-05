@@ -1,5 +1,15 @@
 # Changelog
 
+## [v1.4.0](https://github.com/janosh/svelte-widgets/compare/v1.3.0...v1.4.0)
+
+> 5 August 2026
+
+- **Breaking:** Replace string icon names, `IconName` and the monolithic `icon_data` registry with 800+ named `IconData` exports from `svelte-widgets/icons`; pass imported glyph values directly to `Icon` and icon-bearing component props. The expanded Iconify-backed catalog now tree-shakes unused glyphs. A one-icon Vite 8.2 production bundle drops from 57.5 kB minified / 20.0 kB gzip to 0.3 kB / 0.2 kB (98.9% smaller gzipped) [`#440`](https://github.com/janosh/svelte-widgets/pull/440)
+- **Breaking:** Standardize public numeric timing props on milliseconds with an `_ms` suffix. Rename `CopyButton.reset_sec` to `reset_ms` and `Toc.flashClickedHeadingsFor` to `flash_clicked_headings_for_ms`; append `_ms` to `CommandMenu.fade_duration`, `Masonry.duration`, `Nav.dropdown_cooldown`, `Popover.open_delay`/`close_delay`, `TooltipOptions.delay`/`hide_delay` and `Wiggle.duration` [`#441`](https://github.com/janosh/svelte-widgets/pull/441)
+- Add a searchable gallery for the full icon catalog; click any glyph to copy its `svelte-widgets/icons` import [`#440`](https://github.com/janosh/svelte-widgets/pull/440)
+- Add generic `ActionButton` with pending, success and error feedback, typed results, bindable state and reset timing; `CopyButton` now composes it [`#440`](https://github.com/janosh/svelte-widgets/pull/440)
+- Keep `svelte-widgets/vite-config` types structural across separate Vite+ installations, and make `CopyButton` button hosts explicit `type="button"` elements with a styleable `data-state` [`#440`](https://github.com/janosh/svelte-widgets/pull/440)
+
 ## [v1.3.0](https://github.com/janosh/svelte-widgets/compare/v1.2.0...v1.3.0)
 
 > 3 August 2026

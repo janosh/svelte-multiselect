@@ -98,7 +98,10 @@
       onclick={chain_handlers(() => (open = !open), button_props?.onclick)}
     >
       <Icon icon={open ? Collapse : Expand} />
-      {open ? `Close` : `View code`}
+      <span class="toggle-label">
+        <span aria-hidden={open}>View code</span>
+        <span aria-hidden={!open}>Close</span>
+      </span>
     </button>
   {/if}
 </nav>
@@ -131,6 +134,19 @@
     align-items: center;
     margin: var(--code-example-nav-margin, initial);
     gap: var(--code-example-nav-gap, 1ex);
+  }
+  nav > button {
+    white-space: nowrap;
+  }
+  .toggle-label {
+    display: inline-grid;
+    > span {
+      grid-area: 1 / 1;
+      text-align: center;
+    }
+    > [aria-hidden='true'] {
+      visibility: hidden;
+    }
   }
   pre code {
     background-color: transparent;

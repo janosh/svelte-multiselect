@@ -9,7 +9,7 @@
     scale = 1,
     dx = 0,
     dy = 0,
-    duration = 200,
+    duration_ms = 200,
     spring_options = $bindable({ stiffness: 0.05, damping: 0.1 }),
     children,
     ...rest
@@ -21,7 +21,7 @@
     scale?: number // try 1.2
     dx?: number // try 10
     dy?: number // try 10
-    duration?: number
+    duration_ms?: number
     spring_options?: { stiffness: number; damping: number }
     children?: Snippet
   } = $props()
@@ -38,7 +38,7 @@
 
   $effect.pre(() => {
     if (!wiggle) return
-    const timer = setTimeout(() => (wiggle = false), duration)
+    const timer = setTimeout(() => (wiggle = false), duration_ms)
     // cancel pending timer on re-trigger or unmount so an old timer can't cut
     // a new wiggle short or write to state after destroy
     return () => clearTimeout(timer)

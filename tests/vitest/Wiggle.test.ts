@@ -28,15 +28,15 @@ describe(`Wiggle`, () => {
   }
 
   test.each([0, 200, 500])(
-    `resets wiggle to false only after the full duration=%dms`,
-    (duration) => {
-      const { state } = mount_bindable_wiggle(true, { duration })
+    `resets wiggle to false only after the full duration_ms=%dms`,
+    (duration_ms) => {
+      const { state } = mount_bindable_wiggle(true, { duration_ms })
       expect(state.wiggle).toBe(true)
 
-      // stopping one tick short pins the delay to `duration`; advancing exactly
-      // `duration` alone would also pass for a reset hardcoded to fire immediately
-      vi.advanceTimersByTime(Math.max(duration - 1, 0))
-      expect(state.wiggle).toBe(duration > 0)
+      // stopping one tick short pins the delay to `duration_ms`; advancing exactly
+      // `duration_ms` alone would also pass for a reset hardcoded to fire immediately
+      vi.advanceTimersByTime(Math.max(duration_ms - 1, 0))
+      expect(state.wiggle).toBe(duration_ms > 0)
 
       vi.advanceTimersByTime(1)
       expect(state.wiggle).toBe(false)
@@ -44,7 +44,7 @@ describe(`Wiggle`, () => {
   )
 
   test(`custom animation props produce matching transform values`, () => {
-    const props = { wiggle: true, angle: 15, scale: 1.1, dx: 5, dy: 3, duration: 150 }
+    const props = { wiggle: true, angle: 15, scale: 1.1, dx: 5, dy: 3, duration_ms: 150 }
     mount(Wiggle, {
       target: document.body,
       props: { ...props, spring_options: { stiffness: 0.08, damping: 0.15 } },
@@ -61,7 +61,7 @@ describe(`Wiggle`, () => {
   })
 
   test(`clears pending reset timer on unmount instead of writing to destroyed state`, () => {
-    const { state, component } = mount_bindable_wiggle(true, { duration: 200 })
+    const { state, component } = mount_bindable_wiggle(true, { duration_ms: 200 })
 
     void unmount(component)
     vi.advanceTimersByTime(500)

@@ -6,6 +6,18 @@ import type { IconData } from './icons/types'
 
 export type Option = string | number | ObjectOption
 
+export type ActionState = `ready` | `pending` | `success` | `error`
+export type ActionButtonContent<State extends ActionState = ActionState> = {
+  state: State
+  icon?: IconData
+  text: string
+  disabled: boolean
+}
+export type ActionButtonSnippetProps<Result = unknown> = ActionButtonContent & {
+  result: Result | undefined
+  error: unknown
+}
+
 export type TabItem<Value extends string = string> = {
   value: Value
   label?: string

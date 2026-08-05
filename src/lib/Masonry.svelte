@@ -14,7 +14,7 @@
     order = `balanced-stable`,
     calcCols = (masonryWidth: number, minColWidth: number, gap: number): number =>
       Math.min(items.length, Math.floor((masonryWidth + gap) / (minColWidth + gap)) || 1),
-    duration = 200,
+    duration_ms = 200,
     gap = 20,
     getId = (item: Item): ItemId => {
       if (typeof item === `number`) return item
@@ -45,7 +45,7 @@
     animate?: boolean
     order?: MasonryOrder
     calcCols?: (masonryWidth: number, minColWidth: number, gap: number) => number
-    duration?: number
+    duration_ms?: number
     gap?: number
     getId?: (item: Item) => ItemId
     idKey?: string
@@ -422,9 +422,9 @@
         {#each visible_items as { id, idx, item } (id)}
           <div
             {@attach measure_height(id)}
-            in:fade={{ delay: 100, duration }}
-            out:fade={{ delay: 0, duration }}
-            animate:flip={{ duration }}
+            in:fade={{ delay: 100, duration: duration_ms }}
+            out:fade={{ delay: 0, duration: duration_ms }}
+            animate:flip={{ duration: duration_ms }}
           >
             {@render render_item(idx, item)}
           </div>

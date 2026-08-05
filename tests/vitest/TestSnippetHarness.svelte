@@ -1,8 +1,9 @@
 <script lang="ts">
-  import { CopyButton, FileDetails, Nav, PrevNext, Toggle } from '$lib'
+  import { ActionButton, CopyButton, FileDetails, Nav, PrevNext, Toggle } from '$lib'
   import type { ComponentProps } from 'svelte'
 
   type SnippetHarnessProps =
+    | ({ component: `action-button` } & ComponentProps<typeof ActionButton>)
     | ({ component: `copy-button` } & ComponentProps<typeof CopyButton>)
     | ({ component: `file-details` } & ComponentProps<typeof FileDetails>)
     | ({ component: `nav` } & ComponentProps<typeof Nav>)
@@ -13,7 +14,19 @@
   let props: SnippetHarnessProps = $props()
 </script>
 
-{#if props.component === `copy-button`}
+{#if props.component === `action-button`}
+  {@const { component, ...rest } = props}
+  <ActionButton {...rest}>
+    {#snippet children({ state, disabled, result })}
+      <span
+        data-testid="action-snippet"
+        data-state={state}
+        data-disabled={disabled}
+        data-result={typeof result === `string` ? result : ``}>{state}</span
+      >
+    {/snippet}
+  </ActionButton>
+{:else if props.component === `copy-button`}
   {@const { component, ...rest } = props}
   <CopyButton {...rest}>
     {#snippet children({ state, disabled })}

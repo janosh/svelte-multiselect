@@ -6,7 +6,7 @@ import { slug_to_title } from '$lib/utils'
 export const demo_labels: Record<string, string> = {
   '/multiselect': `MultiSelect`,
   '/command-menu': `CommandMenu`,
-  '/copy-button': `CopyButton`,
+  '/action-button': `ActionButton`,
   '/ui': `UI`,
   '/css-classes': `CSS Classes`,
   '/kit-form-actions': `Form Actions`,
