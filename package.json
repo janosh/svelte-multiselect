@@ -135,12 +135,28 @@
     "test": "vp test --run && playwright test",
     "test:coverage": "vp test --run --coverage",
     "test:package": "npm pack --dry-run && tsc -p tests/package-smoke/tsconfig.json && vp build --config tests/package-smoke/vite.config.ts",
-    "package": "svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' -o -name '*.svelte' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g; s{((?:from|import)\\s*(?:\\(\\s*)?['\\\"])(\\.\\.?\\/(?:[^\\/'\\\"]+\\/)*[^\\/.'\\\"]+)(['\\\"])}{\\1\\2.js\\3}g\" {} + && find dist -name 'readme.svelte' -delete",
+    "package": "npm run gen:icons && svelte-package && find dist \\( -name '*.js' -o -name '*.d.ts' -o -name '*.svelte' \\) -type f -exec perl -pi -e \"s/(\\.\\.?\\/[^'\\\"]*)\\.ts(['\\\"])/\\1.js\\2/g; s{((?:from|import)\\s*(?:\\(\\s*)?['\\\"])(\\.\\.?\\/(?:[^\\/'\\\"]+\\/)*[^\\/.'\\\"]+)(['\\\"])}{\\1\\2.js\\3}g\" {} + && find dist -name 'readme.svelte' -delete",
     "prepare": "npm run package",
     "prepublishOnly": "npm run package",
-    "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts"
+    "changelog": "npx tsx https://github.com/janosh/workflows/raw/refs/heads/main/scripts/make-release-notes.ts",
+    "gen:icons": "node --experimental-strip-types scripts/generate-icons.ts"
   },
   "devDependencies": {
+    "@iconify-json/academicons": "^1.2.4",
+    "@iconify-json/carbon": "^1.2.25",
+    "@iconify-json/fa-brands": "^1.2.2",
+    "@iconify-json/file-icons": "^1.2.2",
+    "@iconify-json/gis": "^1.2.5",
+    "@iconify-json/iconoir": "^1.2.11",
+    "@iconify-json/lucide": "^1.2.121",
+    "@iconify-json/material-symbols": "^1.2.88",
+    "@iconify-json/mdi": "^1.2.3",
+    "@iconify-json/octicon": "^1.2.30",
+    "@iconify-json/ri": "^1.2.10",
+    "@iconify-json/simple-icons": "^1.2.93",
+    "@iconify-json/zondicons": "^1.2.2",
+    "@iconify/types": "^2.0.0",
+    "@iconify/utils": "^3.1.4",
     "@playwright/test": "^1.62.1",
     "@sveltejs/adapter-static": "^3.0.10",
     "@sveltejs/kit": "^2.70.2",
@@ -157,7 +173,7 @@
     "svelte": "^5.56.8",
     "typescript": "^6.0.3",
     "vite": "^8.2.0",
-    "vite-plus": "0.2.7"
+    "vite-plus": "0.2.8"
   },
   "peerDependencies": {
     "@wooorm/starry-night": "^3.0.0",

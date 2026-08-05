@@ -19,6 +19,7 @@ Style the arrow with `sort_button_props` (it sits outside the radiogroup, so hos
 
 ```svelte example id="button-group-single"
 <script lang="ts">
+  import { GitHub } from '$lib/icons'
   import ButtonGroup, { type ButtonGroupOption } from '$lib/ButtonGroup.svelte'
 
   const options: ButtonGroupOption[] = [
@@ -27,7 +28,7 @@ Style the arrow with `sort_button_props` (it sits outside the radiogroup, so hos
       label: `commits`,
       tooltip: `Total commits to the default branch`,
     },
-    { value: `stars`, label: `stars`, icon: `GitHub` },
+    { value: `stars`, label: `stars`, icon: GitHub },
     { value: `title`, label: `title` },
     { value: `size`, label: `size`, disabled: true },
   ]

@@ -58,20 +58,23 @@ Cycles light → system → dark → light, writes the choice to `localStorage.t
 
 ### `Icon`
 
-Renders one path from the bundled icon set at `1em` square, inheriting `currentColor`. An
-unknown name logs an error and falls back to `Alert`.
+Renders one glyph from the bundled icon set at `1em` square, inheriting `currentColor`.
+Pass the glyph value (`<Icon icon={Info} />`), not a name.
 
 ```svelte example id="icon-demo"
 <script lang="ts">
   import { Icon } from '$lib'
-  import { icon_data } from '$lib/icons'
+  import * as icons from '$lib/icons'
+  import type { IconData } from '$lib/icons'
+
+  const catalog = Object.entries<IconData>(icons)
 </script>
 
 <div style="display: flex; flex-wrap: wrap; gap: 1em">
-  {#each Object.keys(icon_data) as icon (icon)}
+  {#each catalog as [name, icon] (name)}
     <span style="display: flex; align-items: center; gap: 4pt">
       <Icon {icon} style="font-size: 1.5em" />
-      <code>{icon}</code>
+      <code>{name}</code>
     </span>
   {/each}
 </div>

@@ -11,6 +11,7 @@
 ```svelte example id="languages-1"
 <script lang="ts">
   import { MultiSelect, Icon } from '$lib'
+  import { Collapse, Expand } from '$lib/icons'
   import { languages } from '$site/options'
   import { LanguageSnippet, MinusIcon } from '$site'
 </script>
@@ -25,7 +26,7 @@
     <LanguageSnippet {option} />
   {/snippet}
   {#snippet expandIcon({ open, disabled })}
-    <Icon icon={open ? 'Collapse' : 'Expand'} style={disabled ? `opacity: 0.5` : null} />
+    <Icon icon={open ? Collapse : Expand} style={disabled ? `opacity: 0.5` : null} />
   {/snippet}
   {#snippet removeIcon({ isRemoveAll })}
     {#if isRemoveAll}Clear all{:else}<MinusIcon width="1em" />{/if}
@@ -45,6 +46,7 @@ This example also moves the expand icon to the right side of the input via `expa
 ```svelte example id="languages-2"
 <script lang="ts">
   import { MultiSelect, Icon } from '$lib'
+  import { Collapse, Expand } from '$lib/icons'
   import { languages } from '$site/options'
   import { LanguageSnippet } from '$site'
 
@@ -68,7 +70,7 @@ This example also moves the expand icon to the right side of the input via `expa
   {/snippet}
   {#snippet expandIcon({ open: expandOpen, disabled })}
     <button type="button" {disabled}>
-      <Icon icon={expandOpen ? `Collapse` : `Expand`} />
+      <Icon icon={expandOpen ? Collapse : Expand} />
     </button>
   {/snippet}
   {#snippet removeIcon({ option: opt, isRemoveAll })}

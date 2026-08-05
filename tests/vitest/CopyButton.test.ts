@@ -1,5 +1,5 @@
 import { CopyButton } from '$lib'
-import { icon_data } from '$lib/icons'
+import { Alert, Check, Copy } from '$lib/icons'
 import type { ComponentProps } from 'svelte'
 import { mount, tick, unmount } from 'svelte'
 import { fromStore, get, writable } from 'svelte/store'
@@ -12,9 +12,9 @@ const mock_write_text = vi.fn()
 vi.stubGlobal(`navigator`, { clipboard: { writeText: mock_write_text } })
 
 const default_labels = {
-  ready: { icon: `Copy`, text: `ready` },
-  success: { icon: `Check`, text: `success` },
-  error: { icon: `Alert`, text: `error` },
+  ready: { icon: Copy, text: `ready` },
+  success: { icon: Check, text: `success` },
+  error: { icon: Alert, text: `error` },
 } as const
 const mount_copy_button = (props: Partial<ComponentProps<typeof CopyButton>> = {}) => {
   const copy_button_component = mount(CopyButton, {
@@ -115,14 +115,14 @@ test.each([
 ] as const)(`text label %j renders %d text span(s)`, (text, expected_spans) => {
   const { copy_button } = mount_copy_button({
     labels: {
-      ready: { icon: `Copy`, text },
-      success: { icon: `Check`, text },
-      error: { icon: `Alert`, text },
+      ready: { icon: Copy, text },
+      success: { icon: Check, text },
+      error: { icon: Alert, text },
     },
   })
   const wrapper = copy_button.querySelector(`span`)
   expect(wrapper?.querySelectorAll(`span`)).toHaveLength(expected_spans)
-  expect(icon_path(copy_button)).toBe(icon_data.Copy.d)
+  expect(icon_path(copy_button)).toBe(Copy.d)
   // an empty label must render no text at all, not a stray placeholder
   expect(copy_button.textContent?.trim()).toBe(text)
 })
@@ -293,8 +293,8 @@ const mount_bound_copy_button = () => {
 }
 
 test.each([
-  [`success`, null, `Check`],
-  [`error`, new Error(`clipboard failed`), `Alert`],
+  [`success`, null, Check],
+  [`error`, new Error(`clipboard failed`), Alert],
 ] as const)(
   `bound state: click propagates %s outward, external writes update rendering`,
   async (expected_state, rejection, icon) => {
@@ -304,12 +304,12 @@ test.each([
     const { copy_button, state_store } = mount_bound_copy_button()
     await click_copy_button(copy_button)
     expect(get(state_store)).toBe(expected_state) // internal change reached the binding
-    expect(icon_path(copy_button)).toBe(icon_data[icon].d)
+    expect(icon_path(copy_button)).toBe(icon.d)
 
     // external write back to idle flows into the component and restores the Copy icon
     state_store.set(`ready`)
     await tick()
-    expect(icon_path(copy_button)).toBe(icon_data.Copy.d)
+    expect(icon_path(copy_button)).toBe(Copy.d)
 
     console_error_spy.mockRestore()
   },

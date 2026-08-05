@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { Search } from './icons'
   // Find-in-page bar over root: Enter/Shift+Enter step; Escape closes. Style matches
   // with ::highlight(find-match), which cannot be component-scoped. For custom chrome,
   // use create_find_state.
@@ -69,7 +70,7 @@
 </script>
 
 <div aria-label={find_label} role="search" {...rest} class={[`find-bar`, rest.class]}>
-  <Icon icon="Search" aria-hidden="true" class="find-icon" />
+  <Icon icon={Search} aria-hidden="true" class="find-icon" />
   <input
     aria-label={find_label}
     bind:this={input_element}

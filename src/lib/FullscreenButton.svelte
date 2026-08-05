@@ -3,7 +3,7 @@
   import type { HTMLButtonAttributes } from 'svelte/elements'
   import { sync_fullscreen } from './fullscreen.svelte'
   import Icon from './Icon.svelte'
-  import type { IconName } from './icons'
+  import { ExitFullscreen, Fullscreen, type IconData } from './icons'
   import { chain_handlers } from './utils'
 
   let {
@@ -11,7 +11,7 @@
     wrapper,
     placement = `inline`,
     bg_css_var = `--fullscreen-bg`,
-    icons = { enter: `Fullscreen`, exit: `ExitFullscreen` },
+    icons = { enter: Fullscreen, exit: ExitFullscreen },
     labels = { enter: `Enter fullscreen`, exit: `Exit fullscreen` },
     on_change,
     on_request_error,
@@ -24,7 +24,7 @@
     // `corner`: top-right of nearest positioned ancestor (CSS vars, overridable)
     placement?: `inline` | `corner`
     bg_css_var?: string
-    icons?: { enter: IconName; exit: IconName }
+    icons?: { enter: IconData; exit: IconData }
     labels?: { enter: string; exit: string }
     on_change?: (fullscreen: boolean) => void
     on_request_error?: (error: unknown) => void

@@ -4,21 +4,32 @@
 //
 // Sections merge over the defaults — lint's object-valued members a second level down,
 // so retuning one rule or staged glob restates nothing else, while its arrays replace.
-// Members are typed via SharedConfig rather than left to infer:
-// a rules literal this size blows TS's instantiation depth when spread into UserConfig.
-import type { UserConfig } from 'vite-plus'
-import type { OxlintConfig } from 'vite-plus/lint'
+//
+// The shapes below are spelled out instead of reused from vite-plus's UserConfig and
+// OxlintConfig (a test keeps that import out). Those come from the `oxlint` package, so a
+// consumer on a different vite-plus has a second, unrelated copy, and comparing the two
+// exhausts TS's stack depth where this config is spread into their `defineConfig`. For the
+// same reason the members are literal unions and carry no index signature: oxlint's own
+// names are unions a widened `string` cannot satisfy, and an unlisted option typed
+// `unknown` satisfies nothing. Extra options belong in the consumer's own literal.
+type Severity = `error` | `warn` | `off`
+// a rule is a severity, or a severity plus its options
+type Rules = Record<string, Severity | [Severity, ...unknown[]]>
 
 export type SharedConfig = {
-  lint: OxlintConfig & {
+  lint: {
+    plugins: (`oxc` | `typescript` | `unicorn` | `import` | `vitest`)[]
+    options: Record<string, boolean>
+    categories: Record<string, Severity>
     ignorePatterns: string[]
-    rules: NonNullable<OxlintConfig[`rules`]>
+    rules: Rules
+    overrides: { files: string[]; rules: Rules }[]
   }
-  fmt: NonNullable<UserConfig[`fmt`]>
-  build: NonNullable<UserConfig[`build`]>
+  fmt: { semi: boolean; singleQuote: boolean; printWidth: number; svelte: boolean }
+  build: { cssTarget: string }
   // lint-staged lets a whole staged config be one function; ours is always a glob map, and
   // vite-plus JSON.stringifies it to reach its Rust side, where a function is dropped
-  staged: Extract<NonNullable<UserConfig[`staged`]>, Record<string, unknown>>
+  staged: Record<string, string>
 }
 
 // Keep simple enabled rules compact so configured rules and exceptions remain visible.
@@ -187,10 +198,9 @@ const fmt: SharedConfig[`fmt`] = {
   svelte: true,
 }
 
-const build: SharedConfig[`build`] = {
-  // Default cssTarget is chrome111 which doesn't support light-dark(),
-  cssTarget: `esnext`, // causing LightningCSS to polyfill it with broken space toggles
-}
+// the default chrome111 lacks light-dark(), which LightningCSS then polyfills into
+// broken space toggles
+const build: SharedConfig[`build`] = { cssTarget: `esnext` }
 
 const staged: SharedConfig[`staged`] = {
   '*.{js,ts,svelte,html,css,scss,less,md,json,yaml,graphql,gql}': `vp check --fix`,
@@ -209,9 +219,6 @@ export type ConfigOverrides = {
 // A factory rather than an object the caller spreads and patches: spreading a function
 // trips no-misused-spread, and vite-plus JSON.stringifies these members to reach its Rust
 // side, where a function value is dropped without a word.
-//
-// Lint's object-valued members merge a second level down, so naming one rule keeps the
-// other 150-odd; its arrays replace, since `ignorePatterns: [...]` means exactly that.
 export const make_config = (overrides: ConfigOverrides = {}): SharedConfig => {
   // deep copy, so a caller mutating `cfg.lint.rules` or pushing onto
   // `cfg.lint.ignorePatterns` cannot rewrite the defaults behind the next call

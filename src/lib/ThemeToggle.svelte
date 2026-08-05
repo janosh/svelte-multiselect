@@ -3,6 +3,7 @@
   import type { HTMLAttributes } from 'svelte/elements'
   import { tooltip, type TooltipOptions } from './attachments'
   import Icon from './Icon.svelte'
+  import { Monitor, Moon, Sun } from './icons'
   import {
     apply_theme_mode,
     listen_theme_storage,
@@ -21,7 +22,7 @@
     icon_props?: HTMLAttributes<SVGSVGElement>
   } = $props()
 
-  const mode_icons = { light: `Sun`, dark: `Moon`, system: `Monitor` } as const
+  const mode_icons = { light: Sun, dark: Moon, system: Monitor } as const
   const mode_labels = { light: `light`, dark: `dark`, system: `system (auto)` } as const
   let is_hydrated = $state(false)
   let next_mode = $derived(THEME_MODE_CYCLE[theme.mode])

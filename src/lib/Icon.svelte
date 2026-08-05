@@ -1,10 +1,11 @@
 <script lang="ts">
   import type { SVGAttributes } from 'svelte/elements'
-  import { icon_data, type IconData, type IconName } from './icons'
+  import type { IconData } from './icons/types'
 
   // SVGAttributes, not HTMLAttributes, which rejects the `width`/`height` an <svg> takes.
-  // Either a bundled name or an ad-hoc glyph for an app's own chrome, never both and
-  // never neither, so a bare <Icon /> is a type error rather than a silent fallback.
+  // Either a glyph (`<Icon icon={Info} />`) or an ad-hoc `path`, never both and never
+  // neither — a bare <Icon /> is a type error. Pass the glyph value, not a name, so the
+  // bundler keeps only the icons this call site reaches.
   let {
     icon,
     path,
@@ -13,16 +14,11 @@
     ...rest
   }: SVGAttributes<SVGSVGElement> &
     (
-      | { icon: IconName; path?: never; viewBox?: never; stroke?: never }
+      | { icon: IconData; path?: never; viewBox?: never; stroke?: never }
       | { icon?: never; path: string; viewBox?: string; stroke?: string }
     ) = $props()
 
-  const resolved_icon: IconData = $derived.by(() => {
-    if (path) return { d: path, viewBox, stroke }
-    if (icon && icon in icon_data) return icon_data[icon]
-    console.error(`Icon '${icon}' not found`)
-    return icon_data.Alert
-  })
+  const resolved_icon: IconData = $derived(path ? { d: path, viewBox, stroke } : icon)
 </script>
 
 <svg
@@ -33,8 +29,8 @@
   {...rest}
 >
   {#if `markup` in resolved_icon}
-    <!-- several shapes rather than one `d`. Only registry glyphs reach {@html}; a
-    caller's `path` always becomes the `d` below, so markup in it cannot inject nodes -->
+    <!-- several shapes rather than one `d`. Only set glyphs reach {@html}; a caller's
+    `path` always becomes the `d` below, so markup in it cannot inject nodes -->
     {@html resolved_icon.markup}
   {:else}
     <path d={resolved_icon.d} />

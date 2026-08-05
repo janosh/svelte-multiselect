@@ -9,6 +9,7 @@
   import { click_outside, highlight_matches } from './attachments'
   import CircleSpinner from './CircleSpinner.svelte'
   import Icon from './Icon.svelte'
+  import { ChevronDown, ChevronExpand, ChevronRight, Cross, Disabled } from './icons'
   import { portal_action } from './portal'
   import type {
     GroupedOptions,
@@ -2042,7 +2043,7 @@
       {@render expandIcon({ open, disabled })}
     {:else}
       <Icon
-        icon="ChevronExpand"
+        icon={ChevronExpand}
         style="width: 15px; min-width: 1em; padding: 0 1pt; cursor: pointer"
       />
     {/if}
@@ -2067,7 +2068,7 @@
     {#if removeIcon}
       {@render removeIcon(icon_props)}
     {:else}
-      <Icon icon="Cross" style="width: {icon_props.isRemoveAll ? 17 : 15}px" />
+      <Icon icon={Cross} style="width: {icon_props.isRemoveAll ? 17 : 15}px" />
     {/if}
   </button>
 {/snippet}
@@ -2234,7 +2235,7 @@
       {@render disabledIcon()}
     {:else}
       <Icon
-        icon="Disabled"
+        icon={Disabled}
         style="width: 14pt; margin: 0 2pt"
         data-name="disabled-icon"
         aria-disabled="true"
@@ -2427,7 +2428,7 @@
               {/if}
               {#if collapsibleGroups}
                 <Icon
-                  icon={collapsed ? `ChevronRight` : `ChevronDown`}
+                  icon={collapsed ? ChevronRight : ChevronDown}
                   style="width: 12px; margin-inline-start: auto"
                 />
               {/if}

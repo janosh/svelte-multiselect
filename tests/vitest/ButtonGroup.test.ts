@@ -1,4 +1,5 @@
 import ButtonGroup from '$lib/ButtonGroup.svelte'
+import { Check } from '$lib/icons'
 import button_group_source from '$lib/ButtonGroup.svelte?raw'
 import type { ComponentProps } from 'svelte'
 import { createRawSnippet, mount, tick, unmount } from 'svelte'
@@ -13,7 +14,7 @@ describe(`ButtonGroup`, () => {
     value: string
     label?: string
     tooltip?: string
-    icon?: `Check`
+    icon?: typeof Check
     disabled?: boolean
     loading?: boolean
   }
@@ -325,7 +326,7 @@ describe(`ButtonGroup`, () => {
 
   test(`renders per-option icon and spinner, and forwards class and rest props`, () => {
     const options: Option[] = [
-      { value: `alpha`, label: `Alpha`, icon: `Check` },
+      { value: `alpha`, label: `Alpha`, icon: Check },
       { value: `beta`, label: `Beta`, loading: true },
     ]
     const buttons = mount_group({ options, class: `consumer-class`, id: `letters` })

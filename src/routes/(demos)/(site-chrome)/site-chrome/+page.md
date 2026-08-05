@@ -8,19 +8,20 @@ and a `ContributorList` of avatars.
 
 The counterpart to [`Nav`](nav): a centered row of icon links above whatever the page
 puts below them, typically a logo and a copyright line. `links` takes
-`{ href, label, icon?, title?, external? }`, `icon` naming one of the
-[bundled icons](extras#icon). `children` renders after the nav, and the `--footer-*`
-custom properties cover padding, background, gap and link color.
+`{ href, label, icon?, title?, external? }`; `icon` accepts an `IconData` value imported
+from `$lib/icons`, such as `GitHub`. `children` renders after the nav, and the
+`--footer-*` custom properties cover padding, background, gap and link color.
 
 ```svelte example id="footer-demo"
 <script lang="ts">
+  import { GitHub, Svelte } from '$lib/icons'
   import Footer from '$lib/Footer.svelte'
   import type { FooterLink } from '$lib'
 
   const repo = `https://github.com/janosh/svelte-widgets`
   const links: FooterLink[] = [
-    { href: `${repo}/issues`, label: `Issues`, icon: `GitHub`, external: true },
-    { href: `https://svelte.dev`, label: `Svelte`, icon: `Svelte`, external: true },
+    { href: `${repo}/issues`, label: `Issues`, icon: GitHub, external: true },
+    { href: `https://svelte.dev`, label: `Svelte`, icon: Svelte, external: true },
     { href: `multiselect`, label: `Docs` },
   ]
 </script>

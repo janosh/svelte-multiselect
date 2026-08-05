@@ -7,7 +7,7 @@
     HTMLButtonAttributes,
   } from 'svelte/elements'
   import Icon from './Icon.svelte'
-  import type { IconName } from './icons'
+  import { Collapse, Expand, GitHub, Svelte } from './icons'
   import { chain_handlers } from './utils'
 
   let {
@@ -62,8 +62,8 @@
   // mdsvex transform emits the current page's path as meta.filename, so fall back
   // to it when meta.file is unset (github: true is documented to link there)
   let github_file = $derived(file ?? filename)
-  let external_links: { cond: unknown; href?: string; icon: IconName }[] = $derived([
-    { cond: repl, href: repl, icon: `Svelte` },
+  let external_links = $derived([
+    { cond: repl, href: repl, icon: Svelte, title: `Svelte` },
     {
       cond: github && repo,
       // string github is an explicit path and needs no file/filename fallback
@@ -71,17 +71,18 @@
         github && (github !== true || github_file)
           ? `${repo}/blob/-/${github === true ? github_file : github}`
           : repo,
-      icon: `GitHub`,
+      icon: GitHub,
+      title: `GitHub`,
     },
   ])
   const links = { target: `_blank`, rel: `noreferrer` }
 </script>
 
 <nav>
-  {#each external_links as { cond, href, icon } (icon)}
+  {#each external_links as { cond, href, icon, title } (title)}
     <a
       {...links}
-      title={icon}
+      {title}
       {...link_props}
       {href}
       style:display={cond ? `inline-block` : `none`}
@@ -96,7 +97,7 @@
       type="button"
       onclick={chain_handlers(() => (open = !open), button_props?.onclick)}
     >
-      <Icon icon={open ? `Collapse` : `Expand`} />
+      <Icon icon={open ? Collapse : Expand} />
       {open ? `Close` : `View code`}
     </button>
   {/if}
