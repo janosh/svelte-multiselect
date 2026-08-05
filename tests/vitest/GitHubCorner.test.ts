@@ -57,5 +57,6 @@ test.each([
     expect(link.target).toBe(expected.target)
     expect(link.title).toBe(expected.title)
     expect(link.querySelector(`svg`)).toBeInstanceOf(SVGElement)
+    expect(getComputedStyle(link).clipPath).toBe(`polygon(0 0, 100% 0, 100% 100%)`)
   },
 )

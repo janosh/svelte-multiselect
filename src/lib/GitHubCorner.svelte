@@ -57,6 +57,8 @@
     fill: var(--github-corner-bg, light-dark(#222, #eee));
     color: var(--github-corner-color, light-dark(#fafafa, #1a1a1a));
     width: var(--github-corner-size, 70px);
+    height: var(--github-corner-size, 70px);
+    clip-path: polygon(0 0, 100% 0, 100% 100%);
   }
   a.top-right {
     top: 0;
