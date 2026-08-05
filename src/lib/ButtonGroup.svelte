@@ -157,7 +157,6 @@
       {#if opt.loading !== undefined}
         <CircleSpinner
           size="0.8em"
-          aria-hidden={!opt.loading}
           style={`visibility: ${opt.loading ? `visible` : `hidden`}`}
         />
       {/if}

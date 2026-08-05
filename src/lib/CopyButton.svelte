@@ -6,11 +6,7 @@
   import Self from './CopyButton.svelte'
   import ActionButton from './ActionButton.svelte'
   import { Alert, Check, Copy, type IconData } from './icons'
-  import type {
-    ActionButtonContent,
-    ActionButtonSnippetProps,
-    ActionState,
-  } from './types'
+  import type { ActionButtonContent, ActionState } from './types'
 
   type State = Exclude<ActionState, `pending`>
 
@@ -88,7 +84,6 @@
             on_copy_error,
             ...rest,
             style,
-            'data-sms-copy': ``,
           },
         })
         mounted_copy_buttons.push({ pre, component: mounted_copy_button })
@@ -113,7 +108,7 @@
   }
 </script>
 
-{#snippet copy_content({ state: action_state, disabled }: ActionButtonSnippetProps<void>)}
+{#snippet copy_content({ state: action_state, disabled }: ActionButtonContent)}
   {@const copy_state = action_state === `pending` ? state : action_state}
   {@const { text, icon } = labels[copy_state]}
   {@render copy_children?.({ state: copy_state, icon, text, disabled })}

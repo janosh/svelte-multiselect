@@ -95,10 +95,9 @@ Pass the glyph value (`<Icon icon={Info} />`), not a name.
         <Icon {icon} style="font-size: 1.5em" />
         <code>{name}</code>
         <small
-          aria-hidden={state === `ready`}
-          style="margin-inline-start: auto; visibility: {state === `ready`
-            ? `hidden`
-            : `visible`}">{state === `error` ? `Failed` : `Copied`}</small
+          style="margin-inline-start: auto"
+          style:visibility={state === `ready` ? `hidden` : `visible`}
+          >{state === `error` ? `Failed` : `Copied`}</small
         >
       {/snippet}
     </CopyButton>

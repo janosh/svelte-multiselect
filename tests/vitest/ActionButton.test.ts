@@ -38,12 +38,9 @@ test(`reserves enough width for every state label`, () => {
   expect(getComputedStyle(button).width).toBe(`fit-content`)
   expect(getComputedStyle(button).display).toBe(`inline-grid`)
   expect(getComputedStyle(content).justifyContent).toBe(`center`)
-  expect(Array.from(width_sizer.children, (child) => child.textContent?.trim())).toEqual([
-    `Save`,
-    `Saving…`,
-    `Saved`,
-    `Failed`,
-  ])
+  expect(Array.from(width_sizer.children, (child) => child.textContent?.trim())).toEqual(
+    Object.values(labels).map(({ text }) => text),
+  )
 })
 
 test(`blocks duplicate actions while pending and resets after success`, async () => {

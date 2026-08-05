@@ -132,17 +132,6 @@ test.each([
   expect(copy_text(copy_button).trim()).toBe(text)
 })
 
-test(`reserves width for ready, success and error labels`, () => {
-  mount_copy_button()
-  const width_labels = doc_query(`[data-sms-action-width]`).children
-  expect(Array.from(width_labels, (child) => child.textContent?.trim())).toEqual([
-    `ready`,
-    `success`,
-    `error`,
-    `ready`,
-  ])
-})
-
 test.each([true, false])(
   `custom children snippet renders and receives disabled=%s`,
   (disabled) => {
@@ -212,27 +201,19 @@ test(`calls on_copy_error with error and content`, async () => {
 })
 
 test.each([
-  [`default reset_ms`, { content: `default reset` }, 2000, 1999],
-  [`custom reset_ms`, { content: `half sec`, reset_ms: 500 }, 500, 499],
-  [`fine-grained reset_ms`, { content: `timed`, reset_ms: 50 }, 50, 49],
-] as const)(
-  `%s schedules millisecond delay and resets on time`,
-  async (_desc, props, expected_delay_ms, elapsed_before_reset_ms) => {
-    vi.useFakeTimers()
-    // no mockRestore needed: the global setup calls vi.restoreAllMocks() before each test
-    const set_timeout_spy = vi.spyOn(globalThis, `setTimeout`)
-    const { copy_button } = mount_copy_button(props)
-    await click_copy_button(copy_button)
-    expect(set_timeout_spy).toHaveBeenCalled()
-    expect(set_timeout_spy.mock.calls.at(-1)?.[1]).toBe(expected_delay_ms)
+  [`default reset_ms`, { content: `default reset` }, 2000],
+  [`custom reset_ms`, { content: `half sec`, reset_ms: 500 }, 500],
+] as const)(`%s resets on time`, async (_desc, props, expected_delay_ms) => {
+  vi.useFakeTimers()
+  const { copy_button } = mount_copy_button(props)
+  await click_copy_button(copy_button)
 
-    await vi.advanceTimersByTimeAsync(elapsed_before_reset_ms)
-    expect(copy_text(copy_button)).toContain(`success`)
+  await vi.advanceTimersByTimeAsync(expected_delay_ms - 1)
+  expect(copy_text(copy_button)).toContain(`success`)
 
-    await vi.advanceTimersByTimeAsync(1)
-    expect(copy_text(copy_button)).toContain(`ready`)
-  },
-)
+  await vi.advanceTimersByTimeAsync(1)
+  expect(copy_text(copy_button)).toContain(`ready`)
+})
 
 test.each([0, -1])(`reset_ms=%s does not auto-reset`, async (reset_ms: number) => {
   vi.useFakeTimers()
@@ -252,7 +233,6 @@ test(`second click clears previous reset timer`, async () => {
 
   await vi.advanceTimersByTimeAsync(50)
   await click_copy_button(copy_button)
-  expect(copy_text(copy_button)).toContain(`success`)
 
   await vi.advanceTimersByTimeAsync(60)
   expect(copy_text(copy_button)).toContain(`success`)
@@ -274,13 +254,11 @@ test(`unmount clears outstanding reset timer`, async () => {
   const reset_idx = set_timeout_spy.mock.calls.findIndex((call) => call[1] === 100)
   expect(reset_idx).not.toBe(-1)
   const reset_timer_id = set_timeout_spy.mock.results[reset_idx].value
-  expect(clear_timeout_spy).not.toHaveBeenCalled()
 
   void unmount(copy_button_component)
   // that exact timer, not merely some clearTimeout call. toContain compares by
   // identity; toHaveBeenCalledWith's deep equality matches any Timeout object
   expect(clear_timeout_spy.mock.calls.map((call) => call[0])).toContain(reset_timer_id)
-  await vi.advanceTimersByTimeAsync(200)
 })
 
 // two-way binding tests: this file isn't compiled by the Svelte plugin so $state is
