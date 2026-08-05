@@ -29,13 +29,20 @@ test.each([
   })
 })
 
+// Importing Vite+ types ties this config to one dependency copy and can overflow TS
+// when consumers resolve another, so the public shapes must stay structural.
+test(`config types stay independent of vite-plus`, async () => {
+  const { default: source } = await import(`$lib/vite-config.ts?raw`)
+  expect(source).not.toMatch(/from\s+['"`](?:vite-plus|oxlint)/)
+})
+
 test(`a returned config owns its nested state`, () => {
   // Snapshot first; comparing another aliased result after mutation would be vacuous.
   const before = structuredClone(make_config())
-  const mine = make_config()
-  mine.lint.rules[`no-var`] = `off` // a nested map
-  mine.lint.ignorePatterns.push(`LEAKED`) // a nested array
-  mine.staged[`*`] = `LEAKED` // a sibling section
+  const config = make_config()
+  config.lint.rules[`no-var`] = `off` // a nested map
+  config.lint.ignorePatterns.push(`LEAKED`) // a nested array
+  config.staged[`*`] = `LEAKED` // a sibling section
 
   expect(make_config()).toEqual(before)
 })
