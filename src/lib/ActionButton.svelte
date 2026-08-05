@@ -2,10 +2,10 @@
   import { onDestroy, type Snippet } from 'svelte'
   import type { HTMLAttributes } from 'svelte/elements'
   import Icon from './Icon.svelte'
-  import type { ActionState } from './types'
+  import type { ActionButtonSnippetProps, ActionState } from './types'
   import { chain_handlers } from './utils'
 
-  type ActionLabel = { icon?: import('./icons').IconData; text: string }
+  type ActionLabel = Pick<ActionButtonSnippetProps, `icon` | `text`>
 
   let {
     action,
@@ -34,18 +34,7 @@
     on_state_change?: (state: ActionState) => void | Promise<void>
     on_success?: (result: Result) => void | Promise<void>
     on_error?: (error: unknown) => void | Promise<void>
-    children?: Snippet<
-      [
-        {
-          state: ActionState
-          icon?: import('./icons').IconData
-          text: string
-          disabled: boolean
-          result: Result | undefined
-          error: unknown
-        },
-      ]
-    >
+    children?: Snippet<[ActionButtonSnippetProps<Result>]>
   } = $props()
 
   let result = $derived<Result | undefined>(undefined)
@@ -129,28 +118,41 @@
   onclick={chain_handlers(run_action, rest.onclick)}
   onkeydown={chain_handlers(handle_action_keydown, rest.onkeydown)}
 >
-  {#if children}
-    {@render children({
-      state,
-      icon: current_label.icon,
-      text: current_label.text,
-      disabled: action_disabled,
-      result,
-      error,
-    })}
-  {:else}
-    <span>
+  <span data-sms-action-content="" style="justify-content: center">
+    {#if children}
+      {@render children({
+        state,
+        icon: current_label.icon,
+        text: current_label.text,
+        disabled: action_disabled,
+        result,
+        error,
+      })}
+    {:else}
       {#if current_label.icon}<Icon icon={current_label.icon} />{/if}
       {#if current_label.text}<span>{@html current_label.text}</span>{/if}
-    </span>
-  {/if}
+    {/if}
+  </span>
+  <span data-sms-action-width="" aria-hidden="true">
+    {#each Object.values(labels) as label}
+      <span>
+        {#if label.icon}<Icon icon={label.icon} />{/if}
+        {#if label.text}<span>{@html label.text}</span>{/if}
+      </span>
+    {/each}
+  </span>
 </svelte:element>
 
 <style>
   [data-sms-action] {
+    display: inline-grid;
     width: fit-content;
   }
   [data-sms-action] > span {
+    grid-area: 1 / 1;
+  }
+  [data-sms-action-content],
+  [data-sms-action-width] > span {
     display: inline-flex;
     gap: 0.35em;
     align-items: center;
@@ -159,8 +161,15 @@
     > span {
       line-height: 1;
     }
-    :global(svg) {
+    > :global(svg) {
       display: block;
+    }
+  }
+  [data-sms-action-width] {
+    display: grid;
+    visibility: hidden;
+    > span {
+      grid-area: 1 / 1;
     }
   }
 </style>

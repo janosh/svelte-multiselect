@@ -81,7 +81,7 @@ test.each([
       open: false,
       triggers,
       actions: mock_actions,
-      fade_duration: 0,
+      fade_duration_ms: 0,
     })
     mount(CommandMenu, { target: document.body, props })
 
@@ -119,7 +119,7 @@ test.each([
       open: true,
       close_keys,
       actions: mock_actions,
-      fade_duration: 0,
+      fade_duration_ms: 0,
     })
     mount(CommandMenu, { target: document.body, props })
 
@@ -147,7 +147,7 @@ test.each([`Escape`, `x`])(
       open: true,
       close_keys: [close_key],
       actions: [{ label: `Close action`, shortcut: close_key, action }],
-      fade_duration: 0,
+      fade_duration_ms: 0,
       onkeydown,
     })
     mount(CommandMenu, { target: document.body, props })
@@ -181,7 +181,7 @@ test.each([
         close_keys,
         actions: mock_actions,
         dialog_props: { oncancel },
-        fade_duration: 0,
+        fade_duration_ms: 0,
       },
     })
     await tick()
@@ -213,7 +213,7 @@ test.each([`available`, `throws`, `unavailable`] as const)(
         actions: mock_actions,
         aria_label: `Run command`,
         open: true,
-        fade_duration: 0,
+        fade_duration_ms: 0,
       },
     })
     await tick()
@@ -236,7 +236,7 @@ test(`handles action selection and execution`, async () => {
     actions: actions_with_spies,
     activeIndex: null as number | null,
     searchText: `action`,
-    fade_duration: 0,
+    fade_duration_ms: 0,
     onadd,
   })
   mount(CommandMenu, { target: document.body, props })
@@ -267,7 +267,7 @@ test(`ignores user-created options without action handlers`, async () => {
     open: true,
     actions: [{ label: `existing action`, action }],
     allowUserOptions: true,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -307,7 +307,7 @@ test.each([
     },
   ],
 ])(`closes dialog on outside click: %s`, async (_label, get_target) => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: true, actions: mock_actions, fade_duration_ms: 0 })
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
@@ -325,7 +325,7 @@ test.each([
   [`the backdrop`, 10, 10, false],
   [`its own padding`, 105, 105, true],
 ])(`a press on %s`, async (_label, clientX, clientY, stays_open) => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: true, actions: mock_actions, fade_duration_ms: 0 })
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
@@ -342,7 +342,7 @@ test.each([
 })
 
 test(`keeps dialog open when clicking inside the menu`, async () => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: true, actions: mock_actions, fade_duration_ms: 0 })
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
@@ -356,8 +356,8 @@ test(`keeps dialog open when clicking inside the menu`, async () => {
 // open=false must call dialog.close() before `{#if open}` unmounts, including while
 // an outro keeps the closed element mounted.
 test.each([0, 50])(
-  `controlled close fires native onclose once (fade_duration=%i)`,
-  async (fade_duration) => {
+  `controlled close fires native onclose once (fade_duration_ms=%i)`,
+  async (fade_duration_ms) => {
     vi.useFakeTimers()
     try {
       const onclose = vi.fn()
@@ -365,7 +365,7 @@ test.each([0, 50])(
       const props = $state({
         open: true,
         actions: mock_actions,
-        fade_duration,
+        fade_duration_ms,
         dialog_props: { onclose },
       })
       mount(CommandMenu, { target: document.body, props })
@@ -378,7 +378,7 @@ test.each([0, 50])(
       expect(dialog.open).toBe(false)
       expect(dialog_close).toHaveBeenCalled()
       expect(onclose).toHaveBeenCalledOnce()
-      if (fade_duration === 0) expect(document.querySelector(`dialog`)).toBeNull()
+      if (fade_duration_ms === 0) expect(document.querySelector(`dialog`)).toBeNull()
       await vi.runAllTimersAsync()
       await tick()
       expect(onclose).toHaveBeenCalledOnce()
@@ -392,7 +392,7 @@ test(`an onclose callback can reopen without another close event`, async () => {
   const props = $state({
     open: true,
     actions: mock_actions,
-    fade_duration: 50,
+    fade_duration_ms: 50,
     dialog_props: {
       onclose: vi.fn(() => {
         props.open = true
@@ -420,7 +420,7 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
   const other_multiselect = document.createElement(`div`)
   other_multiselect.className = `multiselect`
   document.body.append(other_multiselect)
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: true, actions: mock_actions, fade_duration_ms: 0 })
 
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -432,7 +432,7 @@ test(`non-modal fallback closes on click of an unrelated page multiselect`, asyn
 })
 
 test(`keeps dialog open when clicking a nested portalled option`, async () => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: true, actions: mock_actions, fade_duration_ms: 0 })
   mount(CommandMenu, { target: document.body, props })
   await tick()
 
@@ -459,7 +459,7 @@ test(`stays open when a button's click handler sets open=true and the click bubb
   // the very click that opens the menu bubbles to <svelte:window onclick> while
   // dialog is still null (not rendered until next flush) - close_if_outside must
   // not treat it as an outside click and instantly close the menu
-  const props = $state({ open: false, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: false, actions: mock_actions, fade_duration_ms: 0 })
   mount(CommandMenu, { target: document.body, props })
 
   const open_button = document.createElement(`button`)
@@ -516,7 +516,7 @@ test(`native dialog close resets state and forwards dialog_props.onclose`, async
     activeOption: mock_actions[1],
     searchText: `action`,
     actions: mock_actions,
-    fade_duration: 0,
+    fade_duration_ms: 0,
     dialog_props: { class: `custom-dialog`, onclose: on_close },
   })
   mount(CommandMenu, { target: document.body, props })
@@ -542,7 +542,7 @@ test(`handles empty actions array`, () => {
   const console_error = vi.spyOn(console, `error`).mockImplementation(() => {})
   mount(CommandMenu, {
     target: document.body,
-    props: { open: true, actions: [], fade_duration: 0 },
+    props: { open: true, actions: [], fade_duration_ms: 0 },
   })
 
   expect(doc_query(`dialog`)).toBeInstanceOf(HTMLDialogElement)
@@ -551,7 +551,7 @@ test(`handles empty actions array`, () => {
 })
 
 test(`remains open when trigger keys are pressed while already open`, async () => {
-  const props = $state({ open: true, actions: mock_actions, fade_duration: 0 })
+  const props = $state({ open: true, actions: mock_actions, fade_duration_ms: 0 })
   mount(CommandMenu, { target: document.body, props })
 
   expect(props.open).toBe(true)
@@ -567,7 +567,7 @@ test(`remains open when trigger keys are pressed while already open`, async () =
 test(`lets command menu dropdown overflow dialog box`, async () => {
   mount(CommandMenu, {
     target: document.body,
-    props: { open: true, actions: mock_actions, fade_duration: 0 },
+    props: { open: true, actions: mock_actions, fade_duration_ms: 0 },
   })
   await tick()
 
@@ -612,7 +612,7 @@ test.each([
   ]
   mount(CommandMenu, {
     target: document.body,
-    props: { open: true, actions, fuzzy, fade_duration: 0 },
+    props: { open: true, actions, fuzzy, fade_duration_ms: 0 },
   })
 
   await type_search(search)
@@ -631,7 +631,7 @@ test(`handles bindable props correctly`, async () => {
     actions: mock_actions,
     dialog: null,
     input: null,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
 
@@ -658,7 +658,7 @@ test(`selects the first enabled action and preserves pointer selection across gr
     open: true,
     actions,
     activeIndex: null as number | null,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -698,7 +698,7 @@ test(`auto-active considers only visible enabled actions`, async () => {
     ],
     activeIndex: 0,
     maxOptions: 1,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -732,7 +732,7 @@ test(`preserves duplicate action identity across independent key changes`, async
     open: true,
     actions: [first_action, second_action, third_action],
     activeIndex: 1,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -776,7 +776,7 @@ test(`does not retain an ambiguous index when duplicate actions are rebuilt`, as
     open: true,
     actions: make_actions(),
     activeIndex: 1,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -797,7 +797,7 @@ test(`preserves the active action by its unique ID amid rebuilt duplicates`, asy
       { id: `duplicate`, label: `Second duplicate`, action: vi.fn() },
     ],
     activeIndex: 1,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -832,7 +832,7 @@ test(`groupSelectAll selects a whole action group without executing actions or c
     actions,
     groupSelectAll: true,
     onselectAll: on_select_all,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -878,7 +878,7 @@ test(`renders and searches action descriptions, metadata, badges, and keywords`,
   ]
   mount(CommandMenu, {
     target: document.body,
-    props: { open: true, actions, fade_duration: 0 },
+    props: { open: true, actions, fade_duration_ms: 0 },
   })
   await tick()
 
@@ -903,7 +903,7 @@ async function search_pagefind(query: string): Promise<void> {
 }
 
 describe(`PageSearch`, () => {
-  const base_props = { open: true, fade_duration: 0, debounce_ms: 0 }
+  const base_props = { open: true, fade_duration_ms: 0, debounce_ms: 0 }
   const make_pagefind_response = (title: string) => ({
     results: [
       {
@@ -1280,7 +1280,7 @@ test.each([
     target: document.body,
     props: {
       open: true,
-      fade_duration: 0,
+      fade_duration_ms: 0,
       actions: [{ label: `zoom in`, action: vi.fn(), shortcut }],
     },
   })
@@ -1292,7 +1292,7 @@ test.each([
 test(`plain actions without shortcut/description use default option rendering`, async () => {
   mount(CommandMenu, {
     target: document.body,
-    props: { open: true, actions: mock_actions, fade_duration: 0 },
+    props: { open: true, actions: mock_actions, fade_duration_ms: 0 },
   })
   await tick()
   expect(document.querySelector(`.cmd-action`)).toBeNull()
@@ -1342,7 +1342,7 @@ test.each([
     ]
     mount(CommandMenu, {
       target: document.body,
-      props: { actions, open, global_shortcuts, fade_duration: 0 },
+      props: { actions, open, global_shortcuts, fade_duration_ms: 0 },
     })
     await tick()
 
@@ -1367,7 +1367,7 @@ test(`global shortcuts ignore events consumed by editable controls`, () => {
     target: document.body,
     props: {
       actions: [{ label: `save`, action, shortcut: `ctrl+shift+s` }],
-      fade_duration: 0,
+      fade_duration_ms: 0,
     },
   })
   const textarea = document.createElement(`textarea`)
@@ -1396,7 +1396,7 @@ test.each([`n`, `shift+n`])(
     const action = vi.fn()
     mount(CommandMenu, {
       target: document.body,
-      props: { actions: [{ label: `new note`, action, shortcut }], fade_duration: 0 },
+      props: { actions: [{ label: `new note`, action, shortcut }], fade_duration_ms: 0 },
     })
     const press = (tag: string) => {
       const target = document.createElement(tag)
@@ -1456,7 +1456,7 @@ test(`recent_actions_key ranks, persists, and reloads recently triggered actions
     open: true,
     actions,
     recent_actions_key: storage_key,
-    fade_duration: 0,
+    fade_duration_ms: 0,
   })
   mount(CommandMenu, { target: document.body, props })
   await tick()
@@ -1557,7 +1557,7 @@ test.each([
           actions,
           recent_actions_key: storage_key,
           max_recent,
-          fade_duration: 0,
+          fade_duration_ms: 0,
         },
       })
     })
@@ -1601,7 +1601,7 @@ test.each([
         open: false,
         recent_actions_key: storage_key,
         max_recent,
-        fade_duration: 0,
+        fade_duration_ms: 0,
       },
     })
     await tick()

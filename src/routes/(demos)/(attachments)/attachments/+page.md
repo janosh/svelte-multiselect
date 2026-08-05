@@ -24,7 +24,7 @@ Exported from `svelte-widgets/attachments`:
 <script lang="ts">
   import { tooltip } from '$lib/attachments'
 
-  let custom_delay = $state(0)
+  let custom_delay_ms = $state(0)
 </script>
 
 <div style="display: flex; gap: 3em">
@@ -34,7 +34,7 @@ Exported from `svelte-widgets/attachments`:
     {@attach tooltip({
       content: `<strong>Custom</strong> <em>HTML</em> tooltip`,
       placement: `right`,
-      delay: custom_delay,
+      delay_ms: custom_delay_ms,
       // only enable allow_html for trusted or sanitized content, never raw
       // user input — HTML tooltips are an XSS vector otherwise
       allow_html: true,
@@ -45,7 +45,13 @@ Exported from `svelte-widgets/attachments`:
 
   <label style="display: inline-flex; gap: 0.5em; align-items: center">
     Delay (ms)
-    <input type="number" min="0" step="50" bind:value={custom_delay} style="width: 6em" />
+    <input
+      type="number"
+      min="0"
+      step="50"
+      bind:value={custom_delay_ms}
+      style="width: 6em"
+    />
   </label>
 </div>
 

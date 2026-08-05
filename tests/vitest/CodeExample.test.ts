@@ -22,8 +22,11 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   expect(doc_query(`div.code-example#${id}`).classList.contains(`code-above`)).toBe(true)
 
   const toggle_button = doc_query<HTMLButtonElement>(`nav > button`)
+  const toggle_label = () =>
+    toggle_button.querySelector(`[aria-hidden="false"]`)?.textContent
   expect(toggle_button.type).toBe(`button`)
-  expect(toggle_button.textContent).toContain(`View code`)
+  expect(toggle_label()).toBe(`View code`)
+  expect(getComputedStyle(toggle_button).whiteSpace).toBe(`nowrap`)
   const pre_closed = doc_query<HTMLPreElement>(`pre`)
   expect(pre_closed.classList.contains(`open`)).toBe(false)
   const { maxHeight, overflow } = getComputedStyle(pre_closed)
@@ -35,7 +38,7 @@ test(`CodeExample toggles class .open on <pre> on button click`, async () => {
   const { overflowX, overflowY } = getComputedStyle(doc_query(`pre.open`))
   expect([overflowX, overflowY]).toEqual([`auto`, `auto`])
   expect(doc_query(`pre.open > code`).textContent).toBe(src)
-  expect(toggle_button.textContent).toContain(`Close`)
+  expect(toggle_label()).toBe(`Close`)
   expect(onclick).toHaveBeenCalledOnce()
 })
 

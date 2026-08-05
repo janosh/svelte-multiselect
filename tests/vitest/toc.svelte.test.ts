@@ -466,12 +466,12 @@ describe(`Toc`, () => {
     expect(scroll_into_view_mock).not.toHaveBeenCalled()
   })
 
-  test(`flashClickedHeadingsFor removes the clicked-heading class`, async () => {
+  test(`flash_clicked_headings_for_ms removes the clicked-heading class`, async () => {
     vi.useFakeTimers()
     try {
       set_body(`<h2 id="intro">Intro</h2>`)
 
-      mount_toc({ flashClickedHeadingsFor: 10 })
+      mount_toc({ flash_clicked_headings_for_ms: 10 })
       await tick()
 
       const heading = doc_query(`#intro`)

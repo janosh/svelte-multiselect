@@ -94,11 +94,12 @@ Pass the glyph value (`<Icon icon={Info} />`), not a name.
       {#snippet children({ state })}
         <Icon {icon} style="font-size: 1.5em" />
         <code>{name}</code>
-        {#if state !== `ready`}
-          <small style="margin-inline-start: auto"
-            >{state === `success` ? `Copied` : `Failed`}</small
-          >
-        {/if}
+        <small
+          aria-hidden={state === `ready`}
+          style="margin-inline-start: auto; visibility: {state === `ready`
+            ? `hidden`
+            : `visible`}">{state === `error` ? `Failed` : `Copied`}</small
+        >
       {/snippet}
     </CopyButton>
   {:else}

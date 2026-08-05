@@ -28,8 +28,22 @@ const mount_action_button = (
   return doc_query(`[data-sms-action]`)
 }
 
-test(`sizes to its content by default`, () => {
-  expect(getComputedStyle(mount_action_button({})).width).toBe(`fit-content`)
+const action_text = (button: HTMLElement): string =>
+  button.querySelector(`[data-sms-action-content]`)?.textContent ?? ``
+
+test(`reserves enough width for every state label`, () => {
+  const button = mount_action_button({})
+  const content = doc_query(`[data-sms-action-content]`)
+  const width_sizer = doc_query(`[data-sms-action-width]`)
+  expect(getComputedStyle(button).width).toBe(`fit-content`)
+  expect(getComputedStyle(button).display).toBe(`inline-grid`)
+  expect(getComputedStyle(content).justifyContent).toBe(`center`)
+  expect(Array.from(width_sizer.children, (child) => child.textContent?.trim())).toEqual([
+    `Save`,
+    `Saving…`,
+    `Saved`,
+    `Failed`,
+  ])
 })
 
 test(`blocks duplicate actions while pending and resets after success`, async () => {
@@ -49,7 +63,7 @@ test(`blocks duplicate actions while pending and resets after success`, async ()
   expect(button.dataset.state).toBe(`pending`)
   expect(button.disabled).toBe(true)
   expect(button.getAttribute(`aria-busy`)).toBe(`true`)
-  expect(button.textContent).toContain(`Saving…`)
+  expect(action_text(button)).toContain(`Saving…`)
 
   button.click()
   expect(action).toHaveBeenCalledOnce()
@@ -59,7 +73,7 @@ test(`blocks duplicate actions while pending and resets after success`, async ()
   await flush_action()
   expect(button.dataset.state).toBe(`success`)
   expect(button.disabled).toBe(false)
-  expect(button.textContent).toContain(`Saved`)
+  expect(action_text(button)).toContain(`Saved`)
   expect(on_success).toHaveBeenCalledWith(`saved-result`)
 
   await vi.advanceTimersByTimeAsync(99)
@@ -80,7 +94,7 @@ test(`reports action errors without throwing from the event handler`, async () =
   button.click()
   await flush_action()
   expect(button.dataset.state).toBe(`error`)
-  expect(button.textContent).toContain(`Failed`)
+  expect(action_text(button)).toContain(`Failed`)
   expect(on_error).toHaveBeenCalledWith(action_error)
   expect(console_error_spy).toHaveBeenCalledWith(
     `ActionButton action failed`,

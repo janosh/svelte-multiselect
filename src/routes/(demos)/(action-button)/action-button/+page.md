@@ -39,27 +39,20 @@ Use `ActionButton` for save, retry, refresh, download or other synchronous and a
 
 ```svelte example
 <script lang="ts">
-  import { Alert, Check, Copy } from '$lib/icons'
   import { CopyButton } from '$lib'
 
   let content = $state(`npm test`)
   let disabled = $state(false)
-  let reset_sec = $state(2)
+  let reset_ms = $state(2000)
   let state = $state<`ready` | `success` | `error`>(`ready`)
-
-  const labels = {
-    ready: { icon: Copy, text: `ready` },
-    success: { icon: Check, text: `success` },
-    error: { icon: Alert, text: `error` },
-  } as const
 </script>
 
 <p style="display: flex; gap: 8pt; align-items: center; flex-wrap: wrap">
-  <CopyButton {content} bind:state {disabled} {reset_sec} {labels} />
   <input bind:value={content} style="min-width: 16em" />
+  <CopyButton {content} bind:state {disabled} {reset_ms} />
   <label>
-    reset_sec:
-    <input type="number" min="0" step="0.5" bind:value={reset_sec} style="width: 4em" />
+    reset_ms:
+    <input type="number" min="0" step="500" bind:value={reset_ms} style="width: 5em" />
   </label>
   <label><input type="checkbox" bind:checked={disabled} /> disabled</label>
 </p>

@@ -169,17 +169,32 @@ timer, and re-copying a key restarts that timer so the checkmark cannot blink ou
 <table>
   <tbody>
     {#each commands as [key, command] (key)}
+      {@const is_copied = copied.has(key)}
       <tr>
         <td><code>{command}</code></td>
         <td>
-          <button type="button" onclick={() => copy(command, key)}>
-            {copied.has(key) ? `Copied!` : `Copy`}
+          <button class="copy-feedback" type="button" onclick={() => copy(command, key)}>
+            <span aria-hidden={is_copied}>Copy</span>
+            <span aria-hidden={!is_copied}>Copied!</span>
           </button>
         </td>
       </tr>
     {/each}
   </tbody>
 </table>
+
+<style>
+  .copy-feedback {
+    display: inline-grid;
+    white-space: nowrap;
+    > span {
+      grid-area: 1 / 1;
+    }
+    > [aria-hidden='true'] {
+      visibility: hidden;
+    }
+  }
+</style>
 ```
 
 ### `files_from_data_transfer`

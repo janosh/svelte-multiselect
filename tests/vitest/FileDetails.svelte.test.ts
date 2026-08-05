@@ -96,28 +96,30 @@ test(`toggle all button opens/closes all, tracks label, and handles partial/nati
 
   const details = [...document.querySelectorAll(`details`)]
   const btn = doc_query<HTMLButtonElement>(`button[title='toggle all']`)
+  const button_label = () => btn.querySelector(`[aria-hidden="false"]`)?.textContent
   expect(btn.type).toBe(`button`)
+  expect(getComputedStyle(btn).width).toBe(`fit-content`)
   const open_states = () => details.map((el) => el.open)
 
   expect(open_states()).toEqual([false, false, false]) // initially closed
-  expect(btn.textContent).toContain(`Open all`)
+  expect(button_label()).toBe(`Open all`)
 
   btn.click()
   flushSync()
   expect(open_states()).toEqual([true, true, true])
-  expect(btn.textContent).toContain(`Close all`)
+  expect(button_label()).toBe(`Close all`)
 
   btn.click()
   flushSync()
   expect(open_states()).toEqual([false, false, false])
-  expect(btn.textContent).toContain(`Open all`)
+  expect(button_label()).toBe(`Open all`)
 
   // user opens a single <details> directly - the DOM open property is not
   // reactive, so the label must update via the native toggle event
   details[0].open = true
   details[0].dispatchEvent(new Event(`toggle`))
   flushSync()
-  expect(btn.textContent).toContain(`Close all`)
+  expect(button_label()).toBe(`Close all`)
 
   // partial open state: clicking closes all
   details[1].open = true
@@ -138,7 +140,9 @@ test(`toggle all label reflects pre-opened details on mount`, async () => {
   await tick()
 
   expect(doc_query<HTMLDetailsElement>(`details`).open).toBe(true)
-  expect(doc_query(`button[title='Toggle all']`).textContent).toContain(`Close all`)
+  expect(doc_query(`button[title='Toggle all'] [aria-hidden='false']`).textContent).toBe(
+    `Close all`,
+  )
 })
 
 test(`detail element refs are trimmed when files are removed to prevent memory leaks`, async () => {

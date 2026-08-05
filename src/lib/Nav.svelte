@@ -37,7 +37,7 @@
     tooltips,
     tooltip_options,
     breakpoint = 767,
-    dropdown_cooldown = 150,
+    dropdown_cooldown_ms = 150,
     onnavigate,
     onopen,
     onclose,
@@ -58,7 +58,7 @@
     tooltips?: Record<string, string | Omit<TooltipOptions, `disabled`>>
     tooltip_options?: Omit<TooltipOptions, `content`>
     breakpoint?: number
-    dropdown_cooldown?: number // ms delay before hiding dropdown after mouse leaves (ignored when pinned)
+    dropdown_cooldown_ms?: number // delay before hiding dropdown after mouse leaves; ignored when pinned
     onnavigate?: (data: {
       href: string
       event: MouseEvent
@@ -150,7 +150,7 @@
     if (hide_timeout) clearTimeout(hide_timeout)
     hide_timeout = setTimeout(() => {
       if (hovered_dropdown === href) hovered_dropdown = null
-    }, dropdown_cooldown)
+    }, dropdown_cooldown_ms)
   }
 
   function onkeydown(event: KeyboardEvent) {

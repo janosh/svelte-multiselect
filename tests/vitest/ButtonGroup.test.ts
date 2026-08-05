@@ -328,13 +328,16 @@ describe(`ButtonGroup`, () => {
     const options: Option[] = [
       { value: `alpha`, label: `Alpha`, icon: Check },
       { value: `beta`, label: `Beta`, loading: true },
+      { value: `gamma`, label: `Gamma`, loading: false },
     ]
     const buttons = mount_group({ options, class: `consumer-class`, id: `letters` })
 
     expect(buttons[0].querySelector(`svg`)).not.toBeNull()
     expect(buttons[1].querySelector(`svg`)).toBeNull()
-    // CircleSpinner is a bare div sized by inline styles
+    // Loading-capable options keep the spinner's width reserved while it is hidden.
     expect(buttons[1].querySelector(`div`)?.style.width).toBe(`0.8em`)
+    expect(buttons[1].querySelector(`div`)?.style.visibility).toBe(`visible`)
+    expect(buttons[2].querySelector(`div`)?.style.visibility).toBe(`hidden`)
 
     const wrapper = doc_query(`#letters`)
     expect(wrapper.classList.contains(`button-group`)).toBe(true)

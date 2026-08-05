@@ -809,8 +809,8 @@ const owns_tooltip_state = (element: HTMLElement): boolean =>
 export interface TooltipOptions {
   content?: string
   placement?: `top` | `bottom` | `left` | `right`
-  delay?: number
-  hide_delay?: number // Delay before hiding tooltip (ms), helps with rapid hover transitions
+  delay_ms?: number
+  hide_delay_ms?: number // helps with rapid hover transitions
   disabled?: boolean | `touch-devices` // true disables always, 'touch-devices' uses runtime detection
   style?: string
   show_arrow?: boolean // Whether to show the arrow pointer (default: true)
@@ -1198,7 +1198,7 @@ export const tooltip =
           resize_and_position_tooltip(tooltip_el, element)
 
           current_tooltip = Object.assign(tooltip_el, { owner_element: element })
-        }, options.delay ?? 100)
+        }, options.delay_ms ?? 100)
       }
 
       function handle_keydown(event: KeyboardEvent) {
@@ -1221,8 +1221,8 @@ export const tooltip =
         // wiped by a stale timer from the first hide event
         clearTimeout(hide_timeout)
         hide_timeout = undefined
-        const delay = options.hide_delay ?? 0
-        if (delay > 0) hide_timeout = setTimeout(clear_tooltip, delay)
+        const hide_delay_ms = options.hide_delay_ms ?? 0
+        if (hide_delay_ms > 0) hide_timeout = setTimeout(clear_tooltip, hide_delay_ms)
         else clear_tooltip()
       }
 

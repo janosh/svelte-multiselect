@@ -9,7 +9,7 @@
     tooltip?: string
     icon?: IconData
     disabled?: boolean
-    loading?: boolean // trailing spinner, e.g. while this option's data loads
+    loading?: boolean // trailing spinner; pass false initially to reserve its width
   }
 
   // The shapes segmented controls are written with in the wild
@@ -154,7 +154,13 @@
     {:else}
       {#if opt.icon}<Icon icon={opt.icon} />{/if}
       {opt.label}
-      {#if opt.loading}<CircleSpinner size="0.8em" />{/if}
+      {#if opt.loading !== undefined}
+        <CircleSpinner
+          size="0.8em"
+          aria-hidden={!opt.loading}
+          style={`visibility: ${opt.loading ? `visible` : `hidden`}`}
+        />
+      {/if}
     {/if}
   </button>
 {/snippet}

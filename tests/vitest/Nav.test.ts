@@ -19,7 +19,7 @@ describe(`Nav`, () => {
   const two_child_route: NavRoute[] = [[`/p`, [`/p`, `/p/child1`, `/p/child2`]]]
   const one_child_route: NavRoute[] = [[`/p`, [`/p`, `/p/1`]]]
   // no hover cooldown, so a menu still open afterwards is open because it was pinned
-  const pinned_props = { routes: two_child_route, dropdown_cooldown: 0 }
+  const pinned_props = { routes: two_child_route, dropdown_cooldown_ms: 0 }
   const mount_nav = (props: ComponentProps<typeof Nav>) =>
     mount(Nav, { target: document.body, props })
   const click = (el?: Element | null) => {
@@ -781,7 +781,9 @@ describe(`Nav`, () => {
   describe(`pinned dropdown feature`, () => {
     test(`click toggles pinned state and aria-expanded`, async () => {
       // cooldown 0 so an unpinned dropdown would hide within one macrotask
-      const { dropdown, dropdown_menu, toggle } = mount_dropdown({ dropdown_cooldown: 0 })
+      const { dropdown, dropdown_menu, toggle } = mount_dropdown({
+        dropdown_cooldown_ms: 0,
+      })
 
       expect(is_visible(dropdown_menu)).toBe(false)
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
@@ -800,12 +802,12 @@ describe(`Nav`, () => {
       expect(toggle.getAttribute(`aria-expanded`)).toBe(`false`)
     })
 
-    describe(`dropdown_cooldown`, () => {
+    describe(`dropdown_cooldown_ms`, () => {
       beforeEach(() => vi.useFakeTimers())
       afterEach(() => vi.useRealTimers())
 
       test(`cooldown closes only after the full timeout`, async () => {
-        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 100 })
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown_ms: 100 })
 
         mouse_enter(dropdown)
         await tick()
@@ -819,7 +821,7 @@ describe(`Nav`, () => {
       })
 
       test(`multiple rapid enter/leave cycles reset cooldown each time`, async () => {
-        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 100 })
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown_ms: 100 })
 
         for (let idx = 0; idx < 3; idx++) {
           mouse_enter(dropdown)
@@ -838,7 +840,7 @@ describe(`Nav`, () => {
         [`re-entering menu`, (_dropdown: Element, menu: Element) => mouse_enter(menu)],
         [`keyboard focus`, (dropdown: Element) => focus_in(dropdown)],
       ])(`%s during cooldown cancels hide`, async (_desc, reinteract) => {
-        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 150 })
+        const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown_ms: 150 })
 
         mouse_enter(dropdown)
         await tick()
@@ -851,7 +853,7 @@ describe(`Nav`, () => {
       })
 
       test(`switching between multiple dropdowns respects cooldown`, async () => {
-        mount_nav({ routes: two_dropdown_routes, dropdown_cooldown: 100 })
+        mount_nav({ routes: two_dropdown_routes, dropdown_cooldown_ms: 100 })
         const [
           { dropdown: dropdown1, menu: menu1 },
           { dropdown: dropdown2, menu: menu2 },
@@ -920,7 +922,9 @@ describe(`Nav`, () => {
 
     // Enter/Space share one branch; ArrowDown opens when closed via another
     test.each([`Enter`, `ArrowDown`])(`keyboard %s pins dropdown open`, async (key) => {
-      const { dropdown, dropdown_menu, toggle } = mount_dropdown({ dropdown_cooldown: 0 })
+      const { dropdown, dropdown_menu, toggle } = mount_dropdown({
+        dropdown_cooldown_ms: 0,
+      })
 
       keydown(key, toggle)
       await next_task()
@@ -1037,7 +1041,7 @@ describe(`Nav`, () => {
 
     // Open dropdown and enter the panel, returning elements for assertions
     const open_and_enter_panel = async () => {
-      const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 50 })
+      const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown_ms: 50 })
       mouse_enter(dropdown)
       await tick()
       mouse_enter(dropdown_menu)
@@ -1071,7 +1075,7 @@ describe(`Nav`, () => {
     })
 
     test(`panel closes when mouse moves to a different dropdown`, async () => {
-      mount_nav({ routes: two_dropdown_routes, dropdown_cooldown: 50 })
+      mount_nav({ routes: two_dropdown_routes, dropdown_cooldown_ms: 50 })
       const [{ dropdown: dropdown1, menu: menu1 }, { dropdown: dropdown2 }] =
         query_all_dropdowns()
       const other_trigger = dropdown2.querySelector<HTMLElement>(`div:first-child`)
@@ -1129,8 +1133,8 @@ describe(`Nav`, () => {
     test(`shared tooltip_options merge with per-route options taking precedence`, async () => {
       mount_nav({
         routes: [`/docs`],
-        tooltips: { '/docs': { content: `Docs tooltip`, delay: 50 } },
-        tooltip_options: { delay: 500, placement: `right` },
+        tooltips: { '/docs': { content: `Docs tooltip`, delay_ms: 50 } },
+        tooltip_options: { delay_ms: 500, placement: `right` },
       })
       await tick() // wait for tooltip attachment to be wired up
       doc_query(`a[href="/docs"]`).dispatchEvent(new MouseEvent(`mouseenter`))
@@ -1166,7 +1170,7 @@ describe(`Nav`, () => {
       vi.useFakeTimers()
       vi.stubGlobal(`ontouchstart`, () => {})
       // desktop width: hover-open is only blocked when touch AND mobile
-      const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown: 0 })
+      const { dropdown, dropdown_menu } = mount_dropdown({ dropdown_cooldown_ms: 0 })
       await tick()
 
       mouse_enter(dropdown)

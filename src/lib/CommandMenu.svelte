@@ -31,7 +31,7 @@
     activeOption: active_option = $bindable(null),
     triggers = [`k`],
     close_keys = [`Escape`],
-    fade_duration = 200,
+    fade_duration_ms = 200,
     open = $bindable(false),
     dialog = $bindable(null),
     input = $bindable(null),
@@ -59,7 +59,7 @@
     actions: Action[]
     triggers?: string[]
     close_keys?: string[]
-    fade_duration?: number // in ms
+    fade_duration_ms?: number
     open?: boolean
     dialog?: HTMLDialogElement | null
     input?: HTMLInputElement | null
@@ -268,7 +268,7 @@
 {#if open}
   <dialog
     bind:this={dialog}
-    transition:fade={{ duration: fade_duration }}
+    transition:fade={{ duration: fade_duration_ms }}
     aria-label={aria_label}
     {...dialog_props}
     onclose={chain_handlers(close_menu, dialog_props?.onclose)}

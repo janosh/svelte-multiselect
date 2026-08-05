@@ -5,9 +5,12 @@
   // eslint-disable-next-line import/no-self-import -- global mode mounts this component onto external code blocks
   import Self from './CopyButton.svelte'
   import ActionButton from './ActionButton.svelte'
-  import Icon from './Icon.svelte'
   import { Alert, Check, Copy, type IconData } from './icons'
-  import type { ActionState } from './types'
+  import type {
+    ActionButtonContent,
+    ActionButtonSnippetProps,
+    ActionState,
+  } from './types'
 
   type State = Exclude<ActionState, `pending`>
 
@@ -15,7 +18,7 @@
     content = ``,
     state = $bindable(`ready`),
     disabled = false,
-    reset_sec = 2,
+    reset_ms = 2000,
     on_copy_success = (_content: string) => {},
     on_copy_error = (_error: unknown, _content: string) => {},
     global_selector = null,
@@ -33,7 +36,7 @@
     content?: string
     state?: State
     disabled?: boolean
-    reset_sec?: number
+    reset_ms?: number
     on_copy_success?: (content: string) => void
     on_copy_error?: (error: unknown, content: string) => void
     global_selector?: string | null
@@ -41,12 +44,11 @@
     skip_selector?: string | null
     as?: string
     labels?: Record<State, { icon: IconData; text: string }>
-    children?: Snippet<
-      [{ state: State; icon: IconData; text: string; disabled: boolean }]
-    >
+    children?: Snippet<[ActionButtonContent<State> & { icon: IconData }]>
   } = $props()
 
   const copy_button_selector = `[data-sms-copy]`
+  const action_labels = $derived({ ...labels, pending: labels[state] })
 
   $effect(() => {
     if (!global && !global_selector) return
@@ -81,7 +83,7 @@
             as,
             labels,
             disabled,
-            reset_sec,
+            reset_ms,
             on_copy_success,
             on_copy_error,
             ...rest,
@@ -111,30 +113,31 @@
   }
 </script>
 
+{#snippet copy_content({ state: action_state, disabled }: ActionButtonSnippetProps<void>)}
+  {@const copy_state = action_state === `pending` ? state : action_state}
+  {@const { text, icon } = labels[copy_state]}
+  {@render copy_children?.({ state: copy_state, icon, text, disabled })}
+{/snippet}
+
 {#if !(global || global_selector)}
   <ActionButton
     {...rest}
     action={() => navigator.clipboard.writeText(content)}
     {state}
     disabled={disabled || !content}
-    reset_ms={reset_sec * 1000}
+    {reset_ms}
     {as}
+    labels={action_labels}
     on_state_change={handle_action_state}
     on_success={() => on_copy_success(content)}
     on_error={(error) => on_copy_error(error, content)}
     data-sms-copy=""
-  >
-    {#snippet children({ state: action_state, disabled })}
-      {@const copy_state = action_state === `pending` ? state : action_state}
-      {@const { text, icon } = labels[copy_state]}
-      {#if copy_children}
-        {@render copy_children({ state: copy_state, icon, text, disabled })}
-      {:else}
-        <span>
-          <Icon {icon} />
-          {#if text}<span>{@html text}</span>{/if}
-        </span>
-      {/if}
-    {/snippet}
-  </ActionButton>
+    children={copy_children ? copy_content : undefined}
+  />
 {/if}
+
+<style>
+  :global([data-sms-copy]) {
+    white-space: nowrap;
+  }
+</style>
