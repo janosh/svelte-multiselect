@@ -28,6 +28,10 @@ const mount_action_button = (
   return doc_query(`[data-sms-action]`)
 }
 
+test(`sizes to its content by default`, () => {
+  expect(getComputedStyle(mount_action_button({})).width).toBe(`fit-content`)
+})
+
 test(`blocks duplicate actions while pending and resets after success`, async () => {
   vi.useFakeTimers()
   let resolve_action: ((result: string) => void) | undefined

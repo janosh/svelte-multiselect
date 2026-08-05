@@ -147,6 +147,9 @@
 </svelte:element>
 
 <style>
+  [data-sms-action] {
+    width: fit-content;
+  }
   [data-sms-action] > span {
     display: inline-flex;
     gap: 0.35em;
