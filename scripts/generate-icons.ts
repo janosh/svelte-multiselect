@@ -1,5 +1,4 @@
-// Generates src/lib/icons/generated.ts from scripts/icons-manifest.ts via @iconify-json/*.
-// One export const per icon so bundlers can tree-shake; a single object would retain every glyph.
+// Generates tree-shakeable named exports in src/lib/icons/generated.ts via @iconify-json/*.
 /// <reference types="node" />
 import { getIconData, iconToSVG } from '@iconify/utils'
 import type { IconifyJSON } from '@iconify/types'
@@ -29,27 +28,17 @@ const load_collection = async (prefix: string): Promise<IconifyJSON> => {
 }
 
 const single_path = /^<path(?<attrs>(?:\s+[a-z-]+="[^"]*")*)\s*\/>$/
-const path_attr = /\s+(?<key>[a-z-]+)="(?<value>[^"]*)"/g
+const path_d = /\s+d="(?<value>[^"]+)"/
+const current_color_fill = /\s+fill="currentColor"/
 export const escape_template_literal = (value: string): string =>
   value.replaceAll(`\\`, `\\\\`).replaceAll(`\``, `\\\``).replaceAll(`\${`, `\\\${`)
 const as_markup = (body: string) => `markup: \`${escape_template_literal(body)}\``
 
 const as_shape = (body: string): string => {
-  const attr_str = single_path.exec(body)?.groups?.attrs
-  if (attr_str === undefined) return as_markup(body)
-  const attrs: Record<string, string> = {}
-  for (const { groups } of attr_str.matchAll(path_attr)) {
-    if (groups?.key !== undefined && groups.value !== undefined)
-      attrs[groups.key] = groups.value
-  }
-  const d = attrs.d
-  if (
-    !d ||
-    Object.entries(attrs).some(
-      ([key, value]) => key !== `d` && (key !== `fill` || value !== `currentColor`),
-    )
-  )
-    return as_markup(body)
+  const attrs = single_path.exec(body)?.groups?.attrs
+  const d = attrs && path_d.exec(attrs)?.groups?.value
+  const extra_attrs = attrs?.replace(path_d, ``).replace(current_color_fill, ``)
+  if (!d || extra_attrs) return as_markup(body)
   return `d: \`${escape_template_literal(d)}\``
 }
 

@@ -1,5 +1,5 @@
 import Footer from '$lib/Footer.svelte'
-import * as icons from '$lib/icons'
+import { GitHub } from '$lib/icons'
 import type { FooterLink } from '$lib/types'
 import { createRawSnippet, mount } from 'svelte'
 import { describe, expect, test } from 'vite-plus/test'
@@ -16,7 +16,7 @@ describe(`Footer`, () => {
     [`plain link`, { href: `/changelog`, label: `Changelog` }, false, null, null, null],
     [
       `icon link`,
-      { href: `/repo`, label: `GitHub`, icon: icons.GitHub },
+      { href: `/repo`, label: `GitHub`, icon: GitHub },
       true,
       null,
       null,
@@ -78,7 +78,7 @@ describe(`Footer`, () => {
   test(`renders links sharing an href`, () => {
     mount_footer({
       links: [
-        { href: `/repo`, label: `GitHub`, icon: icons.GitHub },
+        { href: `/repo`, label: `GitHub`, icon: GitHub },
         { href: `/repo`, label: `Source` },
       ],
     })
@@ -107,7 +107,7 @@ describe(`Footer`, () => {
       render: () => `<a href="${get_params().link.href}" data-custom>custom</a>`,
     }))
     mount_footer({
-      links: [{ href: `/issues`, label: `Issues`, icon: icons.GitHub }],
+      links: [{ href: `/issues`, label: `Issues`, icon: GitHub }],
       item,
     })
 

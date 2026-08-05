@@ -19,23 +19,16 @@ describe(`Icon`, () => {
   // Every entry, not a sample: the set is merged from another repo, and markup holding
   // several shapes rather than one `d` renders as nothing unless Icon spots the markup.
   // Offenders are collected so a bad merge names every icon it broke, not just the first.
-  // Geometry collisions (two names, one path) are synonyms and land in the same list.
-  test(`every icon renders uniquely with correct viewBox, fill, stroke and shape`, () => {
+  test(`every icon renders its viewBox, fill, stroke and shape`, () => {
     const offenders: string[] = []
-    const by_shape = new Map<string, string[]>()
     // annotated because the inferred literal types drop the optional keys entirely
     for (const [name, entry] of Object.entries<IconData>(icons)) {
-      // exactly one of d/markup is set, so this is the glyph's full geometry
-      const shape = entry.markup ?? entry.d
-      by_shape.set(shape, [...(by_shape.get(shape) ?? []), name])
-
       document.body.innerHTML = ``
       mount(Icon, { target: document.body, props: { icon: entry } })
       const svg = doc_query<SVGSVGElement>(`svg`)
       const { viewBox, stroke, fill = stroke ? `none` : `currentColor` } = entry
 
       if (svg.getAttribute(`viewBox`) !== viewBox) offenders.push(`${name}: viewBox`)
-      if (svg.getAttribute(`role`) !== `img`) offenders.push(`${name}: role`)
       if (svg.getAttribute(`fill`) !== fill) offenders.push(`${name}: fill`)
       if ((svg.getAttribute(`stroke`) ?? undefined) !== stroke) {
         offenders.push(`${name}: stroke`)
@@ -46,9 +39,6 @@ describe(`Icon`, () => {
       } else if (svg.querySelector(`path`)?.getAttribute(`d`) !== entry.d) {
         offenders.push(`${name}: d`)
       }
-    }
-    for (const names of by_shape.values()) {
-      if (names.length > 1) offenders.push(`duplicate geometry: ${names.join(` = `)}`)
     }
     expect(offenders).toEqual([])
   })

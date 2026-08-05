@@ -1,6 +1,5 @@
-// Iconify icons as ExportName: `collection:icon-id`. Run `pnpm gen:icons` after edits.
-// Skip names already in src/lib/icons/custom.ts (duplicate exports fail the build).
-// One glyph per concept; tree-shaken per import. Browse ids at https://icones.js.org.
+// Iconify glyphs as ExportName: `collection:icon-id`; custom export names are reserved.
+// Keep one glyph per concept. Browse ids at https://icones.js.org.
 export const iconify_icons = {
   // editing
   AlignCenter: `mdi:format-align-center`,
@@ -239,16 +238,20 @@ export const iconify_icons = {
   Apple: `simple-icons:apple`,
   Bitbucket: `simple-icons:bitbucket`,
   Bun: `simple-icons:bun`,
+  // not `C`, which would be a single-letter export
+  CLang: `simple-icons:c`,
   Css: `simple-icons:css3`,
   Deno: `simple-icons:deno`,
   Git: `simple-icons:git`,
   GitLab: `simple-icons:gitlab`,
+  GraphQL: `simple-icons:graphql`,
   Html5: `simple-icons:html5`,
   JavaScript: `simple-icons:javascript`,
   Jupyter: `simple-icons:jupyter`,
   Kubernetes: `simple-icons:kubernetes`,
   Linux: `simple-icons:linux`,
   Markdown: `simple-icons:markdown`,
+  Mathematica: `simple-icons:wolframmathematica`,
   MongoDB: `simple-icons:mongodb`,
   NodeJs: `simple-icons:nodedotjs`,
   NumPy: `simple-icons:numpy`,
@@ -360,6 +363,8 @@ export const iconify_icons = {
   Wind: `mdi:weather-windy`,
   // activities
   Bike: `mdi:bike`,
+  // a peak with a summit flag; the only climbing-adjacent glyph in the installed sets
+  Climbing: `material-symbols:mountain-flag-outline`,
   Coffee: `mdi:coffee-outline`,
   Hiking: `mdi:hiking`,
   Run: `mdi:run`,

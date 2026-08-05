@@ -1,6 +1,5 @@
 import { SubpageGrid } from '$lib'
-import type { IconData } from '$lib/icons'
-import * as icons from '$lib/icons'
+import { Check, ChevronRight, Copy, type IconData } from '$lib/icons'
 import MultiSelectPage from '$root/src/routes/(demos)/(multiselect)/multiselect/+page.md'
 import { mount } from 'svelte'
 import { expect, test, vi } from 'vite-plus/test'
@@ -11,7 +10,7 @@ vi.mock(`$app/paths`, () => ({ resolve: (path: string) => `/docs${path}` }))
 test(`renders tuple subpages in order with default and per-page icons`, () => {
   const subpages: [string, string, string, icon?: IconData][] = [
     [`Basics`, `/basics`, `Basics overview`],
-    [`Styling`, `/styling`, `Styling overview`, icons.Copy],
+    [`Styling`, `/styling`, `Styling overview`, Copy],
   ]
   mount(SubpageGrid, {
     target: document.body,
@@ -44,7 +43,7 @@ test(`renders tuple subpages in order with default and per-page icons`, () => {
       href,
       page_title,
       description,
-      (icon ?? icons.ChevronRight).d,
+      (icon ?? ChevronRight).d,
     ]),
   )
 })
@@ -70,15 +69,15 @@ test(`fallback_icon replaces the default icon`, () => {
       subtitle: `sub`,
       subpages: [
         [`Plain`, `/plain`, `no icon`],
-        [`Explicit`, `/explicit`, `per-page icon`, icons.Copy],
+        [`Explicit`, `/explicit`, `per-page icon`, Copy],
       ],
-      fallback_icon: icons.Check,
+      fallback_icon: Check,
     },
   })
 
   expect(
     [...document.querySelectorAll(`svg.icon path`)].map((path) => path.getAttribute(`d`)),
-  ).toEqual([icons.Check.d, icons.Copy.d])
+  ).toEqual([Check.d, Copy.d])
 })
 
 // an href is a destination, not an identity: two cards may point at one page under
