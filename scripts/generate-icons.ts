@@ -50,7 +50,7 @@ const as_shape = (body: string): string => {
   return `d: \`${d}\``
 }
 
-const main = async () => {
+export const generate_icons = async (): Promise<void> => {
   const reserved = new Set(Object.keys(custom))
   const entries: string[] = []
   const problems: string[] = []
@@ -92,4 +92,4 @@ const main = async () => {
   )
 }
 
-await main()
+if (import.meta.main) await generate_icons()

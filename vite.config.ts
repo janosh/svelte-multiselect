@@ -1,6 +1,9 @@
 import { sveltekit } from '@sveltejs/kit/vite'
+import { generate_icons } from './scripts/generate-icons.ts'
 import live_examples from './src/lib/live-examples/vite-plugin.ts'
 import { make_config } from './src/lib/vite-config.ts'
+
+await generate_icons()
 
 export default {
   // shared lint/fmt/build/staged, published as svelte-widgets/vite-config

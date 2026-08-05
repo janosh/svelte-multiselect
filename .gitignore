@@ -5,6 +5,7 @@ node_modules
 .svelte-kit
 build
 dist
+/src/lib/icons/generated.ts
 
 # test results
 test-results
