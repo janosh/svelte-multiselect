@@ -5,6 +5,7 @@ import { getIconData, iconToSVG } from '@iconify/utils'
 import type { IconifyJSON } from '@iconify/types'
 import { readFile, writeFile } from 'node:fs/promises'
 import { createRequire } from 'node:module'
+import { pathToFileURL } from 'node:url'
 import * as custom from '../src/lib/icons/custom.ts'
 import { iconify_icons } from './icons-manifest.ts'
 
@@ -29,7 +30,9 @@ const load_collection = async (prefix: string): Promise<IconifyJSON> => {
 
 const single_path = /^<path(?<attrs>(?:\s+[a-z-]+="[^"]*")*)\s*\/>$/
 const path_attr = /\s+(?<key>[a-z-]+)="(?<value>[^"]*)"/g
-const as_markup = (body: string) => `markup: \`${body.replaceAll(`\``, `\\\``)}\``
+export const escape_template_literal = (value: string): string =>
+  value.replaceAll(`\\`, `\\\\`).replaceAll(`\``, `\\\``).replaceAll(`\${`, `\\\${`)
+const as_markup = (body: string) => `markup: \`${escape_template_literal(body)}\``
 
 const as_shape = (body: string): string => {
   const attr_str = single_path.exec(body)?.groups?.attrs
@@ -47,7 +50,7 @@ const as_shape = (body: string): string => {
     )
   )
     return as_markup(body)
-  return `d: \`${d}\``
+  return `d: \`${escape_template_literal(d)}\``
 }
 
 export const generate_icons = async (): Promise<void> => {
@@ -70,7 +73,7 @@ export const generate_icons = async (): Promise<void> => {
     const { body, attributes } = iconToSVG(data, { height: `none` })
     // one line per glyph (same shape as custom.ts); trailing comment keeps the Iconify id greppable
     entries.push(
-      `export const ${name} = { viewBox: \`${attributes.viewBox}\`, ${as_shape(body.trim())} } satisfies IconData // ${icon_id}`,
+      `export const ${name} = { viewBox: \`${escape_template_literal(attributes.viewBox)}\`, ${as_shape(body.trim())} } satisfies IconData // ${icon_id}`,
     )
   }
 
@@ -86,10 +89,18 @@ export const generate_icons = async (): Promise<void> => {
     ``,
   ].join(`\n`)
 
-  await writeFile(new URL(`../src/lib/icons/generated.ts`, import.meta.url), file)
+  const output_url = new URL(`../src/lib/icons/generated.ts`, import.meta.url)
+  const current_file = await readFile(output_url, `utf8`).catch((error: unknown) => {
+    if (error instanceof Error && `code` in error && error.code === `ENOENT`) return
+    throw error
+  })
+  if (current_file === file) return
+  await writeFile(output_url, file)
   console.info(
     `generated ${Object.keys(iconify_icons).length} icons from ${collections.size} sets`,
   )
 }
 
-if (import.meta.main) await generate_icons()
+const entry_path = process.argv[1]
+if (entry_path && import.meta.url === pathToFileURL(entry_path).href)
+  await generate_icons()

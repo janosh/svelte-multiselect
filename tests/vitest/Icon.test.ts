@@ -1,9 +1,19 @@
 import { Icon } from '$lib'
 import * as icons from '$lib/icons'
 import type { IconData } from '$lib/icons'
+import { escape_template_literal } from '$root/scripts/generate-icons'
 import { mount } from 'svelte'
 import { describe, expect, test } from 'vite-plus/test'
 import { doc_query } from './index'
+
+test.each([
+  [`plain`, `plain`],
+  [String.raw`back\slash`, String.raw`back\\slash`],
+  [`tick\``, `tick\\\``],
+  [`\${value}`, `\\\${value}`],
+])(`escapes template-literal input %j as %j`, (input, expected) => {
+  expect(escape_template_literal(input)).toBe(expected)
+})
 
 describe(`Icon`, () => {
   // Every entry, not a sample: the set is merged from another repo, and markup holding

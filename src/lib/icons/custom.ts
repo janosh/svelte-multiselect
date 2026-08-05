@@ -1,5 +1,5 @@
 // Hand-maintained glyphs (domain shapes, hand-tuned marks, pre-generator set). See icons.ts for tree-shake rationale.
-import type { IconData } from './types'
+import type { IconData } from './types.ts'
 
 export const Alert = {
   viewBox: `0 0 16 16`,
@@ -43,7 +43,7 @@ export const Auto = {
 } satisfies IconData
 export const BandsDOS = {
   viewBox: `0 0 24 24`,
-  markup: `<path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M4 4h10v16H4zm12 0h4v16h-4z"/>`,
+  d: `M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M4 4h10v16H4zm12 0h4v16h-4z`,
 } satisfies IconData
 export const BandStructure = {
   viewBox: `0 0 28 24`,
@@ -301,7 +301,7 @@ export const Graph = {
 } satisfies IconData
 export const Grid2x2 = {
   viewBox: `0 0 24 24`,
-  markup: `<path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M4 4h7v7H4zm0 9h7v7H4zm9-9h7v7h-7zm0 9h7v7h-7z"/>`,
+  d: `M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M4 4h7v7H4zm0 9h7v7H4zm9-9h7v7h-7zm0 9h7v7h-7z`,
 } satisfies IconData
 export const HandsClapping = {
   viewBox: `0 0 256 256`,
@@ -619,7 +619,7 @@ export const Thermometer = {
 } satisfies IconData
 export const ThreePanels = {
   viewBox: `0 0 24 24`,
-  markup: `<path fill="currentColor" d="M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M4 4h5v16H4zm7 0h9v8h-9zm0 10h9v6h-9z"/>`,
+  d: `M20 2H4c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2M4 4h5v16H4zm7 0h9v8h-9zm0 10h9v6h-9z`,
 } satisfies IconData
 export const Trash = {
   viewBox: `0 0 24 24`,

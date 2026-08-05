@@ -8,6 +8,8 @@ Pull requests to improve docs, test coverage, or examples are welcome. Before im
 
 To submit a pull request, clone the repo, install dependencies and start the dev server to see changes as you make them.
 
+Development requires Node.js 22.6 or newer because icon generation uses Node's native TypeScript stripping.
+
 ```sh
 git clone https://github.com/janosh/svelte-widgets
 cd svelte-widgets
