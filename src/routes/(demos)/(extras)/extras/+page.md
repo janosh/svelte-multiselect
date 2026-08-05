@@ -63,19 +63,46 @@ Pass the glyph value (`<Icon icon={Info} />`), not a name.
 
 ```svelte example id="icon-demo"
 <script lang="ts">
-  import { Icon } from '$lib'
+  import { CopyButton, Icon } from '$lib'
   import * as icons from '$lib/icons'
   import type { IconData } from '$lib/icons'
 
   const catalog = Object.entries<IconData>(icons)
+  let query = $state(``)
+  let filtered_catalog = $derived(
+    catalog.filter(([name]) => name.toLowerCase().includes(query.trim().toLowerCase())),
+  )
 </script>
 
-<div style="display: flex; flex-wrap: wrap; gap: 1em">
-  {#each catalog as [name, icon] (name)}
-    <span style="display: flex; align-items: center; gap: 4pt">
-      <Icon {icon} style="font-size: 1.5em" />
-      <code>{name}</code>
-    </span>
+<label style="display: grid; gap: 0.3em; max-width: 28em">
+  Search {catalog.length} icons
+  <input type="search" bind:value={query} placeholder="Try GitHub, arrow, file…" />
+</label>
+
+<p aria-live="polite">{filtered_catalog.length} matching icons</p>
+
+<div
+  style="display: grid; grid-template-columns: repeat(auto-fill, minmax(10em, 1fr)); gap: 0.6em"
+>
+  {#each filtered_catalog as [name, icon] (name)}
+    <CopyButton
+      content={`import { ${name} } from 'svelte-widgets/icons'`}
+      title={`Copy ${name} import`}
+      aria-label={`Copy ${name} import`}
+      style="display: flex; align-items: center; gap: 0.5em; padding: 0.65em; border: 1px solid var(--sms-border, light-dark(lightgray, #555)); border-radius: 5px; background: var(--sms-options-bg, light-dark(white, #333)); color: inherit; cursor: pointer; text-align: left"
+    >
+      {#snippet children({ state })}
+        <Icon {icon} style="font-size: 1.5em" />
+        <code>{name}</code>
+        {#if state !== `ready`}
+          <small style="margin-inline-start: auto"
+            >{state === `success` ? `Copied` : `Failed`}</small
+          >
+        {/if}
+      {/snippet}
+    </CopyButton>
+  {:else}
+    <p>No icons match “{query}”.</p>
   {/each}
 </div>
 ```
