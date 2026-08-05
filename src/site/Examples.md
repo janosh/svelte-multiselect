@@ -168,8 +168,7 @@ heights pack tightly. [Masonry docs &rarr;](masonry)
 
 ### CopyButton
 
-Copies its `content` and cycles through success and error states. Every code block on this
-site has one. [CopyButton docs &rarr;](copy-button)
+Copies its `content` and cycles through success and error states. Every code block on this site has one. [CopyButton docs &rarr;](action-button#copybutton)
 
 ```svelte example
 <script lang="ts">

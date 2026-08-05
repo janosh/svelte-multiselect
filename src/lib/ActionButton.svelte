@@ -1,0 +1,163 @@
+<script lang="ts" generics="Result = unknown">
+  import { onDestroy, type Snippet } from 'svelte'
+  import type { HTMLAttributes } from 'svelte/elements'
+  import Icon from './Icon.svelte'
+  import type { ActionState } from './types'
+  import { chain_handlers } from './utils'
+
+  type ActionLabel = { icon?: import('./icons').IconData; text: string }
+
+  let {
+    action,
+    state = $bindable(`ready`),
+    disabled = false,
+    reset_ms = 2000,
+    as = `button`,
+    labels = {
+      ready: { text: `Run` },
+      pending: { text: `Working…` },
+      success: { text: `Done` },
+      error: { text: `Failed` },
+    },
+    on_state_change,
+    on_success,
+    on_error,
+    children,
+    ...rest
+  }: Omit<HTMLAttributes<HTMLButtonElement>, `children`> & {
+    action: () => Result | Promise<Result>
+    state?: ActionState
+    disabled?: boolean
+    reset_ms?: number
+    as?: string
+    labels?: Record<ActionState, ActionLabel>
+    on_state_change?: (state: ActionState) => void | Promise<void>
+    on_success?: (result: Result) => void | Promise<void>
+    on_error?: (error: unknown) => void | Promise<void>
+    children?: Snippet<
+      [
+        {
+          state: ActionState
+          icon?: import('./icons').IconData
+          text: string
+          disabled: boolean
+          result: Result | undefined
+          error: unknown
+        },
+      ]
+    >
+  } = $props()
+
+  let result = $derived<Result | undefined>(undefined)
+  let error = $derived<unknown>(undefined)
+  let reset_timeout: ReturnType<typeof setTimeout> | null = null
+  let destroyed = false
+  const action_disabled = $derived(disabled || state === `pending`)
+  const current_label = $derived(labels[state])
+
+  const clear_reset_timeout = (): void => {
+    if (reset_timeout !== null) clearTimeout(reset_timeout)
+    reset_timeout = null
+  }
+
+  const invoke_callback = async (
+    callback_name: string,
+    callback: () => void | Promise<void>,
+  ): Promise<void> => {
+    try {
+      await callback()
+    } catch (callback_error) {
+      console.error(`ActionButton ${callback_name} callback failed`, callback_error)
+    }
+  }
+
+  const set_state = (next_state: ActionState): void => {
+    state = next_state
+    void invoke_callback(`on_state_change`, () => on_state_change?.(next_state))
+  }
+
+  onDestroy(() => {
+    destroyed = true
+    clear_reset_timeout()
+  })
+
+  async function run_action(): Promise<void> {
+    if (action_disabled) return
+    clear_reset_timeout()
+    result = undefined
+    error = undefined
+    set_state(`pending`)
+
+    try {
+      const action_result = await action()
+      if (destroyed) return
+      result = action_result
+      set_state(`success`)
+      void invoke_callback(`on_success`, () => on_success?.(action_result))
+    } catch (action_error) {
+      if (destroyed) return
+      console.error(`ActionButton action failed`, action_error)
+      error = action_error
+      set_state(`error`)
+      void invoke_callback(`on_error`, () => on_error?.(action_error))
+    }
+    if (reset_ms > 0) {
+      reset_timeout = setTimeout(() => {
+        set_state(`ready`)
+        reset_timeout = null
+      }, reset_ms)
+    }
+  }
+
+  function handle_action_keydown(event: KeyboardEvent): void {
+    if (event.key !== `Enter` && event.key !== ` `) return
+    event.preventDefault()
+    void run_action()
+  }
+</script>
+
+<svelte:element
+  this={as}
+  role="button"
+  tabindex={action_disabled ? -1 : 0}
+  aria-disabled={action_disabled || undefined}
+  aria-busy={state === `pending` || undefined}
+  {...as === `button` ? { disabled: action_disabled, type: `button` } : {}}
+  data-sms-action=""
+  data-state={state}
+  {...rest}
+  onclick={chain_handlers(run_action, rest.onclick)}
+  onkeydown={chain_handlers(handle_action_keydown, rest.onkeydown)}
+>
+  {#if children}
+    {@render children({
+      state,
+      icon: current_label.icon,
+      text: current_label.text,
+      disabled: action_disabled,
+      result,
+      error,
+    })}
+  {:else}
+    <span>
+      {#if current_label.icon}<Icon icon={current_label.icon} />{/if}
+      {#if current_label.text}<span>{@html current_label.text}</span>{/if}
+    </span>
+  {/if}
+</svelte:element>
+
+<style>
+  [data-sms-action] > span {
+    display: inline-flex;
+    gap: 0.35em;
+    align-items: center;
+    line-height: 1;
+    vertical-align: middle;
+    > span {
+      line-height: 1;
+    }
+    :global(svg) {
+      display: block;
+    }
+  }
+</style>
